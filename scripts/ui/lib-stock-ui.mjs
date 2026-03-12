@@ -183,11 +183,15 @@ export function averageVolume20(rows) {
   return sum / vols.length;
 }
 
-export async function loadUniverse(relPath = 'public/data/universe/all.json') {
+export async function loadUniverse(relPath = 'public/data/universe/v7/ssot/stocks.max.symbols.json') {
   const rows = await readJson(relPath, []);
-  if (!Array.isArray(rows)) return [];
-  return rows
-    .map((row) => ({ ticker: normalizeTicker(row?.ticker || row?.symbol), name: String(row?.name || '').trim() }))
+  const normalized = Array.isArray(rows)
+    ? rows
+      .map((row) => ({ ticker: normalizeTicker(row?.ticker || row?.symbol || row), name: String(row?.name || '').trim() }))
+    : Array.isArray(rows?.symbols)
+      ? rows.symbols.map((symbol) => ({ ticker: normalizeTicker(symbol), name: '' }))
+      : [];
+  return normalized
     .filter((row) => row.ticker)
     .sort((a, b) => a.ticker.localeCompare(b.ticker));
 }

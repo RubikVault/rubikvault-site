@@ -64,6 +64,7 @@ jobs:
           git config --global user.email "bot@rubikvault.com"
           git add public/data/forecast
           git commit -m "ops(forecast): rollback - ${{ inputs.reason }}" || echo "No changes"
+          git pull --rebase origin main || true
           git push
           
       - name: Create Issue

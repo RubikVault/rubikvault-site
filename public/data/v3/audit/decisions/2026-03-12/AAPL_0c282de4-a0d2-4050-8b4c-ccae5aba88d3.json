@@ -1,0 +1,96 @@
+{
+  "log_id": "0c282de4-a0d2-4050-8b4c-ccae5aba88d3",
+  "timestamp": "2026-03-12T15:38:10.765Z",
+  "snapshot_id": "90367f16-f263-4fa7-9200-432cb6c54fce",
+  "ticker": "AAPL",
+  "feature_name": "elliott",
+  "feature_version": "runblock.v3.features",
+  "model_version": "elliott.passive.v1",
+  "model_type": "passive_structure_map",
+  "calibration_version": null,
+  "regime_version": "runblock.v3",
+  "regime_tag": "RANGE",
+  "regime_confidence": 0.9689102590590317,
+  "data_quality_state": "PASS",
+  "feature_hash": "8cc9cf7a0d13c80fe004052da3c6f62a5d80977b7ee6a04a647845347de8e961",
+  "prediction_payload": {
+    "model_version": "elliott.passive.v1",
+    "has_directional_score": false,
+    "invalidation_delay_days": 1,
+    "confluence_hit_rate": 0.56,
+    "flip_frequency": 0.18,
+    "passive_structure_map": "Range floor holding with upside alternatives intact.",
+    "fib_confluence_zones": [
+      "104.5-105.3",
+      "108.8-109.4"
+    ],
+    "invalidation_levels": [
+      "99.2"
+    ],
+    "timeframe_conflict_score": 0.21,
+    "alternative_structure_hypotheses": [
+      "extended wave-B range"
+    ],
+    "confluence_score": 0.58,
+    "structural_confidence": 0.62,
+    "request_directional": false,
+    "reason_codes": [
+      "V1_PASSIVE_ONLY"
+    ],
+    "state": "PASSIVE",
+    "directional_score": null,
+    "direction_label": null,
+    "no_directional": true,
+    "gate": {
+      "allowed": true,
+      "mode": "PASSIVE",
+      "no_directional": true,
+      "reason_codes": [
+        "V1_PASSIVE_ONLY"
+      ]
+    }
+  },
+  "fallback_used": false,
+  "fallback_reason": null,
+  "champion_id": null,
+  "challenger_id": null,
+  "reason_codes": [
+    "V1_PASSIVE_ONLY"
+  ],
+  "realized_outcome": null,
+  "structural_instability_flag": false,
+  "top_3_features": [],
+  "top_3_feature_weights": [],
+  "explainability_unavailable_reason": "PASSIVE_RULE_BASED_STRUCTURE",
+  "knowledge_time": "2026-03-12T15:38:10.765Z",
+  "valid_time": "2026-03-12T15:38:10.765Z",
+  "cost_model_version": "runblock.cost.v3",
+  "liquidity_bucket": "A",
+  "tradability_flag": true,
+  "global_system_state": "GREEN",
+  "git_commit_hash": "local-runblock-v3",
+  "dependency_trace": {
+    "source_data_versions": {
+      "primary_feed": "sample.primary.v1",
+      "secondary_feed": "sample.secondary.v1"
+    },
+    "feature_versions": {
+      "runblock": "runblock.v3.features"
+    },
+    "rule_versions": {
+      "runblock": "runblock.v3.rules"
+    },
+    "regime_version": "runblock.v3",
+    "model_version": {
+      "scientific": "scientific.rf.v3",
+      "forecast": "forecast.xgb.v3",
+      "elliott": "elliott.passive.v1"
+    },
+    "calibration_version": {
+      "scientific": "scientific.cal.v3",
+      "forecast": "forecast.cal.v3"
+    },
+    "cost_model_version": "runblock.cost.v3",
+    "ui_payload_version": "runblock.ui.v3"
+  }
+}

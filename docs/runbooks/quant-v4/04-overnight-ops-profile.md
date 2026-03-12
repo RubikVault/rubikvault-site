@@ -1,6 +1,6 @@
 # Overnight Ops Profile
 
-Stand: 2026-03-08
+Stand: 2026-03-10
 
 ## Ziel
 
@@ -25,7 +25,9 @@ Wesentliche Defaults:
 - `panel-max-assets 5000`
 - effektive Task-Regel: `panel_max_assets = max(requested_panel_max_assets, top_liquid_n)`; `0` ist im Task nicht mehr gleich Vollpanel
 - `threads_cap=1`
-- `max_rss_gib=7.0`
+- `max_rss_gib=8.3` fuer den lokalen Day-Operator auf diesem Mac
+- `max_load_per_core=8.0` fuer den lokalen Safe-Operator, weil `nice=17`, `threads_cap=1` und RSS-Cap die eigentlichen Safety-Limits sind
+- `min_free_disk_gb=12` fuer den lokalen Safe-Start auf diesem Mac
 - `oom_downshift_factor=0.50`
 - `oom_downshift_min_top_liquid=2500`
 - `task_order=safe_light_first`
@@ -34,6 +36,15 @@ Wesentliche Defaults:
 - zusätzlicher Stage-A-Guard: Final-Gates werden automatisch übersprungen, falls der Portfolio-Step deaktiviert ist
 - `day`: `asof-dates-count=2`
 - `night`: `asof-dates-count=4`
+
+## Automation-Hinweis
+
+- Fuer die Codex-Automation `Local` benutzen, nicht `Worktree`.
+- Grund:
+  - QuantLab greift auf `/Users/michaelpuchowezki/QuantLabHot/...` und lokale Desktop-/Storage-Pfade zu.
+- Bevorzugtes Betriebsmodell:
+  - ein stündlicher Keeper statt zwei starre Daily-Jobs
+  - der Keeper prüft Lock/Status und startet bei fehlendem oder gestopptem Lauf den nächsten Safe-Run neu
 
 ## Standard-Kommandos
 

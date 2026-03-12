@@ -331,9 +331,30 @@ async function fetchV7SearchExactEntry(request, symbol) {
   const canonical = typeof row.canonical_id === 'string' ? row.canonical_id : null;
   const canonicalExchange = canonical && canonical.includes(':') ? canonical.split(':')[0] : null;
   return {
+    canonical_id: canonical,
+    symbol: typeof row.symbol === 'string' && row.symbol.trim() ? row.symbol.trim().toUpperCase() : normalizeTicker(symbol),
     name: typeof row.name === 'string' && row.name.trim() ? row.name.trim() : null,
     exchange: typeof row.exchange === 'string' && row.exchange.trim() ? row.exchange : (canonicalExchange || null),
     country: typeof row.country === 'string' && row.country.trim() ? row.country : null
+  };
+}
+
+function buildEodhdSymbol(symbol, exchange) {
+  const cleanSymbol = normalizeTicker(symbol);
+  const cleanExchange = String(exchange || '').trim().toUpperCase();
+  if (!cleanSymbol) return null;
+  if (!cleanExchange) return cleanSymbol;
+  return `${cleanSymbol}.${cleanExchange}`;
+}
+
+function buildProviderSymbolMap(symbol, exchange) {
+  const cleanSymbol = normalizeTicker(symbol);
+  if (!cleanSymbol) return null;
+  const eodhdSymbol = buildEodhdSymbol(cleanSymbol, exchange);
+  return {
+    eodhd: eodhdSymbol || cleanSymbol,
+    tiingo: cleanSymbol,
+    twelvedata: cleanSymbol
   };
 }
 
@@ -520,18 +541,49 @@ export async function onRequestGet(context) {
   // This is independent of the legacy snapshot join below (kept for backwards compatibility).
   let resolvedName = null;
   let resolvedMethod = null;
+  let resolvedTicker = normalizedTicker || null;
+  let resolvedCanonicalId = null;
+  let resolvedExchange = null;
+  let resolvedCountry = null;
+  let v7ExactMeta = null;
   try {
     const resolved = await resolveSymbol(normalizedTicker || tickerParam, request);
     if (resolved?.ok && resolved?.data?.ticker) {
       const strictTicker = normalizeTickerStrict(resolved.data.ticker);
       if (strictTicker) {
-        resolvedName = resolved.data.name || null;
+        resolvedTicker = strictTicker;
+        v7ExactMeta = await fetchV7SearchExactEntry(request, strictTicker);
+        resolvedName = resolved.data.name || v7ExactMeta?.name || null;
         resolvedMethod = resolved.data.method || null;
+        resolvedCanonicalId = resolved.data.canonical_id || v7ExactMeta?.canonical_id || null;
+        resolvedExchange = resolved.data.exchange || v7ExactMeta?.exchange || null;
+        resolvedCountry = resolved.data.country || v7ExactMeta?.country || null;
       }
     }
   } catch {
     // ignore
   }
+  if (!v7ExactMeta && resolvedTicker) {
+    try {
+      v7ExactMeta = await fetchV7SearchExactEntry(request, resolvedTicker);
+    } catch {
+      // ignore
+    }
+  }
+  if (!resolvedName) {
+    resolvedName = v7ExactMeta?.name || null;
+  }
+  if (!resolvedCanonicalId) {
+    resolvedCanonicalId = v7ExactMeta?.canonical_id || null;
+  }
+  if (!resolvedExchange) {
+    resolvedExchange = v7ExactMeta?.exchange || null;
+  }
+  if (!resolvedCountry) {
+    resolvedCountry = v7ExactMeta?.country || null;
+  }
+  const effectiveTicker = resolvedTicker || normalizedTicker || null;
+  const providerSymbolMap = buildProviderSymbolMap(effectiveTicker, resolvedExchange);
 
   let eodBars = [];
   let eodError = null;
@@ -544,7 +596,7 @@ export async function onRequestGet(context) {
 
   const cache = createCache(env);
   const now = new Date();
-  const cacheId = normalizedTicker || null;
+  const cacheId = effectiveTicker || null;
   const cacheTtlSeconds = Number(env?.EOD_CACHE_TTL_SECONDS) || DEFAULT_EOD_CACHE_TTL_SECONDS;
   const lockTtlSeconds = Number(env?.EOD_LOCK_TTL_SECONDS) || DEFAULT_EOD_LOCK_TTL_SECONDS;
   const maxStaleDays = Number(env?.EOD_MAX_STALE_DAYS) || DEFAULT_MAX_STALE_DAYS;
@@ -632,10 +684,11 @@ export async function onRequestGet(context) {
   async function fetchProviderBars({ flagSet = qualityFlags, recordTiming = false } = {}) {
     const originStart = recordTiming ? Date.now() : null;
     const startDate = computeStartDateISO(365 * 3);
-    const chainResult = await fetchBarsWithProviderChain(normalizedTicker, env, {
+    const chainResult = await fetchBarsWithProviderChain(effectiveTicker, env, {
       outputsize: '300',
       startDate,
-      allowFailover: true
+      allowFailover: true,
+      providerSymbols: providerSymbolMap
     });
     sourceChain = buildSourceChainMetadata(chainResult.chain);
     if (!chainResult.ok) {
@@ -658,7 +711,7 @@ export async function onRequestGet(context) {
   }
 
   async function refreshCacheInBackground() {
-    if (!cacheId || !normalizedTicker) return;
+    if (!cacheId || !effectiveTicker) return;
     const refreshFlags = new Set();
     try {
       const result = await fetchProviderBars({ flagSet: refreshFlags });
@@ -674,7 +727,7 @@ export async function onRequestGet(context) {
         JSON.stringify({
           event: 'swr_refresh',
           module: MODULE_NAME,
-          ticker: normalizedTicker,
+          ticker: effectiveTicker,
           ok: result.ok,
           provider: result.provider || null,
           cache_key: cacheKeyUsed || primaryKey || null
@@ -685,7 +738,7 @@ export async function onRequestGet(context) {
     }
   }
 
-  if (normalizedTicker && cachedBars.length) {
+  if (effectiveTicker && cachedBars.length) {
     const cachedQuality = evaluateQuality({ bars: cachedBars }, env);
     if (cachedQuality.reject) {
       cachedBars = [];
@@ -700,13 +753,13 @@ export async function onRequestGet(context) {
     }
   }
 
-  if (normalizedTicker && cachedBars.length && !cachedStale) {
+  if (effectiveTicker && cachedBars.length && !cachedStale) {
     cacheHit = true;
     eodBars = cachedBars;
     eodProvider = cachedProvider || 'eodhd';
     eodStatus = 'fresh';
     eodAttempted = true;
-  } else if (normalizedTicker && cachedBars.length && cachedStatus === 'error' && canFetchProvider) {
+  } else if (effectiveTicker && cachedBars.length && cachedStatus === 'error' && canFetchProvider) {
     eodAttempted = true;
     if (swrPending) {
       cacheHit = true;
@@ -749,7 +802,7 @@ export async function onRequestGet(context) {
         }
       }
     }
-  } else if (normalizedTicker && cachedBars.length) {
+  } else if (effectiveTicker && cachedBars.length) {
     cacheHit = true;
     eodBars = cachedBars;
     eodProvider = cachedProvider || 'eodhd';
@@ -778,13 +831,13 @@ export async function onRequestGet(context) {
     } else {
       qualityFlags.add('EOD_KEYS_MISSING');
     }
-  } else if (normalizedTicker) {
+  } else if (effectiveTicker) {
     // 2. Try Internal Static Store (Cold Layer)
     let staticBars = null;
     if (!eodAttempted) {
       try {
         const { getStaticBars } = await import('./_shared/history-store.mjs');
-        staticBars = await getStaticBars(normalizedTicker, url.origin);
+        staticBars = await getStaticBars(effectiveTicker, url.origin);
 
         if (staticBars && staticBars.length > 0) {
           // Check freshness (Basic check: is last bar within maxStaleDays?)
@@ -816,7 +869,7 @@ export async function onRequestGet(context) {
 
     if (!canFetchProvider && !eodAttempted) {
       // No API keys available - try static EOD batch fallback
-      const staticResult = await fetchStaticEodBar(normalizedTicker, request);
+      const staticResult = await fetchStaticEodBar(effectiveTicker, request);
       if (staticResult && staticResult.bar) {
         eodBars = [staticResult.bar];
         eodProvider = staticResult.source;
@@ -866,7 +919,7 @@ export async function onRequestGet(context) {
                 qualityFlags.add('PROVIDER_FAIL');
                 eodError = null;
               } else {
-                const staticResult = await fetchStaticEodBar(normalizedTicker, request);
+                const staticResult = await fetchStaticEodBar(effectiveTicker, request);
                 if (staticResult && staticResult.bar) {
                   eodBars = [staticResult.bar];
                   eodProvider = staticResult.source;
@@ -989,14 +1042,14 @@ export async function onRequestGet(context) {
   const useV3Shadow = url.searchParams.get('v3_shadow') === '1';
 
   // 1. FOREGROUND: Hybrid Mode (Default)
-  if (useV3 && normalizedTicker) {
-    const v3Data = await fetchV3Data(env, request, normalizedTicker);
+  if (useV3 && effectiveTicker) {
+    const v3Data = await fetchV3Data(env, request, effectiveTicker);
     if (v3Data) {
       // Overlay Logic
       snapshots['market-prices'] = {
         snapshot: {
           data: [{
-            symbol: normalizedTicker,
+            symbol: effectiveTicker,
             date: v3Data.eod.bar.date,
             close: v3Data.eod.bar.close,
             volume: v3Data.eod.bar.volume,
@@ -1014,7 +1067,7 @@ export async function onRequestGet(context) {
       snapshots['market-stats'] = {
         snapshot: {
           data: [{
-            symbol: normalizedTicker,
+            symbol: effectiveTicker,
             as_of: v3Data.indicators.as_of,
             stats: v3Data.indicators.indicators
           }],
@@ -1036,21 +1089,21 @@ export async function onRequestGet(context) {
 
   // 2. BACKGROUND: Shadow Mode (Run for everyone else)
   // Only run if NOT privileged/debug to avoid noise, but for now we run it always for verification.
-  else if (useV3Shadow && normalizedTicker && context.waitUntil) {
+  else if (useV3Shadow && effectiveTicker && context.waitUntil) {
     const shadowCheck = async () => {
       try {
-        const v3Data = await fetchV3Data(env, request, normalizedTicker);
+        const v3Data = await fetchV3Data(env, request, effectiveTicker);
         // We need v2 payload to compare. 
         // Since we can't easily access the final JSON here before it's built, 
         // we can verify against the *snapshots* object which holds the v2 data source.
 
-        const v2Close = findRecord(snapshots['market-prices']?.snapshot, normalizedTicker)?.close;
+        const v2Close = findRecord(snapshots['market-prices']?.snapshot, effectiveTicker)?.close;
         const v3Close = v3Data?.eod?.bar?.close;
 
         if (v2Close && v3Close && Math.abs(v2Close - v3Close) > 0.001) {
-          console.warn(`[V3_SHADOW_DRIFT] ${normalizedTicker}: v2=${v2Close} v3=${v3Close}`);
+          console.warn(`[V3_SHADOW_DRIFT] ${effectiveTicker}: v2=${v2Close} v3=${v3Close}`);
         } else if (v2Close && v3Close) {
-          // console.log(`[V3_SHADOW_MATCH] ${normalizedTicker}`);
+          // console.log(`[V3_SHADOW_MATCH] ${effectiveTicker}`);
         }
       } catch (e) {
         console.error('V3_SHADOW_ERROR', e);
@@ -1090,7 +1143,7 @@ export async function onRequestGet(context) {
   }
   const cacheMeta = isPrivileged ? cacheMetaBase : redact(cacheMetaBase);
 
-  if (!normalizedTicker) {
+  if (!effectiveTicker) {
     const buildStart = Date.now();
     const metaNow = nowUtcIso();
     const payload = {
@@ -1173,18 +1226,17 @@ export async function onRequestGet(context) {
     });
   }
 
-  const universeEntry = findRecord(snapshots['universe']?.snapshot, normalizedTicker);
+  const universeEntry = findRecord(snapshots['universe']?.snapshot, effectiveTicker);
   let universeFallback = null;
   if (!universeEntry) {
     const v7StockSet = await fetchV7StockSet(request);
-    if (v7StockSet?.has(normalizedTicker)) {
-      const v7ExactMeta = await fetchV7SearchExactEntry(request, normalizedTicker);
+    if (v7StockSet?.has(effectiveTicker)) {
       universeFallback = {
-        symbol: normalizedTicker,
+        symbol: effectiveTicker,
         name: v7ExactMeta?.name || null,
-        exchange: v7ExactMeta?.exchange || null,
+        exchange: v7ExactMeta?.exchange || resolvedExchange || null,
         currency: null,
-        country: v7ExactMeta?.country || null,
+        country: v7ExactMeta?.country || resolvedCountry || null,
         sector: null,
         industry: null,
         indexes: [],
@@ -1194,14 +1246,14 @@ export async function onRequestGet(context) {
     }
   }
 
-  const priceEntry = findRecord(snapshots['market-prices']?.snapshot, normalizedTicker);
-  const statsEntry = findRecord(snapshots['market-stats']?.snapshot, normalizedTicker);
-  const scoreEntry = findRecord(snapshots['market-score']?.snapshot, normalizedTicker);
+  const priceEntry = findRecord(snapshots['market-prices']?.snapshot, effectiveTicker);
+  const statsEntry = findRecord(snapshots['market-stats']?.snapshot, effectiveTicker);
+  const scoreEntry = findRecord(snapshots['market-score']?.snapshot, effectiveTicker);
 
   // Attribute DATA_NOT_READY to concrete lookup outcomes.
   for (const moduleName of MODULE_PATHS) {
     if (!sources[moduleName]) continue;
-    sources[moduleName].lookup_key = normalizedTicker;
+    sources[moduleName].lookup_key = effectiveTicker;
   }
   sources.universe.record_found = Boolean(universeEntry);
   if (universeFallback) {
@@ -1218,9 +1270,23 @@ export async function onRequestGet(context) {
     sources['market-prices'].note = 'entry_not_found_for_symbol';
   }
 
-  const universePayload = buildUniversePayload(universeEntry || universeFallback, normalizedTicker);
-  const marketPricesSnapshotPayload = buildMarketPricesPayload(priceEntry, normalizedTicker);
-  const marketStatsSnapshotPayload = buildMarketStatsPayload(statsEntry, normalizedTicker);
+  const universeSeed = universeEntry || universeFallback || (v7ExactMeta ? {
+    symbol: effectiveTicker,
+    name: v7ExactMeta.name || null,
+    exchange: v7ExactMeta.exchange || resolvedExchange || null,
+    country: v7ExactMeta.country || resolvedCountry || null,
+    indexes: [],
+    updated_at: null
+  } : null);
+  const universePayload = buildUniversePayload(universeSeed, effectiveTicker);
+  if (universePayload && !universePayload.country && resolvedCountry) {
+    universePayload.country = resolvedCountry;
+  }
+  if (universePayload && !universePayload.exchange && resolvedExchange) {
+    universePayload.exchange = resolvedExchange;
+  }
+  const marketPricesSnapshotPayload = buildMarketPricesPayload(priceEntry, effectiveTicker);
+  const marketStatsSnapshotPayload = buildMarketStatsPayload(statsEntry, effectiveTicker);
 
   const missingSections = [];
   if (snapshots['market-prices'].snapshot && !marketPricesSnapshotPayload) missingSections.push('market_prices');
@@ -1229,10 +1295,10 @@ export async function onRequestGet(context) {
   if (!snapshots['market-stats'].snapshot) missingSections.push('market_stats');
 
   let errorPayload = null;
-  const universeKnown = Boolean(universeEntry || universeFallback);
+  const universeKnown = Boolean(universeEntry || universeFallback || v7ExactMeta);
   if (!universeKnown && !eodAttempted) {
-    errorPayload = buildErrorPayload('UNKNOWN_TICKER', `Ticker ${normalizedTicker} is not in the universe`, {
-      membership: universePayload.membership
+    errorPayload = buildErrorPayload('UNKNOWN_TICKER', `Ticker ${effectiveTicker} is not in the universe`, {
+      membership: universePayload?.membership
     });
   }
   if (!errorPayload && !eodAttempted && universeKnown && missingSections.length) {
@@ -1248,7 +1314,7 @@ export async function onRequestGet(context) {
     eodError = {
       code: 'EOD_EMPTY',
       message: 'No EOD bars returned',
-      details: { ticker: normalizedTicker }
+      details: { ticker: effectiveTicker }
     };
   }
 
@@ -1291,16 +1357,18 @@ export async function onRequestGet(context) {
   }, 0);
 
   const providerHint = eodProvider || sourceChain?.selected || sourceChain?.primary || null;
-  const marketPricesPayload = buildMarketPricesFromLatestBar(latestBar, normalizedTicker, providerHint) || marketPricesSnapshotPayload;
-  const marketStatsPayload = buildMarketStatsFromIndicators(indicatorOut.indicators, normalizedTicker, latestBar?.date) || marketStatsSnapshotPayload;
+  const marketPricesPayload = buildMarketPricesFromLatestBar(latestBar, effectiveTicker, providerHint) || marketPricesSnapshotPayload;
+  const marketStatsPayload = buildMarketStatsFromIndicators(indicatorOut.indicators, effectiveTicker, latestBar?.date) || marketStatsSnapshotPayload;
 
   const data = {
-    ticker: normalizedTicker,
+    ticker: effectiveTicker,
     name: resolvedName || universePayload?.name || null,
     resolution: {
-      ticker: normalizedTicker,
+      ticker: effectiveTicker,
       name: resolvedName || universePayload?.name || null,
-      method: resolvedMethod || null
+      method: resolvedMethod || null,
+      canonical_id: resolvedCanonicalId || null,
+      exchange: resolvedExchange || universePayload?.exchange || null
     },
     bars: eodBars,
     latest_bar: latestBar,
@@ -1394,7 +1462,8 @@ export async function onRequestGet(context) {
       served_from: servedFrom,
       request: {
         ticker: tickerParam,
-        normalized_ticker: normalizedTicker
+        normalized_ticker: normalizedTicker,
+        effective_ticker: effectiveTicker
       },
       as_of: asOf,
       source_chain: sourceChain,
@@ -1442,7 +1511,7 @@ export async function onRequestGet(context) {
       reason: 'NO_DATA'
     });
     payload.evaluation_v4 = buildStockInsightsV4Evaluation({
-      ticker: normalizedTicker,
+      ticker: effectiveTicker,
       bars: eodBars,
       stats: marketStatsPayload?.stats || {},
       universe: universePayload || {},

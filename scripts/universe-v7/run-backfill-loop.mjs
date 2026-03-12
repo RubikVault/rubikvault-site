@@ -18,6 +18,26 @@ const DEFAULT_BUCKETS = [
   { id: 'rest', allowlist: ['FUND', 'INDEX', 'FOREX', 'CRYPTO', 'BOND', 'OTHER'], priority: 3 }
 ];
 
+function historyPackRelativePath(row) {
+  const rel = String(row?.pointers?.history_pack || '').trim();
+  return rel || null;
+}
+
+function hasAccessibleHistoryPack(row, cache = null) {
+  const rel = historyPackRelativePath(row);
+  if (!rel) return false;
+  if (cache?.has(rel)) return cache.get(rel);
+  const abs = path.join(REPO_ROOT, 'mirrors/universe-v7', rel);
+  let ok = false;
+  try {
+    ok = fs.existsSync(abs) && fs.statSync(abs).isFile();
+  } catch {
+    ok = false;
+  }
+  if (cache) cache.set(rel, ok);
+  return ok;
+}
+
 function parseBucketOrder(value) {
   const raw = String(value || '').trim().toLowerCase();
   if (!raw) return DEFAULT_BUCKETS;
@@ -69,6 +89,7 @@ function runOnce({ envFile, allowlist, backfillMax, offline = false, publish = t
 async function readBucketProgress(typeAllowlist, checkpointPath, waivedCanonicalIds = null) {
   const typeSet = new Set(typeAllowlist.map((x) => String(x).toUpperCase()));
   const waived = waivedCanonicalIds instanceof Set ? waivedCanonicalIds : null;
+  const historyPackCache = new Map();
   const stats = {
     total: 0,
     backfill_real: 0,
@@ -101,9 +122,10 @@ async function readBucketProgress(typeAllowlist, checkpointPath, waivedCanonical
     if (waived && cid && waived.has(cid)) continue;
     stats.total += 1;
     const quality = String(row?._quality_basis || '').toLowerCase();
-    if (quality === 'backfill_real') stats.backfill_real += 1;
+    const hasHistoryPack = hasAccessibleHistoryPack(row, historyPackCache);
+    if (quality === 'backfill_real' && hasHistoryPack) stats.backfill_real += 1;
     const bars = Number(row?.bars_count || 0);
-    if (Number.isFinite(bars) && bars > 0) stats.with_bars += 1;
+    if (Number.isFinite(bars) && bars > 0 && hasHistoryPack) stats.with_bars += 1;
     if (doneSet.has(row?.canonical_id)) stats.checkpoint_done += 1;
     if (pendingSet.has(row?.canonical_id)) stats.checkpoint_pending += 1;
   }

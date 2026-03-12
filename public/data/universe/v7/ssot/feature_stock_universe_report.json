@@ -1,6 +1,6 @@
 {
   "schema": "rv_v7_feature_stock_universe_report_v1",
-  "generated_at": "2026-03-09T10:13:09.074Z",
+  "generated_at": "2026-03-12T01:05:44.036Z",
   "sources": {
     "ssot_symbols": "public/data/universe/v7/ssot/stocks.max.symbols.json",
     "by_feature": "public/data/universe/v7/ssot/stocks.by_feature.json",
@@ -13,15 +13,15 @@
   },
   "counts": {
     "ssot_stocks_max": 55986,
-    "ssot_stocks_history_200_cap": 52846,
-    "ssot_stocks_lt200_or_no_pack_gap": 3140,
-    "ssot_stocks_lt200_no_pack": 3140,
+    "ssot_stocks_history_200_cap": 52989,
+    "ssot_stocks_lt200_or_no_pack_gap": 2997,
+    "ssot_stocks_lt200_no_pack": 2997,
     "ssot_stocks_canonical_max": 74841,
     "stock_analyzer_effective": 55986,
-    "by_feature_scientific": 56596,
-    "by_feature_forecast": 56276,
-    "by_feature_marketphase": 56760,
-    "by_feature_elliott": 56760,
+    "by_feature_scientific": 56500,
+    "by_feature_forecast": 56197,
+    "by_feature_marketphase": 56637,
+    "by_feature_elliott": 56637,
     "by_feature_scientific_canonical": 74841,
     "by_feature_forecast_canonical": 74841,
     "by_feature_marketphase_canonical": 74841,
@@ -30,21 +30,21 @@
     "scientific_raw": 55986,
     "forecast_raw": 2425,
     "marketphase_raw": 2445,
-    "marketphase_deep_raw": 0,
+    "marketphase_deep_raw": 53070,
     "marketphase_deep_raw_canonical": 0,
-    "elliott_raw": 2445,
+    "elliott_raw": 53070,
     "scientific_effective": 55986,
     "forecast_effective": 2425,
-    "marketphase_effective": 2445,
-    "elliott_effective": 2445,
+    "marketphase_effective": 53070,
+    "elliott_effective": 53070,
     "scientific_raw_canonical": 74841,
     "forecast_raw_canonical": 4647,
-    "marketphase_raw_canonical": 4673,
-    "elliott_raw_canonical": 4673,
+    "marketphase_raw_canonical": 71913,
+    "elliott_raw_canonical": 71913,
     "scientific_effective_canonical": 74841,
     "forecast_effective_canonical": 4647,
-    "marketphase_effective_canonical": 4673,
-    "elliott_effective_canonical": 4673
+    "marketphase_effective_canonical": 71913,
+    "elliott_effective_canonical": 71913
   },
   "parity": {
     "effective_equal_scientific_forecast_elliott": false,
@@ -53,10 +53,10 @@
     "effective_equal_forecast_marketphase_elliott_to_history200_cap": false
   },
   "derivation": {
-    "marketphase_raw_effective_source": "marketphase_index",
+    "marketphase_raw_effective_source": "marketphase_deep_summary",
     "marketphase_raw_canonical_source": "projected_from_symbol_sets",
     "forecast_raw_canonical_source": "projected_from_symbol_set",
-    "elliott_raw_source": "marketphase_index"
+    "elliott_raw_source": "marketphase_deep_summary"
   },
   "notes": [
     "Stock Analyzer can query the full v7 stock SSOT via /api/stock + v7 fallback.",

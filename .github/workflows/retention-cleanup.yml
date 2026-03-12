@@ -37,4 +37,5 @@ jobs:
             exit 0
           fi
           git commit -m "chore(v3): retention cleanup"
+          git pull --rebase origin main || true
           git push

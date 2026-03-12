@@ -1,16 +1,139 @@
 # Current State And Implementation Log
 
-Stand: 2026-03-08
+Stand: 2026-03-10
 
 ## Kurzstatus
 
-- Quant v4.0 insgesamt: ca. 69%
+- Quant v4.0 insgesamt: ca. 76%
 - Q1 Backbone lokal vorhanden und mit vielen Artefakten belegt
-- Aktueller Hauptblocker ist fachlich weiter Stage B ueber die As-of-Serie, operativ aber jetzt wieder klar getrennt von Night-Ops-Fehlern
+- Aktueller Hauptblocker ist fachlich weiter Stage B ueber die As-of-Serie, operativ aber wieder klar getrennt von Freshness-/Night-Ops-Fehlern
 - Neuer belastbarer Fortschritt:
   - Data-Truth-Contract-Layer greifen wieder auf echte verfügbare Rohquellen zu
   - Stage-B-/Registry-/Portfolio-/Redflag-Kette ist jetzt governance-aware statt blind
   - Reconciliation ist grün und Contract-/TRI-Invariants sind im Kontrollpfad belastbar
+  - taegliche Delta-/Snapshot-/Feature-Kette ist heute lokal bis Reconciliation erfolgreich aktualisiert
+  - lokaler Day-Operator laeuft wieder mit gesundem RSS-Profil
+
+## Update 2026-03-10 (fresh raw chain + storage cleanup + operator fix)
+
+1. Der heutige Raw-/Delta-Pfad ist wieder aktuell.
+   - Heutiger gezielter EODHD-Refresh:
+     - `assets_requested=120`
+     - `assets_changed=119`
+     - `packs_changed=32`
+   - Raw-Bars fuer die benoetigten Typen sind jetzt wieder frisch:
+     - `stock -> 2026-03-10`
+     - `etf -> 2026-03-10`
+
+2. Die inkrementelle Tageskette ist lokal gruen bis Reconciliation.
+   - Delta:
+     - `/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/jobs/q1_history_touch_delta_20260310_fix1/manifest.json`
+   - Snapshot increment:
+     - `/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/runs/run_id=q1snapinc_20260310T161508Z/q1_incremental_snapshot_update_run_status.json`
+   - Feature increment:
+     - `/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/features/store/feature_store_version=v4_q1inc/asof_date=2026-02-26/feature_manifest.delta_2026-03-10.json`
+   - Reconciliation:
+     - `/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/runs/run_id=q1recon_20260310T161906Z/q1_reconciliation_report.json`
+
+3. Die lokale Ordnerstruktur wurde in Runtime vs. Cold Archive getrennt.
+   - Aktiver Runtime-Kern:
+     - `/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/data/raw/provider=EODHD`
+     - `/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/data/snapshots`
+     - `/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/features/store/feature_store_version=v4_q1panel_overnight`
+     - `/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/features/store/feature_store_version=v4_q1inc`
+     - `/Users/michaelpuchowezki/QuantLabHot/storage/universe-v7-history/history`
+   - Cold-Archive-Staging fuer externe Sicherung:
+     - `/Volumes/My Passport/EODHD-History/from_quantlabhot/quantlab_cold_2026-03-10`
+   - Separiertes Desktop-Roharchiv:
+     - `/Volumes/My Passport/EODHD-History/from_desktop/EODHD_Data`
+   - Keep-vs-Archive-Begruendung:
+     - `/Volumes/My Passport/EODHD-History/from_quantlabhot/quantlab_cold_2026-03-10/manifests/KEEP_VS_ARCHIVE.md`
+   - Move-Manifest:
+     - `/Volumes/My Passport/EODHD-History/manifests/MOVED_ITEMS.md`
+
+4. Der lokale Day-Operator wurde auf den realen Mac-Stand angepasst.
+   - Disk-Guard lokal:
+     - `min_free_disk_gb=12`
+   - Day-RSS-Profil lokal:
+     - `max_rss_gib=8.3`
+   - Bisheriges Ergebnis:
+     - `/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/jobs/day_q1_safe_20260310_172652/state.json`
+     - `p90/top2500 -> ok`
+     - `p90/top3500 -> ok`
+   - Bedeutung:
+     - der heutige Day-Run ist nicht mehr an einem zu engen lokalen RSS-Limit gescheitert.
+
+5. Offene Blocker bis 100% v4.0 bleiben unveraendert fachlich:
+   - Stage-B strict survivors ueber mehrere As-of-Punkte stabilisieren
+   - Registry-Ladder + Portfolio unter echten Zustandsuebergaengen soak-testen
+   - `release-strict` mehrfach auf der aktuellen As-of-Serie gruen bestaetigen
+   - Night-/Day-Automation als lokaler Keeper in `Local`-Ausfuehrungsmodus verankern
+
+## Update 2026-03-10 (resume-lock fix + zero-strict diagnostics + release-strict repeat)
+
+1. Der Resume-Startpfad fuer laufende Day-/Night-Jobs ist jetzt fail-safe gegen Watchdog-Sturm.
+   - Datei:
+     - `/Users/michaelpuchowezki/Dev/rubikvault-site/scripts/quantlab/run_overnight_q1_training_sweep.py`
+   - Fix:
+     - Job-Lock und Named-Lock werden jetzt vor dem teuren Task-Build gesetzt.
+   - Bedeutung:
+     - der Watchdog startet bei schwerem Polars-Task-Build nicht mehr mehrere konkurrierende Resume-Runner parallel.
+
+2. Das lokale Safe-Profil wurde weiter auf den realen Mac-Betrieb gehärtet.
+   - Dateien:
+     - `/Users/michaelpuchowezki/Dev/rubikvault-site/scripts/quantlab/run_overnight_q1_supervised_safe.sh`
+     - `/Users/michaelpuchowezki/Dev/rubikvault-site/scripts/quantlab/start_night14_with_watchdog.sh`
+     - `/Users/michaelpuchowezki/Dev/rubikvault-site/scripts/quantlab/start_q1_operator_safe.sh`
+   - Lokale Defaults:
+     - `min_free_disk_gb=12`
+     - `max_load_per_core=8.0`
+     - `max_rss_gib=8.3`
+   - Grund:
+     - `threads_cap=1`, `nice=17` und RSS-Cap sind die echten Safety-Limits; der alte Load-Guard war fuer diesen Mac zu konservativ und blockierte gesunde Jobs.
+
+3. Zero-Strict-As-ofs sind jetzt explizit diagnostizierbar.
+   - Neue Dateien:
+     - `/Users/michaelpuchowezki/Dev/rubikvault-site/scripts/quantlab/report_stageb_zero_strict_near_pass_q1.py`
+     - `/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/ops/stage_b_stability/zero_strict_near_pass_latest.json`
+   - Aktueller Befund:
+     - `zero_strict_asof_total=6`
+     - `zero_strict_with_near_pass_total=6`
+     - Top-Kandidaten pro As-of sind jetzt direkt sichtbar, zum Beispiel:
+       - `2026-02-18 -> tsmom_trend_quality`
+       - `2026-02-26 -> csmom_20_trend_liq`
+
+4. Stage-B-Top-Level-Reports tragen Near-Pass-Diagnostik jetzt mit.
+   - Datei:
+     - `/Users/michaelpuchowezki/Dev/rubikvault-site/scripts/quantlab/run_stage_b_q1.py`
+   - Neu im Report:
+     - `failed_examples`
+     - `near_pass_candidates`
+   - Bedeutung:
+     - kuenftige Stage-B-Runs muessen fuer Near-Pass-Auswertung nicht mehr nur indirekt ueber `artifacts/stage_b_light_report.json` gelesen werden.
+
+5. Die aktuell beste release-strict-Kette wurde erneut bestaetigt.
+   - Referenzkette:
+     - `phasea -> /Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/runs/run_id=q1backbone_1773023737/q1_daily_data_backbone_run_report.json`
+     - `stagea -> /Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/runs/run_id=cheapgateA_tsplits_2026-02-20/outputs/cheap_gate_A_time_splits_report.json`
+     - `stageb -> /Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/runs/run_id=q1stageb_cheapgateA_tsplits_2026-02-20/stage_b_q1_run_report.json`
+     - `registry -> /Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/runs/run_id=q1registry_q1stageb_cheapgateA_tsplits_2026-02-20/q1_registry_update_report.json`
+     - `portfolio -> /Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/runs/run_id=q1portfolio_1772922466/q1_portfolio_risk_execution_report.json`
+     - `redflags -> /Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/ops/red_flags/2026-02-20.json`
+   - Neue gruene Final-Gates:
+     - `/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/runs/run_id=q1v4gates_1773164843/q1_v4_final_gate_matrix_report.json`
+     - `/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/runs/run_id=q1v4gates_1773164871/q1_v4_final_gate_matrix_report.json`
+     - `/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/runs/run_id=q1v4gates_1773164902/q1_v4_final_gate_matrix_report.json`
+   - Seriennachweis:
+     - `/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/ops/release_strict/repeat_series_2026-03-10.json`
+
+6. Post-Day-Refresh fuer Stage-B-Berichte ist jetzt automatisiert angestoßen.
+   - Neue Datei:
+     - `/Users/michaelpuchowezki/Dev/rubikvault-site/scripts/quantlab/wait_for_day_job_then_refresh_stageb_q1.py`
+   - Laufender Hintergrundprozess:
+     - wartet auf Abschluss von `/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/jobs/day_q1_safe_20260310_172652`
+     - refreshed danach automatisch:
+       - `/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/ops/stage_b_stability/latest.json`
+       - `/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/ops/stage_b_stability/zero_strict_near_pass_latest.json`
 
 ## Update 2026-03-08 (raw-bars preflight + safe panel cap)
 
@@ -1023,13 +1146,14 @@ Dadurch war das System operativ zwar lauffähig, aber nicht sauber auditierbar. 
      - öffentliches v7-Publish-Truth war defekt:
        - `/Users/michaelpuchowezki/Dev/rubikvault-site/public/data/universe/v7/reports/run_status.json`
        - `exit_code=90`, `reason=phase0_failed`
-       - `/Users/michaelpuchowezki/Dev/rubikvault-site/public/data/universe/v7/reports/history_touch_report.json` fehlte
+     - zusaetzlich fehlte die private lokale Source-Truth fuer Delta/Backbone:
+       - `/Users/michaelpuchowezki/Dev/rubikvault-site/mirrors/universe-v7/reports/history_touch_report.json`
      - Backbone lief trotzdem warn-only weiter; dadurch wurden Delta/Snapshot/Stage-A/Stage-B auf altem Stand weitergetrieben.
    - Umgesetzter Fix:
      - Backbone hat jetzt einen additiven lokalen v7-Pre-Refresh-Pfad via `run-backfill-loop.mjs --skip-archeology` mit lokalem EODHD-Env.
      - Danach erzwingt ein neuer `source_truth_gate` fail-closed:
        - `FAIL_RAW_BARS_REQUIRED_TYPES_STALE`
-       - `FAIL_PUBLIC_V7_HISTORY_TOUCH_REPORT_MISSING`
+       - `FAIL_PRIVATE_V7_HISTORY_TOUCH_REPORT_MISSING`
        - `FAIL_PRODUCTION_DELTA_NOOP_NO_CHANGED_PACKS`
      - `PRODUCTION_DELTA_NOOP_NO_CHANGED_PACKS` ist nicht mehr warn-only.
    - Verifikation:
@@ -1041,3 +1165,65 @@ Dadurch war das System operativ zwar lauffähig, aber nicht sauber auditierbar. 
    - Bedeutung:
      - Night-/Day-Runs sollen jetzt sauber an der Datenwahrheit scheitern statt Stage-B mit stale Snapshots zu entwerten.
      - Nächster operativer Schritt bleibt: lokalen v7-Refresh kontrolliert grün bekommen, danach Delta/Snapshot/Stage-A auf aktuelle As-of-Serie neu evaluieren.
+
+31. Lokale Quant-Storage-Wahrheit neu verifiziert und als Recovery-Pfad aufgesetzt.
+   - Verifizierte lokale Quant-Parquet-Basis:
+     - Root:
+       - `/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/data/raw/provider=EODHD`
+     - Stocks:
+       - `74,837` Assets
+       - `2,411` eindeutige `source_pack_rel`
+       - Historie `1990-01-01 .. 2026-02-20`
+     - ETFs:
+       - `20,312` Assets
+       - `688` eindeutige `source_pack_rel`
+       - Historie `1990-01-02 .. 2026-02-23`
+   - Bedeutung:
+     - Die historische Parquet-Basis reicht fuer Quant-Training.
+     - Der offene Blocker bleibt Freshness / Delta / Backbone fuer aktuelle Tage.
+   - Neuer lokaler Recovery-Pfad:
+     - Script:
+       - `/Users/michaelpuchowezki/Dev/rubikvault-site/scripts/quantlab/bootstrap_v7_history_from_quant_parquet.py`
+     - Ziel:
+       - lokale Rekonstruktion von `history/**/*.ndjson.gz` aus bestehenden Quant-Parquets
+       - plus privater Touch-Report unter:
+         - `/Users/michaelpuchowezki/Dev/rubikvault-site/mirrors/universe-v7/reports/history_touch_report.json`
+   - Laufstatus:
+     - Sample-Run verifiziert (`packs_count=3`, `entries_count=122`)
+     - Voll-Run gestartet am `2026-03-09`; erst nach Abschluss kann Delta/Backbone erneut gegen eine vollstaendige lokale Raw-History geprüft werden.
+
+## 2026-03-10 - Bootstrap Complete / Freshness Still Partial
+
+What was verified:
+- Local v7 raw-history bootstrap finished successfully from Quant parquet into `mirrors/universe-v7/history`.
+- Rebuilt private touch report now exists and is large enough to drive backbone freshness checks again.
+- Local Quant parquet basis is still the main training truth for stocks and ETFs and remains strong enough for research/training.
+
+Hard numbers:
+- `history_touch_report.json`: `packs_count=3099`, `entries_count=95149`, generated `2026-03-09T19:45:21Z`.
+- Stock parquet: `74837` assets, `2411` packs, `256200140` rows, `1990-01-01..2026-02-20`.
+- ETF parquet: `20312` assets, `688` packs, `35861869` rows, `1990-01-02..2026-02-23`.
+
+Important nuance:
+- Fresh ingest directories exist through `2026-03-08`, but they currently contain delistings/corp-actions only.
+- Stock/ETF bar parquet is still only present under `ingest_date=2026-02-25`.
+- This means QuantLab is now much closer to operational truth again, but not yet fully current on stock/ETF daily bars.
+
+Night run status (latest inspected overnight sweep):
+- Job: `overnight_q1_training_sweep_safe_20260308_night1`
+- Result: operational failure, not research success
+- Final summary: `done=0`, `failed=3`, `pending=297`, stopped after consecutive failures
+- Failure pattern: first RSS/OOM kills (`rc=137`), then stale-heartbeat/orphan kills (`rc=142`)
+- Conclusion: overnight runner guardrails are working, but the selected profile is still too heavy/fragile for stable unattended throughput.
+
+Gate / stability status:
+- Latest final gate matrix inspected: `run_id=q1v4gates_1773034951`
+- Result: `ok=true` with one strict pass and clean registry/portfolio alignment
+- But the backbone report still shows `PRODUCTION_DELTA_NOOP_NO_CHANGED_PACKS`, so the green gate is not yet equivalent to fully restored daily freshness.
+- Stage-B stability series remains partial: `strict_positive_ratio_all=0.3` over the inspected as-of series.
+
+Current interpretation:
+- v4.0 is materially advanced but not final.
+- Training coverage is good enough.
+- Daily-fresh operation is not yet good enough.
+- Main remaining work stays: restore stock/ETF freshness, stabilize Stage-B over series, harden overnight profile, then soak release-strict.

@@ -14,12 +14,17 @@ function normalizeTicker(value) {
   return String(value || '').trim().toUpperCase();
 }
 
-function readUniverseSet(relPath = 'public/data/universe/all.json') {
+function readUniverseSet(relPath = 'public/data/universe/v7/ssot/stocks.max.symbols.json') {
   const loaded = readJson(relPath);
   if (!loaded.ok) return { ok: false, errors: loaded.errors, set: new Set() };
-  if (!Array.isArray(loaded.doc)) return { ok: false, errors: [`invalid universe array: ${relPath}`], set: new Set() };
+  const universeRows = Array.isArray(loaded.doc)
+    ? loaded.doc
+    : Array.isArray(loaded.doc?.symbols)
+      ? loaded.doc.symbols
+      : null;
+  if (!Array.isArray(universeRows)) return { ok: false, errors: [`invalid universe payload: ${relPath}`], set: new Set() };
   const set = new Set();
-  for (const row of loaded.doc) {
+  for (const row of universeRows) {
     const ticker = normalizeTicker(typeof row === 'string' ? row : row?.ticker || row?.symbol);
     if (ticker) set.add(ticker);
   }
@@ -90,6 +95,16 @@ function validateMeta(doc, relPath) {
   return errors;
 }
 
+function resolveUniverseSetForDoc(doc) {
+  const chain = Array.isArray(doc?.meta?.source_chain) ? doc.meta.source_chain : [];
+  const usesV7Stocks = chain.some((entry) => String(entry || '').includes('public/data/universe/v7/ssot/stocks.max.symbols.json'));
+  const usesLegacyAll = chain.some((entry) => String(entry || '').includes('public/data/universe/all.json'));
+  if (usesV7Stocks && v7UniverseSet.size > 0) return v7UniverseSet;
+  if (usesLegacyAll && legacyUniverseSet.size > 0) return legacyUniverseSet;
+  if (v7UniverseSet.size > 0) return v7UniverseSet;
+  return legacyUniverseSet;
+}
+
 function validateBenchmarks(doc, relPath) {
   const errors = validateMeta(doc, relPath);
   const map = doc?.data?.benchmarks;
@@ -143,12 +158,13 @@ function validatePeers(doc, relPath) {
     }
   }
 
-  if (universeSet.size > 0) {
+  const peerUniverseSet = resolveUniverseSetForDoc(doc);
+  if (peerUniverseSet.size > 0) {
     const peerTickerSet = new Set(keys.map((ticker) => normalizeTicker(ticker)).filter(Boolean));
-    const inUniverse = [...peerTickerSet].filter((ticker) => universeSet.has(ticker)).length;
-    const ratio = inUniverse / universeSet.size;
+    const inUniverse = [...peerTickerSet].filter((ticker) => peerUniverseSet.has(ticker)).length;
+    const ratio = inUniverse / peerUniverseSet.size;
     if (ratio < MIN_PEERS_COVERAGE_RATIO) {
-      const missing = [...universeSet].filter((ticker) => !peerTickerSet.has(ticker)).sort().slice(0, SAMPLE_LIMIT);
+      const missing = [...peerUniverseSet].filter((ticker) => !peerTickerSet.has(ticker)).sort().slice(0, SAMPLE_LIMIT);
       errors.push(`${relPath}: peers coverage ${(ratio * 100).toFixed(2)}% below minimum ${(MIN_PEERS_COVERAGE_RATIO * 100).toFixed(2)}% (sample missing=${missing.join(',')})`);
     }
   }
@@ -188,7 +204,8 @@ function validateCorrelations(doc, relPath) {
 
   const coverage = Object.keys(correlations).length;
   const byAbsolute = Math.max(0, MIN_CORRELATIONS_COVERAGE);
-  const correlationBase = adjustedSeriesSet.size > 0 ? adjustedSeriesSet.size : universeSet.size;
+  const correlationUniverseBase = v7UniverseSet.size > 0 ? v7UniverseSet.size : legacyUniverseSet.size;
+  const correlationBase = adjustedSeriesSet.size > 0 ? adjustedSeriesSet.size : correlationUniverseBase;
   const byRatio = correlationBase > 0 ? Math.ceil(correlationBase * Math.max(0, MIN_CORRELATIONS_COVERAGE_RATIO)) : 0;
   const required = Math.max(byAbsolute, byRatio);
   if (coverage < required) {
@@ -297,10 +314,15 @@ const checks = [
 
 const failures = [];
 const globalPriceSourceKinds = new Set();
-const universeLoaded = readUniverseSet();
-const universeSet = universeLoaded.set;
-if (!universeLoaded.ok) {
-  for (const err of universeLoaded.errors) failures.push(err);
+const v7UniverseLoaded = readUniverseSet();
+const v7UniverseSet = v7UniverseLoaded.set;
+if (!v7UniverseLoaded.ok) {
+  for (const err of v7UniverseLoaded.errors) failures.push(err);
+}
+const legacyUniverseLoaded = readUniverseSet('public/data/universe/all.json');
+const legacyUniverseSet = legacyUniverseLoaded.set;
+if (!legacyUniverseLoaded.ok) {
+  for (const err of legacyUniverseLoaded.errors) failures.push(err);
 }
 const adjustedSeriesLoaded = readAdjustedSeriesSet();
 const adjustedSeriesSet = adjustedSeriesLoaded.set;

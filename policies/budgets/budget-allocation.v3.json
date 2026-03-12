@@ -1,26 +1,26 @@
 {
   "schema_version": "v3",
   "currency": "calls/day",
-  "hard_cap": 900,
-  "reserve": 120,
+  "hard_cap": 3500,
+  "reserve": 200,
   "stop_before_calls": true,
   "allocations": {
     "dp0_universe": 20,
-    "dp1_eod": 420,
+    "dp1_eod": 2500,
     "dp1_5_fx": 10,
     "dp2_actions": 120,
     "dp3_adjusted": 0,
     "dp4_pulse": 0,
-    "dp5_news": 180,
+    "dp5_news": 300,
     "dp6_indicators": 0,
-    "dp7_fundamentals_bridge": 150,
+    "dp7_fundamentals_bridge": 200,
     "dp8_market": 50
   },
   "max_planned_calls": {
-    "dp1_eod": 700,
+    "dp1_eod": 2600,
     "dp2_actions": 160,
-    "dp5_news": 220,
-    "dp7_fundamentals_bridge": 180,
-    "dp8_market": 60
+    "dp5_news": 350,
+    "dp7_fundamentals_bridge": 250,
+    "dp8_market": 80
   }
 }

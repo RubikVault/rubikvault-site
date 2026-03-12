@@ -1,0 +1,49 @@
+{
+  "schema_version": "runblock.v3",
+  "shadow_mode_min_days": 14,
+  "promotion_tiebreaker_hierarchy": [
+    "net_return_after_costs",
+    "brier_score",
+    "calibration_error"
+  ],
+  "scientific_gates": {
+    "oos_accuracy_ratio": 0.85,
+    "brier_max": 0.25,
+    "calibration_error_max": 0.05,
+    "net_return_positive": true,
+    "min_outcomes": 60,
+    "regime_compatible": true,
+    "leakage_pass": true,
+    "primary_data_quality_pass": true,
+    "no_structural_instability": true
+  },
+  "forecast_gates": {
+    "horizons": ["1d", "5d", "20d"],
+    "logloss_below_naive": true,
+    "calibration_buckets": {
+      "60_pct_tolerance": 5,
+      "70_pct_tolerance": 5,
+      "80_pct_tolerance": 5
+    },
+    "drift_below_threshold": true,
+    "leakage_pass": true,
+    "no_structural_instability": true,
+    "no_promotion_freeze": true
+  },
+  "elliott_gates": {
+    "v1_no_directional_score": true,
+    "invalidation_max_delay_days": 1,
+    "v2_enablement": {
+      "min_confluence_events": 200,
+      "net_of_costs": true,
+      "regime_separated": true,
+      "significance_p": 0.05,
+      "practical_effect_size": true
+    }
+  },
+  "structural_instability": {
+    "consecutive_regime_shifts_threshold": 3,
+    "triggers_promotion_block": true,
+    "triggers_challenger_search": true
+  }
+}

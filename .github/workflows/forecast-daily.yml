@@ -86,6 +86,7 @@ jobs:
             echo "No changes to commit"
           else
             git commit -m "chore(forecast): daily pipeline $(date +%Y-%m-%d)"
+            git pull --rebase origin main || true
             git push
           fi
 

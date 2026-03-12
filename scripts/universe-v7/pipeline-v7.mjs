@@ -93,6 +93,26 @@ function canonicalId(exchangeCode, symbol) {
   return `${String(exchangeCode || 'UNK').toUpperCase()}:${String(symbol || '').toUpperCase()}`;
 }
 
+function historyPackRelativePath(row) {
+  const rel = String(row?.pointers?.history_pack || '').trim();
+  return rel || null;
+}
+
+function hasAccessibleHistoryPack(row, cache = null) {
+  const rel = historyPackRelativePath(row);
+  if (!rel) return false;
+  if (cache?.has(rel)) return cache.get(rel);
+  const abs = path.join(REPO_ROOT, 'mirrors/universe-v7', rel);
+  let ok = false;
+  try {
+    ok = fsSync.existsSync(abs) && fsSync.statSync(abs).isFile();
+  } catch {
+    ok = false;
+  }
+  if (cache) cache.set(rel, ok);
+  return ok;
+}
+
 function pickSymbol(row) {
   return normalizeTicker(row?.symbol || row?.ticker || row?.code || row?.Code || row);
 }
@@ -117,6 +137,56 @@ function daysBetween(a, b) {
   const db = Date.parse(`${b}T00:00:00Z`);
   if (!Number.isFinite(da) || !Number.isFinite(db)) return null;
   return Math.max(0, Math.floor((db - da) / 86400000));
+}
+
+function buildHistoryTouchReportPayload({ runId, updated, entries, packs, sanitize = false }) {
+  const sortedPacks = [...packs.values()]
+    .map((pack) => sanitize
+      ? {
+          pack_sha256: pack.pack_sha256 || null,
+          touched_assets: pack.touched_assets,
+        }
+      : {
+          history_pack: pack.history_pack,
+          pack_sha256: pack.pack_sha256 || null,
+          touched_assets: pack.touched_assets,
+        })
+    .sort((a, b) => {
+      const ak = String(a.history_pack || a.pack_sha256 || '');
+      const bk = String(b.history_pack || b.pack_sha256 || '');
+      return ak.localeCompare(bk);
+    });
+
+  const sortedEntries = entries
+    .map((entry) => sanitize
+      ? {
+          canonical_id: entry.canonical_id,
+          symbol: entry.symbol,
+          exchange: entry.exchange,
+          currency: entry.currency,
+          type_norm: entry.type_norm,
+          provider_symbol: entry.provider_symbol,
+          country: entry.country,
+          pack_sha256: entry.pack_sha256 || null,
+        }
+      : entry)
+    .sort((a, b) => {
+      const packCmp = String(a.history_pack || a.pack_sha256 || '').localeCompare(String(b.history_pack || b.pack_sha256 || ''));
+      if (packCmp !== 0) return packCmp;
+      return String(a.canonical_id || '').localeCompare(String(b.canonical_id || ''));
+    });
+
+  return {
+    schema: 'rv_v7_history_touch_report_v1',
+    generated_at: nowIso(),
+    run_id: runId,
+    updated_ids_count: updated.size,
+    entries_count: sortedEntries.length,
+    packs_count: sortedPacks.length,
+    report_scope: sanitize ? 'public_sanitized' : 'private_full',
+    packs: sortedPacks,
+    entries: sortedEntries,
+  };
 }
 
 async function writeHistoryTouchReport({ registryRows, updatedIds, runDir, runId }) {
@@ -150,20 +220,15 @@ async function writeHistoryTouchReport({ registryRows, updatedIds, runDir, runId
     }
     packs.get(historyPack).touched_assets += 1;
   }
-  await writeJsonAtomic(path.join(runDir, 'reports', 'history_touch_report.json'), {
-    schema: 'rv_v7_history_touch_report_v1',
-    generated_at: nowIso(),
-    run_id: runId,
-    updated_ids_count: updated.size,
-    entries_count: entries.length,
-    packs_count: packs.size,
-    packs: [...packs.values()].sort((a, b) => String(a.history_pack).localeCompare(String(b.history_pack))),
-    entries: entries.sort((a, b) => {
-      const packCmp = String(a.history_pack).localeCompare(String(b.history_pack));
-      if (packCmp != 0) return packCmp;
-      return String(a.canonical_id).localeCompare(String(b.canonical_id));
-    }),
-  });
+  const privatePayload = buildHistoryTouchReportPayload({ runId, updated, entries, packs, sanitize: false });
+  const publicPayload = buildHistoryTouchReportPayload({ runId, updated, entries, packs, sanitize: true });
+
+  await writeJsonAtomic(path.join(runDir, 'reports', 'history_touch_report.json'), privatePayload);
+  await writeJsonAtomic(path.join(runDir, 'reports', 'history_touch_report.public.json'), publicPayload);
+
+  const mirrorReportsDir = path.join(REPO_ROOT, 'mirrors', 'universe-v7', 'reports');
+  await fs.mkdir(mirrorReportsDir, { recursive: true });
+  await writeJsonAtomic(path.join(mirrorReportsDir, 'history_touch_report.json'), privatePayload);
 }
 
 function stalenessBusinessDays(lastTradeDate, cfg, today = nowIso().slice(0, 10)) {
@@ -882,9 +947,11 @@ async function runBackfill({
   }
 
   const registryById = new Map(registryRows.map((row) => [row.canonical_id, row]));
+  const historyPackCache = new Map();
   const isBackfillReal = (row) => String(row?._quality_basis || row?.quality_basis || '').toLowerCase() === 'backfill_real';
+  const isBackfillReady = (row) => isBackfillReal(row) && hasAccessibleHistoryPack(row, historyPackCache);
   const forcedPendingSet = canonicalAllow ? new Set([...canonicalAllow].filter((cid) => queueSet.has(cid))) : new Set();
-  const qualityPending = fullQueue.filter((cid) => forcedPendingSet.has(cid) || !isBackfillReal(registryById.get(cid)));
+  const qualityPending = fullQueue.filter((cid) => forcedPendingSet.has(cid) || !isBackfillReady(registryById.get(cid)));
   if (qualityPending.length > 0) {
     const qualityPendingSet = new Set(qualityPending);
     // Keep checkpoint state aligned with actual quality basis:
@@ -2049,6 +2116,7 @@ async function writePublishPayload({ cfg, runDir, runId, contractDoc, registryRo
     ['reports/coverage_summary.json', 'reports/coverage_summary.json'],
     ['reports/data_access_report.json', 'reports/data_access_report.json'],
     ['reports/feature_eligibility_report.json', 'reports/feature_eligibility_report.json'],
+    ['reports/history_touch_report.public.json', 'reports/history_touch_report.json'],
     ['reports/kpi_levels_report.json', 'reports/kpi_levels_report.json'],
     ['reports/ghost_price_report.json', 'reports/ghost_price_report.json'],
     ['reports/drift_report.json', 'reports/drift_report.json'],

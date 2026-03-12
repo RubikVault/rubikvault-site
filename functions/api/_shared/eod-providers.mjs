@@ -45,6 +45,9 @@ export async function fetchBarsWithProviderChain(symbol, env, options = {}) {
   const forced = getForcedProvider(env);
   const providerMode = resolveProviderMode(env);
   const allowFailover = providerMode === 'FAILOVER_ALLOWED' && options.allowFailover === true;
+  const providerSymbols = options.providerSymbols && typeof options.providerSymbols === 'object'
+    ? options.providerSymbols
+    : null;
 
   // Load chain config from registry or fallback
   let primary = 'eodhd';
@@ -71,7 +74,8 @@ export async function fetchBarsWithProviderChain(symbol, env, options = {}) {
   const outputsize = options.outputsize || '260';
 
   const fetchFromProvider = async (provider) => {
-    return fetchBarsViaAdapter(provider, symbol, env, { startDate, outputsize });
+    const providerSymbol = String(providerSymbols?.[provider] || symbol || '').trim();
+    return fetchBarsViaAdapter(provider, providerSymbol, env, { startDate, outputsize });
   };
 
   // 1. Forced Provider Logic

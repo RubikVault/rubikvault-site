@@ -22,7 +22,7 @@ function pickLatestIso(values) {
 
 async function main() {
   const generatedAt = nowIso();
-  const universe = await loadUniverse('public/data/universe/all.json');
+  const universe = await loadUniverse();
   const tickers = universe.map((row) => row.ticker);
 
   const peersDoc = await readJson('public/data/ui/peers/latest.json', { data: { peers: {} } });
@@ -121,6 +121,7 @@ async function main() {
   const dataDate = pickLatestIso(latestDates);
   const coverageCount = Object.keys(correlations).length;
   const sourceChain = [
+    'public/data/universe/v7/ssot/stocks.max.symbols.json',
     'public/data/v3/series/adjusted/*.ndjson.gz',
     'public/data/ui/benchmarks/latest.json',
     'public/data/ui/peers/latest.json'

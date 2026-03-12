@@ -31,7 +31,56 @@ Das Quant-System ist erst dann v4.0-fertig, wenn gleichzeitig erfüllt ist:
 
 - `/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab`
 
+## Lokale Storage-Wahrheit (Stand 2026-03-10)
+
+- QuantLab arbeitet lokal auf dem Mac unter:
+  - `/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab`
+- Historische Quant-Parquets fuer Stocks/ETFs liegen lokal unter:
+  - `/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/data/raw/provider=EODHD`
+- Aktuelle taegliche Raw-Freshness nach heutigem Refresh:
+  - Stocks: latest ingest `2026-03-10`
+  - ETFs: latest ingest `2026-03-10`
+- Aktuell verifizierte lokale Quant-Abdeckung:
+  - Stocks: `74,837` Assets in `2,411` Packs, Historie `1990-01-01 .. 2026-02-20`
+  - ETFs: `20,312` Assets in `688` Packs, Historie `1990-01-02 .. 2026-02-23`
+- Bedeutung:
+  - Die historische Parquet-Basis ist fuer Quant-Training stark genug vorhanden.
+  - Der operative Blocker ist nicht fehlende Trainingshistorie, sondern Freshness / Delta / Backbone auf aktuelle Tage.
+- Lokaler Raw-v7-History-Store fuer Delta-/Freshness-/Backbone-Truth:
+  - `/Users/michaelpuchowezki/QuantLabHot/storage/universe-v7-history`
+- Aktiver Runtime-Kern, der lokal auf dem Mac bleiben muss:
+  - `/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/data/raw/provider=EODHD`
+  - `/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/data/snapshots`
+  - `/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/features/store/feature_store_version=v4_q1panel_overnight`
+  - `/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/features/store/feature_store_version=v4_q1inc`
+  - `/Users/michaelpuchowezki/QuantLabHot/storage/universe-v7-history/history`
+- Kalte, ausgelagerte Bestände fuer externes Backup:
+  - `/Volumes/My Passport/EODHD-History/from_quantlabhot/quantlab_cold_2026-03-10`
+- Bereits sauber separiertes Desktop-Archiv:
+  - `/Volumes/My Passport/EODHD-History/from_desktop/EODHD_Data`
+- Gemeinsamer Export-Sammelpunkt fuer externe Platte:
+  - `/Volumes/My Passport/EODHD-History`
+- Diese Raw-History wird seit 2026-03-09 additiv aus den bestehenden Quant-Parquets rekonstruiert ueber:
+  - `/Users/michaelpuchowezki/Dev/rubikvault-site/scripts/quantlab/bootstrap_v7_history_from_quant_parquet.py`
+- Wichtig:
+  - Quant-Training kann auf den Parquets laufen.
+  - Der taegliche Delta-/Backbone-Pfad erwartet zusaetzlich eine lokale Raw-History plus privaten Touch-Report.
+  - Website-Runtime braucht diese Raw-History nicht direkt, aber lokale v7-Refresh-/Delta-Pfade schon.
+
 ## Letzter belastbarer Stand
+
+- Heutige Delta-Kette lokal gruen:
+  - Delta: `/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/jobs/q1_history_touch_delta_20260310_fix1/manifest.json`
+  - Snapshot increment: `/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/runs/run_id=q1snapinc_20260310T161508Z/q1_incremental_snapshot_update_run_status.json`
+  - Feature increment: `/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/features/store/feature_store_version=v4_q1inc/asof_date=2026-02-26/feature_manifest.delta_2026-03-10.json`
+  - Reconciliation: `/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/runs/run_id=q1recon_20260310T161906Z/q1_reconciliation_report.json`
+- Aktueller Day-Run nach lokalem Profil-Fix wieder gesund:
+  - `/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/jobs/day_q1_safe_20260310_172652/state.json`
+  - `p90/top2500` und `p90/top3500` erfolgreich, kein RSS-Kill mehr
+- Neue Zero-Strict-/Near-Pass-Diagnostik:
+  - `/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/ops/stage_b_stability/zero_strict_near_pass_latest.json`
+- Neue release-strict Wiederholungsserie auf der besten 2026-02-20-Kette:
+  - `/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/ops/release_strict/repeat_series_2026-03-10.json`
 
 - Data-Truth Backbone (Provider-Raw Corp/Delistings) erfolgreich:
   - `/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/runs/run_id=q1backbone_1772758010/q1_daily_data_backbone_run_report.json`
@@ -134,18 +183,19 @@ Das Quant-System ist erst dann v4.0-fertig, wenn gleichzeitig erfüllt ist:
 - Primärblocker ist aktuell nicht mehr “Stage-B an sich”, sondern die Data-Freshness-/Publish-Truth-Kette vor Phase A.
 - Verifizierter Ist-Zustand:
   - Raw Bars `STOCK,ETF` aktuell nur bis `2026-02-25`
-  - öffentliches v7-Run-Truth defekt:
+  - oeffentliches v7-Run-Truth defekt:
     - `public/data/universe/v7/reports/run_status.json -> exit_code=90`
-    - `public/data/universe/v7/reports/history_touch_report.json` fehlt
+  - zusaetzlich fehlte die private lokale Source-Truth fuer Delta/Backbone:
+    - `mirrors/universe-v7/reports/history_touch_report.json`
 - Konsequenz:
   - Der Backbone wurde auf fail-closed umgestellt.
-  - Stale Rohdaten / fehlender Touch-Report / produktiver No-Op-Delta stoppen den Lauf jetzt hart vor Delta/Snapshot/Stage-A/Stage-B.
+  - Stale Rohdaten / fehlender privater Touch-Report / produktiver No-Op-Delta stoppen den Lauf jetzt hart vor Delta/Snapshot/Stage-A/Stage-B.
 - Verifizierter Probe-Report:
   - `/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/runs/run_id=q1backbone_1773047048/q1_daily_data_backbone_run_report.json`
   - `exit_code=96`
   - `threshold_failures`:
     - `FAIL_RAW_BARS_REQUIRED_TYPES_STALE`
-    - `FAIL_PUBLIC_V7_HISTORY_TOUCH_REPORT_MISSING`
+    - `FAIL_PRIVATE_V7_HISTORY_TOUCH_REPORT_MISSING`
     - `FAIL_PRODUCTION_DELTA_NOOP_NO_CHANGED_PACKS`
 
 Das ist beabsichtigt: lieber harter, transparenter Data-Truth-Abbruch als alte Snapshots in Night-Sweeps.
@@ -155,4 +205,5 @@ Das ist beabsichtigt: lieber harter, transparenter Data-Truth-Abbruch als alte S
 - `02-current-state-and-implementation-log.md`
 - `04-overnight-ops-profile.md`
 - `05-low-reasoning-operator-handoff.md`
+- `06-local-storage-layout-and-automation.md`
 - `/Users/michaelpuchowezki/Dev/rubikvault-site/docs/runbooks/web-features-v2-non-breaking.md` (additiver Web-v2 Shadow-Pfad für Forecast/Scientific/Elliott)

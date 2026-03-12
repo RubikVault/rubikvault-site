@@ -1,0 +1,125 @@
+{
+  "schema_version": "rv.features-v4.local-main-5ticker-report.v1",
+  "generated_at": "2026-03-08T11:15:26.511Z",
+  "local_base": "http://127.0.0.1:8788",
+  "main_base": "https://rubikvault.com",
+  "tickers": [
+    "A",
+    "AAPL",
+    "ABBV",
+    "AAMI",
+    "AAOI"
+  ],
+  "summary": {
+    "total": 5,
+    "baseline_presence_parity_ok": 5,
+    "v4_local_contract_ok": 5
+  },
+  "rows": [
+    {
+      "ticker": "A",
+      "local": {
+        "stock_ok": true,
+        "v4_ok": true,
+        "close": 115.07,
+        "as_of": "2026-03-06",
+        "has_stats": true,
+        "v4_contract_ok": true
+      },
+      "main": {
+        "stock_ok": true,
+        "close": 115.07,
+        "as_of": "2026-03-06",
+        "has_stats": true
+      },
+      "checks": {
+        "baseline_presence_parity": true,
+        "v4_local_contract_ok": true
+      }
+    },
+    {
+      "ticker": "AAPL",
+      "local": {
+        "stock_ok": true,
+        "v4_ok": true,
+        "close": 257.46,
+        "as_of": "2026-03-06",
+        "has_stats": true,
+        "v4_contract_ok": true
+      },
+      "main": {
+        "stock_ok": true,
+        "close": 257.46,
+        "as_of": "2026-03-06",
+        "has_stats": true
+      },
+      "checks": {
+        "baseline_presence_parity": true,
+        "v4_local_contract_ok": true
+      }
+    },
+    {
+      "ticker": "ABBV",
+      "local": {
+        "stock_ok": true,
+        "v4_ok": true,
+        "close": 230.11,
+        "as_of": "2026-03-06",
+        "has_stats": true,
+        "v4_contract_ok": true
+      },
+      "main": {
+        "stock_ok": true,
+        "close": 230.11,
+        "as_of": "2026-03-06",
+        "has_stats": true
+      },
+      "checks": {
+        "baseline_presence_parity": true,
+        "v4_local_contract_ok": true
+      }
+    },
+    {
+      "ticker": "AAMI",
+      "local": {
+        "stock_ok": true,
+        "v4_ok": true,
+        "close": 51.18,
+        "as_of": "2026-03-06",
+        "has_stats": true,
+        "v4_contract_ok": true
+      },
+      "main": {
+        "stock_ok": true,
+        "close": 51.18,
+        "as_of": "2026-03-06",
+        "has_stats": true
+      },
+      "checks": {
+        "baseline_presence_parity": true,
+        "v4_local_contract_ok": true
+      }
+    },
+    {
+      "ticker": "AAOI",
+      "local": {
+        "stock_ok": true,
+        "v4_ok": true,
+        "close": 95.58,
+        "as_of": "2026-03-06",
+        "has_stats": true,
+        "v4_contract_ok": true
+      },
+      "main": {
+        "stock_ok": true,
+        "close": 95.58,
+        "as_of": "2026-03-06",
+        "has_stats": true
+      },
+      "checks": {
+        "baseline_presence_parity": true,
+        "v4_local_contract_ok": true
+      }
+    }
+  ]
+}

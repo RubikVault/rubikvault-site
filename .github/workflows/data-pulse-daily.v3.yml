@@ -60,6 +60,7 @@ jobs:
             exit 0
           fi
           git commit -m "chore(v3): daily pulse artifacts"
+          git pull --rebase origin main || true
           git push
 
       - name: Alert on failure

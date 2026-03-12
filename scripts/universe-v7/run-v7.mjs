@@ -80,6 +80,14 @@ async function copyReportsFromRunDir(runDir) {
   const files = await fs.readdir(runReports).catch(() => []);
   for (const name of files) {
     if (!name.endsWith('.json') && !name.endsWith('.md')) continue;
+    if (name === 'history_touch_report.public.json') {
+      await fs.copyFile(
+        path.join(runReports, name),
+        path.join(publicReports, 'history_touch_report.json')
+      );
+      continue;
+    }
+    if (name === 'history_touch_report.json') continue;
     await fs.copyFile(path.join(runReports, name), path.join(publicReports, name));
   }
 }

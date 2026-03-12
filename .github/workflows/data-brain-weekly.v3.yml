@@ -51,4 +51,5 @@ jobs:
             exit 0
           fi
           git commit -m "chore(v3): weekly data brain refresh"
+          git pull --rebase origin main || true
           git push

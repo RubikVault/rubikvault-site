@@ -1,0 +1,37 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://rubikvault.com/schemas/scientific_eligibility.schema.json",
+  "title": "Stock Insights v4 Scientific Eligibility",
+  "type": "object",
+  "required": ["pattern", "setup", "trigger", "reasons"],
+  "properties": {
+    "pattern": { "$ref": "#/definitions/evidenceRow" },
+    "setup": { "$ref": "#/definitions/evidenceRow" },
+    "trigger": { "$ref": "#/definitions/evidenceRow" },
+    "reasons": {
+      "type": "array",
+      "items": { "type": "string" }
+    }
+  },
+  "definitions": {
+    "evidenceRow": {
+      "type": "object",
+      "required": ["samples", "state"],
+      "properties": {
+        "samples": { "type": "integer", "minimum": 0 },
+        "state": {
+          "type": "string",
+          "enum": [
+            "STRONG_EVIDENCE",
+            "MODERATE_EVIDENCE",
+            "LOW_EVIDENCE",
+            "DISABLED_NEGATIVE_EDGE",
+            "DISABLED_INSUFFICIENT_DATA"
+          ]
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

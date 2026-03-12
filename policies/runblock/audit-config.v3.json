@@ -1,0 +1,43 @@
+{
+  "schema_version": "runblock.v3",
+  "decision_log": {
+    "storage": "append_only",
+    "path": "public/data/v3/audit/decisions",
+    "immutable": true,
+    "required_fields": [
+      "log_id", "timestamp", "snapshot_id", "ticker",
+      "feature_name", "feature_version", "model_version",
+      "calibration_version", "regime_version", "regime_tag",
+      "regime_confidence", "data_quality_state", "feature_hash",
+      "prediction_payload", "fallback_used", "fallback_reason",
+      "champion_id", "challenger_id", "reason_codes",
+      "realized_outcome", "structural_instability_flag",
+      "top_3_features", "top_3_feature_weights",
+      "knowledge_time", "valid_time", "cost_model_version",
+      "liquidity_bucket", "tradability_flag",
+      "global_system_state", "git_commit_hash", "dependency_trace"
+    ]
+  },
+  "incident_path": "public/data/v3/audit/incidents",
+  "dependency_trace_fields": [
+    "source_data_versions", "feature_versions", "rule_versions",
+    "regime_version", "model_version", "calibration_version",
+    "cost_model_version", "ui_payload_version"
+  ],
+  "failure_pattern_detection": {
+    "enabled": true,
+    "patterns": [
+      "repeated_high_logloss_sector",
+      "repeated_post_regime_shift_degradation",
+      "repeated_fallback_dependency",
+      "repeated_cost_miss",
+      "repeated_calibration_collapse",
+      "repeated_suspect_dependency"
+    ],
+    "threshold_consecutive": 3
+  },
+  "explainability": {
+    "tree_models": "top_3_features_required",
+    "other_models": "explainability_unavailable_reason_required"
+  }
+}

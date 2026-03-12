@@ -2,6 +2,7 @@ import { sha256Hex } from './_shared/digest.mjs';
 import { getTiingoKeyInfo } from './_shared/tiingo-key.mjs';
 import { fetchFmpFundamentals } from './_shared/fundamentals-fmp.mjs';
 import { kvGetJson } from '../_lib/kv-safe.js';
+import { fetchEodhdFundamentals } from './_shared/fundamentals-eodhd.mjs';
 
 const MODULE_NAME = 'fundamentals';
 const TTL_SECONDS = 24 * 60 * 60;
@@ -309,10 +310,17 @@ export async function onRequestGet(context) {
   };
 
   if (shouldFallbackToFmp(primary)) {
-    const fmpResult = await fetchFmpFundamentals(ticker, env);
-    if (fmpResult.ok && fmpResult.data) {
-      upstream = fmpResult;
+    // Try EODHD before FMP
+    const eodhdResult = await fetchEodhdFundamentals(ticker, env);
+    if (eodhdResult.ok && eodhdResult.data) {
+      upstream = eodhdResult;
       fallbackUsed = true;
+    } else {
+      const fmpResult = await fetchFmpFundamentals(ticker, env);
+      if (fmpResult.ok && fmpResult.data) {
+        upstream = fmpResult;
+        fallbackUsed = true;
+      }
     }
   }
 

@@ -1,0 +1,27 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://rubikvault.com/schemas/context_setup_trigger.schema.json",
+  "title": "Stock Insights v4 Context/Setup/Trigger",
+  "type": "object",
+  "required": ["context", "setup", "trigger"],
+  "properties": {
+    "context": { "$ref": "#/definitions/row" },
+    "setup": { "$ref": "#/definitions/row" },
+    "trigger": { "$ref": "#/definitions/row" }
+  },
+  "definitions": {
+    "row": {
+      "type": "object",
+      "required": ["score", "drivers"],
+      "properties": {
+        "score": { "type": "number", "minimum": 0, "maximum": 100 },
+        "drivers": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

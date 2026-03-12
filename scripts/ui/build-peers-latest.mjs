@@ -29,7 +29,7 @@ function pickLatestIso(values) {
 
 async function main() {
   const generatedAt = nowIso();
-  const universe = await loadUniverse('public/data/universe/all.json');
+  const universe = await loadUniverse();
   const tickers = universe.map((row) => row.ticker);
   const universeSet = new Set(tickers);
   const indexMap = await loadIndexUniverseMap();
@@ -142,7 +142,7 @@ async function main() {
       as_of: dataDate,
       provider: 'local-artifacts',
       source_chain: [
-        'public/data/universe/all.json',
+        'public/data/universe/v7/ssot/stocks.max.symbols.json',
         'public/data/universe/*.json',
         'public/data/v3/eod/US/latest.ndjson.gz',
         'public/data/v3/series/adjusted/*.ndjson.gz',

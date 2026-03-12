@@ -1,0 +1,2454 @@
+{
+  "schema_version": "rv.stock-insights.v2.parity-report.v1",
+  "generated_at": "2026-03-07T16:01:21.095Z",
+  "started_at": "2026-03-07T16:01:18.152Z",
+  "base_url": "http://127.0.0.1:8788",
+  "config": {
+    "max_tickers": 120,
+    "concurrency": 4,
+    "timeout_ms": 30000,
+    "warmup_enabled": true,
+    "strict": false,
+    "index_path": "public/data/features-v2/stock-insights/index.json"
+  },
+  "warmup": {
+    "enabled": true,
+    "ticker": "AAPL",
+    "v1_ok": true,
+    "v2_ok": true,
+    "notes": []
+  },
+  "summary": {
+    "total_tickers": 120,
+    "endpoints_ok_total": 120,
+    "endpoints_ok_ratio_pct": 100,
+    "v2_contract_ok_total": 120,
+    "v2_contract_ok_ratio_pct": 100,
+    "no_issue_total": 120,
+    "no_issue_ratio_pct": 100,
+    "presence_ok_total": {
+      "scientific": 120,
+      "forecast": 120,
+      "elliott": 120
+    },
+    "presence_ok_ratio_pct": {
+      "scientific": 100,
+      "forecast": 100,
+      "elliott": 100
+    },
+    "value_ok_total": {
+      "scientific": 120,
+      "forecast": 120,
+      "elliott": 120
+    },
+    "value_ok_ratio_pct": {
+      "scientific": 100,
+      "forecast": 100,
+      "elliott": 100
+    },
+    "activation_ready": true
+  },
+  "top_issues": [],
+  "rows": [
+    {
+      "ticker": "AAPL",
+      "v1_ok": true,
+      "v1_status": 200,
+      "v2_ok": true,
+      "v2_status": 200,
+      "issues": [],
+      "metrics": {
+        "presence": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        },
+        "values": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        }
+      }
+    },
+    {
+      "ticker": "MSFT",
+      "v1_ok": true,
+      "v1_status": 200,
+      "v2_ok": true,
+      "v2_status": 200,
+      "issues": [],
+      "metrics": {
+        "presence": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        },
+        "values": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        }
+      }
+    },
+    {
+      "ticker": "NVDA",
+      "v1_ok": true,
+      "v1_status": 200,
+      "v2_ok": true,
+      "v2_status": 200,
+      "issues": [],
+      "metrics": {
+        "presence": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        },
+        "values": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        }
+      }
+    },
+    {
+      "ticker": "AMZN",
+      "v1_ok": true,
+      "v1_status": 200,
+      "v2_ok": true,
+      "v2_status": 200,
+      "issues": [],
+      "metrics": {
+        "presence": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        },
+        "values": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        }
+      }
+    },
+    {
+      "ticker": "GOOGL",
+      "v1_ok": true,
+      "v1_status": 200,
+      "v2_ok": true,
+      "v2_status": 200,
+      "issues": [],
+      "metrics": {
+        "presence": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        },
+        "values": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        }
+      }
+    },
+    {
+      "ticker": "META",
+      "v1_ok": true,
+      "v1_status": 200,
+      "v2_ok": true,
+      "v2_status": 200,
+      "issues": [],
+      "metrics": {
+        "presence": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        },
+        "values": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        }
+      }
+    },
+    {
+      "ticker": "TSLA",
+      "v1_ok": true,
+      "v1_status": 200,
+      "v2_ok": true,
+      "v2_status": 200,
+      "issues": [],
+      "metrics": {
+        "presence": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        },
+        "values": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        }
+      }
+    },
+    {
+      "ticker": "SPY",
+      "v1_ok": true,
+      "v1_status": 200,
+      "v2_ok": true,
+      "v2_status": 200,
+      "issues": [],
+      "metrics": {
+        "presence": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        },
+        "values": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        }
+      }
+    },
+    {
+      "ticker": "QQQ",
+      "v1_ok": true,
+      "v1_status": 200,
+      "v2_ok": true,
+      "v2_status": 200,
+      "issues": [],
+      "metrics": {
+        "presence": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        },
+        "values": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        }
+      }
+    },
+    {
+      "ticker": "ROKU",
+      "v1_ok": true,
+      "v1_status": 200,
+      "v2_ok": true,
+      "v2_status": 200,
+      "issues": [],
+      "metrics": {
+        "presence": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        },
+        "values": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        }
+      }
+    },
+    {
+      "ticker": "A",
+      "v1_ok": true,
+      "v1_status": 200,
+      "v2_ok": true,
+      "v2_status": 200,
+      "issues": [],
+      "metrics": {
+        "presence": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        },
+        "values": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        }
+      }
+    },
+    {
+      "ticker": "AAMI",
+      "v1_ok": true,
+      "v1_status": 200,
+      "v2_ok": true,
+      "v2_status": 200,
+      "issues": [],
+      "metrics": {
+        "presence": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        },
+        "values": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        }
+      }
+    },
+    {
+      "ticker": "AAOI",
+      "v1_ok": true,
+      "v1_status": 200,
+      "v2_ok": true,
+      "v2_status": 200,
+      "issues": [],
+      "metrics": {
+        "presence": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        },
+        "values": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        }
+      }
+    },
+    {
+      "ticker": "AAP",
+      "v1_ok": true,
+      "v1_status": 200,
+      "v2_ok": true,
+      "v2_status": 200,
+      "issues": [],
+      "metrics": {
+        "presence": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        },
+        "values": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        }
+      }
+    },
+    {
+      "ticker": "AARD",
+      "v1_ok": true,
+      "v1_status": 200,
+      "v2_ok": true,
+      "v2_status": 200,
+      "issues": [],
+      "metrics": {
+        "presence": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        },
+        "values": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        }
+      }
+    },
+    {
+      "ticker": "AAT",
+      "v1_ok": true,
+      "v1_status": 200,
+      "v2_ok": true,
+      "v2_status": 200,
+      "issues": [],
+      "metrics": {
+        "presence": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        },
+        "values": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        }
+      }
+    },
+    {
+      "ticker": "ABAT",
+      "v1_ok": true,
+      "v1_status": 200,
+      "v2_ok": true,
+      "v2_status": 200,
+      "issues": [],
+      "metrics": {
+        "presence": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        },
+        "values": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        }
+      }
+    },
+    {
+      "ticker": "ABBV",
+      "v1_ok": true,
+      "v1_status": 200,
+      "v2_ok": true,
+      "v2_status": 200,
+      "issues": [],
+      "metrics": {
+        "presence": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        },
+        "values": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        }
+      }
+    },
+    {
+      "ticker": "ABCB",
+      "v1_ok": true,
+      "v1_status": 200,
+      "v2_ok": true,
+      "v2_status": 200,
+      "issues": [],
+      "metrics": {
+        "presence": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        },
+        "values": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        }
+      }
+    },
+    {
+      "ticker": "ABEO",
+      "v1_ok": true,
+      "v1_status": 200,
+      "v2_ok": true,
+      "v2_status": 200,
+      "issues": [],
+      "metrics": {
+        "presence": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        },
+        "values": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        }
+      }
+    },
+    {
+      "ticker": "ABG",
+      "v1_ok": true,
+      "v1_status": 200,
+      "v2_ok": true,
+      "v2_status": 200,
+      "issues": [],
+      "metrics": {
+        "presence": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        },
+        "values": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        }
+      }
+    },
+    {
+      "ticker": "ABM",
+      "v1_ok": true,
+      "v1_status": 200,
+      "v2_ok": true,
+      "v2_status": 200,
+      "issues": [],
+      "metrics": {
+        "presence": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        },
+        "values": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        }
+      }
+    },
+    {
+      "ticker": "ABNB",
+      "v1_ok": true,
+      "v1_status": 200,
+      "v2_ok": true,
+      "v2_status": 200,
+      "issues": [],
+      "metrics": {
+        "presence": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        },
+        "values": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        }
+      }
+    },
+    {
+      "ticker": "ABR",
+      "v1_ok": true,
+      "v1_status": 200,
+      "v2_ok": true,
+      "v2_status": 200,
+      "issues": [],
+      "metrics": {
+        "presence": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        },
+        "values": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        }
+      }
+    },
+    {
+      "ticker": "ABSI",
+      "v1_ok": true,
+      "v1_status": 200,
+      "v2_ok": true,
+      "v2_status": 200,
+      "issues": [],
+      "metrics": {
+        "presence": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        },
+        "values": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        }
+      }
+    },
+    {
+      "ticker": "ABT",
+      "v1_ok": true,
+      "v1_status": 200,
+      "v2_ok": true,
+      "v2_status": 200,
+      "issues": [],
+      "metrics": {
+        "presence": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        },
+        "values": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        }
+      }
+    },
+    {
+      "ticker": "ABUS",
+      "v1_ok": true,
+      "v1_status": 200,
+      "v2_ok": true,
+      "v2_status": 200,
+      "issues": [],
+      "metrics": {
+        "presence": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        },
+        "values": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        }
+      }
+    },
+    {
+      "ticker": "ABX",
+      "v1_ok": true,
+      "v1_status": 200,
+      "v2_ok": true,
+      "v2_status": 200,
+      "issues": [],
+      "metrics": {
+        "presence": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        },
+        "values": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        }
+      }
+    },
+    {
+      "ticker": "ACA",
+      "v1_ok": true,
+      "v1_status": 200,
+      "v2_ok": true,
+      "v2_status": 200,
+      "issues": [],
+      "metrics": {
+        "presence": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        },
+        "values": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        }
+      }
+    },
+    {
+      "ticker": "ACAD",
+      "v1_ok": true,
+      "v1_status": 200,
+      "v2_ok": true,
+      "v2_status": 200,
+      "issues": [],
+      "metrics": {
+        "presence": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        },
+        "values": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        }
+      }
+    },
+    {
+      "ticker": "ACCO",
+      "v1_ok": true,
+      "v1_status": 200,
+      "v2_ok": true,
+      "v2_status": 200,
+      "issues": [],
+      "metrics": {
+        "presence": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        },
+        "values": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        }
+      }
+    },
+    {
+      "ticker": "ACDC",
+      "v1_ok": true,
+      "v1_status": 200,
+      "v2_ok": true,
+      "v2_status": 200,
+      "issues": [],
+      "metrics": {
+        "presence": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        },
+        "values": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        }
+      }
+    },
+    {
+      "ticker": "ACEL",
+      "v1_ok": true,
+      "v1_status": 200,
+      "v2_ok": true,
+      "v2_status": 200,
+      "issues": [],
+      "metrics": {
+        "presence": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        },
+        "values": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        }
+      }
+    },
+    {
+      "ticker": "ACGL",
+      "v1_ok": true,
+      "v1_status": 200,
+      "v2_ok": true,
+      "v2_status": 200,
+      "issues": [],
+      "metrics": {
+        "presence": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        },
+        "values": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        }
+      }
+    },
+    {
+      "ticker": "ACH",
+      "v1_ok": true,
+      "v1_status": 200,
+      "v2_ok": true,
+      "v2_status": 200,
+      "issues": [],
+      "metrics": {
+        "presence": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        },
+        "values": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        }
+      }
+    },
+    {
+      "ticker": "ACHR",
+      "v1_ok": true,
+      "v1_status": 200,
+      "v2_ok": true,
+      "v2_status": 200,
+      "issues": [],
+      "metrics": {
+        "presence": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        },
+        "values": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        }
+      }
+    },
+    {
+      "ticker": "ACIC",
+      "v1_ok": true,
+      "v1_status": 200,
+      "v2_ok": true,
+      "v2_status": 200,
+      "issues": [],
+      "metrics": {
+        "presence": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        },
+        "values": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        }
+      }
+    },
+    {
+      "ticker": "ACIW",
+      "v1_ok": true,
+      "v1_status": 200,
+      "v2_ok": true,
+      "v2_status": 200,
+      "issues": [],
+      "metrics": {
+        "presence": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        },
+        "values": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        }
+      }
+    },
+    {
+      "ticker": "ACLS",
+      "v1_ok": true,
+      "v1_status": 200,
+      "v2_ok": true,
+      "v2_status": 200,
+      "issues": [],
+      "metrics": {
+        "presence": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        },
+        "values": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        }
+      }
+    },
+    {
+      "ticker": "ACLX",
+      "v1_ok": true,
+      "v1_status": 200,
+      "v2_ok": true,
+      "v2_status": 200,
+      "issues": [],
+      "metrics": {
+        "presence": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        },
+        "values": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        }
+      }
+    },
+    {
+      "ticker": "ACMR",
+      "v1_ok": true,
+      "v1_status": 200,
+      "v2_ok": true,
+      "v2_status": 200,
+      "issues": [],
+      "metrics": {
+        "presence": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        },
+        "values": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        }
+      }
+    },
+    {
+      "ticker": "ACN",
+      "v1_ok": true,
+      "v1_status": 200,
+      "v2_ok": true,
+      "v2_status": 200,
+      "issues": [],
+      "metrics": {
+        "presence": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        },
+        "values": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        }
+      }
+    },
+    {
+      "ticker": "ACNB",
+      "v1_ok": true,
+      "v1_status": 200,
+      "v2_ok": true,
+      "v2_status": 200,
+      "issues": [],
+      "metrics": {
+        "presence": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        },
+        "values": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        }
+      }
+    },
+    {
+      "ticker": "ACNT",
+      "v1_ok": true,
+      "v1_status": 200,
+      "v2_ok": true,
+      "v2_status": 200,
+      "issues": [],
+      "metrics": {
+        "presence": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        },
+        "values": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        }
+      }
+    },
+    {
+      "ticker": "ACR",
+      "v1_ok": true,
+      "v1_status": 200,
+      "v2_ok": true,
+      "v2_status": 200,
+      "issues": [],
+      "metrics": {
+        "presence": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        },
+        "values": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        }
+      }
+    },
+    {
+      "ticker": "ACRE",
+      "v1_ok": true,
+      "v1_status": 200,
+      "v2_ok": true,
+      "v2_status": 200,
+      "issues": [],
+      "metrics": {
+        "presence": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        },
+        "values": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        }
+      }
+    },
+    {
+      "ticker": "ACRS",
+      "v1_ok": true,
+      "v1_status": 200,
+      "v2_ok": true,
+      "v2_status": 200,
+      "issues": [],
+      "metrics": {
+        "presence": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        },
+        "values": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        }
+      }
+    },
+    {
+      "ticker": "ACT",
+      "v1_ok": true,
+      "v1_status": 200,
+      "v2_ok": true,
+      "v2_status": 200,
+      "issues": [],
+      "metrics": {
+        "presence": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        },
+        "values": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        }
+      }
+    },
+    {
+      "ticker": "ACTG",
+      "v1_ok": true,
+      "v1_status": 200,
+      "v2_ok": true,
+      "v2_status": 200,
+      "issues": [],
+      "metrics": {
+        "presence": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        },
+        "values": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        }
+      }
+    },
+    {
+      "ticker": "ACTU",
+      "v1_ok": true,
+      "v1_status": 200,
+      "v2_ok": true,
+      "v2_status": 200,
+      "issues": [],
+      "metrics": {
+        "presence": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        },
+        "values": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        }
+      }
+    },
+    {
+      "ticker": "ACU",
+      "v1_ok": true,
+      "v1_status": 200,
+      "v2_ok": true,
+      "v2_status": 200,
+      "issues": [],
+      "metrics": {
+        "presence": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        },
+        "values": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        }
+      }
+    },
+    {
+      "ticker": "ACVA",
+      "v1_ok": true,
+      "v1_status": 200,
+      "v2_ok": true,
+      "v2_status": 200,
+      "issues": [],
+      "metrics": {
+        "presence": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        },
+        "values": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        }
+      }
+    },
+    {
+      "ticker": "ADAM",
+      "v1_ok": true,
+      "v1_status": 200,
+      "v2_ok": true,
+      "v2_status": 200,
+      "issues": [],
+      "metrics": {
+        "presence": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        },
+        "values": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        }
+      }
+    },
+    {
+      "ticker": "ADBE",
+      "v1_ok": true,
+      "v1_status": 200,
+      "v2_ok": true,
+      "v2_status": 200,
+      "issues": [],
+      "metrics": {
+        "presence": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        },
+        "values": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        }
+      }
+    },
+    {
+      "ticker": "ADCT",
+      "v1_ok": true,
+      "v1_status": 200,
+      "v2_ok": true,
+      "v2_status": 200,
+      "issues": [],
+      "metrics": {
+        "presence": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        },
+        "values": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        }
+      }
+    },
+    {
+      "ticker": "ADEA",
+      "v1_ok": true,
+      "v1_status": 200,
+      "v2_ok": true,
+      "v2_status": 200,
+      "issues": [],
+      "metrics": {
+        "presence": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        },
+        "values": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        }
+      }
+    },
+    {
+      "ticker": "ADI",
+      "v1_ok": true,
+      "v1_status": 200,
+      "v2_ok": true,
+      "v2_status": 200,
+      "issues": [],
+      "metrics": {
+        "presence": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        },
+        "values": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        }
+      }
+    },
+    {
+      "ticker": "ADM",
+      "v1_ok": true,
+      "v1_status": 200,
+      "v2_ok": true,
+      "v2_status": 200,
+      "issues": [],
+      "metrics": {
+        "presence": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        },
+        "values": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        }
+      }
+    },
+    {
+      "ticker": "ADMA",
+      "v1_ok": true,
+      "v1_status": 200,
+      "v2_ok": true,
+      "v2_status": 200,
+      "issues": [],
+      "metrics": {
+        "presence": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        },
+        "values": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        }
+      }
+    },
+    {
+      "ticker": "ADNT",
+      "v1_ok": true,
+      "v1_status": 200,
+      "v2_ok": true,
+      "v2_status": 200,
+      "issues": [],
+      "metrics": {
+        "presence": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        },
+        "values": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        }
+      }
+    },
+    {
+      "ticker": "ADP",
+      "v1_ok": true,
+      "v1_status": 200,
+      "v2_ok": true,
+      "v2_status": 200,
+      "issues": [],
+      "metrics": {
+        "presence": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        },
+        "values": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        }
+      }
+    },
+    {
+      "ticker": "ADPT",
+      "v1_ok": true,
+      "v1_status": 200,
+      "v2_ok": true,
+      "v2_status": 200,
+      "issues": [],
+      "metrics": {
+        "presence": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        },
+        "values": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        }
+      }
+    },
+    {
+      "ticker": "ADRO",
+      "v1_ok": true,
+      "v1_status": 200,
+      "v2_ok": true,
+      "v2_status": 200,
+      "issues": [],
+      "metrics": {
+        "presence": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        },
+        "values": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        }
+      }
+    },
+    {
+      "ticker": "ADSK",
+      "v1_ok": true,
+      "v1_status": 200,
+      "v2_ok": true,
+      "v2_status": 200,
+      "issues": [],
+      "metrics": {
+        "presence": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        },
+        "values": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        }
+      }
+    },
+    {
+      "ticker": "ADTN",
+      "v1_ok": true,
+      "v1_status": 200,
+      "v2_ok": true,
+      "v2_status": 200,
+      "issues": [],
+      "metrics": {
+        "presence": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        },
+        "values": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        }
+      }
+    },
+    {
+      "ticker": "ADUS",
+      "v1_ok": true,
+      "v1_status": 200,
+      "v2_ok": true,
+      "v2_status": 200,
+      "issues": [],
+      "metrics": {
+        "presence": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        },
+        "values": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        }
+      }
+    },
+    {
+      "ticker": "ADV",
+      "v1_ok": true,
+      "v1_status": 200,
+      "v2_ok": true,
+      "v2_status": 200,
+      "issues": [],
+      "metrics": {
+        "presence": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        },
+        "values": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        }
+      }
+    },
+    {
+      "ticker": "AEE",
+      "v1_ok": true,
+      "v1_status": 200,
+      "v2_ok": true,
+      "v2_status": 200,
+      "issues": [],
+      "metrics": {
+        "presence": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        },
+        "values": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        }
+      }
+    },
+    {
+      "ticker": "AEHR",
+      "v1_ok": true,
+      "v1_status": 200,
+      "v2_ok": true,
+      "v2_status": 200,
+      "issues": [],
+      "metrics": {
+        "presence": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        },
+        "values": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        }
+      }
+    },
+    {
+      "ticker": "AEIS",
+      "v1_ok": true,
+      "v1_status": 200,
+      "v2_ok": true,
+      "v2_status": 200,
+      "issues": [],
+      "metrics": {
+        "presence": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        },
+        "values": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        }
+      }
+    },
+    {
+      "ticker": "AEO",
+      "v1_ok": true,
+      "v1_status": 200,
+      "v2_ok": true,
+      "v2_status": 200,
+      "issues": [],
+      "metrics": {
+        "presence": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        },
+        "values": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        }
+      }
+    },
+    {
+      "ticker": "AEP",
+      "v1_ok": true,
+      "v1_status": 200,
+      "v2_ok": true,
+      "v2_status": 200,
+      "issues": [],
+      "metrics": {
+        "presence": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        },
+        "values": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        }
+      }
+    },
+    {
+      "ticker": "AES",
+      "v1_ok": true,
+      "v1_status": 200,
+      "v2_ok": true,
+      "v2_status": 200,
+      "issues": [],
+      "metrics": {
+        "presence": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        },
+        "values": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        }
+      }
+    },
+    {
+      "ticker": "AESI",
+      "v1_ok": true,
+      "v1_status": 200,
+      "v2_ok": true,
+      "v2_status": 200,
+      "issues": [],
+      "metrics": {
+        "presence": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        },
+        "values": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        }
+      }
+    },
+    {
+      "ticker": "AEVA",
+      "v1_ok": true,
+      "v1_status": 200,
+      "v2_ok": true,
+      "v2_status": 200,
+      "issues": [],
+      "metrics": {
+        "presence": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        },
+        "values": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        }
+      }
+    },
+    {
+      "ticker": "AEYE",
+      "v1_ok": true,
+      "v1_status": 200,
+      "v2_ok": true,
+      "v2_status": 200,
+      "issues": [],
+      "metrics": {
+        "presence": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        },
+        "values": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        }
+      }
+    },
+    {
+      "ticker": "AFL",
+      "v1_ok": true,
+      "v1_status": 200,
+      "v2_ok": true,
+      "v2_status": 200,
+      "issues": [],
+      "metrics": {
+        "presence": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        },
+        "values": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        }
+      }
+    },
+    {
+      "ticker": "AFRI",
+      "v1_ok": true,
+      "v1_status": 200,
+      "v2_ok": true,
+      "v2_status": 200,
+      "issues": [],
+      "metrics": {
+        "presence": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        },
+        "values": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        }
+      }
+    },
+    {
+      "ticker": "AGIO",
+      "v1_ok": true,
+      "v1_status": 200,
+      "v2_ok": true,
+      "v2_status": 200,
+      "issues": [],
+      "metrics": {
+        "presence": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        },
+        "values": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        }
+      }
+    },
+    {
+      "ticker": "AGL",
+      "v1_ok": true,
+      "v1_status": 200,
+      "v2_ok": true,
+      "v2_status": 200,
+      "issues": [],
+      "metrics": {
+        "presence": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        },
+        "values": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        }
+      }
+    },
+    {
+      "ticker": "AGM",
+      "v1_ok": true,
+      "v1_status": 200,
+      "v2_ok": true,
+      "v2_status": 200,
+      "issues": [],
+      "metrics": {
+        "presence": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        },
+        "values": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        }
+      }
+    },
+    {
+      "ticker": "AGX",
+      "v1_ok": true,
+      "v1_status": 200,
+      "v2_ok": true,
+      "v2_status": 200,
+      "issues": [],
+      "metrics": {
+        "presence": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        },
+        "values": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        }
+      }
+    },
+    {
+      "ticker": "AGYS",
+      "v1_ok": true,
+      "v1_status": 200,
+      "v2_ok": true,
+      "v2_status": 200,
+      "issues": [],
+      "metrics": {
+        "presence": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        },
+        "values": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        }
+      }
+    },
+    {
+      "ticker": "AHCO",
+      "v1_ok": true,
+      "v1_status": 200,
+      "v2_ok": true,
+      "v2_status": 200,
+      "issues": [],
+      "metrics": {
+        "presence": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        },
+        "values": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        }
+      }
+    },
+    {
+      "ticker": "AHH",
+      "v1_ok": true,
+      "v1_status": 200,
+      "v2_ok": true,
+      "v2_status": 200,
+      "issues": [],
+      "metrics": {
+        "presence": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        },
+        "values": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        }
+      }
+    },
+    {
+      "ticker": "AHL",
+      "v1_ok": true,
+      "v1_status": 200,
+      "v2_ok": true,
+      "v2_status": 200,
+      "issues": [],
+      "metrics": {
+        "presence": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        },
+        "values": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        }
+      }
+    },
+    {
+      "ticker": "AHR",
+      "v1_ok": true,
+      "v1_status": 200,
+      "v2_ok": true,
+      "v2_status": 200,
+      "issues": [],
+      "metrics": {
+        "presence": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        },
+        "values": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        }
+      }
+    },
+    {
+      "ticker": "AI",
+      "v1_ok": true,
+      "v1_status": 200,
+      "v2_ok": true,
+      "v2_status": 200,
+      "issues": [],
+      "metrics": {
+        "presence": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        },
+        "values": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        }
+      }
+    },
+    {
+      "ticker": "AIG",
+      "v1_ok": true,
+      "v1_status": 200,
+      "v2_ok": true,
+      "v2_status": 200,
+      "issues": [],
+      "metrics": {
+        "presence": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        },
+        "values": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        }
+      }
+    },
+    {
+      "ticker": "AII",
+      "v1_ok": true,
+      "v1_status": 200,
+      "v2_ok": true,
+      "v2_status": 200,
+      "issues": [],
+      "metrics": {
+        "presence": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        },
+        "values": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        }
+      }
+    },
+    {
+      "ticker": "AIN",
+      "v1_ok": true,
+      "v1_status": 200,
+      "v2_ok": true,
+      "v2_status": 200,
+      "issues": [],
+      "metrics": {
+        "presence": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        },
+        "values": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        }
+      }
+    },
+    {
+      "ticker": "AIOT",
+      "v1_ok": true,
+      "v1_status": 200,
+      "v2_ok": true,
+      "v2_status": 200,
+      "issues": [],
+      "metrics": {
+        "presence": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        },
+        "values": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        }
+      }
+    },
+    {
+      "ticker": "AIP",
+      "v1_ok": true,
+      "v1_status": 200,
+      "v2_ok": true,
+      "v2_status": 200,
+      "issues": [],
+      "metrics": {
+        "presence": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        },
+        "values": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        }
+      }
+    },
+    {
+      "ticker": "AIR",
+      "v1_ok": true,
+      "v1_status": 200,
+      "v2_ok": true,
+      "v2_status": 200,
+      "issues": [],
+      "metrics": {
+        "presence": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        },
+        "values": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        }
+      }
+    },
+    {
+      "ticker": "AIRJ",
+      "v1_ok": true,
+      "v1_status": 200,
+      "v2_ok": true,
+      "v2_status": 200,
+      "issues": [],
+      "metrics": {
+        "presence": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        },
+        "values": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        }
+      }
+    },
+    {
+      "ticker": "AIRS",
+      "v1_ok": true,
+      "v1_status": 200,
+      "v2_ok": true,
+      "v2_status": 200,
+      "issues": [],
+      "metrics": {
+        "presence": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        },
+        "values": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        }
+      }
+    },
+    {
+      "ticker": "AISP",
+      "v1_ok": true,
+      "v1_status": 200,
+      "v2_ok": true,
+      "v2_status": 200,
+      "issues": [],
+      "metrics": {
+        "presence": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        },
+        "values": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        }
+      }
+    },
+    {
+      "ticker": "AIV",
+      "v1_ok": true,
+      "v1_status": 200,
+      "v2_ok": true,
+      "v2_status": 200,
+      "issues": [],
+      "metrics": {
+        "presence": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        },
+        "values": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        }
+      }
+    },
+    {
+      "ticker": "AIZ",
+      "v1_ok": true,
+      "v1_status": 200,
+      "v2_ok": true,
+      "v2_status": 200,
+      "issues": [],
+      "metrics": {
+        "presence": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        },
+        "values": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        }
+      }
+    },
+    {
+      "ticker": "AJG",
+      "v1_ok": true,
+      "v1_status": 200,
+      "v2_ok": true,
+      "v2_status": 200,
+      "issues": [],
+      "metrics": {
+        "presence": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        },
+        "values": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        }
+      }
+    },
+    {
+      "ticker": "AKAM",
+      "v1_ok": true,
+      "v1_status": 200,
+      "v2_ok": true,
+      "v2_status": 200,
+      "issues": [],
+      "metrics": {
+        "presence": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        },
+        "values": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        }
+      }
+    },
+    {
+      "ticker": "AKBA",
+      "v1_ok": true,
+      "v1_status": 200,
+      "v2_ok": true,
+      "v2_status": 200,
+      "issues": [],
+      "metrics": {
+        "presence": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        },
+        "values": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        }
+      }
+    },
+    {
+      "ticker": "AKR",
+      "v1_ok": true,
+      "v1_status": 200,
+      "v2_ok": true,
+      "v2_status": 200,
+      "issues": [],
+      "metrics": {
+        "presence": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        },
+        "values": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        }
+      }
+    },
+    {
+      "ticker": "ALB",
+      "v1_ok": true,
+      "v1_status": 200,
+      "v2_ok": true,
+      "v2_status": 200,
+      "issues": [],
+      "metrics": {
+        "presence": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        },
+        "values": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        }
+      }
+    },
+    {
+      "ticker": "ALCO",
+      "v1_ok": true,
+      "v1_status": 200,
+      "v2_ok": true,
+      "v2_status": 200,
+      "issues": [],
+      "metrics": {
+        "presence": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        },
+        "values": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        }
+      }
+    },
+    {
+      "ticker": "ALDX",
+      "v1_ok": true,
+      "v1_status": 200,
+      "v2_ok": true,
+      "v2_status": 200,
+      "issues": [],
+      "metrics": {
+        "presence": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        },
+        "values": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        }
+      }
+    },
+    {
+      "ticker": "ALEC",
+      "v1_ok": true,
+      "v1_status": 200,
+      "v2_ok": true,
+      "v2_status": 200,
+      "issues": [],
+      "metrics": {
+        "presence": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        },
+        "values": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        }
+      }
+    },
+    {
+      "ticker": "ALEX",
+      "v1_ok": true,
+      "v1_status": 200,
+      "v2_ok": true,
+      "v2_status": 200,
+      "issues": [],
+      "metrics": {
+        "presence": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        },
+        "values": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        }
+      }
+    },
+    {
+      "ticker": "ALG",
+      "v1_ok": true,
+      "v1_status": 200,
+      "v2_ok": true,
+      "v2_status": 200,
+      "issues": [],
+      "metrics": {
+        "presence": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        },
+        "values": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        }
+      }
+    },
+    {
+      "ticker": "ALGN",
+      "v1_ok": true,
+      "v1_status": 200,
+      "v2_ok": true,
+      "v2_status": 200,
+      "issues": [],
+      "metrics": {
+        "presence": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        },
+        "values": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        }
+      }
+    },
+    {
+      "ticker": "ALGT",
+      "v1_ok": true,
+      "v1_status": 200,
+      "v2_ok": true,
+      "v2_status": 200,
+      "issues": [],
+      "metrics": {
+        "presence": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        },
+        "values": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        }
+      }
+    },
+    {
+      "ticker": "ALHC",
+      "v1_ok": true,
+      "v1_status": 200,
+      "v2_ok": true,
+      "v2_status": 200,
+      "issues": [],
+      "metrics": {
+        "presence": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        },
+        "values": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        }
+      }
+    },
+    {
+      "ticker": "ALIT",
+      "v1_ok": true,
+      "v1_status": 200,
+      "v2_ok": true,
+      "v2_status": 200,
+      "issues": [],
+      "metrics": {
+        "presence": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        },
+        "values": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        }
+      }
+    },
+    {
+      "ticker": "ALKS",
+      "v1_ok": true,
+      "v1_status": 200,
+      "v2_ok": true,
+      "v2_status": 200,
+      "issues": [],
+      "metrics": {
+        "presence": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        },
+        "values": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        }
+      }
+    },
+    {
+      "ticker": "ALKT",
+      "v1_ok": true,
+      "v1_status": 200,
+      "v2_ok": true,
+      "v2_status": 200,
+      "issues": [],
+      "metrics": {
+        "presence": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        },
+        "values": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        }
+      }
+    },
+    {
+      "ticker": "ALL",
+      "v1_ok": true,
+      "v1_status": 200,
+      "v2_ok": true,
+      "v2_status": 200,
+      "issues": [],
+      "metrics": {
+        "presence": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        },
+        "values": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        }
+      }
+    },
+    {
+      "ticker": "ALLE",
+      "v1_ok": true,
+      "v1_status": 200,
+      "v2_ok": true,
+      "v2_status": 200,
+      "issues": [],
+      "metrics": {
+        "presence": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        },
+        "values": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        }
+      }
+    },
+    {
+      "ticker": "ALLO",
+      "v1_ok": true,
+      "v1_status": 200,
+      "v2_ok": true,
+      "v2_status": 200,
+      "issues": [],
+      "metrics": {
+        "presence": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        },
+        "values": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        }
+      }
+    },
+    {
+      "ticker": "ALMS",
+      "v1_ok": true,
+      "v1_status": 200,
+      "v2_ok": true,
+      "v2_status": 200,
+      "issues": [],
+      "metrics": {
+        "presence": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        },
+        "values": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        }
+      }
+    },
+    {
+      "ticker": "ALMU",
+      "v1_ok": true,
+      "v1_status": 200,
+      "v2_ok": true,
+      "v2_status": 200,
+      "issues": [],
+      "metrics": {
+        "presence": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        },
+        "values": {
+          "scientific": true,
+          "forecast": true,
+          "elliott": true
+        }
+      }
+    }
+  ]
+}

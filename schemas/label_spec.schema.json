@@ -1,0 +1,28 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://rubikvault.com/schemas/label_spec.schema.json",
+  "title": "Stock Insights v4 Label Spec",
+  "type": "object",
+  "required": [
+    "entry_reference",
+    "exit_reference",
+    "thresholds",
+    "adjusted_policy"
+  ],
+  "properties": {
+    "entry_reference": { "type": "string" },
+    "exit_reference": { "type": "string" },
+    "adjusted_policy": { "type": "string", "enum": ["adjusted_only"] },
+    "thresholds": {
+      "type": "object",
+      "required": ["1d", "5d", "20d"],
+      "properties": {
+        "1d": { "type": "number" },
+        "5d": { "type": "number" },
+        "20d": { "type": "number" }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

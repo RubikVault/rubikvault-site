@@ -1,0 +1,113 @@
+{
+  "log_id": "bb18a0a7-6c89-4f3a-9e77-888b646ad0d9",
+  "timestamp": "2026-03-12T15:38:10.764Z",
+  "snapshot_id": "90367f16-f263-4fa7-9200-432cb6c54fce",
+  "ticker": "AAPL",
+  "feature_name": "scientific",
+  "feature_version": "runblock.v3.features",
+  "model_version": "scientific.rf.v3",
+  "model_type": "random_forest",
+  "calibration_version": "scientific.cal.v3",
+  "regime_version": "runblock.v3",
+  "regime_tag": "RANGE",
+  "regime_confidence": 0.9689102590590317,
+  "data_quality_state": "PASS",
+  "feature_hash": "8cc9cf7a0d13c80fe004052da3c6f62a5d80977b7ee6a04a647845347de8e961",
+  "prediction_payload": {
+    "model_version": "scientific.rf.v3",
+    "model_type": "random_forest",
+    "calibration_version": "scientific.cal.v3",
+    "oos_accuracy": 0.79,
+    "is_accuracy": 0.84,
+    "brier_score": 0.18,
+    "calibration_error": 0.03,
+    "exp_ret_10d_gross": 0.042,
+    "outcome_count": 140,
+    "leakage_pass": true,
+    "structural_instability_flag": false,
+    "regime_compatible": true,
+    "current_regime": "RANGE",
+    "validation_regime": "RANGE",
+    "primary_window_data_quality": "PASS",
+    "p_pos_10d": 0.67,
+    "exp_dd_10d": 0.018,
+    "regime_fit": 0.81,
+    "liquidity_cost_score": 0.89,
+    "top_3_features": [
+      "rsi_14",
+      "macd_histogram",
+      "trend_strength"
+    ],
+    "top_3_feature_weights": [
+      0.42,
+      0.33,
+      0.25
+    ],
+    "gross_return": 0.042,
+    "estimated_spread": 0.0005,
+    "estimated_slippage": 0.0005,
+    "estimated_market_impact": 0,
+    "net_return_after_costs": 0.041,
+    "tradability_flag": true,
+    "cost_model_version": "runblock.cost.v3",
+    "state": "ACTIVE",
+    "reason_codes": [],
+    "ModelState": "ACTIVE",
+    "fallback_used": false,
+    "liquidity_bucket": "A",
+    "gate": {
+      "allowed": true,
+      "model_state": "ACTIVE",
+      "reason_codes": []
+    }
+  },
+  "fallback_used": false,
+  "fallback_reason": null,
+  "champion_id": null,
+  "challenger_id": null,
+  "reason_codes": [],
+  "realized_outcome": null,
+  "structural_instability_flag": false,
+  "top_3_features": [
+    "rsi_14",
+    "macd_histogram",
+    "trend_strength"
+  ],
+  "top_3_feature_weights": [
+    0.42,
+    0.33,
+    0.25
+  ],
+  "explainability_unavailable_reason": null,
+  "knowledge_time": "2026-03-12T15:38:10.764Z",
+  "valid_time": "2026-03-12T15:38:10.764Z",
+  "cost_model_version": "runblock.cost.v3",
+  "liquidity_bucket": "A",
+  "tradability_flag": true,
+  "global_system_state": "GREEN",
+  "git_commit_hash": "local-runblock-v3",
+  "dependency_trace": {
+    "source_data_versions": {
+      "primary_feed": "sample.primary.v1",
+      "secondary_feed": "sample.secondary.v1"
+    },
+    "feature_versions": {
+      "runblock": "runblock.v3.features"
+    },
+    "rule_versions": {
+      "runblock": "runblock.v3.rules"
+    },
+    "regime_version": "runblock.v3",
+    "model_version": {
+      "scientific": "scientific.rf.v3",
+      "forecast": "forecast.xgb.v3",
+      "elliott": "elliott.passive.v1"
+    },
+    "calibration_version": {
+      "scientific": "scientific.cal.v3",
+      "forecast": "forecast.cal.v3"
+    },
+    "cost_model_version": "runblock.cost.v3",
+    "ui_payload_version": "runblock.ui.v3"
+  }
+}

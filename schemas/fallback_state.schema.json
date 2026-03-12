@@ -1,0 +1,33 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://rubikvault.com/schemas/fallback_state.schema.json",
+  "title": "Stock Insights v4 Fallback State",
+  "type": "object",
+  "required": [
+    "active",
+    "verdict",
+    "confidence",
+    "max_confidence",
+    "reason",
+    "scores"
+  ],
+  "properties": {
+    "active": { "type": "boolean" },
+    "verdict": { "type": "string", "enum": ["BUY", "WAIT", "SELL"] },
+    "confidence": { "type": "string", "enum": ["LOW", "MEDIUM"] },
+    "max_confidence": { "type": "string", "enum": ["MEDIUM"] },
+    "reason": { "type": "string" },
+    "scores": {
+      "type": "object",
+      "required": ["trend", "entry", "risk", "context"],
+      "properties": {
+        "trend": { "type": "number", "minimum": 0, "maximum": 100 },
+        "entry": { "type": "number", "minimum": 0, "maximum": 100 },
+        "risk": { "type": "number", "minimum": 0, "maximum": 100 },
+        "context": { "type": "number", "minimum": 0, "maximum": 100 }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

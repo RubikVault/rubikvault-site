@@ -1,0 +1,2130 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Quant Lab v4.0 Daily Report</title>
+  <meta name="description" content="Lokaler Daily Report fuer Quant Lab v4.0: Umsetzung, Training, Fortschritt, Daten-Truth und naechste Schritte.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #09121b;
+      --panel: rgba(16, 28, 40, 0.9);
+      --panel-strong: rgba(12, 23, 34, 0.95);
+      --line: rgba(125, 157, 187, 0.2);
+      --text: #edf4fb;
+      --muted: #95a7b8;
+      --cyan: #5dd0ff;
+      --cyan-soft: rgba(93, 208, 255, 0.12);
+      --green: #36d399;
+      --green-soft: rgba(54, 211, 153, 0.12);
+      --amber: #ffb24d;
+      --amber-soft: rgba(255, 178, 77, 0.12);
+      --red: #ff6b6b;
+      --red-soft: rgba(255, 107, 107, 0.12);
+      --radius: 18px;
+      --shadow: 0 18px 42px rgba(0, 0, 0, 0.28);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: "IBM Plex Sans", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top right, rgba(93, 208, 255, 0.14), transparent 28%),
+        radial-gradient(circle at bottom left, rgba(255, 178, 77, 0.1), transparent 30%),
+        linear-gradient(180deg, #061018 0%, #09121b 100%);
+      min-height: 100vh;
+    }
+
+    .shell {
+      max-width: 1440px;
+      margin: 0 auto;
+      padding: 28px 20px 52px;
+    }
+
+    .hero {
+      display: grid;
+      grid-template-columns: 1.35fr 0.95fr;
+      gap: 18px;
+      margin-bottom: 18px;
+    }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(18px);
+    }
+
+    .hero-main {
+      padding: 26px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero-main::after {
+      content: "";
+      position: absolute;
+      inset: auto -8% -40% auto;
+      width: 220px;
+      height: 220px;
+      background: radial-gradient(circle, rgba(93, 208, 255, 0.18), transparent 70%);
+      pointer-events: none;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 12px;
+      border-radius: 999px;
+      border: 1px solid rgba(93, 208, 255, 0.22);
+      background: rgba(93, 208, 255, 0.08);
+      color: var(--cyan);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 14px;
+    }
+
+    h1 {
+      margin: 0 0 10px;
+      font-size: 38px;
+      line-height: 1.04;
+      letter-spacing: -0.03em;
+    }
+
+    .hero-copy {
+      margin: 0;
+      max-width: 760px;
+      color: var(--muted);
+      font-size: 15px;
+      line-height: 1.65;
+    }
+
+    .meta-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 18px;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .hero-actions {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      gap: 12px;
+      margin-top: 18px;
+      padding-top: 16px;
+      border-top: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .action-group {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .action-button {
+      appearance: none;
+      border: 1px solid rgba(93, 208, 255, 0.3);
+      border-radius: 999px;
+      background: rgba(93, 208, 255, 0.12);
+      color: var(--text);
+      font: inherit;
+      font-size: 13px;
+      font-weight: 600;
+      padding: 10px 16px;
+      cursor: pointer;
+      transition: transform 120ms ease, border-color 120ms ease, background 120ms ease;
+    }
+
+    .action-button:hover {
+      transform: translateY(-1px);
+      border-color: rgba(93, 208, 255, 0.5);
+      background: rgba(93, 208, 255, 0.18);
+    }
+
+    .action-note {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    .action-note code {
+      font-family: "IBM Plex Mono", monospace;
+      color: var(--cyan);
+      font-size: 11px;
+    }
+
+    .latest-box {
+      margin-top: 18px;
+      padding: 16px;
+      border-radius: 16px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .latest-head {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      gap: 10px;
+      align-items: baseline;
+      margin-bottom: 8px;
+    }
+
+    .latest-head strong {
+      font-size: 13px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--cyan);
+    }
+
+    .latest-head span {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .latest-grid {
+      display: grid;
+      gap: 10px;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .latest-item {
+      padding: 12px 14px;
+      border-radius: 14px;
+      background: var(--panel-strong);
+      border: 1px solid rgba(255, 255, 255, 0.04);
+      color: var(--text);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .latest-empty {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    .hero-side {
+      padding: 22px;
+      display: grid;
+      gap: 14px;
+      align-content: start;
+    }
+
+    .hero-side h2 {
+      margin: 0;
+      font-size: 14px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .score-grid, .card-grid, .activity-grid, .storage-grid, .intelligence-grid, .agent-grid {
+      display: grid;
+      gap: 14px;
+    }
+
+    .score-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .score-card {
+      padding: 16px;
+      border-radius: 16px;
+      background: var(--panel-strong);
+      border: 1px solid rgba(255, 255, 255, 0.04);
+    }
+
+    .score-label {
+      color: var(--muted);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-bottom: 8px;
+    }
+
+    .score-value {
+      font-size: 34px;
+      font-weight: 700;
+      line-height: 1;
+      margin-bottom: 6px;
+    }
+
+    .score-detail {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .score-good { color: var(--green); }
+    .score-warn { color: var(--amber); }
+    .score-bad { color: var(--red); }
+
+    .section {
+      padding: 22px;
+      margin-bottom: 18px;
+    }
+
+    .section-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .section-head h2 {
+      margin: 0;
+      font-size: 18px;
+      letter-spacing: -0.02em;
+    }
+
+    .section-head p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .card-grid {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    .mini-card, .storage-card, .intel-card {
+      padding: 16px;
+      border-radius: 16px;
+      background: var(--panel-strong);
+      border: 1px solid rgba(255, 255, 255, 0.04);
+    }
+
+    .mini-card .label, .storage-card .label, .intel-card .label {
+      color: var(--muted);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 8px;
+    }
+
+    .mini-card .value {
+      font-size: 28px;
+      font-weight: 700;
+      line-height: 1.05;
+      margin-bottom: 6px;
+    }
+
+    .mini-card .sub {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .storage-card .value,
+    .intel-card .value {
+      font-size: 22px;
+      font-weight: 700;
+      line-height: 1.12;
+      margin-bottom: 6px;
+    }
+
+    .storage-card .sub,
+    .intel-card .sub {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.55;
+    }
+
+    .split {
+      display: grid;
+      grid-template-columns: 1.05fr 0.95fr;
+      gap: 18px;
+    }
+
+    .list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .list-item {
+      padding: 12px 14px;
+      border-radius: 14px;
+      background: var(--panel-strong);
+      border: 1px solid rgba(255, 255, 255, 0.04);
+    }
+
+    .list-item strong {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 14px;
+    }
+
+    .list-item span, .list-item small {
+      color: var(--muted);
+      display: block;
+      font-size: 12px;
+      line-height: 1.55;
+    }
+
+    .bar {
+      height: 10px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.06);
+      overflow: hidden;
+      margin-top: 10px;
+    }
+
+    .bar > i {
+      display: block;
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, var(--cyan), #8df6ff);
+    }
+
+    .bar.good > i { background: linear-gradient(90deg, var(--green), #8ef3c2); }
+    .bar.warn > i { background: linear-gradient(90deg, var(--amber), #ffd27e); }
+    .bar.bad > i { background: linear-gradient(90deg, var(--red), #ff9c9c); }
+
+    .activity-grid {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    .activity-card {
+      padding: 16px;
+      border-radius: 16px;
+      background: var(--panel-strong);
+      border: 1px solid rgba(255, 255, 255, 0.04);
+    }
+
+    .activity-title {
+      font-size: 12px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 10px;
+    }
+
+    .activity-metric {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      font-size: 13px;
+      padding: 6px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+    }
+
+    .activity-metric:last-child { border-bottom: 0; }
+    .activity-metric span:first-child { color: var(--muted); }
+    .activity-metric span:last-child { font-weight: 600; }
+
+    .table-wrap {
+      overflow: auto;
+      border-radius: 16px;
+      border: 1px solid rgba(255, 255, 255, 0.04);
+      background: var(--panel-strong);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 760px;
+    }
+
+    th, td {
+      padding: 12px 14px;
+      text-align: left;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+      vertical-align: top;
+      font-size: 13px;
+    }
+
+    th {
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      font-size: 11px;
+      background: rgba(255,255,255,0.02);
+    }
+
+    td code {
+      font-family: "IBM Plex Mono", monospace;
+      font-size: 11px;
+      color: var(--cyan);
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 10px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    .badge.good { color: var(--green); background: var(--green-soft); }
+    .badge.warn { color: var(--amber); background: var(--amber-soft); }
+    .badge.bad { color: var(--red); background: var(--red-soft); }
+    .badge.info { color: var(--cyan); background: var(--cyan-soft); }
+
+    .spark {
+      width: 100%;
+      height: 80px;
+      display: block;
+      margin-top: 10px;
+    }
+
+    .storage-grid, .intelligence-grid {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    .tier-grid {
+      display: grid;
+      gap: 14px;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+    }
+
+    .tier-card {
+      padding: 16px;
+      border-radius: 16px;
+      background: var(--panel-strong);
+      border: 1px solid rgba(255, 255, 255, 0.04);
+    }
+
+    .tier-card .label {
+      color: var(--muted);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 8px;
+    }
+
+    .tier-card .value {
+      font-size: 28px;
+      font-weight: 700;
+      line-height: 1.08;
+      margin-bottom: 6px;
+    }
+
+    .trend-card {
+      padding: 16px;
+      border-radius: 16px;
+      background: var(--panel-strong);
+      border: 1px solid rgba(255, 255, 255, 0.04);
+    }
+
+    .trend-card .label {
+      color: var(--muted);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 10px;
+    }
+
+    .trend-card .sub {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.55;
+    }
+
+    .trend-svg {
+      width: 100%;
+      height: 120px;
+      display: block;
+      margin-top: 12px;
+    }
+
+    .agent-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .agent-card {
+      padding: 16px;
+      border-radius: 16px;
+      background: var(--panel-strong);
+      border: 1px solid rgba(255, 255, 255, 0.04);
+    }
+
+    .agent-card h3 {
+      margin: 0 0 8px;
+      font-size: 18px;
+      letter-spacing: -0.02em;
+    }
+
+    .agent-card p {
+      margin: 0 0 10px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.55;
+    }
+
+    .agent-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .agent-small {
+      color: var(--muted);
+      display: block;
+      font-size: 12px;
+      line-height: 1.55;
+    }
+
+    .stock-link {
+      display: inline-flex;
+      flex-direction: column;
+      gap: 1px;
+      color: var(--text);
+      text-decoration: none;
+    }
+
+    .stock-link:hover .stock-symbol,
+    .stock-link:hover .stock-name {
+      color: var(--cyan);
+    }
+
+    .stock-name {
+      font-size: 17px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      color: var(--text);
+      line-height: 1.35;
+    }
+
+    .stock-symbol {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+      line-height: 1.35;
+    }
+
+    .stock-pick {
+      margin-top: 8px;
+      padding: 10px 12px;
+      border-radius: 14px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.04);
+    }
+
+    .stock-pick-head {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      margin-bottom: 6px;
+    }
+
+    .stock-rank {
+      flex: 0 0 auto;
+      min-width: 32px;
+      padding-top: 3px;
+      color: var(--cyan);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+    }
+
+    .stock-meta-line {
+      color: var(--muted);
+      display: block;
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    .stock-reason {
+      color: var(--text);
+      display: block;
+      font-size: 12px;
+      line-height: 1.5;
+      margin-top: 4px;
+    }
+
+    .stock-link-compact .stock-name {
+      font-size: 15px;
+    }
+
+    .stock-link-compact .stock-symbol {
+      font-size: 10px;
+    }
+
+    .market-stack {
+      display: grid;
+      gap: 18px;
+    }
+
+    .market-subhead {
+      margin: 0 0 10px;
+    }
+
+    .market-subhead h3 {
+      margin: 0 0 4px;
+      font-size: 16px;
+      letter-spacing: -0.02em;
+    }
+
+    .market-subhead p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    #expert-top10-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      align-items: start;
+    }
+
+    #expert-top10-grid .agent-card {
+      padding: 14px;
+    }
+
+    #expert-top10-grid .agent-card h3 {
+      font-size: 16px;
+      margin-bottom: 4px;
+    }
+
+    #expert-top10-grid .agent-card p {
+      margin-bottom: 8px;
+      font-size: 12px;
+    }
+
+    #expert-consensus .list-item {
+      padding: 14px 16px;
+    }
+
+    .stock-why {
+      color: var(--text);
+      display: block;
+      font-size: 12px;
+      line-height: 1.5;
+      margin-top: 6px;
+    }
+
+    .stock-why strong {
+      font-size: inherit;
+      margin: 0;
+      display: inline;
+      color: var(--text);
+    }
+
+    .source-list {
+      display: grid;
+      gap: 8px;
+    }
+
+    .source-line {
+      font-family: "IBM Plex Mono", monospace;
+      font-size: 11px;
+      color: var(--muted);
+      padding: 10px 12px;
+      border-radius: 12px;
+      background: rgba(255,255,255,0.03);
+      overflow-wrap: anywhere;
+    }
+
+    .search-shell {
+      position: relative;
+      max-width: 680px;
+    }
+
+    .search-input {
+      width: 100%;
+      padding: 14px 16px;
+      border-radius: 14px;
+      border: 1px solid rgba(93, 208, 255, 0.24);
+      background: rgba(6, 16, 24, 0.8);
+      color: var(--text);
+      font: inherit;
+    }
+
+    .search-results {
+      position: absolute;
+      top: calc(100% + 6px);
+      left: 0;
+      right: 0;
+      z-index: 30;
+      display: grid;
+      gap: 6px;
+      padding: 10px;
+      border-radius: 14px;
+      background: rgba(7, 16, 25, 0.98);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      box-shadow: var(--shadow);
+    }
+
+    .search-result {
+      appearance: none;
+      border: 0;
+      width: 100%;
+      text-align: left;
+      border-radius: 12px;
+      padding: 12px 14px;
+      background: rgba(255, 255, 255, 0.03);
+      color: var(--text);
+      cursor: pointer;
+    }
+
+    .search-result:hover {
+      background: rgba(93, 208, 255, 0.12);
+    }
+
+    .search-result strong,
+    .search-result span {
+      display: block;
+    }
+
+    .search-result span {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.45;
+      margin-top: 4px;
+    }
+
+    .market-note {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.6;
+      margin-top: 10px;
+    }
+
+    .opinion-grid {
+      display: grid;
+      gap: 14px;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .opinion-card {
+      padding: 16px;
+      border-radius: 16px;
+      background: var(--panel-strong);
+      border: 1px solid rgba(255, 255, 255, 0.04);
+    }
+
+    .opinion-card h3 {
+      margin: 0 0 8px;
+      font-size: 17px;
+      letter-spacing: -0.02em;
+    }
+
+    .opinion-card p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.55;
+    }
+
+    .opinion-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .consensus-grid {
+      display: grid;
+      gap: 12px;
+    }
+
+    .continent-board-grid {
+      display: grid;
+      gap: 14px;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      margin-top: 14px;
+    }
+
+    .continent-card {
+      padding: 14px;
+      border-radius: 16px;
+      background: var(--panel-strong);
+      border: 1px solid rgba(255, 255, 255, 0.04);
+    }
+
+    .continent-card h4 {
+      margin: 0 0 4px;
+      font-size: 16px;
+      letter-spacing: -0.02em;
+    }
+
+    .continent-card p {
+      margin: 0 0 10px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    .continent-card .list {
+      gap: 8px;
+    }
+
+    .continent-card .list-item {
+      padding: 10px 12px;
+    }
+
+    .empty {
+      color: var(--muted);
+      padding: 18px 0;
+      font-size: 14px;
+    }
+
+    @media (max-width: 1080px) {
+      .hero,
+      .split,
+      .card-grid,
+      .activity-grid,
+      .tier-grid,
+      .storage-grid,
+      .intelligence-grid,
+      .continent-board-grid,
+      .opinion-grid,
+      .agent-grid,
+      .score-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+
+    @media (max-width: 760px) {
+      .hero,
+      .split,
+      .card-grid,
+      .activity-grid,
+      .tier-grid,
+      .storage-grid,
+      .intelligence-grid,
+      .continent-board-grid,
+      .opinion-grid,
+      .agent-grid,
+      .score-grid {
+        grid-template-columns: 1fr;
+      }
+
+      h1 { font-size: 30px; }
+      .hero-main, .section, .hero-side { padding: 18px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <section class="hero">
+      <div class="panel hero-main">
+        <div class="eyebrow">Quant Lab v4.0 Daily Truth</div>
+        <h1 id="title">Lade lokalen QuantLab-Report…</h1>
+        <p class="hero-copy" id="subtitle">Die Seite liest die taegliche v4-Truth aus lokalen Artefakten und zeigt Umsetzung, Training, Daten-Truth, End-to-End-Gates und die naechsten Engpaesse.</p>
+        <div class="meta-row" id="meta-row"></div>
+        <div class="latest-box">
+          <div class="latest-head">
+            <strong>Latest</strong>
+            <span id="latest-status">Noch kein manueller Refresh in dieser Sitzung.</span>
+          </div>
+          <div class="latest-grid" id="latest-updates"></div>
+        </div>
+        <div class="hero-actions">
+          <div class="action-group">
+            <button class="action-button" id="reload-report" type="button">Report neu laden</button>
+            <span class="action-note" id="refresh-status">Lokale Report-Dateien werden geprueft…</span>
+          </div>
+          <div class="action-note">Button baut jetzt jedes Mal lokal frisch neu. Auto-Build um 08:00 bleibt zusaetzlich aktiv. Notfallweg: <code>QuantLab-Daily-Report.command</code>.</div>
+        </div>
+      </div>
+      <aside class="panel hero-side">
+        <h2>Scoreboard</h2>
+        <div class="score-grid" id="score-grid"></div>
+      </aside>
+    </section>
+
+    <section class="panel section">
+      <div class="section-head">
+        <h2>Expertenlage Jetzt</h2>
+        <p>Ganz einfach: welche Agenturen sind stark, wofuer und ob die Zahl starker Experten waechst.</p>
+      </div>
+      <div class="tier-grid" id="expert-tier-grid"></div>
+      <div class="split" style="margin-top: 14px;">
+        <div class="trend-card">
+          <div class="label">Trend Stark / Super Stark</div>
+          <div class="sub" id="expert-tier-trend-meta"></div>
+          <svg class="trend-svg" id="expert-tier-trend" viewBox="0 0 420 120" preserveAspectRatio="none"></svg>
+        </div>
+        <div class="list" id="expert-tier-notes"></div>
+      </div>
+    </section>
+
+    <section class="panel section">
+      <div class="section-head">
+        <h2>Fortschritt Richtung 100%</h2>
+        <p>Klare Trennung zwischen implementiertem System und echter Release-Reife.</p>
+      </div>
+      <div class="split">
+        <div id="progress-checks"></div>
+        <div id="readiness-checks"></div>
+      </div>
+    </section>
+
+    <section class="panel section">
+      <div class="section-head">
+        <h2>Training Aktivitaet</h2>
+        <p>Alle verfuegbaren Trainings-/Eval-Signale fuer heute, diese Woche, diesen Monat und insgesamt.</p>
+      </div>
+      <div class="activity-grid" id="activity-grid"></div>
+    </section>
+
+    <section class="panel section">
+      <div class="section-head">
+        <h2>Sichtbarer Fortschritt</h2>
+        <p>Anschauliche Belege, ob wir wirklich vorankommen oder nur laufen.</p>
+      </div>
+      <div class="split">
+        <div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>As-of</th>
+                  <th>Strict top3500</th>
+                  <th>Strict top5000</th>
+                  <th>Registry</th>
+                  <th>Portfolio</th>
+                  <th>Final Gates</th>
+                </tr>
+              </thead>
+              <tbody id="target-table"></tbody>
+            </table>
+          </div>
+        </div>
+        <div>
+          <div class="intel-card">
+            <div class="label">History</div>
+            <div id="history-meta" class="sub"></div>
+            <svg class="spark" id="history-spark" viewBox="0 0 420 80" preserveAspectRatio="none"></svg>
+          </div>
+          <div class="list" id="proof-points" style="margin-top: 14px;"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel section">
+      <div class="section-head">
+        <h2>Daten, Sicherung, Nicht-im-Kreis-Drehen</h2>
+        <p>Quellenfrische, Speicherlage und taegliche Snapshot-Historie.</p>
+      </div>
+      <div class="storage-grid" id="storage-grid"></div>
+      <div style="margin-top: 14px;" class="list" id="data-list"></div>
+    </section>
+
+    <section class="panel section">
+      <div class="section-head">
+        <h2>Welche Experten sind schon da?</h2>
+        <p>Fuer jeden Bereich: Staerke, Einsatzzweck, Beispiel-Anforderung und wo du ihn direkt nutzt.</p>
+      </div>
+      <div class="card-grid" id="agent-summary-grid"></div>
+      <div style="margin-top: 14px;" class="list" id="agent-quick-answer"></div>
+      <div style="margin-top: 14px;" class="split">
+        <div class="agent-grid" id="agent-family-grid"></div>
+        <div class="list" id="agent-playbook"></div>
+      </div>
+    </section>
+
+    <section class="panel section">
+      <div class="section-head">
+        <h2>Aktie Durch Experten Pruefen</h2>
+        <p>Universe v7 mit Autovervollstaendigung. Fuer gescorte Aktien bekommst du direkt die Meinungen der besten Experten.</p>
+      </div>
+      <div class="search-shell">
+        <input id="market-search-input" class="search-input" type="search" placeholder="Aktie suchen, z. B. AAPL, SAP, 000001" autocomplete="off">
+        <div id="market-search-results" class="search-results" hidden></div>
+      </div>
+      <div class="market-note" id="market-search-summary"></div>
+      <div class="split" style="margin-top: 14px;">
+        <div class="list" id="selected-stock-summary"></div>
+        <div class="opinion-grid" id="selected-stock-experts"></div>
+      </div>
+    </section>
+
+    <section class="panel section">
+      <div class="section-head">
+        <h2>Beste Kaufchancen Heute</h2>
+        <p>Top 10 pro Experte plus Gesamtkonsens darueber, welche Aktien aktuell am haeufigsten nach oben genannt werden.</p>
+      </div>
+      <div class="market-stack">
+        <div>
+          <div class="market-subhead">
+            <h3>Gesamt-Top-10 aller starken Experten</h3>
+            <p>Das ist die wichtigste Liste: diese Aktien werden heute am haeufigsten gemeinsam als Kaufchance genannt.</p>
+          </div>
+          <div class="consensus-grid" id="expert-consensus"></div>
+          <div class="continent-board-grid" id="continent-top10-grid"></div>
+        </div>
+        <div>
+          <div class="market-subhead">
+            <h3>Top 10 pro super starkem Experten</h3>
+            <p>Hier siehst du, was jeder Spitzenexperte heute am besten findet, in einfacher Sprache erklaert.</p>
+          </div>
+          <div class="agent-grid" id="expert-top10-grid"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel section">
+      <div class="section-head">
+        <h2>Was wird trainiert und wie weit ist das System?</h2>
+        <p>Aktuelle Champions, Familienfokus, Portfolio- und Gate-Belege.</p>
+      </div>
+      <div class="intelligence-grid" id="intelligence-grid"></div>
+      <div style="margin-top: 14px;" class="split">
+        <div class="list" id="training-scope"></div>
+        <div class="list" id="blockers"></div>
+      </div>
+    </section>
+
+    <section class="panel section">
+      <div class="section-head">
+        <h2>Quellen</h2>
+        <p>Die Seite ist nur so gut wie diese lokalen Artefakte.</p>
+      </div>
+      <div class="source-list" id="source-list"></div>
+    </section>
+  </div>
+
+  <script src="./data/quantlab/reports/v4-daily-latest.js"></script>
+  <script src="./data/quantlab/reports/v4-daily-market.js"></script>
+  <script type="module">
+    const REPORT_URL = '/data/quantlab/reports/v4-daily-latest.json';
+    const REPORT_JS_URL = './data/quantlab/reports/v4-daily-latest.js';
+    const MARKET_URL = '/data/quantlab/reports/v4-daily-market.json';
+    const MARKET_JS_URL = './data/quantlab/reports/v4-daily-market.js';
+    const REFRESH_API_BASE = 'http://127.0.0.1:8791';
+    const REFRESH_API_URL = `${REFRESH_API_BASE}/api/quantlab/v4/refresh`;
+    const AUTO_REFRESH_MS = 60 * 1000;
+    let currentReportSignature = '';
+    let currentReport = null;
+    let currentMarketSignature = '';
+    let currentMarket = null;
+    let selectedAssetId = null;
+
+    function statusClass(value) {
+      if (typeof value === 'number') {
+        if (value >= 80) return 'good';
+        if (value >= 60) return 'warn';
+        return 'bad';
+      }
+      if (value === 'good' || value === 'implemented' || value === true) return 'good';
+      if (value === 'warn' || value === 'in_progress') return 'warn';
+      return 'bad';
+    }
+
+    function badge(label, status = 'info') {
+      return `<span class="badge ${statusClass(status) === 'good' ? 'good' : statusClass(status) === 'warn' ? 'warn' : status === 'info' ? 'info' : 'bad'}">${label}</span>`;
+    }
+
+    function fmtPct(value) {
+      return `${Number(value || 0).toFixed(1)}%`;
+    }
+
+    function fmtNumber(value) {
+      return new Intl.NumberFormat('de-DE').format(Number(value || 0));
+    }
+
+    function escapeHtml(text) {
+      return String(text ?? '')
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#39;');
+    }
+
+    function stockAnalyzerHref(symbol) {
+      const cleanSymbol = String(symbol || '').trim();
+      return cleanSymbol ? `https://rubikvault.com/analyze/${encodeURIComponent(cleanSymbol)}` : 'https://rubikvault.com/analyze';
+    }
+
+    function humanFamilyLabel(family) {
+      const map = {
+        BREAKOUT: 'Breakout',
+        CSMOM: 'Relative Staerke',
+        TSMOM: 'Trendfolge',
+        QUALITY: 'Qualitaet',
+        MEANREV: 'Ruecklauf',
+        HYBRID: 'Hybrid',
+      };
+      return map[String(family || '').toUpperCase()] || String(family || 'Experte');
+    }
+
+    function lookupMarketAsset(marketData, item) {
+      const assetId = String(item?.assetId || item?.canonicalId || '').trim();
+      const fallbackSymbol = assetId.includes(':') ? assetId.split(':').pop() : '';
+      const fromOpinion = assetId ? marketData?.assetOpinions?.[assetId] : null;
+      const fromSearch = assetId
+        ? (marketData?.searchIndex || []).find((entry) => (entry.assetId || entry.canonicalId) === assetId)
+        : null;
+      const symbol = String(item?.symbol || fromOpinion?.symbol || fromSearch?.symbol || fallbackSymbol || '—').trim() || '—';
+      const rawName = item?.name || fromOpinion?.name || fromSearch?.name || '';
+      const name = String(rawName || '').trim() && String(rawName).trim() !== symbol
+        ? String(rawName).trim()
+        : 'Name im Feed fehlt';
+      const exchange = String(item?.exchange || fromOpinion?.exchange || fromSearch?.exchange || (assetId.includes(':') ? assetId.split(':')[0] : '') || '—').trim() || '—';
+      return {
+        assetId,
+        symbol,
+        name,
+        exchange,
+      };
+    }
+
+    function hasMeaningfulName(name, symbol) {
+      const normalizedName = String(name || '').trim();
+      const normalizedSymbol = String(symbol || '').trim();
+      return Boolean(normalizedName && normalizedName !== normalizedSymbol && normalizedName.toLowerCase() !== 'name im feed fehlt');
+    }
+
+    function hasUsefulTicker(symbol) {
+      const normalized = String(symbol || '').trim();
+      return Boolean(normalized && !/^\d+$/.test(normalized));
+    }
+
+    function collectReasonFragments(text, family = '') {
+      const lower = String(text || '').toLowerCase();
+      const seen = new Set();
+      const parts = [];
+      const add = (label) => {
+        if (!label || seen.has(label)) return;
+        seen.add(label);
+        parts.push(label);
+      };
+
+      if (/trend 1\.00|trendgeruest 1\.00|trendaufbau 1\.00/.test(lower)) add('klarer Aufwaertstrend');
+      else if (/trend 0\.67|trendgeruest 0\.67|trendaufbau 0\.67/.test(lower)) add('Trend zeigt weiter nach oben');
+
+      if (/relative staerke/.test(lower)) add('die Aktie laeuft staerker als viele andere');
+      if (/macd/.test(lower)) add('Momentum zieht weiter an');
+      if (/breakout/.test(lower)) add('ein Ausbruch nach oben wird bestaetigt');
+      if (/niedrigere volatilitaet|lowvol/.test(lower)) add('der Verlauf wirkt fuer einen Trend vergleichsweise ruhig');
+      if (/liquiditaet/.test(lower) && !parts.length) add('die Aktie wird aktuell sauber gehandelt');
+
+      if (!parts.length) {
+        if (family === 'BREAKOUT') add('ein neuer Schub nach oben setzt sich durch');
+        if (family === 'CSMOM') add('die Aktie gehoert aktuell zu den relativen Gewinnern');
+        if (family === 'TSMOM') add('der laufende Trend haelt an');
+        if (family === 'QUALITY') add('der Trend wirkt robust und vergleichsweise stabil');
+      }
+      return parts;
+    }
+
+    function joinFragments(parts) {
+      if (!parts.length) return '';
+      if (parts.length === 1) return parts[0];
+      if (parts.length === 2) return `${parts[0]} und ${parts[1]}`;
+      return `${parts[0]}, ${parts[1]} und ${parts[2]}`;
+    }
+
+    function toSentence(text) {
+      const normalized = String(text || '').trim();
+      if (!normalized) return '';
+      return `${normalized.charAt(0).toUpperCase()}${normalized.slice(1)}.`;
+    }
+
+    function simpleBuyReason(text, family = '') {
+      const fragments = collectReasonFragments(text, family).slice(0, 2);
+      const combined = joinFragments(fragments);
+      return combined ? toSentence(combined) : 'Mehrere starke Signale zeigen aktuell nach oben.';
+    }
+
+    function expertSupportLine(item, board, marketData) {
+      const boardMap = new Map((marketData?.expertTop10 || []).map((entry) => [entry.candidateId, entry.family]));
+      const families = Array.from(new Set((item.experts || [])
+        .map((candidateId) => humanFamilyLabel(boardMap.get(candidateId)))
+        .filter(Boolean)));
+      if (!families.length) {
+        return `${fmtNumber(item.mentions || 0)} starke Experten bestaetigen diese Aktie heute gleichzeitig.`;
+      }
+      return `${fmtNumber(item.mentions || 0)} starke Experten aus ${families.join(', ')} bestaetigen diese Aktie heute gleichzeitig.`;
+    }
+
+    function explainConsensusPlacement(item, index, items, scopeLabel = 'dieser Liste') {
+      const currentMentions = Number(item?.mentions || 0);
+      const currentSignal = Number(item?.avgPercentile || 0);
+      const next = items[index + 1];
+      if (index === 0) {
+        if (next && currentMentions > Number(next.mentions || 0)) {
+          return `Platz 1 in ${scopeLabel}, weil sie heute von ${fmtNumber(currentMentions)} starken Experten genannt wird. Das ist mehr als bei jeder anderen Aktie.`;
+        }
+        return `Platz 1 in ${scopeLabel}, weil hier heute die staerkste gemeinsame Kaufmeinung zusammenkommt.`;
+      }
+      if (next && currentMentions > Number(next.mentions || 0)) {
+        return `Steht in ${scopeLabel} vor Platz ${index + 2}, weil sie von ${fmtNumber(currentMentions)} Experten genannt wird, die naechste Aktie aber nur von ${fmtNumber(next.mentions || 0)}.`;
+      }
+      if (next && currentMentions === Number(next.mentions || 0) && currentSignal > Number(next.avgPercentile || 0)) {
+        return `Steht in ${scopeLabel} vor Platz ${index + 2}, weil bei gleicher Zahl an Stimmen das Gesamtsignal noch etwas staerker ist.`;
+      }
+      return `Bleibt in ${scopeLabel} weit oben, weil mehrere starke Experten gerade das gleiche Kaufsignal sehen.`;
+    }
+
+    function boardLabel(board) {
+      return board?.title || humanFamilyLabel(board?.family);
+    }
+
+    function renderConsensusRows(items, marketData, options = {}) {
+      const { scopeLabel = 'der Gesamtliste' } = options;
+      return items.map((item, index) => `
+        <div class="list-item">
+          <div class="stock-pick-head">
+            <span class="stock-rank">#${fmtNumber(index + 1)}</span>
+            ${renderStockLink(item, marketData, { compact: true })}
+          </div>
+          <span class="stock-meta-line">${escapeHtml(item.overallVerdict || 'starker Konsens')}</span>
+          <span class="stock-why"><strong>Warum Platz ${fmtNumber(index + 1)}:</strong> ${escapeHtml(explainConsensusPlacement(item, index, items, scopeLabel))}</span>
+          <span class="stock-why"><strong>Warum Kauf jetzt:</strong> ${escapeHtml(simpleBuyReason((item.reasons || []).join(' '), ''))}</span>
+          <small>${escapeHtml(expertSupportLine(item, null, marketData))}</small>
+        </div>
+      `).join('');
+    }
+
+    function boardIntro(board) {
+      const family = String(board?.family || '').toUpperCase();
+      if (family === 'BREAKOUT') return 'Sucht Aktien, die gerade frisch nach oben ausbrechen.';
+      if (family === 'CSMOM') return 'Sucht Aktien, die aktuell staerker laufen als der Rest des Marktes.';
+      if (family === 'TSMOM') return 'Sucht Aktien, deren Aufwaertstrend weiter sauber anhaelt.';
+      if (family === 'QUALITY') return 'Sucht robustere Trendaktien mit stabilerem Verlauf.';
+      if (family === 'MEANREV') return 'Sucht Ruecklauf-Chancen nach uebertriebenen Bewegungen.';
+      return board?.shortPurpose || 'Sucht heute die staerksten Kaufchancen.';
+    }
+
+    function renderStockLink(item, marketData, options = {}) {
+      const { compact = false } = options;
+      const asset = lookupMarketAsset(marketData, item);
+      const usefulTicker = hasUsefulTicker(asset.symbol) ? asset.symbol : '';
+      const displayName = hasMeaningfulName(asset.name, asset.symbol) ? asset.name : asset.symbol || 'Unbekannte Aktie';
+      return `
+        <a class="stock-link ${compact ? 'stock-link-compact' : ''}" href="${escapeHtml(stockAnalyzerHref(asset.symbol))}" target="_blank" rel="noopener noreferrer">
+          <span class="stock-name">${escapeHtml(displayName)}</span>
+          ${usefulTicker ? `<span class="stock-symbol">${escapeHtml(usefulTicker)}</span>` : ''}
+        </a>
+      `;
+    }
+
+    function berlinNow() {
+      const now = new Date();
+      const parts = new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'Europe/Berlin',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false,
+      }).formatToParts(now);
+      const map = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+      return {
+        dateId: `${map.year}-${map.month}-${map.day}`,
+        timeId: `${map.hour}:${map.minute}:${map.second}`,
+      };
+    }
+
+    function reportSignature(report) {
+      return [
+        report?.reportDate || '',
+        report?.generatedAt || '',
+        report?.dataSafety?.reportArchive?.latestHash || '',
+      ].join('|');
+    }
+
+    function marketSignature(market) {
+      return [
+        market?.generatedAt || '',
+        market?.summary?.scoredTodayAssetsTotal || '',
+        market?.summary?.selectedExpertsTotal || '',
+      ].join('|');
+    }
+
+    function setRefreshStatus(message) {
+      const node = document.getElementById('refresh-status');
+      if (node) node.textContent = message;
+    }
+
+    function setLatestStatus(message) {
+      const node = document.getElementById('latest-status');
+      if (node) node.textContent = message;
+    }
+
+    function renderLatestUpdates(items) {
+      const node = document.getElementById('latest-updates');
+      if (!node) return;
+      const rows = Array.isArray(items) ? items.filter(Boolean) : [];
+      if (!rows.length) {
+        node.innerHTML = `<div class="latest-empty">Noch kein neues Delta seit dem letzten manuellen Klick.</div>`;
+        return;
+      }
+      node.innerHTML = rows.map((item) => `<div class="latest-item">${escapeHtml(item)}</div>`).join('');
+    }
+
+    function fmtStamp(value) {
+      if (!value) return '—';
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) return String(value);
+      return date.toLocaleString('de-DE', {
+        timeZone: 'Europe/Berlin',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+      });
+    }
+
+    function setButtonBusy(isBusy) {
+      const button = document.getElementById('reload-report');
+      if (!button) return;
+      button.disabled = Boolean(isBusy);
+      button.textContent = isBusy ? 'Baue Report…' : 'Report neu laden';
+    }
+
+    function buildLatestUpdateItems(previous, next) {
+      const items = [];
+      const prevReadiness = Number(previous?.progress?.readiness?.pct);
+      const nextReadiness = Number(next?.progress?.readiness?.pct);
+      if (Number.isFinite(prevReadiness) && Number.isFinite(nextReadiness) && prevReadiness !== nextReadiness) {
+        items.push(`Readiness jetzt ${fmtPct(nextReadiness)} statt ${fmtPct(prevReadiness)}.`);
+      }
+
+      const prevStrict = Number(previous?.currentState?.stagebStability?.strict_positive_runs_total_all || 0);
+      const nextStrict = Number(next?.currentState?.stagebStability?.strict_positive_runs_total_all || 0);
+      const nextStrictTotal = Number(next?.currentState?.stagebStability?.asof_points_total || 0);
+      if (prevStrict !== nextStrict && nextStrictTotal > 0) {
+        items.push(`Strict-positive Serie jetzt ${fmtNumber(nextStrict)}/${fmtNumber(nextStrictTotal)}.`);
+      }
+
+      const prevGateAsof = String(previous?.intelligence?.latestFinalGate?.asofDate || '');
+      const nextGateAsof = String(next?.intelligence?.latestFinalGate?.asofDate || '');
+      const nextGateOk = Boolean(next?.intelligence?.latestFinalGate?.ok);
+      const prevGateOk = Boolean(previous?.intelligence?.latestFinalGate?.ok);
+      if (nextGateAsof && (nextGateAsof !== prevGateAsof || nextGateOk !== prevGateOk)) {
+        items.push(`Neuester Final-Gate-Stand: ${nextGateAsof} ist ${nextGateOk ? 'gruen' : 'noch nicht gruen'}.`);
+      }
+
+      const prevChampion = String(previous?.intelligence?.currentChampion?.candidate_id || '');
+      const nextChampion = String(next?.intelligence?.currentChampion?.candidate_id || '');
+      if (nextChampion && nextChampion !== prevChampion) {
+        items.push(`Current Champion jetzt ${nextChampion}.`);
+      }
+
+      const prevStrong = Number(previous?.agentReadiness?.summary?.strongOrBetterTotal || 0);
+      const nextStrong = Number(next?.agentReadiness?.summary?.strongOrBetterTotal || 0);
+      if (prevStrong !== nextStrong) {
+        items.push(`Nachweislich starke Experten jetzt ${fmtNumber(nextStrong)} statt ${fmtNumber(prevStrong)}.`);
+      }
+
+      const prevGeneratedAt = String(previous?.generatedAt || '');
+      const nextGeneratedAt = String(next?.generatedAt || '');
+      if (!items.length && nextGeneratedAt && nextGeneratedAt !== prevGeneratedAt) {
+        items.push(`Report frisch neu gebaut um ${fmtStamp(nextGeneratedAt)}. Kennzahlen blieben dabei gleich.`);
+      }
+
+      if (!items.length) {
+        items.push('Keine neuen lokalen Aenderungen seit dem letzten manuellen Klick.');
+      }
+      return items.slice(0, 4);
+    }
+
+    function tierTone(tier) {
+      if (tier === 'super_stark' || tier === 'stark') return 'good';
+      if (tier === 'mittel') return 'warn';
+      return 'bad';
+    }
+
+    function renderBar(value) {
+      const cl = statusClass(value);
+      return `<div class="bar ${cl}"><i style="width:${Math.max(0, Math.min(100, Number(value || 0)))}%"></i></div>`;
+    }
+
+    function renderSparkline(points) {
+      const svg = document.getElementById('history-spark');
+      if (!points?.length) {
+        svg.innerHTML = '';
+        return;
+      }
+      const width = 420;
+      const height = 80;
+      const padding = 8;
+      const values = points.map((item) => Number(item.readinessPct || 0));
+      const min = Math.min(...values, 0);
+      const max = Math.max(...values, 100);
+      const step = points.length > 1 ? (width - padding * 2) / (points.length - 1) : 0;
+      const scaleY = (val) => {
+        if (max === min) return height / 2;
+        return height - padding - ((val - min) / (max - min)) * (height - padding * 2);
+      };
+      const line = points.map((item, idx) => `${padding + idx * step},${scaleY(Number(item.readinessPct || 0))}`).join(' ');
+      const impl = points.map((item, idx) => `${padding + idx * step},${scaleY(Number(item.implementationPct || 0))}`).join(' ');
+      svg.innerHTML = `
+        <polyline points="${impl}" fill="none" stroke="rgba(255,178,77,0.9)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"></polyline>
+        <polyline points="${line}" fill="none" stroke="rgba(93,208,255,0.95)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></polyline>
+      `;
+    }
+
+    function renderTierTrend(points) {
+      const svg = document.getElementById('expert-tier-trend');
+      if (!svg || !Array.isArray(points) || !points.length) {
+        if (svg) svg.innerHTML = '';
+        return;
+      }
+      const width = 420;
+      const height = 120;
+      const padding = 10;
+      const values = points.flatMap((item) => [
+        Number(item.super_stark || 0),
+        Number(item.strong_or_better || 0),
+      ]);
+      const min = 0;
+      const max = Math.max(...values, 1);
+      const step = points.length > 1 ? (width - padding * 2) / (points.length - 1) : 0;
+      const scaleY = (val) => height - padding - ((val - min) / Math.max(max - min, 1)) * (height - padding * 2);
+      const strongLine = points.map((item, idx) => `${padding + idx * step},${scaleY(Number(item.strong_or_better || 0))}`).join(' ');
+      const superLine = points.map((item, idx) => `${padding + idx * step},${scaleY(Number(item.super_stark || 0))}`).join(' ');
+      svg.innerHTML = `
+        <polyline points="${strongLine}" fill="none" stroke="rgba(93,208,255,0.95)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></polyline>
+        <polyline points="${superLine}" fill="none" stroke="rgba(54,211,153,0.95)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></polyline>
+      `;
+    }
+
+    async function loadReportScript(force = false) {
+      if (!force && window.__RV_QUANTLAB_V4_DAILY_REPORT__) {
+        return window.__RV_QUANTLAB_V4_DAILY_REPORT__;
+      }
+      await new Promise((resolve, reject) => {
+        const previous = document.querySelector('script[data-quantlab-report-runtime]');
+        if (previous) previous.remove();
+        const script = document.createElement('script');
+        script.src = `${REPORT_JS_URL}?ts=${Date.now()}`;
+        script.async = true;
+        script.dataset.quantlabReportRuntime = '1';
+        script.onload = () => resolve();
+        script.onerror = () => reject(new Error('Lokale JS-Reportdatei konnte nicht geladen werden'));
+        document.head.appendChild(script);
+      });
+      if (!window.__RV_QUANTLAB_V4_DAILY_REPORT__) {
+        throw new Error('Lokale JS-Reportdaten fehlen');
+      }
+      return window.__RV_QUANTLAB_V4_DAILY_REPORT__;
+    }
+
+    async function loadMarketScript(force = false) {
+      if (!force && window.__RV_QUANTLAB_V4_DAILY_MARKET__) {
+        return window.__RV_QUANTLAB_V4_DAILY_MARKET__;
+      }
+      await new Promise((resolve, reject) => {
+        const previous = document.querySelector('script[data-quantlab-market-runtime]');
+        if (previous) previous.remove();
+        const script = document.createElement('script');
+        script.src = `${MARKET_JS_URL}?ts=${Date.now()}`;
+        script.async = true;
+        script.dataset.quantlabMarketRuntime = '1';
+        script.onload = () => resolve();
+        script.onerror = () => reject(new Error('Lokale JS-Marktdaten konnten nicht geladen werden'));
+        document.head.appendChild(script);
+      });
+      if (!window.__RV_QUANTLAB_V4_DAILY_MARKET__) {
+        throw new Error('Lokale QuantLab-Marktdaten fehlen');
+      }
+      return window.__RV_QUANTLAB_V4_DAILY_MARKET__;
+    }
+
+    async function loadReport(options = {}) {
+      const { force = false } = options;
+      if (window.location.protocol === 'file:') {
+        return loadReportScript(force);
+      }
+      if (!force && window.__RV_QUANTLAB_V4_DAILY_REPORT__) {
+        return window.__RV_QUANTLAB_V4_DAILY_REPORT__;
+      }
+      const reportUrl = `${REPORT_URL}?ts=${Date.now()}`;
+      const res = await fetch(reportUrl, { cache: 'no-store' });
+      if (!res.ok) throw new Error(`Report fetch failed: ${res.status}`);
+      const report = await res.json();
+      window.__RV_QUANTLAB_V4_DAILY_REPORT__ = report;
+      return report;
+    }
+
+    async function loadMarketData(options = {}) {
+      const { force = false } = options;
+      if (window.location.protocol === 'file:') {
+        return loadMarketScript(force);
+      }
+      if (!force && window.__RV_QUANTLAB_V4_DAILY_MARKET__) {
+        return window.__RV_QUANTLAB_V4_DAILY_MARKET__;
+      }
+      const marketUrl = `${MARKET_URL}?ts=${Date.now()}`;
+      const res = await fetch(marketUrl, { cache: 'no-store' });
+      if (!res.ok) throw new Error(`Market fetch failed: ${res.status}`);
+      const market = await res.json();
+      window.__RV_QUANTLAB_V4_DAILY_MARKET__ = market;
+      return market;
+    }
+
+    async function triggerLocalRefresh() {
+      const controller = new AbortController();
+      const timeout = window.setTimeout(() => controller.abort(), 180000);
+      try {
+        const res = await fetch(REFRESH_API_URL, {
+          method: 'POST',
+          mode: 'cors',
+          cache: 'no-store',
+          headers: {
+            'content-type': 'application/json',
+          },
+          body: JSON.stringify({ source: 'daily_report_button' }),
+          signal: controller.signal,
+        });
+        if (!res.ok) {
+          throw new Error(`Lokaler Refresh-Dienst antwortete mit ${res.status}`);
+        }
+        return res.json();
+      } finally {
+        window.clearTimeout(timeout);
+      }
+    }
+
+    function marketSearchItems(query, marketData) {
+      const q = String(query || '').trim().toLowerCase();
+      if (!q || !marketData?.searchIndex?.length) return [];
+      return marketData.searchIndex
+        .filter((item) => {
+          const symbol = String(item.symbol || '').toLowerCase();
+          const name = String(item.name || '').toLowerCase();
+          return symbol.includes(q) || name.includes(q);
+        })
+        .sort((a, b) => {
+          const aStarts = String(a.symbol || '').toLowerCase().startsWith(q) ? 1 : 0;
+          const bStarts = String(b.symbol || '').toLowerCase().startsWith(q) ? 1 : 0;
+          if (aStarts !== bStarts) return bStarts - aStarts;
+          if (a.scoredToday !== b.scoredToday) return Number(b.scoredToday) - Number(a.scoredToday);
+          return String(a.symbol || '').localeCompare(String(b.symbol || ''));
+        })
+        .slice(0, 8);
+    }
+
+    function hideMarketSearchResults() {
+      const node = document.getElementById('market-search-results');
+      if (!node) return;
+      node.innerHTML = '';
+      node.hidden = true;
+    }
+
+    function renderMarketSearchResults(items) {
+      const node = document.getElementById('market-search-results');
+      if (!node) return;
+      if (!items.length) {
+        hideMarketSearchResults();
+        return;
+      }
+      node.hidden = false;
+      node.innerHTML = items.map((item) => `
+        <button class="search-result" type="button" data-market-pick="${escapeHtml(item.assetId || item.canonicalId || '')}">
+          <strong>${escapeHtml(item.symbol || '—')} · ${escapeHtml(item.name || '—')}</strong>
+          <span>${escapeHtml(item.exchange || '—')} · ${escapeHtml(item.status || '—')} · ${item.scoredToday ? 'heute gescored' : 'heute nicht im Daily-Slice gescored'}</span>
+        </button>
+      `).join('');
+    }
+
+    function pickMarketAsset(assetId) {
+      selectedAssetId = assetId || null;
+      const input = document.getElementById('market-search-input');
+      if (input && currentMarket?.assetOpinions?.[assetId]) {
+        const asset = currentMarket.assetOpinions[assetId];
+        input.value = `${asset.symbol} · ${asset.name}`;
+      } else if (input && currentMarket?.searchIndex?.length) {
+        const found = currentMarket.searchIndex.find((item) => (item.assetId || item.canonicalId) === assetId);
+        if (found) input.value = `${found.symbol} · ${found.name}`;
+      }
+      hideMarketSearchResults();
+      if (currentMarket) renderMarketPanels(currentMarket);
+    }
+
+    function bindMarketSearch() {
+      const input = document.getElementById('market-search-input');
+      const results = document.getElementById('market-search-results');
+      if (!input || input.dataset.bound === '1') return;
+      input.dataset.bound = '1';
+      input.addEventListener('input', () => {
+        renderMarketSearchResults(marketSearchItems(input.value, currentMarket));
+      });
+      input.addEventListener('focus', () => {
+        renderMarketSearchResults(marketSearchItems(input.value, currentMarket));
+      });
+      document.addEventListener('click', (event) => {
+        if (results?.contains(event.target) || input.contains(event.target)) return;
+        hideMarketSearchResults();
+      });
+      results?.addEventListener('click', (event) => {
+        const target = event.target.closest('[data-market-pick]');
+        if (!target) return;
+        pickMarketAsset(target.getAttribute('data-market-pick'));
+      });
+    }
+
+    function renderMarketPanels(marketData) {
+      document.getElementById('market-search-summary').textContent = marketData
+        ? `Universe v7 kennt ${fmtNumber(marketData.summary.searchUniverseSymbolsTotal)} Stocks. Heute direkt scored und damit quantifiziert auswertbar: ${fmtNumber(marketData.summary.scoredTodayAssetsTotal)} Aktien.`
+        : 'Marktdaten werden geladen…';
+
+      if (!marketData) {
+        document.getElementById('selected-stock-summary').innerHTML = `<div class="empty">Marktdaten werden geladen…</div>`;
+        document.getElementById('selected-stock-experts').innerHTML = `<div class="empty">Noch keine Expertenmeinungen geladen.</div>`;
+        document.getElementById('expert-top10-grid').innerHTML = `<div class="empty">Top-10-Boards werden geladen…</div>`;
+        document.getElementById('expert-consensus').innerHTML = `<div class="empty">Konsens wird geladen…</div>`;
+        document.getElementById('continent-top10-grid').innerHTML = `<div class="empty">Kontinent-Top-10 werden geladen…</div>`;
+        return;
+      }
+
+      const fallbackAssetId = selectedAssetId && (marketData.assetOpinions?.[selectedAssetId] || marketData.searchIndex.some((item) => (item.assetId || item.canonicalId) === selectedAssetId))
+        ? selectedAssetId
+        : (marketData.defaultAssetId || marketData.aggregateTop10?.[0]?.assetId || null);
+      selectedAssetId = fallbackAssetId;
+
+      const asset = fallbackAssetId ? (marketData.assetOpinions?.[fallbackAssetId] || marketData.searchIndex.find((item) => (item.assetId || item.canonicalId) === fallbackAssetId)) : null;
+      if (!asset) {
+        document.getElementById('selected-stock-summary').innerHTML = `<div class="empty">Waehle eine Aktie aus dem Universe-v7-Suchfeld.</div>`;
+        document.getElementById('selected-stock-experts').innerHTML = `<div class="empty">Noch keine Expertenmeinungen sichtbar.</div>`;
+      } else if (asset.expertOpinions) {
+        document.getElementById('selected-stock-summary').innerHTML = `
+          <div class="list-item">
+            ${renderStockLink(asset, marketData)}
+            <span>${escapeHtml(asset.exchange || '—')} · ${escapeHtml(asset.status || '—')} · letzter Handel ${escapeHtml(asset.lastTradeDate || '—')}</span>
+            <small>20T ${((Number(asset.metrics?.ret20d || 0)) * 100).toFixed(1)}% · 5T ${((Number(asset.metrics?.ret5d || 0)) * 100).toFixed(1)}% · RSI ${Number(asset.metrics?.rsi14 || 0).toFixed(1)} · MACD-Hist ${Number(asset.metrics?.macdHist || 0).toFixed(2)}</small>
+          </div>
+          <div class="list-item">
+            <strong>Gesamtbild</strong>
+            <span>${fmtNumber(asset.overall?.buyVotes || 0)} starke Kaufstimmen, ${fmtNumber(asset.overall?.avoidVotes || 0)} klare Ablehnungen.</span>
+            <small>Beste Experten fuer diese Aktie: ${escapeHtml((asset.overall?.strongestExperts || []).join(', ') || '—')}</small>
+          </div>
+        `;
+        document.getElementById('selected-stock-experts').innerHTML = asset.expertOpinions.slice(0, 8).map((item) => `
+          <div class="opinion-card">
+            <div class="opinion-meta">
+              ${badge(item.family || '—', 'info')}
+              ${badge(item.tierLabel || '—', tierTone(item.tier))}
+              ${badge(item.verdict || '—', item.verdictTone || 'info')}
+            </div>
+            <h3>${escapeHtml(item.candidateId || '—')}</h3>
+            <p>${escapeHtml(item.reason || '—')}</p>
+            <p style="margin-top:8px;">Ranking ${fmtNumber(item.rank || 0)} / Percentile ${Number(item.percentile || 0).toFixed(1)}</p>
+          </div>
+        `).join('');
+      } else {
+        document.getElementById('selected-stock-summary').innerHTML = `
+          <div class="list-item">
+            ${renderStockLink(asset, marketData)}
+            <span>${escapeHtml(asset.exchange || '—')} · ${escapeHtml(asset.status || '—')} · letzter Handel ${escapeHtml(asset.lastTradeDate || '—')}</span>
+            <small>Diese Aktie ist im Universe v7 registriert, liegt heute aber nicht im aktuellen scored Daily-Slice. Deshalb gibt es noch keine tagesaktuelle Expertenmeinung.</small>
+          </div>
+        `;
+        document.getElementById('selected-stock-experts').innerHTML = `<div class="empty">Heute keine Quant-Lab-Tagesmeinung fuer diese Aktie, weil sie nicht im scored Deploy-Slice liegt.</div>`;
+      }
+
+      const visibleBoards = (marketData.expertTop10 || [])
+        .filter((board) => board.tier === 'super_stark')
+        .map((board) => ({
+          ...board,
+          top10: (board.top10 || []).filter((item) => {
+            const asset = lookupMarketAsset(marketData, item);
+            return hasMeaningfulName(asset.name, asset.symbol);
+          }).slice(0, 10),
+        }))
+        .filter((board) => board.top10.length);
+
+      document.getElementById('expert-top10-grid').innerHTML = visibleBoards.map((board) => `
+        <div class="agent-card">
+          <div class="agent-meta">
+            ${badge(board.family || '—', 'info')}
+            ${badge(board.tierLabel || '—', tierTone(board.tier))}
+          </div>
+          <h3>${escapeHtml(boardLabel(board))}</h3>
+          <p>${escapeHtml(boardIntro(board))}</p>
+          ${(board.top10 || []).slice(0, 10).map((item, itemIndex) => `
+            <div class="stock-pick">
+              <div class="stock-pick-head">
+                <span class="stock-rank">#${fmtNumber(itemIndex + 1)}</span>
+                ${renderStockLink(item, marketData)}
+              </div>
+              <span class="stock-meta-line">${escapeHtml(item.verdict || 'Kaufchance')} · ${escapeHtml(humanFamilyLabel(board.family))}</span>
+              <small class="stock-reason"><strong>Warum jetzt:</strong> ${escapeHtml(simpleBuyReason(item.reason, board.family))}</small>
+            </div>
+          `).join('')}
+        </div>
+      `).join('');
+
+      const consensusItems = (marketData.aggregateTop10 || [])
+        .filter((item) => {
+          const asset = lookupMarketAsset(marketData, item);
+          return hasMeaningfulName(asset.name, asset.symbol);
+        })
+        .slice(0, 10);
+
+      document.getElementById('expert-consensus').innerHTML = renderConsensusRows(consensusItems, marketData, { scopeLabel: 'der Gesamtliste' });
+
+      const continentBoards = ['america', 'europe', 'asia'].map((continentKey) => {
+        const board = marketData.aggregateTopByContinent?.[continentKey] || {};
+        const regionItems = (board.top10 || []).filter((item) => {
+          const asset = lookupMarketAsset(marketData, item);
+          return hasMeaningfulName(asset.name, asset.symbol);
+        }).slice(0, 10);
+        const label = board.continentLabel || continentKey;
+        return `
+          <div class="continent-card">
+            <h4>Top 10 ${escapeHtml(label)}</h4>
+            <p>Die staerksten Kaufchancen in ${escapeHtml(label)} auf Basis aller starken Experten.</p>
+            <div class="list">
+              ${regionItems.length
+                ? renderConsensusRows(regionItems, marketData, { scopeLabel: label })
+                : '<div class="empty">Heute noch keine klare Regionalliste verfuegbar.</div>'}
+            </div>
+          </div>
+        `;
+      }).join('');
+      document.getElementById('continent-top10-grid').innerHTML = continentBoards;
+    }
+
+    function render(report, marketData) {
+      document.getElementById('title').textContent = `Quant Lab v4.0 Daily Report · ${report.reportDate}`;
+      document.getElementById('subtitle').textContent = report.objective.releaseGoal;
+
+      document.getElementById('meta-row').innerHTML = `
+        <div class="pill">Generiert: ${escapeHtml(report.generatedAt)}</div>
+        <div class="pill">Kanonische Lane: ${escapeHtml(report.objective.canonicalLane.featureStoreVersion)} · top${escapeHtml(report.objective.canonicalLane.topLiquidN)}</div>
+        <div class="pill">Snapshot: ${escapeHtml(report.objective.canonicalLane.snapshotId)}</div>
+        <div class="pill">Training ist Teil der Fertigstellung: ${report.trainingScope.trainingIsPartOfCompletion ? 'ja' : 'nein'}</div>
+      `;
+
+      const scoreGrid = document.getElementById('score-grid');
+      scoreGrid.innerHTML = `
+        <div class="score-card">
+          <div class="score-label">System Implementiert</div>
+          <div class="score-value score-${statusClass(report.progress.implementation.status)}">${fmtPct(report.progress.implementation.pct)}</div>
+          <div class="score-detail">${report.progress.implementation.done}/${report.progress.implementation.total} Kernbausteine sind lokal umgesetzt.</div>
+        </div>
+        <div class="score-card">
+          <div class="score-label">Release Readiness</div>
+          <div class="score-value score-${statusClass(report.progress.readiness.status)}">${fmtPct(report.progress.readiness.pct)}</div>
+          <div class="score-detail">Empirische v4-final-Reife ueber Daten, Stability und End-to-End-Gates.</div>
+        </div>
+        <div class="score-card">
+          <div class="score-label">Strict-Positive Serie</div>
+          <div class="score-value score-${statusClass(report.currentState.stagebStability.strict_positive_ratio_all >= 0.6 ? 'good' : report.currentState.stagebStability.strict_positive_ratio_all >= 0.3 ? 'warn' : 'bad')}">${fmtPct((report.currentState.stagebStability.strict_positive_ratio_all || 0) * 100)}</div>
+          <div class="score-detail">${fmtNumber(report.currentState.stagebStability.strict_positive_runs_total_all || 0)} von ${fmtNumber(report.currentState.stagebStability.asof_points_total || 0)} As-of-Punkten aktuell positiv.</div>
+        </div>
+        <div class="score-card">
+          <div class="score-label">Night Stability</div>
+          <div class="score-value score-${statusClass(report.currentState.overnightStability.stability_score_0_100)}">${Number(report.currentState.overnightStability.stability_score_0_100 || 0).toFixed(2)}</div>
+          <div class="score-detail">${fmtNumber(report.currentState.overnightStability.completed_jobs || 0)} Jobs completed, ${fmtNumber(report.currentState.overnightStability.failed_jobs || 0)} failed.</div>
+        </div>
+      `;
+
+      document.getElementById('expert-tier-grid').innerHTML = (report.agentReadiness.tierSummary || []).map((item) => `
+        <div class="tier-card">
+          <div class="label">${escapeHtml(item.label || '—')}</div>
+          <div class="value score-${tierTone(item.tier)}">${fmtNumber(item.count || 0)}</div>
+          <div class="sub">${escapeHtml(item.description || '—')}</div>
+        </div>
+      `).join('');
+      document.getElementById('expert-tier-trend-meta').textContent = `Gruen = super stark, cyan = stark oder besser. Heute: ${fmtNumber(report.agentReadiness.summary.strongOrBetterTotal || 0)} starke Experten insgesamt.`;
+      renderTierTrend(report.agentReadiness.tierTrend || []);
+      document.getElementById('expert-tier-notes').innerHTML = (report.agentReadiness.strongestExperts || []).slice(0, 4).map((item) => `
+        <div class="list-item">
+          <strong>${escapeHtml(item.candidateId || '—')} ${badge(item.tierLabel || '—', tierTone(item.tier))}</strong>
+          <span>${escapeHtml(item.proof || '—')}</span>
+          <small>${escapeHtml(item.family || '—')} · strict ${fmtNumber(item.strictPassCount || 0)} · live ${fmtNumber(item.liveCount || 0)} · shadow ${fmtNumber(item.shadowCount || 0)}</small>
+        </div>
+      `).join('');
+
+      document.getElementById('progress-checks').innerHTML = `
+        <div class="list">
+          ${report.progress.implementation.checks.map((item) => `
+            <div class="list-item">
+              <strong>${escapeHtml(item.label)} ${badge(item.ok ? 'ok' : 'offen', item.ok ? 'good' : 'bad')}</strong>
+              <span>${escapeHtml(item.detail)}</span>
+            </div>
+          `).join('')}
+        </div>
+      `;
+
+      document.getElementById('readiness-checks').innerHTML = `
+        <div class="list">
+          ${report.progress.readiness.checks.map((item) => `
+            <div class="list-item">
+              <strong>${escapeHtml(item.label)} · ${fmtPct(item.weightedPct)}</strong>
+              <span>${escapeHtml(item.detail)}</span>
+              ${renderBar(item.score * 100)}
+            </div>
+          `).join('')}
+        </div>
+      `;
+
+      const activityGrid = document.getElementById('activity-grid');
+      const activityEntries = [
+        ['Heute', report.activity.today],
+        ['Diese Woche', report.activity.thisWeek],
+        ['Diesen Monat', report.activity.thisMonth],
+        ['Alle verfuegbaren', report.activity.allTime],
+      ];
+      activityGrid.innerHTML = activityEntries.map(([label, block]) => `
+        <div class="activity-card">
+          <div class="activity-title">${label}</div>
+          <div class="activity-metric"><span>Training Jobs</span><span>${fmtNumber(block.jobs.jobsTotal)}</span></div>
+          <div class="activity-metric"><span>Tasks done/failed</span><span>${fmtNumber(block.jobs.tasksDone)} / ${fmtNumber(block.jobs.tasksFailed)}</span></div>
+          <div class="activity-metric"><span>Stage-B Runs</span><span>${fmtNumber(block.stageb.runsTotal)}</span></div>
+          <div class="activity-metric"><span>Strict-positive Runs</span><span>${fmtNumber(block.stageb.strictPositiveRuns)}</span></div>
+          <div class="activity-metric"><span>Gate pass</span><span>${fmtNumber(block.gates.passedRuns)} / ${fmtNumber(block.gates.runsTotal)}</span></div>
+        </div>
+      `).join('');
+
+      document.getElementById('target-table').innerHTML = report.targetAsofs.map((row) => `
+        <tr>
+          <td><strong>${escapeHtml(row.asofDate)}</strong></td>
+          <td>${fmtNumber(row.stageb?.strictPassTotal || 0)} <small style="display:block;color:var(--muted);">CPCV effective ${fmtNumber(row.stageb?.cpcvPathsEffective || 0)}</small></td>
+          <td>${fmtNumber(row.comparison?.strictPassTotal || 0)} <small style="display:block;color:var(--muted);">CPCV effective ${fmtNumber(row.comparison?.cpcvPathsEffective || 0)}</small></td>
+          <td>${row.registry ? badge(row.registry.decision || 'n/a', row.registry.decision === 'PROMOTE' ? 'good' : row.registry.decision === 'NO_PROMOTION' ? 'warn' : 'bad') : '<span class="empty">—</span>'}</td>
+          <td>${row.portfolio ? badge(row.portfolio.ok ? 'ok' : 'fail', row.portfolio.ok ? 'good' : 'bad') : '<span class="empty">—</span>'}</td>
+          <td>${row.finalGate ? badge(row.finalGate.ok ? 'ok' : 'fail', row.finalGate.ok ? 'good' : 'bad') : '<span class="empty">—</span>'}</td>
+        </tr>
+      `).join('');
+
+      document.getElementById('history-meta').innerHTML = `Readiness (cyan) vs. Implementation (amber) ueber ${fmtNumber(report.momentum.history.length)} Tage.`;
+      renderSparkline(report.momentum.history);
+
+      document.getElementById('proof-points').innerHTML = report.momentum.proofPoints.map((item) => `
+        <div class="list-item">
+          <strong>${escapeHtml(item.asofDate)} · Strict ${item.top3500StrictPassTotal} vs. ${item.top5000StrictPassTotal}</strong>
+          <span>Delta strict passes: ${item.strictPassDelta >= 0 ? '+' : ''}${item.strictPassDelta}. Effektive CPCV-Pfade top3500/top5000: ${item.top3500EffectiveCpcvPaths}/${item.top5000EffectiveCpcvPaths}. Final Gates: ${item.finalGateOk ? 'gruen' : 'noch nicht gruen'}.</span>
+        </div>
+      `).join('');
+
+      document.getElementById('storage-grid').innerHTML = report.dataSafety.storage.map((item) => `
+        <div class="storage-card">
+          <div class="label">${escapeHtml(item.name)}</div>
+          <div class="value">${item.sizeGb == null ? '—' : `${item.sizeGb.toFixed(2)} GB`}</div>
+          <div class="sub">${escapeHtml(item.path)}</div>
+        </div>
+      `).join('');
+
+      document.getElementById('data-list').innerHTML = `
+        <div class="list-item">
+          <strong>Raw-Bars-Freshness ${badge(report.dataSafety.rawBars.requiredAssetTypesFresh ? 'fresh' : 'stale', report.dataSafety.rawBars.requiredAssetTypesFresh ? 'good' : 'bad')}</strong>
+          <span>Stock latest: ${escapeHtml(report.dataSafety.rawBars.latestIngestByAssetType.stock || '—')} · ETF latest: ${escapeHtml(report.dataSafety.rawBars.latestIngestByAssetType.etf || '—')} · Files: ${fmtNumber(report.dataSafety.rawBars.stockFiles)} stock / ${fmtNumber(report.dataSafety.rawBars.etfFiles)} etf.</span>
+        </div>
+        <div class="list-item">
+          <strong>Feature Stores</strong>
+          <span>${report.dataSafety.featureStores.map((item) => `${escapeHtml(item.name)}: ${fmtNumber(item.rowsTotal)} rows, ${fmtNumber(item.asofDatesTotal)} as-ofs, allowlist ${fmtNumber(item.allowlistAssetsTotal)}`).join(' · ')}</span>
+        </div>
+        <div class="list-item">
+          <strong>Daily Snapshot Archive</strong>
+          <span>${fmtNumber(report.dataSafety.reportArchive.dailySnapshotsTotal)} gespeicherte Tages-Snapshots. Latest hash: ${escapeHtml(report.dataSafety.reportArchive.latestHash.slice(0, 16))}…</span>
+        </div>
+      `;
+
+      document.getElementById('agent-summary-grid').innerHTML = `
+        <div class="mini-card">
+          <div class="label">Experten Im System</div>
+          <div class="value">${fmtNumber(report.agentReadiness.summary.expertsDefinedTotal || 0)}</div>
+          <div class="sub">${fmtNumber(report.agentReadiness.summary.familiesTotal || 0)} Familien mit definierter Expertenlogik.</div>
+        </div>
+        <div class="mini-card">
+          <div class="label">Stark Oder Besser</div>
+          <div class="value">${fmtNumber(report.agentReadiness.summary.strongOrBetterTotal || 0)}</div>
+          <div class="sub">${fmtNumber(report.agentReadiness.summary.superStrongTotal || 0)} super stark, ${fmtNumber(report.agentReadiness.summary.strongTotal || 0)} stark.</div>
+        </div>
+        <div class="mini-card">
+          <div class="label">Heute Direkt Bewertbar</div>
+          <div class="value">${fmtNumber(report.agentReadiness.summary.scoredTodayAssetsTotal || 0)}</div>
+          <div class="sub">${Number(report.agentReadiness.summary.scoredCoveragePct || 0).toFixed(2)}% von ${fmtNumber(report.agentReadiness.summary.universeSymbolsTotal || 0)} Universe-v7-Stocks.</div>
+        </div>
+        <div class="mini-card">
+          <div class="label">Trend Stark+</div>
+          <div class="value">${report.agentReadiness.summary.dayDeltaStrongOrBetter >= 0 ? '+' : ''}${fmtNumber(report.agentReadiness.summary.dayDeltaStrongOrBetter || 0)}</div>
+          <div class="sub">Tag ${report.agentReadiness.summary.dayDeltaStrongOrBetter >= 0 ? '+' : ''}${fmtNumber(report.agentReadiness.summary.dayDeltaStrongOrBetter || 0)} · Woche ${report.agentReadiness.summary.weekDeltaStrongOrBetter >= 0 ? '+' : ''}${fmtNumber(report.agentReadiness.summary.weekDeltaStrongOrBetter || 0)}.</div>
+        </div>
+      `;
+
+      document.getElementById('agent-quick-answer').innerHTML = (report.agentReadiness.quickAnswer || []).map((line) => `
+        <div class="list-item">
+          <strong>${escapeHtml(line)}</strong>
+        </div>
+      `).join('');
+
+      document.getElementById('agent-family-grid').innerHTML = (report.agentReadiness.families || []).map((item) => `
+        <div class="agent-card">
+          <div class="agent-meta">
+            ${badge(item.family || '—', 'info')}
+            ${badge(item.tierLabel || '—', tierTone(item.tier))}
+            ${badge(item.headline || '—', tierTone(item.tier))}
+          </div>
+          <h3>${escapeHtml(item.title || '—')}</h3>
+          <p>${escapeHtml(item.purpose || '—')}</p>
+          <span class="agent-small">Gut fuer: ${escapeHtml(item.bestFor || '—')}</span>
+          <span class="agent-small">Staerkste Experten: ${escapeHtml((item.strongestCandidates || []).join(', ') || '—')}</span>
+          <span class="agent-small">Im System: ${fmtNumber(item.definedExpertsTotal || 0)} Expertenvarianten.</span>
+          <span class="agent-small">Heute wichtig: ${escapeHtml(item.todayUse || '—')}</span>
+          <span class="agent-small">So sollst du fragen: ${escapeHtml(item.askTemplate || '—')}</span>
+          <span class="agent-small">Wo eingeben: ${escapeHtml(item.inputWhere || '—')}</span>
+          ${(item.evidence || []).map((line) => `<span class="agent-small">${escapeHtml(line)}</span>`).join('')}
+        </div>
+      `).join('');
+
+      document.getElementById('agent-playbook').innerHTML = (report.agentReadiness.requestPlaybook || []).map((item) => `
+        <div class="list-item">
+          <strong>${escapeHtml(item.task || '—')} ${badge(item.readiness || '—', item.readiness === 'super stark' || item.readiness === 'stark' ? 'good' : item.readiness === 'mittel' ? 'warn' : 'bad')}</strong>
+          <span>${escapeHtml(item.answer || '—')}</span>
+          <small>Beste Experten heute: ${escapeHtml((item.bestAgents || []).join(', ') || '—')}</small>
+          <small>${escapeHtml(item.truth || '—')}</small>
+          <small>Wo eingeben: ${escapeHtml(item.inputWhere || '—')}</small>
+          <small>Beispiel-Anforderung: ${escapeHtml(item.askTemplate || '—')}</small>
+        </div>
+      `).join('');
+
+      document.getElementById('intelligence-grid').innerHTML = `
+        <div class="intel-card">
+          <div class="label">Current Champion</div>
+          <div class="value">${escapeHtml(report.intelligence.currentChampion?.candidate_id || '—')}</div>
+          <div class="sub">${escapeHtml(report.intelligence.currentChampion?.family || 'unbekannt')} · state ${escapeHtml(report.intelligence.currentChampion?.state || '—')}</div>
+        </div>
+        <div class="intel-card">
+          <div class="label">Latest Registry Decision</div>
+          <div class="value">${escapeHtml(report.intelligence.latestRegistryDecision?.decision || '—')}</div>
+          <div class="sub">${escapeHtml((report.intelligence.latestRegistryDecision?.reasonCodes || []).join(', ') || '—')}</div>
+        </div>
+        <div class="intel-card">
+          <div class="label">Latest Portfolio</div>
+          <div class="value">${report.intelligence.latestPortfolio ? (report.intelligence.latestPortfolio.ok ? 'ok' : 'fail') : '—'}</div>
+          <div class="sub">${escapeHtml(report.intelligence.latestPortfolio?.asofDate || '—')} · ${(report.intelligence.latestPortfolio?.failures || []).join(', ') || 'keine Failures'}</div>
+        </div>
+        <div class="intel-card">
+          <div class="label">Latest Final Gate</div>
+          <div class="value">${report.intelligence.latestFinalGate ? (report.intelligence.latestFinalGate.ok ? 'ok' : 'fail') : '—'}</div>
+          <div class="sub">${escapeHtml(report.intelligence.latestFinalGate?.asofDate || '—')} · ${(report.intelligence.latestFinalGate?.failedChecks || []).join(', ') || 'keine Failures'}</div>
+        </div>
+      `;
+
+      document.getElementById('training-scope').innerHTML = report.trainingScope.whatIsBeingTrained.map((line) => `
+        <div class="list-item">
+          <strong>${escapeHtml(line)}</strong>
+          <span>Familienfokus aktuell: ${Object.entries(report.trainingScope.currentFocusFamilies || {}).map(([k, v]) => `${k} ${v}`).join(' · ') || '—'}</span>
+        </div>
+      `).join('');
+
+      document.getElementById('blockers').innerHTML = report.blockers.recommendedActions.map((item) => `
+        <div class="list-item">
+          <strong>#${item.priority} ${escapeHtml(item.title)}</strong>
+          <span>${escapeHtml(item.why)}</span>
+          <small>${escapeHtml(item.impact)}</small>
+        </div>
+      `).join('');
+
+      document.getElementById('source-list').innerHTML = Object.entries(report.sources).map(([key, value]) => `
+        <div class="source-line">${escapeHtml(key)}: ${escapeHtml(value)}</div>
+      `).join('');
+
+      renderMarketPanels(marketData);
+      bindMarketSearch();
+    }
+
+    async function refreshReport({ force = false } = {}) {
+      const [report, marketData] = await Promise.all([
+        loadReport({ force }),
+        loadMarketData({ force }),
+      ]);
+      const nextSignature = reportSignature(report);
+      const nextMarketSignature = marketSignature(marketData);
+      if (nextSignature !== currentReportSignature || nextMarketSignature !== currentMarketSignature) {
+        render(report, marketData);
+        currentReportSignature = nextSignature;
+        currentMarketSignature = nextMarketSignature;
+      }
+      currentReport = report;
+      currentMarket = marketData;
+      const berlin = berlinNow();
+      const freshness = report.reportDate === berlin.dateId ? 'heute frisch' : `noch ${report.reportDate}`;
+      setRefreshStatus(`Letzte Report-Zeit: ${report.generatedAt} · Status: ${freshness} · Auto-Check jede Minute.`);
+      return report;
+    }
+
+    function startAutoRefresh() {
+      const button = document.getElementById('reload-report');
+      button?.addEventListener('click', async () => {
+        const previous = currentReport;
+        setButtonBusy(true);
+        setRefreshStatus('Lokaler Report wird jetzt frisch gebaut…');
+        try {
+          await triggerLocalRefresh();
+          const [freshReport, freshMarket] = await Promise.all([
+            loadReport({ force: true }),
+            loadMarketData({ force: true }),
+          ]);
+          const nextSignature = reportSignature(freshReport);
+          const nextMarketSignature = marketSignature(freshMarket);
+          if (nextSignature !== currentReportSignature || nextMarketSignature !== currentMarketSignature) {
+            render(freshReport, freshMarket);
+            currentReportSignature = nextSignature;
+            currentMarketSignature = nextMarketSignature;
+          }
+          currentReport = freshReport;
+          currentMarket = freshMarket;
+          renderLatestUpdates(buildLatestUpdateItems(previous, freshReport));
+          setLatestStatus(`Manueller Refresh erfolgreich · ${fmtStamp(freshReport.generatedAt)}`);
+          setRefreshStatus(`Frischer lokaler Report gebaut: ${freshReport.generatedAt} · alle Felder neu geladen.`);
+        } catch (error) {
+          try {
+            const fallbackReport = await refreshReport({ force: true });
+            renderLatestUpdates([
+              'Der lokale Refresh-Dienst war nicht erreichbar. Ich habe deshalb nur die vorhandene Report-Datei neu geladen.',
+            ]);
+            setLatestStatus(`Fallback-Reload · ${fmtStamp(fallbackReport.generatedAt)}`);
+          } catch (fallbackError) {
+            setRefreshStatus(`Reload fehlgeschlagen: ${String(fallbackError?.message || fallbackError)}`);
+            setLatestStatus(`Refresh fehlgeschlagen · ${String(error?.message || error)}`);
+            renderLatestUpdates(['Der lokale Report konnte gerade nicht neu gebaut oder geladen werden.']);
+          }
+        } finally {
+          setButtonBusy(false);
+        }
+      });
+      window.setInterval(() => {
+        refreshReport({ force: true }).catch(() => {});
+      }, AUTO_REFRESH_MS);
+    }
+
+    refreshReport({ force: window.location.protocol === 'file:' })
+      .then(() => {
+        renderLatestUpdates([]);
+        setLatestStatus('Noch kein manueller Refresh in dieser Sitzung.');
+        startAutoRefresh();
+      })
+      .catch((error) => {
+      document.getElementById('title').textContent = 'Quant Lab v4.0 Daily Report konnte nicht geladen werden';
+      document.getElementById('subtitle').textContent = String(error?.message || error);
+      setRefreshStatus(`Laden fehlgeschlagen: ${String(error?.message || error)}`);
+    });
+  </script>
+</body>
+</html>

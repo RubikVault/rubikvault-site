@@ -95,6 +95,7 @@ jobs:
               COMMIT_MSG="feat(forecast): promoted ${{ steps.pipeline.outputs.new_champion }}"
             fi
             git commit -m "$COMMIT_MSG"
+            git pull --rebase origin main || true
             git push
           fi
 

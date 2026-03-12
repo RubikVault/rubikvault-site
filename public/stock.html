@@ -10,14 +10,17 @@
   <!-- OG / Social Meta (updated dynamically on render) -->
   <meta property="og:type" content="website" />
   <meta property="og:site_name" content="RubikVault" />
-  <meta property="og:image" content="/assets/rv-favicon.png" />
+  <meta property="og:image" content="https://rubikvault.com/assets/rv-favicon.png" />
   <meta property="og:title" id="og-title" content="Stock Analysis · RubikVault" />
   <meta property="og:description" id="og-desc" content="Technical analysis dashboard — Moving Averages, RSI, MACD, Bollinger Bands and more." />
   <meta property="og:url" id="og-url" content="https://rubikvault.com/analyze/" />
   <meta name="twitter:card" content="summary" />
-  <link rel="icon" type="image/png" sizes="32x32" href="/assets/rv-favicon.png" />
-  <link rel="stylesheet" href="/style.css" />
-  <link rel="stylesheet" href="/search.css" />
+  <link rel="icon" type="image/png" sizes="32x32" href="https://rubikvault.com/assets/rv-favicon.png" />
+  <script>
+    const RV_ASSET_BASE = window.location.protocol === 'file:' ? '.' : '';
+    document.write(`<link rel="stylesheet" href="${RV_ASSET_BASE}/style.css" />`);
+    document.write(`<link rel="stylesheet" href="${RV_ASSET_BASE}/search.css" />`);
+  </script>
   <style>
     :root {
       --bg: #020617;
@@ -793,6 +796,58 @@
       color: var(--text-dim);
     }
 
+    /* ─── Header OHLCV Strip ─── */
+    .header-ohlcv-strip {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0;
+      margin-top: 0.75rem;
+      border-top: 1px solid var(--border);
+      padding-top: 0.65rem;
+    }
+    .header-ohlcv-item {
+      flex: 1 1 auto;
+      min-width: 70px;
+      text-align: center;
+      padding: 0.2rem 0.5rem;
+      border-right: 1px solid rgba(148,163,184,0.08);
+    }
+    .header-ohlcv-item:last-child { border-right: none; }
+    .header-ohlcv-lbl {
+      display: block;
+      font-size: 0.62rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .header-ohlcv-val {
+      display: block;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: var(--text);
+      margin-top: 1px;
+    }
+    .header-prov {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      align-items: center;
+      margin-top: 0.5rem;
+      padding-top: 0.45rem;
+      border-top: 1px solid var(--border);
+      font-size: 0.72rem;
+      color: var(--text-muted);
+    }
+    .header-prov .dot {
+      display: inline-block;
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      margin-right: 4px;
+      vertical-align: middle;
+    }
+    .header-prov .dot.ok { background: var(--green); }
+    .header-prov .dot.warn { background: var(--yellow); }
+
     /* ─── Responsive ─── */
     @media (max-width: 700px) {
       .sections-grid {
@@ -826,8 +881,8 @@
   <!-- HEADER (same as frontpage) -->
   <header class="rv-header">
     <div class="rv-header-inner">
-      <a class="rv-brand" href="/" aria-label="RubikVault">
-        <img class="rv-brand-icon" src="/assets/rv-icon.png" alt="" />
+      <a class="rv-brand" href="https://rubikvault.com/" aria-label="RubikVault">
+        <img class="rv-brand-icon" src="https://rubikvault.com/assets/rv-icon.png" alt="" />
         <span class="rv-brand-text">RubikVault</span>
       </a>
 
@@ -863,9 +918,9 @@
   </header>
   <nav class="rv-page-nav" aria-label="Primary">
     <div class="rv-page-nav-inner">
-      <a href="/analyze" class="rv-page-nav-link active">ANALYZE</a>
-      <a href="/market" class="rv-page-nav-link">MARKET</a>
-      <a href="/ideas" class="rv-page-nav-link">IDEAS</a>
+      <a href="https://rubikvault.com/analyze" class="rv-page-nav-link active">ANALYZE</a>
+      <a href="https://rubikvault.com/market" class="rv-page-nav-link">MARKET</a>
+      <a href="https://rubikvault.com/ideas" class="rv-page-nav-link">IDEAS</a>
     </div>
   </nav>
 
@@ -874,7 +929,7 @@
       <div class="header-top">
         <div class="header-left">
           <h1 class="stock-title" id="stock-title">Stock Analysis</h1>
-          <div class="stock-subtitle" id="stock-subtitle">Loading…</div>
+          <div class="stock-subtitle" id="stock-subtitle">Enter a ticker to begin</div>
         </div>
         <form id="stock-form" class="stock-form" style="position:relative">
           <input id="stock-ticker" name="ticker" type="text" placeholder="AAPL" autocomplete="off" />
@@ -900,6 +955,8 @@
           <span>52W High: <strong id="range-high">—</strong></span>
         </div>
       </div>
+      <div id="header-ohlcv" style="display:none"></div>
+      <div id="header-provenance" style="display:none"></div>
     </div>
     <div id="stock-error" class="error-box" style="display:none;"></div>
     <div id="app">
@@ -907,9 +964,14 @@
     </div>
   </main>
 
-  <script src="/js/stock-features.js"></script>
+  <script>
+    document.write(`<script src="${RV_ASSET_BASE}/js/stock-features.js"><\/script>`);
+  </script>
   <script>
     // ─── State ────────────────────────────────────────────────────────────────────
+    const REMOTE_ORIGIN = 'https://rubikvault.com';
+    const USE_REMOTE_ORIGIN = window.location.protocol === 'file:';
+    const API_BASE = USE_REMOTE_ORIGIN ? REMOTE_ORIGIN : '';
     const form = document.getElementById('stock-form');
     const tickerInput = document.getElementById('stock-ticker');
     const errorBox = document.getElementById('stock-error');
@@ -985,7 +1047,7 @@
         acActiveController = new AbortController();
         const { signal } = acActiveController;
         try {
-          const res = await fetch(`/api/universe?q=${encodeURIComponent(q)}&limit=8&t=${Date.now()}`, { signal });
+          const res = await fetch(`${API_BASE}/api/universe?q=${encodeURIComponent(q)}&limit=8&t=${Date.now()}`, { signal });
           if (!res.ok) return;
           const data = await res.json();
           const deduped = new Map();
@@ -1022,6 +1084,29 @@
     tickerInput.addEventListener('focus', () => { if (tickerInput.value.trim() && acSuggestions.length) { acDropdown.style.display = 'block'; acOpen = true; } });
     tickerInput.addEventListener('blur', () => { setTimeout(() => { acDropdown.style.display = 'none'; acOpen = false; }, 200); });
 
+    // ─── Trading Calendar Helper ──────────────────────────────────────────────────
+    function getLastCompletedTradingDay() {
+      const now = new Date();
+      const nyParts = new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit', hour: 'numeric', minute: 'numeric', hour12: false, weekday: 'short' }).formatToParts(now);
+      const nyH = parseInt(nyParts.find(p => p.type === 'hour')?.value || '0', 10);
+      const nyM = parseInt(nyParts.find(p => p.type === 'minute')?.value || '0', 10);
+      const nyWd = nyParts.find(p => p.type === 'weekday')?.value || '';
+      const nyYear = nyParts.find(p => p.type === 'year')?.value;
+      const nyMonth = nyParts.find(p => p.type === 'month')?.value;
+      const nyDay = nyParts.find(p => p.type === 'day')?.value;
+      const nyDate = new Date(`${nyYear}-${nyMonth}-${nyDay}T00:00:00`);
+      const marketClosed = (nyH + nyM / 60) >= 16; // after 4pm ET
+      const isWeekday = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'].includes(nyWd);
+      // If market is closed today (after 4pm on weekday), today is last trading day
+      if (isWeekday && marketClosed) return `${nyYear}-${nyMonth}-${nyDay}`;
+      // Otherwise go back to previous trading day
+      let d = new Date(nyDate);
+      d.setDate(d.getDate() - 1);
+      // Skip weekends
+      while (d.getDay() === 0 || d.getDay() === 6) d.setDate(d.getDate() - 1);
+      return d.toISOString().slice(0, 10);
+    }
+
     // ─── Formatters ───────────────────────────────────────────────────────────────
     const fmt = (v, d = 2) => v == null || !isFinite(v) ? '—' : v.toFixed(d);
     const fmtPct = v => v == null || !isFinite(v) ? '—' : `${(v * 100).toFixed(2)}%`;
@@ -1032,20 +1117,26 @@
 
     // ─── Load Ticker ──────────────────────────────────────────────────────────────
     async function loadTicker(ticker) {
-      document.getElementById('stock-subtitle').textContent = `Loading ${ticker.toUpperCase()}…`;
+      document.getElementById('stock-title').textContent = ticker.toUpperCase();
+      document.getElementById('stock-subtitle').textContent = 'Loading analysis…';
       document.getElementById('price-block').style.display = 'none';
       document.getElementById('range-52w').style.display = 'none';
+      document.getElementById('header-ohlcv').style.display = 'none';
+      document.getElementById('header-provenance').style.display = 'none';
       errorBox.style.display = 'none';
       app.innerHTML = '<div class="loading-state">⏳ Fetching data…</div>';
 
       try {
         const v4Eval = (typeof isFeaturesV4Enabled === 'function' && isFeaturesV4Enabled()) ? '&eval_v4=1' : '';
-        const res = await fetch(`/api/stock?ticker=${encodeURIComponent(ticker)}${v4Eval}`);
+        const res = await fetch(`${API_BASE}/api/stock?ticker=${encodeURIComponent(ticker)}${v4Eval}`);
         const payload = await res.json();
         render(payload);
       } catch (err) {
+        console.error('[RV] loadTicker error:', err, err?.stack);
         errorBox.style.display = 'block';
-        errorBox.textContent = `Network error: ${err.message}`;
+        errorBox.textContent = `Data temporarily unavailable: ${err?.message || 'unknown error'}. Check console for details.`;
+        app.innerHTML = '';
+        document.getElementById('stock-subtitle').textContent = '';
       }
     }
 
@@ -1081,7 +1172,11 @@
 
       // ── Header ──
       document.getElementById('stock-title').textContent = universe.name || ticker;
-      document.getElementById('stock-subtitle').textContent = universe.name ? `${ticker} · ${universe.exchange || ''} · ${universe.sector || ''}`.replace(/· $/, '') : ticker;
+      const subtitleParts = [ticker];
+      if (universe.exchange) subtitleParts.push(universe.exchange);
+      if (universe.sector) subtitleParts.push(universe.sector);
+      if (universe.industry && universe.industry !== universe.sector) subtitleParts.push(universe.industry);
+      document.getElementById('stock-subtitle').textContent = universe.name ? subtitleParts.join(' · ') : (universe.sector ? `${ticker} · ${universe.sector}` : ticker);
       document.title = `${ticker} — Stock Analysis · RubikVault`;
 
       // ── OG meta dynamic update ──
@@ -1098,8 +1193,21 @@
       const indexes = universe.indexes || [];
       if (indexes.length) {
         indexes.forEach(idx => { badgesEl.innerHTML += `<span class="badge">${idx}</span>`; });
+      }
+      const hasBars = bars.length > 0;
+      const hasProfile = Boolean(universe.name || universe.sector);
+      if (!hasBars && !hasProfile) {
+        // Truly unknown ticker — no data at all
+        badgesEl.innerHTML += '<span class="badge unknown">Ticker not found</span>';
       } else if (!universe.exists_in_universe) {
-        badgesEl.innerHTML = '<span class="badge unknown">Not in universe</span>';
+        if (hasProfile) {
+          badgesEl.innerHTML += '<span class="badge" style="border-color:rgba(251,191,36,0.4);color:var(--yellow)">Coverage limited — not in premium universe</span>';
+        } else if (hasBars) {
+          // Has price data but no profile — analysis runs, just missing metadata
+          badgesEl.innerHTML += '<span class="badge" style="border-color:rgba(148,163,184,0.3)">Company profile unavailable</span>';
+        }
+      } else if (!hasProfile) {
+        badgesEl.innerHTML += '<span class="badge" style="border-color:rgba(148,163,184,0.3)">Company profile unavailable</span>';
       }
 
       // Price block
@@ -1114,7 +1222,7 @@
           changeEl.textContent = `${sign}${fmtCur(chgAbs, prices.currency || 'USD')} (${sign}${(chg * 100).toFixed(2)}%)`;
           changeEl.className = `price-change ${chg >= 0 ? 'up' : 'down'}`;
         } else { changeEl.textContent = ''; }
-        document.getElementById('price-date').textContent = prices.date ? `Ticker data as-of: ${prices.date}` : '';
+        document.getElementById('price-date').textContent = prices.date ? `As of ${prices.date}` : '';
       }
 
       // 52W Range
@@ -1126,7 +1234,21 @@
         document.getElementById('range-low').textContent = fmtCur(l52);
         document.getElementById('range-high').textContent = fmtCur(h52);
         const fromHigh = ((close - h52) / h52 * 100).toFixed(1);
-        document.getElementById('range-pct').textContent = `${fromHigh}% from high`;
+        const rangeLabel = pct > 95 ? 'At 52W high' : pct > 90 ? 'Near 52W high' : pct > 70 ? 'Upper range' : pct < 5 ? 'At 52W low' : pct < 10 ? 'Near 52W low' : pct < 30 ? 'Lower range' : 'Mid range';
+        document.getElementById('range-pct').textContent = `${rangeLabel} · ${fromHigh}% from 52W high`;
+      }
+
+      // ── OHLCV + Provenance in header ──
+      const headerOhlcv = document.getElementById('header-ohlcv');
+      const headerProv = document.getElementById('header-provenance');
+      if (headerOhlcv && bars.length) {
+        headerOhlcv.innerHTML = buildOHLCVStrip(close, stats, bars);
+        headerOhlcv.style.display = 'block';
+      }
+      if (headerProv && bars.length) {
+        const md = window._rvMetadata || {};
+        headerProv.innerHTML = buildDataProvenance(md, {}, bars);
+        headerProv.style.display = 'block';
       }
 
       // ── Error ──
@@ -1135,15 +1257,32 @@
         errorBox.innerHTML = `<strong>${error.code}</strong>: ${error.message}`;
       }
 
-      // ── Freshness badge ──
+      // ── Freshness badge (single source of truth for entire page) ──
       const envelopeStatus = (payload.meta?.status || 'unknown').toUpperCase();
+      const dataDate = prices.date || bars[bars.length - 1]?.date || null;
+      let effectiveFreshness = envelopeStatus;
+      if (envelopeStatus === 'STALE' && dataDate) {
+        const lastTradingDay = getLastCompletedTradingDay();
+        if (dataDate >= lastTradingDay) effectiveFreshness = 'EOD_CURRENT';
+      }
+      window._rvEffectiveFreshness = effectiveFreshness; // shared across all panels
       const freshBadge = document.getElementById('rv-freshness-badge');
       if (freshBadge) {
-        const fbCol = envelopeStatus === 'FRESH' ? '#10b981' : envelopeStatus === 'STALE' ? '#f59e0b' : '#ef4444';
+        const statusLabel = effectiveFreshness === 'FRESH' ? 'LIVE' : effectiveFreshness === 'EOD_CURRENT' ? 'EOD current' : effectiveFreshness;
+        const fbCol = (effectiveFreshness === 'FRESH' || effectiveFreshness === 'EOD_CURRENT') ? '#10b981' : effectiveFreshness === 'STALE' ? '#f59e0b' : '#ef4444';
         freshBadge.style.display = 'inline';
         freshBadge.style.color = fbCol;
         freshBadge.style.fontWeight = '600';
-        freshBadge.textContent = envelopeStatus === 'FRESH' ? 'LIVE' : envelopeStatus;
+        freshBadge.textContent = statusLabel;
+      }
+
+      // ── Unknown ticker gate ──
+      if (!bars.length && !universe.name && !universe.sector && close == null) {
+        app.innerHTML = `<div style="text-align:center;padding:3rem 1rem">
+          <div style="font-size:1.2rem;font-weight:700;color:var(--text);margin-bottom:.5rem">No data available for ${ticker}</div>
+          <div style="font-size:.85rem;color:var(--text-dim)">This ticker was not found or has no price history. Try a different symbol.</div>
+        </div>`;
+        return;
       }
 
       // ── Sections ──
@@ -1153,10 +1292,10 @@
         if (!ctx) return;
         const decisionRoot = document.getElementById('rv-decision-strip-root');
         if (decisionRoot) decisionRoot.innerHTML = buildDecisionStrip(ctx.ticker, ctx.close, ctx.s, ctx.bars);
+        const execRoot = document.getElementById('rv-executive-summary-root');
+        if (execRoot) execRoot.innerHTML = buildExecutiveSummary(ctx.ticker, ctx.close, ctx.s, ctx.bars, ctx.universe);
         const verdictRoot = document.getElementById('rv-technical-verdict-root');
         if (verdictRoot) verdictRoot.innerHTML = buildVerdict(ctx.close, ctx.s);
-        const playbookRoot = document.getElementById('rv-action-playbook-root');
-        if (playbookRoot) playbookRoot.innerHTML = buildActionPlaybook(ctx.ticker, ctx.close, ctx.s, ctx.bars, ctx.universe);
         const canonicalRoot = document.getElementById('rv-canonical-truth-root');
         if (canonicalRoot) canonicalRoot.innerHTML = buildCanonicalTruthPanel(ctx.ticker, ctx.close, ctx.s, ctx.bars);
         const traceRoot = document.getElementById('rv-decision-trace-root');
@@ -1177,55 +1316,205 @@
       }
       // Load async integrations (Scientific, Forecast, Elliott)
       loadAsyncInsights(ticker, { close, stats, bars, universe, evaluation_v4: payload?.evaluation_v4 || null });
+      // Load real-time data modules (News from EODHD, Fundamentals)
+      loadNewsAsync(ticker, stats);
+      loadFundamentalsAsync(ticker);
+    }
+
+    // ─── News / Catalyst Module ───────────────────────────────────────────────────
+    function buildNewsModule(ticker, close, s) {
+      return `<div class="section section-full" id="rv-news-module" style="display:none">
+        <h2>📰 News & Catalysts</h2>
+        <div id="rv-news-content" style="font-size:.85rem;color:var(--text)"></div>
+      </div>`;
+    }
+
+    async function loadNewsAsync(ticker, s) {
+      const mod = document.getElementById('rv-news-module');
+      const content = document.getElementById('rv-news-content');
+      if (!mod || !content) return;
+      try {
+        const res = await fetch(`${API_BASE}/api/live/news?s=${encodeURIComponent(ticker)}`);
+        if (!res.ok) return;
+        const raw = await res.json();
+        const articles = Array.isArray(raw) ? raw : (Array.isArray(raw?.data) ? raw.data : []);
+        if (!articles.length) {
+          // Fallback: show big-move alert if applicable
+          const change1d = s?.ret_1d_pct;
+          if (change1d != null && Math.abs(change1d) >= 0.03) {
+            const dir = change1d > 0 ? 'up' : 'down';
+            const col = dir === 'up' ? 'var(--green)' : 'var(--red)';
+            const icon = dir === 'up' ? '▲' : '▼';
+            const pct = (Math.abs(change1d) * 100).toFixed(1);
+            content.innerHTML = `<strong style="color:${col}">${icon} ${pct}% move</strong> detected — no recent headlines found.`;
+            mod.style.display = '';
+          }
+          return;
+        }
+        const top = articles.slice(0, 8);
+        const html = top.map(a => {
+          const title = a.title || 'Untitled';
+          const date = a.date ? new Date(a.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '';
+          const link = a.link || '#';
+          const sentiment = a.sentiment;
+          let dot = '';
+          if (sentiment) {
+            const pol = typeof sentiment === 'object' ? sentiment.polarity : sentiment;
+            if (pol != null && pol > 0.6) dot = '<span style="color:var(--green);margin-right:4px">●</span>';
+            else if (pol != null && pol < 0.4) dot = '<span style="color:var(--red);margin-right:4px">●</span>';
+            else dot = '<span style="color:var(--text-muted);margin-right:4px">●</span>';
+          }
+          return `<div style="padding:6px 0;border-bottom:1px solid var(--border)">
+            ${dot}<a href="${link}" target="_blank" rel="noopener" style="color:var(--accent);text-decoration:none">${title}</a>
+            <span style="color:var(--text-muted);font-size:.75rem;margin-left:6px">${date}</span>
+          </div>`;
+        }).join('');
+        content.innerHTML = html;
+        mod.style.display = '';
+      } catch { /* silent */ }
+    }
+
+    // ─── Fundamentals Module ──────────────────────────────────────────────────────
+    function buildFundamentalsModule(ticker, universe = {}) {
+      // Static shell; real data loaded async
+      const profileItems = [];
+      if (universe.sector) profileItems.push({l: 'Sector', v: universe.sector});
+      if (universe.industry) profileItems.push({l: 'Industry', v: universe.industry});
+      if (universe.exchange) profileItems.push({l: 'Exchange', v: universe.exchange});
+      if (universe.country) profileItems.push({l: 'Country', v: universe.country});
+      const profileGrid = profileItems.length ? `<div class="m-grid" style="margin-bottom:.75rem">${profileItems.map(i => `<div class="m-item"><div class="m-label">${i.l}</div><div class="m-val" style="font-size:.88rem">${i.v}</div></div>`).join('')}</div>` : '';
+      return `<div class="section section-full" id="rv-fundamentals-module">
+        <h2>🏢 Fundamentals</h2>
+        ${profileGrid}
+        <div id="rv-fundamentals-content" style="font-size:.85rem;color:var(--text-dim)">Loading fundamentals…</div>
+      </div>`;
+    }
+
+    function fundFmtLarge(n) {
+      if (n == null) return '—';
+      const abs = Math.abs(n);
+      if (abs >= 1e12) return (n / 1e12).toFixed(2) + 'T';
+      if (abs >= 1e9) return (n / 1e9).toFixed(2) + 'B';
+      if (abs >= 1e6) return (n / 1e6).toFixed(1) + 'M';
+      if (abs >= 1e3) return (n / 1e3).toFixed(1) + 'K';
+      return n.toFixed(2);
+    }
+
+    function fundFmtPct(n) {
+      if (n == null) return '—';
+      return (n * 100).toFixed(2) + '%';
+    }
+
+    function fundFmtNum(n, d = 2) {
+      if (n == null) return '—';
+      return Number(n).toFixed(d);
+    }
+
+    async function loadFundamentalsAsync(ticker) {
+      const content = document.getElementById('rv-fundamentals-content');
+      if (!content) return;
+      try {
+        const res = await fetch(`${API_BASE}/api/fundamentals?ticker=${encodeURIComponent(ticker)}`);
+        if (!res.ok) { content.innerHTML = `<div class="placeholder-card">No fundamentals are available for ${ticker} right now.</div>`; return; }
+        const json = await res.json();
+        const d = json?.data;
+        if (!d || (!d.marketCap && !d.pe_ttm && !d.eps_ttm && !d.revenue_ttm)) {
+          content.innerHTML = `<div class="placeholder-card">No fundamentals are available for ${ticker} right now.</div>`;
+          return;
+        }
+
+        // Update profile fields from EODHD if richer than universe
+        const mod = document.getElementById('rv-fundamentals-module');
+        if (mod && (d.sector || d.industry || d.companyName)) {
+          const h2 = mod.querySelector('h2');
+          if (h2 && d.companyName) h2.textContent = `🏢 ${d.companyName}`;
+        }
+
+        const rows = [];
+        const addRow = (label, val) => { if (val && val !== '—') rows.push({l: label, v: val}); };
+
+        addRow('Market Cap', '$' + fundFmtLarge(d.marketCap));
+        addRow('P/E (TTM)', fundFmtNum(d.pe_ttm));
+        addRow('Forward P/E', fundFmtNum(d.forwardPE));
+        addRow('PEG Ratio', fundFmtNum(d.pegRatio));
+        addRow('P/S (TTM)', fundFmtNum(d.ps_ttm));
+        addRow('P/B', fundFmtNum(d.pb));
+        addRow('EV/EBITDA', fundFmtNum(d.ev_ebitda));
+        addRow('EPS (TTM)', '$' + fundFmtNum(d.eps_ttm));
+        addRow('Revenue (TTM)', '$' + fundFmtLarge(d.revenue_ttm));
+        addRow('EBITDA', '$' + fundFmtLarge(d.ebitda));
+        addRow('Gross Profit', '$' + fundFmtLarge(d.grossProfitTTM));
+        addRow('Profit Margin', fundFmtPct(d.netMargin));
+        addRow('Operating Margin', fundFmtPct(d.operatingMargin));
+        addRow('ROE', fundFmtPct(d.returnOnEquity));
+        addRow('ROA', fundFmtPct(d.returnOnAssets));
+        addRow('Beta', fundFmtNum(d.beta));
+        addRow('Dividend Yield', d.dividendYield != null ? fundFmtPct(d.dividendYield) : null);
+        addRow('Shares Out', fundFmtLarge(d.sharesOutstanding));
+        addRow('Shares Float', fundFmtLarge(d.sharesFloat));
+        addRow('Book Value', '$' + fundFmtNum(d.bookValue));
+        addRow('Wall St Target', d.wallStreetTarget != null ? '$' + fundFmtNum(d.wallStreetTarget) : null);
+        addRow('Q Earnings Growth YOY', d.quarterlyEarningsGrowthYOY != null ? fundFmtPct(d.quarterlyEarningsGrowthYOY) : null);
+        addRow('Q Revenue Growth YOY', d.quarterlyRevenueGrowthYOY != null ? fundFmtPct(d.quarterlyRevenueGrowthYOY) : null);
+
+        if (!rows.length) { content.innerHTML = `<div class="placeholder-card">No fundamentals are available for ${ticker} right now.</div>`; return; }
+
+        content.innerHTML = `<div class="m-grid">${rows.map(r => `<div class="m-item"><div class="m-label">${r.l}</div><div class="m-val">${r.v}</div></div>`).join('')}</div>`;
+      } catch {
+        content.innerHTML = `<div class="placeholder-card">No fundamentals are available for ${ticker} right now.</div>`;
+      }
     }
 
     // ─── Build All Sections ───────────────────────────────────────────────────────
     function buildSections(ticker, close, s, score, bars, universe) {
-      const md = window._rvMetadata || {};
       return `<div class="sections-grid">
-      <div id="rv-canonical-truth-root">${buildCanonicalTruthPanel(ticker, close, s, bars)}</div>
-      ${buildDataHealthPanel(ticker)}
-      ${buildBiotechContextPanel(ticker, universe)}
-      <div id="rv-decision-strip-root">${buildDecisionStrip(ticker, close, s, bars)}</div>
-      <div id="rv-action-playbook-root">${buildActionPlaybook(ticker, close, s, bars, universe)}</div>
-      ${buildExecutiveSummary(ticker, close, s, bars, universe)}
-      ${buildDataProvenance(md, {}, bars)}
-      ${buildOHLCVStrip(close, s, bars)}
-      ${typeof buildV4SlotShell === 'function' ? buildV4SlotShell() : ''}
-      <div id="rv-technical-verdict-root">${buildVerdict(close, s)}</div>
-      <div id="rv-decision-trace-root">${buildDecisionTracePanel(ticker)}</div>
-      ${buildTrendMomentum(close, s, bars)}
-      <div id="rv-scientific-slot"><div class="section section-full" style="opacity:.5"><h2>🔬 Scientific Analyzer</h2><div class="placeholder-card">Loading scientific analysis…</div></div></div>
-      <details class="advanced-collapsible" open><summary class="section-summary-header">🔮 ML Forecast</summary><div id="rv-forecast-slot"><div style="opacity:.5;padding:.5rem 0"><div class="placeholder-card">Loading forecast…</div></div></div></details>
-      <details class="advanced-collapsible" open><summary class="section-summary-header">🌊 Elliott Wave</summary><div id="rv-elliott-slot"><div style="opacity:.5;padding:.5rem 0"><div class="placeholder-card">Loading wave analysis…</div></div></div></details>
-      ${buildMASection(close, s)}
-      ${buildOscillators(close, s)}
-      ${buildPerformance(s)}
+    <div id="rv-decision-strip-root" style="grid-column:1/-1">${buildDecisionStrip(ticker, close, s, bars)}</div>
+    ${buildNewsModule(ticker, close, s)}
+    <div id="rv-executive-summary-root" style="grid-column:1/-1">${buildExecutiveSummary(ticker, close, s, bars, universe)}</div>
+    ${buildLevels(close, s, bars)}
+    ${typeof buildV4SlotShell === 'function' ? buildV4SlotShell() : ''}
+    <div id="rv-technical-verdict-root" style="grid-column:1/-1">${buildVerdict(close, s)}</div>
+    ${buildMASection(close, s)}
+    ${buildOscillators(close, s)}
+    ${buildVolatility(close, s)}
+    ${buildVolume(s, bars)}
+    ${buildFundamentalsModule(ticker, universe)}
+    ${buildTrendMomentum(close, s, bars)}
+    ${buildPerformance(s)}
+    ${buildScore(score)}
+    <details class="advanced-collapsible" id="rv-quantlab-details" open><summary class="section-summary-header">Quant Lab Experts <span class="advanced-badge">LOCAL RESULTS</span></summary><div id="rv-quantlab-slot"><div class="placeholder-card">Loading Quant Lab result mirror...</div></div></details>
+    <details class="advanced-collapsible" id="rv-scientific-details" open><summary class="section-summary-header">🔬 Scientific Analyzer <span class="advanced-badge">ADVANCED</span></summary><div id="rv-scientific-slot"><div class="placeholder-card">Loading scientific analysis…</div></div></details>
+    <details class="advanced-collapsible" id="rv-forecast-details" open><summary class="section-summary-header">🔮 ML Forecast <span class="advanced-badge">ADVANCED</span></summary><div id="rv-forecast-slot"><div class="placeholder-card">Loading forecast…</div></div></details>
+    <details class="advanced-collapsible" id="rv-elliott-details" open><summary class="section-summary-header">🌊 Elliott Wave <span class="advanced-badge">ADVANCED</span></summary><div id="rv-elliott-slot"><div class="placeholder-card">Loading Elliott wave analysis…</div></div></details>
+    <details class="advanced-collapsible"><summary class="section-summary-header">📊 Advanced Analytics <span class="advanced-badge">ADVANCED</span></summary>
       ${buildEarningsShockProxy(bars)}
-      ${buildVolatility(close, s)}
       ${buildDrawdownAnatomy(bars)}
       ${buildVolTermStructure(bars)}
       ${buildMonteCarlo(bars)}
       ${buildLiquidityScore(s, bars)}
-      ${buildVolume(s, bars)}
       ${buildSeasonality(bars)}
       ${buildCorrelations(ticker, bars)}
       ${buildFactorCorrelation(ticker, bars)}
-      ${buildLevels(close, s, bars)}
       ${buildATRBands(close, s)}
       ${buildRiskBudget(close, s)}
       ${buildSignals(close, s)}
       ${buildStressScenarios(bars)}
-      ${buildInactiveModulesSummary(ticker, universe)}
-      ${buildScore(score)}
-      ${buildPriceConclusion(ticker, close, s, bars, universe)}
       ${buildCorporateActions(bars)}
-    </div>`;
+    </details>
+    <details class="advanced-collapsible"><summary class="section-summary-header">🔍 Data Checks <span class="advanced-badge">ADVANCED</span></summary>
+      <div id="rv-canonical-truth-root">${buildCanonicalTruthPanel(ticker, close, s, bars)}</div>
+      ${buildDataHealthPanel(ticker)}
+      <div id="rv-decision-trace-root">${buildDecisionTracePanel(ticker)}</div>
+      ${buildBiotechContextPanel(ticker, universe)}
+    </details>
+    <div style="font-size:.68rem;color:var(--text-muted);text-align:center;padding:1rem 0;grid-column:1/-1">Technical analysis only. Not financial advice. Data sources: EODHD, Tiingo, Twelvedata.</div>
+  </div>`;
     }
 
     // ─── Async Integration Loader ────────────────────────────────────────────────
     async function loadAsyncInsights(ticker, context = {}) {
       const slots = [
+        { id: 'rv-quantlab-slot', fn: () => buildQuantLabInsight(ticker, context) },
         { id: 'rv-scientific-slot', fn: () => buildScientificInsight(ticker, context) },
         { id: 'rv-forecast-slot', fn: () => buildForecastInsight(ticker, context) },
         { id: 'rv-elliott-slot', fn: () => buildElliottInsight(ticker, context) },
@@ -1233,34 +1522,41 @@
       if (typeof isFeaturesV4Enabled === 'function' && isFeaturesV4Enabled()) {
         slots.push({ id: 'rv-v4-slot', fn: () => buildV4GovernanceInsight(ticker, context) });
       }
+      const ASYNC_TIMEOUT = 12000;
+      const FALLBACK_LABELS = {
+        'rv-quantlab-slot': 'Quant Lab Experts',
+        'rv-scientific-slot': '🔬 Scientific Analyzer',
+        'rv-forecast-slot': '🔮 ML Forecast',
+        'rv-elliott-slot': '🌊 Elliott Wave',
+        'rv-v4-slot': '🧭 v4 Governance'
+      };
       await Promise.allSettled(slots.map(async ({ id, fn }) => {
+        const el = document.getElementById(id);
+        if (!el) return;
         try {
-          const html = await fn();
-          const el = document.getElementById(id);
-          if (el && html) {
-            el.innerHTML = html;
-          } else if (el) {
-            if (id === 'rv-v4-slot') {
-              el.innerHTML = '';
-              return;
-            }
-            el.innerHTML = '<div style="font-size:.72rem;color:var(--text-muted);padding:.3rem 0">Data not loaded for this ticker.</div>';
-            const details = el.closest('details');
-            if (details) details.removeAttribute('open');
+          const result = await Promise.race([
+            fn(),
+            new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), ASYNC_TIMEOUT))
+          ]);
+          if (result && result.trim()) {
+            el.innerHTML = result;
+          } else {
+            const label = FALLBACK_LABELS[id] || 'Section';
+            const message = id === 'rv-quantlab-slot'
+              ? `No fresh Quant Lab result is available for ${ticker} in today's local publish slice.`
+              : `No live ${label.replace(/^[^\p{L}\p{N}]+/u, '')} block is available for ${ticker} right now.`;
+            el.innerHTML = `<div class="section section-full"><h2>${label}</h2><div class="placeholder-card">${message}</div></div>`;
           }
         } catch (e) {
-          console.warn('Async insight error:', id, e);
-          const el = document.getElementById(id);
-          if (el) {
-            if (id === 'rv-v4-slot') {
-              el.innerHTML = '';
-              return;
-            }
-            el.innerHTML = '<div style="font-size:.72rem;color:var(--text-muted);padding:.3rem 0">Data not loaded for this ticker.</div>';
-            const details = el.closest('details');
-            if (details) details.removeAttribute('open');
-          }
+          if (e.message !== 'timeout') console.warn('Async insight error:', id, e);
+          const label = FALLBACK_LABELS[id] || 'Section';
+          const reason = id === 'rv-quantlab-slot'
+            ? (e.message === 'timeout' ? 'Quant Lab result timed out.' : 'Quant Lab result is temporarily unavailable.')
+            : (e.message === 'timeout' ? `${label} timed out.` : `${label} is temporarily unavailable.`);
+          el.innerHTML = `<div class="section section-full"><h2>${label}</h2><div class="placeholder-card">${reason}</div></div>`;
         }
+        const details = el.closest('details');
+        if (details) details.setAttribute('open', '');
       }));
     }
 
@@ -1307,7 +1603,16 @@
           <div class="m-item"><div class="m-label">Digest</div><div class="m-val">${_fmtDigest(can.digest)}</div><div class="m-sub">payload hash</div></div>
           <div class="m-item"><div class="m-label">Schema</div><div class="m-val">${can.schemaVersion || 'rv.stock'}</div><div class="m-sub">contract version</div></div>
         </div>
-        ${mismatch ? `<div style="margin-top:.55rem;padding:.45rem .6rem;border-radius:8px;background:var(--yellow-bg);border:1px solid rgba(251,191,36,.35);font-size:.76rem;color:#fde68a"><strong>Metric drift detected:</strong> canonical metrics diverge slightly from model snapshot. Results may vary.</div>` : `<div style="margin-top:.55rem;font-size:.73rem;color:var(--text-muted)">Canonical metrics are the single decision reference for RSI/ATR/As-of.</div>`}
+        ${mismatch ? (() => {
+          const mm = q.metricMismatchDetail || {};
+          const rsiDrift = mm.rsiMismatch ? Math.abs((mm.canonicalRsi || 0) - (mm.sampleRsi || 0)) : 0;
+          const atrDrift = mm.atrMismatch ? Math.abs((mm.canonicalAtrPct || 0) - (mm.sampleAtrPct || 0)) : 0;
+          const severity = (rsiDrift > 10 || atrDrift > 3) ? 'critical' : (rsiDrift > 5 || atrDrift > 1.5) ? 'material' : 'minor';
+          const sevCol = severity === 'critical' ? 'var(--red)' : severity === 'material' ? '#fb923c' : 'var(--yellow)';
+          const sevBg = severity === 'critical' ? 'var(--red-bg)' : severity === 'material' ? 'rgba(251,146,60,.1)' : 'var(--yellow-bg)';
+          const sevBorder = severity === 'critical' ? 'rgba(248,113,113,.4)' : severity === 'material' ? 'rgba(251,146,60,.35)' : 'rgba(251,191,36,.35)';
+          return `<div style="margin-top:.55rem;padding:.45rem .6rem;border-radius:8px;background:${sevBg};border:1px solid ${sevBorder};font-size:.76rem;color:${sevCol}"><strong>Metric drift — ${severity.toUpperCase()}:</strong> canonical metrics diverge from model snapshot.${rsiDrift > 0 ? ` RSI delta: ${rsiDrift.toFixed(1)}pts.` : ''}${atrDrift > 0 ? ` ATR% delta: ${atrDrift.toFixed(1)}pts.` : ''} ${severity === 'critical' ? 'Decision reliability severely impacted.' : severity === 'material' ? 'Decision may be affected.' : 'Minor deviation — monitor.'}</div>`;
+        })() : `<div style="margin-top:.55rem;font-size:.73rem;color:var(--text-muted)">Canonical metrics aligned — single decision reference for RSI/ATR/As-of.</div>`}
       </div>`;
     }
 
@@ -1315,21 +1620,23 @@
       const meta = window._rvEnvelopeMeta || {};
       const cache = meta.cache || {};
       const raw = window._rvCanonicalMetrics?.rawValidation || null;
-      const state = meta.status || 'unknown';
-      const stateCol = state === 'fresh' ? 'var(--green)' : state === 'stale' ? 'var(--yellow)' : state === 'pending' ? 'var(--yellow)' : 'var(--red)';
+      // Use the same effective freshness as the header badge
+      const effectiveState = window._rvEffectiveFreshness || (meta.status || 'unknown').toUpperCase();
+      const stateCol = (effectiveState === 'FRESH' || effectiveState === 'EOD_CURRENT') ? 'var(--green)' : effectiveState === 'STALE' ? 'var(--yellow)' : 'var(--red)';
+      const stateLabel = effectiveState === 'FRESH' ? 'LIVE' : effectiveState === 'EOD_CURRENT' ? 'EOD current' : effectiveState;
       return `<div class="section section-full">
         <h2>🩺 Data Health & Recovery</h2>
         <div class="m-grid">
-          <div class="m-item"><div class="m-label">Envelope</div><div class="m-val" style="color:${stateCol}">${String(state).toUpperCase()}</div><div class="m-sub">live/cached/stale/pending/error</div></div>
-          <div class="m-item"><div class="m-label">Cache</div><div class="m-val">${cache.hit ? 'HIT' : 'MISS'}${cache.stale ? ' · STALE' : ''}</div><div class="m-sub">mode: ${cache.mode || '—'}</div></div>
-          <div class="m-item"><div class="m-label">Provider</div><div class="m-val">${meta.provider || '—'}</div><div class="m-sub">source chain runtime</div></div>
-          <div class="m-item"><div class="m-label">Raw Validation</div><div class="m-val" style="color:${raw == null ? 'var(--yellow)' : raw.valid ? 'var(--green)' : 'var(--red)'}">${raw == null ? 'UNKNOWN' : raw.valid ? 'VALID' : 'INVALID'}</div><div class="m-sub">${raw == null ? 'data health unverified — blocks BUY' : raw?.code || '—'}</div></div>
+          <div class="m-item"><div class="m-label">Freshness</div><div class="m-val" style="color:${stateCol}">${stateLabel}</div></div>
+          <div class="m-item"><div class="m-label">Cache</div><div class="m-val">${cache.hit ? 'HIT' : 'MISS'}${cache.stale ? ' · stale' : ''}</div></div>
+          <div class="m-item"><div class="m-label">Provider</div><div class="m-val">${meta.provider || '—'}</div></div>
+          <div class="m-item"><div class="m-label">Raw Validation</div><div class="m-val" style="color:${raw == null ? 'var(--yellow)' : raw.valid ? 'var(--green)' : 'var(--red)'}">${raw == null ? 'UNKNOWN' : raw.valid ? 'VALID' : 'INVALID'}</div></div>
         </div>
         <div style="display:flex;align-items:center;justify-content:space-between;gap:.6rem;margin-top:.55rem">
           <div style="font-size:.72rem;color:var(--text-muted)">
-            ${meta.degraded ? `Degraded mode active: ${meta.degraded_reason || 'scheduler_stale'}.` : 'No degradation flag set.'}
+            ${meta.degraded ? `Degraded: ${meta.degraded_reason || 'scheduler_stale'}` : ''}
           </div>
-          <button id="rv-retry-btn" type="button" style="padding:.45rem .75rem;border-radius:8px;border:1px solid var(--border);background:rgba(255,255,255,.04);color:var(--text);font-weight:600;cursor:pointer">Retry / Refresh</button>
+          <button id="rv-retry-btn" type="button" style="padding:.45rem .75rem;border-radius:8px;border:1px solid var(--border);background:rgba(255,255,255,.04);color:var(--text);font-weight:600;cursor:pointer">Retry</button>
         </div>
       </div>`;
     }
@@ -1350,31 +1657,6 @@
       </div>`;
     }
 
-    function buildActionPlaybook(ticker, close, s, bars, universe) {
-      const q = window._rvQualitySignals || {};
-      const trend = s.sma20 > s.sma50 && s.sma50 > s.sma200 ? 'Uptrend' : s.sma20 < s.sma50 && s.sma50 < s.sma200 ? 'Downtrend' : 'Mixed';
-      const risk = s.volatility_percentile != null && s.volatility_percentile >= 85 ? 'High volatility risk' : 'Normal risk';
-      const edge = q.overallAction || q.decisionSummary || 'WAIT';
-      const context = isBiotechTicker(universe) ? 'Biotech context incomplete (confidence cap)' : 'Standard equity context';
-      const action = q.finalSuppressed
-        ? 'No action: verdict suppressed until gates clear.'
-        : edge === 'BUY'
-          ? 'Actionable only after trigger confirms and projected R:R remains favorable.'
-          : edge === 'AVOID'
-            ? 'Avoid entries until trigger and risk profile improve.'
-            : 'Wait: monitor trigger + invalidation and re-check data health.';
-      return `<div class="section section-full">
-        <h2>🧭 Action Playbook</h2>
-        <div class="m-grid">
-          <div class="m-item"><div class="m-label">Trend</div><div class="m-val">${trend}</div></div>
-          <div class="m-item"><div class="m-label">Risk</div><div class="m-val">${risk}</div></div>
-          <div class="m-item"><div class="m-label">Edge</div><div class="m-val">${edge}</div></div>
-          <div class="m-item"><div class="m-label">Context</div><div class="m-val">${context}</div></div>
-          <div class="m-item" style="grid-column:1 / -1"><div class="m-label">What this means now</div><div class="m-val" style="font-size:.86rem">${action}</div></div>
-        </div>
-      </div>`;
-    }
-
     function buildDecisionTracePanel(ticker) {
       const q = window._rvQualitySignals || {};
       const can = window._rvCanonicalMetrics || {};
@@ -1390,7 +1672,7 @@
       if (q.forecastValidated === false) gateEntries.push({ gate: 'FORECAST_VALIDATION_INCOMPLETE', cause: 'Forecast not validated', value: '—', consequence: 'Forecast module output is advisory only' });
       if (q.forecastIndependent === false) gateEntries.push({ gate: 'FORECAST_NON_INDEPENDENT', cause: 'Forecast not independent', value: '—', consequence: 'Forecast module output is advisory only' });
       const chain = Array.isArray(trace?.reason_chain) ? trace.reason_chain : [];
-      const gateRows = gateEntries.map(g => `<tr><td style="font-weight:600;color:var(--yellow)">${g.gate}</td><td>${g.cause}</td><td style="font-family:monospace;font-size:.7rem">${g.value}</td><td>${g.consequence}</td></tr>`).join('');
+      const gateRows = gateEntries.map(g => `<tr><td style="padding:.25rem .4rem;font-weight:600;color:var(--yellow);overflow-wrap:break-word">${g.gate}</td><td style="padding:.25rem .4rem;overflow-wrap:break-word">${g.cause}</td><td style="padding:.25rem .4rem;font-family:monospace;font-size:.7rem;overflow-wrap:break-word">${g.value}</td><td style="padding:.25rem .4rem;overflow-wrap:break-word">${g.consequence}</td></tr>`).join('');
       return `<div class="section section-full">
         <h2>📜 Decision Trace</h2>
         <div style="font-size:.78rem;color:var(--text-dim);line-height:1.55">
@@ -1398,7 +1680,7 @@
           As-of: <strong style="color:var(--text)">${can.asOf || '—'}</strong> ·
           Digest: <strong style="color:var(--text)">${_fmtDigest(can.digest)}</strong>
         </div>
-        ${gateEntries.length ? `<table style="width:100%;margin-top:.5rem;font-size:.72rem;border-collapse:collapse"><tr style="color:var(--text-muted);text-align:left"><th style="padding:.25rem .4rem">Gate</th><th style="padding:.25rem .4rem">Cause</th><th style="padding:.25rem .4rem">Value</th><th style="padding:.25rem .4rem">Consequence</th></tr>${gateRows}</table>` : `<div style="margin-top:.45rem;font-size:.74rem;color:var(--text-muted)">Gates: none</div>`}
+        ${gateEntries.length ? `<div style="overflow-x:auto;margin-top:.5rem"><table style="width:100%;table-layout:fixed;font-size:.72rem;border-collapse:collapse;word-break:break-word"><colgroup><col style="width:18%"><col style="width:28%"><col style="width:18%"><col style="width:36%"></colgroup><tr style="color:var(--text-muted);text-align:left"><th style="padding:.25rem .4rem">Gate</th><th style="padding:.25rem .4rem">Cause</th><th style="padding:.25rem .4rem">Value</th><th style="padding:.25rem .4rem">Consequence</th></tr>${gateRows}</table></div>` : `<div style="margin-top:.45rem;font-size:.74rem;color:var(--text-muted)">Gates: none</div>`}
         ${chain.length ? `<div style="margin-top:.35rem;font-size:.72rem;color:var(--text-muted)">Reason chain: ${chain.join(' → ')}</div>` : ''}
       </div>`;
     }
@@ -1572,7 +1854,19 @@
 
         const rrColor = rr == null ? 'var(--text-muted)' : rr >= 2 ? 'var(--green)' : rr >= 0.5 ? 'var(--yellow)' : 'var(--red)';
         const rrText = rr == null ? '—' : `${rr.toFixed(2)}:1`;
-        const triggerText = trigger ? `Break above ${trigger.name} (${fmtCurLocal(trigger.price)})` : 'No trigger level';
+        let triggerText = 'No trigger level';
+        if (trigger) {
+          const latestBar = bars.length ? bars[bars.length - 1] : null;
+          const barHigh = latestBar ? (toNum(latestBar.high) ?? close) : close;
+          const barClose = close;
+          if (barClose >= trigger.price) {
+            triggerText = `Confirmed breakout above ${trigger.name} (${fmtCurLocal(trigger.price)})`;
+          } else if (barHigh >= trigger.price) {
+            triggerText = `Rejected at ${trigger.name} (${fmtCurLocal(trigger.price)}) — failed breakout`;
+          } else {
+            triggerText = `Break above ${trigger.name} (${fmtCurLocal(trigger.price)})`;
+          }
+        }
         const invalidText = invalid ? `Loss of ${invalid.name} (${fmtCurLocal(invalid.price)})` : 'No invalidation level';
 
         return `<div class="decision-card ${verdict.cls}">
@@ -1582,7 +1876,12 @@
           <ul class="decision-reasons">${sc.reasons.map(r => `<li>${r}</li>`).join('')}</ul>
           <div class="decision-trigger">▶ Trigger: ${triggerText}</div>
           <div class="decision-invalid">✗ Structural Invalidation: ${invalidText}</div>
-          <div style="font-size:.72rem;color:var(--text-dim);margin-top:.2rem">R:R <strong style="color:${rrColor}">${rrText}</strong>${rr != null ? ` (risk ${fmtCurLocal(risk)} / reward ${fmtCurLocal(reward)})` : ''}</div>
+          <div style="font-size:.72rem;color:var(--text-dim);margin-top:.3rem" title="Risk = distance to invalidation. Reward = distance to projected target.">R:R <strong style="color:${rrColor}">${rrText}</strong>${rr != null ? (() => {
+            const total = risk + reward;
+            const riskPct = total > 0 ? Math.round(risk / total * 100) : 50;
+            const rewardPct = 100 - riskPct;
+            return ` <span style="display:inline-flex;align-items:center;gap:2px;vertical-align:middle"><span style="display:inline-block;width:${Math.max(8, riskPct * 0.6)}px;height:6px;background:var(--red);border-radius:2px 0 0 2px;opacity:.7"></span><span style="display:inline-block;width:${Math.max(8, rewardPct * 0.6)}px;height:6px;background:var(--green);border-radius:0 2px 2px 0;opacity:.7"></span></span> <span style="opacity:.7">risk ${fmtCurLocal(risk)} / reward ${fmtCurLocal(reward)}</span>`;
+          })() : ''}</div>
           ${gateNotes.length ? `<div style="font-size:.7rem;color:var(--yellow);margin-top:.25rem">${gateNotes.join(' · ')}</div>` : ''}
         </div>`;
       }).join('');
@@ -1603,6 +1902,7 @@
         decisionSummary: overallAction
       };
       window._rvQualitySignals = qNext;
+      const quant = qNext.quantlab && qNext.quantlab.present ? qNext.quantlab : null;
 
       const trendWord = (s.sma20 > s.sma50 && s.sma50 > s.sma200) ? 'uptrend' : (s.sma20 < s.sma50 && s.sma50 < s.sma200) ? 'downtrend' : 'mixed trend';
       const rsiZone = getRsiMeta(s.rsi14).zone.toLowerCase();
@@ -1614,15 +1914,55 @@
       if (rrBlockedHorizons > 0) gateSummary.push(`${rrBlockedHorizons} horizon(s) blocked by R:R`);
       if (biotechMissing) gateSummary.push('biotech context missing — blocks BUY');
 
+      // Inline next-action logic (merged from Action Playbook)
+      const nearestTrigger = s.bb_upper || s.sma20;
+      const nearestInvalid = s.bb_lower || s.sma50;
+      let nextAction, nextActionColor;
+      if (suppressed) {
+        nextAction = 'No action — verdict suppressed until data integrity gates clear.';
+        nextActionColor = 'var(--text-muted)';
+      } else if (overallAction === 'BUY') {
+        nextAction = `Entry allowed — confirm trigger breakout${nearestTrigger ? ' above ' + fmtCurLocal(nearestTrigger) : ''} and verify R:R.`;
+        nextActionColor = 'var(--green)';
+      } else if (overallAction === 'AVOID') {
+        nextAction = `Avoid new entries.${nearestInvalid ? ' Invalidation near ' + fmtCurLocal(nearestInvalid) + '.' : ' Watch for trend reversal.'}`;
+        nextActionColor = 'var(--red)';
+      } else {
+        const blocker = rsiHardGate ? 'RSI overextended — wait for pullback.'
+          : rawUnknown ? 'Data health unverified.'
+          : nearestTrigger ? 'Watch for confirmed close above ' + fmtCurLocal(nearestTrigger) + '.'
+          : 'Monitor trigger and invalidation levels.';
+        nextAction = `No new entry now. ${blocker}`;
+        nextActionColor = 'var(--yellow)';
+      }
+      if (quant?.tone === 'good' && overallAction === 'WAIT') {
+        nextAction = `${nextAction} Quant Lab already rates this ticker as a buy candidate, but the core entry gates are not clear yet.`;
+      } else if (quant?.tone === 'bad' && overallAction === 'BUY') {
+        nextAction = `${nextAction} Quant Lab is still more cautious than the technical stack.`;
+      }
+      const quantColor = quant?.tone === 'good' ? 'var(--green)' : quant?.tone === 'warn' ? 'var(--yellow)' : quant?.tone === 'bad' ? 'var(--red)' : 'var(--text)';
+      const quantRank = quant?.globalTop10Rank
+        ? `Global Quant Lab Top ${quant.globalTop10Rank}`
+        : quant?.continentTop10Rank
+          ? `Regional Quant Lab Top ${quant.continentTop10Rank}`
+          : quant ? `${quant.strongExperts || 0} strong experts scored this ticker` : '';
+      const quantReason = quant?.summary || (Array.isArray(quant?.whyNow) && quant.whyNow[0]) || (Array.isArray(quant?.whyNotNow) && quant.whyNotNow[0]) || '';
+
       return `<div class="section section-full decision-strip-section">
         <h2>⚡ Decision Strip <span style="font-size:0.7rem;color:var(--text-muted);text-transform:none;letter-spacing:0">multi-horizon analysis</span></h2>
-        <div style="font-size:.68rem;color:var(--text-muted);margin-bottom:.5rem;text-align:center">BUY only if trigger/invalidation is defined and projected R:R >= 0.5. R:R caution below 1.0. Otherwise WAIT/AVOID.</div>
-        <div style="font-size:.82rem;color:var(--text);margin-bottom:.6rem;padding:.5rem .6rem;background:rgba(255,255,255,.02);border-radius:6px;border-left:3px solid var(--accent);line-height:1.5">
-          ${ticker} is in a <strong>${trendWord}</strong> with RSI in <strong>${rsiZone}</strong> territory.
-          ${gateSummary.length ? `<br><span style="color:var(--yellow)">⚠️ Gate status: ${gateSummary.join(' · ')}</span>` : ''}
+        <div style="font-size:.85rem;color:var(--text);margin-bottom:.6rem;padding:.6rem .75rem;background:rgba(255,255,255,.03);border-radius:8px;border-left:3px solid ${overallAction === 'BUY' ? 'var(--green)' : overallAction === 'AVOID' ? 'var(--red)' : 'var(--accent)'};line-height:1.6">
+          <strong style="font-size:.95rem">${overallAction}</strong> — ${ticker} is in a <strong>${trendWord}</strong> with RSI in <strong>${rsiZone}</strong> territory.${
+            overallAction === 'WAIT' && gateSummary.length ? ' New entries blocked: ' + gateSummary[0].split(' — ')[0] + '.' :
+            overallAction === 'BUY' ? ' Signals align for entry — verify trigger confirmation and R:R.' :
+            overallAction === 'AVOID' ? ' Technical structure is unfavorable — wait for improvement.' :
+            overallAction === 'SUPPRESSED' ? ' All verdicts suppressed until data integrity is confirmed.' : ''
+          }
+          ${gateSummary.length > 1 ? `<br><span style="font-size:.76rem;color:var(--yellow)">Active gates: ${gateSummary.join(' · ')}</span>` : ''}
+          ${quant ? `<div style="margin-top:.45rem;padding-top:.45rem;border-top:1px solid rgba(255,255,255,.06);font-size:.8rem;color:${quantColor}">🧠 Quant Lab: <strong>${quant.label}</strong>${quantRank ? ` · ${quantRank}` : ''}${quantReason ? `<br><span style="font-size:.76rem;color:var(--text-dim)">${quantReason}</span>` : ''}</div>` : ''}
+          <div style="margin-top:.4rem;padding-top:.4rem;border-top:1px solid rgba(255,255,255,.06);font-size:.82rem;color:${nextActionColor}">🧭 ${nextAction}</div>
         </div>
         <div class="decision-strip">${cards}</div>
-        <div style="font-size:0.68rem;color:var(--text-muted);margin-top:0.5rem;text-align:center">Final action: <strong style="color:var(--text)">${overallAction}</strong>. Not financial advice.</div>
+        <div style="font-size:0.68rem;color:var(--text-muted);margin-top:0.5rem;text-align:center">Final action: <strong style="color:var(--text)">${overallAction}</strong>${quant ? ` · Quant Lab: <strong style="color:${quantColor}">${quant.label}</strong>` : ''}. Not financial advice.</div>
       </div>`;
     }
 
@@ -1632,9 +1972,8 @@
       const q = window._rvQualitySignals || {};
       if (q.finalSuppressed) {
         return `<div class="section section-full">
-          <h2>🎯 Technical Verdict <span style="font-size:0.7rem;color:var(--text-muted);text-transform:none;letter-spacing:0">1-20d signal blend</span></h2>
-          <div class="verdict-box neutral">⏸ SUPPRESSED</div>
-          <div class="verdict-detail">Final verdict is suppressed until active gates are resolved.</div>
+          <h2>🎯 Signal Diagnostics <span style="font-size:0.7rem;color:var(--text-muted);text-transform:none;letter-spacing:0">transparency layer</span></h2>
+          <div style="font-size:.8rem;color:var(--text-muted);padding:.4rem .6rem;border-radius:6px;background:rgba(255,255,255,.02)">Signals suppressed — raw data validation failed.</div>
         </div>`;
       }
       let bullCount = 0, bearCount = 0;
@@ -1674,10 +2013,19 @@
       if (q.rawStatus === 'UNKNOWN') gateNotes.push('raw validation unknown');
       if (q.biotechContextMissing) gateNotes.push('biotech context missing');
 
+      const rawVerdict = ratio >= 0.65 ? 'BULLISH' : ratio <= 0.35 ? 'BEARISH' : 'NEUTRAL';
+      const gateOverride = q.anyGateActive && rawVerdict === 'BULLISH';
+      const signalColor = rawVerdict === 'BULLISH' ? 'var(--green)' : rawVerdict === 'BEARISH' ? 'var(--red)' : 'var(--yellow)';
       return `<div class="section section-full">
-      <h2>🎯 Technical Verdict <span style="font-size:0.7rem;color:var(--text-muted);text-transform:none;letter-spacing:0">1-20d signal blend</span></h2>
-      <div class="verdict-box ${cls}">${verdict}</div>
-      <div class="verdict-detail">${bullCount} bullish signals, ${bearCount} bearish signals from MA, RSI, MACD, and Bollinger analysis${gateNotes.length ? ` · ⚠ ${gateNotes.join(' · ')}` : ''}</div>
+      <h2>🎯 Signal Diagnostics <span style="font-size:0.7rem;color:var(--text-muted);text-transform:none;letter-spacing:0">transparency layer</span></h2>
+      <div style="display:grid;gap:.4rem">
+        <div style="font-size:.8rem;color:var(--text-dim);padding:.4rem .6rem;border-radius:6px;background:rgba(255,255,255,.02);border-left:3px solid ${signalColor}">
+          <strong style="color:var(--text)">Raw signals:</strong> ${bullCount} bullish / ${bearCount} bearish — <strong style="color:${signalColor}">${rawVerdict}</strong>
+        </div>
+        ${gateNotes.length ? `<div style="font-size:.8rem;color:var(--yellow);padding:.4rem .6rem;border-radius:6px;background:var(--yellow-bg)">
+          <strong>Active gates:</strong> ${gateNotes.join(' · ')}${gateOverride ? ' — raw bullish capped' : ''}
+        </div>` : ''}
+      </div>
     </div>`;
     }
 
@@ -2212,8 +2560,9 @@
     </div>`;
     }
 
-    // ─── 12. PRICE CONCLUSION ───────────────────────────────────────────────────
-    function buildPriceConclusion(ticker, close, s, bars, universe) {
+    // ─── 12. PRICE CONCLUSION (removed — redundant with Decision Strip) ────────
+    function buildPriceConclusion() { return ''; }
+    function _buildPriceConclusionLegacy(ticker, close, s, bars, universe) {
       if (close == null) return '';
       // Governance: withheld when any gate active
       const qPC = window._rvQualitySignals || {};
@@ -2353,7 +2702,9 @@
   </script>
 
   <!-- Market Clock Script (shared with frontpage) -->
-  <script src="/market-clock.js"></script>
+  <script>
+    document.write(`<script src="${RV_ASSET_BASE}/market-clock.js"><\/script>`);
+  </script>
   <script>
     (function () {
       const el = document.getElementById("rv-data-updated-date");

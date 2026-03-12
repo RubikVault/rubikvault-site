@@ -332,11 +332,11 @@ function extractScientificPredictions(date, eodPrices) {
             if (!ticker) continue;
 
             const signalStrength = toStrength(item);
-            if (signalStrength < 60) continue;
+            if (signalStrength < 30) continue;
             const setup = item.setup || {};
             const trigger = item.trigger || {};
-            const setupMet = setup.fulfilled ?? setup.met ?? setup.setup_met ?? (signalStrength > 50);
-            const triggerMet = trigger.fulfilled ?? trigger.met ?? trigger.trigger_met ?? (signalStrength > 70);
+            const setupMet = setup.fulfilled ?? setup.met ?? setup.setup_met ?? (signalStrength > 40);
+            const triggerMet = trigger.fulfilled ?? trigger.met ?? trigger.trigger_met ?? (signalStrength > 60);
             const setupDate = item.setup_date || item.date || snapshotAsOf || date;
             const setupAgeDays = Math.max(0, Math.round((new Date(date) - new Date(setupDate)) / 86400000));
             const decayFactor = setupAgeDays > 10 ? 0.5 : setupAgeDays > 5 ? 0.8 : 1.0;
@@ -400,11 +400,11 @@ function extractScientificPredictions(date, eodPrices) {
         seen.add(ticker);
 
         const signalStrength = toStrength(item);
-        if (signalStrength < 60) continue;
+        if (signalStrength < 30) continue;
         const setup = item.setup || {};
         const trigger = item.trigger || {};
-        const setupMet = setup.fulfilled ?? setup.met ?? setup.setup_met ?? (signalStrength > 50);
-        const triggerMet = trigger.fulfilled ?? trigger.met ?? trigger.trigger_met ?? (signalStrength > 70);
+        const setupMet = setup.fulfilled ?? setup.met ?? setup.setup_met ?? (signalStrength > 40);
+        const triggerMet = trigger.fulfilled ?? trigger.met ?? trigger.trigger_met ?? (signalStrength > 60);
         const setupDate = item.setup_date || item.date || date;
         const setupAgeDays = Math.max(0, Math.round((new Date(date) - new Date(setupDate)) / 86400000));
         const decayFactor = setupAgeDays > 10 ? 0.5 : setupAgeDays > 5 ? 0.8 : 1.0;

@@ -1,0 +1,84 @@
+{
+  "generated_at": "2026-03-12T15:38:38.337Z",
+  "status": "PASS",
+  "log_path": "/Users/michaelpuchowezki/Dev/rubikvault-site/public/data/v3/audit/decisions/2026-03-12/AAPL_6a88356a-82e0-4d11-b3bc-43a99f512bb0.json",
+  "snapshot_path": "/Users/michaelpuchowezki/Dev/rubikvault-site/public/data/v3/snapshots/2026-03-02/AAPL_04a4df1f-eb83-4549-897a-d10bcdcf9ee5.json",
+  "replay": {
+    "ticker": "AAPL",
+    "feature_name": "elliott",
+    "snapshot_id": "04a4df1f-eb83-4549-897a-d10bcdcf9ee5",
+    "feature_hash": "8cc9cf7a0d13c80fe004052da3c6f62a5d80977b7ee6a04a647845347de8e961",
+    "regime_tag": "RANGE",
+    "global_system_state": "GREEN",
+    "dependency_trace": {
+      "source_data_versions": {
+        "primary_feed": "sample.primary.v1",
+        "secondary_feed": "sample.secondary.v1"
+      },
+      "feature_versions": {
+        "runblock": "runblock.v3.features"
+      },
+      "rule_versions": {
+        "runblock": "runblock.v3.rules"
+      },
+      "regime_version": "runblock.v3",
+      "model_version": {
+        "scientific": "scientific.rf.v3",
+        "forecast": "forecast.xgb.v3",
+        "elliott": "elliott.passive.v1"
+      },
+      "calibration_version": {
+        "scientific": "scientific.cal.v3",
+        "forecast": "forecast.cal.v3"
+      },
+      "cost_model_version": "runblock.cost.v3",
+      "ui_payload_version": "runblock.ui.v3"
+    },
+    "prediction_payload": {
+      "model_version": "elliott.passive.v1",
+      "has_directional_score": false,
+      "invalidation_delay_days": 1,
+      "confluence_hit_rate": 0.56,
+      "flip_frequency": 0.18,
+      "passive_structure_map": "Range floor holding with upside alternatives intact.",
+      "fib_confluence_zones": [
+        "104.5-105.3",
+        "108.8-109.4"
+      ],
+      "invalidation_levels": [
+        "99.2"
+      ],
+      "timeframe_conflict_score": 0.21,
+      "alternative_structure_hypotheses": [
+        "extended wave-B range"
+      ],
+      "confluence_score": 0.58,
+      "structural_confidence": 0.62,
+      "request_directional": false,
+      "reason_codes": [
+        "V1_PASSIVE_ONLY"
+      ],
+      "state": "PASSIVE",
+      "directional_score": null,
+      "direction_label": null,
+      "no_directional": true,
+      "gate": {
+        "allowed": true,
+        "mode": "PASSIVE",
+        "no_directional": true,
+        "reason_codes": [
+          "V1_PASSIVE_ONLY"
+        ]
+      }
+    },
+    "snapshot_features": {
+      "close": 124.83,
+      "volume": 298000,
+      "adv_usd": 37199340,
+      "regime_fast": "NORMAL",
+      "regime_weekly": "RANGE",
+      "regime_confidence": 0.9689102590590317,
+      "data_quality_state": "PASS"
+    }
+  }
+}

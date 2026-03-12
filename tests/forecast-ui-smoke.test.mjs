@@ -41,8 +41,13 @@ async function runSmokeTest() {
         }
         console.log('✅ Page loaded successfully\n');
 
-        // Wait for JavaScript to execute and table to populate
-        await page.waitForSelector('#forecasts-table tbody tr', { timeout: 10000 });
+        // Wait for JavaScript to execute and real forecast rows to replace the placeholder row.
+        await page.waitForFunction(() => {
+            const countText = document.querySelector('#forecast-count')?.textContent || '';
+            const stockCount = parseInt(countText.match(/\d+/)?.[0] || '0', 10);
+            const rowCount = document.querySelectorAll('#forecasts-table tbody tr').length;
+            return stockCount >= 100 && rowCount >= 100;
+        }, null, { timeout: 15000 });
 
         // Test 1: Bootstrap notice visibility
         console.log('🧪 Test 1: Bootstrap notice visibility');

@@ -1,0 +1,52 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://rubikvault.com/schemas/decision_trace.schema.json",
+  "title": "Stock Insights v4 Decision Trace",
+  "type": "object",
+  "required": [
+    "ticker",
+    "as_of",
+    "integrity",
+    "gates_fired",
+    "scores",
+    "fallback_active",
+    "reason_chain",
+    "outcomes"
+  ],
+  "properties": {
+    "ticker": { "type": "string" },
+    "as_of": { "type": ["string", "null"] },
+    "integrity": { "type": "string", "enum": ["clean", "suppressed"] },
+    "gates_fired": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "scores": {
+      "type": "object",
+      "required": ["trend", "entry", "risk", "context"],
+      "properties": {
+        "trend": { "type": "number" },
+        "entry": { "type": "number" },
+        "risk": { "type": "number" },
+        "context": { "type": "number" }
+      },
+      "additionalProperties": false
+    },
+    "fallback_active": { "type": "boolean" },
+    "reason_chain": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "outcomes": {
+      "type": "object",
+      "required": ["1d", "5d", "20d"],
+      "properties": {
+        "1d": { "type": ["string", "null"] },
+        "5d": { "type": ["string", "null"] },
+        "20d": { "type": ["string", "null"] }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}
