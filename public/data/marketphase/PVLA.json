@@ -3,8 +3,8 @@
   "feature": "marketphase",
   "meta": {
     "symbol": "PVLA",
-    "generatedAt": "2026-03-11T08:03:23.603Z",
-    "fetchedAt": "2026-03-11T08:03:23.603Z",
+    "generatedAt": "2026-03-12T07:19:40.363Z",
+    "fetchedAt": "2026-03-12T07:19:40.363Z",
     "ttlSeconds": 86400,
     "provider": "internal",
     "dataset": "PVLA",
@@ -15,8 +15,8 @@
     "precision": "IEEE754-Double-Round6",
     "auditTrail": {
       "generatedBy": "MarketPhase-v8-Engine",
-      "commitHash": "ae49410",
-      "reviewDate": "2026-03-11T08:03:23.603Z",
+      "commitHash": "f8b5140",
+      "reviewDate": "2026-03-12T07:19:40.363Z",
       "standards": [
         "ISO-8000",
         "IEEE-7000"
@@ -26,84 +26,84 @@
   },
   "data": {
     "features": {
-      "RSI": 72.031941,
-      "MACDHist": 2.864254,
-      "ATR%": 3.573469,
-      "SMA50": 99.3465,
-      "SMA200": 67.418525,
+      "RSI": 69.484832,
+      "MACDHist": 2.245801,
+      "ATR%": 3.49945,
+      "SMA50": 100.0729,
+      "SMA200": 68.006425,
       "SMATrend": "bullish",
-      "lastClose": 142.11
+      "lastClose": 139.69
     },
     "swings": {
       "raw": [
         {
-          "index": 31,
+          "index": 30,
           "date": "2025-04-10",
           "price": 19.87,
           "type": "low"
         },
         {
-          "index": 38,
+          "index": 37,
           "date": "2025-04-22",
           "price": 26.91,
           "type": "high"
         },
         {
-          "index": 52,
+          "index": 51,
           "date": "2025-05-12",
           "price": 20.75,
           "type": "low"
         },
         {
-          "index": 71,
+          "index": 70,
           "date": "2025-06-09",
           "price": 26.63,
           "type": "high"
         },
         {
-          "index": 78,
+          "index": 77,
           "date": "2025-06-18",
           "price": 20.51,
           "type": "low"
         },
         {
-          "index": 135,
+          "index": 134,
           "date": "2025-09-10",
           "price": 59.73,
           "type": "high"
         },
         {
-          "index": 191,
+          "index": 190,
           "date": "2025-11-28",
           "price": 102.79,
           "type": "high"
         },
         {
-          "index": 202,
+          "index": 201,
           "date": "2025-12-15",
           "price": 88.98,
           "type": "low"
         },
         {
-          "index": 207,
+          "index": 206,
           "date": "2025-12-22",
           "price": 109.07,
           "type": "high"
         },
         {
-          "index": 215,
+          "index": 214,
           "date": "2026-01-05",
           "price": 88.44,
           "type": "low"
         },
         {
-          "index": 222,
+          "index": 221,
           "date": "2026-01-14",
           "price": 105.3,
           "type": "high"
         },
         {
-          "index": 237,
+          "index": 236,
           "date": "2026-02-05",
           "price": 76.43,
           "type": "low"
@@ -111,103 +111,109 @@
       ],
       "confirmed": [
         {
-          "index": 31,
+          "index": 30,
           "date": "2025-04-10",
           "price": 19.87,
           "type": "low"
         },
         {
-          "index": 38,
+          "index": 37,
           "date": "2025-04-22",
           "price": 26.91,
           "type": "high"
         },
         {
-          "index": 52,
+          "index": 51,
           "date": "2025-05-12",
           "price": 20.75,
           "type": "low"
         },
         {
-          "index": 78,
+          "index": 77,
           "date": "2025-06-18",
           "price": 20.51,
           "type": "low"
         },
         {
-          "index": 207,
+          "index": 206,
           "date": "2025-12-22",
           "price": 109.07,
           "type": "high"
         },
         {
-          "index": 222,
+          "index": 221,
           "date": "2026-01-14",
           "price": 105.3,
           "type": "high"
+        },
+        {
+          "index": 236,
+          "date": "2026-02-05",
+          "price": 76.43,
+          "type": "low"
         }
       ]
     },
     "elliott": {
       "completedPattern": {
-        "valid": false,
+        "valid": true,
         "direction": "bullish",
-        "endedAt": "2026-01-14",
+        "endedAt": "2026-02-05",
         "confidence0_100": 100,
         "rules": {
           "r1": true,
-          "r2": false,
+          "r2": true,
           "r3": true
         },
-        "guidelineScore": 46,
-        "rulePasses": 2
+        "guidelineScore": 17,
+        "rulePasses": 3
       },
       "developingPattern": {
         "possibleWave": "Wave 4 or ABC",
         "confidence": 60,
         "fibLevels": {
           "support": [
-            105.74486,
-            104.85514
+            79.83666,
+            73.02334
           ],
           "resistance": [
-            108.62514,
-            109.51486
+            101.89334,
+            108.70666
           ]
         },
         "disclaimer": "Reference levels only -- no prediction"
       },
       "uncertainty": {
         "lastSwingConfirmed": true,
-        "alternativeCounts": 2,
+        "alternativeCounts": 1,
         "confidenceDecay": {
           "base": 100,
-          "adjusted": 76
+          "adjusted": 88
         }
       },
       "fib": {
         "ratios": {
-          "wave2": 0.875,
-          "wave3": 0.034091,
-          "wave4": 369,
-          "wave5": 0.535511
+          "wave2": 0.038961,
+          "wave3": 14.376623,
+          "wave4": 0.04257,
+          "wave5": 4.686688
         },
-        "conformanceScore": 44.359037
+        "conformanceScore": 7.059341
       }
     },
     "fib": {
       "ratios": {
-        "wave2": 0.875,
-        "wave3": 0.034091,
-        "wave4": 369,
-        "wave5": 0.535511
+        "wave2": 0.038961,
+        "wave3": 14.376623,
+        "wave4": 0.04257,
+        "wave5": 4.686688
       },
-      "conformanceScore": 44.359037
+      "conformanceScore": 7.059341
     },
     "multiTimeframeAgreement": null,
     "debug": {
       "symbol": "PVLA",
-      "window": 12,
+      "window": 11,
       "candidateCount": 12,
       "durationMs": 1
     },

@@ -3,8 +3,8 @@
   "feature": "marketphase",
   "meta": {
     "symbol": "ERAS",
-    "generatedAt": "2026-03-11T07:59:21.118Z",
-    "fetchedAt": "2026-03-11T07:59:21.118Z",
+    "generatedAt": "2026-03-12T07:16:41.722Z",
+    "fetchedAt": "2026-03-12T07:16:41.722Z",
     "ttlSeconds": 86400,
     "provider": "internal",
     "dataset": "ERAS",
@@ -15,8 +15,8 @@
     "precision": "IEEE754-Double-Round6",
     "auditTrail": {
       "generatedBy": "MarketPhase-v8-Engine",
-      "commitHash": "ae49410",
-      "reviewDate": "2026-03-11T07:59:21.118Z",
+      "commitHash": "f8b5140",
+      "reviewDate": "2026-03-12T07:16:41.722Z",
       "standards": [
         "ISO-8000",
         "IEEE-7000"
@@ -26,78 +26,78 @@
   },
   "data": {
     "features": {
-      "RSI": 77.332816,
-      "MACDHist": 0.047882,
-      "ATR%": 2.368742,
-      "SMA50": 10.2988,
-      "SMA200": 4.094575,
+      "RSI": 76.064455,
+      "MACDHist": 0.012274,
+      "ATR%": 2.247765,
+      "SMA50": 10.5392,
+      "SMA200": 4.166025,
       "SMATrend": "bullish",
-      "lastClose": 15.58
+      "lastClose": 15.5
     },
     "swings": {
       "raw": [
         {
-          "index": 21,
+          "index": 20,
           "date": "2025-03-27",
           "price": 1.55,
           "type": "high"
         },
         {
-          "index": 29,
+          "index": 28,
           "date": "2025-04-08",
           "price": 1.06,
           "type": "low"
         },
         {
-          "index": 46,
+          "index": 45,
           "date": "2025-05-02",
           "price": 1.58,
           "type": "high"
         },
         {
-          "index": 62,
+          "index": 61,
           "date": "2025-05-27",
           "price": 1.08,
           "type": "low"
         },
         {
-          "index": 71,
+          "index": 70,
           "date": "2025-06-09",
           "price": 1.63,
           "type": "high"
         },
         {
-          "index": 83,
+          "index": 82,
           "date": "2025-06-26",
           "price": 1.26,
           "type": "low"
         },
         {
-          "index": 103,
+          "index": 102,
           "date": "2025-07-25",
           "price": 1.74,
           "type": "high"
         },
         {
-          "index": 108,
+          "index": 107,
           "date": "2025-08-01",
           "price": 1.39,
           "type": "low"
         },
         {
-          "index": 130,
+          "index": 129,
           "date": "2025-09-03",
           "price": 1.43,
           "type": "low"
         },
         {
-          "index": 161,
+          "index": 160,
           "date": "2025-10-16",
           "price": 2.53,
           "type": "high"
         },
         {
-          "index": 175,
+          "index": 174,
           "date": "2025-11-05",
           "price": 2.2,
           "type": "low"
@@ -105,43 +105,49 @@
       ],
       "confirmed": [
         {
-          "index": 29,
+          "index": 28,
           "date": "2025-04-08",
           "price": 1.06,
           "type": "low"
         },
         {
-          "index": 62,
+          "index": 61,
           "date": "2025-05-27",
           "price": 1.08,
           "type": "low"
         },
         {
-          "index": 83,
+          "index": 70,
+          "date": "2025-06-09",
+          "price": 1.63,
+          "type": "high"
+        },
+        {
+          "index": 82,
           "date": "2025-06-26",
           "price": 1.26,
           "type": "low"
         },
         {
-          "index": 103,
+          "index": 102,
           "date": "2025-07-25",
           "price": 1.74,
           "type": "high"
         },
         {
-          "index": 108,
+          "index": 107,
           "date": "2025-08-01",
           "price": 1.39,
           "type": "low"
         },
         {
-          "index": 130,
+          "index": 129,
           "date": "2025-09-03",
           "price": 1.43,
           "type": "low"
         },
         {
-          "index": 175,
+          "index": 174,
           "date": "2025-11-05",
           "price": 2.2,
           "type": "low"
@@ -153,18 +159,18 @@
         "valid": false,
         "direction": "bullish",
         "endedAt": "2025-11-05",
-        "confidence0_100": 100,
+        "confidence0_100": 93,
         "rules": {
           "r1": false,
-          "r2": true,
+          "r2": false,
           "r3": true
         },
-        "guidelineScore": 60,
-        "rulePasses": 2
+        "guidelineScore": 77,
+        "rulePasses": 1
       },
       "developingPattern": {
         "possibleWave": "Wave 4 or ABC",
-        "confidence": 60,
+        "confidence": 56,
         "fibLevels": {
           "support": [
             1.52086,
@@ -181,35 +187,35 @@
         "lastSwingConfirmed": true,
         "alternativeCounts": 2,
         "confidenceDecay": {
-          "base": 100,
-          "adjusted": 76
+          "base": 93,
+          "adjusted": 69
         }
       },
       "fib": {
         "ratios": {
-          "wave2": 2.666667,
-          "wave3": 1.944444,
+          "wave2": 1.297297,
+          "wave3": 0.945946,
           "wave4": 0.114286,
-          "wave5": 4.277778
+          "wave5": 2.081081
         },
-        "conformanceScore": 32.062588
+        "conformanceScore": 53.30473
       }
     },
     "fib": {
       "ratios": {
-        "wave2": 2.666667,
-        "wave3": 1.944444,
+        "wave2": 1.297297,
+        "wave3": 0.945946,
         "wave4": 0.114286,
-        "wave5": 4.277778
+        "wave5": 2.081081
       },
-      "conformanceScore": 32.062588
+      "conformanceScore": 53.30473
     },
     "multiTimeframeAgreement": null,
     "debug": {
       "symbol": "ERAS",
-      "window": 15,
+      "window": 14,
       "candidateCount": 11,
-      "durationMs": 0
+      "durationMs": 1
     },
     "disclaimer": "MarketPhase AI — Scientific Elliott Research (v8.0)\nprovides deterministic, rule-based historical analysis only.\nIt does not forecast future prices or offer financial advice.\nUse solely for educational and research purposes.\nISO 8000 / IEEE 7000 Compliant - Bit-exact reproducibility guaranteed."
   },

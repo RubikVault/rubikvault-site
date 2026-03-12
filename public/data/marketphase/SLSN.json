@@ -3,8 +3,8 @@
   "feature": "marketphase",
   "meta": {
     "symbol": "SLSN",
-    "generatedAt": "2026-03-11T08:04:15.016Z",
-    "fetchedAt": "2026-03-11T08:04:15.016Z",
+    "generatedAt": "2026-03-12T07:20:24.582Z",
+    "fetchedAt": "2026-03-12T07:20:24.582Z",
     "ttlSeconds": 86400,
     "provider": "internal",
     "dataset": "SLSN",
@@ -15,8 +15,8 @@
     "precision": "IEEE754-Double-Round6",
     "auditTrail": {
       "generatedBy": "MarketPhase-v8-Engine",
-      "commitHash": "ae49410",
-      "reviewDate": "2026-03-11T08:04:15.016Z",
+      "commitHash": "f8b5140",
+      "reviewDate": "2026-03-12T07:20:24.582Z",
       "standards": [
         "ISO-8000",
         "IEEE-7000"
@@ -26,13 +26,13 @@
   },
   "data": {
     "features": {
-      "RSI": 36.9584,
-      "MACDHist": -0.012208,
-      "ATR%": 5.242487,
-      "SMA50": 1.4014,
-      "SMA200": 2.8841,
+      "RSI": 35.511033,
+      "MACDHist": -0.010331,
+      "ATR%": 5.211192,
+      "SMA50": 1.3862,
+      "SMA200": 2.87,
       "SMATrend": "bearish",
-      "lastClose": 1.08
+      "lastClose": 1.05
     },
     "swings": {
       "raw": [
@@ -341,6 +341,12 @@
           "date": "2026-02-25",
           "price": 1.33,
           "type": "high"
+        },
+        {
+          "index": 229,
+          "date": "2026-03-06",
+          "price": 1.01,
+          "type": "low"
         }
       ],
       "confirmed": [
@@ -628,7 +634,7 @@
     "debug": {
       "symbol": "SLSN",
       "window": 3,
-      "candidateCount": 51,
+      "candidateCount": 52,
       "durationMs": 1
     },
     "disclaimer": "MarketPhase AI — Scientific Elliott Research (v8.0)\nprovides deterministic, rule-based historical analysis only.\nIt does not forecast future prices or offer financial advice.\nUse solely for educational and research purposes.\nISO 8000 / IEEE 7000 Compliant - Bit-exact reproducibility guaranteed."
