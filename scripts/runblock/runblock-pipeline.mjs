@@ -11,7 +11,7 @@
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 
-import { validateSeries, reconcileFeeds } from './layers/01-data-integrity.mjs';
+import { validateSeries, reconcileFeeds, detectAnomalies } from './layers/01-data-integrity.mjs';
 import { evaluateFastRegime, evaluateWeeklyRegime, detectRegimeBreak } from './layers/02-regime-detection.mjs';
 import {
   createDecisionLog,
@@ -24,13 +24,16 @@ import {
   evaluateScientificGates,
   evaluateForecastGates,
   evaluateElliottV1Gates,
-  evaluateElliottV2Gates
+  evaluateElliottV2Gates,
+  promotionDecision
 } from './layers/04-validation-governance.mjs';
 import { buildFeaturePayload } from './layers/05-feature-output.mjs';
 import { computeGlobalState, enforceGlobalState } from './services/global-state.mjs';
 import { createSnapshot, persistSnapshot } from './services/snapshot-freeze.mjs';
 import { assertNoLeakage, assertPurgeEmbargo } from './services/leakage-guard.mjs';
 import { classifyBucket, computeNetReturn } from './services/liquidity-bucket.mjs';
+
+import YAML from 'yaml';
 
 /**
  * Load all RUNBLOCK config files.
@@ -69,9 +72,13 @@ export async function loadRunblockConfig(rootDir) {
     for (const filePath of candidates) {
       try {
         const raw = await readFile(filePath, 'utf-8');
-        loaded = JSON.parse(raw);
+        if (filePath.endsWith('.yaml') || filePath.endsWith('.yml')) {
+          loaded = YAML.parse(raw);
+        } else {
+          loaded = JSON.parse(raw);
+        }
         break;
-      } catch {
+      } catch (err) {
         // Try next candidate.
       }
     }
@@ -209,6 +216,7 @@ export async function executePipeline({
 
   // ═══ LAYER 1: DATA INTEGRITY ═══
   const dataIntegrity = validateSeries(bars, pipelineConfig.data_integrity);
+  const anomalyCheck = detectAnomalies(bars, pipelineConfig.data_integrity);
   let feedState = { state: 'PASS', reason_codes: [] };
   if (secondaryBars && secondaryBars.length > 0 && bars.length > 0) {
     feedState = reconcileFeeds(
@@ -235,6 +243,7 @@ export async function executePipeline({
 
   result.layers.data_integrity = {
     series: dataIntegrity,
+    anomaly_detection: anomalyCheck,
     feed_reconciliation: feedState,
     leakage_guard: leakageCheck,
     walk_forward_guard: walkForwardCheck,
@@ -242,7 +251,7 @@ export async function executePipeline({
       ? 'FAIL'
       : dataIntegrity.state === 'FAIL'
         ? 'FAIL'
-        : (dataIntegrity.state === 'SUSPECT' || feedState.state === 'SUSPECT')
+        : (dataIntegrity.state === 'SUSPECT' || feedState.state === 'SUSPECT' || anomalyCheck.state === 'SUSPECT')
           ? 'SUSPECT'
           : 'PASS',
   };
@@ -390,6 +399,15 @@ export async function executePipeline({
   const elliottV2Gates = elliottMetrics
     ? evaluateElliottV2Gates(elliottMetrics, promotionConfig)
     : null;
+  
+  const sciPromotion = scientificMetrics?.is_challenger && scientificMetrics?.champion_metrics
+    ? promotionDecision(scientificMetrics.champion_metrics, scientificMetrics)
+    : null;
+    
+  const fcPromotion = forecastMetrics?.is_challenger && forecastMetrics?.champion_metrics
+    ? promotionDecision(forecastMetrics.champion_metrics, forecastMetrics)
+    : null;
+
   const elliottDirectionalRequested = Boolean(elliottMetrics?.request_directional);
   const elliottDirectionalEnabled = Boolean(elliottDirectionalRequested && elliottV2Gates?.eligible);
 
@@ -426,6 +444,8 @@ export async function executePipeline({
     elliott_v1_gates: elliottV1Gates,
     elliott_v2_gates: elliottV2Gates,
     elliott_directional_enabled: elliottDirectionalEnabled,
+    scientific_promotion: sciPromotion,
+    forecast_promotion: fcPromotion,
     promotion_eligible: promotionEligible,
   };
 

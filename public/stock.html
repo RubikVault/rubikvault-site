@@ -239,6 +239,7 @@
       display: grid;
       gap: 1rem;
       grid-template-columns: 1fr 1fr;
+      align-items: start;
     }
 
     .section-full {
@@ -1480,13 +1481,13 @@
     ${buildVolume(s, bars)}
     ${buildFundamentalsModule(ticker, universe)}
     ${buildTrendMomentum(close, s, bars)}
-    ${buildPerformance(s)}
-    ${buildScore(score)}
     <details class="advanced-collapsible" id="rv-quantlab-details" open><summary class="section-summary-header">Quant Lab Experts <span class="advanced-badge">LOCAL RESULTS</span></summary><div id="rv-quantlab-slot"><div class="placeholder-card">Loading Quant Lab result mirror...</div></div></details>
     <details class="advanced-collapsible" id="rv-scientific-details" open><summary class="section-summary-header">🔬 Scientific Analyzer <span class="advanced-badge">ADVANCED</span></summary><div id="rv-scientific-slot"><div class="placeholder-card">Loading scientific analysis…</div></div></details>
     <details class="advanced-collapsible" id="rv-forecast-details" open><summary class="section-summary-header">🔮 ML Forecast <span class="advanced-badge">ADVANCED</span></summary><div id="rv-forecast-slot"><div class="placeholder-card">Loading forecast…</div></div></details>
     <details class="advanced-collapsible" id="rv-elliott-details" open><summary class="section-summary-header">🌊 Elliott Wave <span class="advanced-badge">ADVANCED</span></summary><div id="rv-elliott-slot"><div class="placeholder-card">Loading Elliott wave analysis…</div></div></details>
-    <details class="advanced-collapsible"><summary class="section-summary-header">📊 Advanced Analytics <span class="advanced-badge">ADVANCED</span></summary>
+    ${buildPerformance(s)}
+    ${buildScore(score)}
+    <details class="advanced-collapsible" open><summary class="section-summary-header">📊 Advanced Analytics <span class="advanced-badge">ADVANCED</span></summary>
       ${buildEarningsShockProxy(bars)}
       ${buildDrawdownAnatomy(bars)}
       ${buildVolTermStructure(bars)}
@@ -1501,7 +1502,7 @@
       ${buildStressScenarios(bars)}
       ${buildCorporateActions(bars)}
     </details>
-    <details class="advanced-collapsible"><summary class="section-summary-header">🔍 Data Checks <span class="advanced-badge">ADVANCED</span></summary>
+    <details class="advanced-collapsible" open><summary class="section-summary-header">🔍 Data Checks <span class="advanced-badge">ADVANCED</span></summary>
       <div id="rv-canonical-truth-root">${buildCanonicalTruthPanel(ticker, close, s, bars)}</div>
       ${buildDataHealthPanel(ticker)}
       <div id="rv-decision-trace-root">${buildDecisionTracePanel(ticker)}</div>
@@ -2213,9 +2214,16 @@
       return `<div class="section">
       <h2>⚡ Volatility & Risk</h2>
       ${vpGauge}
-      <div class="m-grid" style="margin-top:0.5rem;">
-        ${metrics.map(m => `<div class="m-item"><div class="m-label">${m.label}</div><div class="m-val">${m.val}</div>${m.sub ? `<div class="m-sub">${m.sub}</div>` : ''}</div>`).join('')}
-      </div>
+      <table class="ma-table" style="margin-top:0.75rem;">
+        <tbody>
+          ${metrics.map(m => `
+          <tr>
+            <td style="font-weight:600">${m.label}</td>
+            <td style="text-align:right"><strong>${m.val}</strong></td>
+            <td style="text-align:right;color:var(--text-dim);font-size:0.75rem;">${m.sub}</td>
+          </tr>`).join('')}
+        </tbody>
+      </table>
     </div>`;
     }
 

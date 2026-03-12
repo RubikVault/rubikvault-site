@@ -1,41 +1,34 @@
-{
-  "schema_version": "runblock.v3",
-  "base_metric": "adv_usd",
-  "buckets": {
-    "A": {
-      "label": "High Liquidity",
-      "adv_min_usd": 10000000,
-      "spread_proxy_pct": 0.05,
-      "slippage_pct": 0.05,
-      "market_impact_pct": 0.00,
-      "tradability": true
-    },
-    "B": {
-      "label": "Medium Liquidity",
-      "adv_min_usd": 1000000,
-      "adv_max_usd": 10000000,
-      "spread_proxy_pct": 0.15,
-      "slippage_pct": 0.15,
-      "market_impact_pct": 0.00,
-      "tradability": true
-    },
-    "C": {
-      "label": "Low Liquidity",
-      "adv_min_usd": 0,
-      "adv_max_usd": 1000000,
-      "spread_proxy_pct": 0.50,
-      "slippage_pct": 0.50,
-      "market_impact_pct_per_adv": 0.05,
-      "tradability": true
-    },
-    "D": {
-      "label": "Untradable / Informational",
-      "adv_max_usd": 500000,
-      "spread_threshold_pct": 1.00,
-      "spread_proxy_pct": 1.00,
-      "slippage_pct": 1.00,
-      "tradability": false,
-      "note": "Signal computed but not trade-executable"
-    }
-  }
-}
+schema_version: runblock.v3
+base_metric: adv_usd
+buckets:
+  A:
+    label: High Liquidity
+    adv_min_usd: 10000000
+    spread_proxy_pct: 0.05
+    slippage_pct: 0.05
+    market_impact_pct: 0
+    tradability: true
+  B:
+    label: Medium Liquidity
+    adv_min_usd: 1000000
+    adv_max_usd: 10000000
+    spread_proxy_pct: 0.15
+    slippage_pct: 0.15
+    market_impact_pct: 0
+    tradability: true
+  C:
+    label: Low Liquidity
+    adv_min_usd: 0
+    adv_max_usd: 1000000
+    spread_proxy_pct: 0.5
+    slippage_pct: 0.5
+    market_impact_pct_per_adv: 0.05
+    tradability: true
+  D:
+    label: Untradable / Informational
+    adv_max_usd: 500000
+    spread_threshold_pct: 1
+    spread_proxy_pct: 1
+    slippage_pct: 1
+    tradability: false
+    note: Signal computed but not trade-executable

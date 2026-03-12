@@ -36,7 +36,7 @@ export function buildSampleWeeklyRegimeFeatures() {
   ];
 }
 
-export function buildSampleRunblockInput({ ticker = 'AAPL' } = {}) {
+export function buildSampleRunblockInput({ ticker = 'MALLPLAZA.SN' } = {}) {
   const bars = buildSampleBars();
   const secondaryBars = bars.map((bar, index) => ({
     ...bar,
@@ -85,6 +85,12 @@ export function buildSampleRunblockInput({ ticker = 'AAPL' } = {}) {
         liquidity_cost_score: 0.89,
         top_3_features: ['rsi_14', 'macd_histogram', 'trend_strength'],
         top_3_feature_weights: [0.42, 0.33, 0.25],
+        is_challenger: true,
+        champion_metrics: {
+          net_return_after_costs: 0.05,
+          brier_score: 0.20,
+          calibration_error: 0.04
+        }
       },
       forecast: {
         model_version: 'forecast.xgb.v3',
@@ -104,6 +110,12 @@ export function buildSampleRunblockInput({ ticker = 'AAPL' } = {}) {
           '5d': { direction_prob: 0.63, expected_move_net: 0.018, uncertainty_band: [0.010, 0.028] },
           '20d': { direction_prob: 0.69, expected_move_net: 0.043, uncertainty_band: [0.024, 0.061] },
         },
+        is_challenger: true,
+        champion_metrics: {
+          horizons: {
+            '1d': { logloss: 0.15 }, '5d': { logloss: 0.16 }, '20d': { logloss: 0.17 }
+          }
+        }
       },
       elliott: {
         model_version: 'elliott.passive.v1',

@@ -1,36 +1,33 @@
-{
-  "schema_version": "runblock.v3",
-  "pipeline_order": [
-    "data_integrity",
-    "regime_detection",
-    "audit_feedback",
-    "validation_governance",
-    "feature_output"
-  ],
-  "data_integrity": {
-    "price_deviation_tolerance_pct": 0.10,
-    "stale_threshold_minutes": 60,
-    "duplicate_candle_tolerance": 0,
-    "out_of_order_tolerance": 0,
-    "max_suspect_pct_before_orange": 10,
-    "anomaly_score_threshold": -0.5,
-    "snapshot_storage": "public/data/v3/snapshots",
-    "snapshot_immutable": true
-  },
-  "leakage_guards": {
-    "purge_period_days": 5,
-    "embargo_period_days": 5,
-    "enforce_in": ["live", "backtest", "walk_forward", "validation"]
-  },
-  "walk_forward": {
-    "rolling_train_months": 21,
-    "validation_months": 3,
-    "holdout_weeks": 3,
-    "min_validation_outcomes": 60
-  },
-  "timeouts": {
-    "api_call_ms": 15000,
-    "async_insight_ms": 12000,
-    "regime_computation_ms": 30000
-  }
-}
+schema_version: runblock.v3
+pipeline_order:
+  - data_integrity
+  - regime_detection
+  - audit_feedback
+  - validation_governance
+  - feature_output
+data_integrity:
+  price_deviation_tolerance_pct: 0.1
+  stale_threshold_minutes: 60
+  duplicate_candle_tolerance: 0
+  out_of_order_tolerance: 0
+  max_suspect_pct_before_orange: 10
+  anomaly_score_threshold: -0.5
+  snapshot_storage: public/data/v3/snapshots
+  snapshot_immutable: true
+leakage_guards:
+  purge_period_days: 5
+  embargo_period_days: 5
+  enforce_in:
+    - live
+    - backtest
+    - walk_forward
+    - validation
+walk_forward:
+  rolling_train_months: 21
+  validation_months: 3
+  holdout_weeks: 3
+  min_validation_outcomes: 60
+timeouts:
+  api_call_ms: 15000
+  async_insight_ms: 12000
+  regime_computation_ms: 30000

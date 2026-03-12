@@ -551,10 +551,15 @@ function buildTrendMomentum(close, s, bars) {
   return `<div class="section section-full"><h2>🔮 Trend & Momentum</h2>
   <div class="trend-big ${stateCls}">TREND: ${state} <span style="font-size:.8rem;font-weight:400;opacity:.8">(${(conf).toFixed(2)})</span></div>
   <div style="font-size:.78rem;color:var(--text-dim);margin-bottom:.6rem">${reasons.join(' · ')}</div>${durationHtml}
-  <div class="m-grid"><div class="m-item"><div class="m-label" title="Measures vol compression and range breakout potential. 0–100 scale. Higher = more coiled energy for breakout.">Breakout Energy</div><div class="m-val">${breakoutEnergy}/100</div><div class="m-sub">${beLabel} · Compression: ${(compression).toFixed(2)}</div></div>
-  <div class="m-item"><div class="m-label" title="Price distance from 50-day MA in units of 60-day price standard deviation. |Z|>2 = statistically extreme.">Z-Score (vs MA)</div><div class="m-val" style="color:${Math.abs(z) > 2 ? 'var(--red)' : 'var(--text)'}">${z.toFixed(2)}</div><div class="m-sub">${reversionHint || 'Within normal range'}</div></div>
-  <div class="m-item"><div class="m-label" title="Ratio of 20-day to 60-day realized volatility. <0.7 = compression (potential breakout), >1.3 = expansion.">Vol Compression</div><div class="m-val">${(compression).toFixed(2)}x</div><div class="m-sub">20d/60d ratio</div></div>
-  <div class="m-item"><div class="m-label" title="Recent 5-day avg volume / prior 15-day avg. Below 0.5 = drying up (often precedes breakout).">Volume Dry-Up</div><div class="m-val">${(volDryUp).toFixed(2)}x</div><div class="m-sub">Recent 5d vs prior 15d</div></div></div></div>`;
+  <table class="ma-table" style="margin-top:0.5rem;">
+    <tbody>
+      <tr><td style="font-weight:600" title="Measures vol compression and range breakout potential. 0–100 scale. Higher = more coiled energy for breakout.">Breakout Energy</td><td style="text-align:right"><strong>${breakoutEnergy}/100</strong></td><td style="text-align:right;color:var(--text-dim);font-size:0.75rem;">${beLabel} · Compress: ${(compression).toFixed(2)}</td></tr>
+      <tr><td style="font-weight:600" title="Price distance from 50-day MA in units of 60-day price standard deviation. |Z|>2 = statistically extreme.">Z-Score (vs MA)</td><td style="text-align:right"><strong style="color:${Math.abs(z) > 2 ? 'var(--red)' : 'var(--text)'}">${z.toFixed(2)}</strong></td><td style="text-align:right;color:var(--text-dim);font-size:0.75rem;">${reversionHint || 'Normal'}</td></tr>
+      <tr><td style="font-weight:600" title="Ratio of 20-day to 60-day realized volatility. <0.7 = compression (potential breakout), >1.3 = expansion.">Vol Compress</td><td style="text-align:right"><strong>${(compression).toFixed(2)}x</strong></td><td style="text-align:right;color:var(--text-dim);font-size:0.75rem;">20d/60d ratio</td></tr>
+      <tr><td style="font-weight:600" title="Recent 5-day avg volume / prior 15-day avg. Below 0.5 = drying up (often precedes breakout).">Vol Dry-Up</td><td style="text-align:right"><strong>${(volDryUp).toFixed(2)}x</strong></td><td style="text-align:right;color:var(--text-dim);font-size:0.75rem;">5d vs 15d</td></tr>
+    </tbody>
+  </table>
+</div>`;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -661,10 +666,14 @@ function buildLiquidityScore(s, bars) {
   const label = score > 70 ? 'Highly Liquid' : score > 40 ? 'Moderate' : 'Low Liquidity';
   const suit = score > 70 ? 'Day trading, swing, long-term' : score > 40 ? 'Swing & long-term' : 'Long-term holds only';
   return `<div class="section"><h2>💧 Liquidity & Tradability</h2>
-  <div class="m-grid"><div class="m-item"><div class="m-label">Score</div><div class="m-val" style="color:${score > 70 ? 'var(--green)' : score > 40 ? 'var(--yellow)' : 'var(--red)'}">${score}/100 — ${label}</div></div>
-  <div class="m-item"><div class="m-label">ADV (20d)</div><div class="m-val">${fmtVol(adv20)}</div></div>
-  <div class="m-item"><div class="m-label">$ Volume</div><div class="m-val">${dollarVol >= 1e9 ? (dollarVol / 1e9).toFixed(1) + 'B' : dollarVol >= 1e6 ? (dollarVol / 1e6).toFixed(1) + 'M' : fmtVol(dollarVol)}</div></div>
-  <div class="m-item"><div class="m-label">Avg Gap</div><div class="m-val">${(avgGap * 100).toFixed(2)}%</div></div></div>
+  <table class="ma-table" style="margin-top:0.5rem;">
+    <tbody>
+      <tr><td style="font-weight:600">Score</td><td style="text-align:right"><strong style="color:${score > 70 ? 'var(--green)' : score > 40 ? 'var(--yellow)' : 'var(--red)'}">${score}/100 — ${label}</strong></td></tr>
+      <tr><td style="font-weight:600">ADV (20d)</td><td style="text-align:right"><strong>${fmtVol(adv20)}</strong></td></tr>
+      <tr><td style="font-weight:600">$ Volume</td><td style="text-align:right"><strong>${dollarVol >= 1e9 ? (dollarVol / 1e9).toFixed(1) + 'B' : dollarVol >= 1e6 ? (dollarVol / 1e6).toFixed(1) + 'M' : fmtVol(dollarVol)}</strong></td></tr>
+      <tr><td style="font-weight:600">Avg Gap</td><td style="text-align:right"><strong>${(avgGap * 100).toFixed(2)}%</strong></td></tr>
+    </tbody>
+  </table>
   <div style="font-size:.78rem;color:var(--text-dim);margin-top:.4rem">Suitable for: ${suit}</div></div>`;
 }
 
@@ -684,9 +693,13 @@ function buildEarningsShockProxy(bars) {
   const upShocks = bigDays.filter(r => r.ret > 0).length, downShocks = bigDays.filter(r => r.ret < 0).length;
   return `<div class="section"><h2>💥 Big Move Analysis (Earnings Proxy)</h2>
   <div style="font-size:.78rem;color:var(--text-dim);margin-bottom:.4rem">Days with |return| > ${(threshold * 100).toFixed(0)}% as proxy for event days</div>
-  <div class="m-grid"><div class="m-item"><div class="m-label">Big Move Days</div><div class="m-val">${bigDays.length}</div><div class="m-sub">↑${upShocks} ↓${downShocks}</div></div>
-  <div class="m-item"><div class="m-label">Avg 1d Follow</div><div class="m-val" style="color:${_col(avg1)}">${(avg1 * 100).toFixed(2)}%</div></div>
-  <div class="m-item"><div class="m-label">Avg 5d Follow</div><div class="m-val" style="color:${_col(avg5)}">${(avg5 * 100).toFixed(2)}%</div></div></div>
+  <table class="ma-table" style="margin-top:0.5rem;">
+    <tbody>
+      <tr><td style="font-weight:600">Big Move Days</td><td style="text-align:right"><strong>${bigDays.length}</strong></td><td style="text-align:right;color:var(--text-dim);font-size:0.75rem;">↑${upShocks} ↓${downShocks}</td></tr>
+      <tr><td style="font-weight:600">Avg 1d Follow</td><td style="text-align:right"><strong style="color:${_col(avg1)}">${(avg1 * 100).toFixed(2)}%</strong></td><td></td></tr>
+      <tr><td style="font-weight:600">Avg 5d Follow</td><td style="text-align:right"><strong style="color:${_col(avg5)}">${(avg5 * 100).toFixed(2)}%</strong></td><td></td></tr>
+    </tbody>
+  </table>
   <div style="font-size:.72rem;color:var(--text-muted);margin-top:.3rem">${avg1 < 0 ? 'Tendency to mean-revert after shocks' : 'Tendency for follow-through after shocks'}</div></div>`;
 }
 
@@ -1052,7 +1065,9 @@ function _normalizeTickerKey(ticker) {
   const raw = String(ticker || '').trim().toUpperCase();
   if (!raw) return '';
   const parts = raw.split(':');
-  return parts[parts.length - 1] || raw;
+  let t = parts[parts.length - 1] || raw;
+  if(t.includes('.')) t = t.split('.')[0];
+  return t;
 }
 
 function _quantLabShardKey(ticker) {
@@ -1090,6 +1105,62 @@ async function _loadQuantLabPublishEntry(ticker) {
   return null;
 }
 
+const _deToEnMap = {
+  'Top Kaufchance': 'Top Buy Opportunity',
+  'Kaufchance': 'Buy Opportunity',
+  'klarer Kaufkandidat': 'Clear Buy Candidate',
+  'Kaufkandidat': 'Buy Candidate',
+  'guter Kauf': 'Good Buy',
+  'Top Short': 'Top Short',
+  'Shortchance': 'Short Opportunity',
+  'interessant': 'Interesting',
+  'neutral': 'Neutral',
+  'nein': 'No',
+  'kein Kauf': 'No Buy',
+  'Kauf': 'Buy',
+  'Halten': 'Hold',
+  'Meiden': 'Avoid',
+  'super stark': 'Super Strong',
+  'stark': 'Strong',
+  'Amerika': 'Americas',
+  'Europa': 'Europe',
+  'Asien': 'Asia',
+  'Aktuell ein Top-Setup, weil': 'Currently a top setup because',
+  'Aktuell ein Top-Setup': 'Currently a top setup',
+  'starker Experte sieht aktuell einen Kauf.': 'strong expert currently sees a buy.',
+  'starker Experte sieht aktuell einen Kauf': 'strong expert currently sees a buy',
+  'starke Experten sehen aktuell einen Kauf': 'strong experts currently see a buy',
+  'starker Experte sieht aktuell': 'strong expert currently sees',
+  'Der RSI wirkt nicht ueberhitzt': 'The RSI does not appear overheated',
+  'Kurzfristig ist die Aktie zuletzt schwach gelaufen': 'In the short term, the stock has recently been weak',
+  'Der MACD bestaetigt den Schub noch nicht sauber': 'The MACD does not yet cleanly confirm the push',
+  'ruhige Qualitaets-Trendaktien': 'Calm quality trend stocks',
+  'liquide defensivere Aktien': 'Liquid defensive stocks',
+  'Breakouts mit MACD und Liquiditaet': 'Breakouts with MACD and liquidity',
+  'staerkster Breakout-Block': 'Strongest breakout block',
+  'Trendgeruest': 'Trend structure',
+  'Liquiditaet': 'Liquidity',
+  'Volatilitaet': 'Volatility',
+  'Sehr sauberes Trendgeruest': 'Very clean trend structure',
+  'plus MACD/Marktfaehigkeit': 'plus MACD/marketability',
+  'und niedrigere': 'and lower',
+  'niedrigere': 'lower',
+  'Qualitaets': 'Quality'
+};
+
+function _tr(text) {
+  if (!text) return '';
+  let s = String(text);
+  if (_deToEnMap[s]) return _deToEnMap[s];
+  const keys = Object.keys(_deToEnMap).sort((a,b) => b.length - a.length);
+  for (const k of keys) {
+    if (s.includes(k)) {
+      s = s.split(k).join(_deToEnMap[k]);
+    }
+  }
+  return s;
+}
+
 function _quantLabToneColor(tone) {
   if (tone === 'good') return 'var(--green)';
   if (tone === 'warn') return 'var(--yellow)';
@@ -1105,7 +1176,7 @@ function _quantLabRankText(row) {
   const globalRank = Number(row?.ranking?.globalTop10Rank || 0);
   const continentRank = Number(row?.ranking?.continentTop10Rank || 0);
   if (globalRank > 0) return `Today in Quant Lab at global top ${globalRank}.`;
-  if (continentRank > 0) return `Today in ${row?.continentLabel || 'its region'} top ${continentRank}.`;
+  if (continentRank > 0) return `Today in ${_tr(row?.continentLabel) || 'its region'} top ${continentRank}.`;
   return 'Today scored by Quant Lab, but not in the top-10 consensus list.';
 }
 
@@ -1130,24 +1201,24 @@ async function buildQuantLabInsight(ticker, context = {}) {
       present: true,
       ticker: row.ticker || key,
       assetClass: row.assetClass || 'stock',
-      label: row?.state?.label || 'No call',
+      label: _tr(row?.state?.label) || 'No call',
       tone: row?.state?.tone || 'info',
-      consensusLabel: row?.state?.consensusLabel || '',
+      consensusLabel: _tr(row?.state?.consensusLabel) || '',
       globalTop10Rank: row?.ranking?.globalTop10Rank || null,
       continentTop10Rank: row?.ranking?.continentTop10Rank || null,
       buyExperts: Number(row?.consensus?.buyExperts || 0),
       watchExperts: Number(row?.consensus?.watchExperts || 0),
       avoidExperts: Number(row?.consensus?.avoidExperts || 0),
       strongExperts: Number(row?.consensus?.strongOrBetterExperts || 0),
-      summary: row?.summary?.short || '',
-      whyNow: Array.isArray(row?.whyNowSimple) ? row.whyNowSimple.slice(0, 3) : [],
-      whyNotNow: Array.isArray(row?.whyNotNowSimple) ? row.whyNotNowSimple.slice(0, 3) : [],
+      summary: _tr(row?.summary?.short) || '',
+      whyNow: Array.isArray(row?.whyNowSimple) ? row.whyNowSimple.map(_tr).slice(0, 3) : [],
+      whyNotNow: Array.isArray(row?.whyNotNowSimple) ? row.whyNotNowSimple.map(_tr).slice(0, 3) : [],
     }
   }, true);
 
   const toneCol = _quantLabToneColor(row?.state?.tone);
-  const whyNow = Array.isArray(row.whyNowSimple) ? row.whyNowSimple.filter(Boolean).slice(0, 3) : [];
-  const whyNot = Array.isArray(row.whyNotNowSimple) ? row.whyNotNowSimple.filter(Boolean).slice(0, 3) : [];
+  const whyNow = Array.isArray(row.whyNowSimple) ? row.whyNowSimple.filter(Boolean).map(_tr).slice(0, 3) : [];
+  const whyNot = Array.isArray(row.whyNotNowSimple) ? row.whyNotNowSimple.filter(Boolean).map(_tr).slice(0, 3) : [];
   const experts = Array.isArray(row.strongestExperts) ? row.strongestExperts.slice(0, 4) : [];
   const metrics = row.metrics || {};
   const chips = [
@@ -1161,19 +1232,19 @@ async function buildQuantLabInsight(ticker, context = {}) {
   const expertHtml = experts.length
     ? experts.map((item) => {
       const verdictCol = _quantLabToneColor(
-        /kauf/i.test(String(item.verdict || '')) ? 'good' :
-        /interessant/i.test(String(item.verdict || '')) ? 'warn' :
-        /nein/i.test(String(item.verdict || '')) || /kein/i.test(String(item.verdict || '')) ? 'bad' : 'info'
+        /buy/i.test(_tr(item.verdict || '')) || /kauf/i.test(String(item.verdict || '')) ? 'good' :
+        /interesting/i.test(_tr(item.verdict || '')) || /interessant/i.test(String(item.verdict || '')) ? 'warn' :
+        /no/i.test(_tr(item.verdict || '')) || /avoid/i.test(_tr(item.verdict || '')) || /nein/i.test(String(item.verdict || '')) || /kein/i.test(String(item.verdict || '')) ? 'bad' : 'info'
       );
       return `<div style="padding:.75rem;border-radius:10px;border:1px solid var(--border);background:rgba(255,255,255,.02)">
         <div style="display:flex;justify-content:space-between;gap:.6rem;align-items:flex-start;margin-bottom:.25rem">
           <div>
-            <div style="font-size:.86rem;font-weight:800;color:var(--text)">${_escHtml(item.title || item.family || 'Expert')}</div>
-            <div style="font-size:.72rem;color:var(--text-dim)">${_escHtml(item.family || '')}${item.purpose ? ` · ${_escHtml(item.purpose)}` : ''}</div>
+            <div style="font-size:.86rem;font-weight:800;color:var(--text)">${_escHtml(_tr(item.title) || _tr(item.family) || 'Expert')}</div>
+            <div style="font-size:.72rem;color:var(--text-dim)">${_escHtml(_tr(item.family) || '')}${item.purpose ? ` · ${_escHtml(_tr(item.purpose))}` : ''}</div>
           </div>
-          <div style="font-size:.76rem;font-weight:700;color:${verdictCol};white-space:nowrap">${_escHtml(item.verdict || 'neutral')}</div>
+          <div style="font-size:.76rem;font-weight:700;color:${verdictCol};white-space:nowrap">${_escHtml(_tr(item.verdict) || 'neutral')}</div>
         </div>
-        <div style="font-size:.75rem;color:var(--text-dim);line-height:1.45">${_escHtml(item.reason || 'No detailed reason available.')}</div>
+        <div style="font-size:.75rem;color:var(--text-dim);line-height:1.45">${_escHtml(_tr(item.reason) || 'No detailed reason available.')}</div>
         <div style="margin-top:.35rem;font-size:.72rem;color:var(--text-muted)">Percentile ${_escHtml(_fmtSignedPctValue(item.percentile, 1).replace('+', ''))} · Rank ${_escHtml(item.rank || '—')}</div>
       </div>`;
     }).join('')
@@ -1182,10 +1253,10 @@ async function buildQuantLabInsight(ticker, context = {}) {
   return `<div class="section section-full"><h2>Quant Lab Experts</h2>
     <div class="placeholder-card" style="margin-bottom:.55rem">Quant Lab training stays local. Only final stock results are mirrored here.</div>
     <div class="m-grid">
-      <div class="m-item"><div class="m-label">Current call</div><div class="m-val" style="color:${toneCol}">${_escHtml(row?.state?.label || 'No call')}</div><div class="m-sub">${_escHtml(row?.summary?.short || '')}</div></div>
-      <div class="m-item"><div class="m-label">Consensus</div><div class="m-val">${_escHtml(row?.state?.consensusLabel || 'n/a')}</div><div class="m-sub">${_escHtml(_quantLabRankText(row))}</div></div>
+      <div class="m-item"><div class="m-label">Current call</div><div class="m-val" style="color:${toneCol}">${_escHtml(_tr(row?.state?.label) || 'No call')}</div><div class="m-sub">${_escHtml(_tr(row?.summary?.short) || '')}</div></div>
+      <div class="m-item"><div class="m-label">Consensus</div><div class="m-val">${_escHtml(_tr(row?.state?.consensusLabel) || 'n/a')}</div><div class="m-sub">${_escHtml(_quantLabRankText(row))}</div></div>
       <div class="m-item"><div class="m-label">Strong experts</div><div class="m-val">${_escHtml(row?.consensus?.strongOrBetterExperts || 0)}</div><div class="m-sub">${_escHtml(row?.consensus?.buyExperts || 0)} buy · ${_escHtml(row?.consensus?.watchExperts || 0)} watch · ${_escHtml(row?.consensus?.avoidExperts || 0)} avoid</div></div>
-      <div class="m-item"><div class="m-label">As of</div><div class="m-val">${_escHtml(row?.asOfDate || row?.lastTradeDate || '—')}</div><div class="m-sub">${_escHtml(row?.exchange || '—')} · ${_escHtml(row?.continentLabel || '')}</div></div>
+      <div class="m-item"><div class="m-label">As of</div><div class="m-val">${_escHtml(row?.asOfDate || row?.lastTradeDate || '—')}</div><div class="m-sub">${_escHtml(row?.exchange || '—')} · ${_escHtml(_tr(row?.continentLabel) || '')}</div></div>
     </div>
     ${chips ? `<div style="display:flex;gap:.45rem;flex-wrap:wrap;margin-top:.7rem">${chips}</div>` : ''}
     <div style="margin-top:.7rem;padding:.8rem;border-radius:10px;background:rgba(16,185,129,.05);border:1px solid rgba(16,185,129,.18)">
@@ -1474,12 +1545,14 @@ async function buildElliottInsight(ticker, context = {}) {
     _setQualitySignals({ elliottState: 'proxy', elliottConflict: false });
     return `<div class="section"><h2>\ud83c\udf0a Elliott Wave Analysis</h2>
       <div class="placeholder-card" style="margin-bottom:.5rem">Full Elliott model output is not ready for ${ticker} yet. Showing a local wave estimate from current price structure.</div>
-      <div style="display:flex;gap:.75rem;flex-wrap:wrap;margin-bottom:.45rem">
-        <div style="padding:.5rem .8rem;border-radius:8px;background:rgba(99,102,241,.08);border:1px solid rgba(99,102,241,.25);flex:1;min-width:120px"><div style="font-size:.72rem;color:var(--text-dim)">Developing Wave</div><div style="font-size:1.05rem;font-weight:800;color:var(--accent)">${proxy.wave}</div></div>
-        <div style="padding:.5rem .8rem;border-radius:8px;background:rgba(255,255,255,.03);border:1px solid var(--border);flex:1;min-width:120px"><div style="font-size:.72rem;color:var(--text-dim)">Direction</div><div style="font-size:1rem;font-weight:700;color:${trendCol}">${proxy.direction.toUpperCase()}</div></div>
-        <div style="padding:.5rem .8rem;border-radius:8px;background:rgba(255,255,255,.03);border:1px solid var(--border);flex:1;min-width:120px"><div style="font-size:.72rem;color:var(--text-dim)">Confidence</div><div style="font-size:1rem;font-weight:700">${proxy.confidence}%</div></div>
-        <div style="padding:.5rem .8rem;border-radius:8px;background:rgba(255,255,255,.03);border:1px solid var(--border);flex:1;min-width:120px"><div style="font-size:.72rem;color:var(--text-dim)">Fib Conformance</div><div style="font-size:1rem;font-weight:700">${proxy.fibConformance}%</div></div>
-      </div>
+      <table class="ma-table" style="margin-bottom:.45rem">
+        <tbody>
+          <tr><td style="font-weight:600">Developing Wave</td><td style="text-align:right"><strong style="color:var(--accent)">${proxy.wave}</strong></td></tr>
+          <tr><td style="font-weight:600">Direction</td><td style="text-align:right"><strong style="color:${trendCol}">${proxy.direction.toUpperCase()}</strong></td></tr>
+          <tr><td style="font-weight:600">Confidence</td><td style="text-align:right"><strong>${proxy.confidence}%</strong></td></tr>
+          <tr><td style="font-weight:600">Fib Conformance</td><td style="text-align:right"><strong>${proxy.fibConformance}%</strong></td></tr>
+        </tbody>
+      </table>
       <div style="font-size:.75rem;color:var(--text-dim)">Support: <strong style="color:var(--green)">$${proxy.support.toFixed(2)}</strong> · Resistance: <strong style="color:var(--red)">$${proxy.resistance.toFixed(2)}</strong></div>
     </div>`;
   }

@@ -145,3 +145,53 @@ export function reconcileFeeds(primary, secondary, config = {}) {
 
   return { state: 'PASS', deviation_pct: deviation, reason_codes: [] };
 }
+
+/**
+ * Second-line anomaly detection using statistical deviations (Z-score based heuristic)
+ * as a lightweight proxy for Isolation Forest in the JS pipeline.
+ *
+ * @param {Array} bars - Array of OHLCV bars
+ * @param {Object} [config] - From pipeline-config.v3.json
+ * @returns {{ state: 'PASS'|'SUSPECT', anomaly_score: number, reason_codes: string[] }}
+ */
+export function detectAnomalies(bars, config = {}) {
+  const threshold = config.anomaly_score_threshold ?? -0.5;
+  if (!bars || bars.length < 10) return { state: 'PASS', anomaly_score: 0, reason_codes: [] };
+
+  const returns = [];
+  const volumes = [];
+  for (let i = 1; i < bars.length; i++) {
+    const prev = bars[i - 1].close;
+    const curr = bars[i].close;
+    returns.push(prev > 0 ? (curr - prev) / prev : 0);
+    volumes.push(bars[i].volume || 0);
+  }
+
+  const meanRet = returns.reduce((a, b) => a + b, 0) / returns.length;
+  const stdRet = Math.sqrt(returns.reduce((a, b) => a + Math.pow(b - meanRet, 2), 0) / returns.length) || 1;
+
+  const meanVol = volumes.reduce((a, b) => a + b, 0) / volumes.length;
+  const stdVol = Math.sqrt(volumes.reduce((a, b) => a + Math.pow(b - meanVol, 2), 0) / volumes.length) || 1;
+
+  let maxZ = 0;
+  for (let i = 0; i < returns.length; i++) {
+    const zRet = Math.abs((returns[i] - meanRet) / stdRet);
+    const zVol = Math.abs((volumes[i] - meanVol) / stdVol);
+    maxZ = Math.max(maxZ, zRet, zVol / 2); // Volume has less weight
+  }
+
+  // Map maxZ to a synthetic isolation score.
+  // e.g. Z=3 -> score 0. Z=6 -> score -0.6
+  // Simple negative map: score = 0.5 - (maxZ / 10)
+  const anomaly_score = Math.max(-1.0, 0.5 - (maxZ / 10));
+
+  if (anomaly_score < threshold) {
+    return {
+      state: 'SUSPECT',
+      anomaly_score,
+      reason_codes: [`ANOMALY_SCORE_EXCEEDS_THRESHOLD:${anomaly_score.toFixed(2)}`]
+    };
+  }
+
+  return { state: 'PASS', anomaly_score, reason_codes: [] };
+}

@@ -1,39 +1,36 @@
-{
-  "schema_version": "runblock.v3",
-  "scientific_suppressed": {
-    "model_state": "SUPPRESSED",
-    "show_exp_ret": false,
-    "show_p_pos_10d": false,
-    "show": ["regime_tag", "data_quality_state", "suppressed_message"]
-  },
-  "forecast_suppressed": {
-    "direction_prob": null,
-    "label": null,
-    "state": "SUPPRESSED",
-    "show_forecast_unavailable": true
-  },
-  "elliott_invalidated": {
-    "show_invalidation_marker": true,
-    "show_passive_structure_map": true,
-    "no_directional_interpretation": true
-  },
-  "global_red": {
-    "all_outputs_blocked": true,
-    "ui_message": "System im Datenfehler-Modus. Keine Signale, keine Prognosen, kein Trading.",
-    "show_score": false,
-    "show_label": false,
-    "show_direction": false
-  },
-  "global_orange": {
-    "disclaimer_required": true,
-    "disclaimer_text": "System im eingeschränkten Modus. Nur informative Ausgaben mit Einschränkungen.",
-    "no_scientific_directional": true,
-    "promotions_frozen": true
-  },
-  "global_yellow": {
-    "warning_required": true,
-    "warning_text": "Warnung: Einzelne Systemkomponenten eingeschränkt. Ausgaben unter Vorbehalt.",
-    "outputs_per_feature_state": true,
-    "shadow_challengers_continue": true
-  }
-}
+schema_version: runblock.v3
+scientific_suppressed:
+  model_state: SUPPRESSED
+  show_exp_ret: false
+  show_p_pos_10d: false
+  show:
+    - regime_tag
+    - data_quality_state
+    - suppressed_message
+forecast_suppressed:
+  direction_prob: null
+  label: null
+  state: SUPPRESSED
+  show_forecast_unavailable: true
+elliott_invalidated:
+  show_invalidation_marker: true
+  show_passive_structure_map: true
+  no_directional_interpretation: true
+global_red:
+  all_outputs_blocked: true
+  ui_message: System im Datenfehler-Modus. Keine Signale, keine Prognosen, kein Trading.
+  show_score: false
+  show_label: false
+  show_direction: false
+global_orange:
+  disclaimer_required: true
+  disclaimer_text: System im eingeschränkten Modus. Nur informative Ausgaben mit
+    Einschränkungen.
+  no_scientific_directional: true
+  promotions_frozen: true
+global_yellow:
+  warning_required: true
+  warning_text: "Warnung: Einzelne Systemkomponenten eingeschränkt. Ausgaben unter
+    Vorbehalt."
+  outputs_per_feature_state: true
+  shadow_challengers_continue: true

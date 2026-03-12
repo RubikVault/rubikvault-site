@@ -1,43 +1,33 @@
-{
-  "schema_version": "runblock.v3",
-  "fast_regime": {
-    "evaluation_frequency": "daily",
-    "thresholds": {
-      "vix_stress": 25,
-      "vix_delta_stress": 5,
-      "sp500_5d_drawdown_pct": 4.0,
-      "hy_spread_delta_bp": 10
-    },
-    "severity_mapping": {
-      "single_breach": "STRESS",
-      "multi_breach": "REGIME_SHIFT"
-    }
-  },
-  "weekly_regime": {
-    "model": "kmeans",
-    "min_confidence": 0.50,
-    "fallback_regime": "RANGE",
-    "fallback_global_state": "YELLOW",
-    "model_fail_global_state": "ORANGE"
-  },
-  "regime_break": {
-    "lookback_days": 30,
-    "confidence_threshold": 0.65,
-    "promotion_freeze_days": 10
-  },
-  "training_weights": {
-    "current_regime": 1.0,
-    "compatible_previous": 0.5,
-    "structurally_foreign": 0.1,
-    "diagnostics_only": 0.0
-  },
-  "monthly_review": {
-    "tasks": [
-      "evaluate_false_positive_negative_regimes",
-      "tune_thresholds",
-      "review_confidence_calibration",
-      "review_shift_frequency",
-      "review_promotion_freeze_interactions"
-    ]
-  }
-}
+schema_version: runblock.v3
+fast_regime:
+  evaluation_frequency: daily
+  thresholds:
+    vix_stress: 25
+    vix_delta_stress: 5
+    sp500_5d_drawdown_pct: 4
+    hy_spread_delta_bp: 10
+  severity_mapping:
+    single_breach: STRESS
+    multi_breach: REGIME_SHIFT
+weekly_regime:
+  model: kmeans
+  min_confidence: 0.5
+  fallback_regime: RANGE
+  fallback_global_state: YELLOW
+  model_fail_global_state: ORANGE
+regime_break:
+  lookback_days: 30
+  confidence_threshold: 0.65
+  promotion_freeze_days: 10
+training_weights:
+  current_regime: 1
+  compatible_previous: 0.5
+  structurally_foreign: 0.1
+  diagnostics_only: 0
+monthly_review:
+  tasks:
+    - evaluate_false_positive_negative_regimes
+    - tune_thresholds
+    - review_confidence_calibration
+    - review_shift_frequency
+    - review_promotion_freeze_interactions

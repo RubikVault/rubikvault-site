@@ -1,5 +1,5 @@
 window.__RUNBLOCK_V3_LOCAL_CHECK__ = {
-  "generated_at": "2026-03-12T15:38:38.345Z",
+  "generated_at": "2026-03-12T17:19:49.899Z",
   "status": "PASS",
   "summary": {
     "runblock_tests_green": true,
@@ -26,12 +26,12 @@ window.__RUNBLOCK_V3_LOCAL_CHECK__ = {
     "audit_replay_exit_code": 0
   },
   "pipeline": {
-    "ticker": "AAPL",
+    "ticker": "MALLPLAZA.SN",
     "global_state": "GREEN",
     "halted": false,
     "halt_reason": null,
-    "snapshot_id": "04a4df1f-eb83-4549-897a-d10bcdcf9ee5",
-    "snapshot_path": "/Users/michaelpuchowezki/Dev/rubikvault-site/public/data/v3/snapshots/2026-03-02/AAPL_04a4df1f-eb83-4549-897a-d10bcdcf9ee5.json",
+    "snapshot_id": "c47814fc-f8d2-4830-b590-783301fe700b",
+    "snapshot_path": "/Users/michaelpuchowezki/Dev/rubikvault-site/public/data/v3/snapshots/2026-03-02/MALLPLAZA.SN_c47814fc-f8d2-4830-b590-783301fe700b.json",
     "decision_log_count": 3,
     "incident_count": 0,
     "effective_regime_tag": "RANGE",
@@ -117,7 +117,7 @@ window.__RUNBLOCK_V3_LOCAL_CHECK__ = {
   },
   "latest_outputs": {
     "preflight": {
-      "generated_at": "2026-03-12T15:38:38.051Z",
+      "generated_at": "2026-03-12T17:19:49.564Z",
       "status": "PASS",
       "pipeline_order_ok": true,
       "loaded_configs": [
@@ -131,8 +131,8 @@ window.__RUNBLOCK_V3_LOCAL_CHECK__ = {
       "missing_artifacts": []
     },
     "daily_regime": {
-      "generated_at": "2026-03-12T15:38:38.112Z",
-      "ticker": "AAPL",
+      "generated_at": "2026-03-12T17:19:49.643Z",
+      "ticker": "MALLPLAZA.SN",
       "market_data": {
         "vix": 18,
         "vix_prev": 17,
@@ -146,8 +146,8 @@ window.__RUNBLOCK_V3_LOCAL_CHECK__ = {
       }
     },
     "weekly_regime": {
-      "generated_at": "2026-03-12T15:38:38.170Z",
-      "ticker": "AAPL",
+      "generated_at": "2026-03-12T17:19:49.714Z",
+      "ticker": "MALLPLAZA.SN",
       "weekly_feature_count": 6,
       "result": {
         "regime_tag": "RANGE",
@@ -160,7 +160,7 @@ window.__RUNBLOCK_V3_LOCAL_CHECK__ = {
       }
     },
     "leakage_ci": {
-      "generated_at": "2026-03-12T15:38:38.221Z",
+      "generated_at": "2026-03-12T17:19:49.761Z",
       "status": "PASS",
       "leakage": {
         "pass": true,
@@ -172,7 +172,7 @@ window.__RUNBLOCK_V3_LOCAL_CHECK__ = {
       }
     },
     "shadow": {
-      "generated_at": "2026-03-12T15:38:38.282Z",
+      "generated_at": "2026-03-12T17:19:49.831Z",
       "shadow_mode_min_days": 14,
       "blockers": [],
       "decision": {
@@ -191,14 +191,14 @@ window.__RUNBLOCK_V3_LOCAL_CHECK__ = {
       }
     },
     "audit_replay": {
-      "generated_at": "2026-03-12T15:38:38.337Z",
+      "generated_at": "2026-03-12T17:19:49.892Z",
       "status": "PASS",
-      "log_path": "/Users/michaelpuchowezki/Dev/rubikvault-site/public/data/v3/audit/decisions/2026-03-12/AAPL_6a88356a-82e0-4d11-b3bc-43a99f512bb0.json",
-      "snapshot_path": "/Users/michaelpuchowezki/Dev/rubikvault-site/public/data/v3/snapshots/2026-03-02/AAPL_04a4df1f-eb83-4549-897a-d10bcdcf9ee5.json",
+      "log_path": "/Users/michaelpuchowezki/Dev/rubikvault-site/public/data/v3/audit/decisions/2026-03-12/MALLPLAZA.SN_f9d439e9-02a2-4395-8e9c-20f4666606c9.json",
+      "snapshot_path": "/Users/michaelpuchowezki/Dev/rubikvault-site/public/data/v3/snapshots/2026-03-02/MALLPLAZA.SN_c47814fc-f8d2-4830-b590-783301fe700b.json",
       "replay": {
-        "ticker": "AAPL",
+        "ticker": "MALLPLAZA.SN",
         "feature_name": "elliott",
-        "snapshot_id": "04a4df1f-eb83-4549-897a-d10bcdcf9ee5",
+        "snapshot_id": "c47814fc-f8d2-4830-b590-783301fe700b",
         "feature_hash": "8cc9cf7a0d13c80fe004052da3c6f62a5d80977b7ee6a04a647845347de8e961",
         "regime_tag": "RANGE",
         "global_system_state": "GREEN",
