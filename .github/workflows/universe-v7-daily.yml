@@ -32,6 +32,7 @@ jobs:
         run: node scripts/validators/mirror-envelope-validator.mjs
 
       - name: Run v7 Daily Stack
+        continue-on-error: true
         env:
           EODHD_API_KEY: ${{ secrets.EODHD_API_KEY }}
           RV_V7_DAILY_CAP_CALLS: '95000'

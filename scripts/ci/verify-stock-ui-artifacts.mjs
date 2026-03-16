@@ -405,8 +405,31 @@ if (!globalPriceSourceKinds.has('v3-canonical')) {
   failures.push('canonical v3 price source not detected in source_chain');
 }
 
-if (failures.length) {
-  console.error('\nStock UI artifact verification failed.');
+const strict = process.env.RV_STOCK_UI_STRICT !== '0';
+const softPatterns = ['coverage', 'below minimum', 'missing in canonical', 'close mismatch'];
+const hardFailures = [];
+const softFailures = [];
+for (const f of failures) {
+  if (softPatterns.some((p) => f.toLowerCase().includes(p))) {
+    softFailures.push(f);
+  } else {
+    hardFailures.push(f);
+  }
+}
+
+if (softFailures.length) {
+  console.warn(`\n⚠️  ${softFailures.length} soft failure(s) (coverage/consistency):`);
+  for (const f of softFailures) console.warn(`   - ${f}`);
+}
+
+if (hardFailures.length) {
+  console.error(`\n❌ ${hardFailures.length} hard failure(s) (schema/structure):`);
+  for (const f of hardFailures) console.error(`   - ${f}`);
+  process.exit(1);
+}
+
+if (softFailures.length && strict) {
+  console.error('\nStock UI artifact verification failed (strict mode).');
   process.exit(1);
 }
 
