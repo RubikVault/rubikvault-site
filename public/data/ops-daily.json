@@ -1,12 +1,12 @@
 {
   "schema_version": "1.0",
-  "asOf": "2026-03-16T08:29:56.251Z",
+  "asOf": "2026-03-16T22:49:27.442Z",
   "baseline": {
     "expectedUniverse": 2453,
     "pipeline": {
       "expected": 2453,
       "fetched": 100,
-      "validatedStored": 98,
+      "validatedStored": 99,
       "computed": 2446,
       "staticReady": 2446,
       "missing": [
@@ -159,7 +159,7 @@
     "cloudflare": {
       "requestsToday": null,
       "requestsLast24h": null,
-      "notes": "ok"
+      "notes": "CF analytics not configured"
     },
     "safety": {
       "kvWritesToday": 0,
@@ -172,34 +172,27 @@
       "counts": {
         "expected": 100,
         "fetched": 100,
-        "validated": 98,
+        "validated": 99,
         "computed": 2446,
         "static_ready": 2446
       },
       "degraded_summary": {
-        "count": 2,
+        "count": 1,
         "classes": {
-          "VALIDATION_FAILED": 2
+          "VALIDATION_FAILED": 1
         },
         "sample": [
           {
-            "symbol": "AAPL",
+            "symbol": "BKR",
             "stage": "validate",
             "class": "VALIDATION_FAILED",
             "hint": "close_outside_range",
-            "since": "2026-03-13T22:46:01.728Z"
-          },
-          {
-            "symbol": "BIIB",
-            "stage": "validate",
-            "class": "VALIDATION_FAILED",
-            "hint": "close_outside_range",
-            "since": "2026-03-13T22:46:01.728Z"
+            "since": "2026-03-16T22:49:24.891Z"
           }
         ]
       },
       "root_failure": null,
-      "generated_at": "2026-03-13T22:46:01.728Z"
+      "generated_at": "2026-03-16T22:49:24.891Z"
     }
   }
 }

@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0",
   "type": "pipeline.truth",
-  "generated_at": "2026-03-13T22:46:01.728Z",
+  "generated_at": "2026-03-16T22:49:24.891Z",
   "universe": "nasdaq100",
   "refs": {
     "universe_ref": "/data/universe/nasdaq100.json",
@@ -10,30 +10,23 @@
   "counts": {
     "expected": 100,
     "fetched": 100,
-    "validated": 98,
+    "validated": 99,
     "computed": 2446,
     "static_ready": 2446
   },
   "root_failure": null,
   "degraded_summary": {
-    "count": 2,
+    "count": 1,
     "classes": {
-      "VALIDATION_FAILED": 2
+      "VALIDATION_FAILED": 1
     },
     "sample": [
       {
-        "symbol": "AAPL",
+        "symbol": "BKR",
         "stage": "validate",
         "class": "VALIDATION_FAILED",
         "hint": "close_outside_range",
-        "since": "2026-03-13T22:46:01.728Z"
-      },
-      {
-        "symbol": "BIIB",
-        "stage": "validate",
-        "class": "VALIDATION_FAILED",
-        "hint": "close_outside_range",
-        "since": "2026-03-13T22:46:01.728Z"
+        "since": "2026-03-16T22:49:24.891Z"
       }
     ]
   },
