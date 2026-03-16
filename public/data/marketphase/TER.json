@@ -3,8 +3,8 @@
   "feature": "marketphase",
   "meta": {
     "symbol": "TER",
-    "generatedAt": "2026-03-12T08:04:42.593Z",
-    "fetchedAt": "2026-03-12T08:04:42.593Z",
+    "generatedAt": "2026-03-16T07:56:04.215Z",
+    "fetchedAt": "2026-03-16T07:56:04.215Z",
     "ttlSeconds": 86400,
     "provider": "internal",
     "dataset": "TER",
@@ -15,8 +15,8 @@
     "precision": "IEEE754-Double-Round6",
     "auditTrail": {
       "generatedBy": "MarketPhase-v8-Engine",
-      "commitHash": "4a68dde",
-      "reviewDate": "2026-03-12T08:04:42.593Z",
+      "commitHash": "e886ebb",
+      "reviewDate": "2026-03-16T07:56:04.215Z",
       "standards": [
         "ISO-8000",
         "IEEE-7000"
@@ -26,66 +26,78 @@
   },
   "data": {
     "features": {
-      "RSI": 52.311066,
-      "MACDHist": -6.166849,
-      "ATR%": 3.328259,
-      "SMA50": 268.328296,
-      "SMA200": 164.503519,
+      "RSI": 46.736635,
+      "MACDHist": -6.499284,
+      "ATR%": 3.386671,
+      "SMA50": 271.91159,
+      "SMA200": 166.576797,
       "SMATrend": "bullish",
-      "lastClose": 301.99
+      "lastClose": 286.42
     },
     "swings": {
       "raw": [
         {
-          "index": 28,
+          "index": 26,
           "date": "2025-04-08",
           "price": 67.709,
           "type": "low"
         },
         {
-          "index": 52,
+          "index": 50,
           "date": "2025-05-13",
           "price": 84.5865,
           "type": "high"
         },
         {
-          "index": 102,
+          "index": 89,
+          "date": "2025-07-10",
+          "price": 98.4053,
+          "type": "high"
+        },
+        {
+          "index": 100,
           "date": "2025-07-25",
           "price": 89.9538,
           "type": "low"
         },
         {
-          "index": 136,
+          "index": 126,
+          "date": "2025-09-02",
+          "price": 120.3475,
+          "type": "high"
+        },
+        {
+          "index": 134,
           "date": "2025-09-12",
           "price": 112.1084,
           "type": "low"
         },
         {
-          "index": 152,
+          "index": 150,
           "date": "2025-10-06",
           "price": 147.6966,
           "type": "high"
         },
         {
-          "index": 156,
+          "index": 154,
           "date": "2025-10-10",
           "price": 131.9251,
           "type": "low"
         },
         {
-          "index": 174,
+          "index": 172,
           "date": "2025-11-05",
           "price": 187.37,
           "type": "high"
         },
         {
-          "index": 185,
+          "index": 183,
           "date": "2025-11-20",
           "price": 155.7172,
           "type": "low"
         },
         {
-          "index": 198,
+          "index": 196,
           "date": "2025-12-10",
           "price": 203.9247,
           "type": "high"
@@ -93,31 +105,31 @@
       ],
       "confirmed": [
         {
-          "index": 28,
+          "index": 26,
           "date": "2025-04-08",
           "price": 67.709,
           "type": "low"
         },
         {
-          "index": 102,
+          "index": 100,
           "date": "2025-07-25",
           "price": 89.9538,
           "type": "low"
         },
         {
-          "index": 136,
+          "index": 134,
           "date": "2025-09-12",
           "price": 112.1084,
           "type": "low"
         },
         {
-          "index": 156,
+          "index": 154,
           "date": "2025-10-10",
           "price": 131.9251,
           "type": "low"
         },
         {
-          "index": 185,
+          "index": 183,
           "date": "2025-11-20",
           "price": 155.7172,
           "type": "low"
@@ -183,9 +195,9 @@
     "multiTimeframeAgreement": null,
     "debug": {
       "symbol": "TER",
-      "window": 14,
-      "candidateCount": 9,
-      "durationMs": 0
+      "window": 13,
+      "candidateCount": 11,
+      "durationMs": 1
     },
     "disclaimer": "MarketPhase AI — Scientific Elliott Research (v8.0)\nprovides deterministic, rule-based historical analysis only.\nIt does not forecast future prices or offer financial advice.\nUse solely for educational and research purposes.\nISO 8000 / IEEE 7000 Compliant - Bit-exact reproducibility guaranteed."
   },
