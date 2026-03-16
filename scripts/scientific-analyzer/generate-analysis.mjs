@@ -28,6 +28,7 @@ import { computeFeatures } from '../lib/scientific-analyzer/features.mjs';
 import { generateExplainabilityReport, formatExplanationForUI } from '../lib/scientific-analyzer/explainability.mjs';
 import { applyPlattScaling } from '../lib/scientific-analyzer/calibration.mjs';
 import { publicSsotRel, mirrorSsotRel } from '../universe-v7/lib/ssot-paths.mjs';
+import { stripExchangeSuffix } from '../utils/symbol-normalize.mjs';
 
 const REPO_ROOT = process.cwd();
 const MODELS_DIR = 'public/data/models';
@@ -38,6 +39,7 @@ const V7_STOCK_ROWS_FILE = mirrorSsotRel('stocks.max.rows.json');
 const V7_STOCK_SYMBOLS_FILE = publicSsotRel('stocks.max.symbols.json');
 const MARKETPHASE_INDEX_FILE = 'public/data/marketphase/index.json';
 const MARKETPHASE_DEEP_SUMMARY_FILE = 'public/data/universe/v7/read_models/marketphase_deep_summary.json';
+const DEFAULT_MAX_DEEP_SUMMARY_AGE_HOURS = 48;
 
 function isoNow() {
     return new Date().toISOString();
@@ -59,6 +61,16 @@ async function writeJsonAtomic(relPath, data) {
     await fs.mkdir(path.dirname(abs), { recursive: true });
     await fs.writeFile(tmpPath, JSON.stringify(data, null, 2) + '\n', 'utf-8');
     await fs.rename(tmpPath, abs);
+}
+
+async function statIso(relPath) {
+    const abs = path.join(REPO_ROOT, relPath);
+    try {
+        const st = await fs.stat(abs);
+        return st.mtime.toISOString();
+    } catch {
+        return null;
+    }
 }
 
 function normalizeTicker(value) {
@@ -145,11 +157,40 @@ async function loadMarketphaseDeepFeatureMap() {
             lastClose: Number.isFinite(Number(f.lastClose)) ? Number(f.lastClose) : null
         });
     }
-    return byTicker;
+    return {
+        byTicker,
+        generated_at: String(doc?.generated_at || doc?.meta?.generated_at || '').trim() || null,
+        file_mtime: await statIso(MARKETPHASE_DEEP_SUMMARY_FILE)
+    };
+}
+
+function freshIsoCandidate(...values) {
+    let freshest = null;
+    for (const value of values) {
+        const ts = Date.parse(String(value || '').trim());
+        if (!Number.isFinite(ts)) continue;
+        freshest = freshest === null ? ts : Math.max(freshest, ts);
+    }
+    return freshest;
+}
+
+function assertDeepSummaryFreshness(meta) {
+    const maxAgeHours = Math.max(1, Number(process.env.SCIENTIFIC_MAX_DEEP_SUMMARY_AGE_HOURS || DEFAULT_MAX_DEEP_SUMMARY_AGE_HOURS));
+    const freshestTs = freshIsoCandidate(meta?.generated_at, meta?.file_mtime);
+    if (!(meta?.byTicker instanceof Map) || meta.byTicker.size === 0) {
+        throw new Error('SCIENTIFIC_V7_DEEP_SUMMARY_MISSING');
+    }
+    if (!Number.isFinite(freshestTs)) {
+        throw new Error('SCIENTIFIC_V7_DEEP_SUMMARY_UNTIMED');
+    }
+    const ageMs = Date.now() - freshestTs;
+    if (ageMs > maxAgeHours * 60 * 60 * 1000) {
+        throw new Error(`SCIENTIFIC_V7_DEEP_SUMMARY_STALE:${Math.round(ageMs / (60 * 60 * 1000))}h`);
+    }
 }
 
 // Evaluate Setup conditions
-function evaluateSetup(ind) {
+export function evaluateSetup(ind) {
     const conditions = {
         rsi_neutral: {
             met: ind.rsi >= 40 && ind.rsi <= 65,
@@ -199,7 +240,7 @@ function evaluateSetup(ind) {
 }
 
 // Evaluate Trigger conditions
-function evaluateTrigger(ind, setup) {
+export function evaluateTrigger(ind, setup) {
     // Trigger only relevant if Setup is fulfilled
     if (!setup.fulfilled) {
         return {
@@ -257,7 +298,7 @@ function evaluateTrigger(ind, setup) {
 }
 
 // Determine timeframe category
-function determineTimeframe(setup, trigger, ind) {
+export function determineTimeframe(setup, trigger, ind) {
     if (!setup.fulfilled) return null;
 
     if (trigger.fulfilled && ind.volumeRatio > 1.3) {
@@ -329,7 +370,9 @@ async function main() {
 
     const tickers = universeLoad.rows;
     const marketphaseSymbols = await loadMarketphaseSymbolSet();
-    const marketphaseDeepFeatures = await loadMarketphaseDeepFeatureMap();
+    const marketphaseDeep = await loadMarketphaseDeepFeatureMap();
+    assertDeepSummaryFreshness(marketphaseDeep);
+    const marketphaseDeepFeatures = marketphaseDeep.byTicker;
     console.log(`Processing ${tickers.length} symbols (source: ${universeLoad.source || 'unknown'})...`);
 
     const analyses = {};
@@ -339,9 +382,13 @@ async function main() {
 
     for (const { ticker, name } of tickers) {
         try {
-            // Try legacy marketphase payload first, then v7 deep-summary features (both real data).
-            const mpData = marketphaseSymbols.has(ticker)
-                ? await readJson(`${MARKETPHASE_DIR}/${ticker}.json`)
+            // Suffix-aware lookup: MALLPLAZA.SN → also try MALLPLAZA
+            const tickerBase = stripExchangeSuffix(ticker);
+            // Prefer v7 deep summary so Scientific stays aligned with the canonical daily build.
+            const mpSymbolKey = marketphaseSymbols.has(ticker) ? ticker
+                : marketphaseSymbols.has(tickerBase) ? tickerBase : null;
+            const mpData = mpSymbolKey
+                ? await readJson(`${MARKETPHASE_DIR}/${mpSymbolKey}.json`)
                 : null;
             let ind;
             let mp = null;
@@ -352,13 +399,15 @@ async function main() {
                 : null;
             const deepFeatures = marketphaseDeepFeatures.has(ticker)
                 ? marketphaseDeepFeatures.get(ticker)
-                : null;
-            if (legacyFeatures) {
-                mp = legacyFeatures;
-                mpSource = 'real_legacy_marketphase';
-            } else if (deepFeatures) {
+                : marketphaseDeepFeatures.has(tickerBase)
+                    ? marketphaseDeepFeatures.get(tickerBase)
+                    : null;
+            if (deepFeatures) {
                 mp = deepFeatures;
                 mpSource = 'real_v7_deep';
+            } else if (legacyFeatures) {
+                mp = legacyFeatures;
+                mpSource = 'real_legacy_marketphase';
             }
 
             if (mp) {
@@ -569,6 +618,8 @@ async function main() {
             generated_at: isoNow(),
             model_version: 'v9.1',
             universe_source: universeLoad.source || 'unknown',
+            dependency_marketphase_deep_generated_at: marketphaseDeep.generated_at,
+            dependency_marketphase_deep_file_mtime: marketphaseDeep.file_mtime,
             symbols_processed: processed,
             symbols_failed: tickers.length - processed,
             duration_ms: Date.now() - startTime
@@ -594,7 +645,14 @@ async function main() {
     console.log(`  Duration: ${Date.now() - startTime}ms`);
 }
 
-main().catch(err => {
-    console.error('Analysis generation failed:', err);
-    process.exit(1);
-});
+import { fileURLToPath } from 'node:url';
+
+const isMain = process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1];
+
+if (isMain) {
+    main().catch(err => {
+        console.error('Analysis generation failed:', err);
+        process.exit(1);
+    });
+}
+

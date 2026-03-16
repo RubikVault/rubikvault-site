@@ -35,7 +35,8 @@ Wesentliche Defaults:
 - `skip-run-v4-final-gate-matrix` (wird im Night-Runner automatisch gesetzt, wenn Portfolio übersprungen wird)
 - zusätzlicher Stage-A-Guard: Final-Gates werden automatisch übersprungen, falls der Portfolio-Step deaktiviert ist
 - `day`: `asof-dates-count=2`
-- `night`: `asof-dates-count=4`
+- `night`: `max_hours=14.2`, `watch_hours=14.6`, `asof-dates-count=6`
+- `night`: `task_timeout_minutes=80`, `sleep_between_tasks_sec=10`, `stop_after_consecutive_failures=6`
 
 ## Automation-Hinweis
 

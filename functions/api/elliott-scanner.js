@@ -309,7 +309,7 @@ function jsonResponse(data, status = 200) {
     });
 }
 
-function extractSetupFromMarketphase(ticker, name, elliott, eod) {
+export function extractSetupFromMarketphase(ticker, name, elliott, eod) {
     const completed = elliott?.completedPattern || {};
     const developing = elliott?.developingPattern || {};
     const fib = elliott?.fib || {};
@@ -346,7 +346,7 @@ function extractSetupFromMarketphase(ticker, name, elliott, eod) {
     };
 }
 
-function estimateWaveFromEOD(ticker, name, eod) {
+export function estimateWaveFromEOD(ticker, name, eod) {
     if (!eod) {
         return {
             ticker,

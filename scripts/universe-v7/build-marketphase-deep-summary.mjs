@@ -61,7 +61,7 @@ function parseArgs(argv = process.argv.slice(2)) {
     else if (token === '--feature') out.feature = String(argv[++i] || out.feature).trim().toLowerCase() || out.feature;
     else if (token === '--id-mode') out.idMode = String(argv[++i] || out.idMode).trim().toLowerCase() || out.idMode;
   }
-  if (!Number.isFinite(out.minBars) || out.minBars < 1) out.minBars = 200;
+  if (!Number.isFinite(out.minBars) || out.minBars < 1) out.minBars = 120;
   if (!Number.isFinite(out.maxSymbols) || out.maxSymbols < 1) out.maxSymbols = Infinity;
   if (!['symbol', 'canonical'].includes(out.idMode)) out.idMode = 'symbol';
   return out;

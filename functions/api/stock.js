@@ -909,7 +909,14 @@ export async function onRequestGet(context) {
                 data_date: dataDate
               });
             } else {
-              // Provider fetch failed - try static EOD fallback (preferred: 30Y history, then 1-day batch)
+              // Provider fetch failed - try static history shards first
+              if (!staticBars) {
+                try {
+                  const { getStaticBars } = await import('./_shared/history-store.mjs');
+                  staticBars = await getStaticBars(effectiveTicker, url.origin);
+                } catch (err) { /* ignore */ }
+              }
+
               if (staticBars && staticBars.length > 0) {
                 eodBars = staticBars;
                 eodProvider = 'static_store_fallback';
@@ -929,7 +936,10 @@ export async function onRequestGet(context) {
                   eodError = null;
                 } else {
                   eodError = result.error || { code: 'EOD_FETCH_FAILED', message: 'Unable to fetch EOD history' };
-                  eodStatus = eodError?.code === 'CB_OPEN' ? 'stale' : 'error';
+                  eodStatus = 'error';
+                  qualityFlags.add('PROVIDER_FAIL');
+                  // Fallback to static store if provider fails
+                  eodAttempted = false;
                   qualityFlags.add(eodError?.code === 'CB_OPEN' ? 'CB_OPEN' : 'PROVIDER_FAIL');
                 }
               }

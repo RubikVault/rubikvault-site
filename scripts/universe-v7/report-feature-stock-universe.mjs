@@ -127,12 +127,14 @@ async function main() {
     (Array.isArray(sharedDoc?.items) ? sharedDoc.items : []).map((item) => item?.symbol || item?.ticker)
   );
   const byFeature = {
+    analyzer: toUpperSet(Array.isArray(byFeatureDoc?.symbols?.analyzer) ? byFeatureDoc.symbols.analyzer : []),
     scientific: toUpperSet(Array.isArray(byFeatureDoc?.symbols?.scientific) ? byFeatureDoc.symbols.scientific : []),
     forecast: toUpperSet(Array.isArray(byFeatureDoc?.symbols?.forecast) ? byFeatureDoc.symbols.forecast : []),
     marketphase: toUpperSet(Array.isArray(byFeatureDoc?.symbols?.marketphase) ? byFeatureDoc.symbols.marketphase : []),
     elliott: toUpperSet(Array.isArray(byFeatureDoc?.symbols?.elliott) ? byFeatureDoc.symbols.elliott : [])
   };
   const byFeatureCanonical = {
+    analyzer: toUpperSet(Array.isArray(byFeatureCanonicalDoc?.canonical_ids?.analyzer) ? byFeatureCanonicalDoc.canonical_ids.analyzer : []),
     scientific: toUpperSet(Array.isArray(byFeatureCanonicalDoc?.canonical_ids?.scientific) ? byFeatureCanonicalDoc.canonical_ids.scientific : []),
     forecast: toUpperSet(Array.isArray(byFeatureCanonicalDoc?.canonical_ids?.forecast) ? byFeatureCanonicalDoc.canonical_ids.forecast : []),
     marketphase: toUpperSet(Array.isArray(byFeatureCanonicalDoc?.canonical_ids?.marketphase) ? byFeatureCanonicalDoc.canonical_ids.marketphase : []),
@@ -202,11 +204,13 @@ async function main() {
       ssot_stocks_lt200_or_no_pack_gap: ssotSet.size - ssotHistory200Cap.size,
       ssot_stocks_lt200_no_pack: ssotHistory200NoPack.size,
       ssot_stocks_canonical_max: ssotCanonicalSet.size,
-      stock_analyzer_effective: ssotSet.size,
+      stock_analyzer_effective: byFeature.analyzer.size,
+      by_feature_analyzer: byFeature.analyzer.size,
       by_feature_scientific: byFeature.scientific.size,
       by_feature_forecast: byFeature.forecast.size,
       by_feature_marketphase: byFeature.marketphase.size,
       by_feature_elliott: byFeature.elliott.size,
+      by_feature_analyzer_canonical: byFeatureCanonical.analyzer.size,
       by_feature_scientific_canonical: byFeatureCanonical.scientific.size,
       by_feature_forecast_canonical: byFeatureCanonical.forecast.size,
       by_feature_marketphase_canonical: byFeatureCanonical.marketphase.size,

@@ -15,15 +15,42 @@ export function normalizeSymbol(symbol) {
     const trimmed = symbol.trim().toUpperCase();
     if (!trimmed) return null;
 
-    // Standardize: Replace dot with nothing? Or strict format?
-    // Existing system often uses AAPL. 
-    // BRK.B is often BRK-B in Yahoo, BRK.B in others. 
-    // Let's standardise to dot for internal, but adapters map as needed.
-    // Actually, standardizing on dot is common. E.g. BRK.B
-
     // Basic validation
     if (!/^[A-Z0-9.\-]+$/.test(trimmed)) return null;
 
+    return trimmed;
+}
+
+/**
+ * Known multi-char ticker suffixes that are part of the symbol itself (not exchange suffixes).
+ * These must NOT be stripped by stripExchangeSuffix.
+ * Examples: BRK.B, BF.B, BRK.A
+ */
+const TICKER_SUFFIXES = new Set(['A', 'B']);
+
+/**
+ * Strips exchange suffix from international tickers while preserving
+ * multi-char class suffixes like BRK.B.
+ *
+ * Examples:
+ *   MALLPLAZA.SN  → MALLPLAZA   (exchange suffix .SN stripped)
+ *   BSANTANDER.SN → BSANTANDER  (exchange suffix .SN stripped)
+ *   BRK.B         → BRK.B       (share class suffix preserved)
+ *   AAPL          → AAPL        (no suffix, unchanged)
+ *
+ * @param {string} symbol
+ * @returns {string} Symbol with exchange suffix stripped
+ */
+export function stripExchangeSuffix(symbol) {
+    if (typeof symbol !== 'string') return symbol;
+    const trimmed = symbol.trim().toUpperCase();
+    const dotIdx = trimmed.lastIndexOf('.');
+    if (dotIdx <= 0) return trimmed;
+    const suffix = trimmed.slice(dotIdx + 1);
+    // Single-char suffixes like .B are share classes — keep them
+    if (TICKER_SUFFIXES.has(suffix)) return trimmed;
+    // Multi-char suffixes like .SN, .SA, .L, .TO are exchange codes — strip them
+    if (suffix.length >= 2) return trimmed.slice(0, dotIdx);
     return trimmed;
 }
 

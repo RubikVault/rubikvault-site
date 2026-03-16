@@ -60,7 +60,9 @@ export async function onRequestGet(context) {
     _v2IndexCache = await fetchJson("/data/features-v2/stock-insights/index.json");
     _v2IndexTs = now;
   }
-  const idxRow = _v2IndexCache?.rows?.[ticker] || null;
+  // Suffix-aware ticker lookup: MALLPLAZA.SN → try both MALLPLAZA.SN and MALLPLAZA
+  const tickerBase = ticker.includes(".") ? ticker.split(".")[0] : ticker;
+  const idxRow = _v2IndexCache?.rows?.[ticker] || _v2IndexCache?.rows?.[tickerBase] || null;
 
   // v2 endpoint already wraps scientific/forecast/elliott in a stable contract.
   const [v2Doc, stockDoc] = await Promise.all([

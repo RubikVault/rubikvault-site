@@ -1,12 +1,9 @@
 // Additive v2 insights endpoint (shadow path).
 // Non-breaking by design: existing /api/stock-insights stays canonical.
 
-let _sciCache = null;
-let _sciTime = 0;
-let _fcCache = null;
-let _fcTime = 0;
-let _idxCache = null;
-let _idxTime = 0;
+let _metaCache = null;
+let _metaTime = 0;
+const _shardCache = new Map();
 const TTL = 600_000; // 10 min cache
 
 function pickAsOf(...values) {
@@ -15,6 +12,32 @@ function pickAsOf(...values) {
     if (s) return s;
   }
   return null;
+}
+
+function classifyElliottPayload(doc) {
+  const version = String(doc?.meta?.version || "").trim().toLowerCase();
+  const source = String(doc?.meta?.source || "").trim().toLowerCase();
+  const bridgeFlag = doc?.data?.debug?.bridge === true;
+  let isBridge = bridgeFlag || version.startsWith("rv_marketphase_bridge_") || source === "marketphase_deep_summary";
+  // Promote high-quality bridge payloads (>=200 bars + all 4 core features)
+  if (isBridge) {
+    const barsCount = Number(doc?.data?.debug?.bars_count || 0);
+    const f = doc?.data?.features || {};
+    const hasCoreFeatures = Number.isFinite(Number(f.RSI)) && Number.isFinite(Number(f.MACDHist))
+      && Number.isFinite(Number(f.SMA50)) && Number.isFinite(Number(f.SMA200));
+    if (barsCount >= 200 && hasCoreFeatures) {
+      return { isBridge: false, sourceKind: "bridge_promoted" };
+    }
+  }
+  return {
+    isBridge,
+    sourceKind: isBridge ? "bridge" : "deep",
+  };
+}
+
+function shardKeyForTicker(ticker) {
+  const first = String(ticker || "").charAt(0).toUpperCase();
+  return /[A-Z0-9]/.test(first) ? first : "_";
 }
 
 function makeState(value, meta = {}) {
@@ -72,115 +95,98 @@ export async function onRequestGet(context) {
   }
 
   const now = Date.now();
-  const srcPaths = {
-    scientific: "/data/snapshots/stock-analysis.json",
-    forecast: "/data/forecast/latest.json",
-    elliott: `/data/marketphase/${ticker}.json`,
-    v2_index: "/data/features-v2/stock-insights/index.json",
-  };
+  const tickerBase = ticker.includes(".") ? ticker.split(".")[0] : ticker;
+  const sKey = shardKeyForTicker(tickerBase);
+  const shardPath = `/data/features-v2/stock-insights/shards/${sKey}.json`;
+  const metaPath = "/data/features-v2/stock-insights/index.json";
 
-  const [sciResult, fcResult, ewResult, idxResult] = await Promise.allSettled([
+  const [metaResult, shardResult, ewResult] = await Promise.allSettled([
     (async () => {
-      if (!_sciCache || now - _sciTime > TTL) {
-        _sciCache = await fetchJson(srcPaths.scientific);
-        _sciTime = now;
+      if (!_metaCache || now - _metaTime > TTL) {
+        _metaCache = await fetchJson(metaPath);
+        _metaTime = now;
       }
-      return _sciCache;
+      return _metaCache;
     })(),
     (async () => {
-      if (!_fcCache || now - _fcTime > TTL) {
-        _fcCache = await fetchJson(srcPaths.forecast);
-        _fcTime = now;
-      }
-      return _fcCache;
+      const cached = _shardCache.get(sKey);
+      if (cached && (now - cached.time < TTL)) return cached.data;
+      const data = await fetchJson(shardPath);
+      if (data) _shardCache.set(sKey, { data, time: now });
+      return data;
     })(),
-    fetchJson(srcPaths.elliott),
     (async () => {
-      if (!_idxCache || now - _idxTime > TTL) {
-        _idxCache = await fetchJson(srcPaths.v2_index);
-        _idxTime = now;
-      }
-      return _idxCache;
+      const doc = await fetchJson(`/data/marketphase/${ticker}.json`);
+      if (doc) return doc;
+      if (ticker.includes(".")) return fetchJson(`/data/marketphase/${tickerBase}.json`);
+      return null;
     })(),
   ]);
 
-  const sciData = sciResult.status === "fulfilled" ? sciResult.value : null;
-  const fcData = fcResult.status === "fulfilled" ? fcResult.value : null;
+  const metaDoc = metaResult.status === "fulfilled" ? metaResult.value : null;
+  const shardDoc = shardResult.status === "fulfilled" ? shardResult.value : null;
   const mpDoc = ewResult.status === "fulfilled" ? ewResult.value : null;
-  const idxDoc = idxResult.status === "fulfilled" ? idxResult.value : null;
-  const idxRow = idxDoc?.rows?.[ticker] || null;
 
-  let scientific = null;
-  let scientificReason = "MISSING_SCIENTIFIC_ENTRY";
-  if (sciData) {
-    const e = sciData[ticker] || sciData[ticker.toUpperCase()] || null;
-    if (e && e.status !== "DATA_UNAVAILABLE") {
-      scientific = e;
-      scientificReason = "";
-    } else if (e?.status === "DATA_UNAVAILABLE") {
-      scientificReason = String(e.reason || "DATA_UNAVAILABLE");
-    }
-  }
+  const shardRow = shardDoc?.rows?.[ticker] || shardDoc?.rows?.[tickerBase] || null;
 
-  const forecasts = fcData?.data?.forecasts || [];
-  const forecast = Array.isArray(forecasts)
-    ? forecasts.find((f) => String(f.symbol || "").toUpperCase() === ticker) || null
-    : null;
-  const forecastMeta = forecast
-    ? {
-        accuracy: fcData?.accuracy || null,
-        champion_id: fcData?.champion_id || null,
-        freshness: fcData?.freshness || null,
-      }
-    : null;
+  // We no longer fetch monolithic snapshots; data is in shardRow
+  const scientific = shardRow?.scientific?.value || null;
+  const scientificReason = shardRow?.scientific?.reason || (shardDoc ? "NO_RECOMMENDATION" : "MISSING_SCIENTIFIC_ENTRY");
+
+  const forecast = shardRow?.forecast?.value || null;
+  const forecastMeta = forecast ? {
+    as_of: shardRow?.forecast?.as_of,
+    source: shardRow?.forecast?.source
+  } : null;
 
   let elliott = null;
-  let elliottReason = "MISSING_ELLIOTT_ENTRY";
+  let elliottReason = shardRow?.elliott?.reason || "MISSING_ELLIOTT_ENTRY";
+  const elliottPayload = classifyElliottPayload(mpDoc);
+
   if (mpDoc?.ok && mpDoc?.data?.elliott) {
-    elliott = mpDoc.data.elliott;
+    elliott = {
+      ...mpDoc.data.elliott,
+      fib: mpDoc?.data?.fib || null,
+      features: mpDoc?.data?.features || null,
+      debug: mpDoc?.data?.debug || null,
+    };
     elliott._meta = {
       symbol: ticker,
+      resolved_symbol: mpDoc?.meta?.symbol || tickerBase || ticker,
       generatedAt: mpDoc?.meta?.generatedAt || null,
       version: mpDoc?.meta?.version || null,
+      source: mpDoc?.meta?.source || null,
+      source_kind: elliottPayload.sourceKind,
+      bridge: elliottPayload.isBridge,
+      canonical_id: mpDoc?.data?.debug?.canonical_id || null,
     };
-    elliottReason = "";
+    elliottReason = elliottPayload.isBridge ? "BRIDGE_PAYLOAD" : "";
   } else if (mpDoc?.reason) {
     elliottReason = String(mpDoc.reason);
   }
 
   const scientificState = makeState(scientific, {
-    as_of: pickAsOf(
-      idxRow?.scientific?.as_of,
-      scientific?.metadata?.as_of,
-      scientific?.metadata?.asOf,
-      scientific?.metadata?.generated_at
-    ),
-    source: idxRow?.scientific?.source || "stock-analysis.snapshot",
-    status: idxRow?.scientific?.status || (scientific ? "ok" : "unavailable"),
-    reason: idxRow?.scientific?.reason || scientificReason,
+    as_of: shardRow?.scientific?.as_of,
+    source: shardRow?.scientific?.source || "stock-analysis.snapshot",
+    status: shardRow?.scientific?.status || (scientific ? "ok" : "unavailable"),
+    reason: scientificReason === "MISSING_SCIENTIFIC_ENTRY" && shardDoc ? "NO_RECOMMENDATION" : scientificReason,
   });
-
   const forecastState = makeState(forecast, {
-    as_of: pickAsOf(
-      idxRow?.forecast?.as_of,
-      fcData?.freshness,
-      fcData?.generated_at,
-      fcData?.as_of
-    ),
-    source: idxRow?.forecast?.source || "forecast.latest",
-    status: idxRow?.forecast?.status || (forecast ? "ok" : "unavailable"),
-    reason: idxRow?.forecast?.reason || (forecast ? "" : "MISSING_FORECAST_ENTRY"),
+    as_of: shardRow?.forecast?.as_of,
+    source: shardRow?.forecast?.source || "forecast.latest",
+    status: shardRow?.forecast?.status || (forecast ? "ok" : "unavailable"),
+    reason: shardRow?.forecast?.reason || (forecast ? "" : (shardDoc ? "NO_RECOMMENDATION" : "MISSING_FORECAST_ENTRY")),
   });
 
   const elliottState = makeState(elliott, {
     as_of: pickAsOf(
-      idxRow?.elliott?.as_of,
+      shardRow?.elliott?.as_of,
       mpDoc?.meta?.generatedAt,
       mpDoc?.meta?.as_of
     ),
-    source: idxRow?.elliott?.source || "marketphase.per_ticker",
-    status: idxRow?.elliott?.status || (elliott ? "ok" : "unavailable"),
-    reason: idxRow?.elliott?.reason || elliottReason,
+    source: shardRow?.elliott?.source || (elliottPayload.isBridge ? "marketphase.bridge" : "marketphase.per_ticker"),
+    status: shardRow?.elliott?.status || (elliott ? (elliottPayload.isBridge ? "proxy" : "ok") : "unavailable"),
+    reason: elliottReason,
   });
 
   const v2Contract = {
@@ -191,18 +197,20 @@ export async function onRequestGet(context) {
 
   const result = {
     ticker,
-    schema_version: "rv.stock-insights.v2",
+    schema_version: "rv.stock-insights.v2.sharded",
     generated_at: new Date().toISOString(),
-    source_paths: srcPaths,
     status: summarizeStatus(v2Contract),
-    // Backward-compatible payload fields:
     scientific: scientificState.value,
     forecast: forecastState.value,
     forecast_meta: forecastMeta,
     elliott: elliottState.value,
-    // v2 contract fields:
     feature_states: v2Contract,
     v2_contract: v2Contract,
+    _shard_info: {
+      shard: sKey,
+      path: shardPath,
+      meta_generated_at: metaDoc?.generated_at
+    }
   };
 
   return new Response(JSON.stringify(result), {

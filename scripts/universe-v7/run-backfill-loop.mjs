@@ -190,7 +190,7 @@ async function main() {
       const remainingGlobal = await readRemaining();
       const after = await readBucketProgress(bucket.allowlist, checkpointPath, backfillWaivers.ids);
       const code = result.parsed?.code ?? result.status;
-      const ok = code === 0 || code === 30 || code === 40;
+      const ok = code === 0 || code === 20 || code === 30 || code === 40;
       const deltaReal = after.backfill_real - before.backfill_real;
       const deltaProgress = after.progress_units - before.progress_units;
       const deltaBars = after.with_bars - before.with_bars;

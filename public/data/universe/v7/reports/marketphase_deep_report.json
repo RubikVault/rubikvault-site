@@ -1,9 +1,9 @@
 {
   "schema": "rv_v7_marketphase_deep_report_v1",
-  "started_at": "2026-03-12T01:02:51.987Z",
-  "finished_at": "2026-03-12T01:05:40.989Z",
+  "started_at": "2026-03-13T08:17:11.255Z",
+  "finished_at": "2026-03-13T08:20:40.446Z",
   "args": {
-    "minBars": 200,
+    "minBars": 120,
     "maxSymbols": null,
     "asOf": null,
     "feature": "marketphase",
@@ -17,25 +17,19 @@
   "scan": {
     "rows_total": 193938,
     "stock_rows": 74841,
-    "stock_rows_in_target": 74841,
-    "stock_rows_with_pack": 74837,
-    "stock_rows_with_min_bars": 71625,
-    "selected_candidates": 53074,
-    "selected_candidate_variants": 71355
+    "stock_rows_in_target": 71914,
+    "stock_rows_with_pack": 71912,
+    "stock_rows_with_min_bars": 71699,
+    "selected_candidates": 53071,
+    "selected_candidate_variants": 71423
   },
   "output": {
     "summary_path": "public/data/universe/v7/read_models/marketphase_deep_summary.json",
-    "count": 53070
+    "count": 53068
   },
   "errors": {
-    "count": 4,
+    "count": 3,
     "sample": [
-      {
-        "symbol": "R8W",
-        "canonical_id": "F:R8W",
-        "reason": "bars_below_min_after_normalize",
-        "bars": 199
-      },
       {
         "symbol": "ATGE",
         "canonical_id": "US:ATGE",

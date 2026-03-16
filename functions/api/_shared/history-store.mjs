@@ -58,6 +58,37 @@ export async function getStaticBars(symbol, baseUrl) {
             if (bars.length) return bars;
         }
 
+        // New: Try Sharded History (100% universe fallback)
+        const shard = cleanSymbol[0] || '_';
+        const shardCandidates = [
+            `/data/eod/history/shards/${shard}.json`,
+            `/public/data/eod/history/shards/${shard}.json`
+        ];
+
+        for (const shardPath of shardCandidates) {
+            try {
+                const url = baseUrl ? new URL(shardPath, baseUrl).toString() : shardPath;
+                const res = await fetch(url);
+                if (res.ok) {
+                    const shardData = await res.json();
+                    const tickerBarsRaw = shardData[cleanSymbol];
+                    if (Array.isArray(tickerBarsRaw)) {
+                        // Convert compact [date, o, h, l, c, a, v] back to object
+                        const bars = tickerBarsRaw.map(b => ({
+                            date: b[0],
+                            open: b[1],
+                            high: b[2],
+                            low: b[3],
+                            close: b[4],
+                            adjClose: b[5],
+                            volume: b[6]
+                        }));
+                        if (bars.length) return bars;
+                    }
+                }
+            } catch { /* ignore */ }
+        }
+
         const latestCandidates = [
             '/data/v3/eod/US/latest.ndjson.gz',
             '/public/data/v3/eod/US/latest.ndjson.gz'

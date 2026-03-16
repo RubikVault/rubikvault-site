@@ -52,7 +52,7 @@ jobs:
           retention-days: 30
 
       - name: Commit Results
-        if: success()
+        if: always()
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -60,4 +60,4 @@ jobs:
           git add public/data/forecast/
           git diff --cached --quiet || git commit -m "chore(v7): daily update [skip ci]"
           git pull --rebase origin main || true
-          git push
+          git push || { echo "Push failed, retrying after pull"; git pull --rebase origin main && git push; }

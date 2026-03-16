@@ -1,6 +1,6 @@
 {
   "schema": "rv_v7_stock_ssot_policy_v1",
-  "generated_at": "2026-03-12T01:02:51.572Z",
+  "generated_at": "2026-03-12T18:32:48.388Z",
   "default_symbol_source": "public/data/universe/v7/ssot/stocks.max.symbols.json",
   "default_canonical_source": "public/data/universe/v7/ssot/stocks.max.canonical.ids.json",
   "feature_symbol_source": "public/data/universe/v7/ssot/stocks.by_feature.json",
@@ -8,10 +8,10 @@
   "shared_feature_source": "public/data/universe/v7/ssot/stocks.shared.features.json",
   "feature_parity_source": "public/data/universe/v7/ssot/stocks.feature.parity.json",
   "eligibility_rules": {
-    "analyzer": "L0_LEGACY_CORE|L1_FULL|L2_PARTIAL",
-    "scientific": "L0_LEGACY_CORE|L1_FULL|L2_PARTIAL",
-    "forecast": "L0_LEGACY_CORE|L1_FULL",
-    "marketphase": "L0_LEGACY_CORE|L1_FULL|L2_PARTIAL|L3_MINIMAL",
-    "elliott": "L0_LEGACY_CORE|L1_FULL|L2_PARTIAL|L3_MINIMAL"
+    "analyzer": "history_pack && bars_count>=200",
+    "scientific": "history_pack && bars_count>=200",
+    "forecast": "history_pack && bars_count>=200",
+    "marketphase": "history_pack && bars_count>=200",
+    "elliott": "history_pack && bars_count>=200"
   }
 }

@@ -5,6 +5,7 @@ import path from 'node:path';
 
 const REPO_ROOT = process.cwd();
 const SSOT_SYMBOLS_PATH = path.join(REPO_ROOT, 'public/data/universe/v7/ssot/stocks.max.symbols.json');
+const SSOT_ROWS_PATH = path.join(REPO_ROOT, 'mirrors/universe-v7/ssot/stocks.max.rows.json');
 const BY_FEATURE_PATH = path.join(REPO_ROOT, 'public/data/universe/v7/ssot/stocks.by_feature.json');
 const SCI_PATH = path.join(REPO_ROOT, 'public/data/snapshots/stock-analysis.json');
 const FORECAST_PATH = path.join(REPO_ROOT, 'public/data/forecast/latest.json');
@@ -58,13 +59,23 @@ function parseArgs(argv = process.argv.slice(2)) {
 async function main() {
   const args = parseArgs();
   const ssotDoc = await readJson(SSOT_SYMBOLS_PATH, {});
+  const ssotRowsDoc = await readJson(SSOT_ROWS_PATH, {});
   const byFeatureDoc = await readJson(BY_FEATURE_PATH, {});
 
   const ssotSet = setFrom(ssotDoc?.symbols);
+  const ssotRows = Array.isArray(ssotRowsDoc?.items) ? ssotRowsDoc.items : [];
   const byFeature = byFeatureDoc?.symbols && typeof byFeatureDoc.symbols === 'object'
     ? byFeatureDoc.symbols
     : {};
   const featureIds = ['analyzer', 'scientific', 'forecast', 'marketphase', 'elliott'];
+  const eligibleByFeature = {};
+  for (const featureId of featureIds) {
+    eligibleByFeature[featureId] = setFrom(
+      ssotRows
+        .filter((row) => row?.eligibility?.[featureId] === true)
+        .map((row) => row?.symbol)
+    );
+  }
 
   const setChecks = {};
   const violations = [];
@@ -73,12 +84,14 @@ async function main() {
   }
   for (const featureId of featureIds) {
     const featureSet = setFrom(byFeature[featureId]);
-    const missingFromFeature = setDiff(ssotSet, featureSet);
-    const extraInFeature = setDiff(featureSet, ssotSet);
+    const eligibleSet = eligibleByFeature[featureId];
+    const missingFromFeature = setDiff(eligibleSet, featureSet);
+    const extraInFeature = setDiff(featureSet, eligibleSet);
     const ok = missingFromFeature.length === 0 && extraInFeature.length === 0;
     setChecks[featureId] = {
       ok,
       count: featureSet.size,
+      eligible_count: eligibleSet.size,
       ssot_count: ssotSet.size,
       missing_from_feature_count: missingFromFeature.length,
       extra_in_feature_count: extraInFeature.length,
@@ -108,6 +121,7 @@ async function main() {
     ssot: {
       symbols_count: ssotSet.size,
       symbols_path: 'public/data/universe/v7/ssot/stocks.max.symbols.json',
+      rows_path: 'mirrors/universe-v7/ssot/stocks.max.rows.json',
       by_feature_path: 'public/data/universe/v7/ssot/stocks.by_feature.json'
     },
     set_parity: setChecks,

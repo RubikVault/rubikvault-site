@@ -61,10 +61,11 @@ jobs:
           fi
           git commit -m "chore(v3): daily pulse artifacts"
           git pull --rebase origin main || true
-          git push
+          git push || { echo "Push failed, retrying after pull"; git pull --rebase origin main && git push; }
 
       - name: Alert on failure
         if: failure()
+        continue-on-error: true
         env:
           RV_ALERT_WEBHOOK: ${{ secrets.RV_ALERT_WEBHOOK }}
           RV_HEALTH_URL: https://rubikvault.com/data/v3/system/health.json

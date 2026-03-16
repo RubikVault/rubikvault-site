@@ -1,0 +1,902 @@
+{
+  "AAPL": {
+    "ticker": "AAPL",
+    "name": "Apple Inc",
+    "price": 260.81,
+    "probability": 0.33,
+    "expected_return_10d": -1.7,
+    "risk_metrics": {
+      "sharpe_proxy": -0.76,
+      "var95": -3.83
+    },
+    "setup": {
+      "fulfilled": true,
+      "score": 100,
+      "conditions_met": "5/5",
+      "proof_points": [
+        "RSI 45.5 (40-65 range)",
+        "Price 6.6% above SMA200",
+        "SMA50 above SMA200",
+        "ATR 2.3% (< 2.8% stable)",
+        "Volume ratio 1.00 (consolidation)"
+      ]
+    },
+    "trigger": {
+      "fulfilled": false,
+      "score": 25,
+      "conditions_met": "1/4",
+      "proof_points": [
+        "Price 1.0% above SMA20"
+      ],
+      "pending": false
+    },
+    "timeframe": "long",
+    "signal_strength": "MODERATE",
+    "indicators": {
+      "rsi": 45.5,
+      "macd_hist": -0.86,
+      "sma20": 258.12,
+      "sma50": 263.39,
+      "sma200": 244.64,
+      "volume_ratio": 1,
+      "atr_pct": 2.3
+    },
+    "explainability": {
+      "top_features": [
+        "adx_14",
+        "sentiment_score",
+        "rsi_14",
+        "overbought_signal",
+        "ma_distance_50_200"
+      ],
+      "shap_values": {
+        "return_20d": 0.02,
+        "ma_distance_50_200": 0.04,
+        "ma_distance_20_50": -0.03,
+        "close_to_sma200_pct": -0.01,
+        "adx_14": 0.5,
+        "macd_hist": -0.27,
+        "rsi_14": 0.07,
+        "deep_value_signal": -0.03,
+        "overbought_signal": 0.05,
+        "vix_level": -0.75,
+        "sentiment_score": 0.1,
+        "lag1_autocorrelation": -0.03
+      },
+      "lime_explanations": {
+        "positive": [
+          "return_20d",
+          "ma_distance_50_200",
+          "close_to_sma200_pct"
+        ],
+        "negative": [
+          "ma_distance_20_50",
+          "macd_hist",
+          "rsi_14"
+        ]
+      },
+      "counterfactuals": {}
+    },
+    "metadata": {
+      "model_auc": 0.78,
+      "calibration_error": 0.02,
+      "drift_status": "stable",
+      "confidence_interval": [
+        0.25,
+        0.41
+      ],
+      "data_source": "real_v7_deep"
+    },
+    "academic_disclaimer": "Research Simulation - model trained for educational and research purposes only. Not for trading decisions."
+  },
+  "MSFT": {
+    "ticker": "MSFT",
+    "name": "Microsoft Corporation",
+    "price": 404.88,
+    "probability": 0.31,
+    "expected_return_10d": -1.9,
+    "risk_metrics": {
+      "sharpe_proxy": -0.79,
+      "var95": -3.96
+    },
+    "setup": {
+      "fulfilled": false,
+      "score": 50,
+      "conditions_met": "3/5",
+      "proof_points": [
+        "RSI 44.9 (40-65 range)",
+        "ATR 2.4% (< 2.8% stable)",
+        "Volume ratio 1.00 (consolidation)"
+      ]
+    },
+    "trigger": {
+      "fulfilled": false,
+      "score": 0,
+      "conditions_met": "0/4",
+      "proof_points": [],
+      "pending": true
+    },
+    "timeframe": null,
+    "signal_strength": "WEAK",
+    "indicators": {
+      "rsi": 44.9,
+      "macd_hist": 3.49,
+      "sma20": 423.55,
+      "sma50": 432.19,
+      "sma200": 481.96,
+      "volume_ratio": 1,
+      "atr_pct": 2.4
+    },
+    "explainability": {
+      "top_features": [
+        "macd_hist",
+        "adx_14",
+        "rsi_14",
+        "overbought_signal",
+        "position_in_52w_range"
+      ],
+      "shap_values": {
+        "return_20d": -0.03,
+        "ma_distance_50_200": -0.22,
+        "ma_distance_20_50": -0.03,
+        "close_to_sma20_pct": -0.02,
+        "close_to_sma200_pct": -0.23,
+        "adx_14": 0.5,
+        "macd_hist": 0.95,
+        "rsi_14": 0.08,
+        "deep_value_signal": -0.03,
+        "overbought_signal": 0.05,
+        "vix_level": -0.81,
+        "sentiment_score": -0.29,
+        "regime_adjusted_return": -0.02
+      },
+      "lime_explanations": {
+        "positive": [
+          "adx_14",
+          "macd_hist",
+          "volume_ratio_20d"
+        ],
+        "negative": [
+          "return_20d",
+          "ma_distance_50_200",
+          "ma_distance_20_50"
+        ]
+      },
+      "counterfactuals": {}
+    },
+    "metadata": {
+      "model_auc": 0.78,
+      "calibration_error": 0.02,
+      "drift_status": "stable",
+      "confidence_interval": [
+        0.23,
+        0.39
+      ],
+      "data_source": "real_v7_deep"
+    },
+    "academic_disclaimer": "Research Simulation - model trained for educational and research purposes only. Not for trading decisions."
+  },
+  "GOOGL": {
+    "ticker": "GOOGL",
+    "name": "Alphabet Inc Class A",
+    "price": 308.7,
+    "probability": 0.45,
+    "expected_return_10d": -0.5,
+    "risk_metrics": {
+      "sharpe_proxy": -0.21,
+      "var95": -4.33
+    },
+    "setup": {
+      "fulfilled": true,
+      "score": 100,
+      "conditions_met": "5/5",
+      "proof_points": [
+        "RSI 47.5 (40-65 range)",
+        "Price 21.2% above SMA200",
+        "SMA50 above SMA200",
+        "ATR 2.6% (< 2.8% stable)",
+        "Volume ratio 1.00 (consolidation)"
+      ]
+    },
+    "trigger": {
+      "fulfilled": false,
+      "score": 25,
+      "conditions_met": "1/4",
+      "proof_points": [
+        "MACD Histogram 0.45 (positive momentum)"
+      ],
+      "pending": false
+    },
+    "timeframe": "long",
+    "signal_strength": "MODERATE",
+    "indicators": {
+      "rsi": 47.5,
+      "macd_hist": 0.45,
+      "sma20": 312.79,
+      "sma50": 319.17,
+      "sma200": 254.8,
+      "volume_ratio": 1,
+      "atr_pct": 2.6
+    },
+    "explainability": {
+      "top_features": [
+        "adx_14",
+        "ma_distance_50_200",
+        "close_to_sma200_pct",
+        "sentiment_score",
+        "macd_hist"
+      ],
+      "shap_values": {
+        "return_20d": 0.02,
+        "ma_distance_50_200": 0.29,
+        "ma_distance_20_50": -0.03,
+        "close_to_sma200_pct": 0.12,
+        "adx_14": 0.5,
+        "macd_hist": 0.1,
+        "rsi_14": 0.04,
+        "deep_value_signal": -0.03,
+        "overbought_signal": 0.05,
+        "vix_level": -0.94,
+        "sentiment_score": 0.11,
+        "lag1_autocorrelation": -0.03
+      },
+      "lime_explanations": {
+        "positive": [
+          "return_20d",
+          "ma_distance_50_200",
+          "close_to_sma200_pct"
+        ],
+        "negative": [
+          "ma_distance_20_50",
+          "rsi_14",
+          "bb_pctb"
+        ]
+      },
+      "counterfactuals": {}
+    },
+    "metadata": {
+      "model_auc": 0.78,
+      "calibration_error": 0.02,
+      "drift_status": "stable",
+      "confidence_interval": [
+        0.37,
+        0.53
+      ],
+      "data_source": "real_v7_deep"
+    },
+    "academic_disclaimer": "Research Simulation - model trained for educational and research purposes only. Not for trading decisions."
+  },
+  "NVDA": {
+    "ticker": "NVDA",
+    "name": "NVIDIA Corporation",
+    "price": 186.03,
+    "probability": 0.25,
+    "expected_return_10d": -2.5,
+    "risk_metrics": {
+      "sharpe_proxy": -0.76,
+      "var95": -5.39
+    },
+    "setup": {
+      "fulfilled": true,
+      "score": 85,
+      "conditions_met": "4/5",
+      "proof_points": [
+        "RSI 51.4 (40-65 range)",
+        "Price 5.2% above SMA200",
+        "SMA50 above SMA200",
+        "Volume ratio 1.00 (consolidation)"
+      ]
+    },
+    "trigger": {
+      "fulfilled": false,
+      "score": 25,
+      "conditions_met": "1/4",
+      "proof_points": [
+        "Price 2.2% above SMA20"
+      ],
+      "pending": false
+    },
+    "timeframe": "long",
+    "signal_strength": "MODERATE",
+    "indicators": {
+      "rsi": 51.4,
+      "macd_hist": -0.17,
+      "sma20": 181.98,
+      "sma50": 185.7,
+      "sma200": 176.89,
+      "volume_ratio": 1,
+      "atr_pct": 3.3
+    },
+    "explainability": {
+      "top_features": [
+        "adx_14",
+        "sentiment_score",
+        "overbought_signal",
+        "return_20d",
+        "position_in_52w_range"
+      ],
+      "shap_values": {
+        "return_20d": 0.02,
+        "ma_distance_20_50": -0.03,
+        "close_to_sma200_pct": -0.03,
+        "adx_14": 0.82,
+        "macd_hist": -0.08,
+        "rsi_14": -0.02,
+        "deep_value_signal": -0.03,
+        "overbought_signal": 0.05,
+        "atr14_normalized": -0.01,
+        "volatility_20d": -0.01,
+        "volatility_percentile": -0.16,
+        "vix_level": -1.36,
+        "sentiment_score": 0.14,
+        "regime_adjusted_volatility": -0.01,
+        "lag1_autocorrelation": -0.03
+      },
+      "lime_explanations": {
+        "positive": [
+          "return_20d",
+          "ma_distance_50_200",
+          "close_to_sma200_pct"
+        ],
+        "negative": [
+          "ma_distance_20_50",
+          "macd_hist",
+          "rsi_14"
+        ]
+      },
+      "counterfactuals": {}
+    },
+    "metadata": {
+      "model_auc": 0.78,
+      "calibration_error": 0.02,
+      "drift_status": "stable",
+      "confidence_interval": [
+        0.17,
+        0.33
+      ],
+      "data_source": "real_v7_deep"
+    },
+    "academic_disclaimer": "Research Simulation - model trained for educational and research purposes only. Not for trading decisions."
+  },
+  "AMZN": {
+    "ticker": "AMZN",
+    "name": "Amazon.com Inc",
+    "price": 212.65,
+    "probability": 0.2,
+    "expected_return_10d": -3,
+    "risk_metrics": {
+      "sharpe_proxy": -1.04,
+      "var95": -4.82
+    },
+    "setup": {
+      "fulfilled": false,
+      "score": 35,
+      "conditions_met": "2/5",
+      "proof_points": [
+        "RSI 46.9 (40-65 range)",
+        "Volume ratio 1.00 (consolidation)"
+      ]
+    },
+    "trigger": {
+      "fulfilled": false,
+      "score": 0,
+      "conditions_met": "0/4",
+      "proof_points": [],
+      "pending": true
+    },
+    "timeframe": null,
+    "signal_strength": "WEAK",
+    "indicators": {
+      "rsi": 46.9,
+      "macd_hist": 1.61,
+      "sma20": 219.77,
+      "sma50": 224.25,
+      "sma200": 224.64,
+      "volume_ratio": 1,
+      "atr_pct": 2.9
+    },
+    "explainability": {
+      "top_features": [
+        "adx_14",
+        "macd_hist",
+        "overbought_signal",
+        "rsi_14",
+        "position_in_52w_range"
+      ],
+      "shap_values": {
+        "return_20d": -0.03,
+        "ma_distance_50_200": -0.08,
+        "ma_distance_20_50": -0.03,
+        "close_to_sma20_pct": -0.02,
+        "close_to_sma200_pct": -0.13,
+        "adx_14": 0.5,
+        "macd_hist": 0.42,
+        "rsi_14": 0.05,
+        "deep_value_signal": -0.03,
+        "overbought_signal": 0.05,
+        "volatility_20d": -0.01,
+        "vix_level": -1.14,
+        "sentiment_score": -0.28,
+        "regime_adjusted_return": -0.02,
+        "regime_adjusted_volatility": -0.01
+      },
+      "lime_explanations": {
+        "positive": [
+          "adx_14",
+          "macd_hist",
+          "volume_ratio_20d"
+        ],
+        "negative": [
+          "return_20d",
+          "ma_distance_20_50",
+          "close_to_sma20_pct"
+        ]
+      },
+      "counterfactuals": {}
+    },
+    "metadata": {
+      "model_auc": 0.78,
+      "calibration_error": 0.02,
+      "drift_status": "stable",
+      "confidence_interval": [
+        0.12,
+        0.28
+      ],
+      "data_source": "real_v7_deep"
+    },
+    "academic_disclaimer": "Research Simulation - model trained for educational and research purposes only. Not for trading decisions."
+  },
+  "ACGL": {
+    "ticker": "ACGL",
+    "name": "Arch Capital Group Ltd",
+    "price": 94.81,
+    "probability": 0.34,
+    "expected_return_10d": -1.6,
+    "risk_metrics": {
+      "sharpe_proxy": -0.72,
+      "var95": -3.71
+    },
+    "setup": {
+      "fulfilled": true,
+      "score": 80,
+      "conditions_met": "4/5",
+      "proof_points": [
+        "Price 2.9% above SMA200",
+        "SMA50 above SMA200",
+        "ATR 2.2% (< 2.8% stable)",
+        "Volume ratio 1.00 (consolidation)"
+      ]
+    },
+    "trigger": {
+      "fulfilled": false,
+      "score": 25,
+      "conditions_met": "1/4",
+      "proof_points": [
+        "Price 0.4% above SMA20"
+      ],
+      "pending": false
+    },
+    "timeframe": "long",
+    "signal_strength": "MODERATE",
+    "indicators": {
+      "rsi": 39,
+      "macd_hist": -0.67,
+      "sma20": 94.4,
+      "sma50": 96.33,
+      "sma200": 92.13,
+      "volume_ratio": 1,
+      "atr_pct": 2.2
+    },
+    "explainability": {
+      "top_features": [
+        "adx_14",
+        "rsi_14",
+        "sentiment_score",
+        "overbought_signal",
+        "return_20d"
+      ],
+      "shap_values": {
+        "return_20d": 0.02,
+        "ma_distance_20_50": -0.03,
+        "close_to_sma200_pct": -0.05,
+        "adx_14": 0.5,
+        "macd_hist": -0.22,
+        "rsi_14": 0.17,
+        "deep_value_signal": -0.03,
+        "overbought_signal": 0.05,
+        "vix_level": -0.71,
+        "sentiment_score": 0.06,
+        "lag1_autocorrelation": -0.03
+      },
+      "lime_explanations": {
+        "positive": [
+          "return_20d",
+          "ma_distance_50_200",
+          "close_to_sma200_pct"
+        ],
+        "negative": [
+          "ma_distance_20_50",
+          "macd_hist",
+          "rsi_14"
+        ]
+      },
+      "counterfactuals": {}
+    },
+    "metadata": {
+      "model_auc": 0.78,
+      "calibration_error": 0.02,
+      "drift_status": "stable",
+      "confidence_interval": [
+        0.26,
+        0.42
+      ],
+      "data_source": "real_v7_deep"
+    },
+    "academic_disclaimer": "Research Simulation - model trained for educational and research purposes only. Not for trading decisions."
+  },
+  "APD": {
+    "ticker": "APD",
+    "name": "Air Products and Chemicals Inc",
+    "price": 277.69,
+    "probability": 0.29,
+    "expected_return_10d": -2.1,
+    "risk_metrics": {
+      "sharpe_proxy": -0.97,
+      "var95": -3.68
+    },
+    "setup": {
+      "fulfilled": true,
+      "score": 100,
+      "conditions_met": "5/5",
+      "proof_points": [
+        "RSI 53.1 (40-65 range)",
+        "Price 2.9% above SMA200",
+        "SMA50 above SMA200",
+        "ATR 2.2% (< 2.8% stable)",
+        "Volume ratio 1.00 (consolidation)"
+      ]
+    },
+    "trigger": {
+      "fulfilled": false,
+      "score": 25,
+      "conditions_met": "1/4",
+      "proof_points": [
+        "Price 4.7% above SMA20"
+      ],
+      "pending": false
+    },
+    "timeframe": "long",
+    "signal_strength": "MODERATE",
+    "indicators": {
+      "rsi": 53.1,
+      "macd_hist": -1.09,
+      "sma20": 265.28,
+      "sma50": 270.69,
+      "sma200": 269.98,
+      "volume_ratio": 1,
+      "atr_pct": 2.2
+    },
+    "explainability": {
+      "top_features": [
+        "adx_14",
+        "sentiment_score",
+        "overbought_signal",
+        "return_20d",
+        "close_to_sma20_pct"
+      ],
+      "shap_values": {
+        "return_20d": 0.02,
+        "ma_distance_50_200": -0.07,
+        "ma_distance_20_50": -0.03,
+        "close_to_sma20_pct": 0.02,
+        "close_to_sma200_pct": -0.05,
+        "adx_14": 0.5,
+        "macd_hist": -0.33,
+        "rsi_14": -0.05,
+        "deep_value_signal": -0.03,
+        "overbought_signal": 0.05,
+        "vix_level": -0.7,
+        "sentiment_score": 0.15,
+        "lag1_autocorrelation": -0.03
+      },
+      "lime_explanations": {
+        "positive": [
+          "return_20d",
+          "close_to_sma20_pct",
+          "close_to_sma200_pct"
+        ],
+        "negative": [
+          "ma_distance_20_50",
+          "macd_hist",
+          "rsi_14"
+        ]
+      },
+      "counterfactuals": {}
+    },
+    "metadata": {
+      "model_auc": 0.78,
+      "calibration_error": 0.02,
+      "drift_status": "stable",
+      "confidence_interval": [
+        0.21,
+        0.37
+      ],
+      "data_source": "real_v7_deep"
+    },
+    "academic_disclaimer": "Research Simulation - model trained for educational and research purposes only. Not for trading decisions."
+  },
+  "SO": {
+    "ticker": "SO",
+    "name": "Southern Company",
+    "price": 96.26,
+    "probability": 0.36,
+    "expected_return_10d": -1.4,
+    "risk_metrics": {
+      "sharpe_proxy": -0.76,
+      "var95": -3.02
+    },
+    "setup": {
+      "fulfilled": true,
+      "score": 100,
+      "conditions_met": "5/5",
+      "proof_points": [
+        "RSI 60.8 (40-65 range)",
+        "Price 6.4% above SMA200",
+        "SMA50 above SMA200",
+        "ATR 1.8% (< 2.8% stable)",
+        "Volume ratio 1.00 (consolidation)"
+      ]
+    },
+    "trigger": {
+      "fulfilled": false,
+      "score": 50,
+      "conditions_met": "2/4",
+      "proof_points": [
+        "RSI 60.8 breaking above 55",
+        "Price 8.3% above SMA20"
+      ],
+      "pending": false
+    },
+    "timeframe": "long",
+    "signal_strength": "MODERATE",
+    "indicators": {
+      "rsi": 60.8,
+      "macd_hist": -0.18,
+      "sma20": 88.91,
+      "sma50": 90.72,
+      "sma200": 90.45,
+      "volume_ratio": 1,
+      "atr_pct": 1.8
+    },
+    "explainability": {
+      "top_features": [
+        "sentiment_score",
+        "adx_14",
+        "volatility_percentile",
+        "overbought_signal",
+        "close_to_sma20_pct"
+      ],
+      "shap_values": {
+        "return_20d": 0.02,
+        "ma_distance_50_200": -0.07,
+        "ma_distance_20_50": -0.03,
+        "close_to_sma20_pct": 0.03,
+        "close_to_sma200_pct": -0.01,
+        "adx_14": 0.18,
+        "macd_hist": -0.08,
+        "rsi_14": -0.16,
+        "deep_value_signal": -0.03,
+        "overbought_signal": 0.05,
+        "volatility_percentile": 0.16,
+        "vix_level": -0.44,
+        "sentiment_score": 0.2,
+        "regime_adjusted_return": 0.01,
+        "lag1_autocorrelation": -0.03
+      },
+      "lime_explanations": {
+        "positive": [
+          "return_20d",
+          "close_to_sma20_pct",
+          "close_to_sma200_pct"
+        ],
+        "negative": [
+          "ma_distance_20_50",
+          "macd_hist",
+          "rsi_14"
+        ]
+      },
+      "counterfactuals": {}
+    },
+    "metadata": {
+      "model_auc": 0.78,
+      "calibration_error": 0.02,
+      "drift_status": "stable",
+      "confidence_interval": [
+        0.28,
+        0.44
+      ],
+      "data_source": "real_v7_deep"
+    },
+    "academic_disclaimer": "Research Simulation - model trained for educational and research purposes only. Not for trading decisions."
+  },
+  "NDSN": {
+    "ticker": "NDSN",
+    "name": "Nordson Corporation",
+    "price": 273.69,
+    "probability": 0.2,
+    "expected_return_10d": -3,
+    "risk_metrics": {
+      "sharpe_proxy": -1.16,
+      "var95": -4.26
+    },
+    "setup": {
+      "fulfilled": true,
+      "score": 80,
+      "conditions_met": "4/5",
+      "proof_points": [
+        "Price 15.6% above SMA200",
+        "SMA50 above SMA200",
+        "ATR 2.6% (< 2.8% stable)",
+        "Volume ratio 1.00 (consolidation)"
+      ]
+    },
+    "trigger": {
+      "fulfilled": false,
+      "score": 25,
+      "conditions_met": "1/4",
+      "proof_points": [
+        "Price 1.2% above SMA20"
+      ],
+      "pending": false
+    },
+    "timeframe": "long",
+    "signal_strength": "MODERATE",
+    "indicators": {
+      "rsi": 39.2,
+      "macd_hist": -3.56,
+      "sma20": 270.34,
+      "sma50": 275.85,
+      "sma200": 236.67,
+      "volume_ratio": 1,
+      "atr_pct": 2.6
+    },
+    "explainability": {
+      "top_features": [
+        "adx_14",
+        "ma_distance_50_200",
+        "rsi_14",
+        "close_to_sma200_pct",
+        "sentiment_score"
+      ],
+      "shap_values": {
+        "return_20d": 0.02,
+        "ma_distance_50_200": 0.17,
+        "ma_distance_20_50": -0.03,
+        "close_to_sma200_pct": 0.07,
+        "adx_14": 0.5,
+        "macd_hist": -1.03,
+        "rsi_14": 0.16,
+        "deep_value_signal": -0.03,
+        "overbought_signal": 0.05,
+        "vix_level": -0.92,
+        "sentiment_score": 0.06,
+        "lag1_autocorrelation": -0.03
+      },
+      "lime_explanations": {
+        "positive": [
+          "return_20d",
+          "ma_distance_50_200",
+          "close_to_sma200_pct"
+        ],
+        "negative": [
+          "ma_distance_20_50",
+          "macd_hist",
+          "rsi_14"
+        ]
+      },
+      "counterfactuals": {}
+    },
+    "metadata": {
+      "model_auc": 0.78,
+      "calibration_error": 0.02,
+      "drift_status": "stable",
+      "confidence_interval": [
+        0.12,
+        0.28
+      ],
+      "data_source": "real_v7_deep"
+    },
+    "academic_disclaimer": "Research Simulation - model trained for educational and research purposes only. Not for trading decisions."
+  },
+  "FSLR": {
+    "ticker": "FSLR",
+    "name": "First Solar Inc",
+    "price": 200.25,
+    "probability": 0.06,
+    "expected_return_10d": -4.4,
+    "risk_metrics": {
+      "sharpe_proxy": -0.78,
+      "var95": -9.33
+    },
+    "setup": {
+      "fulfilled": false,
+      "score": 40,
+      "conditions_met": "2/5",
+      "proof_points": [
+        "SMA50 above SMA200",
+        "Volume ratio 1.00 (consolidation)"
+      ]
+    },
+    "trigger": {
+      "fulfilled": false,
+      "score": 0,
+      "conditions_met": "0/4",
+      "proof_points": [],
+      "pending": true
+    },
+    "timeframe": null,
+    "signal_strength": "WEAK",
+    "indicators": {
+      "rsi": 39.7,
+      "macd_hist": -0.9,
+      "sma20": 226.72,
+      "sma50": 231.34,
+      "sma200": 215.74,
+      "volume_ratio": 1,
+      "atr_pct": 5.7
+    },
+    "explainability": {
+      "top_features": [
+        "adx_14",
+        "rsi_14",
+        "sentiment_score",
+        "overbought_signal",
+        "ma_distance_50_200"
+      ],
+      "shap_values": {
+        "return_20d": 0.02,
+        "ma_distance_50_200": 0.03,
+        "ma_distance_20_50": -0.03,
+        "close_to_sma20_pct": -0.05,
+        "close_to_sma200_pct": -0.14,
+        "adx_14": 0.82,
+        "macd_hist": -0.28,
+        "rsi_14": 0.16,
+        "deep_value_signal": -0.03,
+        "overbought_signal": 0.05,
+        "atr14_normalized": -0.03,
+        "volatility_20d": -0.03,
+        "volatility_percentile": -0.16,
+        "var95": -0.02,
+        "vix_level": -2.48,
+        "sentiment_score": 0.06,
+        "regime_adjusted_volatility": -0.02,
+        "lag1_autocorrelation": -0.03
+      },
+      "lime_explanations": {
+        "positive": [
+          "return_20d",
+          "ma_distance_50_200",
+          "adx_14"
+        ],
+        "negative": [
+          "ma_distance_20_50",
+          "close_to_sma20_pct",
+          "close_to_sma200_pct"
+        ]
+      },
+      "counterfactuals": {}
+    },
+    "metadata": {
+      "model_auc": 0.78,
+      "calibration_error": 0.02,
+      "drift_status": "stable",
+      "confidence_interval": [
+        0,
+        0.14
+      ],
+      "data_source": "real_v7_deep"
+    },
+    "academic_disclaimer": "Research Simulation - model trained for educational and research purposes only. Not for trading decisions."
+  }
+}

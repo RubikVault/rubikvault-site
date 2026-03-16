@@ -74,14 +74,17 @@ function compareRowsForSymbolChoice(a, b) {
   return String(a?.canonical_id || '').localeCompare(String(b?.canonical_id || ''));
 }
 
-function eligibilityFromLayer(layer) {
-  const normalized = String(layer || 'L4_DEAD').toUpperCase();
+function eligibilityFromRow(input = {}) {
+  const normalized = String(input?.layer || 'L4_DEAD').toUpperCase();
+  const barsCount = Number(input?.bars_count || 0);
+  const historyPack = String(input?.history_pack || input?.pointers?.history_pack || '').trim();
+  const hasDeepHistory = Boolean(historyPack) && Number.isFinite(barsCount) && barsCount >= 200;
   return {
-    analyzer: ['L0_LEGACY_CORE', 'L1_FULL', 'L2_PARTIAL'].includes(normalized),
-    scientific: ['L0_LEGACY_CORE', 'L1_FULL', 'L2_PARTIAL'].includes(normalized),
-    forecast: ['L0_LEGACY_CORE', 'L1_FULL'].includes(normalized),
-    marketphase: ['L0_LEGACY_CORE', 'L1_FULL', 'L2_PARTIAL', 'L3_MINIMAL'].includes(normalized),
-    elliott: ['L0_LEGACY_CORE', 'L1_FULL', 'L2_PARTIAL', 'L3_MINIMAL'].includes(normalized)
+    analyzer: hasDeepHistory && normalized !== 'L4_DEAD',
+    scientific: hasDeepHistory && normalized !== 'L4_DEAD',
+    forecast: hasDeepHistory && normalized !== 'L4_DEAD',
+    marketphase: hasDeepHistory && normalized !== 'L4_DEAD',
+    elliott: hasDeepHistory && normalized !== 'L4_DEAD'
   };
 }
 
@@ -120,7 +123,14 @@ async function readStockRows() {
       layer,
       score_0_100: Number.isFinite(score) ? score : null,
       quality_basis: obj?._quality_basis || null,
-      eligibility: eligibilityFromLayer(layer)
+      pointers: {
+        history_pack: obj?.pointers?.history_pack || null
+      },
+      eligibility: eligibilityFromRow({
+        layer,
+        bars_count: Number.isFinite(bars) ? bars : 0,
+        history_pack: obj?.pointers?.history_pack || null
+      })
     });
   }
   return rows.sort(bySymbolThenId);
@@ -128,12 +138,13 @@ async function readStockRows() {
 
 function buildByFeature(rows) {
   const allSymbols = [...new Set(rows.map((row) => row.symbol).filter(Boolean))].sort();
+  const rowBySymbol = new Map(rows.map((row) => [row.symbol, row]));
   const out = {
-    analyzer: [...allSymbols],
-    scientific: [...allSymbols],
-    forecast: [...allSymbols],
-    marketphase: [...allSymbols],
-    elliott: [...allSymbols]
+    analyzer: allSymbols.filter((symbol) => rowBySymbol.get(symbol)?.eligibility?.analyzer),
+    scientific: allSymbols.filter((symbol) => rowBySymbol.get(symbol)?.eligibility?.scientific),
+    forecast: allSymbols.filter((symbol) => rowBySymbol.get(symbol)?.eligibility?.forecast),
+    marketphase: allSymbols.filter((symbol) => rowBySymbol.get(symbol)?.eligibility?.marketphase),
+    elliott: allSymbols.filter((symbol) => rowBySymbol.get(symbol)?.eligibility?.elliott)
   };
   return out;
 }
@@ -186,24 +197,7 @@ async function readPageSymbols(dirName) {
 }
 
 async function buildByFeatureFromReadModels(rows) {
-  const fromLayers = buildByFeature(rows);
-  const fallback = {
-    analyzer: await readPageSymbols('scientific_pages'),
-    scientific: await readPageSymbols('scientific_pages'),
-    forecast: await readPageSymbols('forecast_pages'),
-    marketphase: await readPageSymbols('marketphase_pages'),
-    elliott: await readPageSymbols('marketphase_pages')
-  };
-  function mergeUnique(a = [], b = []) {
-    return [...new Set([...(Array.isArray(a) ? a : []), ...(Array.isArray(b) ? b : [])])].sort();
-  }
-  return {
-    analyzer: mergeUnique(fromLayers.analyzer, fallback.analyzer),
-    scientific: mergeUnique(fromLayers.scientific, fallback.scientific),
-    forecast: mergeUnique(fromLayers.forecast, fallback.forecast),
-    marketphase: mergeUnique(fromLayers.marketphase, fallback.marketphase),
-    elliott: mergeUnique(fromLayers.elliott, fallback.elliott)
-  };
+  return buildByFeature(rows);
 }
 
 function setFromArray(values = []) {
@@ -515,11 +509,11 @@ async function main() {
     shared_feature_source: manifest.files.shared_features,
     feature_parity_source: manifest.files.feature_parity,
     eligibility_rules: {
-      analyzer: 'L0_LEGACY_CORE|L1_FULL|L2_PARTIAL',
-      scientific: 'L0_LEGACY_CORE|L1_FULL|L2_PARTIAL',
-      forecast: 'L0_LEGACY_CORE|L1_FULL',
-      marketphase: 'L0_LEGACY_CORE|L1_FULL|L2_PARTIAL|L3_MINIMAL',
-      elliott: 'L0_LEGACY_CORE|L1_FULL|L2_PARTIAL|L3_MINIMAL'
+      analyzer: 'history_pack && bars_count>=200',
+      scientific: 'history_pack && bars_count>=200',
+      forecast: 'history_pack && bars_count>=200',
+      marketphase: 'history_pack && bars_count>=200',
+      elliott: 'history_pack && bars_count>=200'
     }
   });
 

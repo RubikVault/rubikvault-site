@@ -1,0 +1,156 @@
+{
+  "log_id": "a1340dd1-fa11-41d6-882b-443cecf5c82b",
+  "timestamp": "2026-03-12T17:19:49.848Z",
+  "snapshot_id": "c47814fc-f8d2-4830-b590-783301fe700b",
+  "ticker": "MALLPLAZA.SN",
+  "feature_name": "forecast",
+  "feature_version": "runblock.v3.features",
+  "model_version": "forecast.xgb.v3",
+  "model_type": "xgboost",
+  "calibration_version": "forecast.cal.v3",
+  "regime_version": "runblock.v3",
+  "regime_tag": "RANGE",
+  "regime_confidence": 0.9689102590590317,
+  "data_quality_state": "PASS",
+  "feature_hash": "8cc9cf7a0d13c80fe004052da3c6f62a5d80977b7ee6a04a647845347de8e961",
+  "prediction_payload": {
+    "model_version": "forecast.xgb.v3",
+    "model_type": "xgboost",
+    "calibration_version": "forecast.cal.v3",
+    "leakage_pass": true,
+    "structural_instability_flag": false,
+    "top_3_features": [
+      "return_5d",
+      "atr_14",
+      "volume_surge"
+    ],
+    "top_3_feature_weights": [
+      0.39,
+      0.34,
+      0.27
+    ],
+    "horizons": {
+      "1d": {
+        "logloss": 0.1,
+        "naive_logloss": 0.2,
+        "bucket_60_actual": 60,
+        "bucket_70_actual": 69,
+        "bucket_80_actual": 79
+      },
+      "5d": {
+        "logloss": 0.11,
+        "naive_logloss": 0.21,
+        "bucket_60_actual": 61,
+        "bucket_70_actual": 70,
+        "bucket_80_actual": 81
+      },
+      "20d": {
+        "logloss": 0.12,
+        "naive_logloss": 0.22,
+        "bucket_60_actual": 58,
+        "bucket_70_actual": 72,
+        "bucket_80_actual": 78
+      }
+    },
+    "outputs": {
+      "1d": {
+        "direction_prob": 0.58,
+        "expected_move_net": 0.006,
+        "uncertainty_band": [
+          0.002,
+          0.01
+        ]
+      },
+      "5d": {
+        "direction_prob": 0.63,
+        "expected_move_net": 0.018,
+        "uncertainty_band": [
+          0.01,
+          0.028
+        ]
+      },
+      "20d": {
+        "direction_prob": 0.69,
+        "expected_move_net": 0.043,
+        "uncertainty_band": [
+          0.024,
+          0.061
+        ]
+      }
+    },
+    "is_challenger": true,
+    "champion_metrics": {
+      "horizons": {
+        "1d": {
+          "logloss": 0.15
+        },
+        "5d": {
+          "logloss": 0.16
+        },
+        "20d": {
+          "logloss": 0.17
+        }
+      }
+    },
+    "promotion_freeze_active": false,
+    "state": "ACTIVE",
+    "validation_ready": true,
+    "reason_codes": [],
+    "suppressed_horizons": [],
+    "gate": {
+      "allowed": true,
+      "state": "ACTIVE",
+      "suppressed_horizons": [],
+      "reason_codes": []
+    }
+  },
+  "fallback_used": false,
+  "fallback_reason": null,
+  "champion_id": null,
+  "challenger_id": null,
+  "reason_codes": [],
+  "realized_outcome": null,
+  "structural_instability_flag": false,
+  "top_3_features": [
+    "return_5d",
+    "atr_14",
+    "volume_surge"
+  ],
+  "top_3_feature_weights": [
+    0.39,
+    0.34,
+    0.27
+  ],
+  "explainability_unavailable_reason": null,
+  "knowledge_time": "2026-03-12T17:19:49.848Z",
+  "valid_time": "2026-03-12T17:19:49.848Z",
+  "cost_model_version": "runblock.cost.v3",
+  "liquidity_bucket": "A",
+  "tradability_flag": true,
+  "global_system_state": "GREEN",
+  "git_commit_hash": "local-runblock-v3",
+  "dependency_trace": {
+    "source_data_versions": {
+      "primary_feed": "sample.primary.v1",
+      "secondary_feed": "sample.secondary.v1"
+    },
+    "feature_versions": {
+      "runblock": "runblock.v3.features"
+    },
+    "rule_versions": {
+      "runblock": "runblock.v3.rules"
+    },
+    "regime_version": "runblock.v3",
+    "model_version": {
+      "scientific": "scientific.rf.v3",
+      "forecast": "forecast.xgb.v3",
+      "elliott": "elliott.passive.v1"
+    },
+    "calibration_version": {
+      "scientific": "scientific.cal.v3",
+      "forecast": "forecast.cal.v3"
+    },
+    "cost_model_version": "runblock.cost.v3",
+    "ui_payload_version": "runblock.ui.v3"
+  }
+}

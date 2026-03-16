@@ -2,8 +2,8 @@
  * Forecast System v3.0 — Snapshot Ingest
  * 
  * Ingests data from RubikVault SSOT artifacts:
- * - Universe from /data/v3/universe/universe.json (fallback: /data/universe/all.json)
- * - Prices from /data/v3/eod/US/latest.ndjson.gz
+ * - Universe from v7 registry/SSOT (fallback: legacy v3 universe)
+ * - Prices from v7 registry latests + market snapshot + v3 latest fallback
  * - Creates manifests in mirrors/forecast/snapshots/
  */
 
@@ -11,6 +11,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import zlib from 'node:zlib';
 import { computeDigest } from '../lib/digest.js';
+import { stripExchangeSuffix } from '../utils/symbol-normalize.mjs';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Path Constants
@@ -18,11 +19,133 @@ import { computeDigest } from '../lib/digest.js';
 
 const V3_UNIVERSE_PATH = 'public/data/v3/universe/universe.json';
 const LEGACY_UNIVERSE_PATH = 'public/data/universe/all.json';
+const V7_REGISTRY_PATH = 'public/data/universe/v7/registry/registry.ndjson.gz';
 const EOD_BATCH_PATTERN = 'public/data/eod/batches/eod.latest.';
 const MARKET_PRICES_SNAPSHOT_PATH = 'public/data/snapshots/market-prices/latest.json';
 const V3_EOD_LATEST_PATH = 'public/data/v3/eod/US/latest.ndjson.gz';
 const V3_ADJUSTED_SERIES_DIR = 'public/data/v3/series/adjusted';
 const MIRRORS_SNAPSHOT_BASE = 'mirrors/forecast/snapshots';
+const MIRRORS_UNIVERSE_V7_BASE = 'mirrors/universe-v7';
+const DEFAULT_MIN_BARS = 200;
+
+let _registryUniverseCache = null;
+
+function normalizeTicker(value) {
+    const ticker = String(value || '').trim().toUpperCase();
+    return ticker || null;
+}
+
+function normalizeCanonicalId(value) {
+    const canonicalId = String(value || '').trim().toUpperCase();
+    return canonicalId || null;
+}
+
+function compareRegistryRows(a, b) {
+    const qualityRank = (row) => {
+        const basis = String(row?.quality_basis || '').trim().toLowerCase();
+        if (basis === 'backfill_real') return 3;
+        if (basis === 'daily_bulk_estimate') return 2;
+        if (basis === 'estimate') return 1;
+        return 0;
+    };
+
+    const qa = qualityRank(a);
+    const qb = qualityRank(b);
+    if (qa !== qb) return qa - qb;
+
+    const ba = Number(a?.bars_count || 0);
+    const bb = Number(b?.bars_count || 0);
+    if (ba !== bb) return ba - bb;
+
+    const ha = Boolean(a?.history_pack);
+    const hb = Boolean(b?.history_pack);
+    if (ha !== hb) return Number(ha) - Number(hb);
+
+    const da = String(a?.last_trade_date || '');
+    const db = String(b?.last_trade_date || '');
+    if (da !== db) return da.localeCompare(db);
+
+    return String(a?.canonical_id || '').localeCompare(String(b?.canonical_id || ''));
+}
+
+function registryEntryFromRow(row) {
+    const symbol = normalizeTicker(row?.symbol);
+    const canonicalId = normalizeCanonicalId(row?.canonical_id);
+    if (!symbol || !canonicalId) return null;
+
+    const historyPack = String(row?.pointers?.history_pack || '').trim() || null;
+    const barsCount = Number(row?.bars_count || 0);
+    const recentCloses = Array.isArray(row?._tmp_recent_closes)
+        ? row._tmp_recent_closes.map(toFiniteNumber).filter((value) => value !== null)
+        : [];
+    const recentVolumes = Array.isArray(row?._tmp_recent_volumes)
+        ? row._tmp_recent_volumes.map(toFiniteNumber).filter((value) => value !== null)
+        : [];
+
+    return {
+        symbol,
+        ticker: symbol,
+        canonical_id: canonicalId,
+        exchange: normalizeTicker(row?.exchange),
+        name: row?.name || null,
+        last_trade_date: String(row?.last_trade_date || '').slice(0, 10) || null,
+        bars_count: Number.isFinite(barsCount) ? barsCount : 0,
+        history_pack: historyPack,
+        quality_basis: String(row?._quality_basis || '').trim() || null,
+        recent_closes: recentCloses,
+        recent_volumes: recentVolumes
+    };
+}
+
+function loadRegistryUniverse(repoRoot) {
+    if (_registryUniverseCache) return _registryUniverseCache;
+
+    const registryPath = path.join(repoRoot, V7_REGISTRY_PATH);
+    if (!fs.existsSync(registryPath)) {
+        _registryUniverseCache = {
+            rows: [],
+            bySymbol: new Map(),
+            byCanonical: new Map()
+        };
+        return _registryUniverseCache;
+    }
+
+    const rows = parseGzipNdjsonFile(registryPath)
+        .map((row) => {
+            if (String(row?.type_norm || '').trim().toUpperCase() !== 'STOCK') return null;
+            return registryEntryFromRow(row);
+        })
+        .filter(Boolean);
+
+    const bestBySymbol = new Map();
+    for (const row of rows) {
+        const prev = bestBySymbol.get(row.symbol);
+        if (!prev || compareRegistryRows(row, prev) > 0) {
+            bestBySymbol.set(row.symbol, row);
+        }
+    }
+
+    const byCanonical = new Map();
+    const bySymbol = new Map();
+    const uniqueRows = [...bestBySymbol.values()].sort((a, b) => a.symbol.localeCompare(b.symbol));
+    for (const row of uniqueRows) {
+        bySymbol.set(row.symbol, row);
+        byCanonical.set(row.canonical_id, row);
+    }
+
+    _registryUniverseCache = {
+        rows: uniqueRows,
+        bySymbol,
+        byCanonical
+    };
+    return _registryUniverseCache;
+}
+
+function forecastUniverseFilter(row, minBars = DEFAULT_MIN_BARS) {
+    const barsCount = Number(row?.bars_count || 0);
+    const hasAnyHistory = Boolean(row?.history_pack) || (Array.isArray(row?.recent_closes) && row.recent_closes.length > 0);
+    return Boolean(row?.symbol) && barsCount >= minBars && hasAnyHistory;
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Universe Loading
@@ -31,14 +154,11 @@ const MIRRORS_SNAPSHOT_BASE = 'mirrors/forecast/snapshots';
 /**
  * Load universe (ticker list) from existing data
  * @param {string} repoRoot - Repository root
- * @returns {string[]} Array of tickers
+ * @returns {string[]|object[]} Array of tickers or entries
  */
-export function loadUniverse(repoRoot) {
-    function normalizeTicker(value) {
-        const ticker = String(value || '').trim().toUpperCase();
-        return ticker || null;
-    }
-
+export function loadUniverse(repoRoot, options = {}) {
+    const minBars = Math.max(1, Number(options?.minBars || DEFAULT_MIN_BARS));
+    const returnEntries = options?.entries === true;
     function tickerFromRow(row) {
         if (typeof row === 'string') return normalizeTicker(row);
         if (!row || typeof row !== 'object') return null;
@@ -81,6 +201,13 @@ export function loadUniverse(repoRoot) {
         return [];
     }
 
+    const registryUniverse = loadRegistryUniverse(repoRoot);
+    const registryRows = registryUniverse.rows.filter((row) => forecastUniverseFilter(row, minBars));
+    if (registryRows.length > 0) {
+        console.log(`[Ingest] Universe loaded from ${V7_REGISTRY_PATH} (${registryRows.length} forecast-eligible tickers)`);
+        return returnEntries ? registryRows : registryRows.map((row) => row.symbol);
+    }
+
     const candidates = [V3_UNIVERSE_PATH, LEGACY_UNIVERSE_PATH];
     for (const relPath of candidates) {
         const absPath = path.join(repoRoot, relPath);
@@ -91,7 +218,16 @@ export function loadUniverse(repoRoot) {
             const tickers = extractTickers(parsed);
             if (tickers.length > 0) {
                 console.log(`[Ingest] Universe loaded from ${relPath} (${tickers.length} tickers)`);
-                return tickers;
+                return returnEntries
+                    ? tickers.map((ticker) => ({
+                        symbol: ticker,
+                        ticker,
+                        canonical_id: ticker,
+                        exchange: null,
+                        bars_count: 0,
+                        history_pack: null
+                    }))
+                    : tickers;
             }
             console.warn(`[Ingest] Universe file has no tickers: ${relPath}`);
         } catch (err) {
@@ -187,6 +323,25 @@ export function loadV3LatestPrices(repoRoot) {
     return prices;
 }
 
+export function loadV7RegistryLatestPrices(repoRoot) {
+    const registryUniverse = loadRegistryUniverse(repoRoot);
+    const prices = {};
+    for (const row of registryUniverse.rows) {
+        const close = row.recent_closes[row.recent_closes.length - 1];
+        if (!row.symbol || !row.last_trade_date || close === null || close === undefined) continue;
+        const volume = row.recent_volumes[row.recent_volumes.length - 1];
+        prices[row.symbol] = {
+            date: row.last_trade_date,
+            open: close,
+            high: close,
+            low: close,
+            close,
+            volume: volume ?? 0
+        };
+    }
+    return prices;
+}
+
 /**
  * Load published market-prices snapshot as fallback source.
  * @param {string} repoRoot - Repository root
@@ -210,8 +365,8 @@ export function loadMarketPricesSnapshot(repoRoot) {
 
         const prices = {};
         for (const row of rows) {
-            const ticker = row?.symbol ?? row?.ticker ?? null;
-            if (!ticker || typeof ticker !== 'string') continue;
+            const ticker = normalizeTicker(row?.symbol ?? row?.ticker ?? null);
+            if (!ticker) continue;
 
             const close = toFiniteNumber(row?.close ?? row?.price ?? row?.last ?? row?.adj_close);
             if (close === null) continue;
@@ -242,59 +397,170 @@ export function loadMarketPricesSnapshot(repoRoot) {
 }
 
 /**
- * Load full price history for tickers from v3 adjusted series.
+ * Resolve requested entries against the v7 registry.
  * @param {string} repoRoot - Repository root
- * @param {string[]} tickers - Tickers to load
+ * @param {Array<string|object>} requested - Symbols or partial entries
+ * @returns {object[]} Resolved universe entries
+ */
+function resolveUniverseEntries(repoRoot, requested = []) {
+    const registryUniverse = loadRegistryUniverse(repoRoot);
+    const out = [];
+    const seen = new Set();
+
+    for (const item of Array.isArray(requested) ? requested : []) {
+        const directCanonical = normalizeCanonicalId(item?.canonical_id || item?.canonicalId);
+        const directSymbol = normalizeTicker(
+            typeof item === 'string'
+                ? item
+                : (item?.symbol || item?.ticker || item?.code || null)
+        );
+        const symbolBase = directSymbol ? stripExchangeSuffix(directSymbol) : directSymbol;
+        const resolved =
+            (directCanonical && registryUniverse.byCanonical.get(directCanonical))
+            || (symbolBase && registryUniverse.bySymbol.get(symbolBase))
+            || null;
+
+        const merged = {
+            symbol: resolved?.symbol || symbolBase || directSymbol,
+            ticker: resolved?.symbol || symbolBase || directSymbol,
+            canonical_id: resolved?.canonical_id || directCanonical || symbolBase || directSymbol,
+            exchange: resolved?.exchange || normalizeTicker(item?.exchange),
+            name: resolved?.name || item?.name || null,
+            last_trade_date: resolved?.last_trade_date || String(item?.last_trade_date || '').slice(0, 10) || null,
+            bars_count: Number.isFinite(Number(resolved?.bars_count)) ? Number(resolved.bars_count) : Number(item?.bars_count || 0),
+            history_pack: resolved?.history_pack || String(item?.history_pack || '').trim() || null,
+            quality_basis: resolved?.quality_basis || null,
+            recent_closes: Array.isArray(resolved?.recent_closes) ? resolved.recent_closes : [],
+            recent_volumes: Array.isArray(resolved?.recent_volumes) ? resolved.recent_volumes : []
+        };
+
+        const dedupeKey = normalizeCanonicalId(merged.canonical_id) || normalizeTicker(merged.symbol);
+        if (!dedupeKey || seen.has(dedupeKey)) continue;
+        seen.add(dedupeKey);
+        out.push(merged);
+    }
+
+    return out;
+}
+
+function historyKeyFor(entry, keyBy = 'symbol') {
+    if (String(keyBy || '').trim().toLowerCase() === 'canonical') {
+        return normalizeCanonicalId(entry?.canonical_id) || normalizeTicker(entry?.symbol);
+    }
+    return normalizeTicker(entry?.symbol) || normalizeCanonicalId(entry?.canonical_id);
+}
+
+function parseHistoryBars(rows, asOfDate) {
+    const normalized = (Array.isArray(rows) ? rows : [])
+        .map((row) => {
+            const date = String(row?.date || row?.trading_date || '').slice(0, 10);
+            const close = toFiniteNumber(row?.adjusted_close ?? row?.adj_close ?? row?.close);
+            if (!date || close === null) return null;
+            return {
+                date,
+                close,
+                open: toFiniteNumber(row?.open) ?? close,
+                high: toFiniteNumber(row?.high) ?? close,
+                low: toFiniteNumber(row?.low) ?? close,
+                volume: toFiniteNumber(row?.volume) ?? 0
+            };
+        })
+        .filter(Boolean)
+        .sort((a, b) => a.date.localeCompare(b.date));
+
+    const recent = normalized
+        .filter((row) => row.date <= asOfDate)
+        .slice(Math.max(0, normalized.length - 500));
+
+    if (!recent.length) return null;
+    return {
+        dates: recent.map((row) => row.date),
+        closes: recent.map((row) => row.close),
+        volumes: recent.map((row) => row.volume ?? 0),
+        opens: recent.map((row) => row.open ?? row.close),
+        highs: recent.map((row) => row.high ?? row.close),
+        lows: recent.map((row) => row.low ?? row.close)
+    };
+}
+
+function readHistoryPack(repoRoot, historyPackRel) {
+    const absPath = path.join(repoRoot, MIRRORS_UNIVERSE_V7_BASE, historyPackRel);
+    if (!fs.existsSync(absPath)) return new Map();
+
+    const rows = parseGzipNdjsonFile(absPath);
+    const map = new Map();
+    for (const row of rows) {
+        const canonicalId = normalizeCanonicalId(row?.canonical_id);
+        if (!canonicalId || !Array.isArray(row?.bars) || !row.bars.length) continue;
+        map.set(canonicalId, row.bars);
+    }
+    return map;
+}
+
+/**
+ * Load full price history for tickers from v7 history packs with v3 fallback.
+ * @param {string} repoRoot - Repository root
+ * @param {Array<string|object>} tickers - Tickers or universe entries to load
  * @param {string} asOfDate - As-of date
+ * @param {{ keyBy?: 'symbol'|'canonical' }} [options] - Output key mode
  * @returns {object} Map of ticker -> {dates, closes, volumes}
  */
-export async function loadPriceHistory(repoRoot, tickers, asOfDate) {
+export async function loadPriceHistory(repoRoot, tickers, asOfDate, options = {}) {
     const history = {};
-    const latestPrices = loadV3LatestPrices(repoRoot);
+    const resolvedEntries = resolveUniverseEntries(repoRoot, tickers);
+    const latestPrices = {
+        ...loadV7RegistryLatestPrices(repoRoot),
+        ...loadMarketPricesSnapshot(repoRoot),
+        ...loadV3LatestPrices(repoRoot)
+    };
     const seriesDir = path.join(repoRoot, V3_ADJUSTED_SERIES_DIR);
+    const keyBy = String(options?.keyBy || 'symbol').trim().toLowerCase();
+    const byPack = new Map();
 
-    for (const ticker of tickers) {
-        const seriesPath = path.join(seriesDir, `US__${ticker}.ndjson.gz`);
-        const rows = parseGzipNdjsonFile(seriesPath);
-        if (!rows.length) continue;
+    for (const entry of resolvedEntries) {
+        if (!entry?.history_pack) continue;
+        if (!byPack.has(entry.history_pack)) byPack.set(entry.history_pack, []);
+        byPack.get(entry.history_pack).push(entry);
+    }
 
-        const normalized = rows
-            .map((row) => {
-                const date = String(row?.trading_date || row?.date || '').slice(0, 10);
-                const close = toFiniteNumber(row?.adjusted_close ?? row?.adj_close ?? row?.close);
-                if (!date || close === null) return null;
-                return { date, close };
-            })
-            .filter(Boolean)
-            .sort((a, b) => a.date.localeCompare(b.date));
+    for (const [historyPackRel, entries] of byPack.entries()) {
+        const packRows = readHistoryPack(repoRoot, historyPackRel);
+        for (const entry of entries) {
+            const packBars = packRows.get(normalizeCanonicalId(entry.canonical_id));
+            const parsed = parseHistoryBars(packBars, asOfDate);
+            if (!parsed) continue;
+            history[historyKeyFor(entry, keyBy)] = parsed;
+        }
+    }
 
-        const recent = normalized
-            .filter((row) => row.date <= asOfDate)
-            .slice(Math.max(0, normalized.length - 500));
+    for (const entry of resolvedEntries) {
+        const outKey = historyKeyFor(entry, keyBy);
+        if (history[outKey]) continue;
 
-        if (!recent.length) {
+        // Exchange-aware series resolution: try entry's exchange first, then US fallback
+        const exchange = entry.exchange || 'US';
+        const symbolBase = entry.symbol && entry.symbol.includes('.') ? entry.symbol.split('.')[0] : entry.symbol;
+        const seriesToTry = [
+            path.join(seriesDir, `${exchange}__${entry.symbol}.ndjson.gz`),
+            ...(exchange !== 'US' ? [path.join(seriesDir, `${exchange}__${symbolBase}.ndjson.gz`)] : []),
+            ...(exchange !== 'US' ? [path.join(seriesDir, `US__${entry.symbol}.ndjson.gz`)] : []),
+            ...(symbolBase !== entry.symbol ? [path.join(seriesDir, `US__${symbolBase}.ndjson.gz`)] : [])
+        ];
+        let seriesParsed = null;
+        for (const sp of seriesToTry) {
+            const rows = parseGzipNdjsonFile(sp);
+            seriesParsed = parseHistoryBars(rows, asOfDate);
+            if (seriesParsed) break;
+        }
+        if (seriesParsed) {
+            history[outKey] = seriesParsed;
             continue;
         }
 
-        history[ticker] = {
-            dates: recent.map(row => row.date),
-            closes: recent.map(row => row.close),
-            volumes: recent.map(() => 0),
-            opens: recent.map(row => row.close),
-            highs: recent.map(row => row.close),
-            lows: recent.map(row => row.close)
-        };
-    }
-
-    // Supplement with latest v3 EOD snapshot for any missing tickers
-    for (const ticker of tickers) {
-        if (history[ticker]) continue;
-
-        const tickerData = latestPrices[ticker];
-        if (!tickerData) continue;
-
-        if (tickerData.date && tickerData.close !== undefined) {
-            history[ticker] = {
+        // Latest price fallback: try both full symbol and base symbol
+        const tickerData = latestPrices[entry.symbol] || latestPrices[symbolBase];
+        if (tickerData?.date && tickerData.close !== undefined) {
+            history[outKey] = {
                 dates: [tickerData.date],
                 closes: [tickerData.close],
                 volumes: [tickerData.volume ?? 0],
@@ -394,13 +660,18 @@ export async function ingestSnapshots(repoRoot, tradingDate, policy) {
     const asOf = new Date().toISOString();
 
     // Load universe
-    const universe = loadUniverse(repoRoot);
+    const universeEntries = loadUniverse(repoRoot, { entries: true, minBars: policy?.min_history_bars || DEFAULT_MIN_BARS });
+    const universe = universeEntries.map((row) => row.symbol);
     console.log(`[Ingest] Loaded universe: ${universe.length} tickers`);
 
-    // Load prices from canonical v3 EOD latest snapshot
-    const prices = loadV3LatestPrices(repoRoot);
+    // Load prices from v7 registry latests with published snapshots and v3 fallback.
+    const prices = {
+        ...loadV7RegistryLatestPrices(repoRoot),
+        ...loadMarketPricesSnapshot(repoRoot),
+        ...loadV3LatestPrices(repoRoot)
+    };
     const pricesCount = Object.keys(prices).length;
-    console.log(`[Ingest] Loaded prices for ${pricesCount} tickers from ${V3_EOD_LATEST_PATH}`);
+    console.log(`[Ingest] Loaded prices for ${pricesCount} tickers from v7 registry / snapshots / v3 fallback`);
 
     // Calculate missing data percentage
     const missingCount = universe.filter(t => !prices[t]).length;
@@ -433,6 +704,7 @@ export default {
     loadUniverse,
     loadEodBatches,
     loadV3LatestPrices,
+    loadV7RegistryLatestPrices,
     loadMarketPricesSnapshot,
     loadPriceHistory,
     createManifest,

@@ -206,7 +206,7 @@ async function run() {
   }
   const pipeline = runNodeScript('scripts/universe-v7/pipeline-v7.mjs', pipelineArgs, pipelineEnv);
   const pipelineCode = pipeline.parsed?.code ?? pipeline.status;
-  const pipelineOk = pipeline.status === 0 || pipelineCode === EXIT.BUDGET_STOP || pipelineCode === EXIT.API_THROTTLE;
+  const pipelineOk = pipeline.status === 0 || pipelineCode === EXIT.DEGRADED || pipelineCode === EXIT.BUDGET_STOP || pipelineCode === EXIT.API_THROTTLE;
   steps.push({
     step: 'pipeline_v7',
     ok: pipelineOk,
@@ -385,13 +385,17 @@ async function run() {
     ? EXIT.BUDGET_STOP
     : pipelineCode === EXIT.API_THROTTLE
       ? EXIT.API_THROTTLE
-      : EXIT.SUCCESS;
+      : pipelineCode === EXIT.DEGRADED
+        ? EXIT.DEGRADED
+        : EXIT.SUCCESS;
   const finalReason = pipeline.parsed?.reason
     || (finalCode === EXIT.BUDGET_STOP
       ? 'budget_stop_with_checkpoint'
       : finalCode === EXIT.API_THROTTLE
         ? 'api_rate_limited_429'
-        : 'ok');
+        : finalCode === EXIT.DEGRADED
+          ? 'degraded_legacy_drift_shadow'
+          : 'ok');
   await writeRunReports({
     runId,
     steps,

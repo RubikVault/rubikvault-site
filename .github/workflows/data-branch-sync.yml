@@ -46,4 +46,5 @@ jobs:
             exit 0
           fi
           git commit -m "chore(v3): sync mirrors/system to data branch"
-          git push origin HEAD:data
+          git pull --rebase origin data || true
+          git push origin HEAD:data || { echo "Push failed, retrying after pull"; git pull --rebase origin data && git push origin HEAD:data; }

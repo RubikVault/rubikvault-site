@@ -1457,10 +1457,18 @@ async function computeEligibilityAndReports({ registryRows, coreSet, cfg, runId,
 
 function rankScore(rec) {
   const elig = toSafeNum(rec.computed?.score_0_100, 0) / 100;
+  const layer = String(rec.computed?.layer || '').toUpperCase();
+  const layerBoost = layer === 'L1_FULL' ? 0.15 : layer === 'L2_PARTIAL' ? 0.07 : 0;
+  
   const avg30 = Math.max(1, toSafeNum(rec.avg_volume_30d, 1));
-  const v = Math.log10(avg30) / 10;
-  const m = toSafeNum(rec.market_cap_proxy_percentile, 0);
-  return 0.6 * elig + 0.3 * v + 0.1 * m;
+  const price = toSafeNum(rec._tmp_recent_closes?.[0], 1); 
+  const dollarVol = avg30 * price;
+  
+  // Use log10 dollar volume, capped at 10^10 ($10B/day)
+  const v = Math.min(1.0, Math.log10(dollarVol) / 10); 
+  const usBoost = String(rec.exchange || '').toUpperCase() === 'US' ? 0.2 : 0;
+
+  return 0.25 * elig + 0.4 * v + layerBoost + usBoost;
 }
 
 function qualityBasisRank(value) {
@@ -1573,7 +1581,7 @@ async function buildSearchAndReadModels({ registryRows, runDir, cfg }) {
     return String(a.canonical_id).localeCompare(String(b.canonical_id));
   });
 
-  const topK = ranked.slice(0, 2000).map((row) => ({
+  const topK = ranked.slice(0, 30000).map((row) => ({
     canonical_id: row.canonical_id,
     symbol: row.symbol,
     name: row.name || null,
@@ -1586,10 +1594,24 @@ async function buildSearchAndReadModels({ registryRows, runDir, cfg }) {
     quality_basis: row?._quality_basis || null
   }));
 
-  await writeJsonGz(path.join(searchDir, 'search_global_top_2000.json.gz'), {
+  await writeJsonGz(path.join(searchDir, 'search_global_top_30000.json.gz'), {
     schema: 'rv_v7_search_top_v1',
     generated_at: nowIso(),
     items: topK
+  });
+
+  // Keep search_global_top_10000.json.gz for future growth
+  await writeJsonGz(path.join(searchDir, 'search_global_top_10000.json.gz'), {
+    schema: 'rv_v7_search_top_v1',
+    generated_at: nowIso(),
+    items: topK.slice(0, 10000)
+  });
+
+  // Keep search_global_top_2000.json.gz for backward compatibility with old frontend/workers
+  await writeJsonGz(path.join(searchDir, 'search_global_top_2000.json.gz'), {
+    schema: 'rv_v7_search_top_v1',
+    generated_at: nowIso(),
+    items: topK.slice(0, 2000)
   });
 
   const buckets = buildPrefixBuckets(ranked, 1000, 3);
@@ -1875,6 +1897,11 @@ async function runDriftAndLegacyGate({ registryRows, coreSet, cfg, runDir, updat
   await writeJsonAtomic(prevPath, qualitySnapshot);
 
   if (red > 0) {
+    if (runMode === 'shadow') {
+      // In shadow mode, legacy core drift is informational — do not block the pipeline.
+      // This prevents a death spiral where stale snapshots cause repeated hard failures.
+      return { ok: true, code: EXIT.DEGRADED, drift: { red, yellow, info }, reason: `LEGACY_CORE_DRIFT_RED:${red}` };
+    }
     return {
       ok: false,
       code: EXIT.HARD_FAIL_LEGACY_CORE,

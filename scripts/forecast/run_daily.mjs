@@ -277,8 +277,10 @@ export async function runDailyPipeline(options = {}) {
     // 5. Load price history
     console.log('[Step 5] Loading price history...');
     const priceHistory = await loadPriceHistory(repoRoot, snapshot.universe, tradingDate);
-    const spyPrices = priceHistory['SPY'] ?? null;
-    console.log(`  Loaded history for ${Object.keys(priceHistory).length} tickers`);
+    // Multi-exchange benchmark: prefer SPY, fallback to broad equity ETFs
+    const BENCHMARK_CANDIDATES = ['SPY', 'VT', 'ACWI', 'IWDA'];
+    const spyPrices = BENCHMARK_CANDIDATES.reduce((found, sym) => found || priceHistory[sym] || null, null);
+    console.log(`  Loaded history for ${Object.keys(priceHistory).length} tickers (benchmark: ${BENCHMARK_CANDIDATES.find(s => priceHistory[s]) || 'none'})`);
 
     // 6. Generate forecasts
     console.log('[Step 6] Generating forecasts...');

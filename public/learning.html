@@ -1,12 +1,12 @@
 <!DOCTYPE html>
-<html lang="de">
+<html lang="en">
 
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>RubikVault — Learning Dashboard</title>
   <meta name="description"
-    content="Tägliches Learning-Dashboard: Wie effektiv lernen die 4 RubikVault-Features bei Vorhersagen?">
+    content="Daily Learning Dashboard: How effectively are the 4 RubikVault features learning from predictions?">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
     :root {
@@ -572,62 +572,62 @@
     <div class="header">
       <div class="header-badge">🧠 Machine Learning Monitor</div>
       <h1>Learning Dashboard</h1>
-      <p class="subtitle">Wie effektiv lernen die 4 Features bei Vorhersagen?</p>
+      <p class="subtitle">How effectively are the 4 features learning from predictions?</p>
     </div>
     <div id="app">
       <div class="status-banner">
-        <div><div class="status-text" style="color:var(--accent)">Initialisiere Daily Learning Report…</div></div>
+        <div><div class="status-text" style="color:var(--accent)">Initializing Daily Learning Report…</div></div>
         <div class="status-meta">
-          <span>📅 Werktags nach den Tages-Pipelines</span>
+          <span>📅 Weekdays after daily pipelines</span>
           <span>🧾 /data/reports/learning-report-latest.json</span>
         </div>
       </div>
       <div class="loading">
         <div class="spinner"></div>
-        <p>Lade Learning Report...</p>
+        <p>Loading Learning Report...</p>
       </div>
     </div>
     <noscript>
       <div class="status-banner" style="margin-top:16px">
-        <div><div class="status-text" style="color:var(--yellow)">JavaScript ist deaktiviert</div></div>
+        <div><div class="status-text" style="color:var(--yellow)">JavaScript is disabled</div></div>
         <div class="status-meta">
-          <span><a href="/data/reports/learning-report-latest.json" style="color:var(--accent)">Rohreport öffnen</a></span>
+          <span><a href="/data/reports/learning-report-latest.json" style="color:var(--accent)">Open raw report</a></span>
         </div>
       </div>
     </noscript>
-    <div class="footer">RubikVault Learning System — Report wird täglich um 20:00 CET aktualisiert</div>
+    <div class="footer">RubikVault Learning System — Report updated daily at 20:00 CET</div>
   </div>
 
   <script src="/data/reports/learning-report-latest.js"></script>
   <script>
     const REPORT_URL = '/data/reports/learning-report-latest.json';
     const FEATURE_META = {
-      forecast: { icon: '📈', color: '#3b82f6', label: 'Kursrichtung + Wahrscheinlichkeit', metricKey: 'forecast_accuracy_7d' },
+      forecast: { icon: '📈', color: '#3b82f6', label: 'Price direction + probability', metricKey: 'forecast_accuracy_7d' },
       scientific: { icon: '🔬', color: '#8b5cf6', label: 'Setup/Trigger → Breakout', metricKey: 'scientific_hit_rate_7d' },
-      elliott: { icon: '🌊', color: '#06b6d4', label: 'Wave-Richtung (bullish/bearish)', metricKey: 'elliott_accuracy_7d' },
-      stock_analyzer: { icon: '📊', color: '#f59e0b', label: 'Ranking-Stabilität', metricKey: 'stock_stability' },
+      elliott: { icon: '🌊', color: '#06b6d4', label: 'Wave direction (bullish/bearish)', metricKey: 'elliott_accuracy_7d' },
+      stock_analyzer: { icon: '📊', color: '#f59e0b', label: 'Ranking stability', metricKey: 'stock_stability' },
     };
 
     function pct(v) { return v != null ? `${(v * 100).toFixed(1)}%` : '—'; }
     function num(v) { return v != null ? v.toFixed(4) : '—'; }
     function trendBadge(t) {
-      const m = { improving: ['↑ Besser', 'trend-improving'], declining: ['↓ Schlechter', 'trend-declining'], stable: ['→ Stabil', 'trend-stable'] };
-      const [text, cls] = m[t] || ['— Keine Daten', 'trend-nodata'];
+      const m = { improving: ['↑ Better', 'trend-improving'], declining: ['↓ Worse', 'trend-declining'], stable: ['→ Stable', 'trend-stable'] };
+      const [text, cls] = m[t] || ['— No data', 'trend-nodata'];
       return `<span class="trend-badge ${cls}">${text}</span>`;
     }
 
     function learningPhase(feat, daysActive) {
       if (feat.accuracy_7d == null && feat.hit_rate_7d == null && feat.stability == null) {
-        return `<span class="card-phase phase-bootstrap">📡 Sammelt Daten (Tag ${daysActive})</span>`;
+        return `<span class="card-phase phase-bootstrap">📡 Collecting data (Day ${daysActive})</span>`;
       }
       const trend = feat.trend_accuracy || feat.trend_brier;
-      if (trend === 'improving') return `<span class="card-phase phase-learning">🚀 Lernt aktiv</span>`;
-      if (trend === 'declining') return `<span class="card-phase phase-stagnant">⚠️ Rückgang</span>`;
-      return `<span class="card-phase phase-active">✅ Aktiv</span>`;
+      if (trend === 'improving') return `<span class="card-phase phase-learning">🚀 Learning active</span>`;
+      if (trend === 'declining') return `<span class="card-phase phase-stagnant">⚠️ Decline</span>`;
+      return `<span class="card-phase phase-active">✅ Active</span>`;
     }
 
     function sourceMetaText(meta) {
-      if (!meta) return 'Quelle unbekannt';
+      if (!meta) return 'Source unknown';
       const parts = [meta.source || 'unknown'];
       if (meta.asof) parts.push(`as of ${meta.asof}`);
       if (meta.fresh === true) parts.push('fresh');
@@ -738,65 +738,65 @@
       if (key === 'forecast') {
         if (preds === 0) {
           sections.push({
-            title: '🔴 Keine Predictions heute',
+            title: '🔴 No Predictions today',
             severity: 'critical',
-            text: 'Die Forecast-Pipeline hat heute keine Vorhersagen geliefert. Das System kann nur lernen, wenn täglich Predictions geschrieben werden.',
+            text: 'The Forecast pipeline did not deliver any predictions today. The system can only learn if predictions are written daily.',
             fixes: [
-              { what: 'Pipeline-Zeitplan prüfen', how: 'GitHub Actions → forecast-daily.yml muss VOR dem Learning-Cycle (19:00 UTC) laufen', file: '.github/workflows/forecast-daily.yml' },
-              { what: 'Ledger-Pfad verifizieren', how: 'Prüfen ob mirrors/forecast/ledger/forecasts/YYYY/MM.ndjson.gz existiert und aktuell ist', file: 'scripts/forecast/ledger_writer.mjs' },
-              { what: 'EODHD API-Limit prüfen', how: 'Wenn API-Limit erreicht, werden keine Forecast-Daten generiert. Budget-Ledger prüfen', file: 'public/data/v3/system/budget-ledger.json' },
+              { what: 'Check pipeline schedule', how: 'GitHub Actions → forecast-daily.yml must run BEFORE the Learning Cycle (19:00 UTC)', file: '.github/workflows/forecast-daily.yml' },
+              { what: 'Verify ledger path', how: 'Check if mirrors/forecast/ledger/forecasts/YYYY/MM.ndjson.gz exists and is current', file: 'scripts/forecast/ledger_writer.mjs' },
+              { what: 'Check EODHD API limit', how: 'If API limit is reached, no forecast data is generated. Check budget ledger', file: 'public/data/v3/system/budget-ledger.json' },
             ]
           });
         }
         if (acc != null && acc < 0.50) {
           sections.push({
-            title: '🔴 Accuracy unter 50% — Schlechter als Münzwurf',
+            title: '🔴 Accuracy below 50% — Worse than a coin toss',
             severity: 'critical',
-            text: `Aktuelle Accuracy: ${pct(acc)}. Das Modell trifft weniger als die Hälfte der Richtungs-Vorhersagen. Wahrscheinliche Ursache: Die Champion-Selektion im forecast_engine.mjs wählt ein Modell, das auf vergangene Marktphasen überangepasst ist.`,
+            text: `Current Accuracy: ${pct(acc)}. The model gets less than half of direction predictions right. Likely cause: Champion selection in forecast_engine.mjs selects a model overfitted to past market phases.`,
             fixes: [
-              { what: 'Champion-Selektion überarbeiten', how: 'Die Funktion selectChampion() nutzt aktuell nur historische Backtest-Scores. Ersetze durch Walk-Forward-Validation mit Out-of-Sample-Fenster der letzten 5 Tage', file: 'scripts/forecast/forecast_engine.mjs → selectChampion()' },
-              { what: 'Feature-Drift erkennen', how: 'Vergleiche die Feature-Verteilung der Trainings-Daten mit den aktuellen Live-Daten. Bei Drift > 2σ: Modell-Retrain triggern', file: 'scripts/forecast/evaluator.mjs' },
-              { what: 'Marktregime-Filter einbauen', how: 'Wenn VIX > 25 oder SPY-Drawdown > 3%, Forecast-Confidence automatisch auf 0.50 setzen (kein Signal)', file: 'scripts/forecast/forecast_engine.mjs → applyRegimeFilter()' },
-              { what: 'Probability-Calibration aktivieren', how: 'Isotonic Regression auf die letzten 30 Tage Predictions vs. Outcomes anwenden. Aktuell gibt das Modell systematisch über/unter-konfidente Wahrscheinlichkeiten aus', file: 'scripts/learning/lib/metrics.mjs → calibrate()' },
+              { what: 'Redesign champion selection', how: 'The selectChampion() function currently only uses historical backtest scores. Replace with Walk-Forward Validation using an out-of-sample window of the last 5 days', file: 'scripts/forecast/forecast_engine.mjs → selectChampion()' },
+              { what: 'Detect feature drift', how: 'Compare feature distribution of training data with current live data. If drift > 2σ: trigger model retrain', file: 'scripts/forecast/evaluator.mjs' },
+              { what: 'Implement market regime filter', how: 'If VIX > 25 or SPY drawdown > 3%, automatically set forecast confidence to 0.50 (no signal)', file: 'scripts/forecast/forecast_engine.mjs → applyRegimeFilter()' },
+              { what: 'Activate probability calibration', how: 'Apply Isotonic Regression to the last 30 days of predictions vs. outcomes. Currently the model gives systematically over/under-confident probabilities', file: 'scripts/learning/lib/metrics.mjs → calibrate()' },
             ]
           });
         } else if (acc != null && acc < 0.55) {
           sections.push({
-            title: '🟡 Accuracy 50-55% — Kaum besser als Zufall',
+            title: '🟡 Accuracy 50-55% — Barely better than random',
             severity: 'warning',
-            text: `Accuracy: ${pct(acc)}. Das System hat minimale Vorhersagekraft. Die Wahrscheinlichkeits-Outputs sind wahrscheinlich schlecht kalibriert.`,
+            text: `Accuracy: ${pct(acc)}. The system has minimal predictive power. Probability outputs are likely poorly calibrated.`,
             fixes: [
-              { what: 'Platt Scaling aktivieren', how: 'Logistic Regression auf Raw-Scores trainieren (sigmoid fit). Confidence-Output wird dadurch zuverlässiger', file: 'scripts/forecast/forecast_engine.mjs → calibrateOutput()' },
-              { what: 'Sector-spezifische Modelle testen', how: 'Tech-Aktien und Commodities haben unterschiedliche Momentum-Profile. Separate Modelle pro GICS-Sektor trainieren', file: 'scripts/forecast/forecast_engine.mjs' },
+              { what: 'Enable Platt Scaling', how: 'Train Logistic Regression on raw scores (sigmoid fit). Confidence output becomes more reliable', file: 'scripts/forecast/forecast_engine.mjs → calibrateOutput()' },
+              { what: 'Test sector-specific models', how: 'Tech stocks and commodities have different momentum profiles. Train separate models per GICS sector', file: 'scripts/forecast/forecast_engine.mjs' },
             ]
           });
         } else if (acc != null && acc >= 0.60) {
           sections.push({
-            title: '🟢 Accuracy über 60% — Gute Performance',
+            title: '🟢 Accuracy above 60% — Good performance',
             severity: 'ok',
-            text: `Accuracy: ${pct(acc)}. Das Modell arbeitet signifikant besser als Zufall. Fokus auf Stabilität und Brier-Score-Optimierung.`,
+            text: `Accuracy: ${pct(acc)}. The model works significantly better than random. Focus on stability and Brier Score optimization.`,
             fixes: []
           });
         }
         if (brier != null && brier > 0.25) {
           sections.push({
-            title: '🟡 Brier Score zu hoch — Wahrscheinlichkeiten unzuverlässig',
+            title: '🟡 Brier Score too high — Probabilities unreliable',
             severity: 'warning',
-            text: `Brier Score: ${num(brier)} (Ziel: < 0.20). Das Modell sagt zwar oft die richtige Richtung, aber die ausgegebenen Wahrscheinlichkeiten spiegeln nicht die tatsächliche Trefferquote wider. Bei p_up=0.80 treffen Vorhersagen nicht 80% der Fälle.`,
+            text: `Brier Score: ${num(brier)} (Target: < 0.20). The model often correctly predicts direction, but the output probabilities do not reflect the actual hit rate. At p_up=0.80, predictions do not hit 80% of cases.`,
             fixes: [
-              { what: 'Calibration-Kurve berechnen', how: 'Vorhersagen in 10 Bins (0.0-0.1, 0.1-0.2, ...) gruppieren und tatsächliche Trefferquote pro Bin berechnen. Abweichung > 5% zeigt Fehlkalibration', file: 'scripts/learning/lib/metrics.mjs → buildCalibrationCurve()' },
-              { what: 'Temperature Scaling', how: 'Einen einzigen Parameter T (Temperature) lernen, der alle Logits durch T teilt. Minimiert Brier Score auf Validierungsdaten', file: 'scripts/forecast/forecast_engine.mjs' },
+              { what: 'Calculate calibration curve', how: 'Group predictions in 10 bins (0.0-0.1, 0.1-0.2, ...) and calculate actual hit rate per bin. Deviation > 5% indicates miscalibration', file: 'scripts/learning/lib/metrics.mjs → buildCalibrationCurve()' },
+              { what: 'Temperature Scaling', how: 'Learn a single parameter T (Temperature) that divides all logits by T. Minimizes Brier Score on validation data', file: 'scripts/forecast/forecast_engine.mjs' },
             ]
           });
         }
         if (trendAcc === 'declining') {
           sections.push({
-            title: '🔴 Accuracy-Trend fallend — Feature verschlechtert sich',
+            title: '🔴 Accuracy trend declining — Feature deteriorating',
             severity: 'critical',
-            text: 'Die 7d-Accuracy sinkt im Vergleich zum Vorzeitraum. Das deutet auf Feature-Drift oder einen Marktregimewechsel hin.',
+            text: 'The 7d accuracy is falling compared to the previous period. This suggests feature drift or a market regime shift.',
             fixes: [
-              { what: 'Regime-Detektion implementieren', how: 'HMM (Hidden Markov Model) oder Bollinger-Band-Regime-Klassifikation einbauen. Bei Regime-Wechsel: Modell-Ensemble umschalten', file: 'scripts/forecast/forecast_engine.mjs' },
-              { what: 'Rolling-Retrain aktivieren', how: 'Modell alle 5 Tage auf den letzten 60 Tagen neu trainieren statt statisches Modell zu verwenden', file: 'scripts/forecast/run_daily.mjs' },
+              { what: 'Implement regime detection', how: 'Integrate HMM (Hidden Markov Model) or Bollinger Band regime classification. On regime change: switch model ensemble', file: 'scripts/forecast/forecast_engine.mjs' },
+              { what: 'Enable rolling retrain', how: 'Retrain model every 5 days on the last 60 days instead of using a static model', file: 'scripts/forecast/run_daily.mjs' },
             ]
           });
         }
@@ -1009,7 +1009,7 @@
         // Sparkline data from history
         const sparkData = history.map(h => h[meta.metricKey]);
         const sparkHTML = sparkData.some(v => v != null) ? sparklineSVG(sparkData, meta.color)
-          : `<div class="sparkline-empty">📊 Trend erscheint nach ersten Outcomes</div>`;
+          : `<div class="sparkline-empty">📊 Trend appears after initial outcomes</div>`;
 
         let metricsHTML = '';
         if (!isStock) {
@@ -1019,11 +1019,11 @@
           if (feat.hit_rate_7d != null) metricsHTML += metricRow('Hit Rate (7d)', pct(feat.hit_rate_7d));
           metricsHTML += metricRow('Predictions', (feat.predictions_today ?? 0).toLocaleString());
         } else {
-          metricsHTML += metricRow('Stabilität', pct(feat.stability));
+          metricsHTML += metricRow('Stability', pct(feat.stability));
           metricsHTML += metricRow('Churn', feat.churn != null ? String(feat.churn) : '—');
           metricsHTML += metricRow('Rankings', (feat.rankings_today ?? 0).toLocaleString());
         }
-        metricsHTML += metricRow('Quelle', sourceMetaText(feat.source_meta));
+        metricsHTML += metricRow('Source', sourceMetaText(feat.source_meta));
 
         const accVal = feat.accuracy_7d ?? feat.accuracy_all ?? feat.stability;
         const progressHTML = accVal != null ? `<div class="progress-bar-bg"><div class="progress-bar-fill" style="width:${Math.min(100, accVal * 100)}%;background:${meta.color}"></div></div>` : '';
@@ -1048,7 +1048,7 @@
       const chartSVG = hasHistoryData ? trendChartSVG(history, chartKeys, chartColors) : '';
 
       const chartSection = `<div class="chart-section">
-    <h2>📉 Entwicklung über Zeit (30 Tage)</h2>
+    <h2>📉 Trend over time (30 days)</h2>
     ${chartSVG ? `<div class="chart-area">${chartSVG}</div>
       <div class="chart-legend">
         <div class="chart-legend-item"><div class="chart-legend-dot" style="background:#3b82f6"></div> Forecast Accuracy</div>
@@ -1057,7 +1057,7 @@
       </div>` :
           `<div class="chart-empty"><div class="chart-icon">📈</div>
         <div>Trend-Chart erscheint nach den ersten Outcome-Daten</div>
-        <div style="font-size:11px;margin-top:4px;color:var(--text-dim)">Forecast: nach 1 Tag · Scientific/Elliott: nach 5 Tagen</div>
+        <div style="font-size:11px;margin-top:4px;color:var(--text-dim)">Forecast: after 1 day · Scientific/Elliott: after 5 days</div>
       </div>`}
   </div>`;
 
@@ -1081,9 +1081,9 @@
       }).join('');
 
       const compSection = `<div class="comparison-section">
-    <h2>📊 Woche-über-Woche Vergleich</h2>
+    <h2>📊 Week-over-week comparison</h2>
     <table class="comparison-table">
-      <tr><th>Feature</th><th>Diese Woche</th><th>Letzte Woche</th><th>Veränderung</th></tr>
+      <tr><th>Feature</th><th>This week</th><th>Last week</th><th>Change</th></tr>
       ${compRows}
     </table>
   </div>`;
@@ -1091,11 +1091,11 @@
       const bootstrapDetail = r.summary.overall_status.includes('BOOTSTRAP') ? `<div class="comparison-section">
     <h2>📦 Bootstrap-Status</h2>
     <table class="comparison-table">
-      <tr><th>Feature</th><th>Heute geloggt</th><th>Quelle</th><th>Erste Outcomes</th></tr>
-      <tr><td>📈 Forecast</td><td>${(r.features?.forecast?.predictions_today ?? 0).toLocaleString()}</td><td>${sourceMetaText(r.features?.forecast?.source_meta)}</td><td>nach 1 Handelstag</td></tr>
-      <tr><td>🔬 Scientific</td><td>${(r.features?.scientific?.predictions_today ?? 0).toLocaleString()}</td><td>${sourceMetaText(r.features?.scientific?.source_meta)}</td><td>nach 5 Handelstagen</td></tr>
-      <tr><td>🌊 Elliott</td><td>${(r.features?.elliott?.predictions_today ?? 0).toLocaleString()}</td><td>${sourceMetaText(r.features?.elliott?.source_meta)}</td><td>nach 5 Handelstagen</td></tr>
-      <tr><td>📊 Stock Analyzer</td><td>${(r.features?.stock_analyzer?.rankings_today ?? 0).toLocaleString()}</td><td>${sourceMetaText(r.features?.stock_analyzer?.source_meta)}</td><td>ab Tag 2 via Stabilität</td></tr>
+      <tr><th>Feature</th><th>Logged today</th><th>Source</th><th>Initial Outcomes</th></tr>
+      <tr><td>📈 Forecast</td><td>${(r.features?.forecast?.predictions_today ?? 0).toLocaleString()}</td><td>${sourceMetaText(r.features?.forecast?.source_meta)}</td><td>after 1 trading day</td></tr>
+      <tr><td>🔬 Scientific</td><td>${(r.features?.scientific?.predictions_today ?? 0).toLocaleString()}</td><td>${sourceMetaText(r.features?.scientific?.source_meta)}</td><td>after 5 trading days</td></tr>
+      <tr><td>🌊 Elliott</td><td>${(r.features?.elliott?.predictions_today ?? 0).toLocaleString()}</td><td>${sourceMetaText(r.features?.elliott?.source_meta)}</td><td>after 5 trading days</td></tr>
+      <tr><td>📊 Stock Analyzer</td><td>${(r.features?.stock_analyzer?.rankings_today ?? 0).toLocaleString()}</td><td>${sourceMetaText(r.features?.stock_analyzer?.source_meta)}</td><td>from day 2 via stability</td></tr>
     </table>
   </div>` : '';
 
@@ -1142,7 +1142,7 @@
     ${chartSection}
     ${compSection}
     <div class="diagnose-section">
-      <h2>🔍 Diagnose & Konkrete Nachbesserungen pro Feature</h2>
+      <h2>🔍 Diagnosis & Concrete Fixes per Feature</h2>
       ${diagHTML}
     </div>`;
     }
@@ -1152,7 +1152,7 @@
     }
 
     function formatDate(ds) {
-      const m = ['Jan', 'Feb', 'Mär', 'Apr', 'Mai', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dez'];
+      const m = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
       const [y, mo, d] = ds.split('-');
       return `${parseInt(d)}. ${m[parseInt(mo) - 1]} ${y}`;
     }
@@ -1170,11 +1170,11 @@
       } catch {
         if (embedded && embedded.features) return;
         document.getElementById('app').innerHTML = `<div class="error-state">
-      <p style="font-size:18px;margin-bottom:8px">⚠️ Report nicht verfügbar</p>
+      <p style="font-size:18px;margin-bottom:8px">⚠️ Report unavailable</p>
       <p style="font-size:13px;color:var(--text-dim)">Starte zuerst:<br>
         <code style="background:var(--card);padding:4px 8px;border-radius:4px;margin-top:8px;display:inline-block">
           node scripts/learning/run-daily-learning-cycle.mjs</code></p>
-      <p style="font-size:12px;color:var(--text-dim);margin-top:12px"><a href="/data/reports/learning-report-latest.json" style="color:var(--accent)">Rohreport öffnen</a></p></div>`;
+      <p style="font-size:12px;color:var(--text-dim);margin-top:12px"><a href="/data/reports/learning-report-latest.json" style="color:var(--accent)">Open raw report</a></p></div>`;
       }
     }
     loadAndRender();

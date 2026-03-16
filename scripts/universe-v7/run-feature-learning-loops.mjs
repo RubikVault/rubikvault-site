@@ -186,7 +186,6 @@ async function main() {
     const steps = [];
 
     steps.push(runStep('Build v7 Stock SSOT', 'node', ['scripts/universe-v7/build-stock-ssot.mjs']));
-    steps.push(runStep('Build Scientific Analysis', 'node', ['scripts/scientific-analyzer/generate-analysis.mjs']));
     steps.push(
       runStep(
         'Build Marketphase Deep Summary',
@@ -198,6 +197,7 @@ async function main() {
         ]
       )
     );
+    steps.push(runStep('Build Scientific Analysis', 'node', ['scripts/scientific-analyzer/generate-analysis.mjs']));
     steps.push(runStep('Run Forecast Daily', 'node', ['scripts/forecast/run_daily.mjs']));
     steps.push(runStep('Report Forecast Pack Coverage', 'node', ['scripts/universe-v7/report-forecast-pack-coverage.mjs']));
     steps.push(runStep('Report Feature Stock Universe', 'node', ['scripts/universe-v7/report-feature-stock-universe.mjs']));

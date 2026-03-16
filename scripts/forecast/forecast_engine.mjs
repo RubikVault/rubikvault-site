@@ -239,8 +239,16 @@ export function generateForecast({
     const features = featureSnapshot.features;
     const neutralBand = championSpec.neutral_band ?? 0.03;
 
+    // Horizon-specific weight overrides: short-term weights momentum, long-term weights trend
+    const HORIZON_WEIGHTS = {
+        '1d': { returns_1d: 1.5, returns_5d: 0.5, returns_20d: 0.2, rsi_14: -0.02, dist_to_200d: 0.3, rs_vs_spy_20d: 0.4 },
+        '5d': { returns_1d: 0.8, returns_5d: 1.2, returns_20d: 0.5, rs_vs_spy_20d: 0.8 },
+        '20d': { returns_1d: 0.3, returns_5d: 0.6, returns_20d: 1.5, dist_to_200d: 1.2, is_above_200d: 0.5, rs_vs_spy_20d: 0.9 }
+    };
+    const horizonWeights = HORIZON_WEIGHTS[horizon] ?? null;
+
     // Raw prediction
-    const rawP = logisticPredict(features, null);
+    const rawP = logisticPredict(features, horizonWeights);
 
     // Calibration
     const calibratedP = championSpec.calibration_method === 'isotonic'
