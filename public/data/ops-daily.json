@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0",
-  "asOf": "2026-03-17T08:06:20.490Z",
+  "asOf": "2026-03-17T22:49:58.644Z",
   "baseline": {
     "expectedUniverse": 2453,
     "pipeline": {
@@ -159,7 +159,7 @@
     "cloudflare": {
       "requestsToday": null,
       "requestsLast24h": null,
-      "notes": "ok"
+      "notes": "CF analytics not configured"
     },
     "safety": {
       "kvWritesToday": 0,
@@ -183,16 +183,16 @@
         },
         "sample": [
           {
-            "symbol": "BKR",
+            "symbol": "TMUS",
             "stage": "validate",
             "class": "VALIDATION_FAILED",
             "hint": "close_outside_range",
-            "since": "2026-03-16T22:52:29.967Z"
+            "since": "2026-03-17T22:49:56.146Z"
           }
         ]
       },
       "root_failure": null,
-      "generated_at": "2026-03-16T22:52:29.967Z"
+      "generated_at": "2026-03-17T22:49:56.146Z"
     }
   }
 }
