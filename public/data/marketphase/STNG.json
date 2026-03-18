@@ -3,8 +3,8 @@
   "feature": "marketphase",
   "meta": {
     "symbol": "STNG",
-    "generatedAt": "2026-03-17T08:05:26.000Z",
-    "fetchedAt": "2026-03-17T08:05:26.000Z",
+    "generatedAt": "2026-03-18T07:28:55.912Z",
+    "fetchedAt": "2026-03-18T07:28:55.912Z",
     "ttlSeconds": 86400,
     "provider": "internal",
     "dataset": "STNG",
@@ -15,8 +15,8 @@
     "precision": "IEEE754-Double-Round6",
     "auditTrail": {
       "generatedBy": "MarketPhase-v8-Engine",
-      "commitHash": "e54b666",
-      "reviewDate": "2026-03-17T08:05:26.000Z",
+      "commitHash": "2bfffe4",
+      "reviewDate": "2026-03-18T07:28:55.912Z",
       "standards": [
         "ISO-8000",
         "IEEE-7000"
@@ -26,158 +26,164 @@
   },
   "data": {
     "features": {
-      "RSI": 43.927457,
-      "MACDHist": -1.67708,
-      "ATR%": 2.321577,
-      "SMA50": 65.692848,
-      "SMA200": 54.445035,
+      "RSI": 39.837503,
+      "MACDHist": -1.785678,
+      "ATR%": 2.453081,
+      "SMA50": 66.03073,
+      "SMA200": 54.582209,
       "SMATrend": "bullish",
-      "lastClose": 68.42
+      "lastClose": 66.3
     },
     "swings": {
       "raw": [
         {
-          "index": 12,
+          "index": 11,
           "date": "2025-03-20",
           "price": 40.8711,
           "type": "high"
         },
         {
-          "index": 23,
+          "index": 22,
           "date": "2025-04-04",
           "price": 30.8713,
           "type": "low"
         },
         {
-          "index": 49,
+          "index": 48,
           "date": "2025-05-13",
           "price": 40.9292,
           "type": "high"
         },
         {
-          "index": 56,
+          "index": 55,
           "date": "2025-05-22",
           "price": 38.2355,
           "type": "low"
         },
         {
-          "index": 74,
+          "index": 73,
           "date": "2025-06-18",
           "price": 43.3577,
           "type": "high"
         },
         {
-          "index": 81,
+          "index": 80,
           "date": "2025-06-30",
           "price": 38.2976,
           "type": "low"
         },
         {
-          "index": 90,
+          "index": 89,
           "date": "2025-07-14",
           "price": 44.6202,
           "type": "high"
         },
         {
-          "index": 106,
+          "index": 105,
           "date": "2025-08-05",
           "price": 47.9577,
           "type": "high"
         },
         {
-          "index": 110,
+          "index": 109,
           "date": "2025-08-11",
           "price": 43.1326,
           "type": "low"
         },
         {
-          "index": 134,
+          "index": 133,
           "date": "2025-09-15",
           "price": 60.0907,
           "type": "high"
         },
         {
-          "index": 155,
+          "index": 154,
           "date": "2025-10-14",
           "price": 52.7337,
           "type": "low"
         },
         {
-          "index": 174,
+          "index": 173,
           "date": "2025-11-10",
           "price": 63.7149,
           "type": "high"
         },
         {
-          "index": 211,
+          "index": 210,
           "date": "2026-01-05",
           "price": 49.227,
           "type": "low"
         },
         {
-          "index": 217,
+          "index": 216,
           "date": "2026-01-13",
           "price": 59.7465,
+          "type": "high"
+        },
+        {
+          "index": 250,
+          "date": "2026-03-04",
+          "price": 79.7316,
           "type": "high"
         }
       ],
       "confirmed": [
         {
-          "index": 12,
+          "index": 11,
           "date": "2025-03-20",
           "price": 40.8711,
           "type": "high"
         },
         {
-          "index": 23,
+          "index": 22,
           "date": "2025-04-04",
           "price": 30.8713,
           "type": "low"
         },
         {
-          "index": 49,
+          "index": 48,
           "date": "2025-05-13",
           "price": 40.9292,
           "type": "high"
         },
         {
-          "index": 56,
+          "index": 55,
           "date": "2025-05-22",
           "price": 38.2355,
           "type": "low"
         },
         {
-          "index": 81,
+          "index": 80,
           "date": "2025-06-30",
           "price": 38.2976,
           "type": "low"
         },
         {
-          "index": 110,
+          "index": 109,
           "date": "2025-08-11",
           "price": 43.1326,
           "type": "low"
         },
         {
-          "index": 134,
+          "index": 133,
           "date": "2025-09-15",
           "price": 60.0907,
           "type": "high"
         },
         {
-          "index": 155,
+          "index": 154,
           "date": "2025-10-14",
           "price": 52.7337,
           "type": "low"
         },
         {
-          "index": 174,
+          "index": 173,
           "date": "2025-11-10",
           "price": 63.7149,
           "type": "high"
         },
         {
-          "index": 211,
+          "index": 210,
           "date": "2026-01-05",
           "price": 49.227,
           "type": "low"
@@ -244,7 +250,7 @@
     "debug": {
       "symbol": "STNG",
       "window": 9,
-      "candidateCount": 14,
+      "candidateCount": 15,
       "durationMs": 0
     },
     "disclaimer": "MarketPhase AI — Scientific Elliott Research (v8.0)\nprovides deterministic, rule-based historical analysis only.\nIt does not forecast future prices or offer financial advice.\nUse solely for educational and research purposes.\nISO 8000 / IEEE 7000 Compliant - Bit-exact reproducibility guaranteed."
