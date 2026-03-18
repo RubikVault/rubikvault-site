@@ -1,2724 +1,793 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="dark">
-
-<head>
-  <meta charset="UTF-8" />
-  <title>Stock Analysis · RubikVault</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
-  <meta name="description"
-    content="Comprehensive technical analysis dashboard for any stock — Moving Averages, RSI, MACD, Bollinger Bands, and more." />
-  <!-- OG / Social Meta (updated dynamically on render) -->
-  <meta property="og:type" content="website" />
-  <meta property="og:site_name" content="RubikVault" />
-  <meta property="og:image" content="https://rubikvault.com/assets/rv-favicon.png" />
-  <meta property="og:title" id="og-title" content="Stock Analysis · RubikVault" />
-  <meta property="og:description" id="og-desc" content="Technical analysis dashboard — Moving Averages, RSI, MACD, Bollinger Bands and more." />
-  <meta property="og:url" id="og-url" content="https://rubikvault.com/analyze/" />
-  <meta name="twitter:card" content="summary" />
-  <link rel="icon" type="image/png" sizes="32x32" href="https://rubikvault.com/assets/rv-favicon.png" />
-  <script>
-    const RV_ASSET_BASE = window.location.protocol === 'file:' ? '.' : '';
-    document.write(`<link rel="stylesheet" href="${RV_ASSET_BASE}/style.css" />`);
-    document.write(`<link rel="stylesheet" href="${RV_ASSET_BASE}/search.css" />`);
-  </script>
-  <style>
-    :root {
-      --bg: #020617;
-      --card: rgba(15, 23, 42, 0.92);
-      --card-hover: rgba(15, 23, 42, 0.98);
-      --border: rgba(148, 163, 184, 0.15);
-      --border-bright: rgba(148, 163, 184, 0.3);
-      --text: #f1f5f9;
-      --text-dim: #94a3b8;
-      --text-muted: #64748b;
-      --accent: #06b6d4;
-      --accent-glow: rgba(6, 182, 212, 0.12);
-      --green: #10b981;
-      --green-bg: rgba(16, 185, 129, 0.08);
-      --red: #f87171;
-      --red-bg: rgba(248, 113, 113, 0.08);
-      --yellow: #fbbf24;
-      --yellow-bg: rgba(251, 191, 36, 0.08);
-      --radius: 16px;
-      --radius-sm: 10px;
-    }
-
-    * {
-      box-sizing: border-box;
-    }
-
-    body {
-      margin: 0;
-      font-family: 'Inter', system-ui, -apple-system, sans-serif;
-      background: var(--bg);
-      color: var(--text);
-    }
-
-    .rv-main {
-      max-width: 980px;
-      margin: 0 auto;
-      padding: 2rem 1.25rem 3rem;
-    }
-
-    /* ─── Header Card ─── */
-    .header-card {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 1.5rem 1.75rem;
-      margin-bottom: 1rem;
-    }
-
-    .header-top {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      flex-wrap: wrap;
-      gap: 1rem;
-    }
-
-    .header-left {
-      display: flex;
-      flex-direction: column;
-      gap: 0.15rem;
-    }
-
-    .stock-title {
-      font-size: 1.75rem;
-      font-weight: 800;
-      margin: 0;
-      letter-spacing: -0.02em;
-    }
-
-    .stock-subtitle {
-      font-size: 0.85rem;
-      color: var(--text-dim);
-    }
-
-    .stock-form {
-      display: flex;
-      gap: 0.5rem;
-      align-items: center;
-      flex-wrap: wrap;
-    }
-
-    .stock-form input {
-      padding: 0.6rem 1rem;
-      border-radius: 999px;
-      border: 1px solid var(--border);
-      background: rgba(15, 23, 42, 0.6);
-      color: var(--text);
-      font-size: 0.95rem;
-      width: 140px;
-      outline: none;
-    }
-
-    .stock-form input:focus {
-      border-color: var(--accent);
-    }
-
-    .stock-form button {
-      padding: 0.6rem 1.25rem;
-      border-radius: 999px;
-      border: none;
-      background: linear-gradient(135deg, #14b8a6, #06b6d4);
-      color: #0f172a;
-      font-weight: 700;
-      cursor: pointer;
-      font-size: 0.9rem;
-    }
-
-    .badges {
-      display: flex;
-      gap: 0.4rem;
-      flex-wrap: wrap;
-      margin-top: 0.5rem;
-    }
-
-    .badge {
-      padding: 0.2rem 0.6rem;
-      border-radius: 6px;
-      font-size: 0.75rem;
-      font-weight: 600;
-      border: 1px solid var(--border);
-      color: var(--text-dim);
-      background: rgba(255, 255, 255, 0.03);
-    }
-
-    .badge.unknown {
-      border-color: rgba(248, 113, 113, 0.4);
-      color: var(--red);
-    }
-
-    /* ─── Price Block ─── */
-    .price-block {
-      display: flex;
-      align-items: baseline;
-      gap: 1rem;
-      flex-wrap: wrap;
-      margin-top: 0.75rem;
-    }
-
-    .price-big {
-      font-size: 2.5rem;
-      font-weight: 800;
-      letter-spacing: -0.03em;
-    }
-
-    .price-change {
-      font-size: 1.1rem;
-      font-weight: 700;
-      padding: 0.25rem 0.6rem;
-      border-radius: 8px;
-    }
-
-    .price-change.up {
-      color: var(--green);
-      background: var(--green-bg);
-    }
-
-    .price-change.down {
-      color: var(--red);
-      background: var(--red-bg);
-    }
-
-    .price-date {
-      font-size: 0.8rem;
-      color: var(--text-muted);
-    }
-
-    /* ─── 52W Range ─── */
-    .range-52w {
-      margin-top: 0.75rem;
-    }
-
-    .range-bar {
-      height: 6px;
-      background: rgba(148, 163, 184, 0.15);
-      border-radius: 3px;
-      position: relative;
-    }
-
-    .range-dot {
-      position: absolute;
-      top: -3px;
-      width: 12px;
-      height: 12px;
-      border-radius: 50%;
-      background: var(--accent);
-      border: 2px solid var(--bg);
-      transform: translateX(-50%);
-    }
-
-    .range-labels {
-      display: flex;
-      justify-content: space-between;
-      font-size: 0.75rem;
-      color: var(--text-muted);
-      margin-top: 0.2rem;
-    }
-
-    .range-labels .range-pct {
-      font-size: 0.7rem;
-      color: var(--text-dim);
-    }
-
-    /* ─── Error ─── */
-    .error-box {
-      padding: 0.75rem 1rem;
-      border-radius: var(--radius-sm);
-      background: var(--red-bg);
-      border: 1px solid rgba(248, 113, 113, 0.4);
-      color: var(--red);
-      font-size: 0.85rem;
-      margin-bottom: 1rem;
-    }
-
-    /* ─── Grid layout ─── */
-    .sections-grid {
-      display: grid;
-      gap: 1rem;
-      grid-template-columns: 1fr 1fr;
-      align-items: start;
-    }
-
-    .section-full {
-      grid-column: 1 / -1;
-    }
-
-    /* ─── Section Card ─── */
-    .section {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 1.25rem 1.5rem;
-      overflow: hidden;
-    }
-
-    .section h2 {
-      font-size: 0.85rem;
-      font-weight: 700;
-      color: var(--text-dim);
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-      margin: 0 0 0.75rem;
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-    }
-
-    /* ─── Metric Grid ─── */
-    .m-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
-      gap: 0.5rem;
-    }
-
-    .m-item {
-      padding: 0.6rem 0.75rem;
-      border-radius: var(--radius-sm);
-      background: rgba(255, 255, 255, 0.02);
-      border: 1px solid rgba(255, 255, 255, 0.04);
-    }
-
-    .m-label {
-      font-size: 0.7rem;
-      color: var(--text-muted);
-      margin-bottom: 0.15rem;
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
-    }
-
-    .m-val {
-      font-size: 1rem;
-      font-weight: 700;
-    }
-
-    .m-sub {
-      font-size: 0.7rem;
-      color: var(--text-dim);
-      margin-top: 0.1rem;
-    }
-
-    /* ─── MA Table ─── */
-    .ma-table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 0.85rem;
-    }
-
-    .ma-table th {
-      text-align: left;
-      font-size: 0.7rem;
-      color: var(--text-muted);
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
-      padding: 0.4rem 0.5rem;
-      border-bottom: 1px solid var(--border);
-      font-weight: 600;
-    }
-
-    .ma-table td {
-      padding: 0.5rem 0.5rem;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.03);
-    }
-
-    .ma-table tr:last-child td {
-      border-bottom: none;
-    }
-
-    .ma-pos {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.3rem;
-      font-weight: 700;
-      font-size: 0.8rem;
-    }
-
-    .ma-pos.above {
-      color: var(--green);
-    }
-
-    .ma-pos.below {
-      color: var(--red);
-    }
-
-    /* ─── Stack Badge ─── */
-    .stack-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.4rem;
-      padding: 0.4rem 0.8rem;
-      border-radius: 8px;
-      font-size: 0.85rem;
-      font-weight: 700;
-      margin-bottom: 0.75rem;
-    }
-
-    .stack-badge.bullish {
-      background: var(--green-bg);
-      color: var(--green);
-      border: 1px solid rgba(16, 185, 129, 0.3);
-    }
-
-    .stack-badge.bearish {
-      background: var(--red-bg);
-      color: var(--red);
-      border: 1px solid rgba(248, 113, 113, 0.3);
-    }
-
-    .stack-badge.mixed {
-      background: var(--yellow-bg);
-      color: var(--yellow);
-      border: 1px solid rgba(251, 191, 36, 0.3);
-    }
-
-    /* ─── Gauge ─── */
-    .gauge {
-      margin-bottom: 0.75rem;
-    }
-
-    .gauge:last-child {
-      margin-bottom: 0;
-    }
-
-    .gauge-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: baseline;
-      margin-bottom: 0.3rem;
-    }
-
-    .gauge-label {
-      font-size: 0.8rem;
-      font-weight: 600;
-    }
-
-    .gauge-value {
-      font-size: 0.85rem;
-      font-weight: 700;
-    }
-
-    .gauge-bar {
-      height: 8px;
-      background: rgba(148, 163, 184, 0.1);
-      border-radius: 4px;
-      position: relative;
-      overflow: hidden;
-    }
-
-    .gauge-fill {
-      height: 100%;
-      border-radius: 4px;
-      transition: width 0.3s;
-    }
-
-    .gauge-zones {
-      display: flex;
-      gap: 0;
-      height: 100%;
-    }
-
-    .gauge-zone {
-      height: 100%;
-    }
-
-    .gauge-marker {
-      position: absolute;
-      top: -2px;
-      width: 3px;
-      height: 12px;
-      background: white;
-      border-radius: 1px;
-      transform: translateX(-50%);
-      box-shadow: 0 0 4px rgba(0, 0, 0, 0.5);
-    }
-
-    .gauge-ticks {
-      display: flex;
-      justify-content: space-between;
-      font-size: 0.65rem;
-      color: var(--text-muted);
-      margin-top: 0.15rem;
-    }
-
-    /* ─── Signal chip ─── */
-    .signal-chip {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.3rem;
-      padding: 0.3rem 0.7rem;
-      border-radius: 6px;
-      font-size: 0.78rem;
-      font-weight: 700;
-    }
-
-    .signal-chip.buy {
-      background: var(--green-bg);
-      color: var(--green);
-    }
-
-    .signal-chip.sell {
-      background: var(--red-bg);
-      color: var(--red);
-    }
-
-    .signal-chip.neutral {
-      background: rgba(148, 163, 184, 0.08);
-      color: var(--text-dim);
-    }
-
-    /* ─── Signal Table ─── */
-    .sig-table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 0.85rem;
-    }
-
-    .sig-table th {
-      text-align: left;
-      font-size: 0.7rem;
-      color: var(--text-muted);
-      text-transform: uppercase;
-      padding: 0.4rem 0.5rem;
-      border-bottom: 1px solid var(--border);
-      font-weight: 600;
-    }
-
-    .sig-table td {
-      padding: 0.45rem 0.5rem;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.03);
-    }
-
-    .sig-table tr:last-child td {
-      border-bottom: none;
-    }
-
-    /* ─── Perf bars ─── */
-    .perf-item {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      padding: 0.35rem 0;
-    }
-
-    .perf-label {
-      font-size: 0.8rem;
-      color: var(--text-dim);
-      width: 50px;
-      text-align: right;
-      flex-shrink: 0;
-    }
-
-    .perf-bar-container {
-      flex: 1;
-      height: 20px;
-      position: relative;
-      border-radius: 4px;
-      overflow: hidden;
-      background: rgba(148, 163, 184, 0.05);
-    }
-
-    .perf-bar {
-      height: 100%;
-      position: absolute;
-      top: 0;
-      border-radius: 4px;
-      min-width: 2px;
-    }
-
-    .perf-bar.positive {
-      background: linear-gradient(90deg, rgba(16, 185, 129, 0.4), rgba(16, 185, 129, 0.7));
-      right: 50%;
-    }
-
-    .perf-bar.negative {
-      background: linear-gradient(270deg, rgba(248, 113, 113, 0.4), rgba(248, 113, 113, 0.7));
-      left: 50%;
-    }
-
-    .perf-center {
-      position: absolute;
-      left: 50%;
-      top: 0;
-      bottom: 0;
-      width: 1px;
-      background: rgba(148, 163, 184, 0.2);
-    }
-
-    .perf-val {
-      font-size: 0.8rem;
-      font-weight: 700;
-      width: 65px;
-      flex-shrink: 0;
-    }
-
-    .perf-val.positive {
-      color: var(--green);
-    }
-
-    .perf-val.negative {
-      color: var(--red);
-    }
-
-    /* ─── Levels ─── */
-    .levels-list {
-      display: flex;
-      flex-direction: column;
-      gap: 0.3rem;
-    }
-
-    .level-item {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 0.4rem 0.6rem;
-      border-radius: 6px;
-      border-left: 3px solid;
-      font-size: 0.85rem;
-      background: rgba(255, 255, 255, 0.02);
-    }
-
-    .level-item.support {
-      border-left-color: var(--green);
-    }
-
-    .level-item.resistance {
-      border-left-color: var(--red);
-    }
-
-    .level-item.current {
-      border-left-color: var(--accent);
-      background: var(--accent-glow);
-    }
-
-    .level-name {
-      font-weight: 600;
-      font-size: 0.8rem;
-    }
-
-    .level-price {
-      font-weight: 700;
-    }
-
-    .level-dist {
-      font-size: 0.75rem;
-      color: var(--text-dim);
-      margin-left: 0.5rem;
-    }
-
-    /* ─── S/R Level Ladder ─── */
-    .sr-summary {
-      display: grid;
-      grid-template-columns: 1fr auto 1fr;
-      gap: 0.75rem;
-      margin-bottom: 0.5rem;
-      align-items: start;
-    }
-    .sr-item { padding: 0.75rem; border-radius: var(--radius-sm); border: 1px solid var(--border); }
-    .sr-item.support    { background: rgba(16,185,129,0.06); border-color: rgba(16,185,129,0.25); }
-    .sr-item.resistance { background: rgba(248,113,113,0.06); border-color: rgba(248,113,113,0.25); }
-    .sr-item.empty      { opacity: 0.5; }
-    .sr-current { text-align: center; padding: 0.75rem 0.5rem; }
-    .sr-label  { font-size: 0.65rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 0.25rem; }
-    .sr-price  { font-size: 1.1rem; font-weight: 800; margin-bottom: 0.1rem; }
-    .sr-item.support    .sr-price { color: var(--green); }
-    .sr-item.resistance .sr-price { color: var(--red); }
-    .sr-name  { font-size: 0.75rem; color: var(--text-dim); }
-    .sr-dist  { font-size: 0.72rem; color: var(--text-muted); }
-    .sr-trigger  { font-size: 0.7rem; color: var(--accent); margin-top: 0.2rem; }
-    .sr-invalid  { font-size: 0.7rem; color: var(--red); margin-top: 0.2rem; }
-    .key-level { font-weight: 700; }
-    @media (max-width: 500px) { .sr-summary { grid-template-columns: 1fr; } }
-
-    /* ─── Collapsible Advanced Sections ─── */
-    details.advanced-collapsible {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-sm);
-      padding: 1rem 1.25rem;
-    }
-    details.advanced-collapsible[open] { padding-bottom: 1rem; }
-    summary.section-summary-header {
-      cursor: pointer;
-      font-size: 0.85rem;
-      font-weight: 700;
-      letter-spacing: 0.05em;
-      text-transform: uppercase;
-      color: var(--text-dim);
-      list-style: none;
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      user-select: none;
-    }
-    summary.section-summary-header::before { content: '▶'; font-size: 0.6rem; transition: transform 0.2s; }
-    details[open] > summary.section-summary-header::before { transform: rotate(90deg); }
-    summary.section-summary-header::-webkit-details-marker { display: none; }
-    .advanced-badge {
-      font-size: 0.6rem; font-weight: 700; letter-spacing: 0.08em;
-      background: rgba(148,163,184,0.12); color: var(--text-muted);
-      padding: 0.1rem 0.35rem; border-radius: 4px; border: 1px solid var(--border);
-    }
-
-    /* ─── Decision Strip ─── */
-    .decision-strip-section { grid-column: 1 / -1; }
-    .decision-strip {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 0.75rem;
-    }
-    @media (max-width: 640px) { .decision-strip { grid-template-columns: 1fr; } }
-    .decision-card {
-      border-radius: var(--radius-sm);
-      padding: 1rem;
-      border: 1px solid var(--border);
-    }
-    .decision-card.bullish { background: var(--green-bg); border-color: rgba(16,185,129,0.35); }
-    .decision-card.bearish { background: var(--red-bg);   border-color: rgba(248,113,113,0.35); }
-    .decision-card.neutral { background: var(--yellow-bg); border-color: rgba(251,191,36,0.35); }
-    .decision-horizon {
-      font-size: 0.7rem; font-weight: 700; letter-spacing: 0.1em;
-      color: var(--text-dim); text-transform: uppercase; margin-bottom: 0.35rem;
-    }
-    .decision-horizon-sub { font-weight: 400; letter-spacing: 0; }
-    .decision-verdict {
-      font-size: 1.25rem; font-weight: 800; letter-spacing: 0.04em; margin-bottom: 0.25rem;
-    }
-    .decision-card.bullish .decision-verdict { color: var(--green); }
-    .decision-card.bearish .decision-verdict { color: var(--red); }
-    .decision-card.neutral .decision-verdict { color: var(--yellow); }
-    .decision-conf { font-size: 0.75rem; color: var(--text-dim); margin-bottom: 0.5rem; }
-    .decision-reasons {
-      margin: 0 0 0.5rem 0; padding: 0 0 0 1rem;
-      font-size: 0.75rem; color: var(--text); line-height: 1.5;
-    }
-    .decision-reasons li { margin-bottom: 0.15rem; }
-    .decision-trigger, .decision-invalid {
-      font-size: 0.72rem; color: var(--text-dim); margin-top: 0.2rem;
-      line-height: 1.4;
-    }
-    .decision-trigger { color: var(--accent); }
-
-    /* ─── Verdict ─── */
-    .verdict-box {
-      text-align: center;
-      padding: 1rem;
-      border-radius: var(--radius-sm);
-      margin-bottom: 0.75rem;
-      font-size: 1.1rem;
-      font-weight: 800;
-      letter-spacing: 0.04em;
-    }
-
-    .verdict-box.bullish {
-      background: var(--green-bg);
-      color: var(--green);
-      border: 1px solid rgba(16, 185, 129, 0.3);
-    }
-
-    .verdict-box.bearish {
-      background: var(--red-bg);
-      color: var(--red);
-      border: 1px solid rgba(248, 113, 113, 0.3);
-    }
-
-    .verdict-box.neutral {
-      background: var(--yellow-bg);
-      color: var(--yellow);
-      border: 1px solid rgba(251, 191, 36, 0.3);
-    }
-
-    .verdict-detail {
-      font-size: 0.8rem;
-      color: var(--text-dim);
-      text-align: center;
-    }
-
-    /* ─── Score card ─── */
-    .score-chips {
-      display: flex;
-      gap: 0.5rem;
-      flex-wrap: wrap;
-      margin-bottom: 0.5rem;
-    }
-
-    .score-chip {
-      border-radius: 8px;
-      padding: 0.3rem 0.7rem;
-      border: 1px solid var(--border);
-      font-size: 0.85rem;
-      font-weight: 700;
-    }
-
-    .score-chip.positive {
-      border-color: rgba(16, 185, 129, 0.5);
-      background: var(--green-bg);
-      color: var(--green);
-    }
-
-    .score-chip.negative {
-      border-color: rgba(248, 113, 113, 0.5);
-      background: var(--red-bg);
-      color: var(--red);
-    }
-
-    .score-chip.n {
-      border-color: var(--border);
-      color: var(--text-dim);
-    }
-
-    .score-reasons {
-      display: grid;
-      gap: 0.5rem;
-      margin-top: 0.5rem;
-    }
-
-    .score-reason-group {
-      border-top: 1px solid var(--border);
-      padding-top: 0.5rem;
-    }
-
-    .score-reason-group h3 {
-      margin: 0 0 0.25rem;
-      font-size: 0.8rem;
-      color: var(--text-dim);
-    }
-
-    .score-reason {
-      font-size: 0.8rem;
-      color: var(--text);
-    }
-
-    /* ─── Loading ─── */
-    .loading-state {
-      text-align: center;
-      padding: 3rem;
-      color: var(--text-dim);
-    }
-
-    /* ─── Header OHLCV Strip ─── */
-    .header-ohlcv-strip {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0;
-      margin-top: 0.75rem;
-      border-top: 1px solid var(--border);
-      padding-top: 0.65rem;
-    }
-    .header-ohlcv-item {
-      flex: 1 1 auto;
-      min-width: 70px;
-      text-align: center;
-      padding: 0.2rem 0.5rem;
-      border-right: 1px solid rgba(148,163,184,0.08);
-    }
-    .header-ohlcv-item:last-child { border-right: none; }
-    .header-ohlcv-lbl {
-      display: block;
-      font-size: 0.62rem;
-      color: var(--text-muted);
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-    }
-    .header-ohlcv-val {
-      display: block;
-      font-size: 0.82rem;
-      font-weight: 600;
-      color: var(--text);
-      margin-top: 1px;
-    }
-    .header-prov {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.75rem;
-      align-items: center;
-      margin-top: 0.5rem;
-      padding-top: 0.45rem;
-      border-top: 1px solid var(--border);
-      font-size: 0.72rem;
-      color: var(--text-muted);
-    }
-    .header-prov .dot {
-      display: inline-block;
-      width: 6px; height: 6px;
-      border-radius: 50%;
-      margin-right: 4px;
-      vertical-align: middle;
-    }
-    .header-prov .dot.ok { background: var(--green); }
-    .header-prov .dot.warn { background: var(--yellow); }
-
-    /* ─── Responsive ─── */
-    @media (max-width: 700px) {
-      .sections-grid {
-        grid-template-columns: 1fr;
-      }
-
-      .header-top {
-        flex-direction: column;
-        align-items: flex-start;
-      }
-
-      .stock-title {
-        font-size: 1.4rem;
-      }
-
-      .price-big {
-        font-size: 2rem;
-      }
-    }
-  </style>
-</head>
-
+<html lang="en" data-theme="dark"><head>
+<meta charset="UTF-8">
+<title>Analysis · RubikVault</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#3b82f6" />
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/rv-favicon.png" />
+<link rel="apple-touch-icon" sizes="180x180" href="/assets/rv-apple-icon.png" />
+<link rel="stylesheet" href="/style.css" />
+<style>
+:root{--bg:#020617;--card:rgba(15,23,42,0.92);--border:rgba(148,163,184,0.15);--text:#f1f5f9;--text-dim:#94a3b8;--text-muted:#64748b;--accent:#06b6d4;--accent-glow:rgba(6,182,212,0.12);--green:#10b981;--green-bg:rgba(16,185,129,0.08);--red:#f87171;--red-bg:rgba(248,113,113,0.08);--yellow:#fbbf24;--yellow-bg:rgba(251,191,36,0.08);--radius:16px;--radius-sm:10px}
+*{box-sizing:border-box}body{margin:0;font-family:'Inter',system-ui,-apple-system,sans-serif;background:var(--rv-bg, var(--bg));color:var(--text)}
+.dash-main{max-width:1400px;margin:0 auto;padding:1.5rem 1.5rem 3rem}
+.section{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:1.25rem 1.5rem;overflow:hidden; height: 100%;}
+.section h2{font-size:.85rem;font-weight:700;color:var(--text-dim);text-transform:uppercase;letter-spacing:.06em;margin:0 0 .75rem;display:flex;align-items:center;gap:.5rem}
+.ma-table{width:100%;border-collapse:collapse;font-size:.78rem}
+.ma-table td{padding:.3rem .4rem;border-bottom:1px solid rgba(255,255,255,0.03)}
+.dash-grid{display:grid;grid-template-columns:repeat(3, 1fr);gap:1.25rem;align-items:stretch}
+.kv{display:flex;justify-content:space-between;padding:.15rem 0;border-bottom:1px solid rgba(255,255,255,0.03);font-size:.75rem}
+.kv-l{color:var(--text-dim)}.kv-v{font-weight:600}
+.tf-btn,.cl-btn{padding:3px 8px;border-radius:4px;border:1px solid var(--border);background:rgba(255,255,255,0.03);color:var(--text-dim);font-size:.68rem;font-weight:600;cursor:pointer}
+.tf-btn:hover,.tf-btn.active,.cl-btn:hover,.cl-btn.active{background:var(--accent-glow);color:var(--accent);border-color:rgba(6,182,212,0.3)}
+@media(max-width:1100px){.dash-grid{grid-template-columns:1fr;}}
+</style></head>
 <body>
-  <noscript>
-    <div style="max-width:680px;margin:2rem auto;padding:1.5rem;font-family:system-ui,sans-serif;background:#0f172a;color:#f1f5f9;border-radius:12px;border:1px solid #334155;text-align:center;">
-      <h2 style="margin:0 0 0.75rem">⚠️ JavaScript Required</h2>
-      <p style="color:#94a3b8;margin:0 0 1rem">RubikVault Stock Analyzer requires JavaScript for live technical analysis.</p>
-      <p style="color:#64748b;font-size:0.85rem">Enable JavaScript in your browser or visit <a href="https://rubikvault.com" style="color:#06b6d4">rubikvault.com</a> for more information.</p>
-    </div>
-  </noscript>
-  <!-- HEADER (same as frontpage) -->
-  <header class="rv-header">
-    <div class="rv-header-inner">
-      <a class="rv-brand" href="https://rubikvault.com/" aria-label="RubikVault">
-        <img class="rv-brand-icon" src="https://rubikvault.com/assets/rv-icon.png" alt="" />
-        <span class="rv-brand-text">RubikVault</span>
+
+<!-- HEADER -->
+<header class="rv-header">
+  <div class="rv-header-inner">
+    <a class="rv-brand" href="/" aria-label="RubikVault">
+      <img class="rv-brand-icon" src="/assets/rv-icon.png" alt="" />
+      <span class="rv-brand-text">RubikVault</span>
+    </a>
+    <nav class="rv-nav">
+      <a class="rv-social-link" href="https://www.youtube.com/@RubikVault" target="_blank" rel="noopener noreferrer" aria-label="YouTube">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M21.58 7.19a2.5 2.5 0 0 0-1.76-1.77C18.25 5 12 5 12 5s-6.25 0-7.82.42A2.5 2.5 0 0 0 2.42 7.2 26.6 26.6 0 0 0 2 12s0 2.55.42 4.81a2.5 2.5 0 0 0 1.76 1.77C5.75 19 12 19 12 19s6.25 0 7.82-.42a2.5 2.5 0 0 0 1.76-1.77C22 14.55 22 12 22 12s0-2.55-.42-4.81ZM10 15.5v-7l6 3.5-6 3.5Z"/></svg>
       </a>
-
-      <nav class="rv-nav">
-        <a class="rv-social-link" href="https://www.youtube.com/@RubikVault" target="_blank" rel="noopener noreferrer" aria-label="YouTube">
-          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M21.58 7.19a2.5 2.5 0 0 0-1.76-1.77C18.25 5 12 5 12 5s-6.25 0-7.82.42A2.5 2.5 0 0 0 2.42 7.2 26.6 26.6 0 0 0 2 12s0 2.55.42 4.81a2.5 2.5 0 0 0 1.76 1.77C5.75 19 12 19 12 19s6.25 0 7.82-.42a2.5 2.5 0 0 0 1.76-1.77C22 14.55 22 12 22 12s0-2.55-.42-4.81ZM10 15.5v-7l6 3.5-6 3.5Z"/></svg>
-        </a>
-        <a class="rv-social-link" href="https://x.com/RubikVault" target="_blank" rel="noopener noreferrer" aria-label="X">
-          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M18.9 2H22l-6.79 7.76L23 22h-6.2l-4.86-6.02L6.66 22H3.5l7.26-8.3L3 2h6.35l4.4 5.52L18.9 2Zm-1.09 18h1.72L8.4 3.93H6.56L17.81 20Z"/></svg>
-        </a>
-        <a class="rv-social-link" href="https://www.instagram.com/rubikvault_official/" target="_blank" rel="noopener noreferrer" aria-label="Instagram">
-          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M7 2h10a5 5 0 0 1 5 5v10a5 5 0 0 1-5 5H7a5 5 0 0 1-5-5V7a5 5 0 0 1 5-5Zm10 2H7a3 3 0 0 0-3 3v10a3 3 0 0 0 3 3h10a3 3 0 0 0 3-3V7a3 3 0 0 0-3-3Zm-5 3.5a4.5 4.5 0 1 1 0 9 4.5 4.5 0 0 1 0-9Zm0 2a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5ZM17.8 6.2a1 1 0 1 1 0 2 1 1 0 0 1 0-2Z"/></svg>
-        </a>
-        <a class="rv-social-link" href="https://www.tiktok.com/@rubikvault" target="_blank" rel="noopener noreferrer" aria-label="TikTok">
-          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M16.7 5.2c.8 1.2 2.1 2 3.6 2.1v3.1c-1.7-.1-3.3-.7-4.6-1.7v7.4c0 3.4-2.8 6.2-6.2 6.2S3.3 19.5 3.3 16.1s2.8-6.2 6.2-6.2c.4 0 .8 0 1.2.1v3.3c-.4-.1-.8-.2-1.2-.2-1.7 0-3.1 1.4-3.1 3.1s1.4 3.1 3.1 3.1 3.1-1.4 3.1-3.1V2h3.1c0 1.2.3 2.3 1 3.2Z"/></svg>
-        </a>
-      </nav>
-
-      <div class="rv-header-tools" aria-live="polite">
-        <div class="rv-data-updated" style="font-size: 12px; color: var(--rv-text-muted);">
-          Site snapshot: <span id="rv-data-updated-date">Loading...</span> · <span id="rv-freshness-badge" style="display:none"></span>
-        </div>
-        <div class="rv-market-clock">
-          <span class="rv-clock-time" id="rv-ny-time">NY: --:--:--</span>
-          <span class="rv-clock-status">
-            <span class="rv-led" data-rv-led="closed"></span>
-            <span class="rv-market-label" data-rv-market-label>Closed</span>
-            <span class="rv-market-countdown" id="rv-market-countdown">opens in --:--:--</span>
-          </span>
-        </div>
+      <a class="rv-social-link" href="https://x.com/RubikVault" target="_blank" rel="noopener noreferrer" aria-label="X">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M18.9 2H22l-6.79 7.76L23 22h-6.2l-4.86-6.02L6.66 22H3.5l7.26-8.3L3 2h6.35l4.4 5.52L18.9 2Zm-1.09 18h1.72L8.4 3.93H6.56L17.81 20Z"/></svg>
+      </a>
+      <a class="rv-social-link" href="https://www.instagram.com/rubikvault_official/" target="_blank" rel="noopener noreferrer" aria-label="Instagram">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M7 2h10a5 5 0 0 1 5 5v10a5 5 0 0 1-5 5H7a5 5 0 0 1-5-5V7a5 5 0 0 1 5-5Zm10 2H7a3 3 0 0 0-3 3v10a3 3 0 0 0 3 3h10a3 3 0 0 0 3-3V7a3 3 0 0 0-3-3Zm-5 3.5a4.5 4.5 0 1 1 0 9 4.5 4.5 0 0 1 0-9Zm0 2a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5ZM17.8 6.2a1 1 0 1 1 0 2 1 1 0 0 1 0-2Z"/></svg>
+      </a>
+      <a class="rv-social-link" href="https://www.tiktok.com/@rubikvault" target="_blank" rel="noopener noreferrer" aria-label="TikTok">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M16.7 5.2c.8 1.2 2.1 2 3.6 2.1v3.1c-1.7-.1-3.3-.7-4.6-1.7v7.4c0 3.4-2.8 6.2-6.2 6.2S3.3 19.5 3.3 16.1s2.8-6.2 6.2-6.2c.4 0 .8 0 1.2.1v3.3c-.4-.1-.8-.2-1.2-.2-1.7 0-3.1 1.4-3.1 3.1s1.4 3.1 3.1 3.1 3.1-1.4 3.1-3.1V2h3.1c0 1.2.3 2.3 1 3.2Z"/></svg>
+      </a>
+    </nav>
+    <div class="rv-header-tools" aria-live="polite">
+      <div class="rv-data-updated" style="font-size: 12px; color: var(--rv-text-muted);">Site snapshot: <span id="rv-data-updated-date">...</span> · EOD current</div>
+      <div class="rv-market-clock">
+        <span class="rv-clock-time" id="rv-ny-time">NY: --:--:--</span>
+        <span class="rv-clock-status">
+          <span class="rv-led" data-rv-led="closed"></span>
+          <span class="rv-market-label" data-rv-market-label>Closed</span>
+          <span class="rv-market-countdown" id="rv-market-countdown">opens in --:--:--</span>
+        </span>
       </div>
     </div>
-  </header>
-  <nav class="rv-page-nav" aria-label="Primary">
-    <div class="rv-page-nav-inner">
-      <a href="https://rubikvault.com/analyze" class="rv-page-nav-link active">ANALYZE</a>
-      <a href="https://rubikvault.com/market" class="rv-page-nav-link">MARKET</a>
-      <a href="https://rubikvault.com/ideas" class="rv-page-nav-link">IDEAS</a>
-    </div>
-  </nav>
+  </div>
+</header>
 
-  <main class="rv-main">
-    <div class="header-card" id="header-card">
-      <div class="header-top">
-        <div class="header-left">
-          <h1 class="stock-title" id="stock-title">Stock Analysis</h1>
-          <div class="stock-subtitle" id="stock-subtitle">Enter a ticker to begin</div>
+<!-- PAGE NAVIGATION -->
+<nav class="rv-page-nav">
+  <div class="rv-page-nav-inner">
+    <a href="/analyze" class="rv-page-nav-link active" data-top-route="analyze">ANALYZE</a>
+    <a href="/market" class="rv-page-nav-link" data-top-route="market">MARKET</a>
+    <a href="/ideas" class="rv-page-nav-link" data-top-route="ideas">IDEAS</a>
+  </div>
+</nav>
+
+<div class="dash-main">
+  <!-- Dashboard Sub-Header -->
+  <div style="padding:1rem 0;border-bottom:1px solid var(--border);margin-bottom:1.5rem;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.75rem">
+    <div>
+      <div style="font-size:1.1rem;font-weight:700;margin:0 0 .2rem;color:var(--text)">Executive Dashboard</div>
+      <div style="font-size:.8rem;color:var(--text-muted)">Ticker: <strong id="sc-ticker" style="color:var(--text)">...</strong> · <span id="sc-price">Loading...</span></div>
+    </div>
+    <!-- Search Bar -->
+    <div style="display:flex;align-items:center;gap:.5rem">
+      <input id="dash-search" type="text" placeholder="Search ticker..." style="padding:.4rem .75rem;border-radius:6px;border:1px solid var(--border);background:rgba(255,255,255,0.04);color:var(--text);font-size:.85rem;width:160px;outline:none" />
+      <button id="dash-search-btn" style="padding:.4rem .75rem;border-radius:6px;border:1px solid var(--accent);background:var(--accent-glow);color:var(--accent);font-size:.8rem;font-weight:700;cursor:pointer">Analyze</button>
+    </div>
+    <div id="sc-headline-kpis" style="display:flex;gap:.5rem"></div>
+  </div>
+  <!-- Content Grid -->
+  <div id="sc-content"></div>
+</div>
+
+<script>
+(async function(){
+  const pathMatch = window.location.pathname.match(/\/analyze\/([^/?]+)/i);
+  const ticker = (pathMatch ? decodeURIComponent(pathMatch[1]).toUpperCase() : new URLSearchParams(location.search).get('ticker')?.toUpperCase()) || 'AAPL';
+  let payload;
+  try {
+    const res = await fetch('/api/stock?ticker=' + encodeURIComponent(ticker));
+    payload = await res.json();
+  } catch(e) {
+    document.getElementById('sc-content').innerHTML = '<div style="color:var(--red);text-align:center;padding:2rem">API Error: '+e.message+'</div>'; return;
+  }
+
+  const data = payload.data || {}, meta = payload.metadata || {}, s = data.market_stats?.stats || {}, prices = data.market_prices || {}, bars = data.bars || [], change = data.change || {};
+  const lastBar = bars.length ? bars[bars.length-1] : {};
+  const close = prices.close ?? lastBar.close ?? null;
+  const atr = Number.isFinite(s.atr14) ? s.atr14 : null;
+  const atrPct = close > 0 && atr != null ? (atr / close * 100) : null;
+  const tkr = meta?.request?.normalized_ticker || data?.ticker || ticker;
+
+  document.title = tkr + ' — Analysis · RubikVault';
+
+  // Read backend layers (states, decision, explanation)
+  const _states = payload.states || {};
+  const _decision = payload.decision || {};
+  const _explanation = payload.explanation || {};
+  // Expose for any external feature scripts
+  window._rvStates = _states;
+  window._rvDecision = _decision;
+  window._rvExplanation = _explanation;
+  window._rvEnvelopeMeta = payload.meta || meta || {};
+  window._rvCanonicalMetrics = {
+    close,
+    rsi14: Number.isFinite(s.rsi14) ? s.rsi14 : null,
+    atr14: atr,
+    atrPct,
+    asOf: prices.date || lastBar.date || null
+  };
+
+  // Display mappings from backend states (pure rendering, no business logic)
+  const trendStateMap = {STRONG_UP:'Uptrend',UP:'Uptrend',RANGE:'Sideways',DOWN:'Downtrend',STRONG_DOWN:'Downtrend',UNKNOWN:'Unknown'};
+  const trendWord = (_states.trend==='STRONG_UP'||_states.trend==='UP')?'uptrend':(_states.trend==='DOWN'||_states.trend==='STRONG_DOWN')?'downtrend':'mixed';
+  const trendLabel = trendStateMap[_states.trend] || 'Unknown';
+  const maStack = trendWord==='uptrend'?'Bullish':trendWord==='downtrend'?'Bearish':'Mixed';
+  const momentumMap = {OVERBOUGHT:'Overbought',BULLISH:'Soft Bullish',NEUTRAL:'Neutral',BEARISH:'Soft Bearish',OVERSOLD:'Oversold',UNKNOWN:'Unknown'};
+  const rsiZone = momentumMap[_states.momentum] || 'Unknown';
+  const rsiColor = {OVERSOLD:'var(--green)',BEARISH:'#fb923c',NEUTRAL:'var(--text)',BULLISH:'var(--accent)',OVERBOUGHT:'var(--red)',UNKNOWN:'var(--text-dim)'}[_states.momentum] || 'var(--text-dim)';
+  const macdLabel=s.macd_hist==null?'—':s.macd_hist>0?'Bullish':'Bearish';
+  const volPct=s.volatility_20d!=null?(s.volatility_20d*100).toFixed(1):null;
+  const riskLabel = {EXTREME:'High',HIGH:'High',NORMAL:'Medium',LOW:'Low',COMPRESSED:'Low',UNKNOWN:'Unknown'}[_states.volatility] || 'Unknown';
+  const riskColor=riskLabel==='High'?'var(--red)':riskLabel==='Medium'?'var(--yellow)':'var(--green)';
+  const trendColor=trendWord==='uptrend'?'var(--green)':trendWord==='downtrend'?'var(--red)':'var(--yellow)';
+  const isExtremeVol = _states.volatility === 'EXTREME';
+  const r52pct=s.range_52w_pct;
+  const r52label=r52pct==null?null:r52pct>0.9?'Near High':r52pct<0.1?'Near Low':'Mid-Range';
+  const chgColor=(change.pct||0)>=0?'var(--green)':'var(--red)';
+  const emaCross=s.ema12!=null&&s.ema26!=null?(s.ema12>s.ema26?'Bullish':'Bearish'):null;
+  const bbPctB=(s.bb_upper!=null&&s.bb_lower!=null&&close!=null)?(close-s.bb_lower)/(s.bb_upper-s.bb_lower):null;
+  const fmt=v=>v==null?'—':'$'+Number(v).toFixed(2);
+  const fmtP=v=>v==null?'—':(v>=0?'+':'')+((v)*100).toFixed(2)+'%';
+
+  // Update Header
+  document.getElementById('sc-ticker').textContent = tkr;
+  document.getElementById('sc-price').innerHTML = close!=null?'$'+close.toFixed(2)+' <span style="color:'+((change.pct||0)>=0?'var(--green)':'var(--red)')+'">'+((change.pct||0)>=0?'+':'')+((change.pct||0)*100).toFixed(2)+'%</span> <span style="font-size:.7rem;color:var(--text-muted);margin-left:.4rem">'+(prices.date||'')+'</span>':'—';
+
+  // Render Top Headline KPIs
+  document.getElementById('sc-headline-kpis').innerHTML = [
+    ['Trend', trendLabel, trendColor],
+    ['Risk', riskLabel, riskColor],
+    ['52W', r52label || '—', 'var(--text)'],
+    ['RSI', rsiZone, rsiColor]
+  ].map(x => '<div style="padding:.4rem .6rem; border-radius:6px; background:rgba(255,255,255,0.02); border:1px solid var(--border); text-align:center"><div style="font-size:.6rem; color:var(--text-muted); text-transform:uppercase">'+x[0]+'</div><div style="font-weight:700; color:'+x[2]+'; font-size:.85rem">'+x[1]+'</div></div>').join('');
+
+  // ── Verdicts from backend decision layer ──
+  const overallLabel = _decision.verdict || 'WAIT';
+  const overallColor = overallLabel==='BUY'?'var(--green)':overallLabel==='SELL'||overallLabel==='AVOID'?'var(--red)':'var(--yellow)';
+  const setupType = _decision.setup_type === 'TREND_FOLLOW' ? 'Confirming Uptrend'
+    : _decision.setup_type === 'MEAN_REVERSION' ? 'Pullback in Uptrend'
+    : _decision.setup_type === 'BREAKOUT' ? 'Breakout Setup'
+    : _decision.setup_type === 'DEFENSIVE' ? 'Structural Downtrend'
+    : 'Mixed / No Clean Entry';
+  const overallText = overallLabel === 'BUY' ? 'Strategic BUY · Tactical ' + (_decision.tactical_action === 'ENTER_LONG' ? 'BUY' : 'WAIT')
+    : overallLabel === 'AVOID' || overallLabel === 'SELL' ? 'Strategic AVOID'
+    : overallLabel === 'INSUFFICIENT_DATA' ? 'Insufficient Data'
+    : 'Neutral / Waiting stance';
+  const confidence = _decision.confidence_bucket || 'LOW';
+
+  // Map backend explanation bullets to bull/bear reasons for display
+  const bullR = (_explanation.sentiment === 'positive' ? (_explanation.bullets || []).slice(0, 3) : []);
+  const bearR = (_explanation.sentiment === 'negative' ? (_explanation.bullets || []).slice(0, 3) : []);
+
+  // Horizon cards from backend (unified verdict, displayed per-horizon for compatibility)
+  const horizons = [{k:'short',label:'SHORT'},{k:'mid',label:'MID'},{k:'long',label:'LONG'}].map(h => {
+    const vLabel = overallLabel;
+    const cls = vLabel==='BUY'?'bullish':vLabel==='AVOID'||vLabel==='SELL'?'bearish':'neutral';
+    return {...h, v:{l:vLabel, c:cls, cf:confidence}, score:{score:0, reasons:(_explanation.bullets||[]).slice(0,2)}};
+  });
+  const shortV = horizons[0]?.v?.l || overallLabel;
+  const midV = horizons[1]?.v?.l || overallLabel;
+  const longV = horizons[2]?.v?.l || overallLabel;
+
+  // Dynamic Trade Plan
+  const entryPrice = close;
+  const stopPrice = atr != null ? close - atr : null;
+  const nextRes = levels_arr_later => { const r = levels_arr_later.find(l => l.kind === 'resistance'); return r ? r.price : null; };
+  // will compute after levels
+
+  // Checklists derived from backend states (pure display mapping)
+  const gatesTriggered = _decision.trigger_gates || [];
+  var checksShort = [
+      {l:'Trend aligned', m:_states.trend==='UP'||_states.trend==='STRONG_UP'},
+      {l:'Momentum supportive', m:_states.momentum==='BULLISH'||_states.momentum==='NEUTRAL'},
+      {l:'No hard gates', m:gatesTriggered.length===0}
+  ];
+  if (setupType === "Pullback in Uptrend") {
+      checksShort = [
+          {l:'Momentum oversold', m:_states.momentum==='OVERSOLD'},
+          {l:'Trend still UP', m:_states.trend==='UP'||_states.trend==='STRONG_UP'},
+          {l:'Volume confirmed', m:_states.volume!=='WEAK'&&_states.volume!=='DRY'},
+          {l:'No hard gates', m:gatesTriggered.length===0}
+      ];
+  }
+  var checksMid = [{l:'Trend UP', m:_states.trend==='UP'||_states.trend==='STRONG_UP'}, {l:'Liquidity adequate', m:_states.liquidity!=='LOW'}];
+  var checksLong = [{l:'Trend constructive', m:_states.trend!=='DOWN'&&_states.trend!=='STRONG_DOWN'}, {l:'Volatility manageable', m:_states.volatility!=='EXTREME'}];
+
+  function renderChecklist(checks){
+    var met=checks.filter(c=>c.m).length;
+    return '<div style="font-size:.68rem;font-weight:700;color:var(--text-dim);margin-bottom:.3rem;text-transform:uppercase">Checklist <span style="color:var(--accent)">'+met+'/'+checks.length+'</span></div><div style="display:grid;grid-template-columns:1fr;gap:.15rem">'+checks.map(c=>'<div style="display:flex;align-items:center;gap:.3rem;font-size:.7rem"><span style="color:'+(c.m?'var(--green)':'var(--red)')+'">'+(c.m?'✓':'✗')+'</span><span style="color:'+(c.m?'var(--text)':'var(--text-dim)')+'; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">'+c.l+'</span></div>').join('')+'</div>';
+  }
+
+  // What Changed Data (dynamic)
+  const items1D = [
+    { text: 'RSI is ' + rsiZone + ' (' + (s.rsi14!=null?s.rsi14.toFixed(1):'—') + ')', type: rsiZone==='Oversold'||rsiZone==='Soft Bullish'?'bullish':rsiZone==='Overbought'||rsiZone==='Soft Bearish'?'bearish':'mixed' },
+    { text: 'Daily Change is ' + fmtP(change.pct), type: (change.pct||0)>=0?'bullish':'bearish' },
+    { text: 'Price above SMA 20: ' + (close>(s.sma20||0)?'YES':'NO'), type: close>(s.sma20||0)?'bullish':'bearish' }
+  ];
+  const items3D = [
+    { text: 'SMA 50 is ' + (close>(s.sma50||0)?'Reclaimed':'Broken'), type: close>(s.sma50||0)?'bullish':'bearish' },
+    { text: 'Momentum is ' + trendLabel, type: trendWord==='uptrend'?'bullish':trendWord==='downtrend'?'bearish':'mixed' },
+    { text: 'Risk State is ' + riskLabel, type: riskLabel==='Low'?'bullish':riskLabel==='High'?'bearish':'mixed' }
+  ];
+  const items1W = [
+    { text: 'MA Stack configuration is ' + maStack, type: maStack==='Bullish'?'bullish':maStack==='Bearish'?'bearish':'mixed' },
+    { text: 'Bollinger %B is ' + (bbPctB!=null?bbPctB.toFixed(2):'—'), type: (bbPctB>0.8)?'bearish':(bbPctB<0.2)?'bullish':'mixed' },
+    { text: 'MACD posture is ' + macdLabel, type: macdLabel==='Bullish'?'bullish':'bearish' }
+  ];
+  const items2W = [
+    { text: '52W High Pos is ' + (r52label || 'Mid-Range'), type: r52pct>0.8?'bearish':r52pct<0.2?'bullish':'mixed' },
+    { text: 'ATR is ' + (atr!=null?'$'+atr.toFixed(2):'—'), type: 'mixed' },
+    { text: 'Vol Percentile is ' + (s.volatility_percentile!=null?s.volatility_percentile.toFixed(0)+'th':'—'), type: 'mixed' }
+  ];
+  const items1M = [
+    { text: 'Price above SMA 200: ' + (close>(s.sma200||0)?'YES':'NO'), type: close>(s.sma200||0)?'bullish':'bearish' },
+    { text: 'Overall trend is ' + trendLabel, type: trendWord==='uptrend'?'bullish':trendWord==='downtrend'?'bearish':'mixed' },
+    { text: 'MA Stack is ' + maStack, type: maStack==='Bullish'?'bullish':maStack==='Bearish'?'bearish':'mixed' }
+  ];
+
+  window._whatChangedData = { '1D': items1D, '3D': items3D, '1W': items1W, '2W': items2W, '1M': items1M };
+
+  window._renderWhatChanged = function(tf) {
+    const items = window._whatChangedData[tf] || [];
+    const getBtn = (t) => `<button class="tf-btn ${tf===t?'active':''}" style="font-size:0.55rem; padding:1px 4px;" onclick="window._switchWhatChanged('${t}')">${t}</button>`;
+    const colors = { bullish: 'var(--green)', bearish: 'var(--red)', mixed: 'var(--yellow)' };
+    const icons = { bullish: '✓', bearish: '✕', mixed: '•' };
+    return `
+      <div style="padding:.6rem;border-radius:8px;background:rgba(255,255,255,0.01);border:1px solid rgba(255,255,255,0.03);">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: .4rem;">
+          <div style="font-size: .62rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700;">What Changed</div>
+          <div style="display:flex; gap:2px;">${['1D', '3D', '1W', '2W', '1M'].map(getBtn).join('')}</div>
         </div>
-        <form id="stock-form" class="stock-form" style="position:relative">
-          <input id="stock-ticker" name="ticker" type="text" placeholder="AAPL" autocomplete="off" />
-          <div id="stock-ac-dropdown" class="rv-search-dd"
-            style="display:none;position:absolute;top:100%;left:0;right:0;margin-top:4px;z-index:9999;max-height:300px;overflow-y:auto;background:var(--card, #0f172a);border:1px solid #334155;border-radius:8px;box-shadow:0 10px 25px rgba(0,0,0,0.8)">
+        <div style="display:grid; grid-template-columns: 1fr; gap:0.25rem;">
+          ${items.map(item => {
+            const clr = colors[item.type] || 'var(--text-dim)';
+            const ico = icons[item.type] || '•';
+            return `<div style="font-size:0.65rem; color:${clr}; display:flex; gap:3px;"><span>${ico}</span> ${item.text}</div>`;
+          }).join('')}
+        </div>
+      </div>
+    `;
+  };
+
+  window._switchWhatChanged = function(tf) {
+    const el = document.getElementById('dyn-what-changed');
+    if (el) el.innerHTML = window._renderWhatChanged(tf);
+  };
+
+  // Market Context — fetch SPY & QQQ for real vs-benchmark comparison
+  const _mktCtx = { spy: null, qqq: null, corr: [], loaded: false };
+
+  // Compute returns from bars for a given lookback
+  function barsReturn(b, n) {
+    if (!b || b.length < n + 1) return null;
+    const cur = b[b.length - 1].adjClose ?? b[b.length - 1].close;
+    const prev = b[b.length - 1 - n].adjClose ?? b[b.length - 1 - n].close;
+    return prev > 0 ? (cur - prev) / prev : null;
+  }
+
+  // Pearson correlation between two arrays
+  function pearson(a, b) {
+    const n = Math.min(a.length, b.length);
+    if (n < 10) return 0;
+    const ax = a.slice(-n), bx = b.slice(-n);
+    const ma = ax.reduce((s,v)=>s+v,0)/n, mb = bx.reduce((s,v)=>s+v,0)/n;
+    let num=0, da=0, db=0;
+    for (let i=0;i<n;i++){const x=ax[i]-ma,y=bx[i]-mb;num+=x*y;da+=x*x;db+=y*y;}
+    return da&&db ? num/Math.sqrt(da*db) : 0;
+  }
+
+  // Fetch benchmarks in background
+  async function loadBenchmarks() {
+    try {
+      const [spyRes, qqqRes] = await Promise.all([
+        fetch('/api/stock?ticker=SPY').then(r=>r.json()),
+        fetch('/api/stock?ticker=QQQ').then(r=>r.json())
+      ]);
+      const spyD = spyRes.data || {}, qqqD = qqqRes.data || {};
+      const spyBars = spyD.bars || [], qqqBars = qqqD.bars || [];
+      const spyChg = spyD.change || {}, qqqChg = qqqD.change || {};
+      const spyS = spyD.market_stats?.stats || {}, qqqS = qqqD.market_stats?.stats || {};
+
+      // Returns per timeframe: compute ticker return minus benchmark return
+      const tfMap = { '1D': 1, '1W': 5, '1M': 20, '1Y': 252 };
+      _mktCtx.spy = {}; _mktCtx.qqq = {};
+      for (const [tf, n] of Object.entries(tfMap)) {
+        const tRet = n === 1 ? (change.pct || 0) : barsReturn(bars, n);
+        const sRet = n === 1 ? (spyChg.pct || 0) : barsReturn(spyBars, n);
+        const qRet = n === 1 ? (qqqChg.pct || 0) : barsReturn(qqqBars, n);
+        _mktCtx.spy[tf] = tRet != null && sRet != null ? tRet - sRet : null;
+        _mktCtx.qqq[tf] = tRet != null && qRet != null ? tRet - qRet : null;
+      }
+
+      // Correlations: compute from daily returns
+      const tickerRets = [], spyRets = [], qqqRets = [];
+      for (let i = 1; i < bars.length; i++) {
+        const c0 = bars[i-1].adjClose ?? bars[i-1].close;
+        const c1 = bars[i].adjClose ?? bars[i].close;
+        if (c0 > 0 && c1 > 0) tickerRets.push((c1-c0)/c0);
+      }
+      for (let i = 1; i < spyBars.length; i++) {
+        const c0 = spyBars[i-1].adjClose ?? spyBars[i-1].close;
+        const c1 = spyBars[i].adjClose ?? spyBars[i].close;
+        if (c0 > 0 && c1 > 0) spyRets.push((c1-c0)/c0);
+      }
+      for (let i = 1; i < qqqBars.length; i++) {
+        const c0 = qqqBars[i-1].adjClose ?? qqqBars[i-1].close;
+        const c1 = qqqBars[i].adjClose ?? qqqBars[i].close;
+        if (c0 > 0 && c1 > 0) qqqRets.push((c1-c0)/c0);
+      }
+
+      _mktCtx.corr = [
+        { t: 'SPY', c: pearson(tickerRets, spyRets) },
+        { t: 'QQQ', c: pearson(tickerRets, qqqRets) }
+      ].sort((a,b) => Math.abs(b.c) - Math.abs(a.c));
+
+      _mktCtx.loaded = true;
+      // Re-render
+      const el = document.getElementById('dyn-market-context');
+      if (el) el.innerHTML = window._renderMarketContext('1D');
+    } catch(e) { console.warn('Benchmark fetch failed:', e); }
+  }
+
+  if (tkr !== 'SPY' && tkr !== 'QQQ') loadBenchmarks();
+
+  window._renderMarketContext = function(tf) {
+    const getBtn = (t) => `<button class="tf-btn ${tf===t?'active':''}" style="font-size:0.55rem; padding:1px 4px;" onclick="window._switchContext('${t}')">${t}</button>`;
+
+    if (!_mktCtx.loaded) {
+      return `
+        <div style="padding:.6rem; border-radius:8px; background:rgba(255,255,255,0.01); border:1px solid rgba(255,255,255,0.03);">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: .4rem;">
+            <div style="font-size: .62rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700;">Market Context</div>
+            <div style="display:flex; gap:2px;">${['1D', '1W', '1M', '1Y'].map(getBtn).join('')}</div>
           </div>
-          <button type="submit">Analyze</button>
-        </form>
-      </div>
-      <div class="badges" id="stock-badges"></div>
-      <div class="price-block" id="price-block" style="display:none;">
-        <span class="price-big" id="price-big">—</span>
-        <span class="price-change" id="price-change"></span>
-        <span class="price-date" id="price-date"></span>
-      </div>
-      <div class="range-52w" id="range-52w" style="display:none;">
-        <div class="range-bar">
-          <div class="range-dot" id="range-dot"></div>
-        </div>
-        <div class="range-labels">
-          <span>52W Low: <strong id="range-low">—</strong></span>
-          <span class="range-pct" id="range-pct"></span>
-          <span>52W High: <strong id="range-high">—</strong></span>
-        </div>
-      </div>
-      <div id="header-ohlcv" style="display:none"></div>
-      <div id="header-provenance" style="display:none"></div>
-    </div>
-    <div id="stock-error" class="error-box" style="display:none;"></div>
-    <div id="app">
-      <div class="loading-state">Enter a ticker above to begin the analysis.</div>
-    </div>
-  </main>
-
-  <script>
-    document.write(`<script src="${RV_ASSET_BASE}/js/stock-features.js"><\/script>`);
-  </script>
-  <script>
-    // ─── State ────────────────────────────────────────────────────────────────────
-    const REMOTE_ORIGIN = 'https://rubikvault.com';
-    const USE_REMOTE_ORIGIN = window.location.protocol === 'file:';
-    const API_BASE = USE_REMOTE_ORIGIN ? REMOTE_ORIGIN : '';
-    const form = document.getElementById('stock-form');
-    const tickerInput = document.getElementById('stock-ticker');
-    const errorBox = document.getElementById('stock-error');
-    const app = document.getElementById('app');
-    const params = new URLSearchParams(window.location.search);
-
-    form.addEventListener('submit', e => { e.preventDefault(); const t = tickerInput.value.trim(); if (t) loadTicker(t); });
-
-    // Extract ticker from URL: /analyze/:ticker (path) or ?ticker= (query param)
-    const pathMatch = window.location.pathname.match(/\/analyze\/(.+)/);
-    const initialTicker = (pathMatch ? decodeURIComponent(pathMatch[1]) : params.get('ticker') || '').trim();
-    if (initialTicker) { tickerInput.value = initialTicker; loadTicker(initialTicker); }
-
-    // ─── Ticker Autocomplete (re-uses /api/universe) ──────────────────────────────
-    const acDropdown = document.getElementById('stock-ac-dropdown');
-    let acTimer = null, acSuggestions = [], acIndex = -1, acOpen = false;
-    function acPriority(item, query) {
-      const ticker = String(item?.ticker || '').toUpperCase();
-      const exchange = String(item?.exchange || '').toUpperCase();
-      const name = String(item?.name || '').trim().toLowerCase();
-      const qTicker = String(query || '').trim().toUpperCase();
-      const qName = String(query || '').trim().toLowerCase();
-      const rank = ticker === qTicker ? 0 : ticker.startsWith(qTicker) ? 1 : name.startsWith(qName) ? 2 : 3;
-      const usRank = exchange === 'US' ? 0 : 1;
-      return [rank, usRank, ticker.length || 99, ticker];
-    }
-    function acCompare(a, b, query) {
-      const pa = acPriority(a, query), pb = acPriority(b, query);
-      for (let i = 0; i < pa.length; i++) {
-        if (pa[i] < pb[i]) return -1;
-        if (pa[i] > pb[i]) return 1;
-      }
-      return 0;
-    }
-    function acDedupeKey(item) {
-      // Dedup by ticker first — ensures AAPL only appears once regardless of exchange
-      const ticker = String(item?.ticker || '').toUpperCase();
-      if (ticker) return `ticker:${ticker}`;
-      const name = String(item?.name || '').trim().toLowerCase();
-      if (name && name.length >= 3) return `name:${name}`;
-      return `raw:${ticker}`;
-    }
-
-    function renderAC() {
-      if (!acSuggestions.length) { acDropdown.style.display = 'none'; acOpen = false; return; }
-      acDropdown.innerHTML = '';
-      acSuggestions.forEach((item, idx) => {
-        const div = document.createElement('div');
-        div.className = 'rv-dd-item' + (idx === acIndex ? ' rv-dd-item--highlighted' : '');
-        div.style.padding = '8px 12px'; div.style.cursor = 'pointer'; div.style.borderBottom = '1px solid rgba(255,255,255,0.05)';
-        div.innerHTML = `<strong>${item.name ? `${item.name} (${item.ticker}${item.exchange ? ` · ${item.exchange}` : ''})` : `${item.ticker}${item.exchange ? ` · ${item.exchange}` : ''}`}</strong>`;
-        div.addEventListener('mousedown', (e) => { e.preventDefault(); selectAC(idx); });
-        acDropdown.appendChild(div);
-      });
-      acDropdown.style.display = 'block'; acOpen = true;
-    }
-
-    function selectAC(idx) {
-      if (!acSuggestions[idx]) return;
-      tickerInput.value = acSuggestions[idx].ticker;
-      acDropdown.style.display = 'none'; acOpen = false;
-      loadTicker(acSuggestions[idx].ticker);
-    }
-
-    let acActiveController = null;
-    tickerInput.addEventListener('input', () => {
-      const q = tickerInput.value.trim();
-      if (!q) { acSuggestions = []; renderAC(); return; }
-      if (acActiveController) acActiveController.abort();
-
-      clearTimeout(acTimer);
-      acTimer = setTimeout(async () => {  // 0ms = instant from 1st character
-        acActiveController = new AbortController();
-        const { signal } = acActiveController;
-        try {
-          const res = await fetch(`${API_BASE}/api/universe?q=${encodeURIComponent(q)}&limit=8&t=${Date.now()}`, { signal });
-          if (!res.ok) return;
-          const data = await res.json();
-          const deduped = new Map();
-          (data?.data?.symbols || [])
-            .map(s => ({
-              ticker: s.symbol,
-              name: s.name,
-              exchange: s.exchange || (typeof s.canonical_id === 'string' && s.canonical_id.includes(':') ? s.canonical_id.split(':')[0] : null)
-            }))
-            .filter(s => s.ticker)
-            .forEach((s) => {
-              const key = acDedupeKey(s);
-              const prev = deduped.get(key);
-              if (!prev || acCompare(s, prev, q) < 0) {
-                deduped.set(key, s);
-              }
-            });
-          acSuggestions = Array.from(deduped.values()).sort((a, b) => acCompare(a, b, q)).slice(0, 8);
-          acIndex = -1; renderAC();
-        } catch (e) {
-          if (e.name !== 'AbortError') console.error('AC fetch err', e);
-        }
-      }, 0);
-    });
-
-    tickerInput.addEventListener('keydown', e => {
-      if (!acOpen || !acSuggestions.length) return;
-      if (e.key === 'ArrowDown') { e.preventDefault(); acIndex = Math.min(acSuggestions.length - 1, acIndex + 1); renderAC(); }
-      else if (e.key === 'ArrowUp') { e.preventDefault(); acIndex = Math.max(0, acIndex - 1); renderAC(); }
-      else if (e.key === 'Enter') { e.preventDefault(); selectAC(Math.max(0, acIndex)); }
-      else if (e.key === 'Escape') { acDropdown.style.display = 'none'; acOpen = false; }
-    });
-
-    tickerInput.addEventListener('focus', () => { if (tickerInput.value.trim() && acSuggestions.length) { acDropdown.style.display = 'block'; acOpen = true; } });
-    tickerInput.addEventListener('blur', () => { setTimeout(() => { acDropdown.style.display = 'none'; acOpen = false; }, 200); });
-
-    // ─── Trading Calendar Helper ──────────────────────────────────────────────────
-    function getLastCompletedTradingDay() {
-      const now = new Date();
-      const nyParts = new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit', hour: 'numeric', minute: 'numeric', hour12: false, weekday: 'short' }).formatToParts(now);
-      const nyH = parseInt(nyParts.find(p => p.type === 'hour')?.value || '0', 10);
-      const nyM = parseInt(nyParts.find(p => p.type === 'minute')?.value || '0', 10);
-      const nyWd = nyParts.find(p => p.type === 'weekday')?.value || '';
-      const nyYear = nyParts.find(p => p.type === 'year')?.value;
-      const nyMonth = nyParts.find(p => p.type === 'month')?.value;
-      const nyDay = nyParts.find(p => p.type === 'day')?.value;
-      const nyDate = new Date(`${nyYear}-${nyMonth}-${nyDay}T00:00:00`);
-      const marketClosed = (nyH + nyM / 60) >= 16; // after 4pm ET
-      const isWeekday = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'].includes(nyWd);
-      // If market is closed today (after 4pm on weekday), today is last trading day
-      if (isWeekday && marketClosed) return `${nyYear}-${nyMonth}-${nyDay}`;
-      // Otherwise go back to previous trading day
-      let d = new Date(nyDate);
-      d.setDate(d.getDate() - 1);
-      // Skip weekends
-      while (d.getDay() === 0 || d.getDay() === 6) d.setDate(d.getDate() - 1);
-      return d.toISOString().slice(0, 10);
-    }
-
-    // ─── Formatters ───────────────────────────────────────────────────────────────
-    const fmt = (v, d = 2) => v == null || !isFinite(v) ? '—' : v.toFixed(d);
-    const fmtPct = v => v == null || !isFinite(v) ? '—' : `${(v * 100).toFixed(2)}%`;
-    const fmtPctSigned = v => { if (v == null || !isFinite(v)) return '—'; const pv = (v * 100).toFixed(2); return v >= 0 ? `+${pv}%` : `${pv}%`; };
-    const fmtCur = (v, c = 'USD') => v == null || !isFinite(v) ? '—' : new Intl.NumberFormat('en-US', { style: 'currency', currency: c }).format(v);
-    const fmtVol = v => v == null || !isFinite(v) ? '—' : v >= 1e6 ? `${(v / 1e6).toFixed(1)}M` : v >= 1e3 ? `${(v / 1e3).toFixed(0)}K` : v.toFixed(0);
-    const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
-
-    // ─── Load Ticker ──────────────────────────────────────────────────────────────
-    async function loadTicker(ticker) {
-      document.getElementById('stock-title').textContent = ticker.toUpperCase();
-      document.getElementById('stock-subtitle').textContent = 'Loading analysis…';
-      document.getElementById('price-block').style.display = 'none';
-      document.getElementById('range-52w').style.display = 'none';
-      document.getElementById('header-ohlcv').style.display = 'none';
-      document.getElementById('header-provenance').style.display = 'none';
-      errorBox.style.display = 'none';
-      app.innerHTML = '<div class="loading-state">⏳ Fetching data…</div>';
-
-      try {
-        const v4Eval = (typeof isFeaturesV4Enabled === 'function' && isFeaturesV4Enabled()) ? '&eval_v4=1' : '';
-        const res = await fetch(`${API_BASE}/api/stock?ticker=${encodeURIComponent(ticker)}${v4Eval}`);
-        const payload = await res.json();
-        render(payload);
-      } catch (err) {
-        console.error('[RV] loadTicker error:', err, err?.stack);
-        errorBox.style.display = 'block';
-        errorBox.textContent = `Data temporarily unavailable: ${err?.message || 'unknown error'}. Check console for details.`;
-        app.innerHTML = '';
-        document.getElementById('stock-subtitle').textContent = '';
-      }
-    }
-
-    // ─── Main Render ──────────────────────────────────────────────────────────────
-    function render(payload) {
-      const { data, error, metadata } = payload;
-      window._rvMetadata = metadata; // expose for features
-      window._rvEnvelopeMeta = payload.meta || {}; // expose envelope meta for provenance bar
-      window._rvPayload = payload;
-      const ticker = metadata?.request?.normalized_ticker || data?.ticker || '—';
-      const stats = data?.market_stats?.stats || {};
-      const prices = data?.market_prices || {};
-      const universe = data?.universe || {};
-      const score = data?.market_score || {};
-      const bars = data?.bars || [];
-      const change = data?.change || {};
-      const close = prices.close ?? bars[bars.length - 1]?.close ?? null;
-      const asOf = metadata?.as_of || bars[bars.length - 1]?.date || null;
-      const atr = Number.isFinite(stats.atr14) ? stats.atr14 : null;
-      const atrPct = close > 0 && atr != null ? (atr / close) * 100 : null;
-      window._rvCanonicalMetrics = {
-        ticker,
-        asOf,
-        close: Number.isFinite(close) ? close : null,
-        rsi14: Number.isFinite(stats.rsi14) ? stats.rsi14 : null,
-        atr14: atr,
-        atrPct,
-        digest: metadata?.digest || null,
-        schemaVersion: payload?.evaluation_v4?.schema_version || null,
-        rawValidation: payload?.evaluation_v4?.v4_contract?.raw_validation?.value || null,
-      };
-      window._rvRenderCtx = { ticker, close, s: stats, bars, universe };
-
-      // ── Header ──
-      document.getElementById('stock-title').textContent = universe.name || ticker;
-      const subtitleParts = [ticker];
-      if (universe.exchange) subtitleParts.push(universe.exchange);
-      if (universe.sector) subtitleParts.push(universe.sector);
-      if (universe.industry && universe.industry !== universe.sector) subtitleParts.push(universe.industry);
-      document.getElementById('stock-subtitle').textContent = universe.name ? subtitleParts.join(' · ') : (universe.sector ? `${ticker} · ${universe.sector}` : ticker);
-      document.title = `${ticker} — Stock Analysis · RubikVault`;
-
-      // ── OG meta dynamic update ──
-      const ogTitle = document.getElementById('og-title');
-      const ogDesc  = document.getElementById('og-desc');
-      const ogUrl   = document.getElementById('og-url');
-      if (ogTitle) ogTitle.setAttribute('content', `${ticker} — Stock Analysis · RubikVault`);
-      if (ogDesc)  ogDesc.setAttribute('content',  `Technical analysis for ${universe.name || ticker}: Moving Averages, RSI, MACD, Bollinger Bands and more.`);
-      if (ogUrl)   ogUrl.setAttribute('content',   `https://rubikvault.com/analyze/${encodeURIComponent(ticker)}`);
-
-      // Badges
-      const badgesEl = document.getElementById('stock-badges');
-      badgesEl.innerHTML = '';
-      const indexes = universe.indexes || [];
-      if (indexes.length) {
-        indexes.forEach(idx => { badgesEl.innerHTML += `<span class="badge">${idx}</span>`; });
-      }
-      const hasBars = bars.length > 0;
-      const hasProfile = Boolean(universe.name || universe.sector);
-      if (!hasBars && !hasProfile) {
-        // Truly unknown ticker — no data at all
-        badgesEl.innerHTML += '<span class="badge unknown">Ticker not found</span>';
-      } else if (!universe.exists_in_universe) {
-        if (hasProfile) {
-          badgesEl.innerHTML += '<span class="badge" style="border-color:rgba(251,191,36,0.4);color:var(--yellow)">Coverage limited — not in premium universe</span>';
-        } else if (hasBars) {
-          // Has price data but no profile — analysis runs, just missing metadata
-          badgesEl.innerHTML += '<span class="badge" style="border-color:rgba(148,163,184,0.3)">Company profile unavailable</span>';
-        }
-      } else if (!hasProfile) {
-        badgesEl.innerHTML += '<span class="badge" style="border-color:rgba(148,163,184,0.3)">Company profile unavailable</span>';
-      }
-
-      // Price block
-      if (close != null) {
-        document.getElementById('price-block').style.display = 'flex';
-        document.getElementById('price-big').textContent = fmtCur(close, prices.currency || 'USD');
-        const chg = change.pct ?? stats.ret_1d_pct;
-        const chgAbs = change.abs ?? stats.ret_1d_abs;
-        const changeEl = document.getElementById('price-change');
-        if (chg != null) {
-          const sign = chg >= 0 ? '+' : '';
-          changeEl.textContent = `${sign}${fmtCur(chgAbs, prices.currency || 'USD')} (${sign}${(chg * 100).toFixed(2)}%)`;
-          changeEl.className = `price-change ${chg >= 0 ? 'up' : 'down'}`;
-        } else { changeEl.textContent = ''; }
-        document.getElementById('price-date').textContent = prices.date ? `As of ${prices.date}` : '';
-      }
-
-      // 52W Range
-      const h52 = stats.high_52w, l52 = stats.low_52w;
-      if (h52 != null && l52 != null && close != null && h52 > l52) {
-        document.getElementById('range-52w').style.display = 'block';
-        const pct = ((close - l52) / (h52 - l52)) * 100;
-        document.getElementById('range-dot').style.left = `${clamp(pct, 2, 98)}%`;
-        document.getElementById('range-low').textContent = fmtCur(l52);
-        document.getElementById('range-high').textContent = fmtCur(h52);
-        const fromHigh = ((close - h52) / h52 * 100).toFixed(1);
-        const rangeLabel = pct > 95 ? 'At 52W high' : pct > 90 ? 'Near 52W high' : pct > 70 ? 'Upper range' : pct < 5 ? 'At 52W low' : pct < 10 ? 'Near 52W low' : pct < 30 ? 'Lower range' : 'Mid range';
-        document.getElementById('range-pct').textContent = `${rangeLabel} · ${fromHigh}% from 52W high`;
-      }
-
-      // ── OHLCV + Provenance in header ──
-      const headerOhlcv = document.getElementById('header-ohlcv');
-      const headerProv = document.getElementById('header-provenance');
-      if (headerOhlcv && bars.length) {
-        headerOhlcv.innerHTML = buildOHLCVStrip(close, stats, bars);
-        headerOhlcv.style.display = 'block';
-      }
-      if (headerProv && bars.length) {
-        const md = window._rvMetadata || {};
-        headerProv.innerHTML = buildDataProvenance(md, {}, bars);
-        headerProv.style.display = 'block';
-      }
-
-      // ── Error ──
-      if (error) {
-        errorBox.style.display = 'block';
-        errorBox.innerHTML = `<strong>${error.code}</strong>: ${error.message}`;
-      }
-
-      // ── Freshness badge (single source of truth for entire page) ──
-      const envelopeStatus = (payload.meta?.status || 'unknown').toUpperCase();
-      const dataDate = prices.date || bars[bars.length - 1]?.date || null;
-      let effectiveFreshness = envelopeStatus;
-      if (envelopeStatus === 'STALE' && dataDate) {
-        const lastTradingDay = getLastCompletedTradingDay();
-        if (dataDate >= lastTradingDay) effectiveFreshness = 'EOD_CURRENT';
-      }
-      window._rvEffectiveFreshness = effectiveFreshness; // shared across all panels
-      const freshBadge = document.getElementById('rv-freshness-badge');
-      if (freshBadge) {
-        const statusLabel = effectiveFreshness === 'FRESH' ? 'LIVE' : effectiveFreshness === 'EOD_CURRENT' ? 'EOD current' : effectiveFreshness;
-        const fbCol = (effectiveFreshness === 'FRESH' || effectiveFreshness === 'EOD_CURRENT') ? '#10b981' : effectiveFreshness === 'STALE' ? '#f59e0b' : '#ef4444';
-        freshBadge.style.display = 'inline';
-        freshBadge.style.color = fbCol;
-        freshBadge.style.fontWeight = '600';
-        freshBadge.textContent = statusLabel;
-      }
-
-      // ── Unknown ticker gate ──
-      if (!bars.length && !universe.name && !universe.sector && close == null) {
-        app.innerHTML = `<div style="text-align:center;padding:3rem 1rem">
-          <div style="font-size:1.2rem;font-weight:700;color:var(--text);margin-bottom:.5rem">No data available for ${ticker}</div>
-          <div style="font-size:.85rem;color:var(--text-dim)">This ticker was not found or has no price history. Try a different symbol.</div>
+          <div style="font-size:0.65rem; color:var(--text-dim); text-align:center; padding:.5rem;">Loading benchmark data...</div>
         </div>`;
-        return;
-      }
-
-      // ── Sections ──
-      app.innerHTML = buildSections(ticker, close, stats, score, bars, universe);
-      window._rvRefreshTopSections = function () {
-        const ctx = window._rvRenderCtx;
-        if (!ctx) return;
-        const decisionRoot = document.getElementById('rv-decision-strip-root');
-        if (decisionRoot) decisionRoot.innerHTML = buildDecisionStrip(ctx.ticker, ctx.close, ctx.s, ctx.bars);
-        const execRoot = document.getElementById('rv-executive-summary-root');
-        if (execRoot) execRoot.innerHTML = buildExecutiveSummary(ctx.ticker, ctx.close, ctx.s, ctx.bars, ctx.universe);
-        const verdictRoot = document.getElementById('rv-technical-verdict-root');
-        if (verdictRoot) verdictRoot.innerHTML = buildVerdict(ctx.close, ctx.s);
-        const canonicalRoot = document.getElementById('rv-canonical-truth-root');
-        if (canonicalRoot) canonicalRoot.innerHTML = buildCanonicalTruthPanel(ctx.ticker, ctx.close, ctx.s, ctx.bars);
-        const traceRoot = document.getElementById('rv-decision-trace-root');
-        if (traceRoot) traceRoot.innerHTML = buildDecisionTracePanel(ctx.ticker);
-      };
-      const retryBtn = document.getElementById('rv-retry-btn');
-      if (retryBtn) {
-        retryBtn.onclick = async () => {
-          retryBtn.disabled = true;
-          retryBtn.textContent = 'Retrying…';
-          try {
-            await loadTicker(ticker);
-          } finally {
-            retryBtn.disabled = false;
-            retryBtn.textContent = 'Retry / Refresh';
-          }
-        };
-      }
-      // Load async integrations (Scientific, Forecast, Elliott)
-      loadAsyncInsights(ticker, { close, stats, bars, universe, evaluation_v4: payload?.evaluation_v4 || null });
-      // Load real-time data modules (News from EODHD, Fundamentals)
-      loadNewsAsync(ticker, stats);
-      loadFundamentalsAsync(ticker);
     }
 
-    // ─── News / Catalyst Module ───────────────────────────────────────────────────
-    function buildNewsModule(ticker, close, s) {
-      return `<div class="section section-full" id="rv-news-module" style="display:none">
-        <h2>📰 News & Catalysts</h2>
-        <div id="rv-news-content" style="font-size:.85rem;color:var(--text)"></div>
-      </div>`;
-    }
+    const spyVal = _mktCtx.spy[tf];
+    const qqqVal = _mktCtx.qqq[tf];
+    const fmtRel = v => v == null ? '—' : (v >= 0 ? '+' : '') + (v * 100).toFixed(1) + '%';
+    const spyStr = fmtRel(spyVal);
+    const qqqStr = fmtRel(qqqVal);
+    const sSpy = spyVal >= 0 ? 'var(--green)' : 'var(--red)';
+    const sQqq = qqqVal >= 0 ? 'var(--green)' : 'var(--red)';
 
-    async function loadNewsAsync(ticker, s) {
-      const mod = document.getElementById('rv-news-module');
-      const content = document.getElementById('rv-news-content');
-      if (!mod || !content) return;
-      try {
-        const res = await fetch(`${API_BASE}/api/live/news?s=${encodeURIComponent(ticker)}`);
-        if (!res.ok) return;
-        const raw = await res.json();
-        const articles = Array.isArray(raw) ? raw : (Array.isArray(raw?.data) ? raw.data : []);
-        if (!articles.length) {
-          // Fallback: show big-move alert if applicable
-          const change1d = s?.ret_1d_pct;
-          if (change1d != null && Math.abs(change1d) >= 0.03) {
-            const dir = change1d > 0 ? 'up' : 'down';
-            const col = dir === 'up' ? 'var(--green)' : 'var(--red)';
-            const icon = dir === 'up' ? '▲' : '▼';
-            const pct = (Math.abs(change1d) * 100).toFixed(1);
-            content.innerHTML = `<strong style="color:${col}">${icon} ${pct}% move</strong> detected — no recent headlines found.`;
-            mod.style.display = '';
-          }
-          return;
-        }
-        const top = articles.slice(0, 8);
-        const html = top.map(a => {
-          const title = a.title || 'Untitled';
-          const date = a.date ? new Date(a.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '';
-          const link = a.link || '#';
-          const sentiment = a.sentiment;
-          let dot = '';
-          if (sentiment) {
-            const pol = typeof sentiment === 'object' ? sentiment.polarity : sentiment;
-            if (pol != null && pol > 0.6) dot = '<span style="color:var(--green);margin-right:4px">●</span>';
-            else if (pol != null && pol < 0.4) dot = '<span style="color:var(--red);margin-right:4px">●</span>';
-            else dot = '<span style="color:var(--text-muted);margin-right:4px">●</span>';
-          }
-          return `<div style="padding:6px 0;border-bottom:1px solid var(--border)">
-            ${dot}<a href="${link}" target="_blank" rel="noopener" style="color:var(--accent);text-decoration:none">${title}</a>
-            <span style="color:var(--text-muted);font-size:.75rem;margin-left:6px">${date}</span>
-          </div>`;
-        }).join('');
-        content.innerHTML = html;
-        mod.style.display = '';
-      } catch { /* silent */ }
-    }
+    let note = "Mixed relative strength.";
+    if (spyVal > 0 && qqqVal < 0) note = "Outperforming SPY, Underperforming QQQ (Relative Tech Weakness)";
+    else if (spyVal < 0 && qqqVal > 0) note = "Underperforming SPY, Outperforming QQQ (Relative Tech Strength)";
+    else if (spyVal > 0 && qqqVal > 0) note = "Broad Outperformance vs Benchmarks";
+    else if (spyVal < 0 && qqqVal < 0) note = "Broad Underperformance vs Benchmarks";
 
-    // ─── Fundamentals Module ──────────────────────────────────────────────────────
-    function buildFundamentalsModule(ticker, universe = {}) {
-      // Static shell; real data loaded async
-      const profileItems = [];
-      if (universe.sector) profileItems.push({l: 'Sector', v: universe.sector});
-      if (universe.industry) profileItems.push({l: 'Industry', v: universe.industry});
-      if (universe.exchange) profileItems.push({l: 'Exchange', v: universe.exchange});
-      if (universe.country) profileItems.push({l: 'Country', v: universe.country});
-      const profileGrid = profileItems.length ? `<div class="m-grid" style="margin-bottom:.75rem">${profileItems.map(i => `<div class="m-item"><div class="m-label">${i.l}</div><div class="m-val" style="font-size:.88rem">${i.v}</div></div>`).join('')}</div>` : '';
-      return `<div class="section section-full" id="rv-fundamentals-module">
-        <h2>🏢 Fundamentals</h2>
-        ${profileGrid}
-        <div id="rv-fundamentals-content" style="font-size:.85rem;color:var(--text-dim)">Loading fundamentals…</div>
-      </div>`;
-    }
-
-    function fundFmtLarge(n) {
-      if (n == null) return '—';
-      const abs = Math.abs(n);
-      if (abs >= 1e12) return (n / 1e12).toFixed(2) + 'T';
-      if (abs >= 1e9) return (n / 1e9).toFixed(2) + 'B';
-      if (abs >= 1e6) return (n / 1e6).toFixed(1) + 'M';
-      if (abs >= 1e3) return (n / 1e3).toFixed(1) + 'K';
-      return n.toFixed(2);
-    }
-
-    function fundFmtPct(n) {
-      if (n == null) return '—';
-      return (n * 100).toFixed(2) + '%';
-    }
-
-    function fundFmtNum(n, d = 2) {
-      if (n == null) return '—';
-      return Number(n).toFixed(d);
-    }
-
-    async function loadFundamentalsAsync(ticker) {
-      const content = document.getElementById('rv-fundamentals-content');
-      if (!content) return;
-      try {
-        const res = await fetch(`${API_BASE}/api/fundamentals?ticker=${encodeURIComponent(ticker)}`);
-        if (!res.ok) { content.innerHTML = `<div class="placeholder-card">No fundamentals are available for ${ticker} right now.</div>`; return; }
-        const json = await res.json();
-        const d = json?.data;
-        if (!d || (!d.marketCap && !d.pe_ttm && !d.eps_ttm && !d.revenue_ttm)) {
-          content.innerHTML = `<div class="placeholder-card">No fundamentals are available for ${ticker} right now.</div>`;
-          return;
-        }
-
-        // Update profile fields from EODHD if richer than universe
-        const mod = document.getElementById('rv-fundamentals-module');
-        if (mod && (d.sector || d.industry || d.companyName)) {
-          const h2 = mod.querySelector('h2');
-          if (h2 && d.companyName) h2.textContent = `🏢 ${d.companyName}`;
-        }
-
-        const rows = [];
-        const addRow = (label, val) => { if (val && val !== '—') rows.push({l: label, v: val}); };
-
-        addRow('Market Cap', '$' + fundFmtLarge(d.marketCap));
-        addRow('P/E (TTM)', fundFmtNum(d.pe_ttm));
-        addRow('Forward P/E', fundFmtNum(d.forwardPE));
-        addRow('PEG Ratio', fundFmtNum(d.pegRatio));
-        addRow('P/S (TTM)', fundFmtNum(d.ps_ttm));
-        addRow('P/B', fundFmtNum(d.pb));
-        addRow('EV/EBITDA', fundFmtNum(d.ev_ebitda));
-        addRow('EPS (TTM)', '$' + fundFmtNum(d.eps_ttm));
-        addRow('Revenue (TTM)', '$' + fundFmtLarge(d.revenue_ttm));
-        addRow('EBITDA', '$' + fundFmtLarge(d.ebitda));
-        addRow('Gross Profit', '$' + fundFmtLarge(d.grossProfitTTM));
-        addRow('Profit Margin', fundFmtPct(d.netMargin));
-        addRow('Operating Margin', fundFmtPct(d.operatingMargin));
-        addRow('ROE', fundFmtPct(d.returnOnEquity));
-        addRow('ROA', fundFmtPct(d.returnOnAssets));
-        addRow('Beta', fundFmtNum(d.beta));
-        addRow('Dividend Yield', d.dividendYield != null ? fundFmtPct(d.dividendYield) : null);
-        addRow('Shares Out', fundFmtLarge(d.sharesOutstanding));
-        addRow('Shares Float', fundFmtLarge(d.sharesFloat));
-        addRow('Book Value', '$' + fundFmtNum(d.bookValue));
-        addRow('Wall St Target', d.wallStreetTarget != null ? '$' + fundFmtNum(d.wallStreetTarget) : null);
-        addRow('Q Earnings Growth YOY', d.quarterlyEarningsGrowthYOY != null ? fundFmtPct(d.quarterlyEarningsGrowthYOY) : null);
-        addRow('Q Revenue Growth YOY', d.quarterlyRevenueGrowthYOY != null ? fundFmtPct(d.quarterlyRevenueGrowthYOY) : null);
-
-        if (!rows.length) { content.innerHTML = `<div class="placeholder-card">No fundamentals are available for ${ticker} right now.</div>`; return; }
-
-        content.innerHTML = `<div class="m-grid">${rows.map(r => `<div class="m-item"><div class="m-label">${r.l}</div><div class="m-val">${r.v}</div></div>`).join('')}</div>`;
-      } catch {
-        content.innerHTML = `<div class="placeholder-card">No fundamentals are available for ${ticker} right now.</div>`;
-      }
-    }
-
-    // ─── Build All Sections ───────────────────────────────────────────────────────
-    function buildSections(ticker, close, s, score, bars, universe) {
-      return `<div class="sections-grid">
-    <div id="rv-decision-strip-root" style="grid-column:1/-1">${buildDecisionStrip(ticker, close, s, bars)}</div>
-    ${buildNewsModule(ticker, close, s)}
-    <div id="rv-executive-summary-root" style="grid-column:1/-1">${buildExecutiveSummary(ticker, close, s, bars, universe)}</div>
-    ${buildLevels(close, s, bars)}
-    ${typeof buildV4SlotShell === 'function' ? buildV4SlotShell() : ''}
-    <div id="rv-technical-verdict-root" style="grid-column:1/-1">${buildVerdict(close, s)}</div>
-    ${buildMASection(close, s)}
-    ${buildOscillators(close, s)}
-    ${buildVolatility(close, s)}
-    ${buildVolume(s, bars)}
-    ${buildFundamentalsModule(ticker, universe)}
-    ${buildTrendMomentum(close, s, bars)}
-    <details class="advanced-collapsible" id="rv-quantlab-details" open><summary class="section-summary-header">Quant Lab Experts <span class="advanced-badge">LOCAL RESULTS</span></summary><div id="rv-quantlab-slot"><div class="placeholder-card">Loading Quant Lab result mirror...</div></div></details>
-    <details class="advanced-collapsible" id="rv-scientific-details" open><summary class="section-summary-header">🔬 Scientific Analyzer <span class="advanced-badge">ADVANCED</span></summary><div id="rv-scientific-slot"><div class="placeholder-card">Loading scientific analysis…</div></div></details>
-    <details class="advanced-collapsible" id="rv-forecast-details" open><summary class="section-summary-header">🔮 ML Forecast <span class="advanced-badge">ADVANCED</span></summary><div id="rv-forecast-slot"><div class="placeholder-card">Loading forecast…</div></div></details>
-    <details class="advanced-collapsible" id="rv-elliott-details" open><summary class="section-summary-header">🌊 Elliott Wave <span class="advanced-badge">ADVANCED</span></summary><div id="rv-elliott-slot"><div class="placeholder-card">Loading Elliott wave analysis…</div></div></details>
-    ${buildPerformance(s)}
-    ${buildScore(score)}
-    <details class="advanced-collapsible" open><summary class="section-summary-header">📊 Advanced Analytics <span class="advanced-badge">ADVANCED</span></summary>
-      ${buildEarningsShockProxy(bars)}
-      ${buildDrawdownAnatomy(bars)}
-      ${buildVolTermStructure(bars)}
-      ${buildMonteCarlo(bars)}
-      ${buildLiquidityScore(s, bars)}
-      ${buildSeasonality(bars)}
-      ${buildCorrelations(ticker, bars)}
-      ${buildFactorCorrelation(ticker, bars)}
-      ${buildATRBands(close, s)}
-      ${buildRiskBudget(close, s)}
-      ${buildSignals(close, s)}
-      ${buildStressScenarios(bars)}
-      ${buildCorporateActions(bars)}
-    </details>
-    <details class="advanced-collapsible" open><summary class="section-summary-header">🔍 Data Checks <span class="advanced-badge">ADVANCED</span></summary>
-      <div id="rv-canonical-truth-root">${buildCanonicalTruthPanel(ticker, close, s, bars)}</div>
-      ${buildDataHealthPanel(ticker)}
-      <div id="rv-decision-trace-root">${buildDecisionTracePanel(ticker)}</div>
-      ${buildBiotechContextPanel(ticker, universe)}
-    </details>
-    <div style="font-size:.68rem;color:var(--text-muted);text-align:center;padding:1rem 0;grid-column:1/-1">Technical analysis only. Not financial advice. Data sources: EODHD, Tiingo, Twelvedata.</div>
-  </div>`;
-    }
-
-    // ─── Async Integration Loader ────────────────────────────────────────────────
-    async function loadAsyncInsights(ticker, context = {}) {
-      const slots = [
-        { id: 'rv-quantlab-slot', fn: () => buildQuantLabInsight(ticker, context) },
-        { id: 'rv-scientific-slot', fn: () => buildScientificInsight(ticker, context) },
-        { id: 'rv-forecast-slot', fn: () => buildForecastInsight(ticker, context) },
-        { id: 'rv-elliott-slot', fn: () => buildElliottInsight(ticker, context) },
-      ];
-      if (typeof isFeaturesV4Enabled === 'function' && isFeaturesV4Enabled()) {
-        slots.push({ id: 'rv-v4-slot', fn: () => buildV4GovernanceInsight(ticker, context) });
-      }
-      const ASYNC_TIMEOUT = 12000;
-      const FALLBACK_LABELS = {
-        'rv-quantlab-slot': 'Quant Lab Experts',
-        'rv-scientific-slot': '🔬 Scientific Analyzer',
-        'rv-forecast-slot': '🔮 ML Forecast',
-        'rv-elliott-slot': '🌊 Elliott Wave',
-        'rv-v4-slot': '🧭 v4 Governance'
-      };
-      await Promise.allSettled(slots.map(async ({ id, fn }) => {
-        const el = document.getElementById(id);
-        if (!el) return;
-        try {
-          const result = await Promise.race([
-            fn(),
-            new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), ASYNC_TIMEOUT))
-          ]);
-          if (result && result.trim()) {
-            el.innerHTML = result;
-          } else {
-            const label = FALLBACK_LABELS[id] || 'Section';
-            const message = id === 'rv-quantlab-slot'
-              ? `No fresh Quant Lab result is available for ${ticker} in today's local publish slice.`
-              : `No live ${label.replace(/^[^\p{L}\p{N}]+/u, '')} block is available for ${ticker} right now.`;
-            el.innerHTML = `<div class="section section-full"><h2>${label}</h2><div class="placeholder-card">${message}</div></div>`;
-          }
-        } catch (e) {
-          if (e.message !== 'timeout') console.warn('Async insight error:', id, e);
-          const label = FALLBACK_LABELS[id] || 'Section';
-          const reason = id === 'rv-quantlab-slot'
-            ? (e.message === 'timeout' ? 'Quant Lab result timed out.' : 'Quant Lab result is temporarily unavailable.')
-            : (e.message === 'timeout' ? `${label} timed out.` : `${label} is temporarily unavailable.`);
-          el.innerHTML = `<div class="section section-full"><h2>${label}</h2><div class="placeholder-card">${reason}</div></div>`;
-        }
-        const details = el.closest('details');
-        if (details) details.setAttribute('open', '');
-      }));
-    }
-
-    // Shared Bollinger signal — used by both Verdict and Signal Summary for consistency
-    function getBollingerSignal(close, s) {
-      if (s.bb_upper == null || s.bb_lower == null) return { sig: 'Neutral', pctB: null };
-      const pctB = (close - s.bb_lower) / (s.bb_upper - s.bb_lower);
-      const sig = pctB < 0.2 ? 'Buy' : pctB > 0.8 ? 'Sell' : 'Neutral';
-      return { sig, pctB };
-    }
-
-    // 5-tier RSI classification — aligned with RSI_BUCKETS in stock-analyzer-contract.js
-    function getRsiMeta(rsi) {
-      if (!Number.isFinite(rsi)) return { zone: 'Unknown', signal: 'Neutral', color: 'var(--text-dim)' };
-      if (rsi < 30) return { zone: 'Oversold',     signal: 'Buy',     color: 'var(--green)' };
-      if (rsi < 45) return { zone: 'Soft Bearish', signal: 'Neutral', color: '#fb923c' };
-      if (rsi < 55) return { zone: 'Neutral',      signal: 'Neutral', color: 'var(--text)' };
-      if (rsi < 70) return { zone: 'Soft Bullish', signal: 'Neutral', color: 'var(--accent)' };
-      return             { zone: 'Overbought',    signal: 'Sell',    color: 'var(--red)' };
-    }
-
-    function isBiotechTicker(universe = {}) {
-      const hay = `${universe?.sector || ''} ${universe?.industry || ''} ${universe?.name || ''}`.toLowerCase();
-      return /\bbiotech|biotechnology|pharma|therapeutics|drug\b/.test(hay);
-    }
-
-    function _fmtDigest(d) {
-      const s = String(d || '').trim();
-      return s ? `${s.slice(0, 12)}…` : '—';
-    }
-
-    function buildCanonicalTruthPanel(ticker, close, s, bars) {
-      const can = window._rvCanonicalMetrics || {};
-      const q = window._rvQualitySignals || {};
-      const atrPct = can.atrPct != null ? `${can.atrPct.toFixed(2)}%` : '—';
-      const mismatch = q.metricMismatch;
-      return `<div class="section section-full">
-        <h2>🧾 Canonical Truth & Provenance</h2>
-        <div class="m-grid">
-          <div class="m-item"><div class="m-label">Ticker</div><div class="m-val">${ticker}</div><div class="m-sub">Single source context</div></div>
-          <div class="m-item"><div class="m-label">RSI14 (canonical)</div><div class="m-val">${can.rsi14 != null ? can.rsi14.toFixed(1) : '—'}</div><div class="m-sub">shared across modules</div></div>
-          <div class="m-item"><div class="m-label">ATR14 (canonical)</div><div class="m-val">${can.atr14 != null ? fmtCur(can.atr14) : '—'}</div><div class="m-sub">${atrPct} of price</div></div>
-          <div class="m-item"><div class="m-label">As-of</div><div class="m-val">${can.asOf || '—'}</div><div class="m-sub">bar timestamp</div></div>
-          <div class="m-item"><div class="m-label">Digest</div><div class="m-val">${_fmtDigest(can.digest)}</div><div class="m-sub">payload hash</div></div>
-          <div class="m-item"><div class="m-label">Schema</div><div class="m-val">${can.schemaVersion || 'rv.stock'}</div><div class="m-sub">contract version</div></div>
+    return `
+      <div style="padding:.6rem; border-radius:8px; background:rgba(255,255,255,0.01); border:1px solid rgba(255,255,255,0.03);">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: .4rem;">
+          <div style="font-size: .62rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700;">Market Context</div>
+          <div style="display:flex; gap:2px;">${['1D', '1W', '1M', '1Y'].map(getBtn).join('')}</div>
         </div>
-        ${mismatch ? (() => {
-          const mm = q.metricMismatchDetail || {};
-          const rsiDrift = mm.rsiMismatch ? Math.abs((mm.canonicalRsi || 0) - (mm.sampleRsi || 0)) : 0;
-          const atrDrift = mm.atrMismatch ? Math.abs((mm.canonicalAtrPct || 0) - (mm.sampleAtrPct || 0)) : 0;
-          const severity = (rsiDrift > 10 || atrDrift > 3) ? 'critical' : (rsiDrift > 5 || atrDrift > 1.5) ? 'material' : 'minor';
-          const sevCol = severity === 'critical' ? 'var(--red)' : severity === 'material' ? '#fb923c' : 'var(--yellow)';
-          const sevBg = severity === 'critical' ? 'var(--red-bg)' : severity === 'material' ? 'rgba(251,146,60,.1)' : 'var(--yellow-bg)';
-          const sevBorder = severity === 'critical' ? 'rgba(248,113,113,.4)' : severity === 'material' ? 'rgba(251,146,60,.35)' : 'rgba(251,191,36,.35)';
-          return `<div style="margin-top:.55rem;padding:.45rem .6rem;border-radius:8px;background:${sevBg};border:1px solid ${sevBorder};font-size:.76rem;color:${sevCol}"><strong>Metric drift — ${severity.toUpperCase()}:</strong> canonical metrics diverge from model snapshot.${rsiDrift > 0 ? ` RSI delta: ${rsiDrift.toFixed(1)}pts.` : ''}${atrDrift > 0 ? ` ATR% delta: ${atrDrift.toFixed(1)}pts.` : ''} ${severity === 'critical' ? 'Decision reliability severely impacted.' : severity === 'material' ? 'Decision may be affected.' : 'Minor deviation — monitor.'}</div>`;
-        })() : `<div style="margin-top:.55rem;font-size:.73rem;color:var(--text-muted)">Canonical metrics aligned — single decision reference for RSI/ATR/As-of.</div>`}
-      </div>`;
-    }
-
-    function buildDataHealthPanel(ticker) {
-      const meta = window._rvEnvelopeMeta || {};
-      const cache = meta.cache || {};
-      const raw = window._rvCanonicalMetrics?.rawValidation || null;
-      // Use the same effective freshness as the header badge
-      const effectiveState = window._rvEffectiveFreshness || (meta.status || 'unknown').toUpperCase();
-      const stateCol = (effectiveState === 'FRESH' || effectiveState === 'EOD_CURRENT') ? 'var(--green)' : effectiveState === 'STALE' ? 'var(--yellow)' : 'var(--red)';
-      const stateLabel = effectiveState === 'FRESH' ? 'LIVE' : effectiveState === 'EOD_CURRENT' ? 'EOD current' : effectiveState;
-      return `<div class="section section-full">
-        <h2>🩺 Data Health & Recovery</h2>
-        <div class="m-grid">
-          <div class="m-item"><div class="m-label">Freshness</div><div class="m-val" style="color:${stateCol}">${stateLabel}</div></div>
-          <div class="m-item"><div class="m-label">Cache</div><div class="m-val">${cache.hit ? 'HIT' : 'MISS'}${cache.stale ? ' · stale' : ''}</div></div>
-          <div class="m-item"><div class="m-label">Provider</div><div class="m-val">${meta.provider || '—'}</div></div>
-          <div class="m-item"><div class="m-label">Raw Validation</div><div class="m-val" style="color:${raw == null ? 'var(--yellow)' : raw.valid ? 'var(--green)' : 'var(--red)'}">${raw == null ? 'UNKNOWN' : raw.valid ? 'VALID' : 'INVALID'}</div></div>
-        </div>
-        <div style="display:flex;align-items:center;justify-content:space-between;gap:.6rem;margin-top:.55rem">
-          <div style="font-size:.72rem;color:var(--text-muted)">
-            ${meta.degraded ? `Degraded: ${meta.degraded_reason || 'scheduler_stale'}` : ''}
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:0.5rem;">
+          <div style="font-size:0.68rem; display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.02); padding:3px 6px; border-radius:4px;">
+            <span style="color:var(--text-dim);">vs SPY:</span><span style="font-weight:800; color:${sSpy};">${spyStr}</span>
           </div>
-          <button id="rv-retry-btn" type="button" style="padding:.45rem .75rem;border-radius:8px;border:1px solid var(--border);background:rgba(255,255,255,.04);color:var(--text);font-weight:600;cursor:pointer">Retry</button>
-        </div>
-      </div>`;
-    }
-
-    function buildBiotechContextPanel(ticker, universe = {}) {
-      if (!isBiotechTicker(universe)) return '';
-      const q = window._rvQualitySignals || {};
-      q.biotechContextMissing = true;
-      window._rvQualitySignals = q;
-      return `<div class="section section-full">
-        <h2>🧬 Biotech Context Gate</h2>
-        <div style="padding:.55rem .65rem;border-radius:8px;background:var(--yellow-bg);border:1px solid rgba(251,191,36,.35);font-size:.78rem;color:#fde68a">
-          Biotech minimum context is incomplete for ${ticker}. Catalyst timeline, cash runway, dilution risk, and binary-event context are not connected in live feeds.
-        </div>
-        <div style="margin-top:.5rem;font-size:.74rem;color:var(--text-dim)">
-          Decision confidence is capped at <strong>MEDIUM</strong> until biotech context coverage is available.
-        </div>
-      </div>`;
-    }
-
-    function buildDecisionTracePanel(ticker) {
-      const q = window._rvQualitySignals || {};
-      const can = window._rvCanonicalMetrics || {};
-      const trace = window._rvPayload?.evaluation_v4?.v4_contract?.decision_trace?.value || null;
-      // Audit-tauglich: gate name + cause + affected value + consequence
-      const gateEntries = [];
-      if (q.finalSuppressed) gateEntries.push({ gate: 'FINAL_SUPPRESSED', cause: 'rawValidation === INVALID', value: q.rawStatus || 'INVALID', consequence: 'All horizons suppressed, global action = SUPPRESSED' });
-      if (q.rawStatus === 'UNKNOWN') gateEntries.push({ gate: 'RAW_VALIDATION_UNKNOWN', cause: 'rawValidation is null/missing', value: 'UNKNOWN', consequence: 'Global BUY blocked — data health unverified' });
-      if (q.metricMismatch) gateEntries.push({ gate: 'CANONICAL_DRIFT', cause: 'RSI/ATR diverge from model snapshot', value: JSON.stringify(q.metricMismatchDetail || {}), consequence: 'Global BUY blocked — metric integrity uncertain' });
-      if (q.rsiHardGate) gateEntries.push({ gate: 'RSI_HARD_GATE', cause: 'RSI14 >= 80', value: can.rsi14 != null ? can.rsi14.toFixed(1) : '>=80', consequence: 'Global BUY blocked — overbought hard gate' });
-      if (q.biotechContextMissing) gateEntries.push({ gate: 'BIO_CONTEXT_MISSING', cause: 'Biotech minimum context incomplete', value: 'catalyst/runway/dilution unavailable', consequence: 'Global BUY blocked, confidence capped at MEDIUM' });
-      if (q.rrBlockedHorizons > 0) gateEntries.push({ gate: `RR_BLOCKED_${q.rrBlockedHorizons}`, cause: 'R:R < 0.50 on horizon(s)', value: `${q.rrBlockedHorizons} horizon(s)`, consequence: 'Affected horizons downgraded to WAIT/AVOID' });
-      if (q.forecastValidated === false) gateEntries.push({ gate: 'FORECAST_VALIDATION_INCOMPLETE', cause: 'Forecast not validated', value: '—', consequence: 'Forecast module output is advisory only' });
-      if (q.forecastIndependent === false) gateEntries.push({ gate: 'FORECAST_NON_INDEPENDENT', cause: 'Forecast not independent', value: '—', consequence: 'Forecast module output is advisory only' });
-      const chain = Array.isArray(trace?.reason_chain) ? trace.reason_chain : [];
-      const gateRows = gateEntries.map(g => `<tr><td style="padding:.25rem .4rem;font-weight:600;color:var(--yellow);overflow-wrap:break-word">${g.gate}</td><td style="padding:.25rem .4rem;overflow-wrap:break-word">${g.cause}</td><td style="padding:.25rem .4rem;font-family:monospace;font-size:.7rem;overflow-wrap:break-word">${g.value}</td><td style="padding:.25rem .4rem;overflow-wrap:break-word">${g.consequence}</td></tr>`).join('');
-      return `<div class="section section-full">
-        <h2>📜 Decision Trace</h2>
-        <div style="font-size:.78rem;color:var(--text-dim);line-height:1.55">
-          Verdict: <strong style="color:var(--text)">${q.overallAction || q.decisionSummary || 'WAIT'}</strong> ·
-          As-of: <strong style="color:var(--text)">${can.asOf || '—'}</strong> ·
-          Digest: <strong style="color:var(--text)">${_fmtDigest(can.digest)}</strong>
-        </div>
-        ${gateEntries.length ? `<div style="overflow-x:auto;margin-top:.5rem"><table style="width:100%;table-layout:fixed;font-size:.72rem;border-collapse:collapse;word-break:break-word"><colgroup><col style="width:18%"><col style="width:28%"><col style="width:18%"><col style="width:36%"></colgroup><tr style="color:var(--text-muted);text-align:left"><th style="padding:.25rem .4rem">Gate</th><th style="padding:.25rem .4rem">Cause</th><th style="padding:.25rem .4rem">Value</th><th style="padding:.25rem .4rem">Consequence</th></tr>${gateRows}</table></div>` : `<div style="margin-top:.45rem;font-size:.74rem;color:var(--text-muted)">Gates: none</div>`}
-        ${chain.length ? `<div style="margin-top:.35rem;font-size:.72rem;color:var(--text-muted)">Reason chain: ${chain.join(' → ')}</div>` : ''}
-      </div>`;
-    }
-
-    // ─── 0. DECISION STRIP (above-the-fold, short/mid/long horizons) ─────────────
-    function buildDecisionStrip(ticker, close, s, bars) {
-      if (close == null) return '';
-      const toNum = v => Number.isFinite(Number(v)) ? Number(v) : null;
-      const fmtCurLocal = v => v == null ? '—' : '$' + Number(v).toFixed(2);
-      const qPrev = window._rvQualitySignals || {};
-      const rawState = window._rvCanonicalMetrics?.rawValidation;
-      const rawStatus = rawState == null ? 'UNKNOWN' : rawState.valid ? 'VALID' : 'INVALID';
-      const rawValid = rawStatus === 'VALID';
-      const rawUnknown = rawStatus === 'UNKNOWN';
-      const metricMismatch = Boolean(qPrev.metricMismatch);
-      const biotechMissing = Boolean(qPrev.biotechContextMissing);
-      const rsiHardGate = s.rsi14 != null && s.rsi14 >= 80;
-      const anyGateActive = !rawValid || rawUnknown || metricMismatch || biotechMissing || rsiHardGate;
-      const suppressed = rawStatus === 'INVALID';
-
-      const swingHigh = (n) => {
-        if (!Array.isArray(bars) || bars.length < 3) return null;
-        const arr = bars.slice(-Math.max(3, n));
-        const v = Math.max(...arr.map((b) => toNum(b.high) ?? toNum(b.close) ?? Number.NEGATIVE_INFINITY));
-        return Number.isFinite(v) ? v : null;
-      };
-      const swingLow = (n) => {
-        if (!Array.isArray(bars) || bars.length < 3) return null;
-        const arr = bars.slice(-Math.max(3, n));
-        const v = Math.min(...arr.map((b) => toNum(b.low) ?? toNum(b.close) ?? Number.POSITIVE_INFINITY));
-        return Number.isFinite(v) ? v : null;
-      };
-      const pickLevel = (levels, side) => {
-        const clean = [];
-        for (const l of levels) {
-          if (!l || !Number.isFinite(l.price)) continue;
-          if (clean.some((x) => Math.abs(x.price - l.price) / close < 0.0025)) continue;
-          clean.push(l);
-        }
-        const filtered = clean.filter((l) => side === 'above' ? l.price > close : l.price < close);
-        if (!filtered.length) return null;
-        filtered.sort((a, b) => side === 'above' ? a.price - b.price : b.price - a.price);
-        return filtered[0];
-      };
-
-      function scoreHorizon(horizon) {
-        let score = 0; const reasons = [];
-        const rsiMeta = getRsiMeta(s.rsi14);
-        if (horizon === 'short') {
-          if (s.sma20 != null) { if (close > s.sma20) { score += 1; reasons.push('Price above SMA20'); } else { score -= 1; reasons.push('Price below SMA20'); } }
-          if (s.macd_hist != null) { if (s.macd_hist > 0) { score += 1; reasons.push('MACD histogram positive'); } else { score -= 1; reasons.push('MACD histogram negative'); } }
-          if (rsiMeta.zone === 'Oversold') { score += 0.5; reasons.push('RSI oversold bounce setup'); }
-          if (rsiMeta.zone === 'Overbought') { score -= 0.75; reasons.push('RSI overbought'); }
-        } else if (horizon === 'mid') {
-          if (s.sma50 != null) { if (close > s.sma50) { score += 1; reasons.push('Price above SMA50'); } else { score -= 1; reasons.push('Price below SMA50'); } }
-          if (s.sma20 != null && s.sma50 != null && s.sma200 != null) {
-            if (s.sma20 > s.sma50 && s.sma50 > s.sma200) { score += 1.5; reasons.push('Bullish MA stack'); }
-            else if (s.sma20 < s.sma50 && s.sma50 < s.sma200) { score -= 1.5; reasons.push('Bearish MA stack'); }
-          }
-          if (s.ret_20d_pct != null) { if (s.ret_20d_pct > 0) score += 0.5; else score -= 0.5; }
-        } else {
-          if (s.sma200 != null) { if (close > s.sma200) { score += 2; reasons.push('Price above SMA200'); } else { score -= 2; reasons.push('Price below SMA200'); } }
-          if (s.range_52w_pct != null) {
-            if (s.range_52w_pct > 0.9) { score += 1; reasons.push('Near 52W high'); }
-            else if (s.range_52w_pct < 0.2) { score -= 1; reasons.push('Near 52W low'); }
-          }
-          if (s.volatility_percentile != null && s.volatility_percentile > 90) {
-            score -= 0.5; reasons.push('Very high volatility');
-          }
-        }
-        return { score, reasons: reasons.slice(0, 3) };
-      }
-
-      function baseVerdict(score) {
-        if (score >= 2) return { label: 'BUY', cls: 'bullish', conf: score >= 3 ? 'HIGH' : 'MEDIUM', icon: '▲' };
-        if (score <= -2) return { label: 'AVOID', cls: 'bearish', conf: score <= -3 ? 'HIGH' : 'MEDIUM', icon: '▼' };
-        return { label: 'WAIT', cls: 'neutral', conf: Math.abs(score) >= 1 ? 'MEDIUM' : 'LOW', icon: '◆' };
-      }
-
-      const shortLevels = {
-        trigger: pickLevel([
-          { name: 'Swing High 10d', price: swingHigh(10) },
-          { name: 'BB Upper', price: s.bb_upper },
-          { name: 'SMA 20', price: s.sma20 },
-        ], 'above'),
-        invalid: pickLevel([
-          { name: 'Swing Low 10d', price: swingLow(10) },
-          { name: 'BB Lower', price: s.bb_lower },
-          { name: 'SMA 20', price: s.sma20 },
-        ], 'below')
-      };
-      const midLevels = {
-        trigger: pickLevel([
-          { name: 'Swing High 20d', price: swingHigh(20) },
-          { name: 'SMA 20', price: s.sma20 },
-          { name: '52W High', price: s.high_52w },
-        ], 'above'),
-        invalid: pickLevel([
-          { name: 'SMA 50', price: s.sma50 },
-          { name: 'Swing Low 20d', price: swingLow(20) },
-          { name: 'SMA 200', price: s.sma200 },
-        ], 'below')
-      };
-      const longLevels = {
-        trigger: pickLevel([
-          { name: '52W High', price: s.high_52w },
-          { name: 'Swing High 60d', price: swingHigh(60) },
-        ], 'above'),
-        invalid: pickLevel([
-          { name: 'SMA 200', price: s.sma200 },
-          { name: 'Swing Low 60d', price: swingLow(60) },
-          { name: '52W Low', price: s.low_52w },
-        ], 'below')
-      };
-
-      const horizons = [
-        { key: 'short', label: 'SHORT', sub: '1–5 days', levels: shortLevels },
-        { key: 'mid', label: 'MID', sub: '1–12 weeks', levels: midLevels },
-        { key: 'long', label: 'LONG', sub: '6–24 months', levels: longLevels },
-      ];
-
-      let rrBlockedHorizons = 0;
-      const finalLabels = [];
-      const cards = horizons.map((h) => {
-        const sc = scoreHorizon(h.key);
-        const base = baseVerdict(sc.score);
-        let verdict = { ...base };
-        const trigger = h.levels.trigger;
-        const invalid = h.levels.invalid;
-        let rr = null;
-        let risk = null;
-        let reward = null;
-        const gateNotes = [];
-        if (trigger && invalid) {
-          risk = Math.abs(close - invalid.price);
-          // Project reward beyond trigger using ATR-based targets per horizon
-          const atr = s.atr14 || 0;
-          const atrMult = h.key === 'short' ? 2.5 : h.key === 'mid' ? 5 : 8;
-          const projectedTarget = trigger.price + atr * atrMult;
-          reward = Math.abs(projectedTarget - close);
-          rr = risk > 0 ? reward / risk : null;
-          if (rr != null && rr < 0.5) {
-            rrBlockedHorizons += 1;
-            verdict = rr < 0.3 ? { label: 'AVOID', cls: 'bearish', conf: 'MEDIUM', icon: '▼' } : { label: 'WAIT', cls: 'neutral', conf: 'MEDIUM', icon: '◆' };
-            gateNotes.push(`R:R gate blocked (${rr.toFixed(2)} < 0.50)`);
-          } else if (rr != null && rr < 1.0) {
-            gateNotes.push(`R:R caution (${rr.toFixed(2)} < 1.00)`);
-          }
-        } else {
-          gateNotes.push('Missing trigger/invalidation level');
-        }
-
-        if (rsiHardGate && verdict.label === 'BUY') {
-          verdict = { label: 'WAIT', cls: 'neutral', conf: 'LOW', icon: '◆' };
-          gateNotes.push(`RSI hard gate (${s.rsi14.toFixed(1)} >= 80)`);
-        }
-        if (biotechMissing && verdict.conf === 'HIGH') verdict.conf = 'MEDIUM';
-        if (metricMismatch && verdict.label === 'BUY') {
-          verdict = { label: 'WAIT', cls: 'neutral', conf: 'LOW', icon: '◆' };
-          gateNotes.push('Canonical metric drift blocks BUY');
-        }
-        if (rawUnknown && verdict.label === 'BUY') {
-          verdict = { label: 'WAIT', cls: 'neutral', conf: 'LOW', icon: '◆' };
-          gateNotes.push('Raw validation unknown — data health unverified');
-        }
-        if (suppressed) {
-          verdict = { label: 'SUPPRESSED', cls: 'neutral', conf: 'LOW', icon: '⏸' };
-          gateNotes.push('Raw data validation failed');
-        }
-        finalLabels.push(verdict.label);
-
-        const rrColor = rr == null ? 'var(--text-muted)' : rr >= 2 ? 'var(--green)' : rr >= 0.5 ? 'var(--yellow)' : 'var(--red)';
-        const rrText = rr == null ? '—' : `${rr.toFixed(2)}:1`;
-        let triggerText = 'No trigger level';
-        if (trigger) {
-          const latestBar = bars.length ? bars[bars.length - 1] : null;
-          const barHigh = latestBar ? (toNum(latestBar.high) ?? close) : close;
-          const barClose = close;
-          if (barClose >= trigger.price) {
-            triggerText = `Confirmed breakout above ${trigger.name} (${fmtCurLocal(trigger.price)})`;
-          } else if (barHigh >= trigger.price) {
-            triggerText = `Rejected at ${trigger.name} (${fmtCurLocal(trigger.price)}) — failed breakout`;
-          } else {
-            triggerText = `Break above ${trigger.name} (${fmtCurLocal(trigger.price)})`;
-          }
-        }
-        const invalidText = invalid ? `Loss of ${invalid.name} (${fmtCurLocal(invalid.price)})` : 'No invalidation level';
-
-        return `<div class="decision-card ${verdict.cls}">
-          <div class="decision-horizon">${h.label} <span class="decision-horizon-sub">${h.sub}</span></div>
-          <div class="decision-verdict">${verdict.icon} ${verdict.label}</div>
-          <div class="decision-conf">Confidence: <strong>${verdict.conf}</strong></div>
-          <ul class="decision-reasons">${sc.reasons.map(r => `<li>${r}</li>`).join('')}</ul>
-          <div class="decision-trigger">▶ Trigger: ${triggerText}</div>
-          <div class="decision-invalid">✗ Structural Invalidation: ${invalidText}</div>
-          <div style="font-size:.72rem;color:var(--text-dim);margin-top:.3rem" title="Risk = distance to invalidation. Reward = distance to projected target.">R:R <strong style="color:${rrColor}">${rrText}</strong>${rr != null ? (() => {
-            const total = risk + reward;
-            const riskPct = total > 0 ? Math.round(risk / total * 100) : 50;
-            const rewardPct = 100 - riskPct;
-            return ` <span style="display:inline-flex;align-items:center;gap:2px;vertical-align:middle"><span style="display:inline-block;width:${Math.max(8, riskPct * 0.6)}px;height:6px;background:var(--red);border-radius:2px 0 0 2px;opacity:.7"></span><span style="display:inline-block;width:${Math.max(8, rewardPct * 0.6)}px;height:6px;background:var(--green);border-radius:0 2px 2px 0;opacity:.7"></span></span> <span style="opacity:.7">risk ${fmtCurLocal(risk)} / reward ${fmtCurLocal(reward)}</span>`;
-          })() : ''}</div>
-          ${gateNotes.length ? `<div style="font-size:.7rem;color:var(--yellow);margin-top:.25rem">${gateNotes.join(' · ')}</div>` : ''}
-        </div>`;
-      }).join('');
-
-      let overallAction = 'WAIT';
-      if (suppressed) overallAction = 'SUPPRESSED';
-      else if (finalLabels.every((l) => l === 'AVOID')) overallAction = 'AVOID';
-      else if (finalLabels.some((l) => l === 'BUY') && rrBlockedHorizons === 0 && !anyGateActive) overallAction = 'BUY';
-      const qNext = {
-        ...qPrev,
-        rrBlockedHorizons,
-        horizonVerdicts: finalLabels,
-        finalSuppressed: suppressed,
-        anyGateActive,
-        rsiHardGate,
-        rawStatus,
-        overallAction,
-        decisionSummary: overallAction
-      };
-      window._rvQualitySignals = qNext;
-      const quant = qNext.quantlab && qNext.quantlab.present ? qNext.quantlab : null;
-
-      const trendWord = (s.sma20 > s.sma50 && s.sma50 > s.sma200) ? 'uptrend' : (s.sma20 < s.sma50 && s.sma50 < s.sma200) ? 'downtrend' : 'mixed trend';
-      const rsiZone = getRsiMeta(s.rsi14).zone.toLowerCase();
-      const gateSummary = [];
-      if (rawStatus === 'INVALID') gateSummary.push('raw validation INVALID');
-      if (rawUnknown) gateSummary.push('raw validation UNKNOWN — blocks BUY');
-      if (metricMismatch) gateSummary.push('canonical metric drift — blocks BUY');
-      if (rsiHardGate) gateSummary.push(`RSI hard gate (${s.rsi14.toFixed(1)} >= 80) — blocks BUY`);
-      if (rrBlockedHorizons > 0) gateSummary.push(`${rrBlockedHorizons} horizon(s) blocked by R:R`);
-      if (biotechMissing) gateSummary.push('biotech context missing — blocks BUY');
-
-      // Inline next-action logic (merged from Action Playbook)
-      const nearestTrigger = s.bb_upper || s.sma20;
-      const nearestInvalid = s.bb_lower || s.sma50;
-      let nextAction, nextActionColor;
-      if (suppressed) {
-        nextAction = 'No action — verdict suppressed until data integrity gates clear.';
-        nextActionColor = 'var(--text-muted)';
-      } else if (overallAction === 'BUY') {
-        nextAction = `Entry allowed — confirm trigger breakout${nearestTrigger ? ' above ' + fmtCurLocal(nearestTrigger) : ''} and verify R:R.`;
-        nextActionColor = 'var(--green)';
-      } else if (overallAction === 'AVOID') {
-        nextAction = `Avoid new entries.${nearestInvalid ? ' Invalidation near ' + fmtCurLocal(nearestInvalid) + '.' : ' Watch for trend reversal.'}`;
-        nextActionColor = 'var(--red)';
-      } else {
-        const blocker = rsiHardGate ? 'RSI overextended — wait for pullback.'
-          : rawUnknown ? 'Data health unverified.'
-          : nearestTrigger ? 'Watch for confirmed close above ' + fmtCurLocal(nearestTrigger) + '.'
-          : 'Monitor trigger and invalidation levels.';
-        nextAction = `No new entry now. ${blocker}`;
-        nextActionColor = 'var(--yellow)';
-      }
-      if (quant?.tone === 'good' && overallAction === 'WAIT') {
-        nextAction = `${nextAction} Quant Lab already rates this ticker as a buy candidate, but the core entry gates are not clear yet.`;
-      } else if (quant?.tone === 'bad' && overallAction === 'BUY') {
-        nextAction = `${nextAction} Quant Lab is still more cautious than the technical stack.`;
-      }
-      const quantColor = quant?.tone === 'good' ? 'var(--green)' : quant?.tone === 'warn' ? 'var(--yellow)' : quant?.tone === 'bad' ? 'var(--red)' : 'var(--text)';
-      const quantRank = quant?.globalTop10Rank
-        ? `Global Quant Lab Top ${quant.globalTop10Rank}`
-        : quant?.continentTop10Rank
-          ? `Regional Quant Lab Top ${quant.continentTop10Rank}`
-          : quant ? `${quant.strongExperts || 0} strong experts scored this ticker` : '';
-      const quantReason = quant?.summary || (Array.isArray(quant?.whyNow) && quant.whyNow[0]) || (Array.isArray(quant?.whyNotNow) && quant.whyNotNow[0]) || '';
-
-      return `<div class="section section-full decision-strip-section">
-        <h2>⚡ Decision Strip <span style="font-size:0.7rem;color:var(--text-muted);text-transform:none;letter-spacing:0">multi-horizon analysis</span></h2>
-        <div style="font-size:.85rem;color:var(--text);margin-bottom:.6rem;padding:.6rem .75rem;background:rgba(255,255,255,.03);border-radius:8px;border-left:3px solid ${overallAction === 'BUY' ? 'var(--green)' : overallAction === 'AVOID' ? 'var(--red)' : 'var(--accent)'};line-height:1.6">
-          <strong style="font-size:.95rem">${overallAction}</strong> — ${ticker} is in a <strong>${trendWord}</strong> with RSI in <strong>${rsiZone}</strong> territory.${
-            overallAction === 'WAIT' && gateSummary.length ? ' New entries blocked: ' + gateSummary[0].split(' — ')[0] + '.' :
-            overallAction === 'BUY' ? ' Signals align for entry — verify trigger confirmation and R:R.' :
-            overallAction === 'AVOID' ? ' Technical structure is unfavorable — wait for improvement.' :
-            overallAction === 'SUPPRESSED' ? ' All verdicts suppressed until data integrity is confirmed.' : ''
-          }
-          ${gateSummary.length > 1 ? `<br><span style="font-size:.76rem;color:var(--yellow)">Active gates: ${gateSummary.join(' · ')}</span>` : ''}
-          ${quant ? `<div style="margin-top:.45rem;padding-top:.45rem;border-top:1px solid rgba(255,255,255,.06);font-size:.8rem;color:${quantColor}">🧠 Quant Lab: <strong>${quant.label}</strong>${quantRank ? ` · ${quantRank}` : ''}${quantReason ? `<br><span style="font-size:.76rem;color:var(--text-dim)">${quantReason}</span>` : ''}</div>` : ''}
-          <div style="margin-top:.4rem;padding-top:.4rem;border-top:1px solid rgba(255,255,255,.06);font-size:.82rem;color:${nextActionColor}">🧭 ${nextAction}</div>
-        </div>
-        <div class="decision-strip">${cards}</div>
-        <div style="font-size:0.68rem;color:var(--text-muted);margin-top:0.5rem;text-align:center">Final action: <strong style="color:var(--text)">${overallAction}</strong>${quant ? ` · Quant Lab: <strong style="color:${quantColor}">${quant.label}</strong>` : ''}. Not financial advice.</div>
-      </div>`;
-    }
-
-    // ─── 1. TECHNICAL VERDICT ────────────────────────────────────────────────────
-    function buildVerdict(close, s) {
-      if (close == null) return '';
-      const q = window._rvQualitySignals || {};
-      if (q.finalSuppressed) {
-        return `<div class="section section-full">
-          <h2>🎯 Signal Diagnostics <span style="font-size:0.7rem;color:var(--text-muted);text-transform:none;letter-spacing:0">transparency layer</span></h2>
-          <div style="font-size:.8rem;color:var(--text-muted);padding:.4rem .6rem;border-radius:6px;background:rgba(255,255,255,.02)">Signals suppressed — raw data validation failed.</div>
-        </div>`;
-      }
-      let bullCount = 0, bearCount = 0;
-      // MA stack
-      if (s.sma20 > s.sma50 && s.sma50 > s.sma200) bullCount += 2;
-      else if (s.sma20 < s.sma50 && s.sma50 < s.sma200) bearCount += 2;
-      // Price vs MAs (null-guarded — missing SMA must not count)
-      if (s.sma20 != null) { if (close > s.sma20) bullCount++; else bearCount++; }
-      if (s.sma50 != null) { if (close > s.sma50) bullCount++; else bearCount++; }
-      if (s.sma200 != null) { if (close > s.sma200) bullCount++; else bearCount++; }
-      // RSI
-      const rsiMeta = getRsiMeta(s.rsi14);
-      if (rsiMeta.signal === 'Buy') bullCount++;
-      else if (rsiMeta.signal === 'Sell') bearCount++;
-      // MACD
-      if (s.macd_hist > 0) bullCount++; else if (s.macd_hist < 0) bearCount++;
-      // Bollinger %B (unified 3-state logic — same as Signal Summary)
-      const bbSig = getBollingerSignal(close, s);
-      if (bbSig.sig === 'Buy') bullCount++; else if (bbSig.sig === 'Sell') bearCount++;
-
-      const total = bullCount + bearCount;
-      const ratio = total > 0 ? bullCount / total : 0.5;
-      let verdict, cls;
-      if (ratio >= 0.65) { verdict = '▲ BULLISH'; cls = 'bullish'; }
-      else if (ratio <= 0.35) { verdict = '▼ BEARISH'; cls = 'bearish'; }
-      else { verdict = '◆ NEUTRAL'; cls = 'neutral'; }
-
-      // Governance: if any gate active and verdict is BULLISH, cap to NEUTRAL
-      if (q.anyGateActive && cls === 'bullish') {
-        verdict = '◆ NEUTRAL'; cls = 'neutral';
-      }
-
-      const gateNotes = [];
-      if (q.rrBlockedHorizons > 0) gateNotes.push(`R:R gate blocked ${q.rrBlockedHorizons} horizon(s)`);
-      if (q.metricMismatch) gateNotes.push('canonical metric drift');
-      if (q.rsiHardGate) gateNotes.push('RSI hard gate active');
-      if (q.rawStatus === 'UNKNOWN') gateNotes.push('raw validation unknown');
-      if (q.biotechContextMissing) gateNotes.push('biotech context missing');
-
-      const rawVerdict = ratio >= 0.65 ? 'BULLISH' : ratio <= 0.35 ? 'BEARISH' : 'NEUTRAL';
-      const gateOverride = q.anyGateActive && rawVerdict === 'BULLISH';
-      const signalColor = rawVerdict === 'BULLISH' ? 'var(--green)' : rawVerdict === 'BEARISH' ? 'var(--red)' : 'var(--yellow)';
-      return `<div class="section section-full">
-      <h2>🎯 Signal Diagnostics <span style="font-size:0.7rem;color:var(--text-muted);text-transform:none;letter-spacing:0">transparency layer</span></h2>
-      <div style="display:grid;gap:.4rem">
-        <div style="font-size:.8rem;color:var(--text-dim);padding:.4rem .6rem;border-radius:6px;background:rgba(255,255,255,.02);border-left:3px solid ${signalColor}">
-          <strong style="color:var(--text)">Raw signals:</strong> ${bullCount} bullish / ${bearCount} bearish — <strong style="color:${signalColor}">${rawVerdict}</strong>
-        </div>
-        ${gateNotes.length ? `<div style="font-size:.8rem;color:var(--yellow);padding:.4rem .6rem;border-radius:6px;background:var(--yellow-bg)">
-          <strong>Active gates:</strong> ${gateNotes.join(' · ')}${gateOverride ? ' — raw bullish capped' : ''}
-        </div>` : ''}
-      </div>
-    </div>`;
-    }
-
-    // ─── 2. MOVING AVERAGE RADAR ─────────────────────────────────────────────────
-    function buildMASection(close, s) {
-      if (close == null) return '';
-      const mas = [
-        { name: 'SMA 20', val: s.sma20, key: 'sma20' },
-        { name: 'SMA 50', val: s.sma50, key: 'sma50' },
-        { name: 'SMA 200', val: s.sma200, key: 'sma200' },
-        { name: 'EMA 12', val: s.ema12, key: 'ema12' },
-        { name: 'EMA 26', val: s.ema26, key: 'ema26' },
-      ];
-
-      // Stack detection
-      let stackLabel, stackCls;
-      if (s.sma20 > s.sma50 && s.sma50 > s.sma200) { stackLabel = '▲ Bullish Stack (20 > 50 > 200)'; stackCls = 'bullish'; }
-      else if (s.sma20 < s.sma50 && s.sma50 < s.sma200) { stackLabel = '▼ Bearish Stack (20 < 50 < 200)'; stackCls = 'bearish'; }
-      else { stackLabel = '◆ Mixed Alignment'; stackCls = 'mixed'; }
-
-      // EMA crossover
-      const emaCross = s.ema12 != null && s.ema26 != null
-        ? (s.ema12 > s.ema26 ? '🟢 EMA 12 > 26 (Short-term bullish)' : '🔴 EMA 12 < 26 (Short-term bearish)')
-        : '';
-
-      const rows = mas.map(m => {
-        if (m.val == null) return '';
-        const above = close >= m.val;
-        const dist = ((close - m.val) / m.val * 100).toFixed(2);
-        return `<tr>
-        <td style="font-weight:600">${m.name}</td>
-        <td>${fmtCur(m.val)}</td>
-        <td><span class="ma-pos ${above ? 'above' : 'below'}">${above ? '▲ Above' : '▼ Below'}</span></td>
-        <td style="color:${above ? 'var(--green)' : 'var(--red)'}; font-weight:700">${dist > 0 ? '+' : ''}${dist}%</td>
-      </tr>`;
-      }).join('');
-
-      return `<div class="section section-full">
-      <h2>📐 Moving Average Radar</h2>
-      <div class="stack-badge ${stackCls}">${stackLabel}</div>
-      ${emaCross ? `<div style="font-size:0.85rem;margin-bottom:0.75rem;color:var(--text-dim)">${emaCross}</div>` : ''}
-      <table class="ma-table">
-        <tr><th>Moving Average</th><th>Value</th><th>Position</th><th>Distance</th></tr>
-        ${rows}
-      </table>
-    </div>`;
-    }
-
-    // ─── 3. OSCILLATORS & MOMENTUM ───────────────────────────────────────────────
-    function buildOscillators(close, s) {
-      // RSI Gauge
-      const rsi = s.rsi14;
-      const rsiMeta = getRsiMeta(rsi);
-      const rsiZone = rsiMeta.zone;
-      const rsiColor = rsiMeta.color;
-      const rsiGauge = rsi != null ? `
-      <div class="gauge">
-        <div class="gauge-header">
-          <span class="gauge-label">RSI (14)</span>
-          <span class="gauge-value" style="color:${rsiColor}">${fmt(rsi, 1)} — ${rsiZone}</span>
-        </div>
-        <div class="gauge-bar">
-          <div class="gauge-zones">
-            <div class="gauge-zone" style="width:30%;background:rgba(16,185,129,0.15)"></div>
-            <div class="gauge-zone" style="width:40%;background:rgba(148,163,184,0.05)"></div>
-            <div class="gauge-zone" style="width:30%;background:rgba(248,113,113,0.15)"></div>
+          <div style="font-size:0.68rem; display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.02); padding:3px 6px; border-radius:4px;">
+            <span style="color:var(--text-dim);">vs QQQ:</span><span style="font-weight:800; color:${sQqq};">${qqqStr}</span>
           </div>
-          <div class="gauge-marker" style="left:${clamp(rsi, 0, 100)}%"></div>
         </div>
-        <div class="gauge-ticks"><span>0 (Oversold)</span><span>30</span><span>50</span><span>70</span><span>100 (Overbought)</span></div>
-      </div>` : '';
-
-      // MACD
-      const macdOk = s.macd != null;
-      const macdDir = s.macd_hist > 0 ? 'Bullish' : 'Bearish';
-      const macdCross = s.macd > s.macd_signal ? '🟢 MACD above Signal' : '🔴 MACD below Signal';
-      const macdHist = `<div class="gauge">
-      <div class="gauge-header">
-        <span class="gauge-label">MACD</span>
-        <span class="gauge-value">${macdOk ? `${fmt(s.macd, 3)} — ${macdDir}` : '—'}</span>
-      </div>
-      ${macdOk ? `<div class="m-grid" style="margin-top:0.5rem;">
-        <div class="m-item"><div class="m-label">MACD Line</div><div class="m-val">${fmt(s.macd, 3)}</div></div>
-        <div class="m-item"><div class="m-label">Signal Line</div><div class="m-val">${fmt(s.macd_signal, 3)}</div></div>
-        <div class="m-item"><div class="m-label">Histogram</div><div class="m-val" style="color:${s.macd_hist >= 0 ? 'var(--green)' : 'var(--red)'}">${fmt(s.macd_hist, 3)}</div></div>
-        <div class="m-item"><div class="m-label">Crossover</div><div class="m-val" style="font-size:0.85rem">${macdCross}</div></div>
-      </div>` : ''}
-    </div>`;
-
-      // Bollinger Bands
-      let bbHTML = '';
-      if (s.bb_upper != null && close != null) {
-        const bbWidth = s.bb_upper - s.bb_lower;
-        const bbPos = bbWidth > 0 ? ((close - s.bb_lower) / bbWidth) * 100 : 50;
-        const pctB = bbWidth > 0 ? ((close - s.bb_lower) / bbWidth).toFixed(2) : '—';
-        const bbZone = bbPos > 80 ? 'Near Upper (Overbought)' : bbPos < 20 ? 'Near Lower (Oversold)' : 'Mid Range';
-        bbHTML = `<div class="gauge">
-        <div class="gauge-header">
-          <span class="gauge-label">Bollinger Bands</span>
-          <span class="gauge-value">%B: ${pctB} — ${bbZone}</span>
-        </div>
-        <div class="gauge-bar">
-          <div class="gauge-zones">
-            <div class="gauge-zone" style="width:20%;background:rgba(16,185,129,0.15)"></div>
-            <div class="gauge-zone" style="width:60%;background:rgba(148,163,184,0.05)"></div>
-            <div class="gauge-zone" style="width:20%;background:rgba(248,113,113,0.15)"></div>
+        <div style="margin-top:0.4rem; padding-top:0.4rem; border-top:1px solid rgba(255,255,255,0.04);">
+          <div style="font-size:0.55rem; color:var(--text-muted); text-transform:uppercase; margin-bottom:0.25rem; font-weight:700;">Correlations</div>
+          <div style="display:grid; grid-template-columns: repeat(${_mktCtx.corr.length}, 1fr); gap:0.3rem;">
+            ${_mktCtx.corr.map(c => `
+              <div style="font-size:0.6rem; background:rgba(255,255,255,0.01); border:1px solid rgba(255,255,255,0.02); padding:3px; border-radius:4px; display:flex; justify-content:space-between; align-items:center;">
+                <span style="font-weight:600; color:var(--text);">${c.t}</span>
+                <span style="color:var(--accent); font-weight:700;">${c.c.toFixed(2)}</span>
+              </div>
+            `).join('')}
           </div>
-          <div class="gauge-marker" style="left:${clamp(bbPos, 2, 98)}%"></div>
+          <div style="font-size:0.58rem; color:var(--text-dim); text-align:center; margin-top:0.4rem; font-style:italic;">
+            ${note}
+          </div>
         </div>
-        <div class="gauge-ticks"><span>Lower ${fmtCur(s.bb_lower)}</span><span>Mid ${fmtCur(s.bb_mid)}</span><span>Upper ${fmtCur(s.bb_upper)}</span></div>
-      </div>`;
-      }
+      </div>
+    `;
+  };
 
-      return `<div class="section section-full">
-      <h2>📊 Oscillators & Momentum</h2>
-      ${rsiGauge}
-      ${macdHist}
-      ${bbHTML}
-    </div>`;
+  window._switchContext = function(tf) {
+    const el = document.getElementById('dyn-market-context');
+    if (el) el.innerHTML = window._renderMarketContext(tf);
+  };
+
+  // Dynamic Strategic Rationale
+  const narrativeSynthesis = _explanation.synthesis || _explanation.headline || '';
+  const narrativeRiskNote = _explanation.risk_note || '';
+  const renderStoryFlow = () => {
+    let rationale;
+    if (narrativeSynthesis) {
+      rationale = narrativeSynthesis;
+    } else if (longV==='BUY' && shortV==='BUY' && midV==='BUY') {
+      rationale = 'Full alignment across all horizons. Trend, momentum, and structure confirm bullish posture. Standard trend-following setup with defined risk parameters.';
+    } else if (longV==='BUY' && shortV!=='BUY') {
+      rationale = 'Price remains below short-term averages with weakened momentum. The current thesis relies on an oversold rebound within a long-term structural uptrend. Confirmation requires reclaim of short-term levels before expanding risk exposure.';
+    } else if (longV==='AVOID') {
+      rationale = 'Structural downtrend confirmed. All major moving averages signal bearish alignment. No trend-following setup available — wait for base formation and structural recovery before re-evaluation.';
+    } else {
+      rationale = 'No clear trend-following setup. Price is consolidating within a range. Wait for directional confirmation — either a breakout above resistance or a breakdown below support — before committing capital.';
     }
+    return `
+      <div style="margin-top:1.25rem; padding:.6rem; border-radius:8px; background:rgba(255,255,255,0.01); border:1px solid rgba(255,255,255,0.03);">
+        <div style="font-size: .62rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700; margin-bottom: .4rem;">Strategic Rationale</div>
+        <div style="font-size:0.68rem; line-height:1.4; color:var(--text-dim);">${rationale}</div>
+        ${narrativeRiskNote ? `<div style="margin-top:.5rem;font-size:0.64rem;line-height:1.4;color:var(--yellow)">${narrativeRiskNote}</div>` : ''}
+      </div>
+    `;
+  };
 
-    // ─── 4. PERFORMANCE TIMELINE ─────────────────────────────────────────────────
-    function buildPerformance(s) {
-      const periods = [
-        { label: '1 Day', val: s.ret_1d_pct },
-        { label: '5 Day', val: s.ret_5d_pct },
-        { label: '20 Day', val: s.ret_20d_pct },
-      ];
+  // ── Render Chart ──
+  function svgChart(height,id,bc){
+    const recent=bars.slice(-(bc||60));
+    const cl=recent.map(b=>Number(b.adjClose??b.close)).filter(Number.isFinite);
+    if(cl.length<3) return '<div style="height:'+height+'px;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,0.02);color:var(--text-dim)">No Data</div>';
+    const mn=Math.min(...cl)*0.998, mx=Math.max(...cl)*1.002, rn=mx-mn||1, w=800;
+    const pts=cl.map((c,i)=>(i/(cl.length-1)*w).toFixed(1)+','+(height-(c-mn)/rn*(height-20)-10).toFixed(1)).join(' ');
+    const clr=cl[cl.length-1]>=cl[0]?'var(--green)':'var(--red)';
+    const gradId = 'chg-'+Math.random().toString(36).substr(2, 5);
+    return '<svg viewBox="0 0 '+w+' '+height+'" style="width:100%;height:'+height+'px;border-radius:8px;background:rgba(255,255,255,0.01);border:1px solid var(--border)" preserveAspectRatio="none"><defs><linearGradient id="'+gradId+'" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="'+clr+'" stop-opacity="0.2"/><stop offset="100%" stop-color="'+clr+'" stop-opacity="0"/></linearGradient></defs><polygon points="0,'+height+' '+pts+' '+w+','+height+'" fill="url(#'+gradId+')"/><polyline points="'+pts+'" fill="none" stroke="'+clr+'" stroke-width="2" stroke-linejoin="round"/></svg>';
+  }
 
-      const maxAbs = Math.max(...periods.map(p => Math.abs(p.val || 0)), 0.01);
-      const rows = periods.map(p => {
-        if (p.val == null) return '';
-        const isPos = p.val >= 0;
-        const barWidth = Math.abs(p.val) / maxAbs * 50; // 50% max width
-        const barStyle = isPos
-          ? `right:50%; width:${barWidth}%; border-radius: 4px 0 0 4px;`
-          : `left:50%; width:${barWidth}%; border-radius: 0 4px 4px 0;`;
-        return `<div class="perf-item">
-        <span class="perf-label">${p.label}</span>
-        <div class="perf-bar-container">
-          <div class="perf-center"></div>
-          <div class="perf-bar ${isPos ? 'positive' : 'negative'}" style="${barStyle}"></div>
+  // Key Levels
+  const levels=[];
+  const addLvl=(l,p,src,hz)=>{if(p==null||!Number.isFinite(p))return;levels.push({label:l,price:p,kind:close>p?'support':'resistance',source:src,dist:((p-close)/close*100).toFixed(2),horizon:hz||'all'})};
+  addLvl('SMA 20',s.sma20,'MA','short');addLvl('SMA 50',s.sma50,'MA','mid');addLvl('SMA 200',s.sma200,'MA','long');
+  addLvl('EMA 12',s.ema12,'EMA','short');addLvl('EMA 26',s.ema26,'EMA','mid');
+  addLvl('BB Upper',s.bb_upper,'BB','short');addLvl('BB Lower',s.bb_lower,'BB','short');
+  addLvl('52W High',s.high_52w,'52W','long');addLvl('52W Low',s.low_52w,'52W','long');
+  if(s.high_52w!=null&&s.low_52w!=null){var fR=s.high_52w-s.low_52w;addLvl('Fib 23.6%',s.high_52w-fR*0.236,'Fib','mid');addLvl('Fib 38.2%',s.high_52w-fR*0.382,'Fib','mid');addLvl('Fib 50%',s.high_52w-fR*0.5,'Fib','mid');addLvl('Fib 61.8%',s.high_52w-fR*0.618,'Fib','long')}
+  if(bars.length>=5){var r5=bars.slice(-5);addLvl('5D High',Math.max(...r5.map(b=>b.high||b.close)),'5D','short');addLvl('5D Low',Math.min(...r5.map(b=>b.low||b.close)),'5D','short')}
+  if(bars.length>=20){var r20=bars.slice(-20);addLvl('20D High',Math.max(...r20.map(b=>b.high||b.close)),'20D','mid');addLvl('20D Low',Math.min(...r20.map(b=>b.low||b.close)),'20D','mid')}
+  if(bars.length>0){var lb=bars[bars.length-1],pH=lb.high||close,pL=lb.low||close,pC=lb.close||close,pv=(pH+pL+pC)/3;addLvl('Pivot',pv,'Pivot','short');addLvl('R1',2*pv-pL,'Pivot','short');addLvl('S1',2*pv-pH,'Pivot','short');addLvl('R2',pv+(pH-pL),'Pivot','mid');addLvl('S2',pv-(pH-pL),'Pivot','mid')}
+  if(atr!=null){addLvl('ATR Support',close-atr,'ATR','short')}
+  levels.sort((a,b)=>b.price-a.price);
+  var uq=[];for(var li=0;li<levels.length;li++){var dp=false;for(var lj=0;lj<uq.length;lj++){if(Math.abs(levels[li].price-uq[lj].price)/close<0.001){dp=true;break}}if(!dp)uq.push(levels[li])}
+  levels.length=0;uq.forEach(l=>levels.push(l));
+
+  // Dynamic Trade Plan values
+  const targetRes = levels.find(l => l.kind === 'resistance');
+  const targetPrice = targetRes ? targetRes.price : (close && atr ? close + atr * 2 : null);
+  const stopPr = atr != null ? close - atr : null;
+  const rrRatio = (targetPrice && stopPr && close) ? ((targetPrice - close) / (close - stopPr)).toFixed(1) : '—';
+
+  var rows=levels.map(l=>{
+    var c=l.kind==='support'?'var(--green)':'var(--red)';
+    var hc=l.horizon==='short'?'var(--yellow)':l.horizon==='mid'?'var(--accent)':'#a78bfa';
+    return `<div style="display:flex;align-items:center;gap:.25rem;padding:.2rem .35rem;border-radius:4px;background:rgba(255,255,255,0.01);border-left:2px solid ${c};font-size:.65rem">
+      <span style="font-size:.52rem;color:${hc};font-weight:700;width:22px;text-transform:uppercase">${l.horizon}</span>
+      <span style="flex:1;font-weight:600;color:var(--text-dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${l.label}</span>
+      <span style="font-weight:700;color:var(--text);width:45px;text-align:right">$${l.price.toFixed(1)}</span>
+      <span style="font-size:.55rem;color:${parseFloat(l.dist)>=0?'var(--green)':'var(--red)'};width:35px;text-align:right">${parseFloat(l.dist)>=0?'+':''}${l.dist}%</span>
+    </div>`;
+  });
+  var pi=levels.findIndex(l=>l.price<=close);
+  rows.splice(pi>=0?pi:rows.length,0,`<div style="display:flex;align-items:center;gap:.25rem;padding:.2rem .35rem;border-radius:4px;background:rgba(6,182,212,0.1);border:1px solid var(--accent);font-size:.65rem"><span style="width:22px"></span><span style="flex:1;font-weight:700;color:var(--accent)">CURRENT</span><span style="font-weight:800;color:var(--accent)">$${close.toFixed(2)}</span></div>`);
+  var allLvl=levels.map(l=>l.price).concat([close]);var mnL=Math.min(...allLvl)*0.99,mxL=Math.max(...allLvl)*1.01,rngL=mxL-mnL||1;
+
+  // Collision adjuster for key levels labels
+  levels.forEach(l => { l.yExact = ((1 - ((l.price - mnL) / rngL)) * 90 + 5); l.yText = l.yExact; });
+  levels.sort((a,b) => a.yText - b.yText);
+  let lastY = -Infinity;
+  levels.forEach(l => { if (l.yText < lastY + 3.4) { l.yText = lastY + 3.4; } lastY = l.yText; });
+
+  // Dynamic Structure / Weakness / Rebound
+  const bullPoints = bullR.length ? bullR.map(r => '<li>'+r+'</li>').join('') : '<li>No bullish signals detected</li>';
+  const bearPoints = bearR.length ? bearR.map(r => '<li>'+r+'</li>').join('') : '<li>No bearish signals detected</li>';
+  const reboundConds = [];
+  if (rsiZone === 'Oversold' || rsiZone === 'Soft Bearish') reboundConds.push('RSI oversold trigger active');
+  else reboundConds.push('RSI not yet oversold');
+  if (close < (s.sma20 || Infinity) && close > (s.sma200 || 0)) reboundConds.push('Between SMA20 and SMA200 — pullback zone');
+  else reboundConds.push('Near structure support bounds');
+  const reboundPoints = reboundConds.map(r => '<li>'+r+'</li>').join('');
+
+  // ── Construct Layout ──
+  const layout = `
+  <div class="dash-grid">
+
+    <!-- COLUMN 1: DECISION & ACTION -->
+    <div>
+      <div class="section">
+        <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:.4rem; border-bottom:1px solid rgba(255,255,255,0.03); padding-bottom:.3rem;">
+           <span style="font-weight:800; font-size:1rem; color:#fff;">${data.name || tkr}</span>
+           <h2 style="margin:0; font-size:0.68rem; color:var(--text-muted); text-transform:uppercase;">Executive Decision</h2>
         </div>
-        <span class="perf-val ${isPos ? 'positive' : 'negative'}">${fmtPctSigned(p.val)}</span>
-      </div>`;
-      }).join('');
 
-      // Autocorrelation (SSOT labels — same as Correlations section)
-      const ac = s.lag1_autocorrelation;
-      const acText = ac != null ? (ac > 0.1 ? '🔄 Trending (momentum)' :
-        ac < -0.1 ? '↩️ Mean-reverting' : '➡️ Random walk') : '';
+        <!-- Overall Verdict -->
+        <div style="display:flex;align-items:center;gap:1.25rem;margin-bottom:0.75rem;padding:.75rem;border-radius:10px;background:rgba(255,255,255,0.01)">
+          <div style="width:40px;height:40px;border-radius:50%;background:${overallColor};box-shadow:0 0 15px ${overallColor};flex-shrink:0"></div>
+          <div style="flex:1">
+            <div style="font-size:1.15rem;font-weight:800;color:${overallColor}">${overallLabel}</div>
+            ${overallLabel==='ACCUMULATION ZONE'?'<div style="font-size:0.55rem; color:var(--text-dim); margin-top:2px; font-weight:700;">(Early-Stage, Confirmation Pending)</div>':''}
+            <div style="font-size:.65rem;color:var(--text-dim);font-weight:700;margin-top:2px;">${overallText}</div>
+            <div style="font-size:.58rem;color:var(--text-muted);text-transform:uppercase;margin-top:3px;font-weight:600;">Setup: <span style="color:var(--accent)">${setupType}</span></div>
+          </div>
+          <div style="border-left:1px solid rgba(255,255,255,0.08); padding-left:0.75rem; display:flex; flex-direction:column; gap:2px; min-width:130px; justify-content:center;">
+            <div style="display:flex; justify-content:space-between; font-size:0.62rem;"><span style="color:var(--text-muted)">Price:</span> <span style="font-weight:700; color:#fff;">${close!=null?'$'+close.toFixed(2):'—'}</span></div>
+            <div style="display:flex; justify-content:space-between; font-size:0.62rem;"><span style="color:var(--text-muted)">ATR:</span> <span style="font-weight:700; color:#fff;">${atr!=null?'$'+atr.toFixed(2):'—'}</span></div>
+            <div style="display:flex; justify-content:space-between; font-size:0.62rem;"><span style="color:var(--text-muted)">Vol:</span> <span style="font-weight:700; color:#fff;">${volPct!=null?volPct+'%':'—'}</span></div>
+            <div style="display:flex; justify-content:space-between; font-size:0.62rem;"><span style="color:var(--text-muted)">52W:</span> <span style="font-weight:700; color:#fff;">${r52label||'—'}</span></div>
+          </div>
+        </div>
 
-      return `<div class="section">
-      <h2>📈 Performance</h2>
-      ${rows}
-      ${acText ? `<div style="font-size:0.78rem;color:var(--text-dim);margin-top:0.5rem">${acText}</div>` : ''}
-    </div>`;
-    }
+        <!-- Trade Plan -->
+        <div style="display: flex; justify-content: space-between; font-size: 0.62rem; margin-bottom: 0.35rem; padding: 6px 10px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.04); border-radius: 6px;">
+            <div><span style="color:var(--text-muted)">Entry:</span> <span style="font-weight:600;">${close!=null?'$'+close.toFixed(2):'—'}</span></div>
+            <div><span style="color:var(--text-muted)">Stop:</span> <span style="font-weight:600; color:var(--red);">${stopPr!=null?'$'+stopPr.toFixed(2):'—'}</span></div>
+            <div><span style="color:var(--text-muted)">Target:</span> <span style="font-weight:600; color:var(--green);">${targetPrice!=null?'$'+targetPrice.toFixed(2):'—'}</span></div>
+            <div><span style="color:var(--text-muted)">R/R:</span> <span style="font-weight:700; color:var(--accent);">${rrRatio}x</span></div>
+        </div>
+        <div style="font-size:0.58rem; color:var(--text-dim); text-align:center; margin-bottom:0.75rem; font-style:italic;">
+          Entry: current price · Stop: below ATR · Target: next resistance level
+        </div>
 
-    // ─── 5. VOLATILITY & RISK ────────────────────────────────────────────────────
-    function buildVolatility(close, s) {
-      const vp = s.volatility_percentile;
-      const vpLabel = vp != null ? (vp > 80 ? 'High volatility' : vp > 50 ? 'Normal volatility' : 'Low volatility') : '';
-      const vpColor = vp > 80 ? 'var(--red)' : vp > 50 ? 'var(--yellow)' : 'var(--green)';
+        <!-- Horizons -->
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:.4rem;margin-bottom:1.25rem">
+          ${horizons.map(h => {
+            var c = h.v.c==='bullish'?'var(--green)':h.v.c==='bearish'?'var(--red)':'var(--yellow)';
+            var info = h.k==='long'?'Investor':'Trader';
+            var pc = h.k==='long'?'var(--accent)':'var(--yellow)';
+            return `
+              <div style="text-align:center;padding:.5rem;border-radius:8px;background:rgba(255,255,255,0.02);border:1px solid var(--border)">
+                <div style="font-size:.58rem;color:var(--text-muted);text-transform:uppercase">${h.label}</div>
+                <div style="font-weight:700;color:${c};font-size:1rem">${h.v.l}</div>
+                <div style="font-size:.58rem;color:var(--text-muted);background:rgba(255,255,255,0.04);border-radius:3px;margin:3px 4px;padding:1px 0">${h.v.cf} CONF.</div>
+                <div style="font-size:.55rem;color:${pc};font-weight:600;margin-top:4px">${info}</div>
+              </div>`;
+          }).join('')}
+        </div>
 
-      const vpGauge = vp != null ? `<div class="gauge">
-      <div class="gauge-header">
-        <span class="gauge-label">Volatility Percentile</span>
-        <span class="gauge-value" style="color:${vpColor}">${fmt(vp, 0)}th — ${vpLabel}</span>
-      </div>
-      <div class="gauge-bar">
-        <div class="gauge-fill" style="width:${clamp(vp, 0, 100)}%;background:linear-gradient(90deg,var(--green),var(--yellow),var(--red))"></div>
-      </div>
-      <div class="gauge-ticks"><span>Low</span><span>Moderate</span><span>High</span></div>
-    </div>` : '';
-
-      const atrPct = close > 0 && s.atr14 ? (s.atr14 / close * 100).toFixed(2) : null;
-      const metrics = [
-        { label: 'ATR (14)', val: fmtCur(s.atr14), sub: atrPct ? `${atrPct}% of price` : '' },
-        { label: '20d Volatility', val: fmtPct(s.volatility_20d), sub: '' },
-        { label: '20d Std Dev', val: fmtCur(s.rolling_std_20), sub: '' },
-        { label: '52W Range %', val: fmtPct(s.range_52w_pct), sub: '' },
-      ];
-
-      return `<div class="section">
-      <h2>⚡ Volatility & Risk</h2>
-      ${vpGauge}
-      <table class="ma-table" style="margin-top:0.75rem;">
-        <tbody>
-          ${metrics.map(m => `
+        <!-- Structure / Weakness / Rebound + Checklist -->
+        <table style="width:100%; border-collapse: collapse; margin-bottom: 1.25rem; table-layout: fixed;">
           <tr>
-            <td style="font-weight:600">${m.label}</td>
-            <td style="text-align:right"><strong>${m.val}</strong></td>
-            <td style="text-align:right;color:var(--text-dim);font-size:0.75rem;">${m.sub}</td>
-          </tr>`).join('')}
-        </tbody>
-      </table>
-    </div>`;
-    }
+            <td style="width: 55%; vertical-align: top; padding-right: 1.25rem;">
+              <div style="display:grid; grid-template-columns:1fr; gap:.35rem;">
+                <div style="padding:.5rem;border-radius:6px;background:rgba(16,185,129,0.03);border:1px solid rgba(16,185,129,0.1)">
+                  <div style="font-size:.6rem;font-weight:800;color:var(--green);text-transform:uppercase;">STRUCTURE (Bullish)</div>
+                  <ul style="margin:0;padding-left:.85rem;font-size:.65rem;line-height:1.3;color:var(--text-dim);">${bullPoints}</ul>
+                </div>
+                <div style="padding:.5rem;border-radius:6px;background:rgba(248,113,113,0.03);border:1px solid rgba(248,113,113,0.1)">
+                  <div style="font-size:.6rem;font-weight:800;color:var(--red);text-transform:uppercase;">WEAKNESS (Bearish)</div>
+                  <ul style="margin:0;padding-left:.85rem;font-size:.65rem;line-height:1.3;color:var(--text-dim);">${bearPoints}</ul>
+                </div>
+                <div style="padding:.5rem;border-radius:6px;background:rgba(6,182,212,0.03);border:1px solid rgba(6,182,212,0.1)">
+                  <div style="font-size:.6rem;font-weight:800;color:var(--accent);text-transform:uppercase;">REBOUND CONDITIONS</div>
+                  <ul style="margin:0;padding-left:.85rem;font-size:.65rem;line-height:1.3;color:var(--text-dim);">${reboundPoints}</ul>
+                </div>
+              </div>
+            </td>
+            <td style="width: 45%; vertical-align: top; background:rgba(255,255,255,0.02); border:1px solid var(--border); border-radius:8px; padding:.6rem;">
+               <div style="display:flex; flex-direction:column; gap:.4rem; margin-bottom:.6rem;">
+                 <span style="font-size:.65rem;font-weight:700;color:var(--text-dim);text-transform:uppercase">Pre-Trade Checklist</span>
+                 <div style="display:flex; gap:0; border-radius:4px; overflow:hidden; border:1px solid var(--border); align-self: flex-start;" id="cl-btns">
+                   <button class="cl-btn active" data-hz="short" onclick="window._switchCL(this)">SHORT</button>
+                   <button class="cl-btn" data-hz="mid" onclick="window._switchCL(this)">MID</button>
+                   <button class="cl-btn" data-hz="long" onclick="window._switchCL(this)">LONG</button>
+                 </div>
+               </div>
+               <div id="cl-short">${renderChecklist(checksShort)}</div>
+               <div id="cl-mid" style="display:none">${renderChecklist(checksMid)}</div>
+               <div id="cl-long" style="display:none">${renderChecklist(checksLong)}</div>
+            </td>
+          </tr>
+        </table>
 
-    // ─── 6. VOLUME ANALYSIS ──────────────────────────────────────────────────────
-    function buildVolume(s, bars) {
-      const ratio = s.volume_ratio_20d;
-      const avgVol = s.avg_volume_20d;
-      const hasVolume = ratio != null && ratio > 0;
+        ${renderStoryFlow()}
 
-      // Volume trend from last bars
-      let volTrend = '';
-      if (bars.length >= 10) {
-        const recent5 = bars.slice(-5).reduce((a, b) => a + (b.volume || 0), 0) / 5;
-        const prior5 = bars.slice(-10, -5).reduce((a, b) => a + (b.volume || 0), 0) / 5;
-        if (recent5 > 0 && prior5 > 0) {
-          const chg = ((recent5 - prior5) / prior5 * 100).toFixed(0);
-          volTrend = recent5 > prior5 ? `📈 Volume rising (${chg > 0 ? '+' : ''}${chg}% vs prior 5d)` : `📉 Volume dropping (${chg}% vs prior 5d)`;
-        }
-      }
-
-      if (!hasVolume && !volTrend) return '';
-
-      const ratioBar = hasVolume ? `<div class="gauge">
-      <div class="gauge-header">
-        <span class="gauge-label">Volume vs 20d Average</span>
-        <span class="gauge-value" style="color:${ratio > 1.5 ? 'var(--green)' : ratio < 0.5 ? 'var(--red)' : 'var(--text)'}">${fmt(ratio, 2)}x</span>
-      </div>
-      <div class="gauge-bar">
-        <div class="gauge-fill" style="width:${clamp(ratio / 3 * 100, 2, 100)}%;background:${ratio > 1.5 ? 'var(--green)' : ratio < 0.5 ? 'var(--red)' : 'var(--accent)'}"></div>
-      </div>
-      <div class="gauge-ticks"><span>0x</span><span>1x Avg</span><span>2x</span><span>3x+</span></div>
-    </div>` : '';
-
-      return `<div class="section">
-      <h2>📊 Volume</h2>
-      ${ratioBar}
-      ${avgVol ? `<div style="font-size:0.8rem;color:var(--text-dim);margin-top:0.25rem">20d Average: ${fmtVol(avgVol)}</div>` : ''}
-      ${volTrend ? `<div style="font-size:0.8rem;color:var(--text-dim);margin-top:0.5rem">${volTrend}</div>` : ''}
-    </div>`;
-    }
-
-    // ─── 7. SUPPORT & RESISTANCE LEVELS ──────────────────────────────────────────
-    function buildLevels(close, s, bars) {
-      if (close == null) return '';
-      const rawLevels = [];
-      if (s.high_52w != null) rawLevels.push({ name: '52W High', price: s.high_52w });
-      if (s.bb_upper != null) rawLevels.push({ name: 'BB Upper', price: s.bb_upper });
-      if (s.sma20  != null) rawLevels.push({ name: 'SMA 20',  price: s.sma20 });
-      if (s.sma50  != null) rawLevels.push({ name: 'SMA 50',  price: s.sma50 });
-      if (s.sma200 != null) rawLevels.push({ name: 'SMA 200', price: s.sma200 });
-      if (s.bb_lower != null) rawLevels.push({ name: 'BB Lower', price: s.bb_lower });
-      if (s.low_52w  != null) rawLevels.push({ name: '52W Low', price: s.low_52w });
-
-      // ATR bands (±1, ±2)
-      if (s.atr14 != null) {
-        rawLevels.push({ name: 'ATR +1', price: close + s.atr14 });
-        rawLevels.push({ name: 'ATR -1', price: close - s.atr14 });
-      }
-
-      // Swing High / Swing Low from last 20 bars
-      if (bars && bars.length >= 5) {
-        const recent = bars.slice(-20);
-        const swingHigh = Math.max(...recent.map(b => b.high || b.close || 0));
-        const swingLow  = Math.min(...recent.map(b => b.low  || b.close || Infinity));
-        if (swingHigh > close) rawLevels.push({ name: 'Swing High (20d)', price: swingHigh });
-        if (swingLow  < close) rawLevels.push({ name: 'Swing Low (20d)',  price: swingLow });
-      }
-
-      // Deduplicate by proximity (within 0.3% of each other)
-      const deduped = [];
-      for (const l of rawLevels) {
-        if (!rawLevels.some(o => o !== l && Math.abs(o.price - l.price) / close < 0.003 && deduped.indexOf(o) >= 0)) {
-          deduped.push(l);
-        }
-      }
-
-      const supports    = deduped.filter(l => l.price < close).sort((a, b) => b.price - a.price).slice(0, 4);
-      const resistances = deduped.filter(l => l.price > close).sort((a, b) => a.price - b.price).slice(0, 4);
-
-      const s1 = supports[0]    || null;
-      const r1 = resistances[0] || null;
-
-      // S1/R1 summary header
-      const srSummary = `<div class="sr-summary">
-        <div class="sr-item support${s1 ? '' : ' empty'}">
-          <div class="sr-label">S1 — Nearest Support</div>
-          <div class="sr-price">${s1 ? fmtCur(s1.price) : '—'}</div>
-          <div class="sr-name">${s1 ? s1.name : 'None nearby'}</div>
-          <div class="sr-dist">${s1 ? ((s1.price - close) / close * 100).toFixed(1) + '%' : ''}</div>
-          ${s1 ? `<div class="sr-invalid">✗ Invalidation if breaks below</div>` : ''}
+        <div id="dyn-what-changed" style="margin-top:0.75rem;">
+            ${window._renderWhatChanged('1D')}
         </div>
-        <div class="sr-current">
-          <div class="sr-label">Current</div>
-          <div class="sr-price" style="color:var(--accent)">${fmtCur(close)}</div>
-        </div>
-        <div class="sr-item resistance${r1 ? '' : ' empty'}">
-          <div class="sr-label">R1 — Nearest Resistance</div>
-          <div class="sr-price">${r1 ? fmtCur(r1.price) : '—'}</div>
-          <div class="sr-name">${r1 ? r1.name : 'None nearby'}</div>
-          <div class="sr-dist">${r1 ? '+' + ((r1.price - close) / close * 100).toFixed(1) + '%' : ''}</div>
-          ${r1 ? `<div class="sr-trigger">▶ Trigger: Break above</div>` : ''}
-        </div>
-      </div>`;
 
-      const allSorted = [...resistances.reverse(), { name: 'Current Price', price: close, type: 'current' }, ...supports];
-      allSorted.sort((a, b) => b.price - a.price);
-
-      const html = allSorted.map(l => {
-        const type = l.type === 'current' ? 'current' : l.price > close ? 'resistance' : 'support';
-        const dist = type === 'current' ? '' : `${((l.price - close) / close * 100).toFixed(1)}%`;
-        const isKey = l === s1 || l === r1;
-        return `<div class="level-item ${type}${isKey ? ' key-level' : ''}">
-          <span class="level-name">${l.name}${isKey ? (l === s1 ? ' <strong>S1</strong>' : ' <strong>R1</strong>') : ''}</span>
-          <span><span class="level-price">${fmtCur(l.price)}</span><span class="level-dist">${dist}</span></span>
-        </div>`;
-      }).join('');
-
-      return `<div class="section section-full">
-        <h2>🎚️ Key Levels</h2>
-        ${srSummary}
-        <div class="levels-list" style="margin-top:0.75rem">${html}</div>
-      </div>`;
-    }
-
-    // ─── 8. SIGNAL SUMMARY TABLE ─────────────────────────────────────────────────
-    function buildSignals(close, s) {
-      if (close == null) return '';
-      const signals = [];
-
-      // MA signals
-      if (s.sma20 != null) signals.push({ name: 'Price vs SMA 20', sig: close > s.sma20 ? 'Buy' : 'Sell', detail: `${close > s.sma20 ? 'Above' : 'Below'} (${((close - s.sma20) / s.sma20 * 100).toFixed(1)}%)` });
-      if (s.sma50 != null) signals.push({ name: 'Price vs SMA 50', sig: close > s.sma50 ? 'Buy' : 'Sell', detail: `${close > s.sma50 ? 'Above' : 'Below'} (${((close - s.sma50) / s.sma50 * 100).toFixed(1)}%)` });
-      if (s.sma200 != null) signals.push({ name: 'Price vs SMA 200', sig: close > s.sma200 ? 'Buy' : 'Sell', detail: `${close > s.sma200 ? 'Above' : 'Below'} (${((close - s.sma200) / s.sma200 * 100).toFixed(1)}%)` });
-
-      // MA Stack
-      if (s.sma20 != null && s.sma50 != null && s.sma200 != null) {
-        const stack = s.sma20 > s.sma50 && s.sma50 > s.sma200 ? 'Buy' : s.sma20 < s.sma50 && s.sma50 < s.sma200 ? 'Sell' : 'Neutral';
-        signals.push({ name: 'MA Alignment', sig: stack, detail: stack === 'Buy' ? 'Bullish stack' : stack === 'Sell' ? 'Bearish stack' : 'Mixed order' });
-      }
-
-      // EMA cross
-      if (s.ema12 != null && s.ema26 != null) {
-        signals.push({ name: 'EMA 12/26 Cross', sig: s.ema12 > s.ema26 ? 'Buy' : 'Sell', detail: s.ema12 > s.ema26 ? 'Bullish crossover' : 'Bearish crossover' });
-      }
-
-      // RSI
-      if (s.rsi14 != null) {
-        const rsiSig = getRsiMeta(s.rsi14).signal;
-        signals.push({ name: 'RSI (14)', sig: rsiSig, detail: `${s.rsi14.toFixed(1)}` });
-      }
-
-      // MACD
-      if (s.macd_hist != null) {
-        signals.push({ name: 'MACD Histogram', sig: s.macd_hist > 0 ? 'Buy' : 'Sell', detail: `${s.macd_hist.toFixed(3)}` });
-      }
-
-      // Bollinger (unified 3-state — same logic as Verdict)
-      const bbSignal = getBollingerSignal(close, s);
-      if (bbSignal.pctB != null) {
-        signals.push({ name: 'Bollinger %B', sig: bbSignal.sig, detail: `${bbSignal.pctB.toFixed(2)}` });
-      }
-
-      const rows = signals.map(sig => {
-        const cls = sig.sig === 'Buy' ? 'buy' : sig.sig === 'Sell' ? 'sell' : 'neutral';
-        return `<tr>
-        <td style="font-weight:600">${sig.name}</td>
-        <td><span class="signal-chip ${cls}">${sig.sig}</span></td>
-        <td style="color:var(--text-dim);font-size:0.8rem">${sig.detail}</td>
-      </tr>`;
-      }).join('');
-
-      const buyCount = signals.filter(s => s.sig === 'Buy').length;
-      const sellCount = signals.filter(s => s.sig === 'Sell').length;
-      const neutralCount = signals.filter(s => s.sig === 'Neutral').length;
-
-      return `<div class="section section-full">
-      <h2>📋 Signal Summary <span style="font-size:0.7rem;color:var(--text-muted);text-transform:none;letter-spacing:0">unified methodology with verdict</span></h2>
-      <div style="display:flex;gap:0.5rem;margin-bottom:0.75rem;flex-wrap:wrap;">
-        <span class="signal-chip buy">Buy: ${buyCount}</span>
-        <span class="signal-chip sell">Sell: ${sellCount}</span>
-        <span class="signal-chip neutral">Neutral: ${neutralCount}</span>
       </div>
-      <table class="sig-table">
-        <tr><th>Indicator</th><th>Signal</th><th>Detail</th></tr>
-        ${rows}
-      </table>
-    </div>`;
-    }
+    </div>
 
-    // ─── 9. MARKET SCORE ─────────────────────────────────────────────────────────
-    function buildScore(score) {
-      if (!score || Object.keys(score).length === 0) return '';
+    <!-- COLUMN 2: TECHNICAL VITALITY -->
+    <div>
+      <div class="section">
+        <h2>Technical Vitality</h2>
+        <div style="font-size: 0.62rem; color: var(--text-dim); margin-bottom: 0.75rem; font-weight: 700; text-transform:uppercase;">Trend: <span style="color:${trendColor}">${trendLabel}</span> · MA Stack: <span style="color:${trendColor}">${maStack}</span></div>
 
-      const chipClass = v => v >= 70 ? 'positive' : v <= 40 ? 'negative' : 'n';
-
-      const reasonsHTML = (list, title) => {
-        if (!list || !list.length) return '';
-        const items = list.map(e => `<div class="score-reason">${e.metric}: ${fmtPctSigned(e.points)}</div>`).join('');
-        return `<div class="score-reason-group"><h3>${title}</h3>${items}</div>`;
-      };
-
-      return `<div class="section section-full">
-      <h2>🏆 Market Score</h2>
-      <div class="score-chips">
-        <span class="score-chip ${chipClass(score.score_short)}">Short: ${score.score_short ?? '—'}</span>
-        <span class="score-chip ${chipClass(score.score_mid)}">Mid: ${score.score_mid ?? '—'}</span>
-        <span class="score-chip ${chipClass(score.score_long)}">Long: ${score.score_long ?? '—'}</span>
-      </div>
-      ${score.confidence != null ? `<div style="font-size:0.8rem;color:var(--text-dim);margin-bottom:0.5rem">Confidence: ${score.confidence}</div>` : ''}
-      <div class="score-reasons">
-        ${reasonsHTML(score.reasons_top?.short, 'Short horizon')}
-        ${reasonsHTML(score.reasons_top?.mid, 'Mid horizon')}
-        ${reasonsHTML(score.reasons_top?.long, 'Long horizon')}
-      </div>
-    </div>`;
-    }
-
-    // ─── Helper: prefer adjClose over raw close ─────────────────────────────────
-    const adjC = (bar) => bar?.adjClose ?? bar?.close ?? null;
-
-    // ─── 10. SEASONALITY ────────────────────────────────────────────────────────
-    function buildSeasonality(bars) {
-      if (!bars || bars.length < 252) return ''; // Need at least 1 year
-      const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-      const monthReturns = {};
-      monthNames.forEach((_, i) => { monthReturns[i] = []; });
-
-      for (let i = 1; i < bars.length; i++) {
-        const prev = bars[i - 1];
-        const cur = bars[i];
-        const prevC = adjC(prev), curC = adjC(cur);
-        if (!cur.date || !prevC || !curC || prevC <= 0) continue;
-        const d = new Date(cur.date);
-        if (isNaN(d)) continue;
-        const ret = (curC - prevC) / prevC;
-        monthReturns[d.getMonth()].push(ret);
-      }
-
-      const rows = monthNames.map((name, i) => {
-        const rets = monthReturns[i];
-        if (!rets.length) return `<div style="display:flex;justify-content:space-between;padding:0.3rem 0;border-bottom:1px solid rgba(255,255,255,0.03);"><span style="color:var(--text-dim);width:40px;">${name}</span><span style="color:var(--text-muted)">—</span></div>`;
-        const avg = rets.reduce((a, b) => a + b, 0) / rets.length;
-        const pct = (avg * 100).toFixed(2);
-        const color = avg >= 0 ? 'var(--green)' : 'var(--red)';
-        const sign = avg >= 0 ? '+' : '';
-        const barW = Math.min(Math.abs(avg) * 1000, 60);
-        return `<div style="display:flex;align-items:center;gap:0.5rem;padding:0.3rem 0;border-bottom:1px solid rgba(255,255,255,0.03);">
-          <span style="color:var(--text-dim);width:40px;font-size:0.8rem;">${name}</span>
-          <div style="flex:1;height:14px;position:relative;background:rgba(148,163,184,0.04);border-radius:3px;">
-            <div style="position:absolute;${avg >= 0 ? 'left:50%' : 'right:50%'};width:${barW}%;height:100%;background:${color};opacity:0.5;border-radius:3px;"></div>
-            <div style="position:absolute;left:50%;top:0;bottom:0;width:1px;background:rgba(148,163,184,0.15);"></div>
+        <!-- Gauges Row -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem;margin-bottom:1.25rem">
+          <div style="padding:.75rem;border-radius:8px;background:rgba(255,255,255,0.01);border:1px solid rgba(255,255,255,0.03);text-align:center">
+            <div style="font-size:.6rem;color:var(--text-muted)">RSI INDICATOR</div>
+            <div style="font-size:1.4rem;font-weight:800;color:${rsiColor}">${s.rsi14!=null?s.rsi14.toFixed(1):'—'}</div>
+            <div style="font-size:.62rem;color:var(--text-dim)">Zone: ${rsiZone}</div>
+            <div style="height:4px;background:rgba(255,255,255,0.05);border-radius:2px;margin-top:5px"><div style="width:${s.rsi14!=null?s.rsi14:0}%;height:100%;background:${rsiColor};border-radius:2px"></div></div>
           </div>
-          <span style="color:${color};font-weight:700;font-size:0.8rem;width:60px;text-align:right;">${sign}${pct}%</span>
-        </div>`;
-      }).join('');
+          <div style="padding:.75rem;border-radius:8px;background:rgba(255,255,255,0.01);border:1px solid rgba(255,255,255,0.03);text-align:center">
+            <div style="font-size:.6rem;color:var(--text-muted)">BOLLINGER %B</div>
+            <div style="font-size:1.4rem;font-weight:800;color:var(--accent)">${bbPctB!=null?bbPctB.toFixed(2):'—'}</div>
+            <div style="font-size:.62rem;color:var(--text-dim)">${bbPctB!=null && bbPctB < 0.2 ? 'Near Lower Band' : bbPctB > 0.8 ? 'Near Upper Band' : 'Range Midbound'}</div>
+            <div style="height:4px;background:rgba(255,255,255,0.05);border-radius:2px;margin-top:5px"><div style="width:${bbPctB!=null?Math.max(0,Math.min(100,bbPctB*100)):0}%;height:100%;background:var(--accent);border-radius:2px"></div></div>
+          </div>
+        </div>
 
-      // Best/worst month
-      let bestMonth = '', worstMonth = '', bestAvg = -Infinity, worstAvg = Infinity;
-      monthNames.forEach((name, i) => {
-        const rets = monthReturns[i];
-        if (!rets.length) return;
-        const avg = rets.reduce((a, b) => a + b, 0) / rets.length;
-        if (avg > bestAvg) { bestAvg = avg; bestMonth = name; }
-        if (avg < worstAvg) { worstAvg = avg; worstMonth = name; }
-      });
+        <!-- Risk Gauge -->
+        <div style="display:flex;gap:1rem;align-items:center;background:rgba(255,255,255,0.01);padding:.75rem;border-radius:8px;border:1px solid rgba(255,255,255,0.03);margin-bottom:1rem">
+          <div style="width:28px;height:70px;border:2px solid var(--border);border-radius:6px;position:relative;overflow:hidden;flex-shrink:0">
+            <div style="position:absolute;bottom:0;width:100%;height:${riskLabel==='High'?30:riskLabel==='Medium'?65:95}%;background:${riskColor}"></div>
+          </div>
+          <div style="flex:1">
+            <div style="font-size:.65rem;color:var(--text-muted)">RISK STATE</div>
+            <div style="font-size:1.2rem;font-weight:800;color:${riskColor}">${riskLabel}</div>
+            <div style="font-size:.58rem;color:var(--text-dim);margin-top:2px;font-style:italic;">Regime: <span style="color:var(--yellow);">${isExtremeVol?'Extreme Volatility':'Normal'}</span></div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:.2rem;margin-top:.3rem">
+              <div style="font-size:.65rem"><span style="color:var(--text-muted)">ATR:</span> <span style="font-weight:600">${atr!=null?'$'+atr.toFixed(2):'—'}</span></div>
+              <div style="font-size:.65rem"><span style="color:var(--text-muted)">ATR%:</span> <span style="font-weight:600">${atrPct!=null?atrPct.toFixed(2)+'%':'—'}</span></div>
+              <div style="font-size:.65rem"><span style="color:var(--text-muted)">Vol:</span> <span style="font-weight:600">${volPct!=null?volPct+'%':'—'}</span></div>
+              <div style="font-size:.65rem"><span style="color:var(--text-muted)">Pos:</span> <span style="font-weight:600">${s.volatility_percentile!=null?s.volatility_percentile.toFixed(0)+'th':'—'}</span></div>
+            </div>
+          </div>
+        </div>
 
-      return `<div class="section">
-      <h2>📅 Seasonality</h2>
-      <div style="font-size:0.78rem;color:var(--text-dim);margin-bottom:0.6rem;">Average monthly returns over available history (${Math.floor(bars.length / 252)} years)</div>
-      ${rows}
-      <div style="display:flex;gap:1rem;margin-top:0.6rem;font-size:0.78rem;">
-        <span style="color:var(--green);">🏆 Best: ${bestMonth} (${bestAvg > 0 ? '+' : ''}${(bestAvg * 100).toFixed(2)}%)</span>
-        <span style="color:var(--red);">⚠️ Worst: ${worstMonth} (${(worstAvg * 100).toFixed(2)}%)</span>
+        <!-- Momentum Bars -->
+        <div style="margin-bottom:1.25rem;background:rgba(255,255,255,0.01);padding:.6rem;border-radius:8px;border:1px solid rgba(255,255,255,0.03);">
+          <div style="font-size:.65rem;color:var(--text-muted);text-transform:uppercase;margin-bottom:.4rem;font-weight:700">Momentum Dashboard</div>
+          ${[
+            ['1D', change.pct],
+            ['5D', s.ret_5d_pct],
+            ['20D', s.ret_20d_pct],
+            ['60D', s.ret_60d_pct]
+          ].filter(x=>x[1]!=null).map(x => {
+            var c = x[1]>=0?'var(--green)':'var(--red)';
+            var w = Math.min(80, Math.abs(x[1]*100)*4);
+            return `
+              <div style="display:flex;align-items:center;gap:.4rem;padding:.2rem 0">
+                <span style="font-size:.62rem;color:var(--text-dim);width:25px">${x[0]}</span>
+                <div style="flex:1;height:6px;background:rgba(255,255,255,0.03);border-radius:3px;overflow:hidden"><div style="width:${w}%;height:100%;background:${c};opacity:0.75"></div></div>
+                <span style="font-size:.65rem;font-weight:600;color:${c};width:45px;text-align:right">${fmtP(x[1])}</span>
+              </div>`;
+          }).join('')}
+        </div>
+
+        <!-- Chart -->
+        <div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.4rem">
+            <div style="font-size:.65rem;color:var(--text-dim);font-weight:700">PRICE HISTORY</div>
+            <div style="display:flex;gap:.25rem" id="tf-btns">
+              ${['1W','1M','6M','1Y','ALL'].map(tf=>`<button class="tf-btn ${tf==='1M'?'active':''}" data-tf="${tf}" onclick="window._switchTF(this)">${tf}</button>`).join('')}
+            </div>
+          </div>
+          <div id="tf-chart">${svgChart(180, 'chg-main', 22)}</div>
+        </div>
+
+        <!-- Horizon Consensus -->
+        <div style="margin-top:1.25rem; padding:.6rem; border-radius:8px; background:rgba(255,255,255,0.01); border:1px solid rgba(255,255,255,0.03);">
+            <div style="font-size: .62rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700; margin-bottom: .4rem;">Horizon Consensus</div>
+            <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:0.25rem; text-align:center;">
+                ${horizons.map(h => {
+                  var bg = h.v.c==='bullish'?'rgba(16,185,129,0.05)':h.v.c==='bearish'?'rgba(248,113,113,0.05)':'rgba(251,191,36,0.05)';
+                  var bc = h.v.c==='bullish'?'rgba(16,185,129,0.1)':h.v.c==='bearish'?'rgba(248,113,113,0.1)':'rgba(251,191,36,0.1)';
+                  var tc = h.v.c==='bullish'?'var(--green)':h.v.c==='bearish'?'var(--red)':'var(--yellow)';
+                  return `<div style="padding:4px; background:${bg}; border:1px solid ${bc}; border-radius:4px;">
+                    <div style="font-size:0.52rem; color:var(--text-dim)">${h.label}</div>
+                    <div style="font-size:0.65rem; font-weight:800; color:${tc};">${h.v.l}</div>
+                  </div>`;
+                }).join('')}
+            </div>
+            <div style="font-size:0.58rem; color:var(--text-dim); text-align:center; margin-top:0.4rem; font-style:italic;">
+              ${shortV===midV&&midV===longV ? 'Full consensus: '+shortV : 'Split consensus across horizons'}
+            </div>
+        </div>
+
       </div>
-      ${typeof buildWeekdaySeasonality === 'function' ? buildWeekdaySeasonality(bars) : ''}
-    </div>`;
-    }
+    </div>
 
-    // ─── 11. CORRELATIONS & BENCHMARKS ──────────────────────────────────────────
-    function buildCorrelations(ticker, bars) {
-      if (!bars || bars.length < 60) return ''; // Need at minimum 60 bars
+    <!-- COLUMN 3: NARRATIVE & KEY LEVELS -->
+    <div>
+      <div class="section">
+        <h2>Narrative & Key Levels</h2>
 
-      // We compute "self-correlation" metrics: autocorrelation and momentum persistence
-      const returns = [];
-      for (let i = 1; i < bars.length; i++) {
-        const prev = adjC(bars[i - 1]);
-        const cur = adjC(bars[i]);
-        if (prev > 0 && cur > 0) returns.push((cur - prev) / prev);
-      }
-      if (returns.length < 30) return '';
+        <!-- Upcoming Catalysts -->
+        <div style="margin-bottom:0.75rem; padding:.6rem; border-radius:8px; background:rgba(255,255,255,0.01); border:1px solid rgba(255,255,255,0.03);">
+            <div style="font-size: .62rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700; margin-bottom: .4rem;">Upcoming Catalysts</div>
+            <div id="dyn-catalysts" style="display:flex; flex-direction:column; gap:4px;">
+                <div style="font-size:0.68rem; color:var(--text-dim); font-style:italic;">No catalyst data available</div>
+            </div>
+        </div>
 
-      // Compute rolling 20d returns stats
-      const recent20 = returns.slice(-20);
-      const recent60 = returns.slice(-60);
-      const avgRet20 = recent20.reduce((a, b) => a + b, 0) / recent20.length;
-      const avgRet60 = recent60.reduce((a, b) => a + b, 0) / recent60.length;
-      const winRate20 = (recent20.filter(r => r > 0).length / recent20.length * 100).toFixed(1);
-      const winRate60 = (recent60.filter(r => r > 0).length / recent60.length * 100).toFixed(1);
+        <!-- Market Context (Dynamic) -->
+        <div id="dyn-market-context" style="margin-bottom:0.75rem;">
+            ${window._renderMarketContext('1D')}
+        </div>
 
-      // Compute simple volatility
-      const vol20 = Math.sqrt(recent20.reduce((a, r) => a + (r - avgRet20) ** 2, 0) / (recent20.length - 1)) * Math.sqrt(252);
-      const vol60 = Math.sqrt(recent60.reduce((a, r) => a + (r - avgRet60) ** 2, 0) / (recent60.length - 1)) * Math.sqrt(252);
+        <!-- Key Levels Layout -->
+        <div style="padding-top:.25rem">
+          <div style="font-size:.68rem;color:var(--text-muted);text-transform:uppercase;font-weight:700;margin-bottom:.5rem">Key Levels</div>
+          <div style="display:grid;grid-template-columns:1.2fr .8fr;gap:.5rem;align-items:stretch">
+            <div style="display:flex;flex-direction:column;gap:.11rem;" class="custom-scroll">${rows.join('')}</div>
+            <div style="position:relative;min-height:220px;background:rgba(255,255,255,0.01);border-radius:8px;border:1px solid rgba(255,255,255,0.04);padding:.5rem .3rem">
+              ${levels.map(l=>{var c=l.kind==='support'?'var(--green)':'var(--red)';return '<div style="position:absolute;left:4px;right:4px;top:'+l.yExact+'%;height:1px;background:'+c+';opacity:0.25"></div><div style="position:absolute;right:2px;top:calc('+l.yText+'% - 4px);font-size:.42rem;color:'+c+';white-space:nowrap">'+l.label+'</div>'}).join('')}
+              <div style="position:absolute;left:4px;right:4px;top:${((1-((close-mnL)/rngL))*90+5)}%;height:2px;background:var(--accent);z-index:1"></div>
+              <div style="position:absolute;left:2px;top:calc(${((1-((close-mnL)/rngL))*90+5)}% - 7px);background:var(--accent);color:#000;padding:1px 3px;border-radius:2px;font-size:.55rem;font-weight:700;z-index:2">$${close.toFixed(2)}</div>
+            </div>
+          </div>
+        </div>
 
-      // Autocorrelation (SSOT: use canonical s.lag1_autocorrelation when available, else local calc)
-      const rvCtx = window._rvRenderCtx || {};
-      let autoCorr = rvCtx.s?.lag1_autocorrelation;
-      if (autoCorr == null) {
-        autoCorr = 0;
-        if (returns.length > 2) {
-          const n = Math.min(returns.length - 1, 60);
-          const slice = returns.slice(-n - 1);
-          const mean = slice.reduce((a, b) => a + b, 0) / slice.length;
-          let num = 0, den = 0;
-          for (let i = 1; i < slice.length; i++) {
-            num += (slice[i] - mean) * (slice[i - 1] - mean);
-            den += (slice[i] - mean) ** 2;
-          }
-          autoCorr = den > 0 ? num / den : 0;
-        }
-      }
-      const acLabel = autoCorr > 0.1 ? '🔄 Trending (momentum)' : autoCorr < -0.1 ? '↩️ Mean-reverting' : '➡️ Random walk';
-
-      // Benchmark comparison note
-      const benchmarks = ['SPY', 'QQQ', 'DIA', 'IWM'];
-      const benchNote = benchmarks.includes(ticker.toUpperCase())
-        ? `<div style="font-size:0.78rem;color:var(--accent);margin-top:0.5rem;">ℹ️ ${ticker} is itself a major benchmark index ETF.</div>`
-        : `<div style="font-size:0.78rem;color:var(--text-muted);margin-top:0.5rem;">💡 Cross-correlations to SPY, QQQ, DIA, and IWM require benchmark data in the universe.</div>`;
-
-      return `<div class="section">
-      <h2>🔗 Return Profile & Regime</h2>
-      <table class="ma-table">
-        <tr><th>Metric</th><th>20-Day</th><th>60-Day</th></tr>
-        <tr><td style="font-weight:600">Avg Daily Return</td><td style="color:${avgRet20 >= 0 ? 'var(--green)' : 'var(--red)'}">${avgRet20 >= 0 ? '+' : ''}${(avgRet20 * 100).toFixed(3)}%</td><td style="color:${avgRet60 >= 0 ? 'var(--green)' : 'var(--red)'}">${avgRet60 >= 0 ? '+' : ''}${(avgRet60 * 100).toFixed(3)}%</td></tr>
-        <tr><td style="font-weight:600">Win Rate</td><td>${winRate20}%</td><td>${winRate60}%</td></tr>
-        <tr><td style="font-weight:600" title="Sample standard deviation of daily returns, annualized (×√252 trading days)">Annualized Vol</td><td>${(vol20 * 100).toFixed(1)}%</td><td>${(vol60 * 100).toFixed(1)}%</td></tr>
-      </table>
-      <div style="margin-top:0.75rem;padding:0.5rem;background:rgba(255,255,255,0.02);border-radius:6px;border-left:3px solid var(--accent);">
-        <div style="font-size:0.78rem;color:var(--text-dim);margin-bottom:0.2rem;">Autocorrelation (lag-1, 60d)</div>
-        <div style="font-weight:700;font-size:0.9rem;">${autoCorr.toFixed(3)} ${acLabel}</div>
       </div>
-      ${benchNote}
-    </div>`;
-    }
+    </div>
 
-    // ─── 12. PRICE CONCLUSION (removed — redundant with Decision Strip) ────────
-    function buildPriceConclusion() { return ''; }
-    function _buildPriceConclusionLegacy(ticker, close, s, bars, universe) {
-      if (close == null) return '';
-      // Governance: withheld when any gate active
-      const qPC = window._rvQualitySignals || {};
-      if (qPC.anyGateActive) {
-        const pcGates = [];
-        if (qPC.rawStatus === 'UNKNOWN') pcGates.push('Raw Validation UNKNOWN');
-        if (qPC.rawStatus === 'INVALID') pcGates.push('Raw Validation INVALID');
-        if (qPC.metricMismatch) pcGates.push('Canonical Metric Drift');
-        if (qPC.rsiHardGate) pcGates.push('RSI Hard Gate');
-        if (qPC.biotechContextMissing) pcGates.push('Biotech Context Missing');
-        return `<div class="section section-full">
-      <h2>📝 Price Conclusion <span style="font-size:0.7rem;color:var(--text-muted);text-transform:none;letter-spacing:0">20-200d context</span></h2>
-      <div class="verdict-box neutral" style="font-size:0.95rem;padding:0.75rem;margin-bottom:0.75rem;">PRICE CONCLUSION WITHHELD — active governance gates prevent a normal directional conclusion.</div>
-      <div style="font-size:.78rem;color:var(--yellow);padding:.5rem .6rem;border-radius:6px;background:var(--yellow-bg);border:1px solid rgba(251,191,36,.25);margin-bottom:.5rem">
-        Active gates: ${pcGates.join(' · ') || 'governance gate active'}
-      </div>
-      <div style="font-size:0.7rem;color:var(--text-muted);text-align:center;">⚠️ Conclusion will be available once all governance gates clear. Not financial advice.</div>
-    </div>`;
-      }
-      const points = [];
-      let bullScore = 0, bearScore = 0;
+  </div>
+  `;
 
-      // MA Analysis
-      if (s.sma200 != null) {
-        const distSMA200 = ((close - s.sma200) / s.sma200 * 100);
-        if (close > s.sma200) {
-          points.push(`✅ Price is <strong>${distSMA200.toFixed(1)}% above SMA200</strong> — long-term uptrend intact.`);
-          bullScore += 2;
-        } else {
-          points.push(`⚠️ Price is <strong>${Math.abs(distSMA200).toFixed(1)}% below SMA200</strong> — long-term trend is bearish.`);
-          bearScore += 2;
-        }
-      }
-      if (s.sma20 != null && s.sma50 != null && s.sma200 != null) {
-        if (s.sma20 > s.sma50 && s.sma50 > s.sma200) {
-          points.push('✅ All moving averages are in <strong>bullish alignment</strong> (20 > 50 > 200).');
-          bullScore += 2;
-        } else if (s.sma20 < s.sma50 && s.sma50 < s.sma200) {
-          points.push('🔴 Moving averages show <strong>bearish death cross</strong> alignment (20 < 50 < 200).');
-          bearScore += 2;
-        } else {
-          points.push('◆ Moving average alignment is <strong>mixed</strong> — no clear directional signal.');
-        }
-      }
+  document.getElementById('sc-content').innerHTML = layout;
 
-      // RSI
-      if (s.rsi14 != null) {
-        const rsiMeta = getRsiMeta(s.rsi14);
-        if (rsiMeta.signal === 'Buy') {
-          points.push(`🟢 RSI at <strong>${s.rsi14.toFixed(1)}</strong> — oversold territory, potential bounce setup.`);
-          bullScore += 1;
-        } else if (rsiMeta.signal === 'Sell') {
-          points.push(`🔴 RSI at <strong>${s.rsi14.toFixed(1)}</strong> — overbought, caution for pullback.`);
-          bearScore += 1;
-        } else {
-          points.push(`➡️ RSI at <strong>${s.rsi14.toFixed(1)}</strong> — neutral zone, no extreme signal.`);
-        }
-      }
+  window._switchTF = function(b) {
+    const m={'1W':5,'1M':22,'6M':130,'1Y':252,'ALL':bars.length};
+    document.getElementById('tf-chart').innerHTML = svgChart(180, 'chg-'+b.dataset.tf, m[b.dataset.tf]||22);
+    document.querySelectorAll('#tf-btns .tf-btn').forEach(x => x.classList.remove('active'));
+    b.classList.add('active');
+  };
 
-      // 52W Range — tiered, uses range_52w_pct for consistency with Decision Strip
-      if (s.high_52w != null && s.low_52w != null) {
-        const fromHigh = ((close - s.high_52w) / s.high_52w * 100);
-        const fromLow = ((close - s.low_52w) / s.low_52w * 100);
-        const pct52 = s.range_52w_pct != null ? (s.range_52w_pct * 100).toFixed(0) : null;
-        if (s.range_52w_pct > 0.9) {
-          points.push(`🏔️ Trading near <strong>52-week high</strong> (${fromHigh.toFixed(1)}% from peak, ${pct52}% of range) — momentum intact but elevated risk.`);
-          bullScore += 1;
-        } else if (s.range_52w_pct > 0.7) {
-          points.push(`📈 Upper <strong>52-week range</strong> (${pct52}% position, ${fromHigh.toFixed(1)}% from peak) — positive trend positioning.`);
-          bullScore += 0.5;
-        } else if (s.range_52w_pct < 0.1) {
-          points.push(`🕳️ Near <strong>52-week low</strong> (${fromLow.toFixed(1)}% from bottom, ${pct52}% of range) — severe weakness, falling knife risk.`);
-          bearScore += 1.5;
-        } else if (s.range_52w_pct < 0.2) {
-          points.push(`🕳️ Lower <strong>52-week range</strong> (${fromLow.toFixed(1)}% from bottom, ${pct52}% of range) — under pressure, potential value.`);
-          bearScore += 1;
-        }
-      }
+  window._switchCL = function(b) {
+    ['short','mid','long'].forEach(h => {
+      var el = document.getElementById('cl-'+h);
+      if(el) el.style.display = (h === b.dataset.hz) ? '' : 'none';
+    });
+    document.querySelectorAll('#cl-btns .cl-btn').forEach(x => x.classList.remove('active'));
+    b.classList.add('active');
+  };
 
-      // Volatility
-      if (s.volatility_percentile != null) {
-        if (s.volatility_percentile > 80) {
-          points.push(`⚡ Volatility is in the <strong>${s.volatility_percentile.toFixed(0)}th percentile</strong> — unusually high, expect large swings.`);
-        } else if (s.volatility_percentile < 20) {
-          points.push(`🧊 Volatility is in the <strong>${s.volatility_percentile.toFixed(0)}th percentile</strong> — quiet period, breakout may be imminent.`);
-        }
-      }
+})();
+</script>
 
-      // Volume
-      if (s.volume_ratio_20d != null) {
-        if (s.volume_ratio_20d > 2) {
-          points.push(`📢 Volume is <strong>${s.volume_ratio_20d.toFixed(1)}x</strong> the 20-day average — significant institutional activity.`);
-        } else if (s.volume_ratio_20d < 0.5) {
-          points.push(`🔇 Volume is only <strong>${s.volume_ratio_20d.toFixed(1)}x</strong> the average — low conviction in current move.`);
-        }
-      }
+<style>
+.custom-scroll::-webkit-scrollbar { width: 4px; }
+.custom-scroll::-webkit-scrollbar-track { background: transparent; }
+.custom-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 2px; }
+</style>
 
-      // Seasonality hint
-      if (bars && bars.length >= 252) {
-        const now = new Date();
-        const curMonth = now.getMonth();
-        const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-        const monthRets = [];
-        for (let i = 1; i < bars.length; i++) {
-          const prevC = adjC(bars[i - 1]), curC = adjC(bars[i]);
-          if (!bars[i].date || !prevC || !curC || prevC <= 0) continue;
-          const d = new Date(bars[i].date);
-          if (!isNaN(d) && d.getMonth() === curMonth) {
-            monthRets.push((curC - prevC) / prevC);
-          }
-        }
-        if (monthRets.length > 10) {
-          const avg = monthRets.reduce((a, b) => a + b, 0) / monthRets.length;
-          const pct = (avg * 100).toFixed(2);
-          if (avg > 0.001) points.push(`📅 Historically, <strong>${monthNames[curMonth]}</strong> has been a positive month (avg: +${pct}%).`);
-          else if (avg < -0.001) points.push(`📅 Historically, <strong>${monthNames[curMonth]}</strong> tends to be weak (avg: ${pct}%).`);
-        }
-      }
+<script src="/js/stock-features.js" defer></script>
+<script src="/market-clock.js" defer></script>
+<script>
+// Update date display
+(function(){
+  const el = document.getElementById("rv-data-updated-date");
+  if (el) { el.textContent = new Date().toISOString().slice(0, 10); }
+})();
 
-      // Overall conclusion (only reached when no governance gates active)
-      const total = bullScore + bearScore;
-      const ratio = total > 0 ? bullScore / total : 0.5;
-      let overallVerdict, verdictCls;
-      if (ratio >= 0.65) { overallVerdict = 'The overall technical picture is <strong>BULLISH</strong>. Price is in an uptrend with favorable momentum indicators.'; verdictCls = 'bullish'; }
-      else if (ratio <= 0.35) { overallVerdict = 'The overall technical picture is <strong>BEARISH</strong>. Price faces headwinds with negative momentum signals.'; verdictCls = 'bearish'; }
-      else { overallVerdict = 'The technical picture is <strong>MIXED</strong>. Conflicting signals suggest a wait-and-see approach.'; verdictCls = 'neutral'; }
+// Search bar navigation
+(function(){
+  const input = document.getElementById('dash-search');
+  const btn = document.getElementById('dash-search-btn');
+  if (!input || !btn) return;
+  // Pre-fill with current ticker
+  const m = window.location.pathname.match(/\/analyze\/([^/?]+)/i);
+  if (m) input.value = decodeURIComponent(m[1]).toUpperCase();
+  const go = () => {
+    const t = input.value.trim().toUpperCase();
+    if (t) window.location.href = '/analyze/' + encodeURIComponent(t);
+  };
+  btn.addEventListener('click', go);
+  input.addEventListener('keydown', e => { if (e.key === 'Enter') go(); });
+})();
+</script>
 
-      return `<div class="section section-full">
-      <h2>📝 Price Conclusion <span style="font-size:0.7rem;color:var(--text-muted);text-transform:none;letter-spacing:0">20-200d context</span></h2>
-      <div class="verdict-box ${verdictCls}" style="font-size:0.95rem;padding:0.75rem;margin-bottom:0.75rem;">${overallVerdict}</div>
-      <div style="display:flex;flex-direction:column;gap:0.4rem;">
-        ${points.map(p => `<div style="font-size:0.82rem;color:var(--text);line-height:1.5;padding:0.3rem 0;border-bottom:1px solid rgba(255,255,255,0.03);">${p}</div>`).join('')}
-      </div>
-      <div style="font-size:0.7rem;color:var(--text-muted);margin-top:0.75rem;text-align:center;">⚠️ This is a technical summary, not financial advice. Always conduct your own research.</div>
-    </div>`;
-    }
-  </script>
+<div id="rv-disclaimer" style="margin-top:2rem;padding:1rem;border-top:1px solid var(--border);font-size:.75rem;color:var(--text-muted);max-width:1400px;margin-left:auto;margin-right:auto">
+  <strong>Disclaimer:</strong> Die Inhalte auf RubikVault dienen ausschließlich Informationszwecken und stellen keine Anlageberatung, keine Empfehlung und keine Aufforderung zum Kauf oder Verkauf von Finanzinstrumenten dar. Daten können fehlerhaft, unvollständig oder zeitverzögert sein. Nutzung auf eigenes Risiko.
+  <a href="/disclaimer.html" style="color:var(--accent)">Vollständiger Disclaimer</a>
+</div>
 
-  <!-- Market Clock Script (shared with frontpage) -->
-  <script>
-    document.write(`<script src="${RV_ASSET_BASE}/market-clock.js"><\/script>`);
-  </script>
-  <script>
-    (function () {
-      const el = document.getElementById("rv-data-updated-date");
-      if (el) el.textContent = new Date().toISOString().split("T")[0];
-    })();
-  </script>
-</body>
-
-</html>
+</body></html>

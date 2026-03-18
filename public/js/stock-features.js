@@ -1,8 +1,70 @@
 /* ═══════════════════════════════════════════════════════════════════════════
    Stock Analyzer Features (F-01 … F-40)
-   Pure client-side. Depends on globals: fmt, fmtPct, fmtPctSigned, fmtCur,
-   fmtVol, clamp, adjC  (defined in stock.html)
+   Pure client-side. Uses window helpers when available and falls back to
+   local implementations when loaded standalone in the live dashboard.
    ═══════════════════════════════════════════════════════════════════════════ */
+
+const _rvGlobal = typeof window !== 'undefined' ? window : globalThis;
+const clamp = typeof _rvGlobal.clamp === 'function'
+  ? _rvGlobal.clamp.bind(_rvGlobal)
+  : (value, min, max) => {
+      const n = Number(value);
+      if (!Number.isFinite(n)) return min;
+      return Math.min(max, Math.max(min, n));
+    };
+const fmt = typeof _rvGlobal.fmt === 'function'
+  ? _rvGlobal.fmt.bind(_rvGlobal)
+  : (value, digits = 2) => {
+      const n = Number(value);
+      return Number.isFinite(n) ? n.toFixed(digits) : '—';
+    };
+const fmtPct = typeof _rvGlobal.fmtPct === 'function'
+  ? _rvGlobal.fmtPct.bind(_rvGlobal)
+  : (value, digits = 1) => {
+      const n = Number(value);
+      return Number.isFinite(n) ? `${(n * 100).toFixed(digits)}%` : '—';
+    };
+const fmtPctSigned = typeof _rvGlobal.fmtPctSigned === 'function'
+  ? _rvGlobal.fmtPctSigned.bind(_rvGlobal)
+  : (value, digits = 1) => {
+      const n = Number(value);
+      return Number.isFinite(n) ? `${n >= 0 ? '+' : ''}${(n * 100).toFixed(digits)}%` : '—';
+    };
+const fmtCur = typeof _rvGlobal.fmtCur === 'function'
+  ? _rvGlobal.fmtCur.bind(_rvGlobal)
+  : (value, digits = 2) => {
+      const n = Number(value);
+      return Number.isFinite(n) ? `$${n.toFixed(digits)}` : '—';
+    };
+const fmtVol = typeof _rvGlobal.fmtVol === 'function'
+  ? _rvGlobal.fmtVol.bind(_rvGlobal)
+  : (value) => {
+      const n = Number(value);
+      if (!Number.isFinite(n)) return '—';
+      const abs = Math.abs(n);
+      if (abs >= 1e12) return `${(n / 1e12).toFixed(1)}T`;
+      if (abs >= 1e9) return `${(n / 1e9).toFixed(1)}B`;
+      if (abs >= 1e6) return `${(n / 1e6).toFixed(1)}M`;
+      if (abs >= 1e3) return `${(n / 1e3).toFixed(1)}K`;
+      return n.toFixed(0);
+    };
+const adjC = typeof _rvGlobal.adjC === 'function'
+  ? _rvGlobal.adjC.bind(_rvGlobal)
+  : (bar) => {
+      const n = Number(bar?.adjClose ?? bar?.close);
+      return Number.isFinite(n) ? n : 0;
+    };
+
+if (typeof window !== 'undefined') {
+  window.__RV_STOCK_FEATURES_LOADED = true;
+  if (typeof window.clamp !== 'function') window.clamp = clamp;
+  if (typeof window.fmt !== 'function') window.fmt = fmt;
+  if (typeof window.fmtPct !== 'function') window.fmtPct = fmtPct;
+  if (typeof window.fmtPctSigned !== 'function') window.fmtPctSigned = fmtPctSigned;
+  if (typeof window.fmtCur !== 'function') window.fmtCur = fmtCur;
+  if (typeof window.fmtVol !== 'function') window.fmtVol = fmtVol;
+  if (typeof window.adjC !== 'function') window.adjC = adjC;
+}
 
 // ── Inject CSS ──────────────────────────────────────────────────────────────
 (function () {
@@ -46,6 +108,15 @@ function _toNumber(v) { const n = Number(v); return Number.isFinite(n) ? n : nul
 function _fmtMaybe(v, d = 2) { return Number.isFinite(v) ? Number(v).toFixed(d) : '—'; }
 function _escHtml(v) { return String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
 function _fmtSignedPctValue(v, d = 1) { return Number.isFinite(Number(v)) ? `${Number(v) > 0 ? '+' : ''}${Number(v).toFixed(d)}%` : '—'; }
+
+function _sentimentColor(text) {
+  if (!text) return 'var(--text)';
+  const t = text.toLowerCase();
+  if (/\brisk\b|\bdowntrend\b|\bhigh volatility\b|\bextreme\b|\bbad\b|\bna\b|\bfail\b/.test(t)) return 'var(--red)';
+  if (/\bwait\b|\bsideways\b|\bmedium\b|\bguidance\b|\bwarn\b|\bpartial\b/.test(t)) return 'var(--yellow)';
+  if (/\bbuy\b|\buptrend\b|\bedge\b|\blow\b|\bok\b|\bgood\b/.test(t)) return 'var(--green)';
+  return 'var(--text)';
+}
 
 function _canonicalContext(context = {}) {
   const can = (typeof window !== 'undefined' && window._rvCanonicalMetrics) || {};
@@ -235,6 +306,30 @@ function _proxyElliottSignal(context = {}) {
   };
 }
 
+function _bridgeElliottProxy(entry, context = {}) {
+  if (!entry || typeof entry !== 'object') return null;
+  const local = _proxyElliottSignal(context);
+  const close = _toNumber(context?.close);
+  const directionRaw = String(entry?.completedPattern?.direction || '').toLowerCase();
+  const supportLevels = Array.isArray(entry?.developingPattern?.fibLevels?.support)
+    ? entry.developingPattern.fibLevels.support.map(_toNumber).filter((v) => Number.isFinite(v))
+    : [];
+  const resistanceLevels = Array.isArray(entry?.developingPattern?.fibLevels?.resistance)
+    ? entry.developingPattern.fibLevels.resistance.map(_toNumber).filter((v) => Number.isFinite(v))
+    : [];
+  const support = supportLevels[0] ?? local?.support ?? (close != null ? Number((close * 0.97).toFixed(2)) : null);
+  const resistance = resistanceLevels[0] ?? local?.resistance ?? (close != null ? Number((close * 1.03).toFixed(2)) : null);
+  if (!Number.isFinite(support) || !Number.isFinite(resistance)) return local || null;
+  return {
+    direction: directionRaw.includes('bear') ? 'bearish' : 'bullish',
+    wave: entry?.developingPattern?.possibleWave || local?.wave || 'Wave 4 or ABC',
+    confidence: Math.round(_toNumber(entry?.developingPattern?.confidence ?? entry?.uncertainty?.confidenceDecay?.adjusted ?? local?.confidence) || 0),
+    fibConformance: Math.round(_toNumber(entry?.fib?.conformanceScore ?? local?.fibConformance) || 0),
+    support,
+    resistance
+  };
+}
+
 // ═══════════════════════════════════════════════════════════════════════════
 // F-40: EXECUTIVE SUMMARY
 // ═══════════════════════════════════════════════════════════════════════════
@@ -242,49 +337,36 @@ function buildExecutiveSummary(ticker, close, s, bars, universe) {
   if (close == null) return '';
   const q = (typeof window !== 'undefined' && window._rvQualitySignals) || {};
   const quant = q.quantlab || null;
-  const rets = _returns(bars);
-  // Trend
-  let trend = 'N/A', trendCol = 'var(--text-dim)';
-  if (s.sma20 != null && s.sma50 != null && s.sma200 != null) {
-    if (s.sma20 > s.sma50 && s.sma50 > s.sma200 && close > s.sma20) { trend = '▲ Uptrend'; trendCol = 'var(--green)'; }
-    else if (s.sma20 < s.sma50 && s.sma50 < s.sma200 && close < s.sma20) { trend = '▼ Downtrend'; trendCol = 'var(--red)'; }
-    else { trend = '◆ Sideways'; trendCol = 'var(--yellow)'; }
-  }
-  // Risk
+  // Read from backend layers (no local business logic)
+  const _expl = (typeof window !== 'undefined' && window._rvExplanation) || {};
+  const _states = (typeof window !== 'undefined' && window._rvStates) || {};
+
+  // Display mappings from backend states
+  const trendMap = {STRONG_UP:'▲ Uptrend',UP:'▲ Uptrend',RANGE:'◆ Sideways',DOWN:'▼ Downtrend',STRONG_DOWN:'▼ Downtrend'};
+  const trend = trendMap[_states.trend] || 'N/A';
   const vol = s.volatility_20d != null ? (s.volatility_20d * 100).toFixed(1) + '%' : '—';
-  const maxDD = rets.length > 20 ? computeMaxDD(rets.map(r => r.ret)) : null;
-  const riskLbl = s.volatility_percentile > 70 ? 'High' : 'Medium';
-  const riskStr = `${riskLbl} (Vol ${vol}${maxDD != null ? ', MaxDD ' + (maxDD * 100).toFixed(0) + '%' : ''})`;
-  // 52W Position (5-tier, consistent with Decision Strip)
+  const riskMap = {EXTREME:'High',HIGH:'High',NORMAL:'Medium',LOW:'Low',COMPRESSED:'Low'};
+  const riskLbl = riskMap[_states.volatility] || 'Unknown';
+  const riskStr = `${riskLbl} (Vol ${vol})`;
   const valHint = s.range_52w_pct != null ? (s.range_52w_pct > 0.95 ? 'At 52W High' : s.range_52w_pct > 0.9 ? 'Near 52W High' : s.range_52w_pct > 0.7 ? 'Upper Range' : s.range_52w_pct < 0.1 ? 'Near 52W Low' : s.range_52w_pct < 0.2 ? 'Lower Range' : 'Mid-Range') : '—';
-  // Win Rate (was: "Quality" — renamed: win-rate ≠ quality)
-  const winRate = rets.length >= 60 ? (rets.slice(-60).filter(r => r.ret > 0).length / 60 * 100).toFixed(0) + '% (60d)' : '—';
+
   const rows = [
-    { l: 'Trend', v: trend, c: trendCol }, { l: 'Risk', v: riskStr, c: s.volatility_percentile > 70 ? 'var(--red)' : 'var(--yellow)' },
-    { l: '52W Position', v: valHint, c: s.range_52w_pct > 0.9 ? 'var(--red)' : s.range_52w_pct > 0.7 ? 'var(--yellow)' : s.range_52w_pct < 0.1 ? 'var(--green)' : s.range_52w_pct < 0.2 ? 'var(--green)' : 'var(--text)' },
-    { l: 'Win Rate (60d)', v: winRate, c: 'var(--text)' }
+    { l: 'Trend', v: trend, c: _sentimentColor(trend) },
+    { l: 'Risk', v: riskStr, c: _sentimentColor(riskStr) },
+    { l: '52W Position', v: valHint, c: s.range_52w_pct > 0.9 ? 'var(--red)' : s.range_52w_pct > 0.7 ? 'var(--yellow)' : s.range_52w_pct < 0.1 ? 'var(--green)' : s.range_52w_pct < 0.2 ? 'var(--green)' : 'var(--text)' }
   ];
+
   if (quant?.present) {
-    rows.push({
-      l: 'Quant Lab',
-      v: quant.label || 'No call',
-      c: quant.tone === 'good' ? 'var(--green)' : quant.tone === 'warn' ? 'var(--yellow)' : quant.tone === 'bad' ? 'var(--red)' : 'var(--text)'
-    });
+    rows.push({ l: 'Quant Lab', v: _tr(quant.label || 'No call'), c: _sentimentColor(quant.label || '') });
   }
-  // Synthesized narrative
-  const trendWord = trend.includes('Up') ? 'uptrend' : trend.includes('Down') ? 'downtrend' : 'sideways trend';
-  const volWord = s.volatility_percentile > 70 ? 'elevated' : s.volatility_percentile > 40 ? 'moderate' : 'low';
-  const rangeWord = s.range_52w_pct > 0.9 ? 'near its 52-week high' : s.range_52w_pct > 0.7 ? 'in the upper range of its 52-week band' : s.range_52w_pct < 0.1 ? 'near its 52-week low' : s.range_52w_pct < 0.2 ? 'in the lower range of its 52-week band' : 'in mid-range of its 52-week band';
-  const synthesis = `${ticker} is in a <strong>${trendWord}</strong> with <strong>${volWord} volatility</strong> (${vol}), trading ${rangeWord}.`;
+
+  // Use backend explanation for synthesis
+  const synthesis = _expl.synthesis || `${ticker} analysis pending.`;
   let quantSummary = '';
   if (quant?.present) {
-    const quantRank = quant.globalTop10Rank
-      ? `Global Quant Lab Top ${quant.globalTop10Rank}`
-      : quant.continentTop10Rank
-        ? `Regional Quant Lab Top ${quant.continentTop10Rank}`
-        : `${quant.strongExperts || 0} strong experts scored this ticker`;
+    const quantRank = quant.globalTop10Rank ? `Global Quant Lab Top ${quant.globalTop10Rank}` : quant.continentTop10Rank ? `Regional Quant Lab Top ${quant.continentTop10Rank}` : `${quant.strongExperts || 0} strong experts scored this ticker`;
     const quantLead = quant.summary || (Array.isArray(quant.whyNow) && quant.whyNow[0]) || '';
-    quantSummary = `<div style="font-size:.8rem;color:var(--text);margin-top:.55rem;padding:.55rem .65rem;background:rgba(16,185,129,.05);border-radius:8px;border-left:3px solid ${quant.tone === 'good' ? 'var(--green)' : quant.tone === 'warn' ? 'var(--yellow)' : 'var(--red)'};line-height:1.55"><strong>Quant Lab:</strong> ${_escHtml(quant.label || 'No call')} · ${_escHtml(quantRank)}${quantLead ? `<br><span style="color:var(--text-dim)">${_escHtml(quantLead)}</span>` : ''}</div>`;
+    quantSummary = `<div style="font-size:.8rem;color:var(--text);margin-top:.55rem;padding:.55rem .65rem;background:rgba(16,185,129,.05);border-radius:8px;border-left:3px solid ${quant.tone === 'good' ? 'var(--green)' : quant.tone === 'warn' ? 'var(--yellow)' : 'var(--red)'};line-height:1.55"><strong>Quant Lab:</strong> ${_escHtml(_tr(quant.label || 'No call'))} · ${_escHtml(quantRank)}${quantLead ? `<br><span style="color:var(--text-dim)">${_escHtml(_tr(quantLead))}</span>` : ''}</div>`;
   }
   return `<div class="section section-full"><h2>📋 Executive Summary</h2>
   <div style="font-size:.82rem;color:var(--text);margin-bottom:.6rem;padding:.5rem .6rem;background:rgba(255,255,255,.02);border-radius:6px;border-left:3px solid var(--accent);line-height:1.5">${synthesis}</div>
@@ -438,119 +520,44 @@ function _formatDuration(days) {
 
 function buildTrendMomentum(close, s, bars) {
   if (close == null || bars.length < 60) return '';
-  const rets = _returns(bars); if (rets.length < 20) return '';
-  // F-26: Trend State
-  let state = 'RANGE', stateCls = 'range', conf = 0.5, reasons = [];
-  if (s.sma20 && s.sma50 && s.sma200) {
-    const aboveAll = close > s.sma20 && close > s.sma50 && close > s.sma200;
-    const belowAll = close < s.sma20 && close < s.sma50 && close < s.sma200;
-    const slope20 = s.sma20 && s.sma50 ? (s.sma20 - s.sma50) / s.sma50 : 0;
-    if (aboveAll && slope20 > 0) { state = 'UP'; stateCls = 'up'; conf = Math.min(0.95, 0.5 + slope20 * 10); reasons = ['Price above all MAs', 'SMA20 slope positive']; }
-    else if (belowAll && slope20 < 0) { state = 'DOWN'; stateCls = 'down'; conf = Math.min(0.95, 0.5 + Math.abs(slope20) * 10); reasons = ['Price below all MAs', 'SMA20 slope negative']; }
-    else { reasons = ['Mixed MA alignment']; }
-  }
-  // F-27: Breakout Energy
-  const r20 = rets.slice(-20).map(r => Math.abs(r.ret));
-  const r60 = rets.slice(-60).map(r => Math.abs(r.ret));
-  const vol20 = _std(rets.slice(-20).map(r => r.ret));
-  const vol60 = _std(rets.slice(-60).map(r => r.ret));
-  const compression = vol60 > 0 ? vol20 / vol60 : 1;
-  const volRecent = rets.slice(-5).map(r => r.vol);
-  const volPrior = rets.slice(-20, -5).map(r => r.vol);
-  const volDryUp = _mean(volPrior) > 0 ? _mean(volRecent) / _mean(volPrior) : 1;
-  // Breakout Energy: high compression = coiled spring. But if vol is expanding (event/gap day), show different interpretation
-  const isEventDay = compression > 1.3;
-  const breakoutEnergy = isEventDay
-    ? Math.max(0, Math.min(100, Math.round(50 + (compression - 1) * 30 + (volDryUp > 1.5 ? 20 : 0))))
-    : Math.max(0, Math.min(100, Math.round((1 - compression) * 50 + (1 - Math.min(1, volDryUp)) * 50)));
-  const beLabel = isEventDay
-    ? (breakoutEnergy > 60 ? 'Active Breakout' : 'Event Expansion')
-    : (breakoutEnergy > 60 ? 'Setup Forming' : breakoutEnergy > 30 ? 'Moderate' : 'Low Energy');
-  // F-28: Mean Reversion
-  const ma50 = s.sma50 || s.sma20;
-  // Z-Score: standard deviations of price from MA, using rolling price std dev (not return-based)
-  const priceSeries = bars.slice(-60).map(b => adjC(b)).filter(x => Number.isFinite(x) && x > 0);
-  const priceStd = priceSeries.length >= 20 ? _std(priceSeries) : 0;
-  const z = ma50 && priceStd > 0 ? (close - ma50) / priceStd : 0;
-  const rsi = s.rsi14;
-  // Historical after extreme z
-  let reversionHint = '';
-  if (Math.abs(z) > 1.5) {
-    const dir = z > 0 ? 'overextended to upside' : 'overextended to downside';
-    reversionHint = `z-score ${z.toFixed(2)} → ${dir}`;
-  }
+  const _states = (typeof window !== 'undefined' && window._rvStates) || {};
+  const _expl = (typeof window !== 'undefined' && window._rvExplanation) || {};
+  
+  const trendBackend = _states.trend || 'UNKNOWN';
+  const stateMap = {STRONG_UP:'UP',UP:'UP',RANGE:'RANGE',DOWN:'DOWN',STRONG_DOWN:'DOWN',UNKNOWN:'RANGE'};
+  const state = stateMap[trendBackend] || 'RANGE';
+  const stateCls = state === 'UP' ? 'up' : state === 'DOWN' ? 'down' : 'range';
+  const conf = (trendBackend === 'STRONG_UP' || trendBackend === 'STRONG_DOWN') ? 0.85 : 0.6;
+  const reasons = (_expl.bullets || []).slice(0, 2);
 
-  // ── TREND DURATION ESTIMATOR ──
+  const breakoutEnergy = Number.isFinite(s.breakout_energy) ? s.breakout_energy : 0;
+  const beLabel = breakoutEnergy > 60 ? 'Active Breakout' : breakoutEnergy > 30 ? 'Moderate' : 'Low Energy';
+  const z = Number.isFinite(s.z_score_sma50) ? s.z_score_sma50 : 0;
+  const compression = Number.isFinite(s.vol_compression_20_60) ? s.vol_compression_20_60 : 1;
+  const reversionHint = s.reversion_hint ? 'Reversion Setup' : (Math.abs(z) > 2 ? 'Extreme' : 'Normal');
+  const volDryUp = Number.isFinite(s.vol_dry_up_ratio) ? s.vol_dry_up_ratio : 1;
+
   let durationHtml = '';
-  const tda = _analyzeTrendDuration(bars);
-  if (tda && tda.current) {
-    const cur = tda.current;
-    const curDays = cur.days;
-    const histDurations = tda.stats[cur.state] || [];
-    const histCount = histDurations.length;
-    const histAvg = histCount > 0 ? Math.round(_mean(histDurations)) : 0;
-    const histMedian = histCount > 0 ? histDurations.sort((a, b) => a - b)[Math.floor(histCount / 2)] : 0;
-    const histMax = histCount > 0 ? Math.max(...histDurations) : 0;
-    const histMin = histCount > 0 ? Math.min(...histDurations) : 0;
-    const remaining = Math.max(0, histMedian - curDays);
-    const progress = histMedian > 0 ? Math.min(100, Math.round((curDays / histMedian) * 100)) : 0;
-    const progressColor = progress < 50 ? 'var(--green)' : progress < 80 ? 'var(--yellow)' : 'var(--red)';
-
-    const stateLabel = cur.state === 'UP' ? '▲ Uptrend' : cur.state === 'DOWN' ? '▼ Downtrend' : '◆ Sideways';
-    const stateEmoji = cur.state === 'UP' ? '🟢' : cur.state === 'DOWN' ? '🔴' : '🟡';
-
-    // Find how many past phases lasted LONGER than current
-    const longerPhases = histDurations.filter(d => d > curDays).length;
-    const survivalPct = histCount > 0 ? Math.round((longerPhases / histCount) * 100) : 0;
-
+  const duration = Number.isFinite(s.trend_duration_days) ? s.trend_duration_days : null;
+  if (duration != null) {
+    const stateEmoji = state === 'UP' ? '🟢' : state === 'DOWN' ? '🔴' : '🟡';
     durationHtml = `
   <div style="margin-top:.75rem;padding:.75rem;border-radius:10px;background:linear-gradient(135deg,rgba(99,102,241,.08),rgba(16,185,129,.05));border:1px solid rgba(99,102,241,.2)">
     <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.5rem">
       <span style="font-size:1.1rem">${stateEmoji}</span>
-      <span style="font-weight:700;font-size:.9rem;color:var(--text)">Trend Duration Estimate</span>
-      <span style="font-size:.7rem;color:var(--text-dim);margin-left:auto">based on ${histCount} hist. ${cur.state} phases</span>
+      <span style="font-weight:700;font-size:.9rem;color:var(--text)">Trend Duration</span>
+      <span style="font-size:.7rem;color:var(--text-dim);margin-left:auto">Current Phase</span>
     </div>
-    <div class="m-grid" style="margin-bottom:.5rem">
-      <div class="m-item">
-        <div class="m-label">Current Trend</div>
-        <div class="m-val" style="color:${cur.state === 'UP' ? 'var(--green)' : cur.state === 'DOWN' ? 'var(--red)' : 'var(--yellow)'}">${stateLabel}</div>
-        <div class="m-sub">since ${cur.startDate}</div>
-      </div>
-      <div class="m-item">
-        <div class="m-label">Duration So Far</div>
-        <div class="m-val">${curDays} days</div>
-        <div class="m-sub">${_formatDuration(curDays)}</div>
-      </div>
-      <div class="m-item">
-        <div class="m-label">Hist. Median Duration</div>
-        <div class="m-val">${histMedian} days</div>
-        <div class="m-sub">${_formatDuration(histMedian)} (Ø ${histAvg}d)</div>
-      </div>
-      <div class="m-item">
-        <div class="m-label">Est. Remaining</div>
-        <div class="m-val" style="color:${remaining > 0 ? 'var(--green)' : 'var(--red)'}">${remaining > 0 ? _formatDuration(remaining) : 'Overdue'}</div>
-        <div class="m-sub">${survivalPct}% of phases lasted longer</div>
-      </div>
-    </div>
-    <div style="margin-bottom:.35rem;display:flex;align-items:center;gap:.5rem;font-size:.75rem">
-      <span style="color:var(--text-dim)">Progress:</span>
-      <div style="flex:1;height:10px;border-radius:5px;background:rgba(255,255,255,.05);overflow:hidden">
-        <div style="width:${progress}%;height:100%;border-radius:5px;background:${progressColor};transition:width .5s"></div>
-      </div>
-      <span style="color:${progressColor};font-weight:700">${progress}%</span>
-    </div>
-    <div style="font-size:.7rem;color:var(--text-dim);display:flex;gap:1rem;flex-wrap:wrap">
-      <span>Min: ${histMin}d</span>
-      <span>Median: ${histMedian}d</span>
-      <span>Max: ${histMax}d</span>
-      <span>Range: ${histMin}–${histMax}d</span>
+    <div style="display:flex;gap:1.5rem;font-size:.85rem;padding-left:.5rem">
+      <div><span style="color:var(--text-dim)">Trend:</span> <strong style="color:${state==='UP'?'var(--green)':state==='DOWN'?'var(--red)':'var(--yellow)'}">${state}</strong></div>
+      <div><span style="color:var(--text-dim)">Duration:</span> <strong>${duration} days</strong></div>
     </div>
   </div>`;
   }
 
   return `<div class="section section-full"><h2>🔮 Trend & Momentum</h2>
   <div class="trend-big ${stateCls}">TREND: ${state} <span style="font-size:.8rem;font-weight:400;opacity:.8">(${(conf).toFixed(2)})</span></div>
-  <div style="font-size:.78rem;color:var(--text-dim);margin-bottom:.6rem">${reasons.join(' · ')}</div>${durationHtml}
+  <div style="font-size:.78rem;color:var(--text-dim);margin-bottom:.6rem">${reasons.map(r => `<span style="color:${_sentimentColor(r)}">${r}</span>`).join(' · ')}</div>${durationHtml}
   <table class="ma-table" style="margin-top:0.5rem;">
     <tbody>
       <tr><td style="font-weight:600" title="Measures vol compression and range breakout potential. 0–100 scale. Higher = more coiled energy for breakout.">Breakout Energy</td><td style="text-align:right"><strong>${breakoutEnergy}/100</strong></td><td style="text-align:right;color:var(--text-dim);font-size:0.75rem;">${beLabel} · Compress: ${(compression).toFixed(2)}</td></tr>
@@ -648,30 +655,22 @@ function buildMonteCarlo(bars) {
 // ═══════════════════════════════════════════════════════════════════════════
 function buildLiquidityScore(s, bars) {
   if (!bars.length) return '';
-  const vols = bars.slice(-60).map(b => b.volume || 0).filter(v => v > 0);
-  if (!vols.length) return '';
-  const adv20 = _mean(bars.slice(-20).map(b => b.volume || 0));
-  const adv60 = _mean(vols);
-  const lastClose = bars[bars.length - 1].close || 1;
-  const dollarVol = adv20 * lastClose;
-  // Gap risk: avg absolute gap
-  const gaps = []; for (let i = 1; i < Math.min(60, bars.length); i++) { const g = bars[i].open && bars[i - 1].close ? Math.abs((bars[i].open - bars[i - 1].close) / bars[i - 1].close) : 0; gaps.push(g); }
-  const avgGap = _mean(gaps);
-  // Score
-  let score = 50;
-  if (dollarVol > 1e9) score += 30; else if (dollarVol > 1e8) score += 20; else if (dollarVol > 1e7) score += 10;
-  if (avgGap < 0.005) score += 15; else if (avgGap > 0.02) score -= 15;
-  if (adv20 > 1e6) score += 5;
-  score = Math.max(0, Math.min(100, score));
+  // Read from backend indicators (no local computation)
+  const score = Number.isFinite(s.liquidity_score) ? s.liquidity_score : null;
+  const adv20Dollar = Number.isFinite(s.adv20_dollar) ? s.adv20_dollar : null;
+  const avgGap = Number.isFinite(s.avg_gap_pct) ? s.avg_gap_pct : null;
+  const adv20 = Number.isFinite(s.avg_volume_20d) ? s.avg_volume_20d : 0;
+  if (score == null) return '';
   const label = score > 70 ? 'Highly Liquid' : score > 40 ? 'Moderate' : 'Low Liquidity';
   const suit = score > 70 ? 'Day trading, swing, long-term' : score > 40 ? 'Swing & long-term' : 'Long-term holds only';
+  const dollarVolFmt = adv20Dollar == null ? '—' : adv20Dollar >= 1e9 ? (adv20Dollar / 1e9).toFixed(1) + 'B' : adv20Dollar >= 1e6 ? (adv20Dollar / 1e6).toFixed(1) + 'M' : fmtVol(adv20Dollar);
   return `<div class="section"><h2>💧 Liquidity & Tradability</h2>
   <table class="ma-table" style="margin-top:0.5rem;">
     <tbody>
       <tr><td style="font-weight:600">Score</td><td style="text-align:right"><strong style="color:${score > 70 ? 'var(--green)' : score > 40 ? 'var(--yellow)' : 'var(--red)'}">${score}/100 — ${label}</strong></td></tr>
       <tr><td style="font-weight:600">ADV (20d)</td><td style="text-align:right"><strong>${fmtVol(adv20)}</strong></td></tr>
-      <tr><td style="font-weight:600">$ Volume</td><td style="text-align:right"><strong>${dollarVol >= 1e9 ? (dollarVol / 1e9).toFixed(1) + 'B' : dollarVol >= 1e6 ? (dollarVol / 1e6).toFixed(1) + 'M' : fmtVol(dollarVol)}</strong></td></tr>
-      <tr><td style="font-weight:600">Avg Gap</td><td style="text-align:right"><strong>${(avgGap * 100).toFixed(2)}%</strong></td></tr>
+      <tr><td style="font-weight:600">$ Volume</td><td style="text-align:right"><strong>${dollarVolFmt}</strong></td></tr>
+      <tr><td style="font-weight:600">Avg Gap</td><td style="text-align:right"><strong>${avgGap != null ? (avgGap * 100).toFixed(2) + '%' : '—'}</strong></td></tr>
     </tbody>
   </table>
   <div style="font-size:.78rem;color:var(--text-dim);margin-top:.4rem">Suitable for: ${suit}</div></div>`;
@@ -707,26 +706,76 @@ function buildEarningsShockProxy(bars) {
 // F-31: STRESS SCENARIOS
 // ═══════════════════════════════════════════════════════════════════════════
 function buildStressScenarios(bars) {
-  if (bars.length < 252) return '';
+  if (bars.length < 60) return '';
   const scenarios = [
-    { name: 'COVID Crash', from: '2020-02-19', to: '2020-03-23' },
-    { name: '2022 Bear Market', from: '2022-01-03', to: '2022-10-12' },
-    { name: '2018 Q4 Selloff', from: '2018-09-20', to: '2018-12-24' },
-    { name: 'Flash Crash 2020 Recovery', from: '2020-03-23', to: '2020-06-08' },
+    { name: 'COVID Crash', from: '2020-02-19', to: '2020-03-23', recoveryTo: '2020-08-18' },
+    { name: '2022 Bear Market', from: '2022-01-03', to: '2022-10-12', recoveryTo: '2023-01-26' },
+    { name: '2018 Q4 Selloff', from: '2018-09-20', to: '2018-12-24', recoveryTo: '2019-04-23' },
   ];
   const firstBarDate = bars.length ? bars[0].date : '9999-12-31';
-  const rows = scenarios.map(sc => {
-    if (firstBarDate > sc.from) return `<div class="sub-metric"><span style="font-weight:600">${sc.name}</span><span style="font-size:.72rem;color:var(--yellow)">UNAVAILABLE — insufficient history for reliable stress replay (data starts ${firstBarDate}, scenario requires ${sc.from})</span></div>`;
-    const inRange = bars.filter(b => b.date >= sc.from && b.date <= sc.to);
-    if (inRange.length < 5) return null;
-    const first = adjC(inRange[0]), last = adjC(inRange[inRange.length - 1]);
-    if (!first || !last) return null;
-    const ret = (last - first) / first;
-    return `<div class="sub-metric"><span style="font-weight:600">${sc.name}</span><span style="font-size:.72rem;color:var(--text-dim)">${sc.from} → ${sc.to}</span><span style="color:${_col(ret)};font-weight:700">${ret >= 0 ? '+' : ''}${(ret * 100).toFixed(1)}%</span></div>`;
-  }).filter(Boolean).join('');
-  if (!rows) return '';
-  return `<details class="section advanced-collapsible" open><summary class="section-summary-header">🔥 Stress Scenario Replay</summary>${rows}
-  <div style="font-size:.7rem;color:var(--text-muted);margin-top:.4rem">Shows actual stock performance during historical stress periods.</div></details>`;
+  const lastBarDate = bars.length ? bars[bars.length - 1].date : '0000-01-01';
+  const rows = [];
+
+  for (const sc of scenarios) {
+    if (firstBarDate > sc.from) continue;
+    const crashBars = bars.filter(b => b.date >= sc.from && b.date <= sc.to);
+    if (crashBars.length < 3) continue;
+    const crashStart = adjC(crashBars[0]), crashEnd = adjC(crashBars[crashBars.length - 1]);
+    if (!crashStart || !crashEnd) continue;
+    const drawdown = (crashEnd - crashStart) / crashStart;
+
+    // Recovery: how long to get back to pre-crash level
+    const recoveryBars = bars.filter(b => b.date > sc.to && b.date <= (sc.recoveryTo || lastBarDate));
+    let recoveredDate = null, recoveryDays = null;
+    for (const rb of recoveryBars) {
+      if (adjC(rb) >= crashStart) { recoveredDate = rb.date; break; }
+    }
+    if (recoveredDate) {
+      const d1 = new Date(sc.to), d2 = new Date(recoveredDate);
+      recoveryDays = Math.round((d2 - d1) / (1000 * 60 * 60 * 24));
+    }
+
+    // 6-month return after bottom
+    const sixMoAfter = bars.filter(b => b.date > sc.to).slice(0, 126);
+    const sixMoRet = sixMoAfter.length >= 20 ? (adjC(sixMoAfter[sixMoAfter.length - 1]) - crashEnd) / crashEnd : null;
+
+    rows.push(`<div style="padding:.5rem .6rem;border-radius:8px;border:1px solid var(--border);background:rgba(255,255,255,.02);margin-bottom:.4rem">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.25rem">
+        <span style="font-weight:700;font-size:.82rem">${sc.name}</span>
+        <span style="font-weight:800;color:${_col(drawdown)};font-size:.85rem">${drawdown >= 0 ? '+' : ''}${(drawdown * 100).toFixed(1)}%</span>
+      </div>
+      <div style="display:flex;gap:.8rem;flex-wrap:wrap;font-size:.74rem;color:var(--text-dim)">
+        <span>Crash: ${sc.from} to ${sc.to}</span>
+        <span>Recovery: ${recoveredDate ? `${recoveryDays}d (${recoveredDate})` : '<span style="color:var(--yellow)">not yet</span>'}</span>
+        ${sixMoRet != null ? `<span>6mo after bottom: <strong style="color:${_col(sixMoRet)}">${sixMoRet >= 0 ? '+' : ''}${(sixMoRet * 100).toFixed(1)}%</strong></span>` : ''}
+      </div>
+    </div>`);
+  }
+
+  // Always show: max drawdown from available data
+  const rets = _returns(bars);
+  if (rets.length >= 60) {
+    let peak = rets[0].close, maxDD = 0, ddStart = '', ddEnd = '', peakDate = rets[0].date;
+    for (const r of rets) {
+      if (r.close > peak) { peak = r.close; peakDate = r.date; }
+      const dd = (r.close - peak) / peak;
+      if (dd < maxDD) { maxDD = dd; ddStart = peakDate; ddEnd = r.date; }
+    }
+    if (maxDD < -0.05) {
+      rows.push(`<div style="padding:.5rem .6rem;border-radius:8px;border:1px solid rgba(248,113,113,.2);background:rgba(248,113,113,.04);margin-bottom:.4rem">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <span style="font-weight:700;font-size:.82rem">Max Drawdown (all history)</span>
+          <span style="font-weight:800;color:var(--red);font-size:.85rem">${(maxDD * 100).toFixed(1)}%</span>
+        </div>
+        <div style="font-size:.74rem;color:var(--text-dim)">Peak ${ddStart} to trough ${ddEnd}</div>
+      </div>`);
+    }
+  }
+
+  if (!rows.length) return '';
+  return `<details class="section advanced-collapsible" open><summary class="section-summary-header">Stress & Recovery</summary>
+  ${rows.join('')}
+  <div style="font-size:.7rem;color:var(--text-muted);margin-top:.3rem">Actual performance during historical stress periods with recovery time and post-bottom returns.</div></details>`;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -774,26 +823,83 @@ function buildRiskBudget(close, s) {
 // ═══════════════════════════════════════════════════════════════════════════
 function buildFactorCorrelation(ticker, bars) {
   const rets = _returns(bars); if (rets.length < 60) return '';
-  // Rolling autocorrelation over different windows
   function autoCorr(arr, lag = 1) {
     const n = arr.length; if (n < lag + 2) return 0; const m = _mean(arr); let num = 0, den = 0;
     for (let i = lag; i < n; i++) { num += (arr[i] - m) * (arr[i - lag] - m); den += (arr[i] - m) ** 2; } return den > 0 ? num / den : 0;
   }
+  function pearson(a, b) {
+    const n = Math.min(a.length, b.length); if (n < 10) return null;
+    const aa = a.slice(-n), bb = b.slice(-n);
+    const ma = _mean(aa), mb = _mean(bb);
+    let num = 0, da = 0, db = 0;
+    for (let i = 0; i < n; i++) { num += (aa[i] - ma) * (bb[i] - mb); da += (aa[i] - ma) ** 2; db += (bb[i] - mb) ** 2; }
+    return (da > 0 && db > 0) ? num / Math.sqrt(da * db) : 0;
+  }
+  const r5 = rets.slice(-5).map(r => r.ret);
+  const r20 = rets.slice(-20).map(r => r.ret);
   const r60 = rets.slice(-60).map(r => r.ret);
   const r120 = rets.slice(-120).map(r => r.ret);
   const r252 = rets.slice(-252).map(r => r.ret);
   const ac60 = autoCorr(r60), ac120 = autoCorr(r120), ac252 = autoCorr(r252);
-  // Stability: variance of 60d rolling vol
+
+  // Vol regime stability
   const volWindows = []; for (let i = 60; i <= rets.length; i += 20) { const w = rets.slice(i - 60, i).map(r => r.ret); volWindows.push(_std(w)); }
   const corrStability = volWindows.length > 2 ? _std(volWindows) / _mean(volWindows) : 0;
   const stLabel = corrStability < 0.3 ? 'Stable' : 'Unstable';
-  return `<div class="section"><h2>🔗 Factor & Correlation Profile</h2>
-  <table class="ma-table"><tr><th>Metric</th><th>60d</th><th>120d</th><th>252d</th></tr>
-  <tr><td style="font-weight:600">Autocorrelation</td><td>${ac60.toFixed(3)}</td><td>${ac120.toFixed(3)}</td><td>${ac252.toFixed(3)}</td></tr>
-  <tr><td style="font-weight:600">Annualized Vol</td><td>${(_std(r60) * Math.sqrt(252) * 100).toFixed(1)}%</td><td>${(_std(r120) * Math.sqrt(252) * 100).toFixed(1)}%</td><td>${(_std(r252) * Math.sqrt(252) * 100).toFixed(1)}%</td></tr></table>
-  <div style="margin-top:.5rem;padding:.4rem;background:rgba(255,255,255,.02);border-radius:6px;border-left:3px solid var(--accent);font-size:.78rem">
-  <span style="color:var(--text-dim)">Vol Regime Stability:</span> <span style="font-weight:700">${stLabel}</span> (CV: ${(corrStability).toFixed(2)})</div>
-  <div style="font-size:.72rem;color:var(--text-muted);margin-top:.4rem">💡 Cross-asset correlations (SPY, QQQ, Gold, FX) require benchmark data feeds.</div></div>`;
+
+  // Self-correlation (momentum persistence)
+  const r60lag2 = autoCorr(r60, 2), r60lag5 = autoCorr(r60, 5);
+  const momentumPersist = (ac60 > 0.05 && r60lag2 > 0.02) ? 'Trending' : (ac60 < -0.05) ? 'Mean-reverting' : 'Random walk';
+
+  // Beta estimation vs market (use rolling returns as proxy — actual market data loaded async if available)
+  const beta60 = rets.length >= 60 ? (() => {
+    const w = rets.slice(-60);
+    const avgRet = _mean(w.map(r => r.ret));
+    const upDays = w.filter(r => r.ret > 0).length / w.length;
+    const downMag = _mean(w.filter(r => r.ret < 0).map(r => Math.abs(r.ret))) || 0;
+    const upMag = _mean(w.filter(r => r.ret > 0).map(r => r.ret)) || 0;
+    const impliedBeta = upMag > 0 && downMag > 0 ? (downMag / upMag) : 1;
+    return { impliedBeta: Math.min(3, impliedBeta).toFixed(2), upDays: (upDays * 100).toFixed(0), avgDailyRet: (avgRet * 100).toFixed(3) };
+  })() : null;
+
+  // Period returns
+  const retPeriods = [
+    { label: '1W', data: r5 },
+    { label: '1M', data: r20 },
+    { label: '3M', data: r60 },
+    { label: '6M', data: r120 },
+    { label: '1Y', data: r252 }
+  ].filter(p => p.data.length >= 3);
+  const periodRetHtml = retPeriods.map(p => {
+    const cumRet = p.data.reduce((a, v) => a * (1 + v), 1) - 1;
+    return `<td style="color:${_col(cumRet)};font-weight:700">${cumRet >= 0 ? '+' : ''}${(cumRet * 100).toFixed(1)}%</td>`;
+  }).join('');
+
+  return `<div class="section"><h2>Factor & Correlation Profile</h2>
+  <table class="ma-table"><tr><th></th>${retPeriods.map(p => `<th>${p.label}</th>`).join('')}</tr>
+  <tr><td style="font-weight:600">Cumulative Return</td>${periodRetHtml}</tr>
+  <tr><td style="font-weight:600">Annualized Vol</td>${retPeriods.map(p => `<td>${(_std(p.data) * Math.sqrt(252) * 100).toFixed(1)}%</td>`).join('')}</tr></table>
+
+  <table class="ma-table" style="margin-top:.5rem"><tr><th>Metric</th><th>60d</th><th>120d</th><th>252d</th></tr>
+  <tr><td style="font-weight:600">Autocorrelation (lag 1)</td><td>${ac60.toFixed(3)}</td><td>${ac120.toFixed(3)}</td><td>${ac252.toFixed(3)}</td></tr></table>
+
+  <div style="margin-top:.5rem;display:flex;gap:.5rem;flex-wrap:wrap">
+    <div style="flex:1;min-width:140px;padding:.4rem .6rem;border-radius:6px;border:1px solid var(--border);background:rgba(255,255,255,.02)">
+      <div style="font-size:.68rem;color:var(--text-muted);text-transform:uppercase">Regime</div>
+      <div style="font-weight:700;font-size:.82rem">${momentumPersist}</div>
+      <div style="font-size:.68rem;color:var(--text-dim)">Lag2: ${r60lag2.toFixed(3)} · Lag5: ${r60lag5.toFixed(3)}</div>
+    </div>
+    <div style="flex:1;min-width:140px;padding:.4rem .6rem;border-radius:6px;border:1px solid var(--border);background:rgba(255,255,255,.02)">
+      <div style="font-size:.68rem;color:var(--text-muted);text-transform:uppercase">Vol Stability</div>
+      <div style="font-weight:700;font-size:.82rem">${stLabel}</div>
+      <div style="font-size:.68rem;color:var(--text-dim)">CV: ${corrStability.toFixed(2)}</div>
+    </div>
+    ${beta60 ? `<div style="flex:1;min-width:140px;padding:.4rem .6rem;border-radius:6px;border:1px solid var(--border);background:rgba(255,255,255,.02)">
+      <div style="font-size:.68rem;color:var(--text-muted);text-transform:uppercase">60d Profile</div>
+      <div style="font-weight:700;font-size:.82rem">Up ${beta60.upDays}% days</div>
+      <div style="font-size:.68rem;color:var(--text-dim)">Avg daily: ${beta60.avgDailyRet}% · D/U ratio: ${beta60.impliedBeta}</div>
+    </div>` : ''}
+  </div></div>`;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -957,7 +1063,9 @@ function buildWeekdaySeasonality(bars) {
 // ═══════════════════════════════════════════════════════════════════════════
 // SINGLE-ENDPOINT INSIGHT LOADER (avoids downloading 210MB of JSON client-side)
 let _insightsCache = {};
+let _insightsPending = {};
 let _quantLabShardCache = {};
+const _INSIGHTS_TIMEOUT_MS = 8000;
 function _flagOn(v) {
   const s = String(v ?? '').trim().toLowerCase();
   return s === '1' || s === 'true' || s === 'on' || s === 'yes';
@@ -980,17 +1088,16 @@ function _useFeaturesV2() {
 
 function _useFeaturesV4() {
   try {
-    if (typeof window === 'undefined') return false;
+    if (typeof window === 'undefined') return true;
     const qp = new URLSearchParams(window.location.search || '');
     if (qp.has('rv_features_v4')) return _flagOn(qp.get('rv_features_v4'));
     if (qp.has('features_v4')) return _flagOn(qp.get('features_v4'));
     if (qp.has('featuresV4')) return _flagOn(qp.get('featuresV4'));
     const winFlag = window.__RV_FLAGS?.featuresV4 ?? window.__RV_FEATURES_V4;
     if (winFlag != null) return _flagOn(winFlag);
-    const ls = window.localStorage?.getItem('rv.features.v4');
-    if (ls != null) return _flagOn(ls);
+    return true;
   } catch { /* ignore */ }
-  return false;
+  return true;
 }
 
 function _v2ContractValid(payload) {
@@ -1032,33 +1139,68 @@ function _v4ContractValid(payload) {
 }
 
 function _insightsEndpoints() {
-  if (_useFeaturesV4()) return ['/api/stock-insights-v4', '/api/stock-insights-v2', '/api/stock-insights'];
+  if (_useFeaturesV4()) return ['/api/stock-insights-v2', '/api/stock-insights-v4', '/api/stock-insights'];
   if (_useFeaturesV2()) return ['/api/stock-insights-v2', '/api/stock-insights'];
-  return ['/api/stock-insights'];
+  return ['/api/stock-insights-v2', '/api/stock-insights'];
+}
+
+async function _fetchInsightDoc(endpoint, key) {
+  const cacheKey = `${endpoint}::${key}`;
+  if (_insightsCache[cacheKey]) return _insightsCache[cacheKey];
+  if (_insightsPending[cacheKey]) return _insightsPending[cacheKey];
+
+  _insightsPending[cacheKey] = (async () => {
+    let timer = null;
+    try {
+      const ctrl = new AbortController();
+      timer = setTimeout(() => ctrl.abort(), _INSIGHTS_TIMEOUT_MS);
+      const r = await fetch(`${endpoint}?ticker=${encodeURIComponent(key)}`, { signal: ctrl.signal });
+      clearTimeout(timer);
+      if (!r.ok) return null;
+      const data = await r.json();
+      const isV4 = endpoint.includes('stock-insights-v4');
+      const isV2 = endpoint.includes('stock-insights-v2');
+      if (isV4 && !_v4ContractValid(data)) return null;
+      if (isV2 && !_v2ContractValid(data)) return null;
+      _insightsCache[cacheKey] = data;
+      return data;
+    } catch {
+      return null;
+    } finally {
+      if (timer) clearTimeout(timer);
+      delete _insightsPending[cacheKey];
+    }
+  })();
+
+  return _insightsPending[cacheKey];
 }
 
 async function _loadInsights(ticker) {
   const key = ticker.toUpperCase();
   const endpoints = _insightsEndpoints();
   for (const endpoint of endpoints) {
-    const cacheKey = `${endpoint}::${key}`;
-    if (_insightsCache[cacheKey]) return _insightsCache[cacheKey];
-    try {
-      const ctrl = new AbortController();
-      const timer = setTimeout(() => ctrl.abort(), 15000);
-      const r = await fetch(`${endpoint}?ticker=${encodeURIComponent(key)}`, { signal: ctrl.signal });
-      clearTimeout(timer);
-      if (!r.ok) continue;
-      const data = await r.json();
-      const isV4 = endpoint.includes('stock-insights-v4');
-      const isV2 = endpoint.includes('stock-insights-v2');
-      if (isV4 && !_v4ContractValid(data)) continue;
-      if (isV2 && !_v2ContractValid(data)) continue;
-      _insightsCache[cacheKey] = data;
-      return data;
-    } catch { /* try fallback endpoint */ }
+    const data = await _fetchInsightDoc(endpoint, key);
+    if (data) return data;
   }
   return null;
+}
+
+async function _loadInsightsV4(ticker) {
+  if (!_useFeaturesV4()) return null;
+  const key = ticker.toUpperCase();
+  const data = await _fetchInsightDoc('/api/stock-insights-v4', key);
+  return _v4ContractValid(data) ? data : null;
+}
+
+async function _loadInsightsForGovernance(ticker) {
+  const v4 = await _loadInsightsV4(ticker);
+  if (v4) return v4;
+  return _loadInsights(ticker);
+}
+
+function _contractState(doc, key) {
+  if (!doc || !key) return null;
+  return doc?.v2_contract?.[key] || doc?.feature_states?.[key] || doc?.v4_contract?.[key] || null;
 }
 
 function _normalizeTickerKey(ticker) {
@@ -1066,7 +1208,7 @@ function _normalizeTickerKey(ticker) {
   if (!raw) return '';
   const parts = raw.split(':');
   let t = parts[parts.length - 1] || raw;
-  if(t.includes('.')) t = t.split('.')[0];
+  if (t.includes('.')) t = t.split('.')[0];
   return t;
 }
 
@@ -1127,10 +1269,10 @@ const _deToEnMap = {
   'Asien': 'Asia',
   'Aktuell ein Top-Setup, weil': 'Currently a top setup because',
   'Aktuell ein Top-Setup': 'Currently a top setup',
-  'starker Experte sieht aktuell einen Kauf.': 'strong expert currently sees a buy.',
   'starker Experte sieht aktuell einen Kauf': 'strong expert currently sees a buy',
   'starke Experten sehen aktuell einen Kauf': 'strong experts currently see a buy',
   'starker Experte sieht aktuell': 'strong expert currently sees',
+  'starke Experten sehen aktuell': 'strong experts currently see',
   'Der RSI wirkt nicht ueberhitzt': 'The RSI does not appear overheated',
   'Kurzfristig ist die Aktie zuletzt schwach gelaufen': 'In the short term, the stock has recently been weak',
   'Der MACD bestaetigt den Schub noch nicht sauber': 'The MACD does not yet cleanly confirm the push',
@@ -1145,14 +1287,43 @@ const _deToEnMap = {
   'plus MACD/Marktfaehigkeit': 'plus MACD/marketability',
   'und niedrigere': 'and lower',
   'niedrigere': 'lower',
-  'Qualitaets': 'Quality'
+  'Qualitaets': 'Quality',
+  'Wissenschaftlicher Analyzer': 'Scientific Analyzer',
+  'Ausblick': 'Outlook',
+  'Prognose': 'Forecast',
+  'Experte': 'Expert',
+  'hohes Risiko': 'High Risk',
+  'schwacher Trend': 'Weak Trend',
+  'stabile Lage': 'Stable State',
+  'Widerstand': 'Resistance',
+  'Unterstützung': 'Support',
+  'Widerstände': 'Resistance Levels',
+  'Unterstützungen': 'Support Levels',
+  'keine Kaufempfehlung': 'No Buy Recommendation',
+  'Korrektur': 'Correction',
+  'Aufwärtstrend': 'Uptrend',
+  'Abwärtstrend': 'Downtrend',
+  'Seitwärts': 'Sideways',
+  'Chance': 'Opportunity',
+  'Risiko': 'Risk',
+  'über': 'over',
+  'unter': 'under',
+  'liegt': 'is',
+  'bewertet': 'rated',
+  'Marktphase': 'Market Phase',
+  'Impulswelle': 'Impulsive Wave',
+  'Korrekturwelle': 'Corrective Wave',
+  'Endkeil': 'Ending Diagonal',
+  'Anfangskeil': 'Leading Diagonal',
+  'Bullenfalle': 'Bull Trap',
+  'Bärenfalle': 'Bear Trap'
 };
 
 function _tr(text) {
   if (!text) return '';
   let s = String(text);
   if (_deToEnMap[s]) return _deToEnMap[s];
-  const keys = Object.keys(_deToEnMap).sort((a,b) => b.length - a.length);
+  const keys = Object.keys(_deToEnMap).sort((a, b) => b.length - a.length);
   for (const k of keys) {
     if (s.includes(k)) {
       s = s.split(k).join(_deToEnMap[k]);
@@ -1184,93 +1355,115 @@ async function buildQuantLabInsight(ticker, context = {}) {
   const row = await _loadQuantLabPublishEntry(ticker);
   const key = _normalizeTickerKey(ticker);
   if (!row) {
-    _setQualitySignals({
-      quantlab: {
-        present: false,
-        ticker: key
-      }
-    }, true);
-    return `<div class="section section-full"><h2>Quant Lab Experts</h2>
-      <div class="placeholder-card" style="margin-bottom:.55rem">Quant Lab training stays local. Only final stock results are mirrored here.</div>
-      <div class="placeholder-card">No fresh Quant Lab result is available for ${_escHtml(ticker)} in today's publish slice.</div>
+    _setQualitySignals({ quantlab: { present: false, ticker: key, reason: 'NO_RECOMMENDATION' } }, true);
+    return `<div class="section section-full"><h2>Predictions</h2>
+      <div class="placeholder-card">No prediction data available for ${_escHtml(ticker)} in the current model universe.</div>
     </div>`;
   }
 
   _setQualitySignals({
     quantlab: {
-      present: true,
-      ticker: row.ticker || key,
-      assetClass: row.assetClass || 'stock',
-      label: _tr(row?.state?.label) || 'No call',
-      tone: row?.state?.tone || 'info',
-      consensusLabel: _tr(row?.state?.consensusLabel) || '',
+      present: true, ticker: row.ticker || key, assetClass: row.assetClass || 'stock',
+      label: row?.state?.label || 'No call', tone: row?.state?.tone || 'info',
+      consensusLabel: row?.state?.consensusLabel || '',
       globalTop10Rank: row?.ranking?.globalTop10Rank || null,
       continentTop10Rank: row?.ranking?.continentTop10Rank || null,
       buyExperts: Number(row?.consensus?.buyExperts || 0),
       watchExperts: Number(row?.consensus?.watchExperts || 0),
       avoidExperts: Number(row?.consensus?.avoidExperts || 0),
       strongExperts: Number(row?.consensus?.strongOrBetterExperts || 0),
-      summary: _tr(row?.summary?.short) || '',
-      whyNow: Array.isArray(row?.whyNowSimple) ? row.whyNowSimple.map(_tr).slice(0, 3) : [],
-      whyNotNow: Array.isArray(row?.whyNotNowSimple) ? row.whyNotNowSimple.map(_tr).slice(0, 3) : [],
+      summary: row?.summary?.short || '',
+      whyNow: Array.isArray(row?.whyNowSimple) ? row.whyNowSimple.slice(0, 3) : [],
+      whyNotNow: Array.isArray(row?.whyNotNowSimple) ? row.whyNotNowSimple.slice(0, 3) : [],
+      v3Consensus: row?.v3Consensus || null,
     }
   }, true);
 
   const toneCol = _quantLabToneColor(row?.state?.tone);
-  const whyNow = Array.isArray(row.whyNowSimple) ? row.whyNowSimple.filter(Boolean).map(_tr).slice(0, 3) : [];
-  const whyNot = Array.isArray(row.whyNotNowSimple) ? row.whyNotNowSimple.filter(Boolean).map(_tr).slice(0, 3) : [];
+  const whyNow = Array.isArray(row.whyNowSimple) ? row.whyNowSimple.filter(Boolean).slice(0, 3) : [];
+  const whyNot = Array.isArray(row.whyNotNowSimple) ? row.whyNotNowSimple.filter(Boolean).slice(0, 3) : [];
   const experts = Array.isArray(row.strongestExperts) ? row.strongestExperts.slice(0, 4) : [];
-  const metrics = row.metrics || {};
-  const chips = [
-    Number.isFinite(Number(metrics.rsi14)) ? _quantLabMetricChip('RSI 14', Number(metrics.rsi14).toFixed(1), Number(metrics.rsi14) >= 70 ? 'var(--red)' : Number(metrics.rsi14) <= 35 ? 'var(--yellow)' : 'var(--green)') : '',
-    Number.isFinite(Number(metrics.macdHist)) ? _quantLabMetricChip('MACD', Number(metrics.macdHist).toFixed(2), Number(metrics.macdHist) > 0 ? 'var(--green)' : 'var(--red)') : '',
-    metrics.ret5dLabel ? _quantLabMetricChip('5d', metrics.ret5dLabel, String(metrics.ret5dLabel).startsWith('+') ? 'var(--green)' : 'var(--red)') : '',
-    metrics.ret20dLabel ? _quantLabMetricChip('20d', metrics.ret20dLabel, String(metrics.ret20dLabel).startsWith('+') ? 'var(--green)' : 'var(--red)') : '',
-    Number.isFinite(Number(metrics.trendGate)) ? _quantLabMetricChip('Trend', Number(metrics.trendGate).toFixed(2), Number(metrics.trendGate) >= 0.67 ? 'var(--green)' : 'var(--yellow)') : ''
-  ].filter(Boolean).join('');
 
-  const expertHtml = experts.length
-    ? experts.map((item) => {
-      const verdictCol = _quantLabToneColor(
-        /buy/i.test(_tr(item.verdict || '')) || /kauf/i.test(String(item.verdict || '')) ? 'good' :
-        /interesting/i.test(_tr(item.verdict || '')) || /interessant/i.test(String(item.verdict || '')) ? 'warn' :
-        /no/i.test(_tr(item.verdict || '')) || /avoid/i.test(_tr(item.verdict || '')) || /nein/i.test(String(item.verdict || '')) || /kein/i.test(String(item.verdict || '')) ? 'bad' : 'info'
-      );
-      return `<div style="padding:.75rem;border-radius:10px;border:1px solid var(--border);background:rgba(255,255,255,.02)">
-        <div style="display:flex;justify-content:space-between;gap:.6rem;align-items:flex-start;margin-bottom:.25rem">
-          <div>
-            <div style="font-size:.86rem;font-weight:800;color:var(--text)">${_escHtml(_tr(item.title) || _tr(item.family) || 'Expert')}</div>
-            <div style="font-size:.72rem;color:var(--text-dim)">${_escHtml(_tr(item.family) || '')}${item.purpose ? ` · ${_escHtml(_tr(item.purpose))}` : ''}</div>
-          </div>
-          <div style="font-size:.76rem;font-weight:700;color:${verdictCol};white-space:nowrap">${_escHtml(_tr(item.verdict) || 'neutral')}</div>
-        </div>
-        <div style="font-size:.75rem;color:var(--text-dim);line-height:1.45">${_escHtml(_tr(item.reason) || 'No detailed reason available.')}</div>
-        <div style="margin-top:.35rem;font-size:.72rem;color:var(--text-muted)">Percentile ${_escHtml(_fmtSignedPctValue(item.percentile, 1).replace('+', ''))} · Rank ${_escHtml(item.rank || '—')}</div>
-      </div>`;
-    }).join('')
-    : `<div class="placeholder-card">No expert detail was included in the current publish slice for ${_escHtml(ticker)}.</div>`;
+  // ── Condensed verdict card ──
+  const callLabel = _tr(row?.state?.label || 'No call');
+  const summaryText = _tr(row?.summary?.short || '');
+  const buyN = Number(row?.consensus?.buyExperts || 0);
+  const watchN = Number(row?.consensus?.watchExperts || 0);
+  const avoidN = Number(row?.consensus?.avoidExperts || 0);
+  const strongN = Number(row?.consensus?.strongOrBetterExperts || 0);
 
-  return `<div class="section section-full"><h2>Quant Lab Experts</h2>
-    <div class="placeholder-card" style="margin-bottom:.55rem">Quant Lab training stays local. Only final stock results are mirrored here.</div>
-    <div class="m-grid">
-      <div class="m-item"><div class="m-label">Current call</div><div class="m-val" style="color:${toneCol}">${_escHtml(_tr(row?.state?.label) || 'No call')}</div><div class="m-sub">${_escHtml(_tr(row?.summary?.short) || '')}</div></div>
-      <div class="m-item"><div class="m-label">Consensus</div><div class="m-val">${_escHtml(_tr(row?.state?.consensusLabel) || 'n/a')}</div><div class="m-sub">${_escHtml(_quantLabRankText(row))}</div></div>
-      <div class="m-item"><div class="m-label">Strong experts</div><div class="m-val">${_escHtml(row?.consensus?.strongOrBetterExperts || 0)}</div><div class="m-sub">${_escHtml(row?.consensus?.buyExperts || 0)} buy · ${_escHtml(row?.consensus?.watchExperts || 0)} watch · ${_escHtml(row?.consensus?.avoidExperts || 0)} avoid</div></div>
-      <div class="m-item"><div class="m-label">As of</div><div class="m-val">${_escHtml(row?.asOfDate || row?.lastTradeDate || '—')}</div><div class="m-sub">${_escHtml(row?.exchange || '—')} · ${_escHtml(_tr(row?.continentLabel) || '')}</div></div>
+  // ── Expert rows (condensed — one line each) ──
+  const expertRows = experts.map((item) => {
+    const verdictText = _tr(String(item.verdict || ''));
+    const verdictCol = _quantLabToneColor(
+      /buy|strong buy|good buy/i.test(verdictText) ? 'good' :
+        /interesting|watch/i.test(verdictText) ? 'warn' :
+          /no|avoid|rather/i.test(verdictText) ? 'bad' : 'info'
+    );
+    return `<tr><td style="font-weight:600">${_escHtml(_tr(item.title || item.family || 'Expert'))}</td><td style="color:${verdictCol};font-weight:700;text-align:right">${_escHtml(verdictText || 'neutral')}</td><td style="text-align:right;font-size:.72rem;color:var(--text-muted)">P${_escHtml(_fmtSignedPctValue(item.percentile, 0).replace('+', ''))}</td></tr>`;
+  }).join('');
+
+  // ── v3 Consensus row ──
+  const v3Html = row.v3Consensus ? `<div style="margin-top:.6rem;display:flex;gap:.5rem;flex-wrap:wrap;align-items:center">
+    ${['short','medium','long'].map(h => {
+      const v = row.v3Consensus[h] || 'WAIT';
+      const col = v === 'BUY' ? 'var(--green)' : v === 'SELL' ? 'var(--red)' : 'var(--yellow)';
+      const label = h === 'short' ? '1-5d' : h === 'medium' ? '1-12w' : '6-24m';
+      return `<div style="flex:1;min-width:70px;text-align:center;padding:.35rem;border-radius:6px;border:1px solid var(--border);background:rgba(255,255,255,.02)"><div style="font-size:.62rem;color:var(--text-muted)">${_escHtml(label)}</div><div style="font-size:.82rem;font-weight:800;color:${col}">${_escHtml(v)}</div></div>`;
+    }).join('')}
+    <div style="font-size:.72rem;color:var(--text-dim)">Conf: ${_escHtml(((row.v3Consensus.confidence || 0) * 100).toFixed(0))}%${row.v3Consensus.regime ? ` · ${_escHtml(row.v3Consensus.regime)}` : ''}</div>
+  </div>` : '';
+
+  // ── Load async model summaries (Scientific, Forecast, Elliott) ──
+  let scientificSummary = '', forecastSummary = '', elliottSummary = '';
+  try {
+    const insights = await _loadInsights(ticker);
+    const sci = insights?.scientific;
+    if (sci && sci.status !== 'DATA_UNAVAILABLE') {
+      const prob = sci.probability != null ? (sci.probability * 100).toFixed(0) : null;
+      const expRet = sci.expected_return_10d != null ? (sci.expected_return_10d > 0 ? '+' : '') + sci.expected_return_10d.toFixed(1) + '%' : null;
+      const strength = String(sci.signal_strength || '').toUpperCase();
+      scientificSummary = `<tr><td style="font-weight:600">Scientific Analyzer</td><td style="text-align:right">${prob ? `P(up 10d) = ${prob}%` : '—'}${expRet ? `, ExpRet ${expRet}` : ''}</td><td style="text-align:right;font-size:.72rem;color:var(--text-muted)">${strength || '—'}</td></tr>`;
+    }
+    const fc = insights?.forecast;
+    if (fc?.horizons) {
+      const h1d = fc.horizons['1d'], h5d = fc.horizons['5d'];
+      const fmt = (h) => h ? `${String(h.direction || '').charAt(0).toUpperCase() + String(h.direction || '').slice(1)} ${h.probability != null ? (h.probability * 100).toFixed(0) + '%' : ''}` : '';
+      forecastSummary = `<tr><td style="font-weight:600">ML Forecast</td><td style="text-align:right">${fmt(h1d)}${h5d ? ` · 5d ${fmt(h5d)}` : ''}</td><td style="text-align:right;font-size:.72rem;color:var(--text-muted)">${insights?.forecast_meta?.champion_id || '—'}</td></tr>`;
+    }
+    const ew = insights?.elliott;
+    if (ew) {
+      const dev = ew.developingPattern || {};
+      const comp = ew.completedPattern || {};
+      const wave = dev.possibleWave || 'N/A';
+      const dir = String(comp.direction || '').toLowerCase().includes('bull') ? 'Bullish' : String(comp.direction || '').toLowerCase().includes('bear') ? 'Bearish' : 'Neutral';
+      const conf = dev.confidence != null ? Math.round(dev.confidence) + '%' : '';
+      elliottSummary = `<tr><td style="font-weight:600">Elliott Wave</td><td style="text-align:right">${_escHtml(wave)} · ${_escHtml(dir)}</td><td style="text-align:right;font-size:.72rem;color:var(--text-muted)">${conf}</td></tr>`;
+    }
+  } catch { /* model data optional */ }
+
+  const modelRows = [scientificSummary, forecastSummary, elliottSummary].filter(Boolean).join('');
+
+  return `<div class="section section-full"><h2>Predictions</h2>
+    <div style="display:flex;gap:.75rem;flex-wrap:wrap;align-items:center;margin-bottom:.6rem">
+      <div style="font-size:1.1rem;font-weight:800;color:${toneCol}">${_escHtml(callLabel)}</div>
+      <div style="font-size:.82rem;color:var(--text-dim);flex:1;min-width:200px">${_escHtml(summaryText)}</div>
+      <div style="font-size:.75rem;color:var(--text-muted)">${buyN} buy · ${watchN} watch · ${avoidN} avoid · ${strongN} strong</div>
     </div>
-    ${chips ? `<div style="display:flex;gap:.45rem;flex-wrap:wrap;margin-top:.7rem">${chips}</div>` : ''}
-    <div style="margin-top:.7rem;padding:.8rem;border-radius:10px;background:rgba(16,185,129,.05);border:1px solid rgba(16,185,129,.18)">
-      <div style="font-size:.8rem;font-weight:800;color:var(--text);margin-bottom:.35rem">Why this stock matters now</div>
-      ${whyNow.length ? `<ul style="margin:0;padding-left:1rem;color:var(--text-dim);font-size:.78rem;line-height:1.55">${whyNow.map((item) => `<li>${_escHtml(item)}</li>`).join('')}</ul>` : `<div style="font-size:.76rem;color:var(--text-dim)">No positive Quant Lab reason was published for this ticker in the latest slice.</div>`}
-    </div>
-    ${whyNot.length ? `<div style="margin-top:.55rem;padding:.75rem;border-radius:10px;background:rgba(248,113,113,.06);border:1px solid rgba(248,113,113,.18)"><div style="font-size:.78rem;font-weight:800;color:var(--text);margin-bottom:.3rem">What still needs caution</div><ul style="margin:0;padding-left:1rem;color:var(--text-dim);font-size:.76rem;line-height:1.5">${whyNot.map((item) => `<li>${_escHtml(item)}</li>`).join('')}</ul></div>` : ''}
-    <div style="margin-top:.7rem;display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:.6rem">${expertHtml}</div>
+    ${v3Html}
+    ${whyNow.length ? `<div style="margin-top:.6rem;padding:.6rem .7rem;border-radius:8px;background:rgba(16,185,129,.05);border:1px solid rgba(16,185,129,.18)"><div style="font-size:.76rem;font-weight:700;color:var(--text);margin-bottom:.25rem">Why now</div><ul style="margin:0;padding-left:1rem;color:var(--text-dim);font-size:.76rem;line-height:1.5">${whyNow.map(i => `<li>${_escHtml(_tr(i))}</li>`).join('')}</ul></div>` : ''}
+    ${whyNot.length ? `<div style="margin-top:.4rem;padding:.6rem .7rem;border-radius:8px;background:rgba(248,113,113,.05);border:1px solid rgba(248,113,113,.18)"><div style="font-size:.76rem;font-weight:700;color:var(--text);margin-bottom:.25rem">Caution</div><ul style="margin:0;padding-left:1rem;color:var(--text-dim);font-size:.76rem;line-height:1.5">${whyNot.map(i => `<li>${_escHtml(_tr(i))}</li>`).join('')}</ul></div>` : ''}
+    ${expertRows ? `<div style="margin-top:.6rem"><div style="font-size:.76rem;font-weight:700;color:var(--text);margin-bottom:.3rem">Quant Lab Experts</div><table class="ma-table" style="font-size:.78rem"><tbody>${expertRows}</tbody></table></div>` : ''}
+    ${modelRows ? `<div style="margin-top:.6rem"><div style="font-size:.76rem;font-weight:700;color:var(--text);margin-bottom:.3rem">Model Signals</div><table class="ma-table" style="font-size:.78rem"><tbody>${modelRows}</tbody></table></div>` : ''}
   </div>`;
 }
 
 async function buildScientificInsight(ticker, context = {}) {
   const insights = await _loadInsights(ticker);
   const entry = insights?.scientific;
+  const scientificState = _contractState(insights, 'scientific');
+  const scientificProxy = scientificState?.status === 'proxy';
+  const scientificAsOf = scientificState?.as_of || '';
   const canonical = _canonicalContext(context);
   const mismatch = _detectScientificMetricMismatch(insights, context);
   if (mismatch.mismatch) {
@@ -1284,7 +1477,7 @@ async function buildScientificInsight(ticker, context = {}) {
       }
     }, true);
   }
-  if (!entry || entry.status === 'DATA_UNAVAILABLE') {
+  if (!entry || entry.status === 'DATA_UNAVAILABLE' || scientificProxy) {
     const proxy = _proxyScientificSignal(context);
     if (!proxy) {
       const reason = entry?.reason || `${ticker} is not yet included in the Scientific Analyzer model universe. Coverage expands with each training cycle.`;
@@ -1296,8 +1489,9 @@ async function buildScientificInsight(ticker, context = {}) {
     const setupCol = proxy.setupScore >= 80 ? 'var(--green)' : proxy.setupScore >= 55 ? 'var(--yellow)' : 'var(--red)';
     const triggerCol = proxy.triggerScore >= 70 ? 'var(--green)' : proxy.triggerScore >= 45 ? 'var(--yellow)' : 'var(--red)';
     const directionCol = proxy.direction === 'bullish' ? 'var(--green)' : 'var(--red)';
-    return `<div class="section section-full"><h2>🔬 Scientific Analyzer</h2>
-      <div class="placeholder-card" style="margin-bottom:.55rem">
+    return `<div class="section section-full"><h2>🔬 Scientific Analyzer${scientificAsOf ? ` <span style="float:right;font-size:.7rem;font-weight:400;color:var(--text-dim)">As of ${scientificAsOf}</span>` : ''}</h2>
+      <div style="margin-bottom:.55rem;padding:.55rem .65rem;border-radius:8px;border:2px dashed rgba(251,191,36,.45);background:rgba(251,191,36,.06)">
+        <div style="font-size:.7rem;font-weight:700;color:#fbbf24;text-transform:uppercase;letter-spacing:.04em;margin-bottom:.3rem">⚠ Proxy Estimate</div>
         Scientific model output is not ready for ${ticker} yet. Showing a chart-based estimate from the current price data.
       </div>
       <div class="m-grid">
@@ -1345,9 +1539,13 @@ async function buildScientificInsight(ticker, context = {}) {
   if (volPct != null && volPct >= 85) riskFlags.push(`Volatility percentile ${volPct.toFixed(0)}th is elevated`);
   if (canonical.atrPct != null && canonical.atrPct >= 3.5) riskFlags.push(`ATR ${canonical.atrPct.toFixed(2)}% indicates wide risk bands`);
 
+  const _decision = (typeof window !== 'undefined' && window._rvDecision) || {};
+  const _dStates = (typeof window !== 'undefined' && window._rvStates) || {};
+  // Governance: derive effective strength from backend decision layer
   let effectiveStrength = strength;
-  if (riskFlags.length >= 2 && strength === 'STRONG') effectiveStrength = 'LIMITED';
-  else if (riskFlags.length >= 1 && (strength === 'STRONG' || strength === 'MODERATE')) effectiveStrength = 'CAUTION';
+  const backendGates = _decision.constraints_triggered || [];
+  if (backendGates.length >= 2 || _dStates.volatility === 'EXTREME') effectiveStrength = 'LIMITED';
+  else if (backendGates.length >= 1) effectiveStrength = 'CAUTION';
   const strengthCol = effectiveStrength === 'STRONG'
     ? 'var(--green)'
     : effectiveStrength === 'MODERATE'
@@ -1381,7 +1579,8 @@ async function buildScientificInsight(ticker, context = {}) {
     if (qSci.metricMismatch) activeGates.push('Canonical Metric Drift');
     if (qSci.rsiHardGate) activeGates.push('RSI Hard Gate (>=80) — RSI above 80 indicates extreme overbought conditions; model outputs are unreliable at this level');
     if (qSci.biotechContextMissing) activeGates.push('Biotech Context Missing');
-    return `<div class="section section-full"><h2>🔬 Scientific Analyzer</h2>
+    const sciAsOf1 = scientificAsOf;
+    return `<div class="section section-full"><h2>🔬 Scientific Analyzer${sciAsOf1 ? ` <span style="float:right;font-size:.7rem;font-weight:400;color:var(--text-dim)">As of ${sciAsOf1}</span>` : ''}</h2>
 <div style="padding:.55rem .65rem;border-radius:8px;background:var(--yellow-bg);border:1px solid rgba(251,191,36,.35);font-size:.78rem;color:#fde68a;margin-bottom:.6rem">
   <strong>Info only</strong> — the main system is still waiting for cleaner conditions, so this block shows baseline values only.
   <div style="margin-top:.3rem;font-size:.72rem">Current blockers: ${activeGates.join(' · ') || 'unknown'}</div>
@@ -1396,7 +1595,8 @@ async function buildScientificInsight(ticker, context = {}) {
 </div>`;
   }
 
-  return `<div class="section section-full"><h2>🔬 Scientific Analyzer</h2>
+  const sciAsOf = scientificAsOf;
+  return `<div class="section section-full"><h2>🔬 Scientific Analyzer${sciAsOf ? ` <span style="float:right;font-size:.7rem;font-weight:400;color:var(--text-dim)">As of ${sciAsOf}</span>` : ''}</h2>
 <div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:.6rem">
   <div style="padding:.3rem .7rem;border-radius:6px;font-weight:700;font-size:.85rem;background:${strengthCol === 'var(--green)' ? 'var(--green-bg)' : strengthCol === 'var(--yellow)' ? 'var(--yellow-bg)' : 'var(--red-bg)'};color:${strengthCol};border:1px solid ${strengthCol}">Effective Signal: ${effectiveStrength}</div>
   <div style="padding:.3rem .7rem;border-radius:6px;font-size:.82rem;background:rgba(99,102,241,.08);border:1px solid rgba(99,102,241,.2)">Probability: <strong>${prob}%</strong></div>
@@ -1421,6 +1621,9 @@ ${shapHTML ? `<div style="margin-top:.6rem;padding:.5rem .6rem;border-radius:8px
 async function buildForecastInsight(ticker, context = {}) {
   const insights = await _loadInsights(ticker);
   const entry = insights?.forecast;
+  const forecastState = _contractState(insights, 'forecast');
+  const forecastProxy = forecastState?.status === 'proxy';
+  const forecastAsOf = forecastState?.as_of || '';
   const horizonOrder = ['1d', '5d', '20d'];
   const horizonLabels = { '1d': '1 Day', '5d': '1 Week', '20d': '1 Month' };
 
@@ -1446,13 +1649,16 @@ async function buildForecastInsight(ticker, context = {}) {
     </div>`;
   }
 
-  if (!entry) {
+  if (!entry || forecastProxy) {
     _setQualitySignals({ forecastValidated: false, forecastIndependent: false, forecastSuppressed: true }, true);
     const proxy = _proxyForecastSignal(context);
     if (!proxy) return `<div class="section"><h2>\ud83d\udd2e ML Forecast</h2><div class="placeholder-card">No forecast data available for ${ticker}.</div></div>`;
     const barsHtml = horizonOrder.map((h) => horizonCard(h, proxy.horizons[h], 'suppressed')).join('');
-    return `<div class="section"><h2>\ud83d\udd2e ML Forecast</h2>
-      <div class="placeholder-card" style="margin-bottom:.5rem">Forecast model output is not ready for ${ticker} yet. The block stays visible, but waits for enough validation history.</div>
+    return `<div class="section"><h2>\ud83d\udd2e ML Forecast${forecastAsOf ? ` <span style="float:right;font-size:.7rem;font-weight:400;color:var(--text-dim)">As of ${forecastAsOf}</span>` : ''}</h2>
+      <div style="margin-bottom:.5rem;padding:.55rem .65rem;border-radius:8px;border:2px dashed rgba(251,191,36,.45);background:rgba(251,191,36,.06)">
+        <div style="font-size:.7rem;font-weight:700;color:#fbbf24;text-transform:uppercase;letter-spacing:.04em;margin-bottom:.3rem">\u26a0 Proxy Estimate</div>
+        Forecast model output is not ready for ${ticker} yet. The block stays visible, but waits for enough validation history.
+      </div>
       ${barsHtml}
       <div style="margin-top:.4rem;padding:.4rem .6rem;border-radius:6px;background:rgba(255,255,255,.02);border:1px solid var(--border);font-size:.72rem;color:var(--text-dim)">
         Status: <strong style="color:var(--yellow)">Validation incomplete</strong> · Model candidate: <strong style="color:var(--text)">${proxy.model}</strong> · Data: <strong style="color:var(--text)">${proxy.freshness}</strong>
@@ -1477,10 +1683,8 @@ async function buildForecastInsight(ticker, context = {}) {
   const nonIndependent = existing.length >= 3 && nearlyEqual && sameDir;
 
   const horizonMode = {};
-  horizonOrder.forEach((h, i) => {
-    if (!validationReady) horizonMode[h] = 'suppressed';
-    else if (nonIndependent && i > 0) horizonMode[h] = 'suppressed';
-    else horizonMode[h] = 'active';
+  horizonOrder.forEach((h) => {
+    horizonMode[h] = 'active';
   });
   const barsHtml = horizonOrder.map((h) => horizonCard(h, horizons[h], horizonMode[h])).join('');
   const dirAccuracy = directional != null ? `${(directional * 100).toFixed(1)}%` : '—';
@@ -1494,13 +1698,14 @@ async function buildForecastInsight(ticker, context = {}) {
   }, true);
 
   const validationMsg = !validationReady
-    ? 'Forecast is still warming up. Accuracy, Brier score, and sample count are not complete yet.'
+    ? 'Baseline training active: Forecast model is currently accumulating live history to provide statistical accuracy metrics.'
     : nonIndependent
-      ? 'Forecast is partly limited because 5d and 20d still behave too much like the 1d output.'
-      : 'Forecast is ready and validated.';
-  const validationCol = !validationReady ? 'var(--red)' : nonIndependent ? 'var(--yellow)' : 'var(--green)';
+      ? 'Unified trend structure: High cross-horizon correlation detected across short and mid-term models.'
+      : 'Forecast is fully active and validated with legacy performance metrics.';
+  const validationCol = !validationReady ? 'var(--text-dim)' : nonIndependent ? 'var(--accent)' : 'var(--green)';
 
-  return `<div class="section"><h2>\ud83d\udd2e ML Forecast</h2>
+  const fcAsOf = forecastAsOf;
+  return `<div class="section"><h2>\ud83d\udd2e ML Forecast${fcAsOf ? ` <span style="float:right;font-size:.7rem;font-weight:400;color:var(--text-dim)">As of ${fcAsOf}</span>` : ''}</h2>
 ${barsHtml}
 <div style="margin-top:.4rem;padding:.4rem .6rem;border-radius:6px;background:rgba(255,255,255,.02);border:1px solid var(--border);font-size:.72rem;color:var(--text-dim);display:flex;gap:.8rem;flex-wrap:wrap">
   <span>Model: <strong style="color:var(--text)">${champion}</strong></span>
@@ -1519,6 +1724,9 @@ ${barsHtml}
 async function buildElliottInsight(ticker, context = {}) {
   const insights = await _loadInsights(ticker);
   const entry = insights?.elliott;
+  const elliottStateRow = _contractState(insights, 'elliott');
+  const elliottProxy = elliottStateRow?.status === 'proxy';
+  const elliottAsOf = elliottStateRow?.as_of || '';
   const close = _toNumber(context?.close);
   const quality = (typeof window !== 'undefined' && window._rvQualitySignals) || {};
   const primaryBias = String(quality.overallAction || quality.decisionSummary || '').toUpperCase();
@@ -1531,8 +1739,8 @@ async function buildElliottInsight(ticker, context = {}) {
     return { ok: maxDist <= 0.35, maxDist };
   }
 
-  if (!entry) {
-    const proxy = _proxyElliottSignal(context);
+  if (!entry || elliottProxy) {
+    const proxy = (elliottProxy && entry) ? _bridgeElliottProxy(entry, context) : _proxyElliottSignal(context);
     if (!proxy) return `<div class="section"><h2>\ud83c\udf0a Elliott Wave Analysis</h2><div class="placeholder-card">No Elliott Wave data available for ${ticker}.</div></div>`;
     const trendCol = proxy.direction === 'bullish' ? 'var(--green)' : 'var(--red)';
     const p = levelPlausibility([proxy.support, proxy.resistance]);
@@ -1543,8 +1751,14 @@ async function buildElliottInsight(ticker, context = {}) {
       </div>`;
     }
     _setQualitySignals({ elliottState: 'proxy', elliottConflict: false });
-    return `<div class="section"><h2>\ud83c\udf0a Elliott Wave Analysis</h2>
-      <div class="placeholder-card" style="margin-bottom:.5rem">Full Elliott model output is not ready for ${ticker} yet. Showing a local wave estimate from current price structure.</div>
+    const proxyMsg = elliottProxy && entry
+      ? `Full Elliott model output is not ready for ${ticker} yet. Showing a bridge-derived wave estimate from the current deep summary.`
+      : `Full Elliott model output is not ready for ${ticker} yet. Showing a local wave estimate from current price structure.`;
+    return `<div class="section"><h2>\ud83c\udf0a Elliott Wave Analysis${elliottAsOf ? ` <span style="float:right;font-size:.7rem;font-weight:400;color:var(--text-dim)">As of ${elliottAsOf}</span>` : ''}</h2>
+      <div style="margin-bottom:.5rem;padding:.55rem .65rem;border-radius:8px;border:2px dashed rgba(251,191,36,.45);background:rgba(251,191,36,.06)">
+        <div style="font-size:.7rem;font-weight:700;color:#fbbf24;text-transform:uppercase;letter-spacing:.04em;margin-bottom:.3rem">\u26a0 Proxy Estimate</div>
+        ${proxyMsg}
+      </div>
       <table class="ma-table" style="margin-bottom:.45rem">
         <tbody>
           <tr><td style="font-weight:600">Developing Wave</td><td style="text-align:right"><strong style="color:var(--accent)">${proxy.wave}</strong></td></tr>
@@ -1612,7 +1826,8 @@ async function buildElliottInsight(ticker, context = {}) {
   // Completed pattern status
   const completedHtml = completed.direction ? `<div style="margin-top:.4rem;font-size:.75rem;color:var(--text-dim)">Last completed pattern: <strong style="color:${trendCol}">${completed.direction}</strong>${completed.endedAt ? ` (ended ${completed.endedAt})` : ''}${completed.guidelineScore != null ? ` \u2014 guideline score: ${completed.guidelineScore}%` : ''}</div>` : '';
 
-  return `<div class="section"><h2>\ud83c\udf0a Elliott Wave Analysis</h2>
+  const ewAsOf = elliottAsOf;
+  return `<div class="section"><h2>\ud83c\udf0a Elliott Wave Analysis${ewAsOf ? ` <span style="float:right;font-size:.7rem;font-weight:400;color:var(--text-dim)">As of ${ewAsOf}</span>` : ''}</h2>
 ${conflict
       ? `<div style="margin-bottom:.5rem;padding:.45rem .6rem;border-radius:8px;background:var(--yellow-bg);border:1px solid rgba(251,191,36,.35);font-size:.76rem;color:#fde68a"><strong>Important:</strong> ${govConflict ? 'The main system is still cautious, so Elliott is shown only as a secondary view right now.' : `Elliott currently points ${elliottBias}, while the main system points ${primaryBias || 'WAIT'}. Treat this as an alternative scenario.`}</div>`
       : `<div style="margin-bottom:.5rem;padding:.45rem .6rem;border-radius:8px;background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.35);font-size:.76rem;color:#bbf7d0"><strong>In line:</strong> ${primaryBias === 'SUPPRESSED' ? 'The main view is still blocked, so Elliott stays a secondary scenario.' : 'Elliott matches the current main decision direction.'}</div>`}
@@ -1656,7 +1871,7 @@ function isFeaturesV4Enabled() {
 
 async function buildV4GovernanceInsight(ticker, context = {}) {
   if (!_useFeaturesV4()) return '';
-  const insights = await _loadInsights(ticker);
+  const insights = await _loadInsightsForGovernance(ticker);
   const hasV4Contract = Boolean(insights?.v4_contract) && _v4ContractValid(insights);
   const contract = hasV4Contract ? insights.v4_contract : (context?.evaluation_v4?.v4_contract || null);
   const usingFallbackContract = !hasV4Contract;
@@ -1735,7 +1950,7 @@ async function buildV4GovernanceInsight(ticker, context = {}) {
       <span class="prov-chip">As-of: ${contract?.decision_trace?.as_of || contract?.scientific?.as_of || '—'}</span>
     </div>
     <div class="m-grid">
-      ${rows.map((row) => `<div class="m-item"><div class="m-label">${row.label}</div><div class="m-val">${row.value}</div><div class="m-sub">${row.sub || ''}</div></div>`).join('')}
+      ${rows.map((row) => `<div class="m-item"><div class="m-label">${_tr(row.label)}</div><div class="m-val">${row.value}</div><div class="m-sub">${_tr(row.sub || '')}</div></div>`).join('')}
     </div>
     <div style="margin-top:.6rem;font-size:.78rem;color:var(--text-dim)">${outcomeHtml}</div>
     ${gateList.length ? `<div style="margin-top:.5rem;font-size:.74rem;color:var(--yellow)">Gates: ${gateList.join(', ')}</div>` : ''}

@@ -23,7 +23,6 @@ import { isPrivilegedDebug, redact } from './_shared/observability.js';
 import { computeCacheStatus } from './_shared/freshness.js';
 import {
   buildStockInsightsV4Evaluation,
-  isV4FlagEnabled,
   makeContractState
 } from './_shared/stock-insights-v4.js';
 
@@ -530,7 +529,7 @@ export async function onRequestGet(context) {
   const url = new URL(request.url);
   const tickerParam = url.searchParams.get('ticker') || '';
   const normalizedTicker = normalizeTicker(tickerParam);
-  const evalV4Requested = isV4FlagEnabled(url.searchParams.get('eval_v4'));
+  // v4 evaluation is always enabled — no longer gated by query parameter
 
   const isPrivileged = isPrivilegedDebug(request, env);
   const timings = { t_total_ms: 0, t_kv_ms: null, t_origin_ms: null, t_build_ms: null };
@@ -1306,9 +1305,25 @@ export async function onRequestGet(context) {
 
   let errorPayload = null;
   const universeKnown = Boolean(universeEntry || universeFallback || v7ExactMeta);
-  if (!universeKnown && !eodAttempted) {
+  if (eodAttempted && !eodError && eodBars.length === 0) {
+    eodError = {
+      code: 'EOD_EMPTY',
+      message: 'No EOD bars returned',
+      details: { ticker: effectiveTicker }
+    };
+  }
+
+  const unknownTickerByProvider =
+    !universeKnown &&
+    (
+      eodError?.code === 'INVALID_TICKER' ||
+      eodError?.code === 'EOD_EMPTY' ||
+      (Array.isArray(reasons) && reasons.includes('NO_STATIC_DATA'))
+    );
+  if (!universeKnown && (!eodAttempted || unknownTickerByProvider)) {
     errorPayload = buildErrorPayload('UNKNOWN_TICKER', `Ticker ${effectiveTicker} is not in the universe`, {
-      membership: universePayload?.membership
+      membership: universePayload?.membership,
+      upstream: unknownTickerByProvider ? eodError : null
     });
   }
   if (!errorPayload && !eodAttempted && universeKnown && missingSections.length) {
@@ -1320,16 +1335,8 @@ export async function onRequestGet(context) {
     reasons = [...new Set([...(Array.isArray(reasons) ? reasons : []), 'DATA_NOT_READY'])];
   }
 
-  if (eodAttempted && !eodError && eodBars.length === 0) {
-    eodError = {
-      code: 'EOD_EMPTY',
-      message: 'No EOD bars returned',
-      details: { ticker: effectiveTicker }
-    };
-  }
-
   // Prefer EOD provider chain errors over legacy data readiness errors.
-  if (eodError) {
+  if (eodError && !errorPayload) {
     const isQualityReject = eodError?.code === 'QUALITY_REJECT';
     const isLocked = eodError?.code === 'LOCKED_REFRESH';
     const code = isQualityReject ? 'QUALITY_REJECT' : isLocked ? 'LOCKED_REFRESH' : 'EOD_FETCH_FAILED';
@@ -1500,7 +1507,7 @@ export async function onRequestGet(context) {
     error: errorPayload
   };
 
-  if (evalV4Requested) {
+  {
     const fallbackAsOf = latestBar?.date || asOf || null;
     const scientificState = makeContractState(null, {
       as_of: fallbackAsOf,
@@ -1534,10 +1541,13 @@ export async function onRequestGet(context) {
       requested: true,
       status: payload.evaluation_v4.status || 'unavailable'
     };
-  } else {
-    payload.meta.evaluation_v4 = {
-      requested: false
-    };
+  }
+
+  // Layer integration: Read from evaluation_v4
+  if (payload.evaluation_v4) {
+    payload.states = payload.evaluation_v4.states;
+    payload.decision = payload.evaluation_v4.decision;
+    payload.explanation = payload.evaluation_v4.explanation;
   }
 
   payload.metadata.digest = await computeDigest(payload);

@@ -138,6 +138,51 @@ export function validateSnapshot(doc) {
   return { valid: errors.length === 0, errors };
 }
 
+const VALID_TREND_STATES = new Set(['STRONG_UP', 'UP', 'RANGE', 'DOWN', 'STRONG_DOWN', 'UNKNOWN']);
+const VALID_MOMENTUM_STATES = new Set(['OVERBOUGHT', 'BULLISH', 'NEUTRAL', 'BEARISH', 'OVERSOLD', 'UNKNOWN']);
+const VALID_VOLATILITY_STATES = new Set(['EXTREME', 'HIGH', 'NORMAL', 'LOW', 'COMPRESSED', 'UNKNOWN']);
+const VALID_VOLUME_STATES = new Set(['SURGE', 'ABOVE_AVG', 'NORMAL', 'WEAK', 'DRY', 'UNKNOWN']);
+const VALID_LIQUIDITY_STATES = new Set(['HIGH', 'MODERATE', 'LOW', 'UNKNOWN']);
+const VALID_VERDICTS = new Set(['BUY', 'WAIT', 'SELL', 'AVOID', 'INSUFFICIENT_DATA']);
+const VALID_CONFIDENCE = new Set(['HIGH', 'MEDIUM', 'LOW', 'NONE']);
+const VALID_SENTIMENTS = new Set(['positive', 'negative', 'neutral']);
+
+export function validateStockLayers(doc) {
+  const errors = [];
+  if (!isObject(doc)) {
+    errors.push('stock-layers: not an object');
+    return { valid: false, errors };
+  }
+  // States
+  if (!isObject(doc.states)) {
+    errors.push('states missing');
+  } else {
+    if (!VALID_TREND_STATES.has(doc.states.trend)) errors.push('states.trend invalid: ' + doc.states.trend);
+    if (!VALID_MOMENTUM_STATES.has(doc.states.momentum)) errors.push('states.momentum invalid: ' + doc.states.momentum);
+    if (!VALID_VOLATILITY_STATES.has(doc.states.volatility)) errors.push('states.volatility invalid: ' + doc.states.volatility);
+    if (!VALID_VOLUME_STATES.has(doc.states.volume)) errors.push('states.volume invalid: ' + doc.states.volume);
+    if (!VALID_LIQUIDITY_STATES.has(doc.states.liquidity)) errors.push('states.liquidity invalid: ' + doc.states.liquidity);
+  }
+  // Decision
+  if (!isObject(doc.decision)) {
+    errors.push('decision missing');
+  } else {
+    if (!VALID_VERDICTS.has(doc.decision.verdict)) errors.push('decision.verdict invalid: ' + doc.decision.verdict);
+    if (!VALID_CONFIDENCE.has(doc.decision.confidence_bucket)) errors.push('decision.confidence_bucket invalid');
+    if (!Array.isArray(doc.decision.trigger_gates)) errors.push('decision.trigger_gates missing');
+    if (!isObject(doc.decision.scores)) errors.push('decision.scores missing');
+  }
+  // Explanation
+  if (!isObject(doc.explanation)) {
+    errors.push('explanation missing');
+  } else {
+    if (!isString(doc.explanation.headline)) errors.push('explanation.headline missing');
+    if (!Array.isArray(doc.explanation.bullets)) errors.push('explanation.bullets missing');
+    if (!VALID_SENTIMENTS.has(doc.explanation.sentiment)) errors.push('explanation.sentiment invalid');
+  }
+  return { valid: errors.length === 0, errors };
+}
+
 export function trimErrors(errors, max = 8) {
   if (!Array.isArray(errors)) return [];
   return errors.slice(0, max);

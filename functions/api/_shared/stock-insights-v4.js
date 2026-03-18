@@ -1,3 +1,7 @@
+import { classifyAllStates } from './stock-states-v1.js';
+import { makeDecision } from './stock-decisions-v1.js';
+import { buildExplanation } from './stock-explanations-v1.js';
+
 const REASON_CODES = Object.freeze({
   OK: "OK",
   NO_DATA: "NO_DATA",
@@ -621,6 +625,11 @@ export function buildStockInsightsV4Evaluation({
     }),
   };
 
+  // Layer integration: STATE → DECISION → EXPLANATION
+  const layerStates = classifyAllStates(stats, close);
+  const layerDecision = makeDecision(layerStates, stats, close);
+  const layerExplanation = buildExplanation(ticker, layerDecision, layerStates);
+
   return {
     ticker,
     schema_version: "rv.stock-insights.v4",
@@ -643,6 +652,9 @@ export function buildStockInsightsV4Evaluation({
     forecast: forecastState?.value || null,
     elliott: elliottState?.value || null,
     forecast_meta: forecastMeta || null,
+    states: layerStates,
+    decision: layerDecision,
+    explanation: layerExplanation,
     evaluation_v4: {
       fallback_active: fallback.active,
       fallback_reason: fallback.reason,
@@ -652,10 +664,6 @@ export function buildStockInsightsV4Evaluation({
       confidence: fallback.confidence,
     },
   };
-}
-
-export function isV4FlagEnabled(value) {
-  return bool(value);
 }
 
 export { REASON_CODES };

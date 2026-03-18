@@ -219,6 +219,48 @@ test('Gate: metric drift does NOT affect AVOID', () => {
   assert.equal(scoreHorizonGates('AVOID', 'VALID', false, true, false), 'AVOID');
 });
 
+// ─── D2) deriveRawGate Tests (regression: null rawValidation must not block) ─
+
+function deriveRawGate(rawState) {
+  if (rawState == null) return { status: 'VALID', valid: true, unknown: false, suppressed: false };
+  if (rawState.valid === true) return { status: 'VALID', valid: true, unknown: false, suppressed: false };
+  if (rawState.valid === false) return { status: 'INVALID', valid: false, unknown: false, suppressed: true };
+  return { status: 'VALID', valid: true, unknown: false, suppressed: false };
+}
+
+test('deriveRawGate: null input defaults to VALID (no blocking)', () => {
+  const r = deriveRawGate(null);
+  assert.equal(r.status, 'VALID');
+  assert.equal(r.valid, true);
+  assert.equal(r.unknown, false);
+  assert.equal(r.suppressed, false);
+});
+
+test('deriveRawGate: undefined input defaults to VALID', () => {
+  const r = deriveRawGate(undefined);
+  assert.equal(r.status, 'VALID');
+  assert.equal(r.unknown, false);
+});
+
+test('deriveRawGate: valid=true → VALID', () => {
+  const r = deriveRawGate({ valid: true, code: 'OK', checks: {} });
+  assert.equal(r.status, 'VALID');
+  assert.equal(r.suppressed, false);
+});
+
+test('deriveRawGate: valid=false → INVALID + suppressed', () => {
+  const r = deriveRawGate({ valid: false, code: 'DUPLICATE_DATES', checks: {} });
+  assert.equal(r.status, 'INVALID');
+  assert.equal(r.valid, false);
+  assert.equal(r.suppressed, true);
+});
+
+test('Regression: null rawValidation must not downgrade BUY to WAIT', () => {
+  const raw = deriveRawGate(null);
+  const result = scoreHorizonGates('BUY', raw.status, false, false, raw.unknown);
+  assert.equal(result, 'BUY');
+});
+
 // ─── E) Metric Tests ────────────────────────────────────────────────────────
 
 test('Z-Score: normal day is plausible', () => {
@@ -368,6 +410,22 @@ test('No "Macro context not yet available" in stock-features.js', async () => {
   const fs = await import('node:fs');
   const content = fs.readFileSync(new URL('../public/js/stock-features.js', import.meta.url), 'utf-8');
   assert.ok(!content.includes('Macro context not yet available'), 'Found dead macro placeholder');
+});
+
+test('Live stock.html loads stock-features.js', async () => {
+  const fs = await import('node:fs');
+  const content = fs.readFileSync(new URL('../public/stock.html', import.meta.url), 'utf-8');
+  assert.ok(content.includes('<script src="/js/stock-features.js" defer></script>'), 'Live stock.html does not load stock-features.js');
+});
+
+test('Live stock.html defines runtime variables used in template rendering', async () => {
+  const fs = await import('node:fs');
+  const content = fs.readFileSync(new URL('../public/stock.html', import.meta.url), 'utf-8');
+  assert.ok(content.includes('const shortV ='), 'shortV is not defined in stock.html');
+  assert.ok(content.includes('const midV ='), 'midV is not defined in stock.html');
+  assert.ok(content.includes('const longV ='), 'longV is not defined in stock.html');
+  assert.ok(content.includes('const isExtremeVol ='), 'isExtremeVol is not defined in stock.html');
+  assert.ok(content.includes('window._rvCanonicalMetrics ='), '_rvCanonicalMetrics is not exposed in stock.html');
 });
 
 // ─── K) Initial HTML State Tests ────────────────────────────────────────────
