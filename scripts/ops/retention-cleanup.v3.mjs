@@ -32,6 +32,31 @@ async function removeOlderThan(dir, maxAgeDays) {
   return removed;
 }
 
+/**
+ * Trim NDJSON history file — keep only entries within retention window.
+ * Atomic: writes to .tmp then renames.
+ */
+async function trimNdjsonHistory(filePath, maxAgeDays) {
+  let raw;
+  try { raw = await fs.readFile(filePath, 'utf8'); } catch { return { before: 0, after: 0, trimmed: 0 }; }
+  const cutoff = Date.now() - maxAgeDays * 86_400_000;
+  const lines = raw.split('\n').filter(l => l.trim());
+  const kept = [];
+  for (const line of lines) {
+    try {
+      const entry = JSON.parse(line);
+      if (entry.ts && new Date(entry.ts).getTime() >= cutoff) kept.push(line);
+    } catch { /* skip malformed lines */ }
+  }
+  const trimmed = lines.length - kept.length;
+  if (trimmed > 0) {
+    const tmpPath = filePath + '.tmp';
+    await fs.writeFile(tmpPath, kept.join('\n') + (kept.length ? '\n' : ''), 'utf8');
+    await fs.rename(tmpPath, filePath);
+  }
+  return { before: lines.length, after: kept.length, trimmed };
+}
+
 async function main() {
   const policy = JSON.parse(await fs.readFile(path.join(ROOT, 'policies/retention.v3.json'), 'utf8'));
   const mirrorsDays = Number(policy.mirrors_retention_days || 180);
@@ -39,6 +64,9 @@ async function main() {
 
   const removedMirrors = await removeOlderThan(path.join(ROOT, 'mirrors'), mirrorsDays);
   const removedLedgers = await removeOlderThan(path.join(ROOT, 'public/data/v3/system/drift'), opsDays);
+  const historyTrim = await trimNdjsonHistory(
+    path.join(ROOT, 'public/data/v3/system/ops-history.ndjson'), opsDays
+  );
 
   const report = {
     meta: {
@@ -52,7 +80,8 @@ async function main() {
     },
     removed: {
       mirrors: removedMirrors,
-      drift_reports: removedLedgers
+      drift_reports: removedLedgers,
+      ops_history: historyTrim
     }
   };
 
@@ -68,7 +97,7 @@ async function main() {
     last_cleanup: report.meta.generated_at
   };
   await fs.writeFile(healthPath, `${JSON.stringify(health, null, 2)}\n`, 'utf8');
-  console.log(`RETENTION_CLEANUP_OK mirrors=${removedMirrors} drift=${removedLedgers}`);
+  console.log(`RETENTION_CLEANUP_OK mirrors=${removedMirrors} drift=${removedLedgers} history_trimmed=${historyTrim.trimmed}`);
 }
 
 main().catch((error) => {

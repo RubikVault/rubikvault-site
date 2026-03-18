@@ -1,0 +1,67 @@
+{
+  "schema_version": "3.0",
+  "metadata": {
+    "module": "capital-rotation",
+    "tier": "derived",
+    "domain": "market",
+    "source": "eodhd-derived",
+    "fetched_at": "2026-03-17T10:00:00Z",
+    "published_at": "2026-03-17T10:00:00Z",
+    "digest": "test-fixture",
+    "record_count": 20,
+    "params_version": "1.0",
+    "score_version": "1.0"
+  },
+  "data": {
+    "globalScore": { "value": 58, "regime": "Neutral", "confidence": 0.72, "confidenceLabel": "Medium", "neutralMode": "quiet" },
+    "blocks": {
+      "macroRegime": { "score": 55, "count": 7, "available": 7, "label": "Macro Regime" },
+      "riskAppetite": { "score": 62, "count": 4, "available": 4, "label": "Risk Appetite" },
+      "sectorBreadth": { "score": 48, "count": 8, "available": 8, "label": "Sector Breadth" },
+      "confirmationLiquidity": { "score": 65, "count": 4, "available": 4, "label": "Confirmation & Liquidity" }
+    },
+    "cycle": { "positionPct": 55, "state": "Mid Rotation", "confidence": 0.75, "description": "Ratio advancing from low levels with positive momentum." },
+    "confirmations": {
+      "credit": { "direction": "risk-on", "strength": 0.6, "state": "HYG/LQD rising", "supportsRotation": "yes", "source": "HYG/LQD", "warnings": [] },
+      "dollar": { "direction": "weakening", "strength": 0.4, "state": "Dollar weakening", "supportsRotation": "yes", "source": "UUP (Dollar Proxy)", "warnings": [] },
+      "realRates": { "direction": "stable", "strength": 0.2, "state": "Real rates stable", "supportsRotation": "mixed", "source": "TIP (Real Rates Proxy)", "warnings": [] },
+      "vix": { "direction": "normal", "strength": 0.3, "state": "Volatility normal (z: 0.20)", "supportsRotation": "mixed", "source": "Volatility Z-Score", "warnings": [] }
+    },
+    "divergences": [],
+    "narrative": {
+      "headline": "Neutral rotation environment (58/100). No dominant direction.",
+      "blocks": [
+        "Global rotation score: 58/100 (Neutral). Confidence: Medium.",
+        "Confirmation/liquidity slightly leads at 65, Sector breadth at 48.",
+        "Cycle position: Mid Rotation (55th percentile)."
+      ],
+      "generatedAt": "2026-03-17T10:00:00Z"
+    },
+    "ratios": {
+      "SPY_GLD": { "composite": 55, "ram": 0.5, "zScore": 0.3, "percentile5y": 52, "trendScore": 58, "cycle": "Mid Rotation", "category": "macro", "status": "ok", "returns": { "21": 0.012, "63": 0.035, "126": 0.05, "252": 0.08 } },
+      "SPY_TLT": { "composite": 60, "ram": 0.8, "zScore": 0.5, "percentile5y": 60, "trendScore": 62, "cycle": "Mid Rotation", "category": "macro", "status": "ok", "returns": { "21": 0.02, "63": 0.04, "126": 0.06, "252": 0.1 } },
+      "QQQ_SPY": { "composite": 52, "ram": 0.2, "zScore": -0.1, "percentile5y": 48, "trendScore": 50, "cycle": "Neutral / Undefined", "category": "style", "status": "ok", "returns": { "21": 0.005, "63": 0.01, "126": 0.02, "252": 0.03 } },
+      "IWM_SPY": { "composite": 45, "ram": -0.3, "zScore": -0.5, "percentile5y": 35, "trendScore": 42, "cycle": "Reversal Watch", "category": "style", "status": "ok", "returns": { "21": -0.01, "63": -0.02, "126": -0.03, "252": -0.05 } }
+    },
+    "keyCards": [
+      { "title": "Top Rotation", "value": "SPY_TLT", "direction": "up", "detail": "Score: 60" },
+      { "title": "Weakest", "value": "IWM_SPY", "direction": "down", "detail": "Score: 45" },
+      { "title": "Key Risk", "value": "None", "direction": "neutral", "detail": "" }
+    ],
+    "sectorRelative": {
+      "XLK_XLP": { "displayName": "Tech / Staples", "rsScore": 62, "momScore": 58, "quadrant": "Leading", "cycle": "Mid Rotation" }
+    },
+    "meta": {
+      "status": "ok",
+      "coverage": 0.95,
+      "staleStatus": "fresh",
+      "warnings": [],
+      "asOfDate": "2026-03-17",
+      "timezone": "US/Eastern",
+      "tradingCalendar": "NYSE",
+      "dataSourcesUsed": ["eodhd"],
+      "paramsVersion": "1.0",
+      "returnType": "price-return"
+    }
+  }
+}

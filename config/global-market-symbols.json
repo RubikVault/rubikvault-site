@@ -70,6 +70,18 @@
     { "symbol": "HYG.US", "name": "HY Bond ETF", "purpose": "credit_stress_proxy" },
     { "symbol": "TLT.US", "name": "20Y+ Treasury", "purpose": "rates_proxy" }
   ],
+  "rotation_universe": [
+    { "symbol": "LQD.US", "name": "IG Corporate Bond ETF", "role": "credit_ig", "calendarType": "nyse" },
+    { "symbol": "VWO.US", "name": "Emerging Markets ETF", "role": "geo_em", "calendarType": "nyse" },
+    { "symbol": "VGK.US", "name": "Europe ETF", "role": "geo_europe", "calendarType": "nyse" },
+    { "symbol": "SOXX.US", "name": "PHLX Semiconductor ETF", "role": "sector_semi", "calendarType": "nyse" },
+    { "symbol": "SMH.US", "name": "Semiconductor ETF", "role": "sector_semi_alt", "calendarType": "nyse" },
+    { "symbol": "IVW.US", "name": "S&P 500 Growth ETF", "role": "style_growth", "calendarType": "nyse" },
+    { "symbol": "IVE.US", "name": "S&P 500 Value ETF", "role": "style_value", "calendarType": "nyse" },
+    { "symbol": "RSP.US", "name": "Equal Weight S&P 500 ETF", "role": "breadth_proxy", "calendarType": "nyse" },
+    { "symbol": "UUP.US", "name": "Dollar Bull Fund (DXY Proxy)", "role": "dollar_proxy", "calendarType": "nyse" },
+    { "symbol": "TIP.US", "name": "TIPS Bond ETF (Real Rates Proxy)", "role": "real_rates_proxy", "calendarType": "nyse" }
+  ],
   "session_hours_utc": {
     "asia": { "open": "00:00", "close": "08:00", "label": "Asia-Pacific" },
     "europe": { "open": "07:00", "close": "16:30", "label": "Europe" },

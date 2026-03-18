@@ -143,7 +143,7 @@
       const detailsEl = document.getElementById('details');
 
       if (!data) {
-        summaryEl.textContent = 'Kein lokaler Check gefunden. Bitte `npm run runblock:local-check` ausführen.';
+        summaryEl.textContent = 'No local check found. Please run `npm run runblock:local-check`.';
       } else {
         summaryEl.textContent = `Generiert: ${data.generated_at}`;
         statusEl.innerHTML = `<div class="status ${data.status === 'PASS' ? 'pass' : 'fail'}">${data.status === 'PASS' ? 'PASS' : 'FAIL'}: Runblock lokal verifiziert</div>`;

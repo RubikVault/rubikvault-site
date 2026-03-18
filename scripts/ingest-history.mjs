@@ -8,7 +8,8 @@ import https from 'https';
 
 const SYMBOLS_PATH = './public/data/universe/v7/ssot/stocks.max.symbols.json';
 const SHARDS_DIR = './public/data/eod/history/shards';
-const API_TOKEN = process.env.EODHD_API_KEY || process.env.EODHD_API_TOKEN || '697fb9f690fcb0.51909754';
+const API_TOKEN = process.env.EODHD_API_KEY || process.env.EODHD_API_TOKEN;
+if (!API_TOKEN) { console.error('EODHD_API_KEY or EODHD_API_TOKEN must be set'); process.exit(1); }
 const MAX_DAYS = 100;
 const CONCURRENCY = 8;
 

@@ -9,23 +9,14 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { createRunContext } from '../lib/v3/run-context.mjs';
 import { writeJsonArtifact } from '../lib/v3/artifact-writer.mjs';
+import { promoteToLastGood } from '../lib/v3/artifact-contract.mjs';
 
-const EODHD_BASE = 'https://eodhd.com/api';
+import { fetchEodBars, fetchBatch } from '../lib/v3/eodhd-fetch.mjs';
 
 async function readJsonSafe(filePath, fallback) {
   try {
     return JSON.parse(await fs.readFile(filePath, 'utf8'));
   } catch { return fallback; }
-}
-
-async function fetchEodhdEod(symbol, from, to, apiKey) {
-  const url = `${EODHD_BASE}/eod/${encodeURIComponent(symbol)}?from=${from}&to=${to}&fmt=json&api_token=${encodeURIComponent(apiKey)}`;
-  try {
-    const res = await fetch(url, { headers: { 'user-agent': 'RubikVault-v3-data-plane/1.0' } });
-    if (!res.ok) return null;
-    const data = await res.json();
-    return Array.isArray(data) ? data : null;
-  } catch { return null; }
 }
 
 function changePct(open, close) {
@@ -79,11 +70,11 @@ function computeFlowSignal(bars) {
 }
 
 async function fetchSymbolWithFlow(symbol, displayName, fromDate, toDate, apiKey) {
-  const bars = await fetchEodhdEod(symbol, fromDate, toDate, apiKey);
+  const bars = await fetchEodBars(symbol, fromDate, toDate, apiKey);
   if (!bars || bars.length === 0) {
     return {
       symbol, name: displayName,
-      close: null, change_pct: null, as_of: toDate,
+      close: null, change_pct: null, as_of: null,
       unavailable: true, flow: null
     };
   }
@@ -268,6 +259,22 @@ function applyRegimeDamp(score, confidence, regimeMode) {
   };
 }
 
+function extractQuote(bars) {
+  if (!Array.isArray(bars) || bars.length === 0) return { available: false, open: null, high: null, low: null, close: null, volume: null, as_of: null };
+  const sorted = [...bars].sort((a, b) => a.date.localeCompare(b.date));
+  const last = sorted[sorted.length - 1];
+  const toNum = (v) => { const n = Number(v); return Number.isFinite(n) ? Number(n.toFixed(4)) : null; };
+  return {
+    available: true,
+    open: toNum(last.open),
+    high: toNum(last.high),
+    low: toNum(last.low),
+    close: toNum(last.close),
+    volume: Number(last.volume) || null,
+    as_of: String(last.date || '').slice(0, 10) || null,
+  };
+}
+
 function buildCardPayload(id, name, type, bars, flowSignal, regimeMode, weightsConfig, sources, asOf) {
   const momentum = computeMomentum(bars);
   const volz = computeVolZ(bars);
@@ -298,26 +305,42 @@ function buildCardPayload(id, name, type, bars, flowSignal, regimeMode, weightsC
   if (flowSignal?.direction === 'bullish' && flowSignal?.strength !== 'weak') phaseReasons.push('FLOWZ_POSITIVE');
   if (flowSignal?.direction === 'bearish' && flowSignal?.strength !== 'weak') phaseReasons.push('FLOWZ_NEGATIVE');
 
-  // TL;DR
-  const phaseText = { EARLY: 'Early trend forming', MID: 'Trend established', LATE: 'Trend maturing', EXHAUSTED: 'Trend overheated', REVERSAL_RISK: 'Trend breaking down', NEUTRAL: 'No clear trend' };
-  const tldr = `${phaseText[phase] || 'Mixed signals'}. Score ${score}/100, ${confidence.label} confidence.`;
+  // Structured narrative — all human-readable text resolved by frontend via narrative-dictionary.json
+  const scoreBand = score >= 65 ? 'bullish' : score >= 45 ? 'neutral' : 'bearish';
+  const flowDir = flowSignal?.direction || 'neutral';
+  const flowStr = flowSignal?.strength || 'weak';
+  const freshnessDays = asOf ? Math.max(0, Math.round((Date.now() - new Date(`${asOf}T00:00:00Z`).getTime()) / 86400000)) : null;
+  const isStale = asOf ? (Date.now() - new Date(`${asOf}T00:00:00Z`).getTime()) > 3 * 86400000 : true;
+
+  const quote = extractQuote(bars);
 
   return {
     id, name, type, as_of: asOf,
     score, phase, confidence,
+    score_band: scoreBand,
+    quote,
     drivers_top3: drivers.slice(0, 3),
     risks_top3: risks.slice(0, 3),
     phase_reason_codes: phaseReasons,
+    narrative: {
+      phase_code: phase,
+      confidence_code: confidence.label,
+      regime_code: regimeMode,
+      score_band: scoreBand,
+      flow_direction: flowDir,
+      flow_strength: flowStr,
+      reason_codes: phaseReasons,
+      severity: scoreBand === 'bearish' || phase === 'REVERSAL_RISK' ? 'warn' : phase === 'EXHAUSTED' ? 'caution' : 'info'
+    },
     momentum,
     vol_z: volz,
     data_status: {
-      freshness_days: 1,
-      stale: false,
+      freshness_days: freshnessDays,
+      stale: isStale,
       coverage_ratio: bars?.length > 0 ? 0.9 : 0.0,
       missing_inputs: bars?.length > 0 ? [] : ['price_history']
     },
-    sources: sources || [{ key: 'prices', name: 'EODHD', as_of: asOf }],
-    tldr
+    sources: sources || [{ key: 'prices', name: 'EODHD', as_of: asOf }]
   };
 }
 
@@ -488,14 +511,14 @@ function computeAssetRatios(results) {
   return ratios;
 }
 
-async function loadAndUpdateLearning(rootDir, moneyFlow, ratios, trendForecasts) {
+async function loadAndUpdateLearning(rootDir, moneyFlow, ratios, trendForecasts, snapshotDate) {
   // Self-learning mechanism: track historical flow snapshots to detect pattern changes
   const learningPath = path.join(rootDir, 'public/data/v3/derived/market/flow-learning.json');
   let learning = await readJsonSafe(learningPath, { snapshots: [], patterns: [] });
   if (!Array.isArray(learning.snapshots)) learning.snapshots = [];
   if (!Array.isArray(learning.patterns)) learning.patterns = [];
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = snapshotDate;
 
   // Add today's snapshot (one per day)
   const existingToday = learning.snapshots.find((s) => s.date === today);
@@ -686,7 +709,7 @@ async function main() {
   const marketDoc = await readJsonSafe(path.join(rootDir, 'public/data/v3/derived/market/latest.json'), {});
   const prevGlobal = await readJsonSafe(path.join(rootDir, 'public/data/v3/derived/market/global-latest.json'), {});
 
-  const today = String(runContext.generatedAt).slice(0, 10);
+  const buildDate = String(runContext.generatedAt).slice(0, 10);
   // Fetch 20 days of history for flow analysis
   const fromDate = new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10);
 
@@ -709,27 +732,33 @@ async function main() {
   const regimeProxies = (config.regime_proxies || []).map((s) => ({ ...s, category: 'regime' }));
   allSymbols.push(...regimeProxies);
 
-  console.log(`DP8 global-market-hub: fetching ${allSymbols.length} symbols...`);
+  // Deduplicate symbols (regime proxies may overlap with indices/sectors)
+  const symbolSet = new Set();
+  const dedupedSymbols = allSymbols.filter((s) => {
+    if (symbolSet.has(s.symbol)) return false;
+    symbolSet.add(s.symbol);
+    return true;
+  });
 
-  // Fetch in batches of 5 to avoid rate limits
+  console.log(`DP8 global-market-hub: fetching ${dedupedSymbols.length} symbols (deduped from ${allSymbols.length})...`);
+
+  // Fetch with bounded concurrency (6 parallel, retry/backoff via eodhd-fetch)
   const results = new Map();
-  for (let i = 0; i < allSymbols.length; i += 5) {
-    const batch = allSymbols.slice(i, i + 5);
-    const batchResults = await Promise.all(
-      batch.map((s) =>
-        apiKey
-          ? fetchSymbolWithFlow(s.symbol, s.name || s.display, fromDate, today, apiKey)
-          : Promise.resolve({
-              symbol: s.symbol, name: s.name || s.display,
-              close: null, change_pct: null, as_of: today,
-              unavailable: true, flow: null
-            })
-      )
-    );
+  const fetchTasks = dedupedSymbols.map((s) =>
+    apiKey
+      ? fetchSymbolWithFlow(s.symbol, s.name || s.display, fromDate, buildDate, apiKey)
+      : Promise.resolve({
+          symbol: s.symbol, name: s.name || s.display,
+          close: null, change_pct: null, as_of: null,
+          unavailable: true, flow: null
+        })
+  );
+  // Use bounded concurrency via Promise pool (6 concurrent)
+  const CONCURRENCY = 6;
+  for (let i = 0; i < fetchTasks.length; i += CONCURRENCY) {
+    const batch = fetchTasks.slice(i, i + CONCURRENCY);
+    const batchResults = await Promise.all(batch);
     for (const r of batchResults) results.set(r.symbol, r);
-    if (i + 5 < allSymbols.length && apiKey) {
-      await new Promise((resolve) => setTimeout(resolve, 200));
-    }
   }
 
   // Build sessions
@@ -744,7 +773,7 @@ async function main() {
         country: idx.country,
         close: r?.close ?? null,
         change_pct: r?.change_pct ?? null,
-        as_of: r?.as_of ?? today,
+        as_of: r?.as_of ?? null,
         unavailable: r?.unavailable ?? true,
         flow: r?.flow ?? null
       };
@@ -816,8 +845,14 @@ async function main() {
     });
   const cautionSignals = trendForecasts.filter((t) => t && t.setup_quality === 'caution-overextended');
 
-  // Self-learning: track patterns over time
-  const learning = await loadAndUpdateLearning(rootDir, moneyFlow, assetRatios, trendForecasts);
+  // Derive actual data date from fetched results (latest as_of across all available symbols)
+  // This MUST be derived from real market data, never from build time.
+  const dataDate = [...results.values()]
+    .filter((r) => !r.unavailable && r.as_of)
+    .reduce((latest, r) => (r.as_of > latest ? r.as_of : latest), '') || buildDate;
+
+  // Self-learning: track patterns over time (use actual data date, not build time)
+  const learning = await loadAndUpdateLearning(rootDir, moneyFlow, assetRatios, trendForecasts, dataDate);
 
   // ═══ REGIME ENGINE ═══
   const regime = computeRegime(marketDoc?.data?.pulse, results);
@@ -825,38 +860,42 @@ async function main() {
   // ═══ BUILD CARD PAYLOADS (unified score/phase/confidence for every asset) ═══
   const weightsConfig = await readJsonSafe(path.join(rootDir, 'config/market-hub/weights.json'), {});
   const cards = {};
-  const defaultSources = [{ key: 'prices', name: 'EODHD', as_of: today }];
 
-  // Sector cards
+  // Sector cards — each card gets its real as_of from the fetched result
   for (const s of sectorETFs) {
     const r = results.get(s.symbol);
     const id = `SECTOR:${s.symbol.replace('.US', '')}`;
-    cards[id] = buildCardPayload(id, s.name, 'sector', r?.bars || [], r?.flow, regime.mode, weightsConfig, defaultSources, today);
+    const cardAsOf = r?.as_of || dataDate;
+    cards[id] = buildCardPayload(id, s.name, 'sector', r?.bars || [], r?.flow, regime.mode, weightsConfig, [{ key: 'prices', name: 'EODHD', as_of: cardAsOf }], cardAsOf);
   }
   // Commodity cards
   for (const c of (config.commodities || [])) {
     const r = results.get(c.symbol);
     const id = `CMDTY:${c.symbol.split('.')[0]}`;
-    cards[id] = buildCardPayload(id, c.name, 'commodity', r?.bars || [], r?.flow, regime.mode, weightsConfig, defaultSources, today);
+    const cardAsOf = r?.as_of || dataDate;
+    cards[id] = buildCardPayload(id, c.name, 'commodity', r?.bars || [], r?.flow, regime.mode, weightsConfig, [{ key: 'prices', name: 'EODHD', as_of: cardAsOf }], cardAsOf);
   }
   // Crypto cards
   for (const c of (config.crypto || [])) {
     const r = results.get(c.symbol);
     const id = `CRYPTO:${c.symbol.split('-')[0]}`;
-    cards[id] = buildCardPayload(id, c.name, 'crypto', r?.bars || [], r?.flow, regime.mode, weightsConfig, defaultSources, today);
+    const cardAsOf = r?.as_of || dataDate;
+    cards[id] = buildCardPayload(id, c.name, 'crypto', r?.bars || [], r?.flow, regime.mode, weightsConfig, [{ key: 'prices', name: 'EODHD', as_of: cardAsOf }], cardAsOf);
   }
   // Forex cards
   for (const f of (config.forex || [])) {
     const r = results.get(f.symbol);
     const id = `FX:${f.symbol.split('.')[0]}`;
-    cards[id] = buildCardPayload(id, f.name, 'forex', r?.bars || [], r?.flow, regime.mode, weightsConfig, defaultSources, today);
+    const cardAsOf = r?.as_of || dataDate;
+    cards[id] = buildCardPayload(id, f.name, 'forex', r?.bars || [], r?.flow, regime.mode, weightsConfig, [{ key: 'prices', name: 'EODHD', as_of: cardAsOf }], cardAsOf);
   }
   // Index cards (per region)
   for (const region of ['asia', 'europe', 'americas']) {
     for (const idx of (config.global_indices?.[region] || [])) {
       const r = results.get(idx.symbol);
       const id = `INDEX:${idx.symbol.split('.')[0]}`;
-      cards[id] = buildCardPayload(id, idx.name, 'default', r?.bars || [], r?.flow, regime.mode, weightsConfig, defaultSources, today);
+      const cardAsOf = r?.as_of || dataDate;
+      cards[id] = buildCardPayload(id, idx.name, 'default', r?.bars || [], r?.flow, regime.mode, weightsConfig, [{ key: 'prices', name: 'EODHD', as_of: cardAsOf }], cardAsOf);
     }
   }
 
@@ -866,7 +905,7 @@ async function main() {
     meta: {
       schema_version: 'rv.derived.global-market.v2',
       generated_at: runContext.generatedAt,
-      data_date: today,
+      data_date: dataDate,
       provider: 'eodhd-global',
       symbols_fetched: allSymbols.length,
       symbols_available: available,
@@ -899,6 +938,10 @@ async function main() {
   };
 
   await writeJsonArtifact(rootDir, 'public/data/v3/derived/market/global-latest.json', doc);
+  // Promote to last-known-good on successful build with available data
+  if (available > 0 && cardCount > 0) {
+    await promoteToLastGood(rootDir, 'public/data/v3/derived/market/global-latest.json', 'public/data/v3/derived/market/global-latest.last-good.json');
+  }
   console.log(`DP8 global-market-hub done fetched=${allSymbols.length} available=${available} flows=${moneyFlow.all_flows.length} cards=${cardCount} regime=${regime.mode}`);
 }
 

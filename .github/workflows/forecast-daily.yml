@@ -7,9 +7,14 @@ on:
         description: 'Trading date (YYYY-MM-DD), empty for auto'
         required: false
         type: string
+  # Primary trigger: runs after data-pulse completes (data-state dependency)
+  workflow_run:
+    workflows: ["data-pulse-daily.v3"]
+    types: [completed]
+    branches: [main]
   schedule:
-    # Run after EOD + scientific snapshot pipelines
-    - cron: '30 23 * * 1-5'
+    # Fallback cron — delayed to allow data-pulse to finish first
+    - cron: '45 23 * * 1-5'
 
 permissions:
   contents: write
@@ -36,6 +41,12 @@ jobs:
     timeout-minutes: 60
     
     steps:
+      - name: Skip if upstream failed (workflow_run trigger)
+        if: github.event_name == 'workflow_run' && github.event.workflow_run.conclusion != 'success'
+        run: |
+          echo "Upstream data-pulse workflow failed — skipping forecast."
+          exit 0
+
       - name: Checkout repository
         uses: actions/checkout@v4
         with:

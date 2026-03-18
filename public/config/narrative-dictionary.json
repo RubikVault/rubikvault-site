@@ -1,0 +1,107 @@
+{
+  "schema": "rv.config.narrative-dictionary.v1",
+  "description": "Single source of truth for all market hub labels, tooltips, and narrative text. Frontend renders from this dictionary — no hardcoded fachlogik.",
+
+  "phase": {
+    "EARLY":          { "label": "Early",          "short": "Early trend forming",        "tooltip": "Short-term momentum positive, medium-term not yet confirmed. New trend may be emerging." },
+    "MID":            { "label": "Mid Trend",      "short": "Trend established",          "tooltip": "All timeframes aligned positive. Trend is confirmed and active." },
+    "LATE":           { "label": "Late",           "short": "Trend maturing",             "tooltip": "Long-term trend intact but short-term momentum fading. Watch for exhaustion." },
+    "EXHAUSTED":      { "label": "Exhausted",      "short": "Trend overheated",           "tooltip": "Trend showing fatigue with elevated volatility or momentum divergence. High reversal risk." },
+    "REVERSAL_RISK":  { "label": "Reversal Risk",  "short": "Trend breaking down",        "tooltip": "Medium and long-term momentum both negative. Trend is breaking down." },
+    "NEUTRAL":        { "label": "Neutral",        "short": "No clear trend",             "tooltip": "Mixed or insufficient signals. No clear directional trend." }
+  },
+
+  "confidence": {
+    "HIGH":   { "label": "HIGH",   "tooltip": "Strong signal agreement across multiple timeframes with fresh, reliable data." },
+    "MEDIUM": { "label": "MEDIUM", "tooltip": "Moderate signal agreement or some data quality limitations." },
+    "LOW":    { "label": "LOW",    "tooltip": "Weak signal agreement, stale data, or limited coverage. Interpret with caution." }
+  },
+
+  "regime": {
+    "NORMAL":  { "label": "Normal",  "short": "No stress detected",             "tooltip": "All stress indicators within normal range. Scores unmodified." },
+    "STRESS":  { "label": "Stress",  "short": "Elevated market stress",         "tooltip": "2+ stress conditions triggered (volatility, credit spreads, breadth). Scores dampened by 40%." },
+    "CRISIS":  { "label": "Crisis",  "short": "Multiple stress triggers active", "tooltip": "3+ conditions with severe credit deterioration. Scores dampened by 70%." }
+  },
+
+  "score_bands": {
+    "bullish":  { "min": 65, "label": "Bullish",  "color_key": "bull" },
+    "neutral":  { "min": 45, "label": "Neutral",  "color_key": "warn" },
+    "bearish":  { "min": 0,  "label": "Bearish",  "color_key": "bear" }
+  },
+
+  "flow_direction": {
+    "bullish":  { "label": "Inflow",  "tooltip": "Multi-day price trend indicates capital flowing in." },
+    "bearish":  { "label": "Outflow", "tooltip": "Multi-day price trend indicates capital flowing out." },
+    "neutral":  { "label": "Flat",    "tooltip": "No clear directional flow trend." }
+  },
+
+  "flow_strength": {
+    "strong":   { "label": "Strong",   "tooltip": "Consistent, high-magnitude trend over 5+ days." },
+    "moderate": { "label": "Moderate", "tooltip": "Directionally consistent but moderate magnitude." },
+    "weak":     { "label": "Weak",     "tooltip": "Inconsistent or low-magnitude trend." }
+  },
+
+  "data_status": {
+    "fresh":             { "label": "Fresh",                  "severity": "ok",   "tooltip": "Data is current and within expected freshness window." },
+    "stale_warning":     { "label": "Stale (Warning)",        "severity": "warn", "tooltip": "Data is older than expected but still within acceptable range." },
+    "stale_degraded":    { "label": "Stale (Degraded)",       "severity": "error","tooltip": "Data is significantly outdated. Results may be unreliable." },
+    "fallback":          { "label": "Using Last-Known-Good",  "severity": "warn", "tooltip": "Current data unavailable. Using previous valid snapshot." },
+    "missing":           { "label": "Missing",                "severity": "error","tooltip": "No data available and no fallback. Results unavailable." },
+    "frontend_fallback": { "label": "Limited Data",           "severity": "warn", "tooltip": "Global data unavailable. Showing limited US-only snapshot." }
+  },
+
+  "phase_reason_codes": {
+    "MOMENTUM_SHORT_POSITIVE":  "Short-term momentum is positive",
+    "MEDIUM_NOT_YET":           "Medium-term trend not yet confirmed",
+    "MOMENTUM_STACKED_POSITIVE":"All momentum timeframes aligned positive",
+    "SHORT_MOMENTUM_FADING":    "Short-term momentum is fading",
+    "TREND_OVERHEATED":         "Trend is overextended",
+    "VOLATILITY_SPIKE":         "Recent volatility spike detected",
+    "MOMENTUM_DIVERGENCE":      "Momentum divergence across timeframes",
+    "TREND_BREAKDOWN":          "Trend structure breaking down",
+    "FLOWZ_POSITIVE":           "Flow signals support upward trend",
+    "FLOWZ_NEGATIVE":           "Flow signals indicate distribution"
+  },
+
+  "setup_quality": {
+    "bullish-reversal":      { "label": "Bullish Reversal",      "tooltip": "Oversold/overextended bearish — reversal setup forming." },
+    "bullish-continuation":  { "label": "Bullish Continuation",  "tooltip": "Strong uptrend intact — momentum continuation expected." },
+    "caution-overextended":  { "label": "Caution: Overextended", "tooltip": "Bullish trend showing fatigue — watch for reversal signals." },
+    "bearish-continuation":  { "label": "Bearish Continuation",  "tooltip": "Downtrend intact — further weakness expected." },
+    "neutral":               { "label": "No Clear Setup",        "tooltip": "Mixed signals — no actionable edge." }
+  },
+
+  "asset_type": {
+    "sector":    { "label": "US Sector",     "source": "SPDR Sector ETFs via EODHD" },
+    "commodity": { "label": "Commodity",     "source": "Commodity ETF proxies via EODHD" },
+    "crypto":    { "label": "Crypto",        "source": "EODHD Crypto (CC exchange)" },
+    "forex":     { "label": "Forex",         "source": "EODHD Forex" },
+    "index":     { "label": "Global Index",  "source": "EODHD Global Indices" },
+    "default":   { "label": "Asset",         "source": "EODHD" }
+  },
+
+  "rotation": {
+    "regime": {
+      "DEEP_RISK_OFF":   { "template": "Deep risk-off environment ({score}/100). Capital rotating toward safety." },
+      "CAUTIOUS":        { "template": "Cautious positioning ({score}/100). Relative strength favoring defensive assets." },
+      "NEUTRAL":         { "template": "Neutral rotation environment ({score}/100). No dominant direction." },
+      "RISK_ON":         { "template": "Risk-on rotation active ({score}/100). Cyclical and growth assets gaining." },
+      "EXTREME_RISK_ON": { "template": "Extreme risk-on signal ({score}/100). Strong relative momentum in risk assets." }
+    },
+    "neutral_mode": {
+      "conflicted": { "template": "Rotation score neutral ({score}/100) with conflicting block signals — mixed environment." },
+      "quiet":      { "template": "Rotation score neutral ({score}/100) — quiet, no strong directional signal." }
+    },
+    "blocks": {
+      "macroRegime":            { "label": "Macro regime" },
+      "riskAppetite":           { "label": "Risk appetite" },
+      "sectorBreadth":          { "label": "Sector breadth" },
+      "confirmationLiquidity":  { "label": "Confirmation/liquidity" }
+    },
+    "watch_codes": {
+      "DIVERGENCE":       "Active divergence detected",
+      "CONTRADICTION":    "Confirmation signal contradicts rotation",
+      "LOW_CONFIDENCE":   "Confidence is low — signals may be unreliable"
+    }
+  }
+}

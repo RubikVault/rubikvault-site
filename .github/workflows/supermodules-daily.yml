@@ -2,9 +2,14 @@ name: Super-Modules Build (Daily)
 
 on:
   workflow_dispatch:
+  # Primary trigger: runs after data-pulse completes (data-state dependency)
+  workflow_run:
+    workflows: ["data-pulse-daily.v3"]
+    types: [completed]
+    branches: [main]
   schedule:
-    # Runs at 23:45 UTC Mon–Fri (after data-pulse-daily)
-    - cron: '45 23 * * 1-5'
+    # Fallback cron — delayed to allow data-pulse to finish first
+    - cron: '55 23 * * 1-5'
 
 permissions:
   contents: write
@@ -14,6 +19,12 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
+      - name: Skip if upstream failed
+        if: github.event_name == 'workflow_run' && github.event.workflow_run.conclusion != 'success'
+        run: |
+          echo "Upstream data-pulse workflow failed — skipping supermodules."
+          exit 0
+
       - uses: actions/checkout@v4
 
       - uses: actions/setup-node@v4

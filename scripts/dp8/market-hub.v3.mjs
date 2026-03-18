@@ -4,6 +4,8 @@ import path from 'node:path';
 import zlib from 'node:zlib';
 import { createRunContext } from '../lib/v3/run-context.mjs';
 import { writeJsonArtifact } from '../lib/v3/artifact-writer.mjs';
+import { promoteToLastGood } from '../lib/v3/artifact-contract.mjs';
+import { fetchEodBars } from '../lib/v3/eodhd-fetch.mjs';
 
 const INDEX_PROXIES = ['SPY', 'QQQ', 'DIA', 'IWM'];
 const SECTOR_ETFS = ['XLK', 'XLF', 'XLE', 'XLY', 'XLI', 'XLP', 'XLV', 'XLU', 'XLB', 'XLRE', 'XLC'];
@@ -65,22 +67,17 @@ async function fetchEodhdEod(symbol, date, apiKey) {
   const d = new Date(date);
   d.setDate(d.getDate() - 5);
   const fromDate = d.toISOString().slice(0, 10);
-  const url = `${EODHD_BASE}/eod/${encodeURIComponent(symbol)}?from=${fromDate}&to=${date}&fmt=json&api_token=${encodeURIComponent(apiKey)}`;
-  try {
-    const res = await fetch(url, { headers: { 'user-agent': 'RubikVault-v3-data-plane/1.0' } });
-    if (!res.ok) return null;
-    const data = await res.json();
-    if (!Array.isArray(data) || data.length === 0) return null;
-    const bar = data[data.length - 1];
-    return {
-      open: Number(bar.open),
-      close: Number(bar.close),
-      volume: Number(bar.volume) || null,
-      date: String(bar.date || '').slice(0, 10)
-    };
-  } catch {
-    return null;
-  }
+  const bars = await fetchEodBars(symbol, fromDate, date, apiKey);
+  if (!bars || bars.length === 0) return null;
+  const bar = bars[bars.length - 1];
+  return {
+    open: Number(bar.open),
+    high: Number(bar.high),
+    low: Number(bar.low),
+    close: Number(bar.close),
+    volume: Number(bar.volume) || null,
+    date: String(bar.date || '').slice(0, 10)
+  };
 }
 
 async function loadEtfProxyCache(rootDir) {
@@ -157,7 +154,7 @@ async function collectProxyRows(symbols, ndjsonMap, defaultAsOf, apiKey, proxyCa
 
     rows.push({
       symbol, close: null, open: null, volume: null, change_pct: null,
-      as_of: defaultAsOf, unavailable: true, source: 'unavailable'
+      as_of: null, unavailable: true, source: 'unavailable'
     });
   }
   return rows;
@@ -216,7 +213,16 @@ async function main() {
       .filter(([ticker]) => ticker)
   );
 
-  const defaultAsOf = String(runContext.generatedAt).slice(0, 10);
+  // Derive data date from actual NDJSON data, NOT from build time.
+  // Only fall back to build date if no real data date is available.
+  const ndjsonDataDate = ndjsonRows.length > 0
+    ? ndjsonRows.reduce((latest, row) => {
+        const d = String(row?.trading_date || row?.date || '').slice(0, 10);
+        return d > latest ? d : latest;
+      }, '')
+    : '';
+  const buildDate = String(runContext.generatedAt).slice(0, 10);
+  const defaultAsOf = ndjsonDataDate || buildDate;
   const proxyRows = await collectProxyRows(INDEX_PROXIES, ndjsonMap, defaultAsOf, apiKey, proxyCache);
   const rawSectorRows = await collectProxyRows(SECTOR_ETFS, ndjsonMap, defaultAsOf, apiKey, proxyCache);
 
@@ -270,13 +276,16 @@ async function main() {
     symbols_covered: ndjsonRows.length || Number(healthDoc?.coverage?.symbols ?? 0)
   };
 
-  const asOf = proxyRows.find((row) => row?.as_of)?.as_of || defaultAsOf;
+  // data_date = actual market data date from available rows (never build time)
+  const dataDate = proxyRows.find((row) => row?.as_of && !row.unavailable)?.as_of
+    || rawSectorRows.find((row) => row?.as_of && !row.unavailable)?.as_of
+    || defaultAsOf;
   const etfSources = [...proxyRows, ...rawSectorRows].map((r) => r.source).filter(Boolean);
   const doc = {
     meta: {
       schema_version: 'rv.derived.market.v1',
       generated_at: runContext.generatedAt,
-      data_date: asOf,
+      data_date: dataDate,
       provider: 'derived-local',
       source_chain: [
         '/data/v3/pulse/market-health/latest.json',
@@ -298,8 +307,12 @@ async function main() {
   };
 
   await writeJsonArtifact(rootDir, 'public/data/v3/derived/market/latest.json', doc);
+  // Promote to last-known-good on successful build
   const available = [...proxyRows, ...rawSectorRows].filter((r) => !r.unavailable).length;
   const total = proxyRows.length + rawSectorRows.length;
+  if (available > 0) {
+    await promoteToLastGood(rootDir, 'public/data/v3/derived/market/latest.json', 'public/data/v3/derived/market/latest.last-good.json');
+  }
   console.log(`DP8 market-hub done indices=${proxyRows.length} sectors=${sectorRows.length} movers=${movers.length} etf_available=${available}/${total}`);
 }
 

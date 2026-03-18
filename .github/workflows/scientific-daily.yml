@@ -1,8 +1,14 @@
 name: Scientific Daily Snapshot
 
 on:
+  # Primary trigger: runs after data-pulse-daily completes (data-state dependency)
+  workflow_run:
+    workflows: ["data-pulse-daily.v3"]
+    types: [completed]
+    branches: [main]
+  # Fallback: manual dispatch or schedule (delayed to allow data-pulse to finish first)
   schedule:
-    - cron: "15 23 * * 1-5"
+    - cron: "45 23 * * 1-5"
   workflow_dispatch:
 
 permissions:
@@ -31,11 +37,18 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Validate required inputs
+      - name: Skip if upstream failed (workflow_run trigger)
+        if: github.event_name == 'workflow_run' && github.event.workflow_run.conclusion != 'success'
+        run: |
+          echo "Upstream workflow failed — skipping scientific snapshot."
+          exit 0
+
+      - name: Data-state gate (validate pipeline inputs)
         run: |
           set -euo pipefail
           test -s public/data/universe/all.json
           test -s public/data/models/weights-v9.json
+          node scripts/ci/validate-pipeline-inputs.mjs
 
       - name: Generate scientific snapshot
         run: |
@@ -70,6 +83,8 @@ jobs:
             public/data/v3/pulse/market-health/latest.json \
             public/data/v3/pulse/top-movers/latest.json \
             public/data/v3/derived/market/latest.json \
+            public/data/v3/derived/market/latest.last-good.json \
+            public/data/v3/derived/market/global-latest.last-good.json \
             public/data/ui/benchmarks/latest.json \
             public/data/ui/peers/latest.json \
             public/data/ui/correlations/latest.json

@@ -11,6 +11,7 @@
         '/data/v3/derived/market/global-latest.json',
         '/data/v3/derived/market/latest.json'
     ];
+    const DICT_URL = '/config/narrative-dictionary.json';
     const MH = {
         bg: '#070a0f', panel: '#0d1119', surface: '#111827', border: '#1c2535',
         dim: '#243044', text: '#dde3ed', muted: '#5a6a82', faint: '#0f1722',
@@ -18,12 +19,16 @@
         blue: '#3b82f6', purple: '#8b5cf6', orange: '#f97316'
     };
     const PHASE_COLORS = { EARLY: '#3b82f6', MID: '#10b981', LATE: '#f59e0b', EXHAUSTED: '#f97316', REVERSAL_RISK: '#ef4444', NEUTRAL: '#475569' };
-    const PHASE_LABELS = { EARLY: 'Early', MID: 'Mid Trend', LATE: 'Late', EXHAUSTED: 'Exhausted', REVERSAL_RISK: 'Reversal Risk', NEUTRAL: 'Neutral' };
+    // Fallback labels — overridden by narrative dictionary when loaded
+    const PHASE_LABELS_FALLBACK = { EARLY: 'Early', MID: 'Mid Trend', LATE: 'Late', EXHAUSTED: 'Exhausted', REVERSAL_RISK: 'Reversal Risk', NEUTRAL: 'Neutral' };
     const CONF_COLORS = { HIGH: '#10b981', MEDIUM: '#f59e0b', LOW: '#ef4444' };
+
+    // Narrative dictionary — loaded at init, provides all labels/tooltips
+    let narrativeDict = null;
 
     const TABS = [
         { id: 'snapshot', label: 'Snapshot' },
-        { id: 'flows', label: 'Flows' },
+        { id: 'flows', label: 'Money Flow' },
         { id: 'sectors', label: 'Sectors' },
         { id: 'commodities', label: 'Commodities' },
         { id: 'crypto', label: 'Crypto' },
@@ -36,6 +41,8 @@
     ];
 
     let doc = null;
+    let rotationDoc = null;
+    const ROTATION_SUMMARY_URL = '/data/v3/derived/market/capital-rotation/latest.json';
     let currentTab = 'snapshot';
     let proMode = false;
     let alertsState = [];
@@ -50,22 +57,48 @@
     // ═══ HELPERS ═══
     function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
 
+    // Dictionary lookup: returns entry or null
+    function dictLookup(section, key) {
+        return narrativeDict?.[section]?.[key] || null;
+    }
+    function dictLabel(section, key, fallback) {
+        return dictLookup(section, key)?.label || fallback || key || '—';
+    }
+    function dictTooltip(section, key) {
+        return dictLookup(section, key)?.tooltip || '';
+    }
+    function phaseLabel(phase) {
+        return dictLabel('phase', phase, PHASE_LABELS_FALLBACK[phase]);
+    }
+
+    // Build tldr from structured narrative codes (dictionary-driven)
+    function buildTldr(c) {
+        if (!c?.narrative) return c?.tldr || '';
+        const phaseShort = dictLookup('phase', c.narrative.phase_code)?.short || c.narrative.phase_code;
+        const confLabel = dictLabel('confidence', c.narrative.confidence_code, c.narrative.confidence_code);
+        return `${phaseShort}. Score ${c.score}/100, ${confLabel} confidence.`;
+    }
+
     function scorePill(score) {
         const s = Number(score) || 0;
+        const band = s >= 65 ? 'bullish' : s >= 45 ? 'neutral' : 'bearish';
         const cls = s >= 65 ? 'mh-score-bull' : s >= 45 ? 'mh-score-warn' : 'mh-score-bear';
-        return `<span class="mh-score ${cls}">${s}</span>`;
+        const tip = dictTooltip('score_bands', band);
+        return `<span class="mh-score ${cls}"${tip ? ` title="${esc(tip)}"` : ''}>${s}</span>`;
     }
 
     function phaseBadge(phase) {
         const c = PHASE_COLORS[phase] || MH.neutral;
-        const l = PHASE_LABELS[phase] || phase || '—';
-        return `<span class="mh-phase" style="background:${c}22;color:${c}">${esc(l)}</span>`;
+        const l = phaseLabel(phase);
+        const tip = dictTooltip('phase', phase);
+        return `<span class="mh-phase" style="background:${c}22;color:${c}"${tip ? ` title="${esc(tip)}"` : ''}>${esc(l)}</span>`;
     }
 
     function confBadge(conf) {
         const label = conf?.label || 'LOW';
         const c = CONF_COLORS[label] || MH.neutral;
-        return `<span class="mh-conf" style="background:${c}15;color:${c}">${label}${conf?.value != null ? ' ' + conf.value.toFixed(2) : ''}</span>`;
+        const tip = dictTooltip('confidence', label);
+        return `<span class="mh-conf" style="background:${c}15;color:${c}"${tip ? ` title="${esc(tip)}"` : ''}>${label}${conf?.value != null ? ' ' + conf.value.toFixed(2) : ''}</span>`;
     }
 
     function driverChips(drivers) {
@@ -85,16 +118,23 @@
     function card(inner) { return `<article class="mh-card">${inner}</article>`; }
     function secTitle(t) { return `<div class="mh-section-title">${esc(t)}</div>`; }
 
+    function quoteChips(q) {
+        if (!q?.available) return '';
+        const f = (v) => v != null ? Number(v).toFixed(2) : '—';
+        return `<span class="mh-chip" style="background:${MH.surface};color:${MH.muted};font-size:0.68rem">O ${f(q.open)} H ${f(q.high)} L ${f(q.low)} C ${f(q.close)}</span>`;
+    }
+
     function cardRow(c) {
         if (!c) return '';
+        const tldr = buildTldr(c);
         return `<div class="mh-card-row">
       <div class="mh-card-row-left">
         <div class="mh-card-row-tags">
           <span class="mh-card-row-name">${esc(c.name || c.id)}</span>
           ${phaseBadge(c.phase)} ${confBadge(c.confidence)}
         </div>
-        <div class="mh-card-row-drivers">${driverChips(c.drivers_top3)}</div>
-        ${c.tldr ? `<div class="mh-card-row-tldr">${esc(c.tldr)}</div>` : ''}
+        <div class="mh-card-row-drivers">${driverChips(c.drivers_top3)} ${quoteChips(c.quote)}</div>
+        ${tldr ? `<div class="mh-card-row-tldr">${esc(tldr)}</div>` : ''}
       </div>
       <div class="mh-card-row-right">${scorePill(c.score)}</div>
     </div>`;
@@ -129,67 +169,45 @@
         const hasCards = data?.cards && typeof data.cards === 'object' && Object.keys(data.cards).length > 0;
         if (hasCards) return raw;
 
+        // Fallback adapter: market-latest.json has no cards.
+        // Build minimal display-only cards — NO competing fachlogik.
+        // Phase is always NEUTRAL (single-day change cannot determine trend lifecycle).
+        // Confidence is always LOW (no multi-timeframe data available).
         const sectors = Array.isArray(data.sectors) ? data.sectors : [];
         const indices = Array.isArray(data.indices) ? data.indices : [];
         const pulse = data.pulse && typeof data.pulse === 'object' ? data.pulse : {};
         const cards = {};
 
-        function phaseFromChange(changePct) {
-            const c = Number(changePct) || 0;
-            if (c >= 1.2) return 'MID';
-            if (c >= 0.25) return 'EARLY';
-            if (c <= -1.2) return 'REVERSAL_RISK';
-            if (c <= -0.25) return 'LATE';
-            return 'NEUTRAL';
-        }
-
-        function confidenceFromStaleness(staleDays) {
-            const sd = Number(staleDays);
-            if (!Number.isFinite(sd)) return { label: 'MEDIUM', value: 0.6 };
-            if (sd <= 1) return { label: 'HIGH', value: 0.82 };
-            if (sd <= 3) return { label: 'MEDIUM', value: 0.62 };
-            return { label: 'LOW', value: 0.35 };
-        }
-
-        function buildCard(type, id, name, changePct, staleDays) {
+        function buildFallbackCard(type, id, name, changePct) {
             const change = Number(changePct) || 0;
             const score = Math.round(clamp(50 + (change * 18), 0, 100));
             const dir = change > 0 ? 'up' : (change < 0 ? 'down' : 'flat');
             return {
-                id,
-                type,
-                name,
-                score,
-                phase: phaseFromChange(change),
-                confidence: confidenceFromStaleness(staleDays),
+                id, type, name, score,
+                phase: 'NEUTRAL',
+                confidence: { label: 'LOW', value: 0.30, fallback: true },
                 momentum: { m20: change, m60: null, m200: null },
                 vol_z: null,
                 drivers_top3: [
-                    { label: 'Flow Direction', dir, value: change, unit: '%' },
                     { label: 'Price Change', dir, value: change, unit: '%' }
                 ],
-                tldr: `${name} ${change >= 0 ? 'up' : 'down'} ${Math.abs(change).toFixed(2)}%`
+                tldr: `${name} ${change >= 0 ? 'up' : 'down'} ${Math.abs(change).toFixed(2)}% (fallback — limited data)`,
+                data_status: { source: 'frontend-fallback', stale: true }
             };
         }
 
         sectors.forEach((s) => {
             const symbol = String(s?.symbol || '').toUpperCase();
             if (!symbol) return;
-            const id = `SECTOR:${symbol}`;
-            cards[id] = buildCard('sector', id, s?.display_name || s?.sector || symbol, s?.change_pct, s?.stale_days);
+            cards[`SECTOR:${symbol}`] = buildFallbackCard('sector', `SECTOR:${symbol}`, s?.display_name || s?.sector || symbol, s?.change_pct);
         });
 
         indices.forEach((idx) => {
             const symbol = String(idx?.symbol || '').toUpperCase();
             if (!symbol) return;
-            const id = `INDEX:${symbol}`;
-            cards[id] = buildCard('index', id, symbol, idx?.change_pct, idx?.stale_days);
+            cards[`INDEX:${symbol}`] = buildFallbackCard('index', `INDEX:${symbol}`, symbol, idx?.change_pct);
         });
 
-        const riskOnOff = Number.isFinite(Number(pulse?.risk_on_off)) ? Number(pulse.risk_on_off) : 0.5;
-        const flowScore = Math.round(clamp(riskOnOff * 100, 0, 100));
-        const riskScore = Math.round(clamp((1 - riskOnOff) * 100, 0, 100));
-        const trendScore = Math.round(clamp(50 + ((Number(pulse?.average_change_pct) || 0) * 12), 0, 100));
         const regimeMode = String(pulse?.risk_mode || '').toLowerCase() === 'risk-off' ? 'STRESS' : 'NORMAL';
 
         return {
@@ -213,11 +231,7 @@
                     }
                 },
                 regime_mode: regimeMode,
-                regime_details: {
-                    breadth_z: null,
-                    credit_z: null,
-                    vol_z: null
-                },
+                regime_details: { breadth_z: null, credit_z: null, vol_z: null },
                 us_pulse: {
                     average_change_pct: Number(pulse?.average_change_pct) || 0,
                     breadth_up: Number(pulse?.breadth_up) || 0,
@@ -226,11 +240,11 @@
                     symbols_covered: Number(pulse?.symbols_covered) || 0
                 },
                 investment_compass: {
-                    composite_score: Math.round(clamp((trendScore * 0.45) + (flowScore * 0.35) + ((100 - riskScore) * 0.20), 0, 100)),
-                    trend_score: trendScore,
-                    risk_score: riskScore,
-                    flow_score: flowScore,
-                    summary: 'Derived from market pulse and sector/index daily movement.'
+                    composite_score: 50,
+                    trend_score: 50,
+                    risk_score: 50,
+                    flow_score: 50,
+                    summary: 'Fallback mode — global-latest.json unavailable. Scores reflect limited data.'
                 }
             }
         };
@@ -274,9 +288,10 @@
         const regCol = regime === 'CRISIS' ? MH.bear : regime === 'STRESS' ? MH.warn : MH.bull;
 
         // Regime + Composite
+        const regTip = dictTooltip('regime', regime);
         h += card(`<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:0.6rem">
       <div>
-        <div style="font-size:1.1rem;color:${regCol};font-weight:700">Regime: ${regime}</div>
+        <div style="font-size:1.1rem;color:${regCol};font-weight:700"${regTip ? ` title="${esc(regTip)}"` : ''}>Regime: ${dictLabel('regime', regime, regime)}</div>
         <div style="font-size:0.78rem;color:${MH.muted};margin-top:0.2rem">
           Breadth Z: ${rd.breadth_z?.toFixed(2) || '—'} | Credit Z: ${rd.credit_z?.toFixed(2) || '—'} | Vol Z: ${rd.vol_z?.toFixed(2) || '—'}
         </div>
@@ -312,10 +327,10 @@
         h += card(`${secTitle('Trend Lifecycle Distribution')}
       <div class="mh-phase-bar">${Object.entries(phaseG).filter(([, v]) => v.length).map(([k, v]) => {
             const pct = (v.length / total * 100).toFixed(0);
-            return `<div class="mh-phase-bar-seg" style="flex:${v.length};background:${PHASE_COLORS[k]}" title="${PHASE_LABELS[k]}: ${v.length}">${pct}%</div>`;
+            return `<div class="mh-phase-bar-seg" style="flex:${v.length};background:${PHASE_COLORS[k]}" title="${phaseLabel(k)}: ${v.length}">${pct}%</div>`;
         }).join('')}</div>
       <div style="display:flex;gap:0.6rem;flex-wrap:wrap;font-size:0.75rem">${Object.entries(phaseG).filter(([, v]) => v.length).map(([k, v]) =>
-            `<span style="color:${PHASE_COLORS[k]}">${PHASE_LABELS[k]}: ${v.length}</span>`).join('')}
+            `<span style="color:${PHASE_COLORS[k]}">${phaseLabel(k)}: ${v.length}</span>`).join('')}
       </div>`);
 
         // Top/Bottom
@@ -435,7 +450,8 @@
         all.forEach(c => {
             const fd = c.drivers_top3?.find(d => d.label === 'Flow Direction');
             const fc = fd?.dir === 'up' ? MH.bull : fd?.dir === 'down' ? MH.bear : MH.muted;
-            const fl = fd ? (fd.dir === 'up' ? 'Inflow' : 'Outflow') : '—';
+            const flowKey = fd?.dir === 'up' ? 'bullish' : fd?.dir === 'down' ? 'bearish' : 'neutral';
+            const fl = fd ? dictLabel('flow_direction', flowKey, fd.dir === 'up' ? 'Inflow' : 'Outflow') : '—';
             const mc = (c.momentum?.m20 || 0) >= 0 ? MH.bull : MH.bear;
             h += `<tr><td style="color:${MH.text}">${esc(c.name || c.key)}</td>
         <td class="mh-center" style="font-size:0.72rem;color:${MH.muted}">${esc(c.type || '—')}</td>
@@ -459,7 +475,7 @@
         // Regime
         h += card(`<div style="display:flex;justify-content:space-between;align-items:center">
       <div><div style="font-size:0.82rem;color:${MH.muted}">Market Regime</div>
-        <div style="font-size:1.4rem;font-weight:700;color:${regCol}">${regime}</div></div>
+        <div style="font-size:1.4rem;font-weight:700;color:${regCol}" title="${esc(dictTooltip('regime', regime))}">${dictLabel('regime', regime, regime)}</div></div>
       <div style="display:grid;gap:0.3rem;text-align:right">
         <div style="font-size:0.78rem"><span style="color:${MH.muted}">Breadth Z:</span> <span style="color:${(rd.breadth_z || 0) < -1 ? MH.bear : MH.text};font-weight:600">${rd.breadth_z?.toFixed(2) || '—'}</span></div>
         <div style="font-size:0.78rem"><span style="color:${MH.muted}">Credit Z:</span> <span style="color:${(rd.credit_z || 0) > 1.5 ? MH.bear : MH.text};font-weight:600">${rd.credit_z?.toFixed(2) || '—'}</span></div>
@@ -576,24 +592,23 @@
         </div>`)}
       ${card(`<div style="font-size:0.88rem;font-weight:700;color:${MH.text};margin-bottom:0.6rem">Phase Classification (Trend Lifecycle)</div>
         <div style="font-size:0.8rem;color:${MH.muted};line-height:1.6;display:grid;gap:0.3rem">
-          <div>${phaseBadge('EARLY')} Short momentum positive, medium not yet confirmed</div>
-          <div>${phaseBadge('MID')} All timeframes aligned positive</div>
-          <div>${phaseBadge('LATE')} Long trend intact but short momentum fading</div>
-          <div>${phaseBadge('EXHAUSTED')} Trend overheated — high vol or divergence</div>
-          <div>${phaseBadge('REVERSAL_RISK')} Medium and long momentum both negative</div>
-          <div>${phaseBadge('NEUTRAL')} No clear trend or insufficient data</div>
+          ${['EARLY', 'MID', 'LATE', 'EXHAUSTED', 'REVERSAL_RISK', 'NEUTRAL'].map(p =>
+            `<div>${phaseBadge(p)} ${esc(dictTooltip('phase', p) || p)}</div>`
+          ).join('\n          ')}
         </div>`)}
       ${card(`<div style="font-size:0.88rem;font-weight:700;color:${MH.text};margin-bottom:0.6rem">Confidence Calculation</div>
         <div style="font-size:0.8rem;color:${MH.muted};line-height:1.6">
           <p><span class="mh-code">confidence = signal_agreement × data_quality</span></p>
           <p>Data quality = coverage × freshness × source reliability</p>
-          <p><strong>HIGH</strong> ≥ 0.75 | <strong>MEDIUM</strong> ≥ 0.50 | <strong>LOW</strong> &lt; 0.50</p>
+          ${['HIGH', 'MEDIUM', 'LOW'].map(c =>
+            `<p><strong>${c}</strong>: ${esc(dictTooltip('confidence', c) || c)}</p>`
+          ).join('\n          ')}
         </div>`)}
       ${card(`<div style="font-size:0.88rem;font-weight:700;color:${MH.text};margin-bottom:0.6rem">Regime Engine</div>
         <div style="font-size:0.8rem;color:${MH.muted};line-height:1.6">
-          <p><strong>NORMAL:</strong> No stress → scores unmodified</p>
-          <p><strong>STRESS:</strong> 2+ of: Vol Z > 1.5, Credit Z > 1.5, Breadth Z &lt; -1.5 → scores ×0.6</p>
-          <p><strong>CRISIS:</strong> 3 conditions + Credit Z > 2.5 → scores ×0.3</p>
+          ${['NORMAL', 'STRESS', 'CRISIS'].map(r =>
+            `<p><strong>${dictLabel('regime', r, r)}:</strong> ${esc(dictTooltip('regime', r) || r)}</p>`
+          ).join('\n          ')}
         </div>`)}
       ${card(`<div style="font-size:0.88rem;font-weight:700;color:${MH.text};margin-bottom:0.6rem">Data Sources & Limitations</div>
         <div style="font-size:0.8rem;color:${MH.muted};line-height:1.6">
@@ -628,6 +643,14 @@
             ['Freshness Days', 'Days since last data update. Stale data > 2 days reduces confidence.'],
             ['Anti-Noise', 'Phase cannot flip unless confirmed for 2+ consecutive days. Prevents flicker.'],
             ['Regime Damping', 'In STRESS: scores ×0.6, confidence ×0.85. In CRISIS: scores ×0.3, confidence ×0.7.'],
+            ['Capital Rotation Score', 'Global 0-100 score aggregating macro regime, risk appetite, sector breadth, and confirmation signals. EOD-based, not real fund flows.'],
+            ['Relative Rotation', 'Comparing the price ratio of two assets over time to detect shifts in relative strength. Rising ratio = numerator gaining strength.'],
+            ['Risk-Adjusted Momentum (RAM)', 'Return divided by rolling volatility across multiple windows (1M/3M/6M/12M), weighted to produce a composite momentum signal.'],
+            ['Confirmation Layer', 'Independent checks (Credit, Dollar, Real Rates, VIX) that either support or contradict the rotation signal.'],
+            ['Cycle Position', 'Estimated position in the rotation cycle (Early/Mid/Late/Exhausted/Reversal Watch) based on percentile rank and momentum.'],
+            ['Divergence', 'When two related signals disagree — e.g., equities rising but credit spreads widening. Reduces confidence.'],
+            ['Neutral Mode', 'When score is 40-60: "quiet" (low conflict) or "conflicted" (blocks disagree strongly).'],
+            ['Sector Relative Momentum Map', 'Scatter plot showing each sector\'s relative strength (X) vs momentum (Y). NOT RRG™; uses risk-adjusted momentum.'],
         ];
         let h = secTitle('Glossary');
         terms.forEach(([term, desc]) => {
@@ -639,9 +662,974 @@
         panel.innerHTML = h;
     }
 
+    // ═══ CAPITAL ROTATION MONITOR (Money Flow) ═══
+
+    const RATIO_NAMES = {
+        SPY_GLD: 'S&P 500 / Gold', SPY_TLT: 'S&P 500 / Treasuries', QQQ_DIA: 'Nasdaq / Dow',
+        BTC_GLD: 'Bitcoin / Gold', GLD_UUP: 'Gold / Dollar', HYG_LQD: 'High Yield / IG Credit',
+        VWO_SPY: 'Emerging Mkts / S&P', SPY_VGK: 'S&P 500 / Europe',
+        XLK_XLP: 'Tech / Staples', SOXX_XLU: 'Semis / Utilities', XLY_XLP: 'Discret. / Staples',
+        XLE_XLU: 'Energy / Utilities', XLF_SPY: 'Financials / S&P', XLI_XLP: 'Industrials / Staples',
+        XLV_XLU: 'Healthcare / Utilities', XLK_RSP: 'Tech / Equal Wt S&P',
+        QQQ_SPY: 'Nasdaq / S&P 500', IWM_SPY: 'Small Cap / Large Cap',
+        IVW_IVE: 'Growth / Value', SMH_SPY: 'Semis / S&P 500'
+    };
+
+    function rotHeatmapCell(val, label) {
+        if (val == null) return `<td class="mh-center" style="background:${MH.neutral}22;color:${MH.muted};font-size:0.72rem;padding:0.3rem" data-sort="-1">—</td>`;
+        const pct = Number(val) || 0;
+        const c = pct >= 60 ? MH.blue : pct <= 40 ? MH.orange : MH.neutral;
+        const arrow = pct >= 55 ? '▲' : pct <= 45 ? '▼' : '—';
+        return `<td class="mh-center" style="background:${c}18;color:${c};font-size:0.74rem;font-weight:600;padding:0.35rem" title="${esc(label)}: ${pct}" data-sort="${pct}">${pct} ${arrow}</td>`;
+    }
+
+    function rotConfirmCard(key, conf) {
+        if (!conf) return '';
+        const c = conf.supportsRotation === 'yes' ? MH.bull : conf.supportsRotation === 'no' ? MH.bear : MH.neutral;
+        const icon = conf.supportsRotation === 'yes' ? '✓' : conf.supportsRotation === 'no' ? '✗' : '~';
+        return `<div style="background:${MH.surface};border:1px solid ${MH.border};border-left:3px solid ${c};border-radius:6px;padding:0.5rem 0.7rem;font-size:0.78rem">
+      <div style="color:${MH.text};font-weight:600">${icon} ${esc(key)}</div>
+      <div style="color:${c};font-size:0.72rem">${esc(conf.state || conf.direction)}</div>
+      <div style="color:${MH.muted};font-size:0.65rem">Strength: ${((conf.strength || 0) * 100).toFixed(0)}%</div>
+    </div>`;
+    }
+
+    function rotBuildSectorSVG(sectorRel) {
+        if (!sectorRel || !Object.keys(sectorRel).length) return '<div style="color:#64748b;font-size:0.82rem">No sector relative data.</div>';
+        const W = 380, H = 280, PAD = 45;
+        const entries = Object.entries(sectorRel);
+        let svg = `<svg viewBox="0 0 ${W} ${H}" style="width:100%;max-width:${W}px;height:auto;font-family:monospace">`;
+        svg += `<rect x="0" y="0" width="${W}" height="${H}" fill="${MH.panel}" rx="6"/>`;
+        const cx = PAD, cy = PAD, cw = W - 2 * PAD, ch = H - 2 * PAD;
+        svg += `<line x1="${cx}" y1="${cy + ch / 2}" x2="${cx + cw}" y2="${cy + ch / 2}" stroke="${MH.border}" stroke-width="1"/>`;
+        svg += `<line x1="${cx + cw / 2}" y1="${cy}" x2="${cx + cw / 2}" y2="${cy + ch}" stroke="${MH.border}" stroke-width="1"/>`;
+        svg += `<text x="${cx + cw * 0.75}" y="${cy + 14}" fill="${MH.muted}" font-size="9" text-anchor="middle">Leading</text>`;
+        svg += `<text x="${cx + cw * 0.25}" y="${cy + 14}" fill="${MH.muted}" font-size="9" text-anchor="middle">Improving</text>`;
+        svg += `<text x="${cx + cw * 0.75}" y="${cy + ch - 4}" fill="${MH.muted}" font-size="9" text-anchor="middle">Weakening</text>`;
+        svg += `<text x="${cx + cw * 0.25}" y="${cy + ch - 4}" fill="${MH.muted}" font-size="9" text-anchor="middle">Lagging</text>`;
+        svg += `<text x="${cx + cw / 2}" y="${H - 4}" fill="${MH.muted}" font-size="8" text-anchor="middle">RS Score →</text>`;
+        svg += `<text x="10" y="${cy + ch / 2}" fill="${MH.muted}" font-size="8" text-anchor="middle" transform="rotate(-90,10,${cy + ch / 2})">Momentum →</text>`;
+        for (const [id, s] of entries) {
+            const x = cx + (Math.max(0, Math.min(100, s.rsScore)) / 100) * cw;
+            const y = cy + ch - (Math.max(0, Math.min(100, s.momScore)) / 100) * ch;
+            const dotC = s.rsScore >= 50 ? (s.momScore >= 50 ? MH.bull : MH.warn) : (s.momScore >= 50 ? MH.blue : MH.bear);
+            const label = (s.displayName || id).replace(/ \/.*/g, '').slice(0, 8);
+            svg += `<circle cx="${x}" cy="${y}" r="5" fill="${dotC}" opacity="0.85"><title>${esc(s.displayName)} | RS:${s.rsScore} Mom:${s.momScore} | ${s.quadrant}</title></circle>`;
+            svg += `<text x="${x}" y="${y - 8}" fill="${MH.text}" font-size="7" text-anchor="middle">${esc(label)}</text>`;
+        }
+        svg += '</svg>';
+        return svg;
+    }
+
+    /** Build flow intelligence summary from rotation data */
+    function buildFlowIntel(rd) {
+        const ratios = rd.ratios || {};
+        const blocks = rd.blocks || {};
+        const cycle = rd.cycle || {};
+        const gs = rd.globalScore || {};
+        const lines = [];
+
+        // 1) Where is money flowing?
+        const sorted = Object.entries(ratios).filter(([, r]) => r.composite != null).sort(([, a], [, b]) => b.composite - a.composite);
+        const top3 = sorted.slice(0, 3);
+        const bot3 = sorted.slice(-3).reverse();
+        if (top3.length) {
+            const names = top3.map(([id]) => RATIO_NAMES[id] || id.replace(/_/g, '/')).join(', ');
+            lines.push(`<span style="color:${MH.bull}">Gaining strength:</span> ${esc(names)}`);
+        }
+        if (bot3.length) {
+            const names = bot3.map(([id]) => RATIO_NAMES[id] || id.replace(/_/g, '/')).join(', ');
+            lines.push(`<span style="color:${MH.bear}">Losing strength:</span> ${esc(names)}`);
+        }
+
+        // 2) How long? Trend strength
+        const topId = top3[0]?.[0];
+        const topR = topId ? ratios[topId] : null;
+        if (topR) {
+            const ret1m = topR.returns?.['21'];
+            const ret3m = topR.returns?.['63'];
+            const ret6m = topR.returns?.['126'];
+            let duration = 'short-term';
+            if (ret6m != null && ret6m > 0.02 && ret3m != null && ret3m > 0.01) duration = '3-6 months';
+            else if (ret3m != null && ret3m > 0.01) duration = '1-3 months';
+            const strength = topR.composite >= 70 ? 'strong' : topR.composite >= 55 ? 'moderate' : 'weak';
+            lines.push(`Trend: <span style="color:${MH.text}">${esc(strength)}</span>, running ~${esc(duration)}`);
+        }
+
+        // 3) Cycle position
+        if (cycle.state && cycle.state !== 'Neutral / Undefined') {
+            const cycC = cycle.state.includes('Early') ? MH.blue : cycle.state.includes('Mid') ? MH.bull : cycle.state.includes('Late') ? MH.warn : MH.bear;
+            lines.push(`Cycle: <span style="color:${cycC}">${esc(cycle.state)}</span>`);
+        }
+
+        // 4) Oversold sectors to watch (low composite = potential next rotation target)
+        const sectorRatios = Object.entries(ratios).filter(([, r]) => r.category === 'sector' && r.composite != null);
+        const oversold = sectorRatios.filter(([, r]) => r.composite <= 35).sort(([, a], [, b]) => a.composite - b.composite);
+        if (oversold.length) {
+            const names = oversold.slice(0, 3).map(([id]) => RATIO_NAMES[id] || id.replace(/_/g, '/')).join(', ');
+            lines.push(`<span style="color:${MH.orange}">Watch (oversold):</span> ${names}`);
+        }
+
+        return lines;
+    }
+
+    // ═══ EXPERIMENTAL VISUALIZATIONS ═══
+
+    const VIZ_OPTIONS = [
+        { id: 'ladder', label: 'Leadership Ladder' },
+        { id: 'sankey', label: 'Sankey Flow Map' },
+        { id: 'rotationMap', label: 'Rotation & Opportunity Map' },
+        { id: 'cycleBar', label: 'Cycle Progress Bar' },
+        { id: 'timeline', label: 'Flow Story Timeline' }
+    ];
+
+    function _vizToggles() {
+        try { return JSON.parse(localStorage.getItem('mh_viz_toggles') || '{}'); } catch { return {}; }
+    }
+
+    function rotVizTogglePanel() {
+        const t = _vizToggles();
+        let h = '<details class="mh-viz-toggle-panel"><summary>Experimental Visualizations (toggle to preview)</summary>';
+        h += '<div class="mh-viz-toggle-grid">';
+        VIZ_OPTIONS.forEach(o => {
+            h += `<label><input type="checkbox" data-viz="${o.id}" ${t[o.id] ? 'checked' : ''} onchange="window._mhVizToggle('${o.id}',this.checked)"/> ${esc(o.label)}</label>`;
+        });
+        h += '</div></details>';
+        return h;
+    }
+
+    window._mhVizToggle = function (id, on) {
+        const t = _vizToggles();
+        t[id] = on;
+        localStorage.setItem('mh_viz_toggles', JSON.stringify(t));
+        const el = document.getElementById('mh-viz-' + id);
+        if (el) el.style.display = on ? 'block' : 'none';
+    };
+
+    // ── Traffic-light keyword coloring ──
+    function _colorKeywords(text) {
+        const green = ['buy', 'bullish', 'ueberkauft', 'overbought', 'staerke', 'strong', 'gaining', 'leading', 'positiv', 'stuetzend', 'risk-on'];
+        const red = ['sell', 'bearish', 'ueberverkauft', 'oversold', 'schwaeche', 'weak', 'losing', 'lagging', 'negativ', 'widersprechend', 'risk-off', 'erosion', 'verschlechtert', 'vorsicht'];
+        const yellow = ['wait', 'neutral', 'abwarten', 'gemischt', 'mixed', 'seitwaerts', 'unklar', 'conflicted', 'quiet'];
+        let out = text;
+        green.forEach(w => { out = out.replace(new RegExp(`(\\b)(${w})(\\b)`, 'gi'), `$1<span style="color:${MH.bull};font-weight:700">$2</span>$3`); });
+        red.forEach(w => { out = out.replace(new RegExp(`(\\b)(${w})(\\b)`, 'gi'), `$1<span style="color:${MH.bear};font-weight:700">$2</span>$3`); });
+        yellow.forEach(w => { out = out.replace(new RegExp(`(\\b)(${w})(\\b)`, 'gi'), `$1<span style="color:${MH.warn};font-weight:700">$2</span>$3`); });
+        return out;
+    }
+
+    // ── Insight helper: generates a live one-liner conclusion for each section ──
+    function _insightBox(text) {
+        return `<div style="margin-bottom:0.5rem;padding:0.4rem 0.6rem;background:${MH.faint};border-left:3px solid ${MH.blue};border-radius:4px;font-size:0.74rem;color:${MH.text};line-height:1.4">${_colorKeywords(text)}</div>`;
+    }
+
+    function _heatmapInsight(rd) {
+        const ratios = rd.ratios || {};
+        const sorted = Object.entries(ratios).filter(([, r]) => r.composite != null).sort(([, a], [, b]) => b.composite - a.composite);
+        if (!sorted.length) return '';
+        const top = sorted[0], bot = sorted[sorted.length - 1];
+        const topName = RATIO_NAMES[top[0]] || top[0], botName = RATIO_NAMES[bot[0]] || bot[0];
+        const topR = top[1], botR = bot[1];
+        // Trend duration estimate
+        const ret6m = topR.returns?.['126'], ret3m = topR.returns?.['63'], ret1m = topR.returns?.['21'];
+        let duration = 'kurzfristig (< 1 Monat)';
+        if (ret6m != null && ret6m > 0.03 && ret3m != null && ret3m > 0.02) duration = 'seit ~3-6 Monaten aufgebaut';
+        else if (ret3m != null && ret3m > 0.01) duration = 'seit ~1-3 Monaten im Aufbau';
+        // Trend maturity
+        const zAbs = Math.abs(topR.zScore || 0);
+        let maturity = 'frueh im Trend';
+        if (zAbs > 2) maturity = 'bereits fortgeschritten (erhoehtes Reversalrisiko)';
+        else if (zAbs > 1.2) maturity = 'im mittleren Bereich';
+        // Weak side
+        const botZ = Math.abs(botR.zScore || 0);
+        const botWatch = botZ > 1.5 ? ` — ${botName} ist ueberverkauft und koennte der naechste Rotationskandidat sein` : '';
+        return _insightBox(`Staerkste Rotation: <strong>${esc(topName)}</strong> (Score ${topR.composite}), Trend ${duration}, ${maturity}.<br>Schwaechste: <strong>${esc(botName)}</strong> (${botR.composite})${botWatch}.`);
+    }
+
+    function _narrativeInsight(rd) {
+        const gs = rd.globalScore || {};
+        const divs = rd.divergences || [];
+        const sc = gs.value ?? 50;
+        let phase = sc >= 65 ? 'bullish' : sc <= 35 ? 'bearish' : 'neutral';
+        let signal = divs.length ? ` Achtung: ${divs.length} Divergenz(en) aktiv — das Bild ist nicht eindeutig.` : ' Keine Divergenzen aktiv.';
+        return _insightBox(`Gesamtbild: Der Markt ist aktuell <strong>${phase}</strong> (${sc}/100).${signal} Historisch dauern neutrale Phasen 2-8 Wochen, bevor eine klare Richtung entsteht.`);
+    }
+
+    function _cycleInsight(rd) {
+        const cyc = rd.cycle || {};
+        const conf = cyc.confidence ?? 0;
+        const state = cyc.state || 'Undefined';
+        if (state.includes('Neutral') || state.includes('Undefined')) return _insightBox('Kein klares Zyklussignal — der Markt zeigt gemischte Positionierung ohne dominante Rotationsrichtung.');
+        const early = state.includes('Early');
+        const late = state.includes('Late') || state.includes('Exhausted');
+        if (early) return _insightBox(`Fruehe Rotationsphase (Conf: ${conf}) — historisch folgen nach fruehen Signalen oft 2-4 Monate Trendfortsetzung, falls Breadth-Bestaetigung eintritt.`);
+        if (late) return _insightBox(`Spaete Phase / Erschoepfung (Conf: ${conf}) — historisch endet die Rotation innerhalb von 2-6 Wochen. Beobachte Watch-Kandidaten als naechste Fuehrung.`);
+        return _insightBox(`Zyklus: ${esc(state)} (Conf: ${conf}) — Trend ist aktiv, aber beobachte Divergenzen als Warnsignal fuer einen moeglichen Phasenwechsel.`);
+    }
+
+    function _confirmInsight(rd) {
+        const confs = rd.confirmations || {};
+        const supporting = Object.entries(confs).filter(([, c]) => c.supportsRotation === 'yes');
+        const against = Object.entries(confs).filter(([, c]) => c.supportsRotation === 'no');
+        if (supporting.length > against.length) return _insightBox(`Bestaetigung ueberwiegend positiv (${supporting.length} von ${Object.keys(confs).length} Signale stuetzend) — das Umfeld unterstuetzt die aktuelle Rotation.`);
+        if (against.length > supporting.length) return _insightBox(`Bestaetigung ueberwiegend negativ (${against.length} widersprechend) — Vorsicht, das Makro-Umfeld arbeitet gegen die Rotation.`);
+        return _insightBox('Bestaetigung gemischt — keine klare Unterstuetzung oder Widerspruch durch Credit, Dollar, VIX. Abwarten empfohlen.');
+    }
+
+    function _divInsight(rd) {
+        const divs = rd.divergences || [];
+        if (!divs.length) return _insightBox('Keine Divergenzen — alle Signale sind konsistent, was die Zuverlaessigkeit des aktuellen Scores erhoeht.');
+        const titles = divs.map(d => d.title).join(', ');
+        return _insightBox(`${divs.length} aktive Divergenz(en): ${esc(titles)} — unter der Oberflaeche bricht etwas auf. Historisch folgen nach Breadth-Erosion oft 4-8 Wochen spaeter Trendwechsel.`);
+    }
+
+    // ── Leadership Ladder ──
+    function rotVizLadder(rd) {
+        const ratios = rd.ratios || {};
+        const sorted = Object.entries(ratios).filter(([, r]) => r.composite != null).sort(([, a], [, b]) => b.composite - a.composite);
+        const top5 = sorted.slice(0, 5);
+        const bot5 = sorted.slice(-5).reverse();
+
+        function horizLabel(r) {
+            const ret = r.returns || {};
+            if (ret['126'] != null && Math.abs(ret['126']) > Math.abs(ret['63'] || 0)) return '6M';
+            if (ret['63'] != null && Math.abs(ret['63']) > Math.abs(ret['21'] || 0)) return '3M';
+            return '1M';
+        }
+
+        function renderCol(items, color, title) {
+            let h = `<div class="mh-viz-ladder-col"><h4 style="color:${color}">${title}</h4>`;
+            items.forEach(([id, r]) => {
+                const name = RATIO_NAMES[id] || id.replace(/_/g, '/');
+                h += `<div class="mh-viz-ladder-item" style="background:${color}10;border-left:3px solid ${color}">`;
+                h += `<div><span style="color:${MH.text};font-weight:600">${esc(name)}</span> <span style="color:${MH.muted};font-size:0.68rem">${esc(r.category)} · ${horizLabel(r)}</span></div>`;
+                h += scorePill(r.composite);
+                h += '</div>';
+            });
+            h += '</div>';
+            return h;
+        }
+
+        // Insight first
+        const topName = top5[0] ? (RATIO_NAMES[top5[0][0]] || top5[0][0]) : '—';
+        const botName = bot5[0] ? (RATIO_NAMES[bot5[0][0]] || bot5[0][0]) : '—';
+        const topR = top5[0]?.[1], botR = bot5[0]?.[1];
+        const spread = (topR?.composite || 50) - (botR?.composite || 50);
+        let h = secTitle('Leadership Ladder');
+        h += _insightBox(`Fuehrungsspread: ${spread} Punkte zwischen ${esc(topName)} und ${esc(botName)} — ${spread > 40 ? 'sehr breiter Spread, klare Rotationsrichtung' : spread > 20 ? 'moderater Spread, Rotation aktiv aber nicht extrem' : 'enger Spread, keine klare Fuehrung'}.`);
+        h += '<div class="mh-viz-ladder">' + renderCol(top5, MH.bull, 'Top Rotations') + renderCol(bot5, MH.bear, 'Weakest') + '</div>';
+        return h;
+    }
+
+    // ── Sankey Flow Map (with timeframe switcher) ──
+    const SANKEY_TIMEFRAMES = [
+        { id: '5', label: '1W', window: 5 },
+        { id: '21', label: '1M', window: 21 },
+        { id: '63', label: '3M', window: 63 },
+        { id: '126', label: '6M', window: 126 },
+        { id: '252', label: '1J', window: 252 },
+        { id: '756', label: '3J', window: 756 }
+    ];
+
+    window._mhSankeyTf = function (tf) {
+        localStorage.setItem('mh_sankey_tf', tf);
+        // Re-render sankey container
+        const el = document.getElementById('mh-sankey-inner');
+        if (el && window._mhRotationDoc) {
+            el.innerHTML = _buildSankeySvg(window._mhRotationDoc, tf);
+        }
+        // Update active button
+        document.querySelectorAll('.mh-sankey-tf-btn').forEach(btn => {
+            btn.style.background = btn.dataset.tf === tf ? MH.blue + '22' : 'transparent';
+            btn.style.color = btn.dataset.tf === tf ? MH.blue : MH.muted;
+        });
+    };
+
+    function _getSankeyTimeframe() {
+        const saved = localStorage.getItem('mh_sankey_tf');
+        if (saved && SANKEY_TIMEFRAMES.find(t => t.id === saved)) return saved;
+        // Smart default: pick longest available window with data
+        return '63'; // 3M default
+    }
+
+    function _buildSankeySvg(rd, tf) {
+        const ratios = rd.ratios || {};
+        const gs = rd.globalScore || {};
+        const win = tf || '63';
+
+        // Classify gainers/losers based on selected timeframe return
+        const entries = Object.entries(ratios).filter(([, r]) => r.composite != null);
+        const withReturn = entries.map(([id, r]) => {
+            const ret = r.returns?.[win];
+            const score = ret != null ? 50 + ret * 500 : r.composite; // scale return to pseudo-score
+            return [id, r, score];
+        });
+        withReturn.sort(([,, a], [,, b]) => b - a);
+        const gainers = withReturn.filter(([,, s]) => s > 55);
+        const losers = withReturn.filter(([,, s]) => s < 45).reverse();
+
+        const W = 600, nodeH = 22, gap = 6;
+        const maxNodes = Math.max(gainers.length, losers.length, 1);
+        const H = Math.max(200, maxNodes * (nodeH + gap) + 80);
+        const leftX = 10, midX = W / 2, rightX = W - 160;
+
+        let svg = `<svg viewBox="0 0 ${W} ${H}" class="mh-viz-sankey">`;
+        svg += `<rect x="0" y="0" width="${W}" height="${H}" fill="${MH.panel}" rx="6"/>`;
+
+        const regC = gs.regime === 'Bullish' ? MH.bull : gs.regime === 'Bearish' ? MH.bear : MH.neutral;
+        const regY = H / 2 - 20;
+        svg += `<rect x="${midX - 50}" y="${regY}" width="100" height="40" fill="${regC}" opacity="0.2" rx="6" stroke="${regC}" stroke-width="1"/>`;
+        svg += `<text x="${midX}" y="${regY + 18}" fill="${regC}" font-size="10" font-weight="700" text-anchor="middle">${esc(gs.regime || 'Neutral')}</text>`;
+        svg += `<text x="${midX}" y="${regY + 30}" fill="${MH.muted}" font-size="7" text-anchor="middle">Score: ${gs.value ?? 50}</text>`;
+
+        const tfLabel = SANKEY_TIMEFRAMES.find(t => t.id === win)?.label || win;
+        svg += `<text x="${leftX}" y="16" fill="${MH.bear}" font-size="9" font-weight="700">Losing (${tfLabel})</text>`;
+        svg += `<text x="${rightX}" y="16" fill="${MH.bull}" font-size="9" font-weight="700">Gaining (${tfLabel})</text>`;
+
+        losers.forEach(([id, r, score], i) => {
+            const name = RATIO_NAMES[id] || id.replace(/_/g, '/');
+            const y = 30 + i * (nodeH + gap);
+            const w = Math.max(20, (50 - score) * 2.5);
+            svg += `<rect x="${leftX}" y="${y}" width="${w}" height="${nodeH}" fill="${MH.bear}" opacity="0.4" rx="3"/>`;
+            svg += `<text x="${leftX + w + 4}" y="${y + nodeH / 2 + 3}" fill="${MH.muted}" font-size="7">${esc(name)} (${r.composite})</text>`;
+            const pathMidY = regY + 20;
+            svg += `<path d="M ${leftX + w} ${y + nodeH / 2} C ${midX - 80} ${y + nodeH / 2}, ${midX - 80} ${pathMidY}, ${midX - 50} ${pathMidY}" fill="none" stroke="${MH.bear}" stroke-width="${Math.max(1, (50 - score) / 10)}" opacity="0.3"/>`;
+        });
+
+        gainers.forEach(([id, r, score], i) => {
+            const name = RATIO_NAMES[id] || id.replace(/_/g, '/');
+            const y = 30 + i * (nodeH + gap);
+            const w = Math.max(20, (score - 50) * 2.5);
+            svg += `<rect x="${rightX + 150 - w}" y="${y}" width="${w}" height="${nodeH}" fill="${MH.bull}" opacity="0.4" rx="3"/>`;
+            svg += `<text x="${rightX + 150 - w - 4}" y="${y + nodeH / 2 + 3}" fill="${MH.muted}" font-size="7" text-anchor="end">${esc(name)} (${r.composite})</text>`;
+            const pathMidY = regY + 20;
+            svg += `<path d="M ${rightX + 150 - w} ${y + nodeH / 2} C ${midX + 80} ${y + nodeH / 2}, ${midX + 80} ${pathMidY}, ${midX + 50} ${pathMidY}" fill="none" stroke="${MH.bull}" stroke-width="${Math.max(1, (score - 50) / 10)}" opacity="0.3"/>`;
+        });
+
+        svg += '</svg>';
+        return svg + `<div style="font-size:0.68rem;color:${MH.muted};margin-top:0.3rem">${gainers.length} gaining, ${losers.length} losing in ${tfLabel} window.</div>`;
+    }
+
+    function rotVizSankey(rd) {
+        window._mhRotationDoc = rd;
+        const tf = _getSankeyTimeframe();
+
+        let h = secTitle('Sankey Flow Map');
+        // Timeframe switcher
+        h += `<div style="display:flex;gap:0.3rem;margin-bottom:0.4rem;align-items:center">`;
+        h += `<span style="font-size:0.68rem;color:${MH.muted};margin-right:0.3rem">Zeitraum:</span>`;
+        SANKEY_TIMEFRAMES.forEach(t => {
+            const active = t.id === tf;
+            h += `<button class="mh-sankey-tf-btn" data-tf="${t.id}" onclick="window._mhSankeyTf('${t.id}')" style="padding:0.15rem 0.45rem;font-size:0.7rem;border-radius:4px;border:1px solid ${MH.dim};cursor:pointer;font-family:inherit;font-weight:600;background:${active ? MH.blue + '22' : 'transparent'};color:${active ? MH.blue : MH.muted}">${t.label}</button>`;
+        });
+        h += `</div>`;
+        h += `<div style="font-size:0.62rem;color:${MH.warn};margin-bottom:0.3rem">Relative rotation, not direct fund flows.</div>`;
+        h += `<div id="mh-sankey-inner">${_buildSankeySvg(rd, tf)}</div>`;
+        return h;
+    }
+
+    // ── Rotation & Opportunity Map (Combined: Sector Momentum + Opp/Risk) ──
+    function rotVizRotationMap(rd) {
+        const sectorRel = rd.sectorRelative || {};
+        const ratios = rd.ratios || {};
+
+        // Build unified dataset: use sectorRelative as primary, add macro/style ratios that are NOT already represented
+        const sectorIds = new Set(Object.keys(sectorRel));
+        const unifiedEntries = [];
+
+        // Add sector-relative entries (deduplicated)
+        const seenLabels = new Set();
+        for (const [id, s] of Object.entries(sectorRel)) {
+            const label = (s.displayName || id).split(' / ')[0].trim();
+            if (seenLabels.has(label)) continue; // skip duplicates like 2x Tech
+            seenLabels.add(label);
+            unifiedEntries.push({
+                id, label, fullName: s.displayName || id,
+                rs: s.rsScore, mom: s.momScore, quadrant: s.quadrant,
+                composite: ratios[id]?.composite ?? s.rsScore,
+                zScore: ratios[id]?.zScore ?? 0,
+                trendScore: ratios[id]?.trendScore ?? 50,
+                category: ratios[id]?.category || 'sector',
+                source: 'sector'
+            });
+        }
+
+        // Add non-sector ratios that aren't already in (macro, style)
+        for (const [id, r] of Object.entries(ratios)) {
+            if (sectorIds.has(id)) continue;
+            if (r.composite == null) continue;
+            const label = (RATIO_NAMES[id] || id).split(' / ')[0].trim();
+            if (seenLabels.has(label)) continue;
+            seenLabels.add(label);
+            // Map composite/zScore to RS/Mom axes
+            const rs = r.composite;
+            const mom = clamp(50 + (r.ram || 0) * 3, 0, 100);
+            const quad = rs >= 50 ? (mom >= 50 ? 'Leading' : 'Weakening') : (mom >= 50 ? 'Improving' : 'Lagging');
+            unifiedEntries.push({
+                id, label, fullName: RATIO_NAMES[id] || id.replace(/_/g, '/'),
+                rs, mom, quadrant: quad,
+                composite: r.composite, zScore: r.zScore || 0,
+                trendScore: r.trendScore || 50, category: r.category || '—',
+                source: 'ratio'
+            });
+        }
+
+        if (!unifiedEntries.length) return secTitle('Rotation & Opportunity Map') + `<div style="color:${MH.muted}">No data.</div>`;
+
+        const W = 520, H = 400, PAD = 55;
+        let svg = `<svg viewBox="0 0 ${W} ${H}" class="mh-viz-opprisk">`;
+        svg += `<rect x="0" y="0" width="${W}" height="${H}" fill="${MH.panel}" rx="6"/>`;
+        const cx = PAD, cy = PAD, cw = W - 2 * PAD, ch = H - 2 * PAD;
+
+        // Quadrant fills
+        svg += `<rect x="${cx}" y="${cy}" width="${cw / 2}" height="${ch / 2}" fill="${MH.blue}" opacity="0.04"/>`;
+        svg += `<rect x="${cx + cw / 2}" y="${cy}" width="${cw / 2}" height="${ch / 2}" fill="${MH.bull}" opacity="0.06"/>`;
+        svg += `<rect x="${cx}" y="${cy + ch / 2}" width="${cw / 2}" height="${ch / 2}" fill="${MH.bear}" opacity="0.06"/>`;
+        svg += `<rect x="${cx + cw / 2}" y="${cy + ch / 2}" width="${cw / 2}" height="${ch / 2}" fill="${MH.warn}" opacity="0.04"/>`;
+
+        svg += `<line x1="${cx}" y1="${cy + ch / 2}" x2="${cx + cw}" y2="${cy + ch / 2}" stroke="${MH.border}" stroke-width="1"/>`;
+        svg += `<line x1="${cx + cw / 2}" y1="${cy}" x2="${cx + cw / 2}" y2="${cy + ch}" stroke="${MH.border}" stroke-width="1"/>`;
+
+        // Quadrant labels (dual: momentum quadrant + opportunity quadrant)
+        svg += `<text x="${cx + cw * 0.75}" y="${cy + 16}" fill="${MH.bull}" font-size="9" font-weight="700" text-anchor="middle" opacity="0.5">LEADING / STRONG</text>`;
+        svg += `<text x="${cx + cw * 0.25}" y="${cy + 16}" fill="${MH.blue}" font-size="9" font-weight="700" text-anchor="middle" opacity="0.5">IMPROVING / WATCH</text>`;
+        svg += `<text x="${cx + cw * 0.75}" y="${cy + ch - 6}" fill="${MH.warn}" font-size="9" font-weight="700" text-anchor="middle" opacity="0.5">WEAKENING / RISKY</text>`;
+        svg += `<text x="${cx + cw * 0.25}" y="${cy + ch - 6}" fill="${MH.bear}" font-size="9" font-weight="700" text-anchor="middle" opacity="0.5">LAGGING / AVOID</text>`;
+
+        svg += `<text x="${cx + cw / 2}" y="${H - 6}" fill="${MH.muted}" font-size="8" text-anchor="middle">Relative Strength / Composite Score →</text>`;
+        svg += `<text x="12" y="${cy + ch / 2}" fill="${MH.muted}" font-size="8" text-anchor="middle" transform="rotate(-90,12,${cy + ch / 2})">Momentum Score →</text>`;
+
+        // Plot entries with collision avoidance for labels
+        const labelPositions = [];
+        for (const e of unifiedEntries) {
+            const x = cx + (clamp(e.rs, 0, 100) / 100) * cw;
+            const y = cy + ch - (clamp(e.mom, 0, 100) / 100) * ch;
+            const radius = e.source === 'sector' ? (4 + Math.abs(e.rs - 50) / 10) : 3.5;
+            const dotC = e.rs >= 50 ? (e.mom >= 50 ? MH.bull : MH.warn) : (e.mom >= 50 ? MH.blue : MH.bear);
+            const opacity = e.source === 'sector' ? '0.85' : '0.55';
+            const stroke = e.source === 'sector' ? `stroke="${dotC}" stroke-width="1"` : `stroke="${MH.border}" stroke-width="0.5"`;
+
+            // Reversal indicator ring for high z-score
+            if (Math.abs(e.zScore) > 1.5) {
+                svg += `<circle cx="${x}" cy="${y}" r="${radius + 4}" fill="none" stroke="${MH.warn}" stroke-width="1" stroke-dasharray="2,2" opacity="0.5"><title>High Z-Score: potential reversal</title></circle>`;
+            }
+
+            svg += `<circle cx="${x}" cy="${y}" r="${radius}" fill="${dotC}" opacity="${opacity}" ${stroke}><title>${esc(e.fullName)} | RS:${Math.round(e.rs)} Mom:${Math.round(e.mom)} | ${e.quadrant} | Z:${e.zScore.toFixed(2)} | ${e.category}</title></circle>`;
+
+            // Smart label: avoid overlaps
+            let ly = y - radius - 4;
+            for (const lp of labelPositions) {
+                if (Math.abs(lp.x - x) < 30 && Math.abs(lp.y - ly) < 10) ly = lp.y - 11;
+            }
+            labelPositions.push({ x, y: ly });
+            const fs = e.source === 'sector' ? '8' : '6.5';
+            const fc = e.source === 'sector' ? MH.text : MH.muted;
+            svg += `<text x="${x}" y="${ly}" fill="${fc}" font-size="${fs}" font-weight="${e.source === 'sector' ? '600' : '400'}" text-anchor="middle">${esc(e.label)}</text>`;
+        }
+
+        svg += `<text x="${W - 6}" y="${H - 6}" fill="${MH.muted}" font-size="6" text-anchor="end">Not RRG™ — risk-adjusted momentum | Dashed ring = high reversal potential</text>`;
+        svg += '</svg>';
+
+        // Insight sentence
+        const leading = unifiedEntries.filter(e => e.quadrant === 'Leading');
+        const lagging = unifiedEntries.filter(e => e.quadrant === 'Lagging');
+        const watchCandidates = unifiedEntries.filter(e => e.rs < 40 && Math.abs(e.zScore) > 1.2);
+        let insight = `${leading.length} Sektoren/Ratios fuehren (Leading), ${lagging.length} hinken hinterher (Lagging).`;
+        if (watchCandidates.length) {
+            insight += ` Beobachtenswert: ${watchCandidates.map(e => e.label).join(', ')} — schwach aber mit erhoehtem Reversalpotenzial (gestrichelte Ringe).`;
+        }
+
+        let h = secTitle('Rotation & Opportunity Map');
+        h += _insightBox(insight);
+        h += `<div style="font-size:0.62rem;color:${MH.muted};margin-bottom:0.3rem">Sektoren (grosse Punkte) + Macro/Style Ratios (kleine Punkte) | Gestrichelter Ring = hohes Reversalpotenzial</div>` + svg;
+        return h;
+    }
+
+    // ── Divergence Radar ──
+    function rotVizDivRadar(rd) {
+        const confs = rd.confirmations || {};
+        const divs = rd.divergences || [];
+        const ratios = rd.ratios || {};
+
+        const axes = [
+            { label: 'Credit', value: _confStrength(confs.credit) },
+            { label: 'Dollar', value: _confStrength(confs.dollar) },
+            { label: 'Volatility', value: _confStrength(confs.vix) },
+            { label: 'Cycl. Breadth', value: _breadthScore(ratios) },
+            { label: 'Growth Int.', value: _growthScore(ratios) },
+            { label: 'Defensive', value: _defensiveScore(ratios) }
+        ];
+
+        const W = 300, H = 300, cx2 = W / 2, cy2 = H / 2, R = 110;
+        const n = axes.length;
+        let svg = `<svg viewBox="0 0 ${W} ${H}" class="mh-viz-radar">`;
+        svg += `<rect x="0" y="0" width="${W}" height="${H}" fill="${MH.panel}" rx="6"/>`;
+
+        [0.25, 0.5, 0.75, 1].forEach(pct => {
+            let pts = [];
+            for (let i = 0; i < n; i++) {
+                const angle = -Math.PI / 2 + (2 * Math.PI * i) / n;
+                pts.push(`${cx2 + Math.cos(angle) * R * pct},${cy2 + Math.sin(angle) * R * pct}`);
+            }
+            svg += `<polygon points="${pts.join(' ')}" fill="none" stroke="${MH.border}" stroke-width="0.5"/>`;
+        });
+
+        for (let i = 0; i < n; i++) {
+            const angle = -Math.PI / 2 + (2 * Math.PI * i) / n;
+            const lx = cx2 + Math.cos(angle) * (R + 18);
+            const ly = cy2 + Math.sin(angle) * (R + 18);
+            svg += `<line x1="${cx2}" y1="${cy2}" x2="${cx2 + Math.cos(angle) * R}" y2="${cy2 + Math.sin(angle) * R}" stroke="${MH.border}" stroke-width="0.5"/>`;
+            svg += `<text x="${lx}" y="${ly + 3}" fill="${MH.muted}" font-size="7" text-anchor="middle">${axes[i].label}</text>`;
+        }
+
+        let dataPts = [];
+        for (let i = 0; i < n; i++) {
+            const angle = -Math.PI / 2 + (2 * Math.PI * i) / n;
+            const v = clamp(axes[i].value, 0, 100) / 100;
+            dataPts.push(`${cx2 + Math.cos(angle) * R * v},${cy2 + Math.sin(angle) * R * v}`);
+        }
+        svg += `<polygon points="${dataPts.join(' ')}" fill="${MH.blue}" fill-opacity="0.15" stroke="${MH.blue}" stroke-width="1.5"/>`;
+
+        for (let i = 0; i < n; i++) {
+            const angle = -Math.PI / 2 + (2 * Math.PI * i) / n;
+            const v = clamp(axes[i].value, 0, 100) / 100;
+            const dx = cx2 + Math.cos(angle) * R * v;
+            const dy = cy2 + Math.sin(angle) * R * v;
+            const dotC = axes[i].value >= 60 ? MH.bull : axes[i].value <= 40 ? MH.bear : MH.warn;
+            svg += `<circle cx="${dx}" cy="${dy}" r="3.5" fill="${dotC}"><title>${axes[i].label}: ${axes[i].value}</title></circle>`;
+        }
+
+        if (divs.length) svg += `<text x="${cx2}" y="${H - 8}" fill="${MH.warn}" font-size="8" text-anchor="middle">${divs.length} divergence(s) active</text>`;
+        svg += '</svg>';
+
+        const weak = axes.filter(a => a.value < 40).map(a => a.label);
+        const strong = axes.filter(a => a.value >= 60).map(a => a.label);
+        let insight = '';
+        if (weak.length && strong.length) insight = `Staerke bei ${strong.join(', ')} — aber Schwaeche bei ${weak.join(', ')} zeigt innere Konflikte unter der Oberflaeche.`;
+        else if (weak.length) insight = `Breite Schwaeche bei ${weak.join(', ')} — das Risikobild verschlechtert sich, auch wenn der Score noch neutral wirkt.`;
+        else if (strong.length) insight = `Breite Staerke bei ${strong.join(', ')} — alle Dimensionen stuetzen den aktuellen Trend.`;
+        else insight = 'Alle Dimensionen nahe neutral — kein klarer Ausreisser, abwartende Haltung empfohlen.';
+
+        let h = secTitle('Divergence Radar');
+        h += _insightBox(insight);
+        h += svg;
+        return h;
+    }
+
+    function _confStrength(conf) {
+        if (!conf) return 50;
+        const s = conf.strength || 0;
+        return conf.supportsRotation === 'yes' ? 50 + s * 50 : conf.supportsRotation === 'no' ? 50 - s * 50 : 50;
+    }
+    function _breadthScore(ratios) {
+        const sectorRatios = Object.values(ratios).filter(r => r.category === 'sector');
+        if (!sectorRatios.length) return 50;
+        return Math.round(sectorRatios.reduce((s, r) => s + (r.composite || 50), 0) / sectorRatios.length);
+    }
+    function _growthScore(ratios) {
+        const growth = ['QQQ_DIA', 'QQQ_SPY', 'IVW_IVE'].map(k => ratios[k]?.composite).filter(v => v != null);
+        return growth.length ? Math.round(growth.reduce((s, v) => s + v, 0) / growth.length) : 50;
+    }
+    function _defensiveScore(ratios) {
+        const def = ['XLV_XLU', 'XLE_XLU', 'XLY_XLP'].map(k => ratios[k]?.composite).filter(v => v != null);
+        return def.length ? Math.round(100 - def.reduce((s, v) => s + v, 0) / def.length) : 50;
+    }
+
+    // ── Cycle Progress Bar ──
+    function rotVizCycleBar(rd) {
+        const cyc = rd.cycle || {};
+        const pct = cyc.positionPct ?? 50;
+        const segments = [
+            { label: 'Early', color: MH.blue, range: [0, 20] },
+            { label: 'Mid', color: MH.bull, range: [20, 40] },
+            { label: 'Late', color: MH.warn, range: [40, 60] },
+            { label: 'Exhausted', color: MH.orange, range: [60, 80] },
+            { label: 'Reversal', color: MH.bear, range: [80, 100] }
+        ];
+
+        let h = secTitle('Cycle Progress Bar');
+        h += _cycleInsight(rd);
+        h += '<div style="position:relative">';
+        h += '<div class="mh-viz-cycle-track">';
+        segments.forEach(s => {
+            h += `<div class="mh-viz-cycle-seg" style="background:${s.color}44" title="${s.label}: ${s.range[0]}-${s.range[1]}">${s.label}</div>`;
+        });
+        h += `<div class="mh-viz-cycle-marker" style="left:${pct}%"></div>`;
+        h += '</div></div>';
+        h += `<div style="display:flex;justify-content:space-between;align-items:center;margin-top:0.3rem">`;
+        h += `<div style="font-size:0.84rem;color:${MH.text};font-weight:600">${esc(cyc.state || 'Unknown')}</div>`;
+        h += `<div style="font-size:0.74rem;color:${MH.muted}">Position: ${pct}th pct | Confidence: ${cyc.confidence ?? '—'}</div>`;
+        h += '</div>';
+        if (cyc.description) h += `<div style="font-size:0.72rem;color:${MH.muted};margin-top:0.2rem">${esc(cyc.description)}</div>`;
+        return h;
+    }
+
+    // ── Flow Story Timeline ──
+    function rotVizTimeline(rd) {
+        const gs = rd.globalScore || {};
+        const ratios = rd.ratios || {};
+        const divs = rd.divergences || [];
+        const sorted = Object.entries(ratios).filter(([, r]) => r.composite != null).sort(([, a], [, b]) => b.composite - a.composite);
+        const topName = sorted[0] ? (RATIO_NAMES[sorted[0][0]] || sorted[0][0]) : '—';
+        const botName = sorted.length ? (RATIO_NAMES[sorted[sorted.length - 1][0]] || sorted[sorted.length - 1][0]) : '—';
+
+        const topScore = sorted[0]?.[1]?.composite ?? 50;
+        const botScore2 = sorted.length ? sorted[sorted.length - 1][1]?.composite ?? 50 : 50;
+        const topR2 = sorted[0]?.[1];
+        const ret6t = topR2?.returns?.['126'], ret3t = topR2?.returns?.['63'];
+        let trendNote2 = 'kurzfristiger Trend';
+        if (ret6t != null && ret6t > 0.03) trendNote2 = 'Trend laeuft seit 3-6 Monaten';
+        else if (ret3t != null && ret3t > 0.01) trendNote2 = 'Trend seit 1-3 Monaten im Aufbau';
+
+        let h = secTitle('Flow Story Timeline');
+        h += _insightBox(`${esc(topName)} fuehrt mit Score ${topScore} (${trendNote2}), waehrend ${esc(botName)} bei ${botScore2} am schwaechsten ist — ${divs.length ? 'aktive Divergenzen deuten auf moegliche Verschiebung hin' : 'keine Warnsignale fuer eine baldige Aenderung'}.`);
+        h += `<div style="font-size:0.62rem;color:${MH.muted};margin-bottom:0.4rem">Current snapshot — historical timeline requires time-series data</div>`;
+        h += '<div class="mh-viz-timeline-tracks">';
+
+        const scC = (gs.value ?? 50) >= 65 ? MH.bull : (gs.value ?? 50) >= 45 ? MH.warn : MH.bear;
+        const scW = gs.value ?? 50;
+        h += `<div class="mh-viz-timeline-row"><span style="color:${MH.muted}">Global Score</span><div class="mh-viz-timeline-bar" style="width:${scW}%;background:${scC}">${gs.value ?? 50}</div></div>`;
+
+        h += `<div class="mh-viz-timeline-row"><span style="color:${MH.bull}">Top Rotation</span><div class="mh-viz-timeline-bar" style="width:${topScore}%;background:${MH.bull}">${esc(topName)} (${topScore})</div></div>`;
+
+        h += `<div class="mh-viz-timeline-row"><span style="color:${MH.bear}">Weakest</span><div class="mh-viz-timeline-bar" style="width:${Math.max(10, botScore2)}%;background:${MH.bear}">${esc(botName)} (${botScore2})</div></div>`;
+
+        if (divs.length) {
+            h += `<div class="mh-viz-timeline-row"><span style="color:${MH.warn}">Divergences</span><div style="display:flex;gap:0.3rem;flex-wrap:wrap">`;
+            divs.forEach(d => {
+                h += `<span style="background:${MH.warn}15;color:${MH.warn};font-size:0.68rem;padding:0.2rem 0.5rem;border-radius:4px;border:1px solid ${MH.warn}33">${esc(d.title)}</span>`;
+            });
+            h += '</div></div>';
+        }
+
+        h += '</div>';
+        return h;
+    }
+
+    function renderCapitalRotation(panel) {
+        if (!rotationDoc) {
+            renderFlows(panel);
+            return;
+        }
+        const rd = rotationDoc;
+        const gs = rd.globalScore || {};
+        const meta = rd.meta || {};
+        let h = '';
+
+        // Stale / Partial banners
+        if (meta.staleStatus === 'critical_stale') {
+            h += `<div style="background:${MH.bear}22;border:1px solid ${MH.bear};border-radius:6px;padding:0.5rem 0.8rem;margin-bottom:0.6rem;font-size:0.78rem;color:${MH.bear}">⚠ Data is critically stale. Scores may be unreliable.</div>`;
+        } else if (meta.staleStatus === 'stale') {
+            h += `<div style="background:${MH.warn}15;border:1px solid ${MH.warn}44;border-radius:6px;padding:0.4rem 0.8rem;margin-bottom:0.5rem;font-size:0.75rem;color:${MH.warn}">⏳ Data is stale. Scores may not reflect current conditions.</div>`;
+        }
+        if (meta.coverage != null && meta.coverage < 1) {
+            h += `<div style="background:${MH.warn}10;border:1px solid ${MH.border};border-radius:6px;padding:0.35rem 0.8rem;margin-bottom:0.5rem;font-size:0.72rem;color:${MH.muted}">Coverage: ${(meta.coverage * 100).toFixed(0)}% — some signals partial.</div>`;
+        }
+
+        // ═══ ABOVE THE FOLD: Score + Flow Intel + Divergence Radar ═══
+        const sc = gs.value ?? 50;
+        const scC = sc >= 65 ? MH.bull : sc >= 45 ? MH.warn : MH.bear;
+        const staleBadge = meta.staleStatus === 'critical_stale' ? ` <span style="color:${MH.bear};font-size:0.68rem">STALE</span>` : meta.staleStatus === 'stale' ? ` <span style="color:${MH.warn};font-size:0.68rem">stale</span>` : '';
+        const neutralBadge = gs.neutralMode === 'conflicted' ? `<div style="color:${MH.warn};font-size:0.7rem">⚡ Conflicting block signals</div>` : gs.neutralMode === 'quiet' ? `<div style="color:${MH.muted};font-size:0.7rem">Quiet neutral — no strong direction</div>` : '';
+
+        const intelLines = buildFlowIntel(rd);
+        const radarHtml = rotVizDivRadar(rd);
+
+        h += card(`<div style="display:flex;gap:1.2rem;align-items:flex-start;flex-wrap:wrap">
+      <div style="text-align:center;min-width:100px">
+        <div style="width:80px;height:80px;border-radius:50%;border:3px solid ${scC};display:flex;align-items:center;justify-content:center;margin:0 auto;background:${scC}15">
+          <span style="font-size:1.7rem;font-weight:800;color:${scC}">${sc}</span>
+        </div>
+        <div style="font-size:0.82rem;font-weight:700;color:${scC};margin-top:0.3rem">${esc(gs.regime || '—')}</div>
+        <div style="font-size:0.68rem;color:${MH.muted}">Conf: ${esc(gs.confidenceLabel || '—')}${staleBadge}</div>
+        ${neutralBadge}
+        <div style="font-size:0.62rem;color:${MH.muted};margin-top:0.15rem">As of ${esc(meta.asOfDate || '—')}</div>
+      </div>
+      <div style="flex:1;min-width:200px">
+        <div style="font-size:0.82rem;font-weight:700;color:${MH.text};margin-bottom:0.4rem">Flow Intelligence</div>
+        ${intelLines.map(l => `<div style="font-size:0.76rem;color:${MH.muted};line-height:1.5;margin-bottom:0.15rem">${l}</div>`).join('')}
+      </div>
+      <div style="min-width:220px;max-width:300px">${radarHtml}</div>
+    </div>`);
+
+        // ═══ HEATMAP (merged 2.0 — sortable + arrows + Z + RAM) ═══
+        const ratios = rd.ratios || {};
+        const categories = ['macro', 'sector', 'style'];
+        let heatHtml = secTitle('Rotation Heatmap');
+        heatHtml += _heatmapInsight(rd);
+        heatHtml += `<div style="font-size:0.65rem;color:${MH.muted};margin-bottom:0.3rem">Click column headers to sort. Blue = relative strength | Orange = weakness | Gray = neutral. Click ratio to drill down.</div>`;
+        heatHtml += '<div style="overflow-x:auto"><table class="mh-table" id="mh-rot-heatmap" style="font-size:0.74rem"><thead><tr>';
+        heatHtml += '<th class="mh-sort-col" data-col="0" style="cursor:pointer">Ratio ⇅</th>';
+        heatHtml += '<th class="mh-center mh-sort-col" data-col="1" style="cursor:pointer">1M ⇅</th>';
+        heatHtml += '<th class="mh-center mh-sort-col" data-col="2" style="cursor:pointer">3M ⇅</th>';
+        heatHtml += '<th class="mh-center mh-sort-col" data-col="3" style="cursor:pointer">6M ⇅</th>';
+        heatHtml += '<th class="mh-center mh-sort-col" data-col="4" style="cursor:pointer">12M ⇅</th>';
+        heatHtml += '<th class="mh-center mh-sort-col" data-col="5" style="cursor:pointer">Score ⇅</th>';
+        heatHtml += '<th class="mh-center mh-sort-col" data-col="6" style="cursor:pointer">Z ⇅</th>';
+        heatHtml += '<th class="mh-center mh-sort-col" data-col="7" style="cursor:pointer">RAM ⇅</th>';
+        heatHtml += '</tr></thead><tbody>';
+        for (const cat of categories) {
+            const catRatios = Object.entries(ratios).filter(([, r]) => r.category === cat);
+            if (!catRatios.length) continue;
+            heatHtml += `<tr class="mh-cat-header" data-cat="${esc(cat)}"><td colspan="8" style="font-weight:700;color:${MH.text};font-size:0.78rem;padding-top:0.5rem;border-bottom:1px solid ${MH.dim}">${cat.toUpperCase()}</td></tr>`;
+            for (const [id, r] of catRatios) {
+                const ret = r.returns || {};
+                const name = RATIO_NAMES[id] || id.replace(/_/g, '/');
+                heatHtml += `<tr class="mh-ratio-row" data-ratio="${esc(id)}" data-cat="${esc(cat)}" style="cursor:pointer" onclick="window._mhDrilldown('${esc(id)}')">`;
+                heatHtml += `<td style="color:${MH.text};font-size:0.74rem" data-sort="${esc(name)}">${esc(name)}</td>`;
+                // Enhanced cells with arrows + percentage
+                ['21', '63', '126', '252'].forEach(w => {
+                    const v = ret[w];
+                    if (v == null) { heatHtml += `<td class="mh-center" style="color:${MH.muted};font-size:0.72rem" data-sort="-1">—</td>`; return; }
+                    const pct = (v * 100).toFixed(1);
+                    const arrow = v > 0.02 ? '↑' : v < -0.02 ? '↓' : '→';
+                    const c = v > 0.02 ? MH.blue : v < -0.02 ? MH.orange : MH.neutral;
+                    const op = Math.min(0.5, Math.abs(v) * 3) + 0.1;
+                    const heatVal = mapRetToHeat(v);
+                    heatHtml += `<td class="mh-center" style="background:${c}${Math.round(op * 40).toString(16).padStart(2, '0')};color:${c};font-weight:600;font-size:0.72rem" title="${pct}%" data-sort="${heatVal}">${arrow} ${pct}%</td>`;
+                });
+                heatHtml += `<td class="mh-center" data-sort="${r.composite ?? -1}">${scorePill(r.composite)}</td>`;
+                const zC = Math.abs(r.zScore || 0) > 1.5 ? MH.warn : MH.muted;
+                heatHtml += `<td class="mh-center" style="color:${zC};font-size:0.72rem" data-sort="${(r.zScore || 0).toFixed(2)}">${(r.zScore || 0).toFixed(2)}</td>`;
+                const ramC = (r.ram || 0) >= 0 ? MH.bull : MH.bear;
+                heatHtml += `<td class="mh-center" style="color:${ramC};font-size:0.72rem" data-sort="${(r.ram || 0).toFixed(1)}">${(r.ram || 0).toFixed(1)}</td>`;
+                heatHtml += '</tr>';
+            }
+        }
+        heatHtml += '</tbody></table></div>';
+        h += card(heatHtml);
+
+        // ═══ NARRATIVE + KEY CARDS ═══
+        const narr = rd.narrative || {};
+        const kc = rd.keyCards || [];
+        let narrHtml = secTitle('Narrative');
+        narrHtml += _narrativeInsight(rd);
+        narrHtml += `<div style="font-weight:700;font-size:0.86rem;color:${MH.text};line-height:1.4;margin-bottom:0.4rem">${esc(narr.headline || 'No narrative.')}</div>`;
+        if (narr.blocks) narr.blocks.forEach(b => { narrHtml += `<div style="font-size:0.76rem;color:${MH.muted};line-height:1.35;margin-bottom:0.25rem">${esc(b)}</div>`; });
+        if (kc.length) {
+            narrHtml += '<div style="display:flex;gap:0.5rem;margin-top:0.5rem;flex-wrap:wrap">';
+            kc.forEach(k => {
+                const c2 = k.direction === 'up' ? MH.bull : k.direction === 'down' ? MH.bear : k.direction === 'alert' ? MH.warn : MH.muted;
+                narrHtml += `<div style="flex:1;min-width:130px;background:${MH.faint};border-left:3px solid ${c2};border-radius:4px;padding:0.4rem 0.6rem"><div style="font-size:0.68rem;color:${MH.muted}">${esc(k.title)}</div><div style="font-size:0.8rem;color:${c2};font-weight:700">${esc(String(k.value).replace(/_/g, '/'))}</div><div style="font-size:0.62rem;color:${MH.muted}">${esc((k.detail || '').slice(0, 60))}</div></div>`;
+            });
+            narrHtml += '</div>';
+        }
+        h += card(narrHtml);
+
+        // ═══ CYCLE POSITION ═══
+        const cyc = rd.cycle || {};
+        if (cyc.state) {
+            const phases = ['Early Rotation', 'Mid Rotation', 'Late Rotation', 'Exhausted', 'Reversal Watch', 'Neutral / Undefined'];
+            const activeIdx = phases.indexOf(cyc.state);
+            let cycHtml = secTitle('Cycle Position');
+            cycHtml += _cycleInsight(rd);
+            cycHtml += '<div style="display:flex;gap:2px;margin:0.5rem 0">';
+            phases.forEach((ph, i) => {
+                const active = i === activeIdx;
+                const phC = i <= 1 ? MH.blue : i <= 2 ? MH.bull : i === 3 ? MH.warn : i === 4 ? MH.bear : MH.neutral;
+                cycHtml += `<div style="flex:1;height:8px;border-radius:3px;background:${active ? phC : MH.dim}" title="${esc(ph)}"></div>`;
+            });
+            cycHtml += '</div>';
+            cycHtml += `<div style="font-size:0.84rem;color:${MH.text};font-weight:600">${esc(cyc.state)} <span style="color:${MH.muted};font-weight:400">(${cyc.positionPct ?? '—'}th pct, conf: ${cyc.confidence ?? '—'})</span></div>`;
+            if (cyc.description) cycHtml += `<div style="font-size:0.74rem;color:${MH.muted};margin-top:0.2rem">${esc(cyc.description)}</div>`;
+            h += card(cycHtml);
+        }
+
+        // ═══ DIVERGENCES (expanded) ═══
+        const divs = rd.topDivergence ? [rd.topDivergence] : (rd.divergences || []);
+        {
+            let divHtml = secTitle(`Divergences (${rd.divergenceCount ?? divs.length})`);
+            divHtml += _divInsight(rd);
+            if (divs.length) {
+                divs.forEach(d => {
+                    const dc = d.severity === 'alert' ? MH.bear : d.severity === 'warning' ? MH.warn : MH.blue;
+                    divHtml += `<div style="background:${dc}10;border:1px solid ${dc}44;border-radius:6px;padding:0.6rem 0.8rem;margin-bottom:0.5rem">`;
+                    divHtml += `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.3rem">`;
+                    divHtml += `<div style="font-weight:700;color:${dc};font-size:0.84rem">${esc(d.title)}</div>`;
+                    divHtml += `<span style="font-size:0.68rem;padding:0.1rem 0.4rem;border-radius:4px;background:${dc}22;color:${dc};font-weight:600">${esc(d.severity || 'info')}</span>`;
+                    divHtml += `</div>`;
+                    divHtml += `<div style="font-size:0.76rem;color:${MH.muted};margin-bottom:0.4rem">${esc(d.explanation)}</div>`;
+                    // Expanded: related ratios, confirmation context, historical framing
+                    const relatedRatios = Object.entries(ratios).filter(([, r]) => r.category === 'sector' && (r.composite < 42 || Math.abs(r.zScore || 0) > 1.3));
+                    if (relatedRatios.length) {
+                        divHtml += `<div style="font-size:0.72rem;color:${MH.text};margin-bottom:0.3rem"><strong>Betroffene Ratios:</strong></div>`;
+                        divHtml += `<div style="display:flex;gap:0.3rem;flex-wrap:wrap;margin-bottom:0.3rem">`;
+                        relatedRatios.forEach(([id, r]) => {
+                            const nm = RATIO_NAMES[id] || id.replace(/_/g, '/');
+                            const rc = r.composite < 42 ? MH.bear : MH.warn;
+                            divHtml += `<span style="font-size:0.68rem;padding:0.15rem 0.4rem;border-radius:4px;background:${rc}15;color:${rc};border:1px solid ${rc}33">${esc(nm)} (${r.composite}, Z: ${(r.zScore || 0).toFixed(1)})</span>`;
+                        });
+                        divHtml += `</div>`;
+                    }
+                    // Confirmation cross-reference
+                    const confs = rd.confirmations || {};
+                    const confEntries = Object.entries(confs);
+                    if (confEntries.length) {
+                        const supporting = confEntries.filter(([, c]) => c.supportsRotation === 'yes').map(([k]) => k);
+                        const against = confEntries.filter(([, c]) => c.supportsRotation === 'no').map(([k]) => k);
+                        divHtml += `<div style="font-size:0.72rem;margin-top:0.2rem">`;
+                        if (supporting.length) divHtml += `<span style="color:${MH.bull}">Stuetzend: ${supporting.join(', ')}</span> `;
+                        if (against.length) divHtml += `<span style="color:${MH.bear}">Dagegen: ${against.join(', ')}</span>`;
+                        divHtml += `</div>`;
+                    }
+                    // Historical context
+                    divHtml += `<div style="font-size:0.68rem;color:${MH.muted};margin-top:0.3rem;padding-top:0.3rem;border-top:1px solid ${MH.dim}">`;
+                    divHtml += `Historischer Kontext: Breadth-Erosion tritt typischerweise 4-8 Wochen vor groesseren Trendwechseln auf. `;
+                    const sectorAvg = Object.values(ratios).filter(r => r.category === 'sector').reduce((s, r) => ({ sum: s.sum + (r.composite || 50), n: s.n + 1 }), { sum: 0, n: 0 });
+                    const avgScore = sectorAvg.n ? (sectorAvg.sum / sectorAvg.n).toFixed(0) : 50;
+                    divHtml += `Aktueller Sektor-Durchschnitt: ${avgScore}/100. `;
+                    const weakCount = Object.values(ratios).filter(r => r.category === 'sector' && (r.composite || 50) < 45).length;
+                    const totalSec = Object.values(ratios).filter(r => r.category === 'sector').length;
+                    divHtml += `${weakCount} von ${totalSec} Sektoren unter 45 — ${weakCount > totalSec / 2 ? 'Mehrheit schwach, erhoehte Vorsicht' : 'begrenzte Schwaeche, noch kein Flaechenbrand'}.`;
+                    divHtml += `</div>`;
+                    divHtml += `</div>`;
+                });
+            } else {
+                divHtml += `<div style="color:${MH.bull};font-size:0.78rem;padding:0.4rem 0">Keine Divergenzen erkannt — alle Signale konsistent.</div>`;
+                // Still show summary stats
+                const sectorAvg = Object.values(ratios).filter(r => r.category === 'sector').reduce((s, r) => ({ sum: s.sum + (r.composite || 50), n: s.n + 1 }), { sum: 0, n: 0 });
+                const avgScore = sectorAvg.n ? (sectorAvg.sum / sectorAvg.n).toFixed(0) : 50;
+                divHtml += `<div style="font-size:0.72rem;color:${MH.muted}">Sektor-Durchschnitt: ${avgScore}/100 | Alle Konfirmationen und Ratios in Einklang.</div>`;
+            }
+            h += card(divHtml);
+        }
+
+        // ═══ EXPERIMENTAL VISUALIZATIONS ═══
+        h += card(rotVizTogglePanel());
+        const _vt = _vizToggles();
+        const _vizRenderers = {
+            ladder: rotVizLadder, sankey: rotVizSankey, rotationMap: rotVizRotationMap,
+            cycleBar: rotVizCycleBar, timeline: rotVizTimeline
+        };
+        VIZ_OPTIONS.forEach(o => {
+            const show = _vt[o.id];
+            h += `<div id="mh-viz-${o.id}" style="display:${show ? 'block' : 'none'}">`;
+            h += card(_vizRenderers[o.id](rd));
+            h += '</div>';
+        });
+
+        h += '<div id="mh-ratio-drilldown" style="display:none"></div>';
+        h += `<div style="font-size:0.68rem;color:${MH.muted};margin-top:0.6rem;font-style:italic">Relative rotation derived from EOD price ratios — not fund-flow data. Price return only. <a href="#" onclick="window._mhSwitchTab('methodology');return false" style="color:${MH.blue}">Methodology</a></div>`;
+        h += sourcesFooter('EODHD (derived ratios)', meta.asOfDate);
+        panel.innerHTML = h;
+
+        // Attach sort handlers after DOM render
+        setTimeout(() => _mhAttachHeatmapSort(), 0);
+    }
+
+    /** Attach click-to-sort on heatmap column headers */
+    function _mhAttachHeatmapSort() {
+        const table = document.getElementById('mh-rot-heatmap');
+        if (!table) return;
+        const headers = table.querySelectorAll('.mh-sort-col');
+        let sortState = { col: -1, asc: true };
+        headers.forEach(th => {
+            th.addEventListener('click', () => {
+                const col = parseInt(th.dataset.col, 10);
+                if (sortState.col === col) sortState.asc = !sortState.asc;
+                else { sortState.col = col; sortState.asc = false; } // default desc
+                const tbody = table.querySelector('tbody');
+                const catHeaders = [...tbody.querySelectorAll('.mh-cat-header')];
+                catHeaders.forEach(ch => ch.style.display = 'none'); // hide category headers when sorted
+                const rows = [...tbody.querySelectorAll('.mh-ratio-row')];
+                rows.sort((a, b) => {
+                    const cellA = a.children[col];
+                    const cellB = b.children[col];
+                    let vA = cellA?.dataset?.sort ?? cellA?.textContent ?? '';
+                    let vB = cellB?.dataset?.sort ?? cellB?.textContent ?? '';
+                    const nA = parseFloat(vA), nB = parseFloat(vB);
+                    if (!isNaN(nA) && !isNaN(nB)) return sortState.asc ? nA - nB : nB - nA;
+                    return sortState.asc ? String(vA).localeCompare(String(vB)) : String(vB).localeCompare(String(vA));
+                });
+                rows.forEach(r => tbody.appendChild(r));
+                // Update header arrows
+                headers.forEach(h2 => {
+                    const c2 = parseInt(h2.dataset.col, 10);
+                    const base = h2.textContent.replace(/ [⇅▲▼]$/, '');
+                    h2.textContent = base + (c2 === col ? (sortState.asc ? ' ▲' : ' ▼') : ' ⇅');
+                });
+            });
+        });
+    }
+
+    /** Map a ratio return to a 0-100 heatmap score */
+    function mapRetToHeat(ret) {
+        if (ret == null) return null;
+        const clamped = Math.max(-0.10, Math.min(0.10, ret));
+        return Math.round(((clamped + 0.10) / 0.20) * 100);
+    }
+
+    /** Drilldown: fetch and show ratio detail */
+    window._mhDrilldown = async function (ratioId) {
+        const container = document.getElementById('mh-ratio-drilldown');
+        if (!container) return;
+        container.style.display = 'block';
+        container.innerHTML = `<div style="padding:1rem;color:${MH.muted}">Loading ${ratioId.replace(/_/g, '/')}…</div>`;
+
+        try {
+            const detail = await fetchJsonWithTimeout(`/data/v3/derived/market/capital-rotation/ratios/${encodeURIComponent(ratioId)}.json`, 5000);
+            if (!detail) { container.innerHTML = card(`<div style="color:${MH.warn}">Detail not available for ${ratioId}.</div>`); return; }
+
+            const d = detail;
+            let html = `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem">
+        <div style="font-size:1rem;font-weight:700;color:${MH.text}">${esc(d.displayName || ratioId.replace(/_/g, '/'))}</div>
+        <button onclick="document.getElementById('mh-ratio-drilldown').style.display='none'" style="background:none;border:1px solid ${MH.border};border-radius:4px;color:${MH.muted};cursor:pointer;padding:0.2rem 0.6rem;font-size:0.78rem">Close</button>
+      </div>`;
+            html += `<div style="font-size:0.75rem;color:${MH.muted};margin-bottom:0.5rem">${esc(d.symbolA)} / ${esc(d.symbolB)} | ${esc(d.category)} | ${d.barsUsed || '?'} bars</div>`;
+
+            // Sparkline
+            if (d.sparkline && d.sparkline.length > 1) {
+                const vals = d.sparkline.map(s => s.v);
+                const min = Math.min(...vals), max = Math.max(...vals);
+                const range = max - min || 1;
+                const sw = 360, sh = 60;
+                let path = `M 0 ${sh - ((vals[0] - min) / range) * sh}`;
+                for (let i = 1; i < vals.length; i++) {
+                    const x = (i / (vals.length - 1)) * sw;
+                    const y = sh - ((vals[i] - min) / range) * sh;
+                    path += ` L ${x} ${y}`;
+                }
+                const lc = vals[vals.length - 1] >= vals[0] ? MH.bull : MH.bear;
+                html += `<svg viewBox="0 0 ${sw} ${sh}" style="width:100%;height:60px;margin-bottom:0.5rem"><path d="${path}" fill="none" stroke="${lc}" stroke-width="1.5"/></svg>`;
+            }
+
+            // Metrics table
+            html += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:0.4rem">';
+            const metrics = [
+                ['Composite', d.composite],
+                ['RAM', d.ram != null ? d.ram.toFixed(3) : '—'],
+                ['Z-Score', d.zScore != null ? d.zScore.toFixed(2) : '—'],
+                ['Percentile (5Y)', d.percentile5y ?? '—'],
+                ['Percentile (Long)', d.percentileLong ?? '—'],
+                ['Window (5Y)', d.windowYearsUsed5y ? d.windowYearsUsed5y + 'Y' : '—'],
+                ['Window (Long)', d.windowYearsUsedLong ? d.windowYearsUsedLong + 'Y' : '—'],
+                ['Trend Slope', d.trendSlope != null ? (d.trendSlope * 100).toFixed(3) + '%' : '—'],
+                ['Cycle', d.cycle?.state || '—'],
+                ['Cycle Conf', d.cycle?.confidence ?? '—']
+            ];
+            metrics.forEach(([label, val]) => {
+                html += `<div style="background:${MH.faint};border-radius:4px;padding:0.35rem 0.5rem"><div style="font-size:0.65rem;color:${MH.muted}">${esc(label)}</div><div style="font-size:0.82rem;color:${MH.text};font-weight:600">${esc(String(val))}</div></div>`;
+            });
+            html += '</div>';
+
+            // Warnings
+            if (d.alignmentWarnings?.length) {
+                html += `<div style="margin-top:0.4rem;font-size:0.7rem;color:${MH.warn}">⚠ ${d.alignmentWarnings.join(' | ')}</div>`;
+            }
+            if (d.limitedHistory) {
+                html += `<div style="font-size:0.7rem;color:${MH.warn}">Limited history — percentile calculations may be less reliable.</div>`;
+            }
+
+            container.innerHTML = card(html);
+            container.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        } catch (err) {
+            container.innerHTML = card(`<div style="color:${MH.bear}">Error loading detail: ${esc(err.message)}</div>`);
+        }
+    };
+
     const RENDERERS = {
         snapshot: renderSnapshot, sectors: renderSectors, commodities: renderCommodities,
-        crypto: renderCrypto, countries: renderCountries, flows: renderFlows,
+        crypto: renderCrypto, countries: renderCountries, flows: renderCapitalRotation,
         risks: renderRisks, playbook: renderPlaybook, alerts: renderAlerts,
         methodology: renderMethodology, glossary: renderGlossary
     };
@@ -783,7 +1771,14 @@
         if (!root) return;
 
         buildDOM(root);
-        await loadData();
+        // Load market data + rotation data + narrative dictionary in parallel
+        const [, rotData, dictData] = await Promise.all([
+            loadData(),
+            fetchJsonWithTimeout(ROTATION_SUMMARY_URL, 5000).catch(() => null),
+            fetchJsonWithTimeout(DICT_URL, 3000).catch(() => null)
+        ]);
+        if (dictData && typeof dictData === 'object') narrativeDict = dictData;
+        if (rotData) rotationDoc = rotData.data || rotData;
 
         const gDoc = doc?.data || {};
         const meta = doc?.meta || {};

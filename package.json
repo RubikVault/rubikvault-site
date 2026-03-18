@@ -1,4 +1,9 @@
 {
+  "name": "rubikvault-site",
+  "version": "0.1.0",
+  "engines": {
+    "node": ">=20"
+  },
   "type": "module",
   "scripts": {
     "prepare:data": "node scripts/copy-feature-registry.mjs && node scripts/ops/build-build-info.mjs",
@@ -21,8 +26,6 @@
     "audit:strict": "node scripts/audit-site.mjs --mode local --base public --format json --fail-on bad",
     "audit:live": "node scripts/audit-site.mjs --mode live --url https://rubikvault.com --format table --fail-on bad",
     "audit": "npm run audit:reality && npm run audit:registry && npm run audit:stubs && npm run audit:artifacts && npm run audit:local",
-    "build:registry": "node scripts/build-registry.js",
-    "validate:registry": "node scripts/validate-registry.js",
     "simulate:cost": "node scripts/simulate-cost.js",
     "validate:symbols": "node scripts/validate-symbols.mjs",
     "test:envelope": "node scripts/test-envelope.mjs",
@@ -134,6 +137,8 @@
     "dp7:top-setups": "node scripts/dp7/top-setups.v3.mjs",
     "dp8:market-hub": "node scripts/dp8/market-hub.v3.mjs",
     "dp8:market-hub:global": "node scripts/dp8/global-market-hub.v3.mjs",
+    "dp8:capital-rotation": "node scripts/dp8/capital-rotation.v3.mjs",
+    "test:capital-rotation": "node --test tests/capital-rotation-alignment.test.mjs tests/capital-rotation-scoring.test.mjs tests/capital-rotation-divergences.test.mjs tests/capital-rotation-narrative.test.mjs tests/capital-rotation-artifact.test.mjs",
     "dp9:ideas-hub": "node scripts/dp9/ideas-hub.v3.mjs",
     "build:supermodules": "node scripts/build-supermodules.mjs",
     "build:supermodules:risk": "node scripts/build-supermodules.mjs --module risk_resilience",
@@ -149,7 +154,7 @@
     "build:v3:daily": "npm run dp0:v3 && npm run dp1:v3 && npm run dp1_5:v3 && npm run dp2:v3 && npm run dp3:v3 && npm run dp4:v3 && npm run dp5:v3 && npm run dp6:v3",
     "test:v3:fixtures": "node scripts/contracts/validate-v3-fixtures.mjs",
     "test:v3:unit": "node --test tests/unit/*.v3.test.mjs",
-    "test:v3:contracts": "node scripts/contracts/validate-v3-artifacts.mjs",
+    "test:v3:contracts": "node scripts/contracts/validate-v3-artifacts.mjs && node tests/contracts/market-hub-time-semantics.test.mjs && node tests/contracts/market-hub-regression.test.mjs",
     "test:v3:dry-run": "node scripts/contracts/run-v3-dry-run.mjs"
   },
   "dependencies": {

@@ -1,16 +1,11 @@
 # macOS
-.DS_Store
 **/.DS_Store
 
 # Node
 node_modules/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
 .pnpm-debug.log*
 .package-lock.json
 # Cloudflare / Wrangler
-.wrangler/
 **/.cache/wrangler/
 **/.wrangler/
 .dev.vars
@@ -48,7 +43,6 @@ artifacts/
 scripts/generate-snapshots.mjs.bak
 scripts/generate-snapshots.mjs.bak.*
 # Local Python envs
-.venv/
 .venv-rvci*/
 # Python caches
 **/__pycache__/
@@ -69,17 +63,7 @@ public/data/rvci/
 # local noise (auto-added)
 nohup.out
 public/data/universe_spy50.json
-# Local/Generated noise
-functions/api/_bak/
-functions/api/_bak/**
-src/
-!src/
-src/**
-!src/lib/
-!src/lib/envelope.ts
-!src/lib/freshness.ts
 # local/CI debug reports
-debug/
 # Playwright artifacts
 test-results/
 test-results/**
@@ -92,8 +76,6 @@ functions/api/_middleware.js.bak.*
 .venv-rvci/**
 # rubikvault: generated dirs (avoid privacy-guard false positives)
 mirrors/.locks/
-*.log
-*.tmp
 # standard noise (keep repo clean)
 # standard noise
 # generated dirs (avoid privacy-guard false positives)
@@ -119,6 +101,15 @@ mirrors/.locks/
 tmp/
 
 _local_trash/
+functions/api/_bak/
+functions/api/_bak/**
+
+# Keep accidental local src/ trees out of Git, except explicit helpers.
+src/**
+!src/
+!src/lib/
+!src/lib/envelope.ts
+!src/lib/freshness.ts
 
 # Prevent nested repo clone accidents
 rubikvault-site/
@@ -198,6 +189,8 @@ Report/ProtectionAudit/
 /docs/universe-explorer-ui-variants.md
 /docs/universe-v7.1-implementation.md
 /eodhd-maximizer.mjs
+# CI test with local secrets — never commit
+scripts/ci/test_eodhd.mjs
 /public/data/universe/v7/reports/marketphase_legacy_bridge_report.json
 /public/data/v3/derived/market/flow-learning.json
 /public/data/v3/eod/US/etf-proxies.json
