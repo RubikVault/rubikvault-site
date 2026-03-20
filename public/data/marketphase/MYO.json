@@ -3,8 +3,8 @@
   "feature": "marketphase",
   "meta": {
     "symbol": "MYO",
-    "generatedAt": "2026-03-18T08:02:17.804Z",
-    "fetchedAt": "2026-03-18T08:02:17.804Z",
+    "generatedAt": "2026-03-20T07:17:38.672Z",
+    "fetchedAt": "2026-03-20T07:17:38.672Z",
     "ttlSeconds": 86400,
     "provider": "internal",
     "dataset": "MYO",
@@ -15,8 +15,8 @@
     "precision": "IEEE754-Double-Round6",
     "auditTrail": {
       "generatedBy": "MarketPhase-v8-Engine",
-      "commitHash": "256d8e4",
-      "reviewDate": "2026-03-18T08:02:17.804Z",
+      "commitHash": "66b5f3f",
+      "reviewDate": "2026-03-20T07:17:38.672Z",
       "standards": [
         "ISO-8000",
         "IEEE-7000"
@@ -26,569 +26,557 @@
   },
   "data": {
     "features": {
-      "RSI": 44.295957,
-      "MACDHist": 0.000359,
-      "ATR%": 4.673799,
-      "SMA50": 0.841044,
-      "SMA200": 1.268536,
+      "RSI": 44.370578,
+      "MACDHist": 0.001747,
+      "ATR%": 4.10609,
+      "SMA50": 0.827964,
+      "SMA200": 1.246266,
       "SMATrend": "bearish",
       "lastClose": 0.7212
     },
     "swings": {
       "raw": [
         {
-          "index": 3,
-          "date": "2025-03-10",
-          "price": 4.17,
-          "type": "low"
-        },
-        {
-          "index": 4,
-          "date": "2025-03-11",
-          "price": 5.87,
-          "type": "high"
-        },
-        {
-          "index": 13,
+          "index": 11,
           "date": "2025-03-24",
           "price": 5.52,
           "type": "high"
         },
         {
-          "index": 20,
+          "index": 18,
           "date": "2025-04-02",
           "price": 4.9,
           "type": "high"
         },
         {
-          "index": 25,
+          "index": 23,
           "date": "2025-04-09",
           "price": 4.68,
           "type": "high"
         },
         {
-          "index": 26,
+          "index": 24,
           "date": "2025-04-10",
           "price": 4.29,
           "type": "low"
         },
         {
-          "index": 29,
+          "index": 27,
           "date": "2025-04-15",
           "price": 4.48,
           "type": "high"
         },
         {
-          "index": 30,
+          "index": 28,
           "date": "2025-04-16",
           "price": 4.27,
           "type": "low"
         },
         {
-          "index": 35,
+          "index": 33,
           "date": "2025-04-24",
           "price": 4.88,
           "type": "high"
         },
         {
-          "index": 38,
+          "index": 36,
           "date": "2025-04-29",
           "price": 4.63,
           "type": "low"
         },
         {
-          "index": 41,
+          "index": 39,
           "date": "2025-05-02",
           "price": 4.88,
           "type": "high"
         },
         {
-          "index": 48,
+          "index": 46,
           "date": "2025-05-13",
           "price": 3.19,
           "type": "low"
         },
         {
-          "index": 51,
+          "index": 49,
+          "date": "2025-05-16",
+          "price": 3.57,
+          "type": "high"
+        },
+        {
+          "index": 60,
+          "date": "2025-06-03",
+          "price": 2.88,
+          "type": "low"
+        },
+        {
+          "index": 61,
+          "date": "2025-06-04",
+          "price": 2.88,
+          "type": "low"
+        },
+        {
+          "index": 62,
+          "date": "2025-06-05",
+          "price": 2.99,
+          "type": "high"
+        },
+        {
+          "index": 81,
+          "date": "2025-07-03",
+          "price": 2.03,
+          "type": "low"
+        },
+        {
+          "index": 84,
+          "date": "2025-07-09",
+          "price": 2.21,
+          "type": "high"
+        },
+        {
+          "index": 89,
+          "date": "2025-07-16",
+          "price": 1.95,
+          "type": "low"
+        },
+        {
+          "index": 95,
+          "date": "2025-07-24",
+          "price": 2.16,
+          "type": "high"
+        },
+        {
+          "index": 103,
+          "date": "2025-08-05",
+          "price": 1.97,
+          "type": "high"
+        },
+        {
+          "index": 111,
+          "date": "2025-08-15",
+          "price": 0.975,
+          "type": "low"
+        },
+        {
+          "index": 116,
+          "date": "2025-08-22",
+          "price": 1.18,
+          "type": "high"
+        },
+        {
+          "index": 132,
+          "date": "2025-09-16",
+          "price": 0.823,
+          "type": "low"
+        },
+        {
+          "index": 138,
+          "date": "2025-09-24",
+          "price": 1.04,
+          "type": "high"
+        },
+        {
+          "index": 142,
+          "date": "2025-09-30",
+          "price": 0.892,
+          "type": "low"
+        },
+        {
+          "index": 148,
+          "date": "2025-10-08",
+          "price": 1.18,
+          "type": "high"
+        },
+        {
+          "index": 152,
+          "date": "2025-10-14",
+          "price": 1.16,
+          "type": "high"
+        },
+        {
+          "index": 155,
+          "date": "2025-10-17",
+          "price": 1.03,
+          "type": "low"
+        },
+        {
+          "index": 157,
+          "date": "2025-10-21",
+          "price": 1.12,
+          "type": "high"
+        },
+        {
+          "index": 169,
+          "date": "2025-11-06",
+          "price": 0.817,
+          "type": "low"
+        },
+        {
+          "index": 171,
+          "date": "2025-11-10",
+          "price": 0.917,
+          "type": "high"
+        },
+        {
+          "index": 177,
+          "date": "2025-11-18",
+          "price": 0.72,
+          "type": "low"
+        },
+        {
+          "index": 179,
+          "date": "2025-11-20",
+          "price": 0.72,
+          "type": "low"
+        },
+        {
+          "index": 190,
+          "date": "2025-12-08",
+          "price": 1.08,
+          "type": "high"
+        },
+        {
+          "index": 193,
+          "date": "2025-12-11",
+          "price": 1.08,
+          "type": "high"
+        },
+        {
+          "index": 198,
+          "date": "2025-12-18",
+          "price": 0.901,
+          "type": "low"
+        },
+        {
+          "index": 202,
+          "date": "2025-12-24",
+          "price": 1.02,
+          "type": "high"
+        },
+        {
+          "index": 203,
+          "date": "2025-12-26",
+          "price": 1.02,
+          "type": "high"
+        },
+        {
+          "index": 206,
+          "date": "2025-12-31",
+          "price": 0.91,
+          "type": "low"
+        },
+        {
+          "index": 208,
+          "date": "2026-01-05",
+          "price": 1.08,
+          "type": "high"
+        },
+        {
+          "index": 215,
+          "date": "2026-01-14",
+          "price": 0.933,
+          "type": "low"
+        },
+        {
+          "index": 218,
+          "date": "2026-01-20",
+          "price": 0.98,
+          "type": "high"
+        },
+        {
+          "index": 227,
+          "date": "2026-02-02",
+          "price": 0.876,
+          "type": "high"
+        },
+        {
+          "index": 230,
+          "date": "2026-02-05",
+          "price": 0.773,
+          "type": "low"
+        },
+        {
+          "index": 234,
+          "date": "2026-02-11",
+          "price": 0.802,
+          "type": "low"
+        },
+        {
+          "index": 236,
+          "date": "2026-02-13",
+          "price": 0.82,
+          "type": "high"
+        },
+        {
+          "index": 242,
+          "date": "2026-02-24",
+          "price": 0.655,
+          "type": "low"
+        },
+        {
+          "index": 244,
+          "date": "2026-02-26",
+          "price": 0.784,
+          "type": "high"
+        },
+        {
+          "index": 247,
+          "date": "2026-03-03",
+          "price": 0.749,
+          "type": "low"
+        },
+        {
+          "index": 249,
+          "date": "2026-03-05",
+          "price": 0.84,
+          "type": "high"
+        },
+        {
+          "index": 252,
+          "date": "2026-03-10",
+          "price": 0.675,
+          "type": "low"
+        },
+        {
+          "index": 256,
+          "date": "2026-03-16",
+          "price": 0.74,
+          "type": "high"
+        }
+      ],
+      "confirmed": [
+        {
+          "index": 11,
+          "date": "2025-03-24",
+          "price": 5.52,
+          "type": "high"
+        },
+        {
+          "index": 18,
+          "date": "2025-04-02",
+          "price": 4.9,
+          "type": "high"
+        },
+        {
+          "index": 23,
+          "date": "2025-04-09",
+          "price": 4.68,
+          "type": "high"
+        },
+        {
+          "index": 28,
+          "date": "2025-04-16",
+          "price": 4.27,
+          "type": "low"
+        },
+        {
+          "index": 33,
+          "date": "2025-04-24",
+          "price": 4.88,
+          "type": "high"
+        },
+        {
+          "index": 36,
+          "date": "2025-04-29",
+          "price": 4.63,
+          "type": "low"
+        },
+        {
+          "index": 39,
+          "date": "2025-05-02",
+          "price": 4.88,
+          "type": "high"
+        },
+        {
+          "index": 46,
+          "date": "2025-05-13",
+          "price": 3.19,
+          "type": "low"
+        },
+        {
+          "index": 49,
           "date": "2025-05-16",
           "price": 3.57,
           "type": "high"
         },
         {
           "index": 62,
-          "date": "2025-06-03",
-          "price": 2.88,
-          "type": "low"
-        },
-        {
-          "index": 63,
-          "date": "2025-06-04",
-          "price": 2.88,
-          "type": "low"
-        },
-        {
-          "index": 64,
           "date": "2025-06-05",
           "price": 2.99,
           "type": "high"
         },
         {
-          "index": 83,
+          "index": 81,
           "date": "2025-07-03",
           "price": 2.03,
           "type": "low"
         },
         {
-          "index": 86,
+          "index": 84,
           "date": "2025-07-09",
           "price": 2.21,
           "type": "high"
         },
         {
-          "index": 91,
+          "index": 89,
           "date": "2025-07-16",
           "price": 1.95,
           "type": "low"
         },
         {
-          "index": 97,
+          "index": 95,
           "date": "2025-07-24",
           "price": 2.16,
           "type": "high"
         },
         {
-          "index": 105,
+          "index": 103,
           "date": "2025-08-05",
           "price": 1.97,
           "type": "high"
         },
         {
-          "index": 113,
+          "index": 111,
           "date": "2025-08-15",
           "price": 0.975,
           "type": "low"
         },
         {
-          "index": 118,
+          "index": 116,
           "date": "2025-08-22",
           "price": 1.18,
           "type": "high"
         },
         {
-          "index": 134,
+          "index": 132,
           "date": "2025-09-16",
           "price": 0.823,
           "type": "low"
         },
         {
-          "index": 140,
+          "index": 138,
           "date": "2025-09-24",
           "price": 1.04,
           "type": "high"
         },
         {
-          "index": 144,
+          "index": 142,
           "date": "2025-09-30",
           "price": 0.892,
           "type": "low"
         },
         {
-          "index": 150,
+          "index": 148,
           "date": "2025-10-08",
           "price": 1.18,
           "type": "high"
         },
         {
-          "index": 154,
+          "index": 152,
           "date": "2025-10-14",
           "price": 1.16,
           "type": "high"
         },
         {
-          "index": 157,
+          "index": 155,
           "date": "2025-10-17",
           "price": 1.03,
           "type": "low"
         },
         {
-          "index": 159,
+          "index": 157,
           "date": "2025-10-21",
           "price": 1.12,
           "type": "high"
         },
         {
           "index": 171,
-          "date": "2025-11-06",
-          "price": 0.817,
-          "type": "low"
-        },
-        {
-          "index": 173,
           "date": "2025-11-10",
           "price": 0.917,
           "type": "high"
         },
         {
-          "index": 179,
+          "index": 177,
           "date": "2025-11-18",
           "price": 0.72,
           "type": "low"
         },
         {
-          "index": 181,
+          "index": 179,
           "date": "2025-11-20",
           "price": 0.72,
           "type": "low"
         },
         {
-          "index": 192,
+          "index": 190,
           "date": "2025-12-08",
           "price": 1.08,
           "type": "high"
         },
         {
-          "index": 195,
+          "index": 193,
           "date": "2025-12-11",
           "price": 1.08,
           "type": "high"
         },
         {
-          "index": 200,
+          "index": 198,
           "date": "2025-12-18",
           "price": 0.901,
           "type": "low"
         },
         {
-          "index": 204,
-          "date": "2025-12-24",
-          "price": 1.02,
-          "type": "high"
-        },
-        {
-          "index": 205,
-          "date": "2025-12-26",
-          "price": 1.02,
-          "type": "high"
-        },
-        {
-          "index": 208,
+          "index": 206,
           "date": "2025-12-31",
           "price": 0.91,
           "type": "low"
         },
         {
-          "index": 210,
+          "index": 208,
           "date": "2026-01-05",
           "price": 1.08,
           "type": "high"
         },
         {
-          "index": 217,
-          "date": "2026-01-14",
-          "price": 0.933,
-          "type": "low"
-        },
-        {
-          "index": 220,
+          "index": 218,
           "date": "2026-01-20",
           "price": 0.98,
           "type": "high"
         },
         {
-          "index": 229,
+          "index": 227,
           "date": "2026-02-02",
           "price": 0.876,
           "type": "high"
         },
         {
-          "index": 232,
+          "index": 230,
           "date": "2026-02-05",
           "price": 0.773,
           "type": "low"
         },
         {
           "index": 236,
-          "date": "2026-02-11",
-          "price": 0.802,
-          "type": "low"
-        },
-        {
-          "index": 238,
           "date": "2026-02-13",
           "price": 0.82,
           "type": "high"
         },
         {
-          "index": 244,
+          "index": 242,
           "date": "2026-02-24",
           "price": 0.655,
           "type": "low"
-        },
-        {
-          "index": 246,
-          "date": "2026-02-26",
-          "price": 0.784,
-          "type": "high"
         },
         {
           "index": 249,
-          "date": "2026-03-03",
-          "price": 0.749,
-          "type": "low"
-        },
-        {
-          "index": 251,
           "date": "2026-03-05",
           "price": 0.84,
           "type": "high"
         },
         {
-          "index": 254,
+          "index": 252,
           "date": "2026-03-10",
           "price": 0.675,
           "type": "low"
-        }
-      ],
-      "confirmed": [
-        {
-          "index": 3,
-          "date": "2025-03-10",
-          "price": 4.17,
-          "type": "low"
-        },
-        {
-          "index": 4,
-          "date": "2025-03-11",
-          "price": 5.87,
-          "type": "high"
-        },
-        {
-          "index": 13,
-          "date": "2025-03-24",
-          "price": 5.52,
-          "type": "high"
-        },
-        {
-          "index": 20,
-          "date": "2025-04-02",
-          "price": 4.9,
-          "type": "high"
-        },
-        {
-          "index": 25,
-          "date": "2025-04-09",
-          "price": 4.68,
-          "type": "high"
-        },
-        {
-          "index": 30,
-          "date": "2025-04-16",
-          "price": 4.27,
-          "type": "low"
-        },
-        {
-          "index": 35,
-          "date": "2025-04-24",
-          "price": 4.88,
-          "type": "high"
-        },
-        {
-          "index": 38,
-          "date": "2025-04-29",
-          "price": 4.63,
-          "type": "low"
-        },
-        {
-          "index": 41,
-          "date": "2025-05-02",
-          "price": 4.88,
-          "type": "high"
-        },
-        {
-          "index": 48,
-          "date": "2025-05-13",
-          "price": 3.19,
-          "type": "low"
-        },
-        {
-          "index": 51,
-          "date": "2025-05-16",
-          "price": 3.57,
-          "type": "high"
-        },
-        {
-          "index": 64,
-          "date": "2025-06-05",
-          "price": 2.99,
-          "type": "high"
-        },
-        {
-          "index": 83,
-          "date": "2025-07-03",
-          "price": 2.03,
-          "type": "low"
-        },
-        {
-          "index": 86,
-          "date": "2025-07-09",
-          "price": 2.21,
-          "type": "high"
-        },
-        {
-          "index": 91,
-          "date": "2025-07-16",
-          "price": 1.95,
-          "type": "low"
-        },
-        {
-          "index": 97,
-          "date": "2025-07-24",
-          "price": 2.16,
-          "type": "high"
-        },
-        {
-          "index": 105,
-          "date": "2025-08-05",
-          "price": 1.97,
-          "type": "high"
-        },
-        {
-          "index": 113,
-          "date": "2025-08-15",
-          "price": 0.975,
-          "type": "low"
-        },
-        {
-          "index": 118,
-          "date": "2025-08-22",
-          "price": 1.18,
-          "type": "high"
-        },
-        {
-          "index": 134,
-          "date": "2025-09-16",
-          "price": 0.823,
-          "type": "low"
-        },
-        {
-          "index": 140,
-          "date": "2025-09-24",
-          "price": 1.04,
-          "type": "high"
-        },
-        {
-          "index": 144,
-          "date": "2025-09-30",
-          "price": 0.892,
-          "type": "low"
-        },
-        {
-          "index": 150,
-          "date": "2025-10-08",
-          "price": 1.18,
-          "type": "high"
-        },
-        {
-          "index": 154,
-          "date": "2025-10-14",
-          "price": 1.16,
-          "type": "high"
-        },
-        {
-          "index": 157,
-          "date": "2025-10-17",
-          "price": 1.03,
-          "type": "low"
-        },
-        {
-          "index": 159,
-          "date": "2025-10-21",
-          "price": 1.12,
-          "type": "high"
-        },
-        {
-          "index": 173,
-          "date": "2025-11-10",
-          "price": 0.917,
-          "type": "high"
-        },
-        {
-          "index": 179,
-          "date": "2025-11-18",
-          "price": 0.72,
-          "type": "low"
-        },
-        {
-          "index": 181,
-          "date": "2025-11-20",
-          "price": 0.72,
-          "type": "low"
-        },
-        {
-          "index": 192,
-          "date": "2025-12-08",
-          "price": 1.08,
-          "type": "high"
-        },
-        {
-          "index": 195,
-          "date": "2025-12-11",
-          "price": 1.08,
-          "type": "high"
-        },
-        {
-          "index": 200,
-          "date": "2025-12-18",
-          "price": 0.901,
-          "type": "low"
-        },
-        {
-          "index": 208,
-          "date": "2025-12-31",
-          "price": 0.91,
-          "type": "low"
-        },
-        {
-          "index": 210,
-          "date": "2026-01-05",
-          "price": 1.08,
-          "type": "high"
-        },
-        {
-          "index": 220,
-          "date": "2026-01-20",
-          "price": 0.98,
-          "type": "high"
-        },
-        {
-          "index": 229,
-          "date": "2026-02-02",
-          "price": 0.876,
-          "type": "high"
-        },
-        {
-          "index": 232,
-          "date": "2026-02-05",
-          "price": 0.773,
-          "type": "low"
-        },
-        {
-          "index": 238,
-          "date": "2026-02-13",
-          "price": 0.82,
-          "type": "high"
-        },
-        {
-          "index": 244,
-          "date": "2026-02-24",
-          "price": 0.655,
-          "type": "low"
-        },
-        {
-          "index": 251,
-          "date": "2026-03-05",
-          "price": 0.84,
-          "type": "high"
         }
       ]
     },
@@ -596,14 +584,14 @@
       "completedPattern": {
         "valid": false,
         "direction": "bearish",
-        "endedAt": "2026-03-05",
+        "endedAt": "2026-03-10",
         "confidence0_100": 100,
         "rules": {
           "r1": true,
-          "r2": false,
-          "r3": true
+          "r2": true,
+          "r3": false
         },
-        "guidelineScore": 56,
+        "guidelineScore": 99,
         "rulePasses": 2
       },
       "developingPattern": {
@@ -611,12 +599,12 @@
         "confidence": 60,
         "fibLevels": {
           "support": [
-            0.67683,
-            0.63317
+            0.69447,
+            0.65553
           ],
           "resistance": [
-            0.81817,
-            0.86183
+            0.82053,
+            0.85947
           ]
         },
         "disclaimer": "Reference levels only -- no prediction"
@@ -631,28 +619,28 @@
       },
       "fib": {
         "ratios": {
-          "wave2": 0.990385,
-          "wave3": 0.451923,
-          "wave4": 3.510638,
-          "wave5": 1.778846
+          "wave2": 0.456311,
+          "wave3": 1.601942,
+          "wave4": 1.121212,
+          "wave5": 1.601942
         },
-        "conformanceScore": 47.996697
+        "conformanceScore": 72.319296
       }
     },
     "fib": {
       "ratios": {
-        "wave2": 0.990385,
-        "wave3": 0.451923,
-        "wave4": 3.510638,
-        "wave5": 1.778846
+        "wave2": 0.456311,
+        "wave3": 1.601942,
+        "wave4": 1.121212,
+        "wave5": 1.601942
       },
-      "conformanceScore": 47.996697
+      "conformanceScore": 72.319296
     },
     "multiTimeframeAgreement": null,
     "debug": {
       "symbol": "MYO",
       "window": 3,
-      "candidateCount": 52,
+      "candidateCount": 51,
       "durationMs": 1
     },
     "disclaimer": "MarketPhase AI — Scientific Elliott Research (v8.0)\nprovides deterministic, rule-based historical analysis only.\nIt does not forecast future prices or offer financial advice.\nUse solely for educational and research purposes.\nISO 8000 / IEEE 7000 Compliant - Bit-exact reproducibility guaranteed."
