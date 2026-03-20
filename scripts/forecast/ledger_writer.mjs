@@ -7,6 +7,7 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
+import readline from 'node:readline';
 import zlib from 'node:zlib';
 import { canonicalJSON } from '../lib/digest.js';
 
@@ -90,6 +91,42 @@ export function readLedgerRange(repoRoot, ledgerType, startDate, endDate) {
             }
         }
 
+        current.setMonth(current.getMonth() + 1);
+    }
+
+    return records;
+}
+
+export async function readLedgerRangeAsync(repoRoot, ledgerType, startDate, endDate) {
+    const records = [];
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+
+    const current = new Date(start.getFullYear(), start.getMonth(), 1);
+    while (current <= end) {
+        const year = current.getFullYear();
+        const month = String(current.getMonth() + 1).padStart(2, '0');
+        const partitionPath = getLedgerPath(repoRoot, ledgerType, `${year}-${month}-01`);
+        if (fs.existsSync(partitionPath)) {
+            const rl = readline.createInterface({
+                input: fs.createReadStream(partitionPath).pipe(zlib.createGunzip()),
+                crlfDelay: Infinity,
+            });
+            for await (const line of rl) {
+                if (!line.trim()) continue;
+                let record = null;
+                try {
+                    record = JSON.parse(line);
+                } catch {
+                    record = null;
+                }
+                if (!record) continue;
+                const recordDate = record.trading_date || record.forecast_trading_date || record.outcome_trading_date || record.as_of?.slice(0, 10);
+                if (recordDate && recordDate >= startDate && recordDate <= endDate) {
+                    records.push(record);
+                }
+            }
+        }
         current.setMonth(current.getMonth() + 1);
     }
 
@@ -243,6 +280,7 @@ export default {
     getLedgerPath,
     readLedger,
     readLedgerRange,
+    readLedgerRangeAsync,
     appendToLedger,
     writeForecastRecords,
     writeOutcomeRecords,

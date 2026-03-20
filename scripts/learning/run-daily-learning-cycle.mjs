@@ -12,13 +12,15 @@
  */
 
 import fs from 'node:fs';
+import crypto from 'node:crypto';
 import path from 'node:path';
 import zlib from 'node:zlib';
 import {
-    brierScore, accuracy, hitRate, trend, rollingAverage,
+    brierScore, accuracy, hitRate, trend, rollingAverage, eceScore,
     round, trendEmoji, isoDate, daysAgo
 } from './lib/metrics.mjs';
 import { resolveSsotPath } from '../universe-v7/lib/ssot-paths.mjs';
+import { addTradingDays } from '../forecast/trading_date.mjs';
 
 // ─── Paths ──────────────────────────────────────────────────────────────────
 const ROOT = process.cwd();
@@ -29,6 +31,14 @@ const REPORT_DIR = path.join(LEARNING, 'reports');
 const CALIB_DIR = path.join(LEARNING, 'calibration');
 const PUBLIC_REPORT = path.join(ROOT, 'public/data/reports/learning-report-latest.json');
 const PUBLIC_REPORT_JS = path.join(ROOT, 'public/data/reports/learning-report-latest.js');
+const BEST_SETUPS_POLICY = path.join(ROOT, 'policies/best-setups.v1.json');
+const BEST_SETUPS_SNAPSHOT = path.join(ROOT, 'public/data/snapshots/best-setups-v4.json');
+const ETF_DIAGNOSTIC_LATEST = path.join(ROOT, 'public/data/reports/best-setups-etf-diagnostic-latest.json');
+const HORIZON_CONFIG_MAP = Object.freeze({
+    short: '1d',
+    medium: '5d',
+    long: '20d'
+});
 
 const FORECAST_LEDGER = path.join(ROOT, 'mirrors/forecast/ledger');
 const SCIENTIFIC_SUMMARY = path.join(ROOT, 'public/data/supermodules/scientific-summary.json');
@@ -103,9 +113,147 @@ function loadCalib(feature) {
     return readJson(calibPath(feature)) || { weights: {}, hit_rates: {}, updated: null };
 }
 
+function loadBestSetupsPolicy() {
+    return readJson(BEST_SETUPS_POLICY) || null;
+}
+
 function saveCalib(feature, calib) {
     calib.updated = new Date().toISOString();
     writeJson(calibPath(feature), calib);
+}
+
+function stableHash(value) {
+    return crypto.createHash('sha256').update(JSON.stringify(value)).digest('hex');
+}
+
+function finiteOrNull(value) {
+    const num = Number(value);
+    return Number.isFinite(num) ? num : null;
+}
+
+function estimateTradingCosts(assetClass) {
+    const normalized = String(assetClass || 'stock').toLowerCase();
+    if (normalized === 'etf') {
+        return { estimated_costs_bps: 4, estimated_slippage_bps: 3 };
+    }
+    return { estimated_costs_bps: 6, estimated_slippage_bps: 5 };
+}
+
+function classifyRegimeTag(row = {}) {
+    const volatilityPct = finiteOrNull(row?.analyzer_volatility_percentile);
+    const trendScore = finiteOrNull(row?.analyzer_trend_score);
+    const trendDuration = finiteOrNull(row?.analyzer_trend_duration_days);
+    if (volatilityPct != null && volatilityPct >= 85) return 'high_vol';
+    if ((trendScore ?? 0) >= 68 && (trendDuration == null || trendDuration >= 10)) return 'trend';
+    return 'chop';
+}
+
+function loadAnalyzerPolicy() {
+    const policy = loadBestSetupsPolicy() || {};
+    return {
+        learningStatus: policy?.learning_status || {},
+        minimumNGates: policy?.minimum_n_gates || {},
+        safety: policy?.safety_switch_thresholds?.defaults || {},
+        registry: policy?.registry || {},
+        costModelVersion: policy?.cost_model_version || 'v1.0_replay_us_equities',
+        featureLogicVersion: policy?.feature_logic_version || 'v1_shared_core',
+        regimeLogicVersion: policy?.regime_logic_version || 'v1_simple_pit',
+        labelVersion: policy?.label_version || 'v1_tradeability_atr_net',
+        systemVersion: policy?.system?.version || '1.0.0',
+        metaLabelerRuleVersion: policy?.meta_labeler_rule_version || 'v1_bootstrap_rules',
+        hardGate: policy?.hard_gate || null,
+    };
+}
+
+function deriveAnalyzerLearningStatus(metrics, policyConfig) {
+    const globalMin = Number(policyConfig?.learningStatus?.activation_thresholds?.global_min_predictions || 500);
+    const perHorizonMin = Number(policyConfig?.learningStatus?.activation_thresholds?.per_horizon_min_predictions || 150);
+    const minOutcomeDays = Number(policyConfig?.learningStatus?.activation_thresholds?.min_live_outcome_days || 30);
+    const total = Number(metrics?.outcomes_resolved || 0);
+    const outcomeDays = new Set((metrics?.outcome_dates || []).filter(Boolean)).size;
+    const byHorizon = metrics?.by_horizon || {};
+    const horizonsReady = ['1d', '5d', '20d'].every((horizon) => Number(byHorizon?.[horizon]?.outcomes_resolved || 0) >= perHorizonMin);
+    if (total >= globalMin && horizonsReady && outcomeDays >= minOutcomeDays) return 'ACTIVE';
+    return 'BOOTSTRAP';
+}
+
+function computeMinimumNStatus(metrics, policyConfig) {
+    const gates = policyConfig?.minimumNGates || {};
+    const globalPerHorizon = Number(gates?.global_per_horizon || 200);
+    const assetClassHorizon = Number(gates?.asset_class_horizon || 100);
+    const regimeHorizon = Number(gates?.regime_horizon || 75);
+    const horizons = ['1d', '5d', '20d'];
+    const byHorizon = Object.fromEntries(
+        horizons.map((horizon) => {
+            const row = metrics?.by_horizon?.[horizon] || {};
+            return [horizon, {
+                outcomes_resolved: Number(row?.outcomes_resolved || 0),
+                satisfied: Number(row?.outcomes_resolved || 0) >= globalPerHorizon,
+            }];
+        })
+    );
+    const satisfiedHorizons = horizons.filter((horizon) => byHorizon[horizon].satisfied).length;
+    const ready = satisfiedHorizons >= 2;
+    return {
+        global_per_horizon_threshold: globalPerHorizon,
+        asset_class_horizon_threshold: assetClassHorizon,
+        regime_horizon_threshold: regimeHorizon,
+        satisfied_horizons: satisfiedHorizons,
+        ready_for_safety: ready,
+        by_horizon: byHorizon,
+    };
+}
+
+function applyLearningStatusSafety(baseStatus, safetySwitch) {
+    const level = String(safetySwitch?.level || '').toUpperCase();
+    if (level === 'RED') return 'SAFE_MODE';
+    if (level === 'ORANGE' && baseStatus === 'ACTIVE') return 'COOLDOWN';
+    return baseStatus;
+}
+
+function evaluateSafetySwitch(metrics, policyConfig) {
+    const defaults = policyConfig?.safety || {};
+    const minimumNStatus = computeMinimumNStatus(metrics, policyConfig);
+    const precision10 = finiteOrNull(metrics?.precision_10);
+    const ece = finiteOrNull(metrics?.ece_7d);
+    const coveragePerDay = finiteOrNull(metrics?.coverage_per_day) || 0;
+    const predictionsTotal = finiteOrNull(metrics?.predictions_total) || 0;
+    const coverageDropPct = coveragePerDay > 0 ? Math.max(0, ((coveragePerDay - predictionsTotal) / coveragePerDay) * 100) : 0;
+
+    if (!minimumNStatus.ready_for_safety || (precision10 == null && ece == null)) {
+        return { level: 'BOOTSTRAP', actions: ['log_only'], trigger: 'minimum_n_not_met', minimum_n_status: minimumNStatus };
+    }
+    if (precision10 != null && precision10 < Number(defaults?.red?.precision_at_10_lt ?? 0.5)) {
+        return { level: 'RED', actions: ['freeze_promotions', 'buy_eligible_false'], trigger: 'precision_red', minimum_n_status: minimumNStatus };
+    }
+    if (precision10 != null && precision10 < Number(defaults?.orange?.precision_at_10_lt ?? 0.54)) {
+        return { level: 'ORANGE', actions: ['freeze_promotions', 'champion_freeze'], trigger: 'precision_orange', minimum_n_status: minimumNStatus };
+    }
+    if ((ece != null && ece > Number(defaults?.yellow?.ece_gt ?? 0.08)) || coverageDropPct > Number(defaults?.yellow?.coverage_drop_pct ?? 20)) {
+        return { level: 'YELLOW', actions: ['alert_only', 'coverage_throttle'], trigger: 'ece_or_coverage', minimum_n_status: minimumNStatus };
+    }
+    return { level: 'GREEN', actions: ['normal'], trigger: 'within_thresholds', minimum_n_status: minimumNStatus };
+}
+
+function classifyFalsePositive(outcome = {}) {
+    if (outcome?.feature !== 'stock_analyzer' || outcome?.buy_eligible !== true || outcome?.hit !== false) return null;
+    if (String(outcome?.regime_tag || '').toLowerCase() === 'high_vol') return 'volatility_trap';
+    if ((finiteOrNull(outcome?.estimated_slippage_bps) ?? 0) >= 15) return 'low_liquidity';
+    if ((finiteOrNull(outcome?.contributor_agreement) ?? 1) < 0.45) return 'weak_consensus';
+    if (String(outcome?.regime_tag || '').toLowerCase() === 'chop') return 'regime_mismatch';
+    if ((finiteOrNull(outcome?.actual_return) ?? 0) <= -0.08) return 'event_shock';
+    if ((finiteOrNull(outcome?.expected_edge) ?? 0) < 0.1) return 'overextended_entry';
+    return 'fake_breakout';
+}
+
+function summarizeFalsePositives(outcomes = []) {
+    const counts = {};
+    for (const outcome of outcomes) {
+        const code = classifyFalsePositive(outcome);
+        if (!code) continue;
+        counts[code] = (counts[code] || 0) + 1;
+    }
+    return counts;
 }
 
 // ─── EOD Price Loader ───────────────────────────────────────────────────────
@@ -178,6 +326,144 @@ function resolveRunDate(dateArg) {
     const explicit = normalizeDate(dateArg);
     if (explicit) return explicit;
     return isoDate(new Date());
+}
+
+function isoMidnightUtc(date) {
+    return `${date}T00:00:00.000Z`;
+}
+
+function isoCutoffUtc(date) {
+    return `${date}T23:59:59.000Z`;
+}
+
+function decorateAnalyzerRecord(base, date, policy, sourceMeta) {
+    const sourceEnv = process.env.GITHUB_ACTIONS ? 'main' : 'local';
+    const ticker = String(base?.ticker || '').toUpperCase();
+    const horizon = String(base?.horizon || 'na');
+    const assetClass = String(base?.asset_class || 'stock').toLowerCase();
+    const costDefaults = estimateTradingCosts(assetClass);
+    const featureHash = stableHash({
+        ticker,
+        assetClass,
+        horizon,
+        source: base?.source || null,
+        rank_score: base?.rank_score ?? base?.quality_score ?? null,
+        probability: base?.probability ?? base?.raw_probability ?? null,
+        regime_tag: base?.regime_tag || null,
+    });
+    return {
+        prediction_uid: `stock_analyzer:${date}:${ticker}:${assetClass}:${horizon}`,
+        prediction_timestamp_utc: isoMidnightUtc(date),
+        data_cutoff_timestamp_utc: isoCutoffUtc(sourceMeta?.asof || date),
+        source_env: sourceEnv,
+        asset_class: assetClass,
+        model_family: 'stock_analyzer_v4',
+        decision_core_version: policy?.system?.version || '1.0.0',
+        feature_logic_version: policy?.feature_logic_version || 'v1_shared_core',
+        regime_logic_version: policy?.regime_logic_version || 'v1_simple_pit',
+        label_version: policy?.label_version || 'v1_tradeability_atr_net',
+        cost_model_version: policy?.cost_model_version || 'v1.0_replay_us_equities',
+        feature_hash: featureHash,
+        raw_score: base.quality_score_raw ?? base.quality_score ?? null,
+        raw_probability: null,
+        calibrated_probability: null,
+        confidence_bucket: null,
+        verdict: null,
+        buy_eligible: false,
+        abstain_reason: null,
+        gates: [],
+        rank_score: base.quality_score ?? null,
+        regime_tag: base?.regime_tag || classifyRegimeTag(base),
+        estimated_costs_bps: costDefaults.estimated_costs_bps,
+        estimated_slippage_bps: costDefaults.estimated_slippage_bps,
+        realized_costs_bps: null,
+        realized_slippage_bps: null,
+        cost_observation_mode: policy?.registry?.cost_observation_mode_default || 'replay',
+        realized_outcome: null,
+        realized_return_net: null,
+        realized_return_atr: null,
+        mfe: null,
+        mae: null,
+        stop_hit: null,
+        target_hit: null,
+        run_id: `learning:${date}`,
+        learning_status: policy?.learning_status?.default || 'BOOTSTRAP',
+        ...base
+    };
+}
+
+function horizonDays(horizon) {
+    const key = String(horizon || '').trim().toLowerCase();
+    if (key === 'short' || key === '1d') return 1;
+    if (key === 'medium' || key === '5d') return 5;
+    if (key === 'long' || key === '20d') return 20;
+    return null;
+}
+
+function horizonBucket(horizon) {
+    const key = String(horizon || '').trim().toLowerCase();
+    if (key === '1d' || key === 'short') return 'short';
+    if (key === '5d' || key === 'medium') return 'medium';
+    if (key === '20d' || key === 'long') return 'long';
+    return null;
+}
+
+function gateBreakdownFromSnapshot(doc) {
+    const breakdown = doc?.meta?.rejection_counts;
+    return breakdown && typeof breakdown === 'object' ? breakdown : null;
+}
+
+function computePrecisionAtK(items, k, groupKeyFn) {
+    const rows = Array.isArray(items) ? items.filter((item) => item?.hit != null) : [];
+    if (!rows.length) return null;
+    const groups = new Map();
+    for (const row of rows) {
+        const key = groupKeyFn(row);
+        if (!groups.has(key)) groups.set(key, []);
+        groups.get(key).push(row);
+    }
+    const scores = [];
+    for (const groupRows of groups.values()) {
+        const slice = groupRows
+            .slice()
+            .sort((a, b) => (Number(b.rank_score || b.quality_score || 0) - Number(a.rank_score || a.quality_score || 0)))
+            .slice(0, k);
+        if (!slice.length) continue;
+        scores.push(slice.filter((row) => row.hit === true).length / slice.length);
+    }
+    if (!scores.length) return null;
+    return scores.reduce((sum, value) => sum + value, 0) / scores.length;
+}
+
+function metricBucket(items, referenceDate = null) {
+    const rows = Array.isArray(items) ? items : [];
+    const probs = rows.map((o) => ({ p: o.probability ?? o.calibrated_probability ?? o.raw_probability ?? 0.5, y: o.y }));
+    const anchorDate = referenceDate || rows.reduce((max, row) => (row?.outcome_date && row.outcome_date > max ? row.outcome_date : max), isoDate(new Date()));
+    const last7d = rows.filter((o) => o.outcome_date >= daysAgo(anchorDate, 7));
+    const prior7d = rows.filter((o) => o.outcome_date >= daysAgo(anchorDate, 14) && o.outcome_date < daysAgo(anchorDate, 7));
+    const p7d = last7d.map((o) => ({ p: o.probability ?? o.calibrated_probability ?? o.raw_probability ?? 0.5, y: o.y }));
+    const pPrior = prior7d.map((o) => ({ p: o.probability ?? o.calibrated_probability ?? o.raw_probability ?? 0.5, y: o.y }));
+    const acc7d = accuracy(p7d);
+    const accPrior = accuracy(pPrior);
+    const brier7d = brierScore(p7d);
+    const brierPrior = brierScore(pPrior);
+    return {
+        predictions_total: rows.length,
+        outcomes_resolved: rows.filter((o) => o.y != null).length,
+        accuracy_all: round(accuracy(probs)),
+        brier_all: round(brierScore(probs)),
+        ece_all: round(eceScore(probs)),
+        hit_rate_all: round(hitRate(rows)),
+        accuracy_7d: round(acc7d),
+        brier_7d: round(brier7d),
+        ece_7d: round(eceScore(p7d)),
+        hit_rate_7d: round(hitRate(last7d)),
+        precision_10: round(computePrecisionAtK(rows, 10, (row) => `${row.outcome_date}|${row.horizon}`)),
+        precision_50: round(computePrecisionAtK(rows, 50, (row) => `${row.outcome_date}|${row.horizon}`)),
+        coverage_per_day: round(rows.length / 30, 2),
+        trend_accuracy: trend(acc7d, accPrior, false),
+        trend_brier: trend(brier7d, brierPrior, true),
+    };
 }
 
 // ─── 1. FORECAST: Extract Predictions ───────────────────────────────────────
@@ -579,143 +865,192 @@ function extractElliottPredictions(date, eodPrices, candidateTickers = []) {
     };
 }
 
-// ─── 4. STOCK ANALYZER: Extract Rankings ────────────────────────────────────
-// IMPROVEMENT: EMA(5) score smoothing using historical data
-function extractStockRankings(date) {
+// ─── 4. STOCK ANALYZER: Extract Best-Setup Predictions ─────────────────────
+function extractStockRankings(date, eodPrices, policy = null) {
+    const snapshotDoc = readJson(BEST_SETUPS_SNAPSHOT);
+    const snapshotAsof = normalizeDate(
+        snapshotDoc?.meta?.forecast_asof ||
+        snapshotDoc?.meta?.quantlab_asof ||
+        snapshotDoc?.generated_at
+    );
+
+    if (snapshotDoc?.data?.stocks) {
+        const sourceMeta = {
+            source: snapshotDoc?.meta?.source || 'best_setups_snapshot',
+            asof: snapshotAsof,
+            fresh: Boolean(snapshotAsof && snapshotAsof === date),
+            stale_days: daysBetween(snapshotAsof, date),
+            gate_rejection_breakdown: gateBreakdownFromSnapshot(snapshotDoc),
+            verified_counts: snapshotDoc?.meta?.verified_counts || null,
+        };
+
+        const predictions = [];
+        for (const assetClass of ['stocks', 'etfs']) {
+            const bucket = snapshotDoc?.data?.[assetClass] || {};
+            for (const horizon of ['short', 'medium', 'long']) {
+                const rows = Array.isArray(bucket[horizon]) ? bucket[horizon] : [];
+                rows.forEach((row, idx) => {
+                    const ticker = String(row?.ticker || '').trim().toUpperCase();
+                    if (!ticker) return;
+                    const calibratedProbability = finiteOrNull(row?.calibrated_probability);
+                    const rawProbability = finiteOrNull(row?.raw_probability);
+                    const probability = finiteOrNull(
+                        calibratedProbability ??
+                        rawProbability ??
+                        row?.probability
+                    ) ?? 0.5;
+                    predictions.push(decorateAnalyzerRecord({
+                        feature: 'stock_analyzer',
+                        ticker,
+                        date,
+                        asset_class: String(row?.asset_class || (assetClass === 'etfs' ? 'etf' : 'stock')).toLowerCase(),
+                        horizon: row?.horizon_key || HORIZON_CONFIG_MAP[horizon],
+                        horizon_bucket: horizon,
+                        direction: 'bullish',
+                        probability,
+                        calibrated_probability: calibratedProbability,
+                        raw_probability: rawProbability,
+                        confidence_bucket: row?.confidence || 'HIGH',
+                        verdict: row?.verdict || 'BUY',
+                        buy_eligible: row?.buy_eligible !== false,
+                        abstain_reason: row?.abstain_reason || null,
+                        gates: Array.isArray(row?.trigger_gates) ? row.trigger_gates : [],
+                        rank: idx + 1,
+                        quality_score: row?.score ?? row?.rank_score ?? null,
+                        quality_score_raw: row?.ranking_score ?? row?.score ?? null,
+                        rank_score: row?.rank_score ?? row?.score ?? null,
+                        price_at_prediction: eodPrices?.[ticker]?.close ?? row?.price ?? null,
+                        source: row?.source || 'best_setups_snapshot',
+                        source_rank_label: row?.source_rank_label || null,
+                        analyzer_horizon_verdict: row?.verdict || 'BUY',
+                        contributor_agreement: finiteOrNull(row?.contributor_agreement),
+                        expected_edge: finiteOrNull(row?.expected_edge),
+                        regime_tag: row?.regime_tag || classifyRegimeTag(row),
+                        meta_labeler_rule_version: row?.meta_labeler_rule_version || policy?.meta_labeler_rule_version || null,
+                    }, date, policy, sourceMeta));
+                });
+            }
+        }
+
+        predictions.sort((a, b) => (Number(b.rank_score || b.quality_score || 0) - Number(a.rank_score || a.quality_score || 0)));
+        predictions.forEach((row, index) => { row.rank = index + 1; });
+        console.log(`[learning] Stock Analyzer: ${predictions.length} horizon predictions from best-setups snapshot`);
+        return { rankings: predictions, source_meta: sourceMeta };
+    }
+
     const ssotPath = V7_STOCK_ROWS;
     const doc = readJson(ssotPath);
     const docAsof = String(doc?.generated_at || doc?.as_of || '').slice(0, 10) || null;
-
     if (!doc) {
-        console.warn(`[learning] Stock Analyzer: SSOT file not found at ${ssotPath}`);
-        return { rankings: [], source_meta: { source: 'v7_stock_rows', asof: null, fresh: false, stale_days: null } };
+        console.warn(`[learning] Stock Analyzer: no best-setups snapshot and SSOT file not found at ${ssotPath}`);
+        return { rankings: [], source_meta: { source: 'stock_analyzer_missing', asof: null, fresh: false, stale_days: null } };
     }
-
     const items = Array.isArray(doc) ? doc : (doc.items || doc.rows || []);
-    if (!items.length) {
-        console.warn(`[learning] Stock Analyzer: SSOT loaded but 0 items (keys: ${Object.keys(doc).join(',')})`);
-        return { rankings: [], source_meta: { source: 'v7_stock_rows', asof: docAsof, fresh: false, stale_days: daysBetween(docAsof, date) } };
-    }
-
-    console.log(`[learning] Stock Analyzer: SSOT loaded ${items.length} items (asof: ${docAsof})`);
-
-    // Load historical scores for EMA smoothing (last 5 days)
-    const historicalScores = {}; // ticker -> [score, score, ...]
-    for (let i = 1; i <= 5; i++) {
-        const pastDate = daysAgo(date, i);
-        const pastPreds = readNdjson(predPath(pastDate, 'stock_analyzer'));
-        for (const p of pastPreds) {
-            if (!historicalScores[p.ticker]) historicalScores[p.ticker] = [];
-            if (p.quality_score != null) historicalScores[p.ticker].push(p.quality_score);
-        }
-    }
-
-    // EMA smoothing: α = 0.3 (recent data weighted more)
-    const ALPHA = 0.3;
-    function emaSmooth(currentScore, ticker) {
-        const hist = historicalScores[ticker];
-        if (!hist || !hist.length) return currentScore;
-        // Compute EMA backwards through history
-        let ema = hist[0];
-        for (let i = 1; i < hist.length; i++) {
-            ema = ALPHA * hist[i] + (1 - ALPHA) * ema;
-        }
-        // Blend current with EMA
-        return round(ALPHA * currentScore + (1 - ALPHA) * ema);
-    }
-
-    const rankings = items.slice(0, 200).map((row, idx) => {
-        const ticker = String(row.symbol || row.ticker || row.canonical_id || '').toUpperCase();
-        const rawScore = row.score_0_100 ?? row.quality_score ?? row.score ?? null;
-        const smoothedScore = rawScore != null ? emaSmooth(rawScore, ticker) : rawScore;
-
-        return {
-            feature: 'stock_analyzer',
-            ticker,
-            date,
-            rank: idx + 1,
-            quality_score: smoothedScore,
-            quality_score_raw: rawScore,
-            bars_count: row.bars_count ?? null,
-            layer: row.layer ?? null,
-            source: 'v7_stock_rows'
-        };
-    }).filter(r => r.ticker);
-
-    // Re-sort by smoothed score and reassign ranks
-    rankings.sort((a, b) => (b.quality_score ?? 0) - (a.quality_score ?? 0));
-    rankings.forEach((r, i) => { r.rank = i + 1; });
-
-    console.log(`[learning] Stock Analyzer: ${rankings.length} rankings with EMA(5) smoothing (α=${ALPHA})`);
-    const staleDays = daysBetween(docAsof, date);
-    return {
-        rankings,
-        source_meta: {
-            source: 'v7_stock_rows',
-            asof: docAsof,
-            fresh: staleDays != null ? staleDays <= 1 : false,
-            stale_days: staleDays
-        }
+    const sourceMeta = {
+        source: 'v7_stock_rows_fallback',
+        asof: docAsof,
+        fresh: Boolean(docAsof && docAsof === date),
+        stale_days: daysBetween(docAsof, date),
+        gate_rejection_breakdown: null,
+        verified_counts: null,
     };
+    const rankings = items.slice(0, 200).map((row, idx) => decorateAnalyzerRecord({
+        feature: 'stock_analyzer',
+        ticker: String(row.symbol || row.ticker || row.canonical_id || '').toUpperCase(),
+        date,
+        asset_class: 'stock',
+        horizon: '5d',
+        horizon_bucket: 'medium',
+        direction: 'bullish',
+        probability: 0.5,
+        confidence_bucket: null,
+        verdict: null,
+        buy_eligible: false,
+        abstain_reason: 'SNAPSHOT_MISSING_FALLBACK',
+        gates: [],
+        rank: idx + 1,
+        quality_score: row.score_0_100 ?? row.quality_score ?? row.score ?? null,
+        quality_score_raw: row.score_0_100 ?? row.quality_score ?? row.score ?? null,
+        rank_score: row.score_0_100 ?? row.quality_score ?? row.score ?? null,
+        price_at_prediction: eodPrices?.[String(row.symbol || row.ticker || row.canonical_id || '').toUpperCase()]?.close ?? null,
+        source: 'v7_stock_rows_fallback',
+    }, date, policy, sourceMeta)).filter((row) => row.ticker);
+    return { rankings, source_meta: sourceMeta };
 }
 
 // ─── Outcome Resolution ─────────────────────────────────────────────────────
-function resolveOutcomes(date, feature, horizonDays, eodPrices) {
-    const predDate = daysAgo(date, horizonDays);
-    const preds = readNdjson(predPath(predDate, feature));
-    if (!preds.length) return [];
-
+function resolveOutcomes(date, feature, eodPrices) {
     const calib = loadCalib(feature);
     const outcomes = [];
+    const supportedDays = new Set([1, 5, 20]);
 
-    for (const pred of preds) {
-        const ticker = pred.ticker;
-        const currentPrice = eodPrices[ticker]?.close;
-        const predPrice = pred.price_at_prediction;
-
-        if (!currentPrice || !predPrice || predPrice <= 0) continue;
-
-        const actualReturn = (currentPrice - predPrice) / predPrice;
-        const wentUp = actualReturn > 0;
-        const y = wentUp ? 1 : 0;
-        const p = pred.probability ?? 0.5;
-        const predictedUp = p >= 0.5;
-        const isCorrect = predictedUp === wentUp;
-
-        const outcome = {
-            ...pred,
-            outcome_date: date,
-            outcome_price: currentPrice,
-            actual_return: round(actualReturn),
-            went_up: wentUp,
-            y,
-            predicted_direction_correct: isCorrect,
-            brier_contribution: round((p - y) ** 2),
-        };
-
-        // Feature-specific hit checks
-        if (feature === 'scientific') {
-            // IMPROVEMENT: ATR-based dynamic threshold instead of fixed 2%
-            const bar = eodPrices[ticker];
-            const atrProxy = bar ? (bar.high - bar.low) / (bar.close || 1) : 0.02;
-            const threshold = Math.max(0.01, Math.min(0.05, atrProxy)); // 1%–5% based on volatility
-            outcome.hit = pred.trigger_met && Math.abs(actualReturn) >= threshold &&
-                ((pred.direction === 'bullish' && actualReturn > 0) ||
-                    (pred.direction === 'bearish' && actualReturn < 0));
-            outcome.breakout_threshold = round(threshold);
-        } else if (feature === 'elliott') {
-            outcome.hit = isCorrect;
-        } else {
-            outcome.hit = isCorrect;
+    for (const hDays of supportedDays) {
+        let predDate = daysAgo(date, hDays);
+        try {
+            predDate = addTradingDays(date, -hDays);
+        } catch {
+            predDate = daysAgo(date, hDays);
         }
+        const preds = readNdjson(predPath(predDate, feature)).filter((pred) => horizonDays(pred?.horizon) === hDays);
+        for (const pred of preds) {
+            const ticker = pred.ticker;
+            const currentPrice = eodPrices[ticker]?.close;
+            const predPrice = pred.price_at_prediction;
 
-        outcomes.push(outcome);
+            if (!currentPrice || !predPrice || predPrice <= 0) continue;
 
-        // Update per-ticker calibration
-        const key = `${ticker}_${pred.direction || 'any'}`;
-        if (!calib.hit_rates[key]) calib.hit_rates[key] = { hits: 0, total: 0 };
-        calib.hit_rates[key].total++;
-        if (outcome.hit) calib.hit_rates[key].hits++;
+            const actualReturn = (currentPrice - predPrice) / predPrice;
+            const wentUp = actualReturn > 0;
+            const y = wentUp ? 1 : 0;
+            const p = pred.calibrated_probability ?? pred.raw_probability ?? pred.probability ?? 0.5;
+            const predictedUp = p >= 0.5;
+            const isCorrect = predictedUp === wentUp;
+            const realizedCostsBps = finiteOrNull(pred?.estimated_costs_bps) ?? 0;
+            const realizedSlippageBps = finiteOrNull(pred?.estimated_slippage_bps) ?? 0;
+            const totalCost = (realizedCostsBps + realizedSlippageBps) / 10000;
+            const realizedReturnNet = actualReturn - totalCost;
+            const atrDenominator = Math.max(0.01, Math.abs(finiteOrNull(pred?.price_at_prediction) || 1));
+            const realizedReturnAtr = realizedReturnNet / atrDenominator;
+
+            const outcome = {
+                ...pred,
+                outcome_date: date,
+                outcome_price: currentPrice,
+                actual_return: round(actualReturn),
+                went_up: wentUp,
+                y,
+                predicted_direction_correct: isCorrect,
+                brier_contribution: round((p - y) ** 2),
+                realized_outcome: isCorrect ? 'correct' : 'incorrect',
+                realized_costs_bps: realizedCostsBps,
+                realized_slippage_bps: realizedSlippageBps,
+                realized_return_net: round(realizedReturnNet),
+                realized_return_atr: round(realizedReturnAtr),
+            };
+
+            if (feature === 'scientific') {
+                const bar = eodPrices[ticker];
+                const atrProxy = bar ? (bar.high - bar.low) / (bar.close || 1) : 0.02;
+                const threshold = Math.max(0.01, Math.min(0.05, atrProxy));
+                outcome.hit = pred.trigger_met && Math.abs(actualReturn) >= threshold &&
+                    ((pred.direction === 'bullish' && actualReturn > 0) ||
+                        (pred.direction === 'bearish' && actualReturn < 0));
+                outcome.breakout_threshold = round(threshold);
+            } else {
+                outcome.hit = isCorrect;
+            }
+
+            if (feature === 'stock_analyzer') {
+                outcome.false_positive_class = classifyFalsePositive(outcome);
+            }
+
+            outcomes.push(outcome);
+
+            const key = `${ticker}_${pred.direction || 'any'}`;
+            if (!calib.hit_rates[key]) calib.hit_rates[key] = { hits: 0, total: 0 };
+            calib.hit_rates[key].total++;
+            if (outcome.hit) calib.hit_rates[key].hits++;
+        }
     }
 
     if (outcomes.length) {
@@ -771,10 +1106,17 @@ function computeFeatureMetrics(feature, date, lookbackDays = 30) {
             outcomes_resolved: 0,
             accuracy_all: null,
             brier_all: null,
+            ece_all: null,
             hit_rate_all: null,
             accuracy_7d: null,
             brier_7d: null,
+            ece_7d: null,
             hit_rate_7d: null,
+            precision_10: null,
+            precision_50: null,
+            coverage_per_day: 0,
+            by_horizon: {},
+            by_asset_class: {},
             trend_accuracy: 'no_data',
             trend_brier: 'no_data'
         };
@@ -783,31 +1125,59 @@ function computeFeatureMetrics(feature, date, lookbackDays = 30) {
     const last7d = allOutcomes.filter(o => o.outcome_date >= daysAgo(date, 7));
     const prior7d = allOutcomes.filter(o => o.outcome_date >= daysAgo(date, 14) && o.outcome_date < daysAgo(date, 7));
 
-    const pAll = allOutcomes.map(o => ({ p: o.probability ?? 0.5, y: o.y }));
-    const p7d = last7d.map(o => ({ p: o.probability ?? 0.5, y: o.y }));
-    const pPrior = prior7d.map(o => ({ p: o.probability ?? 0.5, y: o.y }));
+    const pAll = allOutcomes.map(o => ({ p: o.calibrated_probability ?? o.raw_probability ?? o.probability ?? 0.5, y: o.y }));
+    const p7d = last7d.map(o => ({ p: o.calibrated_probability ?? o.raw_probability ?? o.probability ?? 0.5, y: o.y }));
+    const pPrior = prior7d.map(o => ({ p: o.calibrated_probability ?? o.raw_probability ?? o.probability ?? 0.5, y: o.y }));
 
     const acc7d = accuracy(p7d);
     const accPrior = accuracy(pPrior);
     const brier7d = brierScore(p7d);
     const brierPrior = brierScore(pPrior);
 
+    const byHorizon = {};
+    for (const horizon of [...new Set(allOutcomes.map((row) => String(row?.horizon || '').trim()).filter(Boolean))]) {
+        byHorizon[horizon] = metricBucket(allOutcomes.filter((row) => String(row?.horizon || '').trim() === horizon), date);
+    }
+
+    const byAssetClass = {};
+    for (const assetClass of [...new Set(allOutcomes.map((row) => String(row?.asset_class || 'stock').trim()).filter(Boolean))]) {
+        const assetRows = allOutcomes.filter((row) => String(row?.asset_class || 'stock').trim() === assetClass);
+        byAssetClass[assetClass] = {
+            ...metricBucket(assetRows, date),
+            by_horizon: Object.fromEntries(
+                [...new Set(assetRows.map((row) => String(row?.horizon || '').trim()).filter(Boolean))]
+                    .map((horizon) => [horizon, metricBucket(assetRows.filter((row) => String(row?.horizon || '').trim() === horizon), date)])
+            ),
+        };
+    }
+
     return {
         predictions_total: allOutcomes.length,
         outcomes_resolved: allOutcomes.filter(o => o.y != null).length,
         accuracy_all: round(accuracy(pAll)),
         brier_all: round(brierScore(pAll)),
+        ece_all: round(eceScore(pAll)),
         hit_rate_all: round(hitRate(allOutcomes)),
         accuracy_7d: round(acc7d),
         brier_7d: round(brier7d),
+        ece_7d: round(eceScore(p7d)),
         hit_rate_7d: round(hitRate(last7d)),
+        precision_10: round(computePrecisionAtK(allOutcomes, 10, (row) => `${row.outcome_date}|${row.horizon}`)),
+        precision_50: round(computePrecisionAtK(allOutcomes, 50, (row) => `${row.outcome_date}|${row.horizon}`)),
+        precision_at_10: round(computePrecisionAtK(allOutcomes, 10, (row) => `${row.outcome_date}|${row.horizon}`)),
+        precision_at_50: round(computePrecisionAtK(allOutcomes, 50, (row) => `${row.outcome_date}|${row.horizon}`)),
+        coverage_per_day: round(allOutcomes.length / lookbackDays, 2),
+        coverage_7d: round(last7d.length / 7, 2),
+        by_horizon: byHorizon,
+        by_asset_class: byAssetClass,
+        false_positive_classes: summarizeFalsePositives(allOutcomes),
         trend_accuracy: trend(acc7d, accPrior, false),
         trend_brier: trend(brier7d, brierPrior, true),
     };
 }
 
 // ─── Report Builder ─────────────────────────────────────────────────────────
-function buildReport(date, forecastMetrics, scientificMetrics, elliottMetrics, stockStability, predCounts) {
+function buildReport(date, forecastMetrics, scientificMetrics, elliottMetrics, stockMetrics, stockStability, predCounts, analyzerControl = {}) {
     // Build history from past reports (last 30 days)
     const history = [];
     for (let i = 29; i >= 0; i--) {
@@ -863,8 +1233,8 @@ function buildReport(date, forecastMetrics, scientificMetrics, elliottMetrics, s
         days_active: daysActive,
         summary: {
             features_tracked: 4,
-            total_predictions_today: (predCounts.forecast || 0) + (predCounts.scientific || 0) + (predCounts.elliott || 0),
-            overall_status: determineOverallStatus(forecastMetrics, scientificMetrics, elliottMetrics)
+            total_predictions_today: (predCounts.forecast || 0) + (predCounts.scientific || 0) + (predCounts.elliott || 0) + (predCounts.stock || 0),
+            overall_status: determineOverallStatus(forecastMetrics, scientificMetrics, elliottMetrics, stockMetrics)
         },
         features: {
             forecast: {
@@ -890,10 +1260,16 @@ function buildReport(date, forecastMetrics, scientificMetrics, elliottMetrics, s
             },
             stock_analyzer: {
                 name: 'Stock Analyzer',
-                type: 'ranking_stability',
+                type: 'best_setups_horizon_buy_signals',
+                ...stockMetrics,
                 ...stockStability,
-                rankings_today: predCounts.stock || 0,
+                learning_status: analyzerControl.learning_status || 'BOOTSTRAP',
+                safety_switch: analyzerControl.safety_switch || null,
+                minimum_n_status: analyzerControl.minimum_n_status || null,
+                false_positive_classes_30d: analyzerControl.false_positive_classes_30d || {},
+                predictions_today: predCounts.stock || 0,
                 source_meta: predCounts.stock_source_meta || null,
+                gate_rejection_breakdown: predCounts.stock_source_meta?.gate_rejection_breakdown || null,
             }
         },
         weekly_comparison: weeklyComparison,
@@ -904,13 +1280,15 @@ function buildReport(date, forecastMetrics, scientificMetrics, elliottMetrics, s
             scientific_accuracy_7d: scientificMetrics.accuracy_7d,
             scientific_hit_rate_7d: scientificMetrics.hit_rate_7d,
             elliott_accuracy_7d: elliottMetrics.accuracy_7d,
+            stock_analyzer_precision_10: stockMetrics.precision_10,
+            stock_analyzer_brier_7d: stockMetrics.brier_7d,
             stock_stability: stockStability.stability,
         }
     };
 }
 
-function determineOverallStatus(f, s, e) {
-    const trends = [f.trend_accuracy, s.trend_accuracy, e.trend_accuracy].filter(t => t && t !== 'no_data');
+function determineOverallStatus(f, s, e, stock = null) {
+    const trends = [f.trend_accuracy, s.trend_accuracy, e.trend_accuracy, stock?.trend_accuracy].filter(t => t && t !== 'no_data');
     if (!trends.length) return 'BOOTSTRAP — Noch keine Outcome-Daten';
     const improving = trends.filter(t => t === 'improving').length;
     const declining = trends.filter(t => t === 'declining').length;
@@ -933,11 +1311,14 @@ function printReport(report) {
         console.log(`  📊 ${feat.name}`);
         if (feat.accuracy_7d != null) console.log(`     Accuracy (7d):  ${(feat.accuracy_7d * 100).toFixed(1)}%  ${trendEmoji(feat.trend_accuracy)}`);
         if (feat.brier_7d != null) console.log(`     Brier (7d):     ${feat.brier_7d}  ${trendEmoji(feat.trend_brier)}`);
+        if (feat.ece_7d != null) console.log(`     ECE (7d):       ${feat.ece_7d}`);
         if (feat.hit_rate_7d != null) console.log(`     Hit Rate (7d):  ${(feat.hit_rate_7d * 100).toFixed(1)}%`);
+        if (feat.precision_10 != null) console.log(`     Precision@10:   ${(feat.precision_10 * 100).toFixed(1)}%`);
+        if (feat.precision_50 != null) console.log(`     Precision@50:   ${(feat.precision_50 * 100).toFixed(1)}%`);
         if (feat.stability != null) console.log(`     Ranking-Stabilität: ${(feat.stability * 100).toFixed(1)}%`);
         if (feat.accuracy_all != null) console.log(`     Accuracy (30d): ${(feat.accuracy_all * 100).toFixed(1)}%`);
         const count = feat.predictions_today ?? feat.rankings_today ?? 0;
-        console.log(`     Heute: ${count} ${key === 'stock_analyzer' ? 'Rankings' : 'Vorhersagen'}`);
+        console.log(`     Heute: ${count} ${key === 'stock_analyzer' ? 'Signale' : 'Vorhersagen'}`);
         if (!feat.accuracy_7d && !feat.stability) console.log(`     Status: — KEINE DATEN (Sammle Predictions...)`);
         console.log('');
     }
@@ -1039,6 +1420,8 @@ async function main() {
 
     console.log(`[learning] Starting daily learning cycle for ${date}...`);
     console.log('[learning] Improvements active: Calibration feedback, Signal ≥60, Elliott top-500, EMA smoothing, Cross-feature conviction');
+    const bestSetupsPolicy = loadBestSetupsPolicy();
+    const analyzerPolicy = loadAnalyzerPolicy();
 
     // 1. Load current prices
     const eodPrices = loadEodPrices();
@@ -1058,7 +1441,7 @@ async function main() {
     );
     const elliottResult = extractElliottPredictions(date, eodPrices, elliottCandidates);
     const elliottPreds = elliottResult.predictions || [];
-    const stockResult = extractStockRankings(date);
+    const stockResult = extractStockRankings(date, eodPrices, bestSetupsPolicy);
     const stockPreds = stockResult.rankings || [];
 
     // 3. Save predictions to ledger
@@ -1076,22 +1459,39 @@ async function main() {
 
     // 5. Resolve outcomes for past predictions
     console.log('[learning] Resolving outcomes...');
-    const forecastOutcomes = resolveOutcomes(date, 'forecast', 1, eodPrices);
-    const scientificOutcomes = resolveOutcomes(date, 'scientific', 5, eodPrices);
-    const elliottOutcomes = resolveOutcomes(date, 'elliott', 5, eodPrices);
+    const forecastOutcomes = resolveOutcomes(date, 'forecast', eodPrices);
+    const scientificOutcomes = resolveOutcomes(date, 'scientific', eodPrices);
+    const elliottOutcomes = resolveOutcomes(date, 'elliott', eodPrices);
+    const stockOutcomes = resolveOutcomes(date, 'stock_analyzer', eodPrices);
 
-    console.log(`[learning] Outcomes resolved: forecast=${forecastOutcomes.length} scientific=${scientificOutcomes.length} elliott=${elliottOutcomes.length}`);
+    console.log(`[learning] Outcomes resolved: forecast=${forecastOutcomes.length} scientific=${scientificOutcomes.length} elliott=${elliottOutcomes.length} stock=${stockOutcomes.length}`);
 
     // 6. Compute metrics (rolling 30d window)
     console.log('[learning] Computing metrics...');
     const forecastMetrics = computeFeatureMetrics('forecast', date);
     const scientificMetrics = computeFeatureMetrics('scientific', date);
     const elliottMetrics = computeFeatureMetrics('elliott', date);
+    const stockMetrics = computeFeatureMetrics('stock_analyzer', date);
     const stockStability = computeRankingStability(date);
     const forwardReturns = computeForwardReturns(date, eodPrices);
+    stockMetrics.outcome_dates = Array.from(new Set(
+        Array.from({ length: 30 }, (_, i) => daysAgo(date, i))
+            .flatMap((d) => readNdjson(outcomePath(d, 'stock_analyzer')).map((row) => row?.outcome_date))
+            .filter(Boolean)
+    )).sort();
+    const analyzerSafety = evaluateSafetySwitch(stockMetrics, analyzerPolicy);
+    const analyzerControl = {
+        learning_status: applyLearningStatusSafety(deriveAnalyzerLearningStatus(stockMetrics, analyzerPolicy), analyzerSafety),
+        safety_switch: analyzerSafety,
+        minimum_n_status: analyzerSafety.minimum_n_status || computeMinimumNStatus(stockMetrics, analyzerPolicy),
+        false_positive_classes_30d: summarizeFalsePositives(
+            Array.from({ length: 30 }, (_, i) => daysAgo(date, i))
+                .flatMap((d) => readNdjson(outcomePath(d, 'stock_analyzer')))
+        ),
+    };
 
     // 7. Build and save report
-    const report = buildReport(date, forecastMetrics, scientificMetrics, elliottMetrics, stockStability, {
+    const report = buildReport(date, forecastMetrics, scientificMetrics, elliottMetrics, stockMetrics, stockStability, {
         forecast: forecastPreds.length,
         forecast_source_meta: forecastResult.source_meta,
         scientific: scientificPreds.length,
@@ -1100,7 +1500,7 @@ async function main() {
         elliott_source_meta: elliottResult.source_meta,
         stock: stockPreds.length,
         stock_source_meta: stockResult.source_meta
-    });
+    }, analyzerControl);
 
     // Enrich report with cross-feature data
     report.conviction_scores = convictionScores;
@@ -1114,7 +1514,16 @@ async function main() {
         'stock_ema_smoothing_alpha03',
         'cross_feature_conviction',
         'scientific_atr_breakout_threshold',
+        'best_setups_policy_registry_fields',
     ];
+    report.best_setups_policy = bestSetupsPolicy ? {
+        schema_version: bestSetupsPolicy.schema_version || null,
+        system_version: bestSetupsPolicy.system?.version || null,
+        learning_status_default: bestSetupsPolicy.learning_status?.default || null,
+        learning_status_current: analyzerControl.learning_status,
+        cost_model_version: bestSetupsPolicy.cost_model_version || null,
+        meta_labeler_rule_version: bestSetupsPolicy.meta_labeler_rule_version || null,
+    } : null;
 
     writeJson(reportPath(date), report);
     writeJson(path.join(REPORT_DIR, 'latest.json'), report);

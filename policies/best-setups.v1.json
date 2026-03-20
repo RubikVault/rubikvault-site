@@ -1,0 +1,89 @@
+{
+  "schema_version": "best_setups_policy_v1",
+  "system": {
+    "id": "rv-best-setups",
+    "version": "1.0.0"
+  },
+  "learning_status": {
+    "default": "BOOTSTRAP",
+    "allowed": [
+      "BOOTSTRAP",
+      "ACTIVE",
+      "COOLDOWN",
+      "SAFE_MODE"
+    ],
+    "activation_thresholds": {
+      "global_min_predictions": 500,
+      "per_horizon_min_predictions": 150,
+      "min_live_outcome_days": 30
+    }
+  },
+  "cost_model_version": "v1.0_replay_us_equities",
+  "meta_labeler_rule_version": "v1_bootstrap_rules",
+  "regime_logic_version": "v1_simple_pit",
+  "label_version": "v1_tradeability_atr_net",
+  "feature_logic_version": "v1_shared_core",
+  "minimum_n_gates": {
+    "global_per_horizon": 200,
+    "asset_class_horizon": 100,
+    "regime_horizon": 75,
+    "ticker_specific_calibration": 300
+  },
+  "regime_definitions": {
+    "trend": {
+      "adx_gt": 25,
+      "close_above_sma200": true
+    },
+    "high_vol": {
+      "atr14_vs_median_atr90_gt": 2.0
+    },
+    "chop": {
+      "fallback": true
+    }
+  },
+  "hard_gate": {
+    "verdict": "BUY",
+    "confidence_bucket": "HIGH",
+    "trend_allowed": [
+      "UP",
+      "STRONG_UP"
+    ],
+    "max_trigger_gates": 0
+  },
+  "safety_switch_thresholds": {
+    "defaults": {
+      "yellow": {
+        "precision_at_10_delta_vs_baseline_pct": -10,
+        "ece_gt": 0.08,
+        "coverage_drop_pct": 20
+      },
+      "orange": {
+        "precision_at_10_lt": 0.54,
+        "window_days": 10,
+        "ece_delta_gt": 0.08,
+        "error_class_multiple_of_median": 3
+      },
+      "red": {
+        "precision_at_10_lt": 0.5,
+        "drawdown_lt": -0.15,
+        "coverage_drop_pct": 50
+      }
+    }
+  },
+  "registry": {
+    "partitioning": "daily_append_only",
+    "cost_observation_mode_default": "replay",
+    "mark_backfills": true,
+    "keep_delistings": true
+  },
+  "score_thresholds": {
+    "v1_bootstrap_rules": {
+      "defaults": {
+        "trend": 68,
+        "entry": 60,
+        "risk": 45,
+        "context": 55
+      }
+    }
+  }
+}

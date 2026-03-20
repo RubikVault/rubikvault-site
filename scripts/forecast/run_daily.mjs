@@ -14,8 +14,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { buildFeatureSnapshot } from './build_features.mjs';
-import { loadPolicy, loadChampion, computePolicyHash, generateForecast } from './forecast_engine.mjs';
-import { writeForecastRecords, writeOutcomeRecords, readLedgerRange } from './ledger_writer.mjs';
+import { loadPolicy, loadChampion, computePolicyHash, generateForecast, loadCalibrationArtifact } from './forecast_engine.mjs';
+import { writeForecastRecords, writeOutcomeRecords, readLedgerRangeAsync } from './ledger_writer.mjs';
 import { computeOutcome, createOutcomeRecord } from './evaluator.mjs';
 import { generateDailyReport, writeReport, generateScorecards, writeScorecards, updateStatus, updateLatest, updateLastGood, publishLatestFromLastGood } from './report_generator.mjs';
 import { ingestSnapshots, loadPriceHistory, loadUniverse } from './snapshot_ingest.mjs';
@@ -64,6 +64,7 @@ async function generateAllForecasts({
     priceHistory,
     spyPrices,
     championSpec,
+    calibrationArtifacts,
     policyHash,
     codeHash,
     snapshotsManifest,
@@ -129,7 +130,8 @@ async function generateAllForecasts({
                 snapshotsManifest,
                 provenance: 'live',
                 asOf,
-                runId
+                runId,
+                calibrationData: calibrationArtifacts?.[horizon] || null,
             });
 
             forecasts.push(forecast);
@@ -170,7 +172,7 @@ async function evaluateMaturedForecasts({
     const startDate = new Date(today);
     startDate.setMonth(startDate.getMonth() - maxMonths);
 
-    const forecasts = readLedgerRange(
+    const forecasts = await readLedgerRangeAsync(
         repoRoot,
         'forecasts',
         startDate.toISOString().slice(0, 10),
@@ -229,6 +231,7 @@ export async function runDailyPipeline(options = {}) {
     console.log('[Step 1] Loading policy and champion spec...');
     const policy = loadPolicy(repoRoot);
     const champion = loadChampion(repoRoot);
+    const calibrationArtifacts = Object.fromEntries(HORIZONS.map((horizon) => [horizon, loadCalibrationArtifact(repoRoot, horizon)]));
     const policyHash = computePolicyHash(repoRoot);
     const codeHash = options.codeHash ?? 'local-dev';
 
@@ -290,6 +293,7 @@ export async function runDailyPipeline(options = {}) {
         priceHistory,
         spyPrices,
         championSpec: champion,
+        calibrationArtifacts,
         policyHash,
         codeHash,
         snapshotsManifest: snapshot.manifest,
