@@ -465,16 +465,82 @@
     `;
   };
 
+  // ── Render Chart Hover Handlers ──
+  window._svgHover = function(e, container) {
+    const data = container._chartData;
+    if (!data) return;
+    const { cl, dates, mn, mx, rn, height } = data;
+    const rect = container.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const w = rect.width;
+    const ratio = Math.max(0, Math.min(1, x / w));
+    const idx = Math.round(ratio * (cl.length - 1));
+    const price = cl[idx];
+    const date = dates[idx];
+
+    const marker = container.querySelector('#svg-marker');
+    const tooltip = container.querySelector('#svg-tooltip');
+    if (marker && tooltip) {
+      marker.style.display = 'block';
+      marker.style.left = `${(idx / (cl.length - 1) * 100)}%`;
+      tooltip.style.display = 'block';
+      tooltip.style.left = `${e.clientX + 10}px`;
+      tooltip.style.top = `${e.clientY - 30}px`;
+      tooltip.innerHTML = `<div style="font-weight:700;color:var(--text-dim);font-size:0.62rem">${date}</div><div style="font-weight:800;color:var(--accent);font-size:0.75rem;margin-top:1px;">$${price.toFixed(2)}</div>`;
+    }
+  };
+  window._svgLeave = function(container) {
+    const marker = container.querySelector('#svg-marker');
+    const tooltip = container.querySelector('#svg-tooltip');
+    if (marker) marker.style.display = 'none';
+    if (tooltip) tooltip.style.display = 'none';
+  };
+
   // ── Render Chart ──
   function svgChart(height,id,bc){
     const recent=bars.slice(-(bc||60));
     const cl=recent.map(b=>Number(b.adjClose??b.close)).filter(Number.isFinite);
+    const dates=recent.map(b=>b.date);
     if(cl.length<3) return '<div style="height:'+height+'px;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,0.02);color:var(--text-dim)">No Data</div>';
     const mn=Math.min(...cl)*0.998, mx=Math.max(...cl)*1.002, rn=mx-mn||1, w=800;
     const pts=cl.map((c,i)=>(i/(cl.length-1)*w).toFixed(1)+','+(height-(c-mn)/rn*(height-20)-10).toFixed(1)).join(' ');
     const clr=cl[cl.length-1]>=cl[0]?'var(--green)':'var(--red)';
     const gradId = 'chg-'+Math.random().toString(36).substr(2, 5);
-    return '<svg viewBox="0 0 '+w+' '+height+'" style="width:100%;height:'+height+'px;border-radius:8px;background:rgba(255,255,255,0.01);border:1px solid var(--border)" preserveAspectRatio="none"><defs><linearGradient id="'+gradId+'" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="'+clr+'" stop-opacity="0.2"/><stop offset="100%" stop-color="'+clr+'" stop-opacity="0"/></linearGradient></defs><polygon points="0,'+height+' '+pts+' '+w+','+height+'" fill="url(#'+gradId+')"/><polyline points="'+pts+'" fill="none" stroke="'+clr+'" stroke-width="2" stroke-linejoin="round"/></svg>';
+    const uniqId = 'chart-' + Math.random().toString(36).substr(2, 5);
+    
+    setTimeout(() => {
+      const el = document.getElementById(uniqId);
+      if (el) el._chartData = { cl, dates, mn, mx, rn, height };
+    }, 50);
+
+    return `
+      <div id="${uniqId}" style="position:relative; width:100%; height:${height}px; cursor:crosshair;" onmousemove="window._svgHover(event, this)" onmouseleave="window._svgLeave(this)">
+        <svg viewBox="0 0 ${w} ${height}" style="width:100%;height:100%;border-radius:8px;background:rgba(255,255,255,0.01);border:1px solid var(--border)" preserveAspectRatio="none">
+          <defs>
+            <linearGradient id="${gradId}" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="${clr}" stop-opacity="0.2"/>
+              <stop offset="100%" stop-color="${clr}" stop-opacity="0"/>
+            </linearGradient>
+          </defs>
+          <polygon points="0,${height} ${pts} ${w},${height}" fill="url(#${gradId})"/>
+          <polyline points="${pts}" fill="none" stroke="${clr}" stroke-width="2" stroke-linejoin="round"/>
+        </svg>
+
+        <!-- Y-Axis Labels -->
+        <div style="position:absolute; top:4px; right:6px; font-size:0.56rem; color:var(--text-muted); font-weight:700; background:rgba(15,23,42,0.6); padding:1px 3px; border-radius:3px; border: 1px solid rgba(255,255,255,0.05);">$${mx.toFixed(1)}</div>
+        <div style="position:absolute; bottom:20px; right:6px; font-size:0.56rem; color:var(--text-muted); font-weight:700; background:rgba(15,23,42,0.6); padding:1px 3px; border-radius:3px; border: 1px solid rgba(255,255,255,0.05);">$${mn.toFixed(1)}</div>
+
+        <!-- X-Axis Labels -->
+        <div style="position:absolute; bottom:4px; left:6px; font-size:0.56rem; color:var(--text-dim); font-weight:600; background:rgba(15,23,42,0.6); padding:1px 3px; border-radius:3px; border: 1px solid rgba(255,255,255,0.05);">${dates[0]}</div>
+        <div style="position:absolute; bottom:4px; right:6px; font-size:0.56rem; color:var(--text-dim); font-weight:600; background:rgba(15,23,42,0.6); padding:1px 3px; border-radius:3px; border: 1px solid rgba(255,255,255,0.05);">${dates[dates.length-1]}</div>
+
+        <!-- Floating Tooltip Container -->
+        <div id="svg-tooltip" style="position:fixed; display:none; background:rgba(15,23,42,0.92); border:1px solid var(--border); padding:0.4rem 0.6rem; border-radius:6px; pointer-events:none; z-index:9999; font-size:0.65rem; color:var(--text); box-shadow:0 4px 6px -1px rgba(0,0,0,0.4);"></div>
+        
+        <!-- Vertical Marker Line -->
+        <div id="svg-marker" style="position:absolute; top:0; bottom:0; width:1px; background:rgba(255,255,255,0.2); display:none; pointer-events:none;"></div>
+      </div>
+    `;
   }
 
   // Key Levels
