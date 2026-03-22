@@ -466,6 +466,7 @@
   };
 
   // ── Render Chart Hover Handlers ──
+  // ── Render Chart Hover Handlers ──
   window._svgHover = function(e, container) {
     const data = container._chartData;
     if (!data) return;
@@ -473,7 +474,13 @@
     const rect = container.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const w = rect.width;
-    const ratio = Math.max(0, Math.min(1, x / w));
+
+    const paddingLeft = 42, graphW = 750; // based on viewBox w=800
+    const graphLeftPx = (paddingLeft / 800) * w;
+    const graphWidthPx = (graphW / 800) * w;
+    
+    // Calculate ratio inside graph coordinates
+    const ratio = Math.max(0, Math.min(1, (x - graphLeftPx) / graphWidthPx));
     const idx = Math.round(ratio * (cl.length - 1));
     const price = cl[idx];
     const date = dates[idx];
@@ -482,10 +489,11 @@
     const tooltip = container.querySelector('#svg-tooltip');
     if (marker && tooltip) {
       marker.style.display = 'block';
-      marker.style.left = `${(idx / (cl.length - 1) * 100)}%`;
+      // Adjust marker line left offset position accurately using left bounding
+      marker.style.left = `${graphLeftPx + (idx / (cl.length - 1) * graphWidthPx)}px`;
       tooltip.style.display = 'block';
-      tooltip.style.left = `${e.clientX + 10}px`;
-      tooltip.style.top = `${e.clientY - 30}px`;
+      tooltip.style.left = `${e.clientX + 12}px`;
+      tooltip.style.top = `${e.clientY - 35}px`;
       tooltip.innerHTML = `<div style="font-weight:700;color:var(--text-dim);font-size:0.62rem">${date}</div><div style="font-weight:800;color:var(--accent);font-size:0.75rem;margin-top:1px;">$${price.toFixed(2)}</div>`;
     }
   };
@@ -502,8 +510,17 @@
     const cl=recent.map(b=>Number(b.adjClose??b.close)).filter(Number.isFinite);
     const dates=recent.map(b=>b.date);
     if(cl.length<3) return '<div style="height:'+height+'px;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,0.02);color:var(--text-dim)">No Data</div>';
-    const mn=Math.min(...cl)*0.998, mx=Math.max(...cl)*1.002, rn=mx-mn||1, w=800;
-    const pts=cl.map((c,i)=>(i/(cl.length-1)*w).toFixed(1)+','+(height-(c-mn)/rn*(height-20)-10).toFixed(1)).join(' ');
+    
+    const paddingLeft = 42, paddingRight = 8, paddingTop = 10, paddingBottom = 20;
+    const w = 800, graphW = w - paddingLeft - paddingRight, graphH = height - paddingTop - paddingBottom;
+    const mn=Math.min(...cl)*0.998, mx=Math.max(...cl)*1.002, rn=mx-mn||1;
+
+    const pts=cl.map((c,i) => {
+      const px = paddingLeft + (i / (cl.length - 1) * graphW);
+      const py = paddingTop + (graphH - (c - mn) / rn * graphH);
+      return px.toFixed(1) + ',' + py.toFixed(1);
+    }).join(' ');
+
     const clr=cl[cl.length-1]>=cl[0]?'var(--green)':'var(--red)';
     const gradId = 'chg-'+Math.random().toString(36).substr(2, 5);
     const uniqId = 'chart-' + Math.random().toString(36).substr(2, 5);
@@ -518,30 +535,40 @@
         <svg viewBox="0 0 ${w} ${height}" style="width:100%;height:100%;border-radius:8px;background:rgba(255,255,255,0.01);border:1px solid var(--border)" preserveAspectRatio="none">
           <defs>
             <linearGradient id="${gradId}" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stop-color="${clr}" stop-opacity="0.2"/>
+              <stop offset="0%" stop-color="${clr}" stop-opacity="0.18"/>
               <stop offset="100%" stop-color="${clr}" stop-opacity="0"/>
             </linearGradient>
           </defs>
-          <polygon points="0,${height} ${pts} ${w},${height}" fill="url(#${gradId})"/>
+          
+          <!-- Axis Frame Lines -->
+          <line x1="${paddingLeft}" y1="${paddingTop}" x2="${paddingLeft}" y2="${height-paddingBottom}" stroke="rgba(255,255,255,0.12)" stroke-width="1"/>
+          <line x1="${paddingLeft}" y1="${height-paddingBottom}" x2="${w-paddingRight}" y2="${height-paddingBottom}" stroke="rgba(255,255,255,0.12)" stroke-width="1"/>
+
+          <!-- Horizontal Grid Lines -->
+          <line x1="${paddingLeft}" y1="${paddingTop}" x2="${w-paddingRight}" y2="${paddingTop}" stroke="rgba(255,255,255,0.03)" stroke-width="1" stroke-dasharray="2,2"/>
+          <line x1="${paddingLeft}" y1="${paddingTop + graphH/2}" x2="${w-paddingRight}" y2="${paddingTop + graphH/2}" stroke="rgba(255,255,255,0.03)" stroke-width="1" stroke-dasharray="2,2"/>
+
+          <!-- Line and Area Path -->
+          <polygon points="${paddingLeft},${height-paddingBottom} ${pts} ${w-paddingRight},${height-paddingBottom}" fill="url(#${gradId})"/>
           <polyline points="${pts}" fill="none" stroke="${clr}" stroke-width="2" stroke-linejoin="round"/>
         </svg>
 
         <!-- Y-Axis Labels -->
-        <div style="position:absolute; top:4px; right:6px; font-size:0.56rem; color:var(--text-muted); font-weight:700; background:rgba(15,23,42,0.6); padding:1px 3px; border-radius:3px; border: 1px solid rgba(255,255,255,0.05);">$${mx.toFixed(1)}</div>
-        <div style="position:absolute; bottom:20px; right:6px; font-size:0.56rem; color:var(--text-muted); font-weight:700; background:rgba(15,23,42,0.6); padding:1px 3px; border-radius:3px; border: 1px solid rgba(255,255,255,0.05);">$${mn.toFixed(1)}</div>
+        <div style="position:absolute; top:${paddingTop}px; left:4px; font-size:0.55rem; color:var(--text-muted); font-weight:700;">$${mx.toFixed(1)}</div>
+        <div style="position:absolute; top:${paddingTop + graphH/2 - 5}px; left:4px; font-size:0.55rem; color:var(--text-dim);">$${((mx+mn)/2).toFixed(1)}</div>
+        <div style="position:absolute; bottom:${paddingBottom + 2}px; left:4px; font-size:0.55rem; color:var(--text-muted); font-weight:700;">$${mn.toFixed(1)}</div>
 
         <!-- X-Axis Labels -->
-        <div style="position:absolute; bottom:4px; left:6px; font-size:0.56rem; color:var(--text-dim); font-weight:600; background:rgba(15,23,42,0.6); padding:1px 3px; border-radius:3px; border: 1px solid rgba(255,255,255,0.05);">${dates[0]}</div>
-        <div style="position:absolute; bottom:4px; right:6px; font-size:0.56rem; color:var(--text-dim); font-weight:600; background:rgba(15,23,42,0.6); padding:1px 3px; border-radius:3px; border: 1px solid rgba(255,255,255,0.05);">${dates[dates.length-1]}</div>
+        <div style="position:absolute; bottom:4px; left:${paddingLeft}px; font-size:0.55rem; color:var(--text-dim); font-weight:600;">${dates[0]}</div>
+        <div style="position:absolute; bottom:4px; right:${paddingRight + 4}px; font-size:0.55rem; color:var(--text-dim); font-weight:600;">${dates[dates.length-1]}</div>
 
         <!-- Floating Tooltip Container -->
-        <div id="svg-tooltip" style="position:fixed; display:none; background:rgba(15,23,42,0.92); border:1px solid var(--border); padding:0.4rem 0.6rem; border-radius:6px; pointer-events:none; z-index:9999; font-size:0.65rem; color:var(--text); box-shadow:0 4px 6px -1px rgba(0,0,0,0.4);"></div>
+        <div id="svg-tooltip" style="position:fixed; display:none; background:rgba(15,23,42,0.95); border:1px solid var(--border); padding:0.4rem 0.6rem; border-radius:6px; pointer-events:none; z-index:9999; font-size:0.65rem; color:var(--text); box-shadow:0 10px 15px -3px rgba(0,0,0,0.4);"></div>
         
         <!-- Vertical Marker Line -->
-        <div id="svg-marker" style="position:absolute; top:0; bottom:0; width:1px; background:rgba(255,255,255,0.2); display:none; pointer-events:none;"></div>
+        <div id="svg-marker" style="position:absolute; top:${paddingTop}px; bottom:${paddingBottom}px; width:1px; background:rgba(255,255,255,0.25); display:none; pointer-events:none;"></div>
       </div>
-    `;
-  }
+    `;}
 
   // Key Levels
   const levels=[];
