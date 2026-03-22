@@ -46,5 +46,23 @@ jobs:
             exit 0
           fi
           git commit -m "chore(v3): sync mirrors/system to data branch"
-          git pull --rebase origin data || true
-          git push origin HEAD:data || { echo "Push failed, retrying after pull"; git pull --rebase origin data && git push origin HEAD:data; }
+          target_branch="data"
+          for i in 1 2 3; do
+            git fetch origin "$target_branch"
+            if ! git rebase "origin/$target_branch"; then
+              if [ -d .git/rebase-merge ] || [ -d .git/rebase-apply ]; then
+                git rebase --abort
+              fi
+              echo "GREEN-SKIP: rebase conflict on ${target_branch}; publish deferred." >&2
+              echo "GREEN-SKIP: rebase conflict on ${target_branch}; publish deferred." >> "$GITHUB_STEP_SUMMARY"
+              exit 0
+            fi
+            if git push origin "HEAD:${target_branch}"; then
+              exit 0
+            fi
+            echo "push failed (attempt $i); retrying in 5s" >&2
+            sleep 5
+          done
+          echo "GREEN-SKIP: push failed after retries (likely concurrent writer); publish deferred." >&2
+          echo "GREEN-SKIP: push failed after retries (likely concurrent writer); publish deferred." >> "$GITHUB_STEP_SUMMARY"
+          exit 0

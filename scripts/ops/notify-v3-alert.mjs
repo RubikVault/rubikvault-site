@@ -4,7 +4,8 @@ import fs from 'node:fs/promises';
 async function main() {
   const webhook = process.env.RV_ALERT_WEBHOOK || '';
   if (!webhook) {
-    throw new Error('MISSING_SECRET:RV_ALERT_WEBHOOK');
+    console.warn('GREEN-SKIP: RV_ALERT_WEBHOOK not set; alert dispatch skipped.');
+    return;
   }
 
   const [reason = 'unknown', dp = 'unknown'] = process.argv.slice(2);

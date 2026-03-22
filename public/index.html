@@ -231,7 +231,7 @@
         </div>
 
         <p id="buy-signals-note" style="font-size: 0.8rem; color: #64748b; margin: 0 0 1rem;">
-          Best buy signals: Setup + Trigger fulfilled. Click a number to see the stocks.
+          Analyzer-verified BUY/HIGH rows by horizon. Click a number to see the stocks.
         </p>
 
         <p style="font-size: 0.875rem; color: #64748b; font-style: italic;">
@@ -1785,7 +1785,12 @@
       if (noteEl) {
         const asOf = homeSetupsByHorizon?.asOf || topSetupsDoc?.meta?.data_date || topSetupsDoc?.meta?.generated_at || 'n/a';
         const source = homeSetupsByHorizon?.source || 'n/a';
-        noteEl.textContent = `Best setups by horizon (max 10 each). Source: ${source}. asOf=${asOf}. Click a number to inspect rows.`;
+        const verified = isAnalyzerVerifiedSource(source);
+        noteEl.textContent = verified
+          ? (isQuantLabVerifiedSource(source)
+            ? `Analyzer-verified BUY/HIGH rows ranked by Quant Lab strength (max 10 each). Source: ${source}. asOf=${asOf}. Click a number to inspect rows.`
+            : `Analyzer-verified BUY/HIGH rows by horizon (max 10 each). Source: ${source}. asOf=${asOf}. Click a number to inspect rows.`)
+          : `Best setups by horizon (max 10 each). Source: ${source}. asOf=${asOf}. Click a number to inspect rows.`;
       }
       window.__rvUiAudit = window.__rvUiAudit || {};
       window.__rvUiAudit.analyze = {
@@ -1842,6 +1847,7 @@
 
       titleEl.innerHTML = `<span style="color:${tfColors[timeframe] || '#e5e7eb'}">●</span> ${tfLabels[timeframe] || 'Buy Signals'}`;
       const filtered = Array.isArray(homeSetupsByHorizon?.[timeframe]) ? homeSetupsByHorizon[timeframe].map((row) => ({ ...row })) : [];
+      const source = homeSetupsByHorizon?.source || '';
 
       if (!filtered.length) {
         contentEl.innerHTML = '<div style="text-align:center; color:#64748b; padding:2rem;">No valid rows for this timeframe in current snapshot.</div>';
@@ -1853,26 +1859,38 @@
       modal.style.display = 'block';
       document.body.style.overflow = 'hidden';
       await enrichModalRowsWithPrice(filtered);
+      const analyzerVerified = filtered.some((row) => row?.verdict) || isAnalyzerVerifiedSource(source);
+      const col1Label = analyzerVerified ? 'Verdict' : 'Setup';
+      const col2Label = analyzerVerified ? 'Confidence' : 'Trigger';
+      const metricLabel = `${bestSetupMetricLabel(source)} ↑`;
 
       const rows = filtered.map((s, i) => {
         const ticker = s.ticker || '—';
         const name = s.name || '—';
         const price = numberOrNull(s.price);
-        const prob = numberOrNull(s.probability ?? s.score);
+        const metricValue = isQuantLabVerifiedSource(source)
+          ? numberOrNull(s.metric_value ?? s.rank_score ?? s.score ?? s.avg_top_percentile)
+          : numberOrNull(s.probability ?? s.score);
         const er = numberOrNull(s.expected_return);
         const setupScore = numberOrNull(s.setup_score);
         const triggerScore = numberOrNull(s.trigger_score);
         const bgColor = i % 2 === 0 ? 'rgba(30,41,59,0.4)' : 'rgba(15,23,42,0.4)';
-        const probColor = Number.isFinite(prob) ? (prob >= 0.6 ? '#34d399' : prob >= 0.4 ? '#fbbf24' : '#f87171') : '#94a3b8';
+        const metricColor = Number.isFinite(metricValue)
+          ? (isQuantLabVerifiedSource(source)
+            ? (metricValue >= 85 ? '#34d399' : metricValue >= 75 ? '#fbbf24' : '#94a3b8')
+            : (metricValue >= 0.6 ? '#34d399' : metricValue >= 0.4 ? '#fbbf24' : '#f87171'))
+          : '#94a3b8';
         const erColor = er > 0 ? '#34d399' : er < 0 ? '#f87171' : '#94a3b8';
+        const verdict = String(s.verdict || '').toUpperCase();
+        const confidence = String(s.confidence || '').toUpperCase();
         return `
           <tr style="background:${bgColor};">
             <td style="padding:0.75rem 1rem; font-weight:600; color:#60a5fa; cursor:pointer;" onclick="closeSignalModal();selectSymbol('${ticker}', '${name.replace(/'/g, "\\'")}', {push:true})">${ticker}</td>
             <td style="padding:0.75rem 1rem; color:#e5e7eb;">${name}</td>
             <td style="padding:0.75rem 1rem; color:#94a3b8; text-align:right;">${Number.isFinite(price) ? `$${price.toFixed(2)}` : 'N/A'}</td>
-            <td style="padding:0.75rem 1rem; text-align:center;"><span style="background:rgba(16,185,129,0.15); color:#34d399; padding:0.2rem 0.5rem; border-radius:4px; font-size:0.85rem;">${Number.isFinite(setupScore) ? Math.round(setupScore) : '—'}</span></td>
-            <td style="padding:0.75rem 1rem; text-align:center;"><span style="background:rgba(59,130,246,0.15); color:#60a5fa; padding:0.2rem 0.5rem; border-radius:4px; font-size:0.85rem;">${Number.isFinite(triggerScore) ? Math.round(triggerScore) : '—'}</span></td>
-            <td style="padding:0.75rem 1rem; text-align:right; color:${probColor}; font-weight:600;">${Number.isFinite(prob) ? Math.round(prob * 100) + '%' : '—'}</td>
+            <td style="padding:0.75rem 1rem; text-align:center;"><span style="background:rgba(16,185,129,0.15); color:#34d399; padding:0.2rem 0.5rem; border-radius:4px; font-size:0.85rem;">${analyzerVerified ? (verdict || '—') : (Number.isFinite(setupScore) ? Math.round(setupScore) : '—')}</span></td>
+            <td style="padding:0.75rem 1rem; text-align:center;"><span style="background:rgba(59,130,246,0.15); color:#60a5fa; padding:0.2rem 0.5rem; border-radius:4px; font-size:0.85rem;">${analyzerVerified ? (confidence || '—') : (Number.isFinite(triggerScore) ? Math.round(triggerScore) : '—')}</span></td>
+            <td style="padding:0.75rem 1rem; text-align:right; color:${metricColor}; font-weight:600;">${formatBestSetupMetric(s, source)}</td>
             <td style="padding:0.75rem 1rem; text-align:right; color:${erColor}; font-weight:600;">${Number.isFinite(er) ? (er > 0 ? '+' : '') + er.toFixed(1) + '%' : 'N/A'}</td>
           </tr>
         `;
@@ -1886,9 +1904,9 @@
                 <th style="padding:0.75rem 1rem; text-align:left; color:#94a3b8; font-weight:600;">Ticker</th>
                 <th style="padding:0.75rem 1rem; text-align:left; color:#94a3b8; font-weight:600;">Name</th>
                 <th style="padding:0.75rem 1rem; text-align:right; color:#94a3b8; font-weight:600;">Price</th>
-                <th style="padding:0.75rem 1rem; text-align:center; color:#94a3b8; font-weight:600;">Setup</th>
-                <th style="padding:0.75rem 1rem; text-align:center; color:#94a3b8; font-weight:600;">Trigger</th>
-                <th style="padding:0.75rem 1rem; text-align:right; color:#94a3b8; font-weight:600;">Prob ↑</th>
+                <th style="padding:0.75rem 1rem; text-align:center; color:#94a3b8; font-weight:600;">${col1Label}</th>
+                <th style="padding:0.75rem 1rem; text-align:center; color:#94a3b8; font-weight:600;">${col2Label}</th>
+                <th style="padding:0.75rem 1rem; text-align:right; color:#94a3b8; font-weight:600;">${metricLabel}</th>
                 <th style="padding:0.75rem 1rem; text-align:right; color:#94a3b8; font-weight:600;">Exp.Ret 10d</th>
               </tr>
             </thead>
@@ -1955,6 +1973,8 @@
     let lastResolved = { ticker: null, name: null };
     let currentTopRoute = 'analyze';
     let topSetupsDoc = null;
+    let verifiedBestSetupsDoc = null;
+    let verifiedBestSetupsPromise = null;
     let forecastLatestDoc = null;
     let forecastLatestPromise = null;
     let homeSetupsByHorizon = { short: [], medium: [], long: [], source: 'none', asOf: null };
@@ -2858,6 +2878,27 @@
       return `${(num * 100).toFixed(digits)}%`;
     }
 
+    function isQuantLabVerifiedSource(source) {
+      return String(source || '').includes('quantlab_ranked');
+    }
+
+    function isAnalyzerVerifiedSource(source) {
+      const value = String(source || '');
+      return value.includes('stock_api_verified') || value.includes('quantlab_ranked');
+    }
+
+    function bestSetupMetricLabel(source) {
+      return isQuantLabVerifiedSource(source) ? 'Rank' : 'Prob';
+    }
+
+    function formatBestSetupMetric(row, source) {
+      if (isQuantLabVerifiedSource(source)) {
+        const value = numberOrNull(row?.metric_value ?? row?.rank_score ?? row?.score ?? row?.avg_top_percentile);
+        return value == null ? '—' : `${value.toFixed(0)}`;
+      }
+      return formatProbabilityPct(row?.probability ?? row?.score);
+    }
+
     function takeTop(rows, limit = 10) {
       if (!Array.isArray(rows)) return [];
       const strict = rows.filter((row) => isValidDisplayTicker(row?.ticker || ''));
@@ -3052,6 +3093,48 @@
       return homeSetupsByHorizon;
     }
 
+    function buildVerifiedBestSetupsByHorizon(doc) {
+      const source = doc?.meta?.source || doc?.source || 'shared_decision_core_quantlab_forecast_snapshot';
+      const asOf = doc?.meta?.quantlab_asof || doc?.meta?.forecast_asof || doc?.generated_at || null;
+      const stockBuckets = doc?.data?.stocks && typeof doc.data.stocks === 'object' ? doc.data.stocks : {};
+      const etfBuckets = doc?.data?.etfs && typeof doc.data.etfs === 'object' ? doc.data.etfs : {};
+      const out = { short: [], medium: [], long: [] };
+      for (const horizon of ['short', 'medium', 'long']) {
+        const rows = [
+          ...(Array.isArray(stockBuckets?.[horizon]) ? stockBuckets[horizon] : []),
+          ...(Array.isArray(etfBuckets?.[horizon]) ? etfBuckets[horizon] : [])
+        ]
+          .sort((a, b) => Number(b?.rank_score ?? b?.score ?? 0) - Number(a?.rank_score ?? a?.score ?? 0));
+        out[horizon] = takeTop(rows.map((row) => ({
+          ...row,
+          canonical_id: row?.canonical_id || canonicalForTicker(row?.ticker || ''),
+          trigger_fulfilled: true
+        })), 10);
+      }
+      homeSetupsByHorizon = { ...out, source, asOf };
+      return homeSetupsByHorizon;
+    }
+
+    function fallbackTopSetupsRows() {
+      return [];
+    }
+
+    async function loadVerifiedBestSetupsDoc() {
+      if (verifiedBestSetupsDoc) return verifiedBestSetupsDoc;
+      if (verifiedBestSetupsPromise) return verifiedBestSetupsPromise;
+      verifiedBestSetupsPromise = (async () => {
+        const { response, payload } = await fetchJson('/data/snapshots/best-setups-v4.json');
+        if (response?.ok && payload?.ok === true && payload?.data && typeof payload.data === 'object') {
+          verifiedBestSetupsDoc = payload;
+          return verifiedBestSetupsDoc;
+        }
+        return null;
+      })().finally(() => {
+        verifiedBestSetupsPromise = null;
+      });
+      return verifiedBestSetupsPromise;
+    }
+
     async function loadTopSetupsDoc() {
       if (topSetupsDoc) return topSetupsDoc;
       const { response, payload } = await fetchJson('/data/v3/derived/top-setups/latest.json');
@@ -3075,12 +3158,20 @@
 
     async function renderBestSetups() {
       if (!bestSetupsByHorizonWrap || !bestSetupsMeta) return;
-      await loadForecastLatestDoc();
-      const forecastRows = buildForecastHorizonFallback();
-      const horizonRows = buildBestSetupsByHorizon(forecastRows);
-      const generatedAt = topSetupsDoc?.meta?.generated_at || horizonRows?.asOf || 'n/a';
+      const verifiedDoc = await loadVerifiedBestSetupsDoc();
+      let horizonRows;
+      if (verifiedDoc) {
+        horizonRows = buildVerifiedBestSetupsByHorizon(verifiedDoc);
+      } else {
+        await loadForecastLatestDoc();
+        const forecastRows = buildForecastHorizonFallback();
+        horizonRows = buildBestSetupsByHorizon(forecastRows);
+      }
+      const source = horizonRows.source || 'none';
+      const metricLabel = bestSetupMetricLabel(source);
+      const generatedAt = verifiedDoc?.meta?.quantlab_asof || verifiedDoc?.meta?.forecast_asof || verifiedDoc?.generated_at || topSetupsDoc?.meta?.generated_at || horizonRows?.asOf || 'n/a';
       const totalRows = ['short', 'medium', 'long'].reduce((sum, h) => sum + (horizonRows[h]?.length || 0), 0);
-      bestSetupsMeta.textContent = `Rows=${totalRows} • source=${horizonRows.source || 'none'} • asOf=${generatedAt}`;
+      bestSetupsMeta.textContent = `Rows=${totalRows} • source=${source} • asOf=${generatedAt}`;
 
       const titles = {
         short: 'Short (1-5d) Top 10',
@@ -3096,7 +3187,7 @@
                 <tr>
                   <th style="text-align:left; color:#94a3b8; padding:0.35rem 0.25rem;">Ticker</th>
                   <th style="text-align:left; color:#94a3b8; padding:0.35rem 0.25rem;">Name</th>
-                  <th style="text-align:right; color:#94a3b8; padding:0.35rem 0.25rem;">Prob</th>
+                  <th style="text-align:right; color:#94a3b8; padding:0.35rem 0.25rem;">${metricLabel}</th>
                   <th style="text-align:right; color:#94a3b8; padding:0.35rem 0.25rem;">Signal</th>
                 </tr>
               </thead>
@@ -3107,8 +3198,8 @@
                       <a class="best-setup-link" href="/analyze/${encodeURIComponent(row.ticker)}" data-open-ticker="${escapeHtml(row.ticker)}" data-canonical-id="${escapeHtml(row.canonical_id || '')}" title="${escapeHtml(row.canonical_id || 'canonical_id: n/a')}">${escapeHtml(row.ticker)}</a>
                     </td>
                     <td style="padding:0.35rem 0.25rem; border-top:1px solid rgba(100,116,139,0.18); color:#cbd5e1;">${escapeHtml(row.name || '—')}</td>
-                    <td style="padding:0.35rem 0.25rem; border-top:1px solid rgba(100,116,139,0.18); text-align:right; color:#e5e7eb;">${formatProbabilityPct(row.probability ?? row.score)}</td>
-                    <td style="padding:0.35rem 0.25rem; border-top:1px solid rgba(100,116,139,0.18); text-align:right; color:${row.trigger_fulfilled ? '#22c55e' : '#94a3b8'};">${row.trigger_fulfilled ? 'Setup+Trigger' : 'Setup'}</td>
+                    <td style="padding:0.35rem 0.25rem; border-top:1px solid rgba(100,116,139,0.18); text-align:right; color:#e5e7eb;">${formatBestSetupMetric(row, source)}</td>
+                    <td style="padding:0.35rem 0.25rem; border-top:1px solid rgba(100,116,139,0.18); text-align:right; color:${row.verdict === 'BUY' ? '#22c55e' : (row.trigger_fulfilled ? '#22c55e' : '#94a3b8')};">${row.verdict ? `${escapeHtml(row.verdict)} / ${escapeHtml(row.confidence || '—')}` : (row.trigger_fulfilled ? 'Setup+Trigger' : 'Setup')}</td>
                   </tr>
                 `).join('')}
               </tbody>
@@ -4770,7 +4861,6 @@
             clearSearch({ push: false, keepInput: true, focus: false });
             await loadTopSetupsDoc();
             await renderBestSetups();
-            warmScientificData();
           } else if (route === 'market') {
             await loadMarketDoc();
             await renderMarketView();
@@ -4812,7 +4902,6 @@
           clearSearch({ push: false, keepInput: true, focus: true });
           await loadTopSetupsDoc();
           await renderBestSetups();
-          warmScientificData();
         }
       } catch (err) {
         console.error('[RV] Init error:', err);
@@ -4848,7 +4937,6 @@
       clearSearch({ push: false, keepInput: true, focus: false });
       await loadTopSetupsDoc();
       await renderBestSetups();
-      warmScientificData();
     });
 
     /*

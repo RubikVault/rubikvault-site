@@ -13,6 +13,9 @@ on:
       - 'public/data/**'
       - 'scripts/**'
 
+permissions:
+  contents: read
+
 jobs:
   asset-budget:
     name: Asset Budget Check

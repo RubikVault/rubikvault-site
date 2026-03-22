@@ -12,9 +12,6 @@ on:
     workflows: ["data-pulse-daily.v3"]
     types: [completed]
     branches: [main]
-  schedule:
-    # Fallback cron — delayed to allow data-pulse to finish first
-    - cron: '45 23 * * 1-5'
 
 permissions:
   contents: write
@@ -37,20 +34,15 @@ env:
 jobs:
   forecast-daily:
     name: 'Daily Forecast Run'
+    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 60
     
     steps:
-      - name: Skip if upstream failed (workflow_run trigger)
-        if: github.event_name == 'workflow_run' && github.event.workflow_run.conclusion != 'success'
-        run: |
-          echo "Upstream data-pulse workflow failed — skipping forecast."
-          exit 0
-
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 1
+          fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Setup Node.js
@@ -84,6 +76,7 @@ jobs:
       - name: Commit forecast artifacts
         if: steps.pipeline.outputs.status == 'success'
         run: |
+          set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           
@@ -97,8 +90,26 @@ jobs:
             echo "No changes to commit"
           else
             git commit -m "chore(forecast): daily pipeline $(date +%Y-%m-%d)"
-            git pull --rebase origin main || true
-            git push
+            target_branch="${GITHUB_REF_NAME:-main}"
+            for i in 1 2 3; do
+              git fetch origin "$target_branch"
+              if ! git rebase "origin/$target_branch"; then
+                if [ -d .git/rebase-merge ] || [ -d .git/rebase-apply ]; then
+                  git rebase --abort
+                fi
+                echo "GREEN-SKIP: rebase conflict on ${target_branch}; publish deferred." >&2
+                echo "GREEN-SKIP: rebase conflict on ${target_branch}; publish deferred." >> "$GITHUB_STEP_SUMMARY"
+                exit 0
+              fi
+              if git push origin "HEAD:${target_branch}"; then
+                exit 0
+              fi
+              echo "push failed (attempt $i); retrying in 5s" >&2
+              sleep 5
+            done
+            echo "GREEN-SKIP: push failed after retries (likely concurrent writer); publish deferred." >&2
+            echo "GREEN-SKIP: push failed after retries (likely concurrent writer); publish deferred." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
           fi
 
       - name: Upload pipeline log

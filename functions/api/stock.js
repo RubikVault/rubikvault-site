@@ -25,6 +25,7 @@ import {
   buildStockInsightsV4Evaluation,
   makeContractState
 } from './_shared/stock-insights-v4.js';
+import { assembleDecisionInputs, loadRequestCoreInputs } from './_shared/decision-input-assembly.js';
 
 const MODULE_NAME = 'stock';
 const TICKER_MAX_LENGTH = 12;
@@ -1508,38 +1509,47 @@ export async function onRequestGet(context) {
   };
 
   {
-    const fallbackAsOf = latestBar?.date || asOf || null;
-    const scientificState = makeContractState(null, {
-      as_of: fallbackAsOf,
-      source: 'stock-analysis.snapshot',
-      status: 'unavailable',
-      reason: 'NO_DATA'
-    });
-    const forecastState = makeContractState(null, {
-      as_of: fallbackAsOf,
-      source: 'forecast.latest',
-      status: 'unavailable',
-      reason: 'NO_DATA'
-    });
-    const elliottState = makeContractState(null, {
-      as_of: fallbackAsOf,
-      source: 'marketphase.per_ticker',
-      status: 'unavailable',
-      reason: 'NO_DATA'
+    // Use the same shared raw-input path as /api/stock-insights-v4 and the offline builder.
+    const origin = url.origin;
+    const assetFetcher = env?.ASSETS || null;
+    async function fetchJsonForAssembly(path) {
+      try {
+        let res;
+        if (assetFetcher && path.startsWith('/data/')) {
+          res = await assetFetcher.fetch(new URL(path, origin).toString());
+        } else {
+          res = await fetch(new URL(path, origin).toString());
+        }
+        if (!res.ok) return null;
+        return await res.json();
+      } catch { return null; }
+    }
+    const decisionInputs = await assembleDecisionInputs(effectiveTicker, {
+      fetchJson: fetchJsonForAssembly,
+      loadCoreInputs: (resolvedTicker) => loadRequestCoreInputs(resolvedTicker, {
+        request,
+        assetFetcher,
+        fetchJson: fetchJsonForAssembly,
+      }),
     });
     payload.evaluation_v4 = buildStockInsightsV4Evaluation({
       ticker: effectiveTicker,
-      bars: eodBars,
-      stats: marketStatsPayload?.stats || {},
-      universe: universePayload || {},
-      scientificState,
-      forecastState,
-      elliottState,
-      forecastMeta: null
+      bars: decisionInputs.bars,
+      stats: decisionInputs.stats,
+      universe: decisionInputs.universe,
+      scientificState: decisionInputs.scientificState,
+      forecastState: decisionInputs.forecastState,
+      elliottState: decisionInputs.elliottState,
+      quantlabState: decisionInputs.quantlabState,
+      forecastMeta: decisionInputs.forecastMeta,
+      inputFingerprints: decisionInputs.input_fingerprints,
+      runtimeControl: decisionInputs.runtimeControl,
     });
     payload.meta.evaluation_v4 = {
       requested: true,
-      status: payload.evaluation_v4.status || 'unavailable'
+      status: payload.evaluation_v4.status || 'unavailable',
+      as_of: decisionInputs.as_of || null,
+      input_fingerprints: decisionInputs.input_fingerprints || null
     };
   }
 

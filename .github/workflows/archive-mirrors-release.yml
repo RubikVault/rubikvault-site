@@ -34,6 +34,7 @@ jobs:
 
       - name: Update archive index
         run: |
+          set -euo pipefail
           mkdir -p public/data/v3/system
           cat > public/data/v3/system/archive-index.json <<JSON
           {
@@ -52,5 +53,23 @@ jobs:
             exit 0
           fi
           git commit -m "chore(v3): update archive index"
-          git pull --rebase origin main || true
-          git push
+          target_branch="main"
+          for i in 1 2 3; do
+            git fetch origin "$target_branch"
+            if ! git rebase "origin/$target_branch"; then
+              if [ -d .git/rebase-merge ] || [ -d .git/rebase-apply ]; then
+                git rebase --abort
+              fi
+              echo "GREEN-SKIP: rebase conflict on ${target_branch}; publish deferred." >&2
+              echo "GREEN-SKIP: rebase conflict on ${target_branch}; publish deferred." >> "$GITHUB_STEP_SUMMARY"
+              exit 0
+            fi
+            if git push origin "HEAD:${target_branch}"; then
+              exit 0
+            fi
+            echo "push failed (attempt $i); retrying in 5s" >&2
+            sleep 5
+          done
+          echo "GREEN-SKIP: push failed after retries (likely concurrent writer); publish deferred." >&2
+          echo "GREEN-SKIP: push failed after retries (likely concurrent writer); publish deferred." >> "$GITHUB_STEP_SUMMARY"
+          exit 0

@@ -1,19 +1,8 @@
-// Additive v4 insights endpoint (shadow path).
-// Non-breaking: existing /api/stock-insights and /api/stock-insights-v2 stay canonical.
+// Additive v4 insights endpoint — uses shared decision-input-assembly.
+// This endpoint and /api/stock both call the shared decision input assembly.
 
-import { buildStockInsightsV4Evaluation, makeContractState, REASON_CODES } from "./_shared/stock-insights-v4.js";
-
-let _v2IndexCache = null;
-let _v2IndexTs = 0;
-const TTL = 600_000; // 10 minutes
-
-function pickAsOf(...values) {
-  for (const value of values) {
-    const s = String(value || "").trim();
-    if (s) return s;
-  }
-  return null;
-}
+import { buildStockInsightsV4Evaluation } from "./_shared/stock-insights-v4.js";
+import { assembleDecisionInputs, loadRequestCoreInputs } from "./_shared/decision-input-assembly.js";
 
 function summarizeStatus(states) {
   const vals = Object.values(states || {});
@@ -43,7 +32,6 @@ export async function onRequestGet(context) {
     try {
       let res;
       if (assetFetcher && path.startsWith("/data/")) {
-        // Static assets can be fetched via ASSETS without loopback.
         res = await assetFetcher.fetch(new URL(path, origin).toString());
       } else {
         res = await fetch(new URL(path, origin).toString());
@@ -55,61 +43,30 @@ export async function onRequestGet(context) {
     }
   }
 
-  const now = Date.now();
-  if (!_v2IndexCache || now - _v2IndexTs > TTL) {
-    _v2IndexCache = await fetchJson("/data/features-v2/stock-insights/index.json");
-    _v2IndexTs = now;
-  }
-  // Suffix-aware ticker lookup: MALLPLAZA.SN → try both MALLPLAZA.SN and MALLPLAZA
-  const tickerBase = ticker.includes(".") ? ticker.split(".")[0] : ticker;
-  const idxRow = _v2IndexCache?.rows?.[ticker] || _v2IndexCache?.rows?.[tickerBase] || null;
-
-  // v2 endpoint already wraps scientific/forecast/elliott in a stable contract.
-  const [v2Doc, stockDoc] = await Promise.all([
-    fetchJson(`/api/stock-insights-v2?ticker=${encodeURIComponent(ticker)}`),
-    fetchJson(`/api/stock?ticker=${encodeURIComponent(ticker)}&eval_v4=1`),
-  ]);
-
-  const scientificState = makeContractState(v2Doc?.scientific || null, {
-    as_of: pickAsOf(idxRow?.scientific?.as_of, v2Doc?.v2_contract?.scientific?.as_of),
-    source: idxRow?.scientific?.source || v2Doc?.v2_contract?.scientific?.source || "stock-analysis.snapshot",
-    status: idxRow?.scientific?.status || v2Doc?.v2_contract?.scientific?.status || (v2Doc?.scientific ? "ok" : "unavailable"),
-    reason: idxRow?.scientific?.reason || v2Doc?.v2_contract?.scientific?.reason || (v2Doc?.scientific ? REASON_CODES.OK : REASON_CODES.MISSING_SCIENTIFIC_ENTRY),
+  const decisionInputs = await assembleDecisionInputs(ticker, {
+    fetchJson,
+    loadCoreInputs: (resolvedTicker) => loadRequestCoreInputs(resolvedTicker, { request, assetFetcher, fetchJson }),
   });
-  const forecastState = makeContractState(v2Doc?.forecast || null, {
-    as_of: pickAsOf(idxRow?.forecast?.as_of, v2Doc?.v2_contract?.forecast?.as_of),
-    source: idxRow?.forecast?.source || v2Doc?.v2_contract?.forecast?.source || "forecast.latest",
-    status: idxRow?.forecast?.status || v2Doc?.v2_contract?.forecast?.status || (v2Doc?.forecast ? "ok" : "unavailable"),
-    reason: idxRow?.forecast?.reason || v2Doc?.v2_contract?.forecast?.reason || (v2Doc?.forecast ? REASON_CODES.OK : REASON_CODES.MISSING_FORECAST_ENTRY),
-  });
-  const elliottState = makeContractState(v2Doc?.elliott || null, {
-    as_of: pickAsOf(idxRow?.elliott?.as_of, v2Doc?.v2_contract?.elliott?.as_of),
-    source: idxRow?.elliott?.source || v2Doc?.v2_contract?.elliott?.source || "marketphase.per_ticker",
-    status: idxRow?.elliott?.status || v2Doc?.v2_contract?.elliott?.status || (v2Doc?.elliott ? "ok" : "unavailable"),
-    reason: idxRow?.elliott?.reason || v2Doc?.v2_contract?.elliott?.reason || (v2Doc?.elliott ? REASON_CODES.OK : REASON_CODES.MISSING_ELLIOTT_ENTRY),
-  });
-
-  const bars = Array.isArray(stockDoc?.data?.bars) ? stockDoc.data.bars : [];
-  const stats = stockDoc?.data?.market_stats?.stats || {};
-  const universe = stockDoc?.data?.universe || {};
 
   const evalDoc = buildStockInsightsV4Evaluation({
     ticker,
-    bars,
-    stats,
-    universe,
-    scientificState,
-    forecastState,
-    elliottState,
-    forecastMeta: v2Doc?.forecast_meta || null,
+    bars: decisionInputs.bars,
+    stats: decisionInputs.stats,
+    universe: decisionInputs.universe,
+    scientificState: decisionInputs.scientificState,
+    forecastState: decisionInputs.forecastState,
+    elliottState: decisionInputs.elliottState,
+    quantlabState: decisionInputs.quantlabState,
+    forecastMeta: decisionInputs.forecastMeta,
+    inputFingerprints: decisionInputs.input_fingerprints,
+    runtimeControl: decisionInputs.runtimeControl,
   });
 
   const result = {
     ...evalDoc,
     source_paths: {
-      v2: "/api/stock-insights-v2",
-      stock: "/api/stock?eval_v4=1",
-      v2_index: "/data/features-v2/stock-insights/index.json",
+      assembly: "decision-input-assembly (shared full path)",
+      core_inputs: "static_asset_loader",
     },
     status: summarizeStatus(evalDoc.v4_contract),
   };

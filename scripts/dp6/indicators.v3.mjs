@@ -107,6 +107,16 @@ async function main() {
   });
 
   if (produced === 0) {
+    const diagPath = 'public/data/v3/derived/dp6_zero_output_diagnostic.json';
+    const diag = {
+      error: 'DP6_NO_INDICATORS_PRODUCED',
+      timestamp: new Date().toISOString(),
+      expected_entries: entries.length,
+      produced: 0,
+      manifest: 'public/data/v3/derived/manifest.json'
+    };
+    const { writeFileSync } = await import('node:fs');
+    try { writeFileSync(diagPath, JSON.stringify(diag, null, 2) + '\n'); } catch (_) { /* best-effort */ }
     throw new Error("DP6_NO_INDICATORS_PRODUCED");
   }
 

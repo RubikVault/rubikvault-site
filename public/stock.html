@@ -176,11 +176,28 @@
   const bullR = (_explanation.sentiment === 'positive' ? (_explanation.bullets || []).slice(0, 3) : []);
   const bearR = (_explanation.sentiment === 'negative' ? (_explanation.bullets || []).slice(0, 3) : []);
 
-  // Horizon cards from backend (unified verdict, displayed per-horizon for compatibility)
-  const horizons = [{k:'short',label:'SHORT'},{k:'mid',label:'MID'},{k:'long',label:'LONG'}].map(h => {
-    const vLabel = overallLabel;
+  // Horizon cards now come from the backend decision layer.
+  const horizonDecisionMap = _decision.horizons || {};
+  const horizons = [
+    { key:'short', label:'SHORT' },
+    { key:'medium', label:'MID' },
+    { key:'long', label:'LONG' }
+  ].map(h => {
+    const slice = horizonDecisionMap[h.key] || _decision;
+    const vLabel = slice?.verdict || overallLabel;
     const cls = vLabel==='BUY'?'bullish':vLabel==='AVOID'||vLabel==='SELL'?'bearish':'neutral';
-    return {...h, v:{l:vLabel, c:cls, cf:confidence}, score:{score:0, reasons:(_explanation.bullets||[]).slice(0,2)}};
+    return {
+      ...h,
+      v: {
+        l: vLabel,
+        c: cls,
+        cf: slice?.confidence_bucket || confidence
+      },
+      score: {
+        score: slice?.scores?.composite || 0,
+        reasons: (slice?.trigger_gates && slice.trigger_gates.length ? slice.trigger_gates : (_explanation.bullets||[]).slice(0,2))
+      }
+    };
   });
   const shortV = horizons[0]?.v?.l || overallLabel;
   const midV = horizons[1]?.v?.l || overallLabel;

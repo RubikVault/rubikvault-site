@@ -45,6 +45,10 @@ const all = entries
         price: d.price ?? null,
         probability: d.probability ?? null,
         signal_strength: d.signal_strength || 'WEAK',
+        v4_decision: {
+            verdict: d.v4_decision?.verdict || null,
+            confidence_bucket: d.v4_decision?.confidence_bucket || null
+        },
         setup: {
             fulfilled: d.setup?.fulfilled ?? false,
             score: d.setup?.score ?? 0,
@@ -68,20 +72,30 @@ console.log(`  ${all.length} US-like stocks after filtering`);
 
 // 1. Strong signals: setup AND trigger fulfilled, sorted by combined score
 const strong = all
-    .filter(s => s.setup.fulfilled && s.trigger.fulfilled)
+    .filter(s =>
+        s.setup.fulfilled &&
+        s.trigger.fulfilled &&
+        s.v4_decision.verdict === 'BUY' &&
+        s.v4_decision.confidence_bucket === 'HIGH'
+    )
     .sort((a, b) => (b.setup.score + b.trigger.score) - (a.setup.score + a.trigger.score))
     .slice(0, 30);
 
 // 2. Best setups (fulfilled, not necessarily triggered), sorted by setup score
 const bestSetups = all
-    .filter(s => s.setup.fulfilled && !s.trigger.fulfilled)
+    .filter(s =>
+        s.setup.fulfilled &&
+        !s.trigger.fulfilled &&
+        s.v4_decision.verdict === 'BUY' &&
+        s.v4_decision.confidence_bucket === 'HIGH'
+    )
     .sort((a, b) => b.setup.score - a.setup.score)
     .slice(0, 30);
 
 // 3. Universe stats
 const totalSetups = all.filter(s => s.setup.fulfilled).length;
 const totalTriggers = all.filter(s => s.trigger.fulfilled).length;
-const totalStrong = all.filter(s => s.signal_strength === 'STRONG').length;
+const totalStrong = all.filter(s => s.v4_decision.verdict === 'BUY' && s.v4_decision.confidence_bucket === 'HIGH').length;
 
 const summary = {
     module: 'scientific_analyzer',

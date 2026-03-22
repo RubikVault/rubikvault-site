@@ -109,6 +109,13 @@ function stubFetch({ overrides = {}, tiingo, twelvedata } = {}) {
       return twelvedata ? twelvedata(u) : { ok: false, status: 500, json: async () => ({}) };
     }
 
+    if (u.hostname.includes('eodhistoricaldata.com') || u.hostname.includes('eodhd.com')) {
+      if (u.pathname.includes('/ZZZZ') || u.searchParams.get('s') === 'ZZZZ') {
+        return { ok: false, status: 404, json: async () => ({}) };
+      }
+      return { ok: true, status: 200, json: async () => tiingoPayload(makeBars()) };
+    }
+
     const mapping = {
       '/data/snapshots/universe/latest.json': 'stock-universe.sample.json',
       '/data/snapshots/market-prices/latest.json': 'market-prices-latest.sample.json',
@@ -149,7 +156,7 @@ async function testKnownTicker() {
     tiingo: () => ({ ok: true, status: 200, json: async () => tiingoPayload(makeBars()) })
   });
   try {
-    const result = await requestTicker('SPY', makeEnv({ TIINGO_API_KEY: '' }));
+    const result = await requestTicker('SPY', makeEnv({ EODHD_API_KEY: 'test', TIINGO_API_KEY: '' }));
     assert(result.schema_version === '3.0', 'schema_version mismatch');
     assert(!result.error, 'expected no error for SPY');
     assert(result.data.universe.exists_in_universe === true, 'universe flag');
@@ -171,7 +178,8 @@ async function testUnknownTicker() {
     assert(result.error?.code === 'UNKNOWN_TICKER', 'unknown ticker code');
     assert(result.data.universe.exists_in_universe === false, 'universe miss');
     assert(result.data.market_prices === null, 'prices should be null');
-    assert(result.data.market_stats === null, 'stats should be null');
+    assert(result.data.market_stats?.symbol === 'ZZZZ', 'market_stats placeholder missing');
+    assert(result.data.market_stats?.stats?.sma20 === null, 'market_stats placeholder should stay null-filled');
     assertHasMetaStatus(result);
   } finally {
     restore();

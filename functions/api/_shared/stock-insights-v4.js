@@ -14,6 +14,7 @@ const REASON_CODES = Object.freeze({
   MISSING_FORECAST_ENTRY: "MISSING_FORECAST_ENTRY",
   MISSING_SCIENTIFIC_ENTRY: "MISSING_SCIENTIFIC_ENTRY",
   MISSING_ELLIOTT_ENTRY: "MISSING_ELLIOTT_ENTRY",
+  MISSING_QUANTLAB_ENTRY: "MISSING_QUANTLAB_ENTRY",
   LOW_EVIDENCE: "LOW_EVIDENCE",
   DRIFT_YELLOW: "DRIFT_YELLOW",
   DRIFT_ORANGE: "DRIFT_ORANGE",
@@ -509,7 +510,10 @@ export function buildStockInsightsV4Evaluation({
   scientificState,
   forecastState,
   elliottState,
+  quantlabState = null,
   forecastMeta = null,
+  inputFingerprints = null,
+  runtimeControl = null,
 }) {
   const safeBars = Array.isArray(bars) ? bars : [];
   const asOf = safeBars[safeBars.length - 1]?.date || scientificState?.as_of || forecastState?.as_of || elliottState?.as_of || null;
@@ -537,7 +541,7 @@ export function buildStockInsightsV4Evaluation({
     confluence,
     fallback,
     scientificEligibility,
-    featureStates: { scientific: scientificState, forecast: forecastState, elliott: elliottState },
+    featureStates: { scientific: scientificState, forecast: forecastState, elliott: elliottState, quantlab: quantlabState },
     outcomes,
   });
 
@@ -545,6 +549,12 @@ export function buildStockInsightsV4Evaluation({
     scientific: scientificState,
     forecast: forecastState,
     elliott: elliottState,
+    quantlab: quantlabState || makeContractState(null, {
+      as_of: asOf,
+      source: "quantlab.stock-insights",
+      status: "unavailable",
+      reason: REASON_CODES.MISSING_QUANTLAB_ENTRY,
+    }),
     raw_validation: makeContractState(rawValidation, {
       as_of: asOf,
       source: "bars.raw_validation",
@@ -623,11 +633,26 @@ export function buildStockInsightsV4Evaluation({
       status: "ok",
       reason: REASON_CODES.OK,
     }),
+    input_fingerprints: makeContractState(inputFingerprints || {}, {
+      as_of: asOf,
+      source: "stock-insights-v4.input-fingerprints",
+      status: "ok",
+      reason: REASON_CODES.OK,
+    }),
   };
 
   // Layer integration: STATE → DECISION → EXPLANATION
   const layerStates = classifyAllStates(stats, close);
-  const layerDecision = makeDecision(layerStates, stats, close);
+  const layerDecision = makeDecision({
+    states: layerStates,
+    stats,
+    close,
+    scientific: scientificState?.value || null,
+    forecast: forecastState?.value || null,
+    elliott: elliottState?.value || null,
+    quantlab: quantlabState?.value || null,
+    runtimeControl,
+  });
   const layerExplanation = buildExplanation(ticker, layerDecision, layerStates);
 
   return {
@@ -651,7 +676,10 @@ export function buildStockInsightsV4Evaluation({
     scientific: scientificState?.value || null,
     forecast: forecastState?.value || null,
     elliott: elliottState?.value || null,
+    quantlab: quantlabState?.value || null,
     forecast_meta: forecastMeta || null,
+    input_fingerprints: inputFingerprints || null,
+    runtime_control: runtimeControl || null,
     states: layerStates,
     decision: layerDecision,
     explanation: layerExplanation,

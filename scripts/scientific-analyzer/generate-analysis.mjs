@@ -29,6 +29,8 @@ import { generateExplainabilityReport, formatExplanationForUI } from '../lib/sci
 import { applyPlattScaling } from '../lib/scientific-analyzer/calibration.mjs';
 import { publicSsotRel, mirrorSsotRel } from '../universe-v7/lib/ssot-paths.mjs';
 import { stripExchangeSuffix } from '../utils/symbol-normalize.mjs';
+import { classifyAllStates } from '../../functions/api/_shared/stock-states-v1.js';
+import { makeDecision } from '../../functions/api/_shared/stock-decisions-v1.js';
 
 const REPO_ROOT = process.cwd();
 const MODELS_DIR = 'public/data/models';
@@ -509,6 +511,21 @@ async function main() {
                 Math.min(1, calibratedProbability + 0.08)
             ];
 
+            const stats = {
+                rsi14: ind.rsi,
+                macd_hist: ind.macdHist,
+                sma20: ind.sma20,
+                sma50: ind.sma50,
+                sma200: ind.sma200,
+                volatility_percentile: ind.atrPct > 4 ? 92 : ind.atrPct > 2.8 ? 80 : 50,
+                volume_ratio_20d: ind.volumeRatio,
+                liquidity_score: 50
+            };
+            const states = classifyAllStates(stats, ind.close);
+            const decision = makeDecision(states, stats, ind.close);
+            const isApprovedSetup = setup.fulfilled && decision.verdict === 'BUY';
+            const signalStrength = isApprovedSetup && trigger.fulfilled ? 'STRONG' : isApprovedSetup ? 'MODERATE' : 'WEAK';
+
             const analysis = {
                 ticker,
                 name,
@@ -533,7 +550,7 @@ async function main() {
                     pending: trigger.pending
                 },
                 timeframe,
-                signal_strength: setup.fulfilled && trigger.fulfilled ? 'STRONG' : setup.fulfilled ? 'MODERATE' : 'WEAK',
+                signal_strength: signalStrength,
                 indicators: {
                     rsi: Math.round(ind.rsi * 10) / 10,
                     macd_hist: Math.round(ind.macdHist * 100) / 100,
@@ -556,13 +573,18 @@ async function main() {
                     confidence_interval: ci.map(v => Math.round(v * 100) / 100),
                     data_source: mpSource || 'real'
                 },
+                v4_decision: {
+                    verdict: decision.verdict,
+                    confidence_bucket: decision.confidence_bucket || null,
+                    trigger_gates: decision.trigger_gates || []
+                },
                 academic_disclaimer: modelData.disclaimer
             };
 
             analyses[ticker] = analysis;
 
             // Track top setups and triggered setups
-            if (setup.fulfilled) {
+            if (isApprovedSetup) {
                 topSetups.push({
                     ticker,
                     name,
@@ -576,7 +598,7 @@ async function main() {
                 });
             }
 
-            if (setup.fulfilled && trigger.fulfilled) {
+            if (isApprovedSetup && trigger.fulfilled) {
                 triggeredSetups.push({
                     ticker,
                     name,
@@ -655,4 +677,3 @@ if (isMain) {
         process.exit(1);
     });
 }
-

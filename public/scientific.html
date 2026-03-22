@@ -712,10 +712,16 @@
                 .filter(k => !k.startsWith('_') && analysisData[k].probability !== null)
                 .sort();
 
+            const hasApprovedBuy = (row) => {
+                const verdict = String(row?.v4_decision?.verdict || '').toUpperCase();
+                const confidence = String(row?.v4_decision?.confidence_bucket || '').toUpperCase();
+                return verdict === 'BUY' && (!confidence || confidence === 'HIGH');
+            };
+
             // Group by signal strength
-            const strong = symbols.filter(s => analysisData[s].signal_strength === 'STRONG');
-            const moderate = symbols.filter(s => analysisData[s].signal_strength === 'MODERATE');
-            const weak = symbols.filter(s => analysisData[s].signal_strength === 'WEAK');
+            const strong = symbols.filter(s => hasApprovedBuy(analysisData[s]) && analysisData[s].trigger?.fulfilled === true);
+            const moderate = symbols.filter(s => hasApprovedBuy(analysisData[s]) && analysisData[s].trigger?.fulfilled !== true);
+            const weak = symbols.filter(s => !hasApprovedBuy(analysisData[s]));
 
             select.innerHTML = '<option value="">Select a stock...</option>';
 
