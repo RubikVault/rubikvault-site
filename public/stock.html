@@ -21,6 +21,8 @@
 .tf-btn,.cl-btn{padding:3px 8px;border-radius:4px;border:1px solid var(--border);background:rgba(255,255,255,0.03);color:var(--text-dim);font-size:.68rem;font-weight:600;cursor:pointer}
 .tf-btn:hover,.tf-btn.active,.cl-btn:hover,.cl-btn.active{background:var(--accent-glow);color:var(--accent);border-color:rgba(6,182,212,0.3)}
 @media(max-width:1100px){.dash-grid{grid-template-columns:1fr;}}
+.hp-btn{padding:4px 14px;border-radius:6px;border:1px solid var(--border);background:rgba(255,255,255,0.03);color:var(--text-dim);font-size:.72rem;font-weight:700;cursor:pointer;transition:all .15s}
+.hp-btn:hover,.hp-btn.active{background:rgba(6,182,212,0.12);color:var(--accent);border-color:rgba(6,182,212,0.35)}
 </style></head>
 <body>
 
@@ -159,8 +161,16 @@
   ].map(x => '<div style="padding:.4rem .6rem; border-radius:6px; background:rgba(255,255,255,0.02); border:1px solid var(--border); text-align:center"><div style="font-size:.6rem; color:var(--text-muted); text-transform:uppercase">'+x[0]+'</div><div style="font-weight:700; color:'+x[2]+'; font-size:.85rem">'+x[1]+'</div></div>').join('');
 
   // ── Verdicts from backend decision layer ──
-  const overallLabel = _decision.verdict || 'WAIT';
-  const overallColor = overallLabel==='BUY'?'var(--green)':overallLabel==='SELL'||overallLabel==='AVOID'?'var(--red)':'var(--yellow)';
+  const VALID_PHASES = ['EARLY', 'MID', 'LATE'];
+  const baseVerdict = _decision.verdict || 'WAIT';
+  const shouldRenderSetupPhase = baseVerdict === 'WAIT' && VALID_PHASES.includes(_decision.setup_phase);
+  
+  const overallLabel = shouldRenderSetupPhase ? `${_decision.setup_phase} ACCUMULATION` : baseVerdict;
+  const overallColor = shouldRenderSetupPhase ? 'var(--yellow)' : (overallLabel==='BUY'?'var(--green)':overallLabel==='SELL'||overallLabel==='AVOID'?'var(--red)':'var(--yellow)');
+  
+  const setupPhaseSubtext = _decision.setup_phase === 'EARLY' ? 'Early-stage, confirmation pending'
+    : _decision.setup_phase === 'LATE' ? 'Late-stage, breakout watch'
+    : 'Accumulation in progress';
   const setupType = _decision.setup_type === 'TREND_FOLLOW' ? 'Confirming Uptrend'
     : _decision.setup_type === 'MEAN_REVERSION' ? 'Pullback in Uptrend'
     : _decision.setup_type === 'BREAKOUT' ? 'Breakout Setup'
@@ -536,7 +546,7 @@
           <div style="width:40px;height:40px;border-radius:50%;background:${overallColor};box-shadow:0 0 15px ${overallColor};flex-shrink:0"></div>
           <div style="flex:1">
             <div style="font-size:1.15rem;font-weight:800;color:${overallColor}">${overallLabel}</div>
-            ${overallLabel==='ACCUMULATION ZONE'?'<div style="font-size:0.55rem; color:var(--text-dim); margin-top:2px; font-weight:700;">(Early-Stage, Confirmation Pending)</div>':''}
+            ${shouldRenderSetupPhase ? `<div style="font-size:0.55rem; color:var(--text-dim); margin-top:2px; font-weight:700;">${setupPhaseSubtext}</div>` : ''}
             <div style="font-size:.65rem;color:var(--text-dim);font-weight:700;margin-top:2px;">${overallText}</div>
             <div style="font-size:.58rem;color:var(--text-muted);text-transform:uppercase;margin-top:3px;font-weight:600;">Setup: <span style="color:var(--accent)">${setupType}</span></div>
           </div>
@@ -563,8 +573,8 @@
         <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:.4rem;margin-bottom:1.25rem">
           ${horizons.map(h => {
             var c = h.v.c==='bullish'?'var(--green)':h.v.c==='bearish'?'var(--red)':'var(--yellow)';
-            var info = h.k==='long'?'Investor':'Trader';
-            var pc = h.k==='long'?'var(--accent)':'var(--yellow)';
+            var info = h.key==='long'?'Investor':'Trader';
+            var pc = h.key==='long'?'var(--accent)':'var(--yellow)';
             return `
               <div style="text-align:center;padding:.5rem;border-radius:8px;background:rgba(255,255,255,0.02);border:1px solid var(--border)">
                 <div style="font-size:.58rem;color:var(--text-muted);text-transform:uppercase">${h.label}</div>
@@ -747,9 +757,95 @@
     </div>
 
   </div>
+
+  <!-- HISTORISCHE ENTWICKLUNG (volle Breite) -->
+  <div style="margin-top:1.25rem" id="hp-section">
+    <div class="section" style="height:auto">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.75rem">
+        <h2 style="margin:0">📊 Historische Entwicklung</h2>
+        <div style="display:flex;gap:.3rem" id="hp-hz-btns">
+          <button class="hp-btn active" data-hz="short" onclick="window._switchHpHz(this)">SHORT</button>
+          <button class="hp-btn" data-hz="mid" onclick="window._switchHpHz(this)">MID</button>
+          <button class="hp-btn" data-hz="long" onclick="window._switchHpHz(this)">LONG</button>
+        </div>
+      </div>
+      <div id="hp-regime-bar" style="display:flex;gap:.5rem;margin-bottom:.75rem;flex-wrap:wrap"></div>
+      <div id="hp-body"><div style="color:var(--text-muted);font-size:.75rem;text-align:center;padding:1rem">Lade historische Daten...</div></div>
+    </div>
+  </div>
+
   `;
 
   document.getElementById('sc-content').innerHTML = layout;
+
+  // ── Historical Probabilities Layer ──
+  window._hpData = null;
+  window._hpHz = 'short';
+  window._hpHzMap = { short: 'h5d', mid: 'h20d', long: 'h60d' };
+  window._hpHzLabel = { short: '5 Tage', mid: '20 Tage', long: '60 Tage' };
+
+  window._switchHpHz = function(btn) {
+    window._hpHz = btn.dataset.hz;
+    document.querySelectorAll('#hp-hz-btns .hp-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    window._renderHpBody();
+  };
+
+  window._renderHpBody = function() {
+    const hz = window._hpHz;
+    const hKey = window._hpHzMap[hz];
+    const hLabel = window._hpHzLabel[hz];
+    const body = document.getElementById('hp-body');
+    if (!body) return;
+    const data = window._hpData;
+    if (!data) { body.innerHTML = '<div style="color:var(--text-muted);font-size:.75rem;text-align:center;padding:1rem">Keine historischen Daten verfügbar.</div>'; return; }
+    const events = data.events || {};
+    const keys = Object.keys(events).filter(k => events[k][hKey]);
+    if (!keys.length) { body.innerHTML = '<div style="color:var(--text-muted);font-size:.75rem;text-align:center;padding:1rem">Keine Event-Daten für diesen Horizont (min. 50 Beobachtungen erforderlich).</div>'; return; }
+    keys.sort((a,b) => (events[b][hKey]?.win_rate||0) - (events[a][hKey]?.win_rate||0));
+    const humanLabel = k => {
+      const map = {'rsi14_bin_lt_30':'RSI < 30 (Oversold)','rsi14_bin_30_50':'RSI 30-50','rsi14_bin_50_70':'RSI 50-70','rsi14_bin_gt_70':'RSI > 70 (Overbought)','event_new_52w_high':'New 52W High','event_new_52w_low':'New 52W Low','event_new_high_20':'New 20-Day High','event_new_low_20':'New 20-Day Low','event_new_high_50':'New 50-Day High','event_new_low_50':'New 50-Day Low','event_volume_spike_2x':'Volume Spike 2×','event_ppo_cross_signal':'PPO Signal Cross','event_adx_gt_25':'ADX Trend (>25)','event_adx_lt_20':'ADX Weak (<20)','ppo_bin_gt_0':'PPO Positiv','ppo_bin_lt_0':'PPO Negativ','volume_ratio_20d_bin_gt_2x':'Volume Ratio 2×+'};
+      return map[k] || k.replace(/event_|_bin_/g,'').replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase());
+    };
+    const rows = keys.map(k => {
+      const o = events[k][hKey];
+      const wr=o.win_rate, avgRet=o.avg_return, mae=o.mae, mfe=o.mfe, n=o.n, maxDD=o.max_drawdown;
+      const wrPct=(wr*100).toFixed(0), retPct=(avgRet*100).toFixed(1), maePct=(mae*100).toFixed(1), mfePct=(mfe*100).toFixed(1), ddPct=(maxDD*100).toFixed(1);
+      const isBull=wr>0.55, isBear=wr<0.45;
+      const clr=isBull?'var(--green)':isBear?'var(--red)':'var(--yellow)';
+      const bg=isBull?'rgba(16,185,129,0.04)':isBear?'rgba(248,113,113,0.04)':'rgba(251,191,36,0.04)';
+      const brd=isBull?'rgba(16,185,129,0.15)':isBear?'rgba(248,113,113,0.15)':'rgba(251,191,36,0.15)';
+      const icon=isBull?'▲':isBear?'▼':'◆';
+      const sentiment=isBull?'BULLISH':isBear?'BÄRISCH':'NEUTRAL';
+      return `<div style="display:grid;grid-template-columns:2.5fr 1fr 1fr 1fr 1fr 1fr;gap:.5rem;align-items:center;padding:.45rem .65rem;border-radius:8px;background:${bg};border:1px solid ${brd};margin-bottom:.3rem"><div><div style="font-size:.72rem;font-weight:700;color:var(--text)">${humanLabel(k)}</div><div style="font-size:.58rem;color:var(--text-muted);margin-top:1px">${n.toLocaleString()} Beobachtungen · ${hLabel}</div></div><div style="text-align:center"><div style="font-size:.58rem;color:var(--text-muted)">Sentiment</div><div style="font-size:.7rem;font-weight:800;color:${clr}">${icon} ${sentiment}</div></div><div style="text-align:center"><div style="font-size:.58rem;color:var(--text-muted)">Win-Rate</div><div style="font-size:.85rem;font-weight:800;color:${clr}">${wrPct}%</div></div><div style="text-align:center"><div style="font-size:.58rem;color:var(--text-muted)">Ø Return</div><div style="font-size:.78rem;font-weight:700;color:${parseFloat(retPct)>=0?'var(--green)':'var(--red)'}">${retPct>0?'+':''}${retPct}%</div></div><div style="text-align:center"><div style="font-size:.58rem;color:var(--text-muted)">MAE / MFE</div><div style="font-size:.65rem;font-weight:600"><span style="color:var(--red)">${maePct}%</span> / <span style="color:var(--green)">+${mfePct}%</span></div></div><div style="text-align:center"><div style="font-size:.58rem;color:var(--text-muted)">Max DD</div><div style="font-size:.65rem;font-weight:600;color:var(--red)">${ddPct}%</div></div></div>`;
+    }).join('');
+    const header = `<div style="display:grid;grid-template-columns:2.5fr 1fr 1fr 1fr 1fr 1fr;gap:.5rem;padding:0 .65rem .3rem;margin-bottom:.15rem"><div style="font-size:.58rem;color:var(--text-muted);text-transform:uppercase;font-weight:700">Event / Zustand</div><div style="font-size:.58rem;color:var(--text-muted);text-transform:uppercase;font-weight:700;text-align:center">Bewertung</div><div style="font-size:.58rem;color:var(--text-muted);text-transform:uppercase;font-weight:700;text-align:center">Win-Rate</div><div style="font-size:.58rem;color:var(--text-muted);text-transform:uppercase;font-weight:700;text-align:center">Ø Return</div><div style="font-size:.58rem;color:var(--text-muted);text-transform:uppercase;font-weight:700;text-align:center">MAE / MFE</div><div style="font-size:.58rem;color:var(--text-muted);text-transform:uppercase;font-weight:700;text-align:center">Max DD</div></div>`;
+    body.innerHTML = header + rows;
+  };
+
+  (async function initHistProbs() {
+    const ts = Date.now();
+    const [hpDoc, regDoc] = await Promise.all([
+      fetch('/data/hist-probs/' + encodeURIComponent(tkr.toUpperCase()) + '.json?_=' + ts).then(r => r.ok ? r.json() : null).catch(() => null),
+      fetch('/data/hist-probs/regime-daily.json?_=' + ts).then(r => r.ok ? r.json() : null).catch(() => null)
+    ]);
+    const regBar = document.getElementById('hp-regime-bar');
+    if (regBar && regDoc) {
+      const mColors={bull:'var(--green)',bear:'var(--red)'};
+      const bColors={weak:'var(--red)',normal:'var(--yellow)',strong:'var(--green)'};
+      const vMap={low_vol:'LOW',normal_vol:'NORMAL',high_vol:'HIGH'};
+      const pills=[
+        {l:'Markt',v:(regDoc.market_regime||'-').toUpperCase(),c:mColors[regDoc.market_regime]||'var(--text)'},
+        {l:'Volat.',v:vMap[regDoc.volatility_regime]||(regDoc.volatility_regime||'-').toUpperCase(),c:'var(--text)'},
+        {l:'Breadth',v:(regDoc.breadth_regime||'-').toUpperCase(),c:bColors[regDoc.breadth_regime]||'var(--text)'},
+        {l:'Breadth %',v:(regDoc.breadth_above_ma50_pct!=null?regDoc.breadth_above_ma50_pct+'%':'-'),c:'var(--text-dim)'},
+        {l:'Stand',v:regDoc.date||'-',c:'var(--text-muted)'}
+      ];
+      regBar.innerHTML=pills.map(p=>`<div style="display:flex;flex-direction:column;align-items:center;padding:.3rem .65rem;border-radius:6px;background:rgba(255,255,255,0.02);border:1px solid var(--border)"><span style="font-size:.55rem;color:var(--text-muted);text-transform:uppercase;font-weight:700">${p.l}</span><span style="font-size:.72rem;font-weight:800;color:${p.c};margin-top:1px">${p.v}</span></div>`).join('');
+    }
+    window._hpData = hpDoc;
+    window._renderHpBody();
+  })();
 
   window._switchTF = function(b) {
     const m={'1W':5,'1M':22,'6M':130,'1Y':252,'ALL':bars.length};
