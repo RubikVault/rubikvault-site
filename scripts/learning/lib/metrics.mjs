@@ -18,6 +18,35 @@ export function brierScore(preds) {
 }
 
 /**
+ * Expected Calibration Error (ECE) with fixed bins.
+ * @param {{p: number, y: number}[]} preds
+ * @param {number} bins
+ * @returns {number|null}
+ */
+export function eceScore(preds, bins = 10) {
+    const valid = preds.filter(d => d.p != null && d.y != null);
+    if (!valid.length) return null;
+    const bucketCount = Math.max(2, Number(bins) || 10);
+    const bucketed = Array.from({ length: bucketCount }, () => ({ count: 0, sumP: 0, sumY: 0 }));
+    for (const { p, y } of valid) {
+        const clipped = Math.max(0, Math.min(0.999999, Number(p)));
+        const idx = Math.min(bucketCount - 1, Math.floor(clipped * bucketCount));
+        bucketed[idx].count += 1;
+        bucketed[idx].sumP += clipped;
+        bucketed[idx].sumY += Number(y);
+    }
+    const total = valid.length;
+    let ece = 0;
+    for (const bucket of bucketed) {
+        if (!bucket.count) continue;
+        const avgP = bucket.sumP / bucket.count;
+        const avgY = bucket.sumY / bucket.count;
+        ece += (bucket.count / total) * Math.abs(avgP - avgY);
+    }
+    return ece;
+}
+
+/**
  * Classification accuracy: did the predicted direction match?
  * @param {{p: number, y: number}[]} preds - p≥0.5 means "up", y=1 means "went up"
  * @returns {number|null}

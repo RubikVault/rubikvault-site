@@ -8,9 +8,11 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { computeDigest, canonicalJSON } from '../lib/digest.js';
+import { applyIsotonicCalibration } from '../lib/calibration/isotonic.mjs';
 
 const POLICY_PATH = 'policies/forecast.v3.json';
 const CHAMPION_PATH = 'mirrors/forecast/champion/current.json';
+const CALIBRATION_ARTIFACT_TEMPLATE = 'mirrors/forecast/champion/calibration_{horizon}.json';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Policy & Champion Loading
@@ -42,6 +44,18 @@ export function loadChampion(repoRoot) {
     }
     const content = fs.readFileSync(championPath, 'utf8');
     return JSON.parse(content);
+}
+
+export function loadCalibrationArtifact(repoRoot, horizon) {
+    const relPath = CALIBRATION_ARTIFACT_TEMPLATE.replace('{horizon}', String(horizon || '').trim());
+    const absPath = path.join(repoRoot, relPath);
+    if (!fs.existsSync(absPath)) return null;
+    try {
+        const payload = JSON.parse(fs.readFileSync(absPath, 'utf8'));
+        return payload?.status === 'insufficient_samples' ? null : payload;
+    } catch {
+        return null;
+    }
 }
 
 /**
@@ -140,20 +154,18 @@ export function isotonicCalibrate(rawP, calibrationData = null) {
         return rawP * (1 - shrinkage) + 0.5 * shrinkage;
     }
 
-    // With calibration data, interpolate from the calibration curve
-    const { bins, calibrated } = calibrationData;
-    if (!Array.isArray(bins) || !Array.isArray(calibrated)) {
-        return rawP;
+    if (Array.isArray(calibrationData?.points) && calibrationData.points.length) {
+        const calibrated = applyIsotonicCalibration(rawP, calibrationData);
+        return Number.isFinite(calibrated) ? calibrated : rawP;
     }
-
+    const { bins, calibrated } = calibrationData;
+    if (!Array.isArray(bins) || !Array.isArray(calibrated)) return rawP;
     for (let i = 0; i < bins.length - 1; i++) {
         if (rawP >= bins[i] && rawP < bins[i + 1]) {
-            // Linear interpolation
             const t = (rawP - bins[i]) / (bins[i + 1] - bins[i]);
             return calibrated[i] * (1 - t) + calibrated[i + 1] * t;
         }
     }
-
     return rawP;
 }
 
@@ -246,9 +258,13 @@ export function generateForecast({
         '20d': { returns_1d: 0.3, returns_5d: 0.6, returns_20d: 1.5, dist_to_200d: 1.2, is_above_200d: 0.5, rs_vs_spy_20d: 0.9 }
     };
     const horizonWeights = HORIZON_WEIGHTS[horizon] ?? null;
+    const championWeights = championSpec?.weights?.[horizon] || championSpec?.weights || null;
 
     // Raw prediction
-    const rawP = logisticPredict(features, horizonWeights);
+    const rawP = logisticPredict(features, {
+        ...(horizonWeights || {}),
+        ...(championWeights || {}),
+    });
 
     // Calibration
     const calibratedP = championSpec.calibration_method === 'isotonic'
