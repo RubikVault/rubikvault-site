@@ -2,6 +2,7 @@
 
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import zlib from 'node:zlib';
 import {
   BEST_SETUP_LIMIT,
   buildForecastCandidatePools,
@@ -70,23 +71,29 @@ async function readQuantLabRowsForClass(assetClass) {
   try {
     files = (await fs.readdir(dir)).filter((name) => name.endsWith('.json')).sort();
   } catch {
-    files = [];
+    return { rows: [], shardCount: 0, generatedAt: null, asOfDate: null };
   }
-  const rows = [];
+
   let generatedAt = null;
   let asOfDate = null;
 
-  for (const file of files) {
-    const payload = JSON.parse(await fs.readFile(path.join(dir, file), 'utf8'));
-    if (!generatedAt && typeof payload?.generatedAt === 'string') generatedAt = payload.generatedAt;
-    if (!asOfDate && typeof payload?.asOfDate === 'string') asOfDate = payload.asOfDate;
-    const byTicker = payload?.byTicker && typeof payload.byTicker === 'object' ? payload.byTicker : {};
-    for (const [tickerKey, row] of Object.entries(byTicker)) {
-      rows.push({ ticker: row?.ticker || tickerKey, assetClass, ...row });
+  const parsedChunks = await mapWithConcurrency(files, 8, async (file) => {
+    try {
+      const payload = JSON.parse(await fs.readFile(path.join(dir, file), 'utf8'));
+      if (!generatedAt && typeof payload?.generatedAt === 'string') generatedAt = payload.generatedAt;
+      if (!asOfDate && typeof payload?.asOfDate === 'string') asOfDate = payload.asOfDate;
+      const byTicker = payload?.byTicker && typeof payload.byTicker === 'object' ? payload.byTicker : {};
+      const chunkRows = [];
+      for (const [tickerKey, row] of Object.entries(byTicker)) {
+        chunkRows.push({ ticker: row?.ticker || tickerKey, assetClass, ...row });
+      }
+      return chunkRows;
+    } catch {
+      return [];
     }
-  }
+  });
 
-  return { rows, shardCount: files.length, generatedAt, asOfDate };
+  return { rows: parsedChunks.flat(), shardCount: files.length, generatedAt, asOfDate };
 }
 
 async function readQuantLabRows() {
@@ -130,8 +137,10 @@ function horizonScore(row, horizon) {
   const buyLead = scaleTo100((num(row?.buy_experts) ?? 0) - (num(row?.avoid_experts) ?? 0), -8, 8);
   const quantTrend = scaleTo100(num(row?.quantlab_trend_gate), 0, 1);
 
+  let baseScore = 0;
+
   if (horizon === 'short') {
-    return clamp(
+    baseScore = 
       quant * 0.26 +
         composite * 0.24 +
         entry * 0.20 +
@@ -139,14 +148,9 @@ function horizonScore(row, horizon) {
         macd * 0.08 +
         ret5 * 0.06 +
         quantTrend * 0.04 +
-        risk * 0.02,
-      0,
-      100,
-    );
-  }
-
-  if (horizon === 'medium') {
-    return clamp(
+        risk * 0.02;
+  } else if (horizon === 'medium') {
+    baseScore = 
       quant * 0.28 +
         composite * 0.22 +
         trend * 0.14 +
@@ -155,26 +159,28 @@ function horizonScore(row, horizon) {
         trendDuration * 0.06 +
         buyLead * 0.06 +
         quantTrend * 0.04 +
-        risk * 0.02,
-      0,
-      100,
-    );
+        risk * 0.02;
+  } else {
+    baseScore = 
+      quant * 0.28 +
+        composite * 0.18 +
+        trend * 0.16 +
+        context * 0.12 +
+        trendDuration * 0.10 +
+        liquidity * 0.07 +
+        strongExperts * 0.05 +
+        ret20 * 0.04 +
+        risk * 0.02 -
+        volatilityPenalty * 0.02;
   }
 
-  return clamp(
-    quant * 0.28 +
-      composite * 0.18 +
-      trend * 0.16 +
-      context * 0.12 +
-      trendDuration * 0.10 +
-      liquidity * 0.07 +
-      strongExperts * 0.05 +
-      ret20 * 0.04 +
-      risk * 0.02 -
-      volatilityPenalty * 0.02,
-    0,
-    100,
-  );
+  // V6 Relaxation Penalties: Replace hard gates with score reduction
+  if (String(row?.verdict || '').toUpperCase() !== 'BUY') baseScore -= 30;
+  if (String(row?.confidence || '').toUpperCase() !== 'HIGH') baseScore -= 15;
+  if (row?.trigger_fulfilled === false) baseScore -= 20;
+  if (row?.buy_eligible === false) baseScore -= 10; // Safety mode penalty
+
+  return clamp(baseScore, 0, 100);
 }
 
 function decorateForHorizon(row, horizon) {
@@ -372,6 +378,11 @@ async function main() {
           long: horizonsByClass.etfs.long.length,
         },
       },
+      setup_phase_counts: {
+        early: (acceptedByHorizon.medium || []).filter(r => r.setup_phase === 'EARLY').length,
+        mid: (acceptedByHorizon.medium || []).filter(r => r.setup_phase === 'MID').length,
+        late: (acceptedByHorizon.medium || []).filter(r => r.setup_phase === 'LATE').length,
+      },
       rejection_counts: summarizeRejections(evalByTicker, candidatePools),
       duration_ms: Date.now() - startedAt,
     },
@@ -383,7 +394,27 @@ async function main() {
 
   await writeJson(OUTPUT_PATH, payload);
 
+  const finalTickers = new Set([
+    ...horizonsByClass.stocks.short, ...horizonsByClass.stocks.medium, ...horizonsByClass.stocks.long,
+    ...horizonsByClass.etfs.short, ...horizonsByClass.etfs.medium, ...horizonsByClass.etfs.long,
+  ].map((row) => row.ticker).filter(Boolean));
+
+  let backfills = 0;
+  for (const ticker of finalTickers) {
+    const doc = evalByTicker.get(ticker);
+    const bars = doc?.data?.bars || [];
+    if (bars.length >= 200) {
+      const outPath = path.join(REPO_ROOT, `public/data/v3/series/adjusted/US__${ticker}.ndjson.gz`);
+      await fs.mkdir(path.dirname(outPath), { recursive: true });
+      const ndjson = bars.map((b) => JSON.stringify(b)).join('\n') + '\n';
+      const compressed = zlib.gzipSync(Buffer.from(ndjson, 'utf-8'));
+      await fs.writeFile(outPath, compressed);
+      backfills++;
+    }
+  }
+
   console.log(`[best-setups-v4] wrote ${OUTPUT_PATH}`);
+  console.log(`[best-setups-v4] backfilled ${backfills} candidate histories for live compatibility.`);
   console.log(
     `[best-setups-v4] candidates=${uniqueTickers.length} stocks=${horizonsByClass.stocks.short.length}/${horizonsByClass.stocks.medium.length}/${horizonsByClass.stocks.long.length} etfs=${horizonsByClass.etfs.short.length}/${horizonsByClass.etfs.medium.length}/${horizonsByClass.etfs.long.length}`,
   );

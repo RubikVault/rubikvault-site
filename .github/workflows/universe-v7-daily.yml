@@ -47,6 +47,9 @@ jobs:
         # Conservative pacing reduces false stops / retry waste.
         run: node scripts/universe-v7/run-daily-stack.mjs --buckets stocks,etfs,rest --max-runs-per-bucket 50 --max-no-progress-runs 3 --backfill-max 2000 --sleep-ms 2000 --min-bars 200 --feature marketphase --allow-next-bucket-on-incomplete
 
+      - name: Build Best Setups v4
+        run: node scripts/build-best-setups-v4.mjs
+
       - name: Upload Reports
         if: always()
         uses: actions/upload-artifact@v4
