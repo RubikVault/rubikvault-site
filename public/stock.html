@@ -235,7 +235,8 @@
   };
 
   const _fund = data.fundamentals || null;
-  const _volumeInputsAvailable = Number.isFinite(latestBar?.volume)
+  const _latestBar = Array.isArray(bars) && bars.length ? bars[bars.length - 1] : null;
+  const _volumeInputsAvailable = Number.isFinite(_latestBar?.volume)
     || Number.isFinite(prices?.volume)
     || Number.isFinite(s.avg_volume_20d)
     || Number.isFinite(s.volume_ma_20)
