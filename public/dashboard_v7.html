@@ -1,0 +1,762 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Unified System Dashboard V7 | RubikVault</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%230b0f19'/%3E%3Cpath d='M18 46V18h11c10 0 17 5 17 14 0 8-5 14-16 14h-6v-8h5c5 0 8-2 8-6 0-4-3-6-8-6h-2v20H18z' fill='%233b82f6'/%3E%3C/svg%3E">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --bg: #0b0f19;
+            --card-bg: rgba(255,255,255,0.03);
+            --card-border: rgba(255,255,255,0.08);
+            --text: #f3f4f6;
+            --text-muted: #9ca3af;
+            --text-dim: #6b7280;
+            --blue: #3b82f6;
+            --green: #10b981;
+            --yellow: #f59e0b;
+            --red: #ef4444;
+            --purple: #8b5cf6;
+            --cyan: #06b6d4;
+            --glass: blur(12px);
+        }
+        * { margin:0; padding:0; box-sizing:border-box; font-family:'Outfit',sans-serif; }
+        body { background:var(--bg); background-image:radial-gradient(at 0% 0%,rgba(59,130,246,0.15) 0px,transparent 50%),radial-gradient(at 98% 100%,rgba(16,185,129,0.1) 0px,transparent 50%); color:var(--text); min-height:100vh; padding:1.5rem; overflow-x:hidden; }
+        .container { max-width:1500px; margin:0 auto; }
+
+        /* Global Banner */
+        .gov-banner { padding:.75rem 1.25rem; border-radius:10px; margin-bottom:1.25rem; display:flex; align-items:center; gap:.75rem; font-weight:600; font-size:.9rem; }
+        .gov-banner i { font-size:1.1rem; }
+
+        /* Header */
+        header { display:flex; justify-content:space-between; align-items:center; margin-bottom:1.25rem; padding-bottom:1rem; border-bottom:1px solid var(--card-border); flex-wrap:wrap; gap:.75rem; }
+        h1 { font-size:2rem; font-weight:800; background:linear-gradient(135deg,#fff 0%,var(--blue) 100%); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+        .header-right { display:flex; align-items:center; gap:.75rem; flex-wrap:wrap; }
+        .badge { display:inline-flex; align-items:center; gap:.35rem; padding:.35rem .75rem; border-radius:50px; font-weight:600; font-size:.8rem; border:1px solid; }
+        .badge-green { background:rgba(16,185,129,0.1); border-color:rgba(16,185,129,0.2); color:var(--green); }
+        .badge-blue { background:rgba(59,130,246,0.1); border-color:rgba(59,130,246,0.2); color:var(--blue); }
+        .badge-yellow { background:rgba(245,158,11,0.1); border-color:rgba(245,158,11,0.2); color:var(--yellow); }
+        .badge-red { background:rgba(239,68,68,0.1); border-color:rgba(239,68,68,0.2); color:var(--red); }
+        .badge-muted { background:rgba(156,163,175,0.1); border-color:rgba(156,163,175,0.2); color:var(--text-muted); }
+
+        /* Tabs */
+        .tab-bar { display:flex; gap:0; margin-bottom:1.5rem; border-bottom:2px solid var(--card-border); overflow-x:auto; }
+        .tab-btn { padding:.7rem 1.25rem; font-size:.85rem; font-weight:600; color:var(--text-muted); cursor:pointer; border:none; background:none; border-bottom:2px solid transparent; margin-bottom:-2px; white-space:nowrap; transition:color .2s, border-color .2s; }
+        .tab-btn:hover { color:var(--text); }
+        .tab-btn.active { color:var(--blue); border-bottom-color:var(--blue); }
+        .tab-panel { display:none; }
+        .tab-panel.active { display:block; }
+
+        /* Shared components */
+        .health-row { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:.75rem; margin-bottom:1.5rem; }
+        .health-cell { background:var(--card-bg); border:1px solid var(--card-border); border-radius:12px; padding:.75rem 1rem; text-align:center; }
+        .health-label { font-size:.7rem; color:var(--text-muted); text-transform:uppercase; font-weight:700; }
+        .health-value { font-size:1.1rem; font-weight:800; margin-top:.2rem; }
+        .model-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:1rem; margin-bottom:1.5rem; }
+        .card { background:var(--card-bg); backdrop-filter:var(--glass); border:1px solid var(--card-border); border-radius:14px; padding:1.25rem; transition:transform .2s,box-shadow .2s; }
+        .card:hover { transform:translateY(-3px); box-shadow:0 8px 25px rgba(0,0,0,0.4); border-color:rgba(255,255,255,0.12); }
+        .card-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:.75rem; }
+        .card-icon { font-size:1.3rem; color:var(--blue); }
+        .model-name { font-size:1.05rem; font-weight:600; }
+        .model-type { font-size:.72rem; color:var(--text-muted); text-transform:uppercase; margin-top:.15rem; }
+        .metric { margin-bottom:.6rem; }
+        .metric-label { font-size:.78rem; color:var(--text-muted); }
+        .metric-value { font-size:1.35rem; font-weight:800; }
+        .metric-sub { font-size:.72rem; color:var(--text-muted); }
+        .sections-grid { display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-bottom:1.5rem; }
+        @media (max-width:900px) { .sections-grid { grid-template-columns:1fr; } }
+        .section-box { background:var(--card-bg); backdrop-filter:var(--glass); border:1px solid var(--card-border); border-radius:14px; padding:1.25rem; }
+        .section-title { font-size:1rem; font-weight:600; margin-bottom:1rem; color:#fff; display:flex; align-items:center; gap:.5rem; }
+        .weight-row { display:flex; justify-content:space-between; align-items:center; margin-bottom:.6rem; padding-bottom:.5rem; border-bottom:1px solid rgba(255,255,255,0.04); font-size:.85rem; }
+        .weight-bar { height:5px; background:rgba(255,255,255,0.05); border-radius:3px; overflow:hidden; display:flex; margin-top:.3rem; }
+        .verdict-bar { display:flex; height:24px; border-radius:6px; overflow:hidden; margin-bottom:.5rem; }
+        .pill { display:inline-flex; font-size:.7rem; font-weight:600; padding:2px 8px; border-radius:4px; border:1px solid; margin:2px; }
+        .rec-item { padding:.5rem .75rem; margin-bottom:.4rem; border-radius:8px; font-size:.82rem; line-height:1.4; }
+        .rec-critical { background:rgba(239,68,68,0.08); border:1px solid rgba(239,68,68,0.15); color:var(--red); }
+        .rec-warning { background:rgba(245,158,11,0.08); border:1px solid rgba(245,158,11,0.15); color:var(--yellow); }
+        .rec-ok { background:rgba(16,185,129,0.08); border:1px solid rgba(16,185,129,0.15); color:var(--green); }
+        .funnel-step { display:flex; justify-content:space-between; font-size:.78rem; padding:.25rem 0; border-bottom:1px solid rgba(255,255,255,0.03); }
+        .chart-box { background:var(--card-bg); backdrop-filter:var(--glass); border:1px solid var(--card-border); border-radius:14px; padding:1.25rem; margin-bottom:1.5rem; }
+        .chart-title { font-size:1rem; font-weight:600; margin-bottom:1rem; color:#fff; }
+        .staleness-fresh { color:var(--green); }
+        .staleness-acceptable { color:var(--text-muted); }
+        .staleness-stale { color:var(--yellow); }
+        .staleness-critical { color:var(--red); }
+        .staleness-unknown { color:var(--text-muted); font-style:italic; }
+
+        /* Fix hints */
+        .fix-toggle { background:none; border:1px solid rgba(255,255,255,0.1); color:var(--text-muted); font-size:.72rem; padding:2px 8px; border-radius:4px; cursor:pointer; margin-top:.3rem; }
+        .fix-toggle:hover { color:var(--text); border-color:rgba(255,255,255,0.2); }
+        .fix-content { display:none; margin-top:.5rem; padding:.5rem .75rem; background:rgba(0,0,0,0.2); border-radius:6px; font-size:.78rem; color:var(--text-muted); font-family:monospace; line-height:1.6; }
+        .fix-content.open { display:block; }
+
+        /* Deep diagnosis */
+        .diagnose-feature { margin-bottom:1.5rem; }
+        .diagnose-feature-header { font-size:1rem; font-weight:700; margin-bottom:.75rem; display:flex; align-items:center; gap:.5rem; }
+        .diagnose-card { padding:.75rem 1rem; border-radius:10px; margin-bottom:.5rem; border:1px solid rgba(255,255,255,0.06); }
+        .diagnose-card.sev-critical { background:rgba(239,68,68,0.06); border-color:rgba(239,68,68,0.12); }
+        .diagnose-card.sev-warning { background:rgba(245,158,11,0.06); border-color:rgba(245,158,11,0.12); }
+        .diagnose-card.sev-ok { background:rgba(16,185,129,0.06); border-color:rgba(16,185,129,0.12); }
+        .diagnose-card.sev-info { background:rgba(59,130,246,0.06); border-color:rgba(59,130,246,0.12); }
+        .diagnose-title { font-weight:700; font-size:.88rem; margin-bottom:.3rem; }
+        .diagnose-text { font-size:.8rem; color:var(--text-muted); line-height:1.5; margin-bottom:.4rem; }
+        .fix-list { list-style:none; padding:0; margin:0; }
+        .fix-item { padding:.3rem 0; border-bottom:1px solid rgba(255,255,255,0.03); font-size:.78rem; }
+        .fix-what { font-weight:600; color:var(--text); }
+        .fix-how { color:var(--text-muted); margin-top:.15rem; }
+        .fix-file { display:inline-block; margin-top:.2rem; font-size:.72rem; color:var(--blue); font-family:monospace; }
+
+        /* Weekly comparison */
+        .comp-table { width:100%; border-collapse:collapse; font-size:.82rem; }
+        .comp-table th { text-align:left; padding:.5rem; color:var(--text-muted); font-weight:600; border-bottom:1px solid var(--card-border); }
+        .comp-table td { padding:.5rem; border-bottom:1px solid rgba(255,255,255,0.03); }
+        .delta-positive { color:var(--green); font-weight:700; }
+        .delta-negative { color:var(--red); font-weight:700; }
+        .delta-neutral { color:var(--text-muted); }
+
+        /* Sparkline */
+        .sparkline-container { height:36px; margin-top:.5rem; }
+        .sparkline-container svg { width:100%; height:100%; }
+        .info-stack { margin-top:.7rem; padding-top:.7rem; border-top:1px solid rgba(255,255,255,0.04); }
+        .info-row { display:flex; justify-content:space-between; gap:.75rem; font-size:.72rem; color:var(--text-muted); margin-top:.25rem; }
+        .info-row strong { color:var(--text); font-weight:600; text-align:right; }
+        .soft-note { font-size:.74rem; color:var(--text-muted); line-height:1.45; margin-top:.45rem; }
+
+        /* Ops */
+        .ops-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:1rem; margin-bottom:1.5rem; }
+        .ops-cell { background:rgba(15,23,42,0.3); padding:1rem; border-radius:.75rem; border:1px solid var(--card-border); }
+        .ops-cell-label { color:var(--text-muted); font-size:.75rem; font-weight:600; text-transform:uppercase; }
+        .ops-cell-value { font-size:1.25rem; font-weight:700; margin-top:.25rem; }
+        .ops-cell-sub { font-size:.8rem; color:var(--text-muted); margin-top:.25rem; }
+        .regime-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(120px,1fr)); gap:.75rem; margin-bottom:1rem; }
+        .regime-pill { background:var(--card-bg); border:1px solid var(--card-border); border-radius:10px; padding:.6rem .8rem; text-align:center; }
+        .regime-pill .label { font-size:.7rem; color:var(--text-muted); text-transform:uppercase; font-weight:600; }
+        .regime-pill .value { font-size:1rem; font-weight:800; margin-top:.2rem; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <!-- Global Governance Banner -->
+    <div class="gov-banner" id="govBanner" style="background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.2);color:var(--green)">
+        <i class="fas fa-spinner fa-spin"></i> <span>Loading system status...</span>
+    </div>
+
+    <header>
+        <div>
+            <h1>Unified Dashboard V7</h1>
+            <p style="color:var(--text-muted);font-size:.8rem" id="genTimestamp">Loading...</p>
+        </div>
+        <div class="header-right">
+            <span class="badge badge-muted" id="modeBadge"><i class="fas fa-circle-dot"></i> —</span>
+            <span class="badge badge-muted" id="learningBadge"><i class="fas fa-chart-line"></i> Loading</span>
+            <span class="badge badge-green" id="statusBadge"><i class="fas fa-spinner fa-spin"></i> Loading</span>
+        </div>
+    </header>
+
+    <!-- Tab Navigation -->
+    <div class="tab-bar">
+        <button class="tab-btn active" data-tab="health"><i class="fas fa-heartbeat"></i> System Health</button>
+        <button class="tab-btn" data-tab="performance"><i class="fas fa-chart-line"></i> Performance</button>
+        <button class="tab-btn" data-tab="strategy"><i class="fas fa-balance-scale"></i> Strategy</button>
+        <button class="tab-btn" data-tab="operations"><i class="fas fa-cogs"></i> Operations</button>
+    </div>
+
+    <!-- Tab 1: System Health -->
+    <div class="tab-panel active" id="tab-health">
+        <div class="health-row" id="healthRow"></div>
+        <div class="model-grid" id="modelGrid"></div>
+        <div class="sections-grid">
+            <div class="section-box" id="recsBox">
+                <div class="section-title"><i class="fas fa-brain"></i> System Intelligence</div>
+                <div id="recsContent"></div>
+            </div>
+            <div class="section-box" id="diagBox">
+                <div class="section-title"><i class="fas fa-stethoscope"></i> Pipeline Diagnostic</div>
+                <div id="diagContent"><span style="color:var(--text-muted);font-size:.82rem">No diagnostic data</span></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tab 2: Performance -->
+    <div class="tab-panel" id="tab-performance">
+        <div class="chart-box">
+            <div class="chart-title"><i class="fas fa-chart-line"></i> Accuracy History (7-day Rolling)</div>
+            <div style="height:320px"><canvas id="accuracyChart"></canvas></div>
+        </div>
+        <div class="section-box" style="margin-bottom:1.5rem" id="weeklyCompBox">
+            <div class="section-title"><i class="fas fa-calendar-week"></i> Week-over-Week Comparison</div>
+            <div id="weeklyCompContent"><span style="color:var(--text-muted);font-size:.82rem">No comparison data</span></div>
+        </div>
+        <div class="section-box" style="margin-bottom:1.5rem">
+            <div class="section-title"><i class="fas fa-search-plus"></i> Deep Diagnosis & Concrete Fixes</div>
+            <div id="deepDiagContent"><span style="color:var(--text-muted);font-size:.82rem">No diagnosis data available</span></div>
+        </div>
+    </div>
+
+    <!-- Tab 3: Strategy -->
+    <div class="tab-panel" id="tab-strategy">
+        <div class="sections-grid">
+            <div class="section-box" id="v1WeightsBox">
+                <div class="section-title"><i class="fas fa-balance-scale"></i> V1 Fusion Source Weights</div>
+                <div id="v1WeightsContent"></div>
+            </div>
+            <div class="section-box" id="verdictBox">
+                <div class="section-title"><i class="fas fa-gavel"></i> Verdict Distribution</div>
+                <div id="verdictContent"><span style="color:var(--text-muted);font-size:.82rem">No V1 report data</span></div>
+            </div>
+        </div>
+        <div class="sections-grid">
+            <div class="section-box" id="govBox">
+                <div class="section-title"><i class="fas fa-shield-alt"></i> Governance & Quality</div>
+                <div id="govContent"><span style="color:var(--text-muted);font-size:.82rem">No governance data</span></div>
+            </div>
+            <div class="section-box">
+                <div class="section-title"><i class="fas fa-layer-group"></i> Legacy Horizon Weights</div>
+                <div id="legacyWeightsContent"></div>
+            </div>
+        </div>
+        <div class="chart-box" id="weightHistoryBox" style="display:none">
+            <div class="chart-title"><i class="fas fa-history"></i> V1 Weight Evolution</div>
+            <div style="height:280px"><canvas id="weightHistoryChart"></canvas></div>
+        </div>
+        <div class="sections-grid">
+            <div class="section-box" id="cutoverBox">
+                <div class="section-title"><i class="fas fa-rocket"></i> Cutover Readiness</div>
+                <div id="cutoverContent"><span style="color:var(--text-muted);font-size:.82rem">Awaiting V1 audit data</span></div>
+            </div>
+            <div class="section-box" id="improvementsBox">
+                <div class="section-title"><i class="fas fa-lightbulb"></i> Active Improvements</div>
+                <div id="improvementsContent"><span style="color:var(--text-muted);font-size:.82rem">No improvement data</span></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tab 4: Operations -->
+    <div class="tab-panel" id="tab-operations">
+        <div class="section-box" style="margin-bottom:1.5rem">
+            <div class="section-title"><i class="fas fa-robot"></i> V5 Training Autopilot</div>
+            <div id="autopilotContent"><span style="color:var(--text-muted);font-size:.82rem">No autopilot data</span></div>
+        </div>
+        <div class="section-box" style="margin-bottom:1.5rem">
+            <div class="section-title"><i class="fas fa-globe"></i> Market Regime</div>
+            <div id="regimeContent"><span style="color:var(--text-muted);font-size:.82rem">No regime data</span></div>
+        </div>
+        <div class="sections-grid">
+            <div class="section-box">
+                <div class="section-title"><i class="fas fa-filter"></i> Candidate Funnel</div>
+                <div id="candidateContent"><span style="color:var(--text-muted);font-size:.82rem">No candidate data</span></div>
+            </div>
+            <div class="section-box">
+                <div class="section-title"><i class="fas fa-info-circle"></i> Data Sources</div>
+                <div id="sourcesContent"><span style="color:var(--text-muted);font-size:.82rem">Loading...</span></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+const STALE_ICONS = { fresh:'', acceptable:'', stale:' \u26A0', critical:' \u26A0\u26A0', unknown:' ?' };
+const MODEL_ICONS = { forecast:'fa-bolt', scientific:'fa-flask', elliott:'fa-wave-square', quantlab:'fa-brain', breakout_v2:'fa-arrow-trend-up', hist_probs:'fa-chart-bar' };
+const SOURCE_COLORS = { forecast:'#3b82f6', scientific:'#10b981', elliott:'#8b5cf6', quantlab:'#f59e0b', breakout_v2:'#ef4444', hist_probs:'#06b6d4' };
+const FEATURE_META = {
+    forecast: { icon:'<i class="fas fa-bolt" style="color:#3b82f6"></i>', color:'#3b82f6', label:'Direction Forecast', metricKey:'forecast_accuracy_7d' },
+    scientific: { icon:'<i class="fas fa-flask" style="color:#10b981"></i>', color:'#10b981', label:'Setup/Trigger', metricKey:'scientific_hit_rate_7d' },
+    elliott: { icon:'<i class="fas fa-wave-square" style="color:#8b5cf6"></i>', color:'#8b5cf6', label:'Wave Analysis', metricKey:'elliott_accuracy_7d' },
+    stock_analyzer: { icon:'<i class="fas fa-ranking-star" style="color:#f59e0b"></i>', color:'#f59e0b', label:'Universe Ranking', metricKey:'stock_analyzer_stability' },
+};
+
+const FIX_HINTS = {
+    forecast: { stale:'Run: node scripts/learning/run-daily-learning-cycle.mjs', low_accuracy:'Check forecast calibration. Consider adjusting forecast_calibration_feedback threshold in scripts/forecast/forecast_engine.mjs' },
+    scientific: { stale:'Run: node scripts/learning/run-daily-learning-cycle.mjs', low_accuracy:'Increase signal threshold (currently 60) in build-scientific-summary.mjs' },
+    elliott: { stale:'Regenerate: node scripts/marketphase/run-marketphase.mjs', low_accuracy:'Check quality filter: elliott_quality_filter_top500. Reduce prediction volume via confidence filter.' },
+    quantlab: { stale:'QuantLab data from mirrors/quantlab/. Check sync pipeline.', low_accuracy:'Review expert consensus thresholds in stock-decisions-v1.js' },
+    breakout_v2: { stale:'Breakout data generated at API call time. Check if API is running.' },
+    hist_probs: { stale:'Run: node scripts/lib/hist-probs/run-hist-probs.mjs' },
+};
+
+let _accuracyChart = null;
+let _weightHistoryChart = null;
+
+// Tab switching
+document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+    });
+});
+
+function pct(v) { return v != null ? (v * 100).toFixed(1) + '%' : '\u2014'; }
+function num(v) { return v != null ? v.toFixed(3) : '\u2014'; }
+function hc(label, value, color) { return `<div class="health-cell"><div class="health-label">${label}</div><div class="health-value" style="color:${color}">${value}</div></div>`; }
+function fmtAgeHours(v) { return v == null || v < 0 ? 'n/a' : (v < 24 ? `${v.toFixed(1)}h` : `${(v / 24).toFixed(1)}d`); }
+function fmtShortDate(v) { if (!v) return 'N/A'; const d = new Date(v); return Number.isNaN(d.getTime()) ? String(v) : d.toLocaleString(); }
+function stalenessText(m) { return m.stale_days == null ? 'unknown' : `${m.stale_days}d (${m.staleness_level || 'unknown'})`; }
+function badgeClassForSeverity(level) { return level === 'critical' ? 'badge-red' : level === 'warning' ? 'badge-yellow' : 'badge-green'; }
+function statusIconForSeverity(level) { return level === 'critical' ? 'fa-triangle-exclamation' : level === 'warning' ? 'fa-circle-exclamation' : 'fa-check-circle'; }
+
+function sparklineSVG(values, color, w = 200, h = 36) {
+    const valid = values.filter(v => v != null);
+    if (valid.length < 2) return '';
+    const min = Math.min(...valid) * 0.95;
+    const max = Math.max(...valid) * 1.05 || 1;
+    const range = max - min || 1;
+    const step = w / (values.length - 1);
+    const points = [];
+    values.forEach((v, i) => { if (v != null) points.push(`${i * step},${h - ((v - min) / range) * h}`); });
+    if (points.length < 2) return '';
+    const linePoints = points.join(' ');
+    const areaPoints = `0,${h} ${linePoints} ${(values.length - 1) * step},${h}`;
+    const gid = 'grad-' + color.replace('#', '');
+    return `<div class="sparkline-container"><svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none">
+        <defs><linearGradient id="${gid}" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="${color}" stop-opacity="0.3"/><stop offset="100%" stop-color="${color}" stop-opacity="0"/></linearGradient></defs>
+        <polygon points="${areaPoints}" fill="url(#${gid})" />
+        <polyline points="${linePoints}" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        <circle cx="${points[points.length-1].split(',')[0]}" cy="${points[points.length-1].split(',')[1]}" r="3" fill="${color}"/>
+    </svg></div>`;
+}
+
+function deepDiagnosis(key, feat, history) {
+    const preds = feat.predictions_today ?? feat.rankings_today ?? 0;
+    const acc = feat.accuracy_7d;
+    const brier = feat.brier_7d;
+    const hr = feat.hit_rate_7d;
+    const trendAcc = feat.trend_accuracy;
+    const metricKey = FEATURE_META[key]?.metricKey;
+    const histVals = (history || []).map(h => h[metricKey]).filter(v => v != null);
+    const weekVals = histVals.slice(-5);
+    const monthVals = histVals.slice(-22);
+    const weekTrend = weekVals.length >= 2 ? weekVals[weekVals.length - 1] - weekVals[0] : null;
+    const monthTrend = monthVals.length >= 5 ? monthVals[monthVals.length - 1] - monthVals[0] : null;
+    const sections = [];
+
+    if (key === 'forecast') {
+        if (preds === 0) sections.push({ title:'\uD83D\uDD34 No Predictions today', severity:'critical', text:'The Forecast pipeline did not deliver predictions today.', fixes:[{ what:'Check pipeline schedule', how:'GitHub Actions forecast-daily.yml must run BEFORE the Learning Cycle (19:00 UTC)', file:'.github/workflows/forecast-daily.yml' }] });
+        if (acc != null && acc < 0.50) sections.push({ title:'\uD83D\uDD34 Accuracy below 50%', severity:'critical', text:`Accuracy: ${pct(acc)}. Worse than coin toss. Likely overfitted champion selection.`, fixes:[{ what:'Redesign champion selection', how:'Replace with Walk-Forward Validation using 5-day OOS window', file:'scripts/forecast/forecast_engine.mjs \u2192 selectChampion()' },{ what:'Implement regime filter', how:'If VIX > 25 or SPY drawdown > 3%: set confidence to 0.50', file:'scripts/forecast/forecast_engine.mjs' }] });
+        else if (acc != null && acc < 0.55) sections.push({ title:'\uD83D\uDFE1 Accuracy 50-55%', severity:'warning', text:`Accuracy: ${pct(acc)}. Barely above random.`, fixes:[{ what:'Enable Platt Scaling', how:'Train Logistic Regression on raw scores for calibrated confidence', file:'scripts/forecast/forecast_engine.mjs' }] });
+        else if (acc != null && acc >= 0.60) sections.push({ title:'\uD83D\uDFE2 Accuracy above 60%', severity:'ok', text:`Accuracy: ${pct(acc)}. Good performance.`, fixes:[] });
+        if (brier != null && brier > 0.25) sections.push({ title:'\uD83D\uDFE1 Brier Score too high', severity:'warning', text:`Brier: ${num(brier)} (Target: < 0.20). Probabilities unreliable.`, fixes:[{ what:'Temperature Scaling', how:'Learn parameter T that divides logits. Minimizes Brier on validation.', file:'scripts/forecast/forecast_engine.mjs' }] });
+        if (trendAcc === 'declining') sections.push({ title:'\uD83D\uDD34 Accuracy declining', severity:'critical', text:'7d accuracy falling. Feature drift or regime shift.', fixes:[{ what:'Enable rolling retrain', how:'Retrain every 5 days on last 60 days', file:'scripts/forecast/run_daily.mjs' }] });
+    }
+    if (key === 'scientific') {
+        if (preds === 0) sections.push({ title:'\uD83D\uDD34 No Scientific predictions', severity:'critical', text:'No setup/trigger signals extracted.', fixes:[{ what:'Check data source', how:'Verify public/data/supermodules/scientific-summary.json exists and is < 24h old', file:'scripts/build-supermodules.mjs' }] });
+        if (hr != null && hr < 0.30) sections.push({ title:'\uD83D\uDD34 Hit Rate below 30%', severity:'critical', text:`Hit Rate: ${pct(hr)}. Setup/Trigger too permissive.`, fixes:[{ what:'Raise signal threshold', how:'Set strength > 70 (currently > 0)', file:'scripts/build-scientific-summary.mjs' },{ what:'Add volume confirmation', how:'Volume > 1.5x Avg AND Price > Resistance', file:'scripts/supermodules/' }] });
+        else if (hr != null && hr < 0.40) sections.push({ title:'\uD83D\uDFE1 Hit Rate 30-40%', severity:'warning', text:`Hit Rate: ${pct(hr)}. Improvable.`, fixes:[{ what:'Multi-timeframe confirmation', how:'Require Daily AND Weekly consistency', file:'scripts/supermodules/' }] });
+        else if (hr != null && hr >= 0.40) sections.push({ title:'\uD83D\uDFE2 Hit Rate above 40%', severity:'ok', text:`Hit Rate: ${pct(hr)}. Effective filtering.`, fixes:[] });
+    }
+    if (key === 'elliott') {
+        if (acc != null && acc < 0.50) sections.push({ title:'\uD83D\uDD34 Elliott Accuracy below 50%', severity:'critical', text:`Accuracy: ${pct(acc)}. Wave counts unreliable.`, fixes:[{ what:'Confidence filter', how:'Only use predictions with wave_confidence > 0.6', file:'scripts/learning/run-daily-learning-cycle.mjs' },{ what:'Use invalidation levels', how:'If price > invalidation level \u2192 switch to alternative count', file:'functions/api/elliott-scanner.js' }] });
+        else if (acc != null && acc < 0.55) sections.push({ title:'\uD83D\uDFE1 Elliott Accuracy 50-55%', severity:'warning', text:`Accuracy: ${pct(acc)}. Minimal edge.`, fixes:[{ what:'Top-confidence filter', how:'Only top 200 highest confidence instead of all 50k+', file:'scripts/learning/run-daily-learning-cycle.mjs' }] });
+        if (preds > 10000) sections.push({ title:'\u26A0\uFE0F Too many predictions', severity:'warning', text:`${preds.toLocaleString()} predictions dilute accuracy.`, fixes:[{ what:'Reduce volume', how:'Only wave_quality > 70 into ledger \u2192 ~500-2000 predictions', file:'scripts/learning/run-daily-learning-cycle.mjs' }] });
+    }
+    if (weekTrend != null && weekTrend < -0.02) sections.push({ title:`\uD83D\uDCC9 Weekly decline: ${(weekTrend*100).toFixed(1)}%`, severity:'warning', text:`Main metric dropped ${(Math.abs(weekTrend)*100).toFixed(1)} pp this week.`, fixes:[{ what:'Check market context', how:'Regime shift? Adjust parameters for new regime.', file:'' }] });
+    if (monthTrend != null && monthTrend < -0.03) sections.push({ title:`\uD83D\uDCC9 Monthly decline: ${(monthTrend*100).toFixed(1)}%`, severity:'critical', text:'Sustained decline over 30 days. Feature not learning effectively.', fixes:[{ what:'Fundamental redesign', how:'Analyze failed predictions for patterns. Consider alternative approach.', file:'' }] });
+    return sections;
+}
+
+async function loadDashboard() {
+    try {
+        const data = await (await fetch('/dashboard_v6_meta_data.json?_='+Date.now())).json();
+
+        // === Global Banner ===
+        const allModels = Object.values(data.models || {});
+        const worstStale = allModels.reduce((w, m) => Math.max(w, m.stale_days || 0), 0);
+        const banner = document.getElementById('govBanner');
+        if (worstStale > 7) {
+            banner.style.background = 'rgba(239,68,68,0.1)'; banner.style.borderColor = 'rgba(239,68,68,0.3)'; banner.style.color = 'var(--red)';
+            banner.innerHTML = `<i class="fas fa-exclamation-triangle"></i> CRITICAL: Data ${worstStale}d stale \u2014 Pipeline may be broken`;
+        } else if (worstStale > 3) {
+            banner.style.background = 'rgba(245,158,11,0.1)'; banner.style.borderColor = 'rgba(245,158,11,0.3)'; banner.style.color = 'var(--yellow)';
+            banner.innerHTML = `<i class="fas fa-exclamation-circle"></i> WARNING: Data ${worstStale}d behind \u2014 Check ingest pipeline`;
+        } else {
+            banner.style.background = 'rgba(16,185,129,0.08)'; banner.style.borderColor = 'rgba(16,185,129,0.2)'; banner.style.color = 'var(--green)';
+            banner.innerHTML = '<i class="fas fa-check-circle"></i> All systems operational';
+        }
+
+        // === Header ===
+        document.getElementById('genTimestamp').textContent = 'Generated: ' + (data.generated_at ? new Date(data.generated_at).toLocaleString() : '\u2014');
+        const mode = data.system?.v1_mode || '\u2014';
+        const modeBadge = document.getElementById('modeBadge');
+        modeBadge.className = 'badge ' + (mode === 'shadow_v1' ? 'badge-blue' : mode === 'v1_primary_with_legacy_audit' ? 'badge-green' : 'badge-muted');
+        modeBadge.innerHTML = '<i class="fas fa-circle-dot"></i> ' + mode.toUpperCase().replace(/_/g, ' ');
+        const learningBadge = document.getElementById('learningBadge');
+        learningBadge.className = 'badge badge-blue';
+        learningBadge.innerHTML = '<i class="fas fa-chart-line"></i> ' + (data.system?.learning_status || 'UNKNOWN');
+        const statusBadge = document.getElementById('statusBadge');
+        const statusSeverity = data.system?.status_severity || 'ok';
+        statusBadge.className = 'badge ' + badgeClassForSeverity(statusSeverity);
+        statusBadge.innerHTML = `<i class="fas ${statusIconForSeverity(statusSeverity)}"></i> ${data.system?.overall_status || 'UNKNOWN'}`;
+        statusBadge.title = (data.system?.status_detail || []).join(' | ');
+
+        // ═══════════════════════════════════════════
+        // TAB 1: SYSTEM HEALTH
+        // ═══════════════════════════════════════════
+
+        // Health row
+        const v1r = data.v1_report;
+        const regime = data.system?.regime;
+        document.getElementById('healthRow').innerHTML = [
+            hc('Mode', mode.replace(/_/g,' ').toUpperCase(), 'var(--blue)'),
+            hc('Hit Rate (Matured)', v1r?.hit_rate != null ? (v1r.hit_rate*100).toFixed(0)+'%' : 'N/A', v1r?.hit_rate == null ? 'var(--text-muted)' : v1r?.hit_rate > 0.55 ? 'var(--green)' : 'var(--yellow)'),
+            hc('Signals Today', v1r?.signals_today ?? '\u2014', 'var(--text)'),
+            hc('Evidence Q (Matured)', v1r?.avg_evidence_quality != null ? (v1r.avg_evidence_quality*100).toFixed(0)+'%' : 'N/A', v1r?.avg_evidence_quality == null ? 'var(--text-muted)' : v1r?.avg_evidence_quality >= 0.7 ? 'var(--green)' : 'var(--yellow)'),
+            hc('Regime', regime ? regime.market?.toUpperCase() : '\u2014', regime?.market === 'bull' ? 'var(--green)' : 'var(--red)'),
+            hc('Breadth', regime?.breadth?.toUpperCase() || '\u2014', regime?.breadth === 'strong' ? 'var(--green)' : regime?.breadth === 'weak' ? 'var(--red)' : 'var(--yellow)'),
+        ].join('');
+
+        // Model cards
+        const grid = document.getElementById('modelGrid');
+        grid.innerHTML = '';
+        for (const [key, m] of Object.entries(data.models)) {
+            const icon = MODEL_ICONS[key] || 'fa-cube';
+            const accLabel = m.accuracy_label || '7D Accuracy';
+            const accValue = m.accuracy_7d != null ? (m.accuracy_7d*100).toFixed(1)+'%' : 'N/A';
+            const accColor = m.accuracy_7d == null ? 'var(--text-muted)' : m.accuracy_7d > 0.55 ? 'var(--green)' : m.accuracy_7d < 0.50 ? 'var(--red)' : 'var(--yellow)';
+            const isQuant = key === 'quantlab';
+            const univText = isQuant ? (m.active_universe||0).toLocaleString()+' / '+(m.universe_size||0).toLocaleString() : (m.universe_size||0).toLocaleString();
+            const staleClass = 'staleness-'+(m.staleness_level||'unknown');
+            const staleIcon = STALE_ICONS[m.staleness_level||'unknown'];
+            const inactive = (m.asof === null && m.predictions_today === 0) ? '<span class="badge badge-yellow" style="font-size:.65rem;padding:1px 6px;margin-left:.3rem">INACTIVE</span>' : '';
+            const trendBadge = m.trend === 'improving' || m.trend === 'active'
+                ? `<span class="badge badge-green" style="font-size:.65rem;padding:1px 6px"><i class="fas fa-arrow-up"></i> ${m.trend}</span>`
+                : `<span class="badge badge-blue" style="font-size:.65rem;padding:1px 6px">${m.trend}</span>`;
+
+            // Fix hint
+            const hints = FIX_HINTS[key] || {};
+            let fixHtml = '';
+            if (m.stale_days > 3 && hints.stale) fixHtml += `<div class="fix-content open" style="display:block;margin-top:.4rem"><b>Fix:</b> ${hints.stale}</div>`;
+            else if (m.accuracy_7d != null && m.accuracy_7d < 0.50 && hints.low_accuracy) fixHtml += `<div class="fix-content open" style="display:block;margin-top:.4rem"><b>Fix:</b> ${hints.low_accuracy}</div>`;
+
+            grid.innerHTML += `<div class="card">
+                <div class="card-header"><div><div class="model-name">${m.name}${inactive}</div><div class="model-type">${m.type}</div></div><i class="fas ${icon} card-icon"></i></div>
+                <div class="metric"><div class="metric-label">Universe</div><div class="metric-value">${univText}</div><div class="metric-sub">${isQuant?'Active / Total':'Coverage'}</div></div>
+                <div class="metric"><div class="metric-label">${accLabel}</div><div class="metric-value" style="color:${accColor}">${accValue}</div></div>
+                <div class="info-stack">
+                    <div class="info-row"><span>Data as-of</span><strong>${m.asof || 'N/A'}${staleIcon}</strong></div>
+                    <div class="info-row"><span>Staleness</span><strong class="${staleClass}">${stalenessText(m)}</strong></div>
+                    <div class="info-row"><span>Report</span><strong>${m.report_date ? fmtShortDate(m.report_date) : 'N/A'}${m.report_age_hours != null ? ' · ' + fmtAgeHours(m.report_age_hours) : ''}</strong></div>
+                </div>
+                ${m.stale_reason ? `<div class="soft-note">${m.stale_reason}</div>` : ''}
+                <div style="margin-top:auto;padding-top:.6rem;border-top:1px solid rgba(255,255,255,0.03);display:flex;justify-content:space-between;align-items:center">
+                    <span class="${staleClass}" style="font-size:.75rem;text-transform:uppercase;font-weight:700">${m.staleness_level || 'unknown'}</span>
+                    ${trendBadge}
+                </div>
+                ${fixHtml}
+            </div>`;
+        }
+
+        // Recommendations
+        const rc = document.getElementById('recsContent');
+        let recsHtml = '';
+        if (data.recommendations?.length > 0) {
+            for (const r of data.recommendations) {
+                const cls = r.level === 'critical' ? 'rec-critical' : 'rec-warning';
+                const icon = r.level === 'critical' ? '\uD83D\uDD34' : '\uD83D\uDFE1';
+                const hint = FIX_HINTS[r.model];
+                const fixKey = r.text.includes('accuracy') || r.text.includes('coin-flip') ? 'low_accuracy' : 'stale';
+                const fixText = hint?.[fixKey] || '';
+                recsHtml += `<div class="rec-item ${cls}">${icon} ${r.text}`;
+                if (fixText) {
+                    const fixId = 'fix-' + r.model + '-' + fixKey;
+                    recsHtml += `<button class="fix-toggle" onclick="const el=document.getElementById('${fixId}');el.classList.toggle('open');el.style.display=el.classList.contains('open')?'block':'none'">How to fix</button>`;
+                    recsHtml += `<div class="fix-content" id="${fixId}">${fixText}</div>`;
+                }
+                recsHtml += '</div>';
+            }
+        } else {
+            recsHtml = '<div class="rec-item rec-ok">\u2705 All systems nominal</div>';
+        }
+        rc.innerHTML = recsHtml;
+
+        // Pipeline diagnostic
+        if (data.pipeline_diagnostic) {
+            const pd = data.pipeline_diagnostic;
+            const sevColor = pd.severity === 'high' ? 'var(--red)' : pd.severity === 'medium' ? 'var(--yellow)' : 'var(--text-muted)';
+            let dhtml = `<div style="font-size:.82rem;font-weight:700;color:${sevColor};margin-bottom:.3rem">\u26A0 ${pd.diagnosis_code}</div>
+                <div style="font-size:.78rem;color:var(--text-muted);margin-bottom:.6rem">${pd.explanation}</div>
+                <div class="soft-note" style="margin-top:0;margin-bottom:.5rem">Generated: ${pd.generated_at ? fmtShortDate(pd.generated_at) : 'N/A'} · Age: ${fmtAgeHours(pd.age_hours)}</div>`;
+            if (pd.stage_counts) {
+                const sc = pd.stage_counts;
+                dhtml += `<div class="funnel-step"><span>Registry ETFs</span><b>${(sc.registry_etf_total||0).toLocaleString()}</b></div>`;
+                dhtml += `<div class="funnel-step"><span>\u2192 Opinions</span><b>${(sc.asset_opinions_etf_total||0).toLocaleString()}</b></div>`;
+                dhtml += `<div class="funnel-step"><span>\u2192 Published</span><b>${(sc.publish_etf_total||0).toLocaleString()}</b></div>`;
+                dhtml += `<div class="funnel-step"><span>\u2192 Snapshot</span><b style="color:${sc.snapshot_etf_total===0?'var(--red)':'var(--green)'}">${sc.snapshot_etf_total||0}</b></div>`;
+            }
+            document.getElementById('diagContent').innerHTML = dhtml;
+        }
+
+        // ═══════════════════════════════════════════
+        // TAB 2: PERFORMANCE
+        // ═══════════════════════════════════════════
+
+        // Accuracy Chart
+        const history = (data.history||[]).filter(h => h.forecast_accuracy_7d || h.scientific_accuracy_7d || h.elliott_accuracy_7d);
+        if (history.length > 0) {
+            const labels = history.map(h => h.date.slice(5));
+            if (_accuracyChart) _accuracyChart.destroy();
+            _accuracyChart = new Chart(document.getElementById('accuracyChart').getContext('2d'), {
+                type:'line',
+                data:{
+                    labels,
+                    datasets:[
+                        { label:'Forecast', data:history.map(h=>h.forecast_accuracy_7d), borderColor:'#3b82f6', backgroundColor:'rgba(59,130,246,0.1)', borderWidth:2, tension:.3, spanGaps:true },
+                        { label:'Scientific', data:history.map(h=>h.scientific_accuracy_7d), borderColor:'#10b981', backgroundColor:'rgba(16,185,129,0.1)', borderWidth:2, tension:.3, spanGaps:true },
+                        { label:'Elliott', data:history.map(h=>h.elliott_accuracy_7d), borderColor:'#8b5cf6', backgroundColor:'rgba(139,92,246,0.1)', borderWidth:2, tension:.3, spanGaps:true },
+                    ]
+                },
+                options:{
+                    responsive:true, maintainAspectRatio:false,
+                    plugins:{ legend:{ labels:{ color:'#9ca3af', font:{ family:'Outfit' } } } },
+                    scales:{
+                        y:{ min:0.30, max:0.75, ticks:{ color:'#9ca3af', callback:v=>(v*100).toFixed(0)+'%' }, grid:{ color:'rgba(255,255,255,0.05)' } },
+                        x:{ ticks:{ color:'#9ca3af' }, grid:{ color:'transparent' } }
+                    }
+                },
+                plugins:[{ id:'baseline', afterDraw(chart){ const y=chart.scales.y.getPixelForValue(0.5); const ctx=chart.ctx; ctx.save(); ctx.strokeStyle='rgba(255,255,255,0.15)'; ctx.setLineDash([5,5]); ctx.beginPath(); ctx.moveTo(chart.chartArea.left,y); ctx.lineTo(chart.chartArea.right,y); ctx.stroke(); ctx.fillStyle='rgba(255,255,255,0.2)'; ctx.font='10px Outfit'; ctx.fillText('50% baseline',chart.chartArea.left+4,y-4); ctx.restore(); } }]
+            });
+        }
+
+        // Weekly comparison
+        const wc = data.weekly_comparison;
+        if (wc) {
+            const rows = [
+                { name:'\uD83D\uDCC8 Forecast', ...wc.forecast },
+                { name:'\uD83D\uDD2C Scientific', ...wc.scientific },
+                { name:'\uD83C\uDF0A Elliott', ...wc.elliott },
+            ].map(row => {
+                const tw = row.this_week, lw = row.last_week;
+                const delta = (tw != null && lw != null) ? tw - lw : null;
+                const dc = delta == null ? 'delta-neutral' : delta > 0.005 ? 'delta-positive' : delta < -0.005 ? 'delta-negative' : 'delta-neutral';
+                const dt = delta != null ? `${delta > 0 ? '+' : ''}${(delta*100).toFixed(1)}%` : '\u2014';
+                return `<tr><td>${row.name}<div class="metric-sub">7d ${row.metric_label || 'Metric'}</div></td><td style="text-align:center;font-weight:600">${pct(tw)}</td><td style="text-align:center">${pct(lw)}</td><td style="text-align:center" class="${dc}">${dt}</td></tr>`;
+            }).join('');
+            document.getElementById('weeklyCompContent').innerHTML = `<table class="comp-table"><tr><th>Feature</th><th>This week</th><th>Last week</th><th>Change</th></tr>${rows}</table>`;
+        }
+
+        // Deep Diagnosis
+        const dd = data.deep_diagnosis;
+        if (dd) {
+            const featureOrder = ['forecast', 'scientific', 'elliott'];
+            let diagHtml = '';
+            for (const key of featureOrder) {
+                const feat = dd[key];
+                if (!feat) continue;
+                const meta = FEATURE_META[key];
+                const sections = deepDiagnosis(key, feat, data.history || []);
+                if (!sections.length) continue;
+
+                // Sparkline for this feature
+                const sparkData = (data.history || []).map(h => h[meta.metricKey]);
+                const spark = sparklineSVG(sparkData, meta.color);
+
+                const cardsHtml = sections.map(s => {
+                    const fixesHtml = s.fixes.length ? `<ul class="fix-list">${s.fixes.map(f =>
+                        `<li class="fix-item"><div class="fix-what">\u2192 ${f.what}</div><div class="fix-how">${f.how}</div>${f.file ? `<span class="fix-file">\uD83D\uDCC1 ${f.file}</span>` : ''}</li>`
+                    ).join('')}</ul>` : '';
+                    return `<div class="diagnose-card sev-${s.severity}"><div class="diagnose-title">${s.title}</div><div class="diagnose-text">${s.text}</div>${fixesHtml}</div>`;
+                }).join('');
+
+                diagHtml += `<div class="diagnose-feature"><div class="diagnose-feature-header" style="color:${meta.color}">${meta.icon} ${feat.name}</div>${spark}${cardsHtml}</div>`;
+            }
+            document.getElementById('deepDiagContent').innerHTML = diagHtml || '<span style="color:var(--text-muted);font-size:.82rem">All features healthy</span>';
+        }
+
+        // ═══════════════════════════════════════════
+        // TAB 3: STRATEGY
+        // ═══════════════════════════════════════════
+
+        // V1 Weights
+        const vw = data.v1_weights;
+        if (vw?.weights) {
+            const wc2 = document.getElementById('v1WeightsContent');
+            let html = '';
+            for (const [src, val] of Object.entries(vw.weights)) {
+                html += `<div class="weight-row"><span style="color:${SOURCE_COLORS[src]||'var(--text)'}">${src}</span><b>${(val*100).toFixed(0)}%</b></div>`;
+            }
+            html += `<div class="weight-bar">${Object.entries(vw.weights).map(([s,v])=>`<div style="width:${v*100}%;background:${SOURCE_COLORS[s]||'#666'}"></div>`).join('')}</div>`;
+            html += `<div style="font-size:.72rem;color:var(--text-muted);margin-top:.5rem">Version: ${vw.version} \u00B7 Fallback: ${vw.fallback_level}${vw.timestamp ? ' \u00B7 '+new Date(vw.timestamp).toLocaleDateString() : ''}</div>`;
+            wc2.innerHTML = html;
+        }
+
+        // Verdict Distribution
+        if (v1r?.verdict_distribution) {
+            const vd = v1r.verdict_distribution;
+            const total = Object.values(vd).reduce((a,b)=>a+b,0);
+            const widthBase = total || 1;
+            const colors = { BUY:'var(--green)', WAIT:'var(--yellow)', SELL:'var(--red)' };
+            let barHtml = '', legendHtml = '';
+            for (const [k,v] of Object.entries(vd)) {
+                const p = ((v/widthBase)*100).toFixed(0);
+                barHtml += `<div style="width:${p}%;background:${colors[k]||'var(--text-muted)'}" title="${k}: ${v} (${p}%)"></div>`;
+                legendHtml += `<span style="font-size:.8rem;color:${colors[k]||'var(--text)'};font-weight:700">${k}: ${v} (${p}%)</span> `;
+            }
+            document.getElementById('verdictContent').innerHTML = `<div class="verdict-bar">${barHtml}</div><div style="margin-bottom:.5rem">${legendHtml}</div>
+                <div style="font-size:.78rem;color:var(--text-muted)">Total: ${total} \u00B7 Hit Rate: ${v1r.hit_rate!=null?(v1r.hit_rate*100).toFixed(0)+'%':'N/A'} \u00B7 Evidence Q: ${v1r.avg_evidence_quality!=null?(v1r.avg_evidence_quality*100).toFixed(0)+'%':'N/A'} \u00B7 Matured: ${v1r.matured_signals||0}</div>
+                ${total === 0 ? '<div class="soft-note">No V1 verdicts were published in the current audit report.</div>' : ''}`;
+        }
+
+        // Governance
+        if (v1r) {
+            const gc = document.getElementById('govContent');
+            let ghtml = '';
+            const mp = (l,v,c) => `<span class="pill" style="border-color:${c};color:${c}">${l}: ${v}</span>`;
+            if (data.system?.learning_status) ghtml += mp('Learning', data.system.learning_status, 'var(--green)');
+            if (v1r.top_sources?.length) ghtml += mp('Top Sources', v1r.top_sources.join(', '), 'var(--blue)');
+            if (v1r.fallback_usage) ghtml += mp('Fallback', Object.entries(v1r.fallback_usage).map(([k,v])=>k+':'+v).join(', '), 'var(--yellow)');
+            if (v1r.regime_transition_active) ghtml += mp('Regime', 'TRANSITION', 'var(--red)');
+            if (v1r.governance_warnings) ghtml += mp('Flags', Object.keys(v1r.governance_warnings).slice(0,3).join(', '), 'var(--yellow)');
+            if (v1r.friction_impact_avg) ghtml += mp('Friction', v1r.friction_impact_avg, 'var(--text-muted)');
+            if (v1r.report_date || v1r.report_age_hours != null) ghtml += `<div style="font-size:.7rem;color:var(--text-muted);margin-top:.4rem">Report: ${v1r.report_date || 'N/A'} · Age: ${fmtAgeHours(v1r.report_age_hours)}</div>`;
+            gc.innerHTML = ghtml || '<span style="color:var(--text-muted);font-size:.82rem">No governance data</span>';
+        }
+
+        // Legacy Weights
+        const lw = data.legacy_weights;
+        if (lw) {
+            const lwc = document.getElementById('legacyWeightsContent');
+            const legacyColors = { trend:'#3b82f6', entry:'#10b981', risk:'#ef4444', context:'#f59e0b' };
+            let lwhtml = '';
+            for (const [hz, w] of Object.entries(lw)) {
+                lwhtml += `<div style="font-weight:600;text-transform:uppercase;color:var(--blue);font-size:.82rem;margin-bottom:.3rem;margin-top:.6rem">${hz}</div>`;
+                for (const [k,v] of Object.entries(w)) lwhtml += `<div class="weight-row"><span style="color:${legacyColors[k]||'var(--text)'}">${k}</span><b>${(v*100).toFixed(0)}%</b></div>`;
+                lwhtml += `<div class="weight-bar">${Object.entries(w).map(([k,v])=>`<div style="width:${v*100}%;background:${legacyColors[k]||'#666'}"></div>`).join('')}</div>`;
+            }
+            lwc.innerHTML = lwhtml;
+        }
+
+        // Weight History Chart
+        if (data.v1_weight_history?.length > 1) {
+            document.getElementById('weightHistoryBox').style.display = '';
+            const wh = data.v1_weight_history;
+            const whLabels = wh.map(s => s.timestamp ? new Date(s.timestamp).toLocaleDateString() : s.version);
+            const sources = Object.keys(wh[0].weights || {});
+            if (_weightHistoryChart) _weightHistoryChart.destroy();
+            _weightHistoryChart = new Chart(document.getElementById('weightHistoryChart').getContext('2d'), {
+                type:'line',
+                data:{
+                    labels:whLabels,
+                    datasets:sources.map(src => ({
+                        label:src, data:wh.map(s => s.weights?.[src] ?? null),
+                        borderColor:SOURCE_COLORS[src]||'#666', backgroundColor:'transparent', borderWidth:2, tension:.3, spanGaps:true,
+                    }))
+                },
+                options:{
+                    responsive:true, maintainAspectRatio:false,
+                    plugins:{ legend:{ labels:{ color:'#9ca3af', font:{ family:'Outfit' } } } },
+                    scales:{
+                        y:{ min:0, max:0.35, ticks:{ color:'#9ca3af', callback:v=>(v*100).toFixed(0)+'%' }, grid:{ color:'rgba(255,255,255,0.05)' } },
+                        x:{ ticks:{ color:'#9ca3af' }, grid:{ color:'transparent' } }
+                    }
+                }
+            });
+        }
+
+        // Cutover readiness
+        const cutoverIssues = [];
+        if (vw?.fallback_level && vw.fallback_level !== 'none') cutoverIssues.push(`Fusion weights still use fallback: ${vw.fallback_level}`);
+        if ((v1r?.signals_today || 0) === 0) cutoverIssues.push('V1 audit published 0 signals today');
+        if ((v1r?.matured_signals || 0) === 0) cutoverIssues.push('No matured signals available for hit-rate validation');
+        if ((data.pipeline_diagnostic?.stage_counts?.snapshot_etf_total || 0) === 0) cutoverIssues.push('ETF snapshot stage currently outputs 0 rows');
+        const cutoverReady = cutoverIssues.length === 0 && (data.system?.status_severity || 'ok') === 'ok';
+        document.getElementById('cutoverContent').innerHTML = cutoverReady
+            ? '<div class="rec-item rec-ok">Cutover criteria currently look clean. No blocking freshness or audit issues detected.</div>'
+            : cutoverIssues.map(t => `<div class="rec-item rec-warning">${t}</div>`).join('');
+
+        // Improvements
+        if (data.improvements_active?.length) {
+            document.getElementById('improvementsContent').innerHTML = data.improvements_active.map(imp =>
+                `<div class="rec-item rec-ok" style="font-size:.8rem"><b>${imp.name || imp}</b>${imp.status ? ' \u2014 '+imp.status : ''}</div>`
+            ).join('');
+        }
+
+        // ═══════════════════════════════════════════
+        // TAB 4: OPERATIONS
+        // ═══════════════════════════════════════════
+
+        // Autopilot
+        const ops = data.operations;
+        if (ops?.autopilot) {
+            const ap = ops.autopilot;
+            const active = ap.active_lock;
+            const learning = ap.learning || {};
+            let apHtml = `<div class="ops-grid">
+                <div class="ops-cell"><div class="ops-cell-label">Job Status</div><div class="ops-cell-value" style="color:${active?'var(--yellow)':'var(--green)'}">${active?'Running...':'Ready'}</div><div class="ops-cell-sub">Lock PID: ${active?active.pid:'none'}</div></div>
+                <div class="ops-cell"><div class="ops-cell-label">Learning (P10)</div><div class="ops-cell-value" style="color:var(--yellow)">${((learning.precision_10||0)*100).toFixed(1)}%</div><div class="ops-cell-sub">State: ${learning.learning_status||'Unknown'}</div></div>`;
+            if (ops.verified_counts) {
+                const vc = ops.verified_counts;
+                const sTotal = (vc.stocks?.short||0) + (vc.stocks?.medium||0) + (vc.stocks?.long||0);
+                const eTotal = (vc.etfs?.short||0) + (vc.etfs?.medium||0) + (vc.etfs?.long||0);
+                apHtml += `<div class="ops-cell"><div class="ops-cell-label">Verified (Stocks)</div><div class="ops-cell-value" style="color:var(--green)">\u03A3 ${sTotal}</div><div class="ops-cell-sub">S:${vc.stocks?.short||0} M:${vc.stocks?.medium||0} L:${vc.stocks?.long||0}</div></div>`;
+                apHtml += `<div class="ops-cell"><div class="ops-cell-label">Verified (ETFs)</div><div class="ops-cell-value" style="color:var(--green)">\u03A3 ${eTotal}</div><div class="ops-cell-sub">S:${vc.etfs?.short||0} M:${vc.etfs?.medium||0} L:${vc.etfs?.long||0}</div></div>`;
+            }
+            apHtml += '</div>';
+            if (ops.snapshots_date) apHtml += `<div style="font-size:.72rem;color:var(--text-muted);margin-top:.3rem">Snapshot: ${new Date(ops.snapshots_date).toLocaleString()}</div>`;
+            document.getElementById('autopilotContent').innerHTML = apHtml;
+        }
+
+        // Regime
+        if (regime) {
+            const regimeColors = { bull:'var(--green)', bear:'var(--red)' };
+            const breadthColors = { weak:'var(--red)', normal:'var(--yellow)', strong:'var(--green)' };
+            document.getElementById('regimeContent').innerHTML = `<div class="regime-grid">
+                <div class="regime-pill"><div class="label">Market</div><div class="value" style="color:${regimeColors[regime.market]||'var(--blue)'}">${(regime.market||'-').toUpperCase()}</div></div>
+                <div class="regime-pill"><div class="label">Volatility</div><div class="value">${(regime.volatility||'-').toUpperCase()}</div></div>
+                <div class="regime-pill"><div class="label">Breadth</div><div class="value" style="color:${breadthColors[regime.breadth]||'var(--text)'}">${(regime.breadth||'-').toUpperCase()}</div></div>
+                <div class="regime-pill"><div class="label">Date</div><div class="value" style="font-size:.85rem">${regime.date||'-'}</div></div>
+            </div>`;
+        }
+
+        // Candidate funnel
+        if (ops?.candidate_counts || ops?.setup_phases) {
+            let fhtml = '';
+            if (ops.candidate_counts) {
+                const cc = ops.candidate_counts;
+                const totalCandidates = cc.total ?? cc.quantlab_rows_total ?? cc.unique_tickers ?? 0;
+                const stockCandidates = cc.stocks ?? cc.quantlab_rows_stocks ?? null;
+                const etfCandidates = cc.etfs ?? cc.quantlab_rows_etfs ?? null;
+                fhtml += `<div class="funnel-step"><span>Total Candidates</span><b>${totalCandidates.toLocaleString()}</b></div>`;
+                if (stockCandidates != null) fhtml += `<div class="funnel-step"><span>\u2192 Stocks</span><b>${stockCandidates.toLocaleString()}</b></div>`;
+                if (etfCandidates != null) fhtml += `<div class="funnel-step"><span>\u2192 ETFs</span><b>${etfCandidates.toLocaleString()}</b></div>`;
+                if (cc.quantlab_ranked != null) fhtml += `<div class="funnel-step"><span>\u2192 Ranked</span><b>${cc.quantlab_ranked.toLocaleString()}</b></div>`;
+                if (cc.unique_tickers != null) fhtml += `<div class="funnel-step"><span>\u2192 Unique Tickers</span><b>${cc.unique_tickers.toLocaleString()}</b></div>`;
+                if (cc.forecast_short != null || cc.forecast_medium != null || cc.forecast_long != null) {
+                    fhtml += `<div class="soft-note">Forecast pools: short ${cc.forecast_short||0} / medium ${cc.forecast_medium||0} / long ${cc.forecast_long||0}</div>`;
+                }
+            }
+            if (ops.setup_phases) {
+                const sp = ops.setup_phases;
+                fhtml += `<div style="margin-top:.5rem;font-size:.78rem;color:var(--text-muted)">Setup Phases: Early ${sp.early||0} / Mid ${sp.mid||0} / Late ${sp.late||0}</div>`;
+            }
+            document.getElementById('candidateContent').innerHTML = fhtml;
+        }
+
+        // Data sources
+        if (data.meta?.source_files) {
+            const sf = data.meta.source_files;
+            let shtml = '';
+            for (const [name, info] of Object.entries(sf)) {
+                const age = info.age_hours;
+                const ageText = age >= 0 ? (age < 24 ? age+'h' : Math.round(age/24)+'d') : '?';
+                const ageColor = age < 0 ? 'var(--text-muted)' : age < 24 ? 'var(--green)' : age < 72 ? 'var(--yellow)' : 'var(--red)';
+                const detail = info.date || info.version || 'N/A';
+                shtml += `<div class="funnel-step"><span>${name.replace(/_/g,' ')}</span><span style="color:${ageColor};font-weight:600">${info.exists?'\u2705':'\\u274C'} ${ageText}</span></div><div class="soft-note" style="margin-top:0;margin-bottom:.35rem">${detail}</div>`;
+            }
+            document.getElementById('sourcesContent').innerHTML = shtml;
+        }
+
+    } catch (err) {
+        document.getElementById('statusBadge').className = 'badge badge-red';
+        document.getElementById('statusBadge').innerHTML = '<i class="fas fa-exclamation-triangle"></i> ' + err.message;
+    }
+}
+
+window.onload = loadDashboard;
+setInterval(loadDashboard, 300000);
+</script>
+</body>
+</html>

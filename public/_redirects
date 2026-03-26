@@ -17,6 +17,9 @@
 /internal-dahboard /internal-dashboard 301
 /dev/internal-dashboard /internal-dashboard 301
 # /ops is now the canonical owner view.
+# Unified Dashboard V7
+/dashboard /dashboard_v7.html 200
+/ops/dashboard /dashboard_v7.html 200
 # Deep Links (Stock Analyzer) — stock.html is the UI owner for /analyze/:ticker
 /analyze /stock 200
 /analyze/* /stock 200

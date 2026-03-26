@@ -1,0 +1,2181 @@
+{
+  "generated_at": "2026-03-25T20:30:18.532Z",
+  "models": {
+    "forecast": {
+      "name": "Forecast System v3.0",
+      "type": "price_direction_probability",
+      "universe_size": 17172,
+      "accuracy": 0.5676,
+      "accuracy_7d": 0.5727,
+      "hit_rate_all": 0.5676,
+      "trend": "improving",
+      "stale_days": 7,
+      "staleness_level": "stale",
+      "asof": "2026-03-19",
+      "predictions_today": 2424,
+      "report_age_hours": 84,
+      "report_date": "2026-03-20",
+      "stale_reason": "Learning source forecast_latest_envelope last as-of 2026-03-19"
+    },
+    "scientific": {
+      "name": "Scientific Analyzer v9.1",
+      "type": "setup_trigger_breakout",
+      "universe_size": 9342,
+      "accuracy": 0.5322,
+      "accuracy_7d": 0.538,
+      "hit_rate_all": 0.0104,
+      "trend": "improving",
+      "stale_days": null,
+      "staleness_level": "unknown",
+      "asof": null,
+      "predictions_today": 0,
+      "report_age_hours": 84,
+      "report_date": "2026-03-20",
+      "stale_reason": "Learning source scientific_missing has no current timestamp"
+    },
+    "elliott": {
+      "name": "Elliott Waves DFMSIF v1.0",
+      "type": "wave_direction_forecast",
+      "universe_size": 7717,
+      "accuracy": 0.4754,
+      "accuracy_7d": 0.4869,
+      "hit_rate_all": 0.4754,
+      "trend": "improving",
+      "stale_days": 8,
+      "staleness_level": "critical",
+      "asof": "2026-03-18",
+      "predictions_today": 1500,
+      "report_age_hours": 84,
+      "report_date": "2026-03-20",
+      "stale_reason": "Learning source marketphase_per_symbol last as-of 2026-03-18"
+    },
+    "quantlab": {
+      "name": "Quant Lab System v4.0 Daily Report",
+      "type": "Expert Swarm / Stability",
+      "universe_size": 71140,
+      "active_universe": 13965,
+      "accuracy": 0.9749,
+      "accuracy_7d": 0.9749,
+      "accuracy_label": "Task Success Rate",
+      "stage_stability": 1,
+      "trend": "active",
+      "stale_days": 12,
+      "staleness_level": "critical",
+      "asof": "2026-03-12",
+      "report_age_hours": 13.5,
+      "report_date": "2026-03-25",
+      "stale_reason": "RAW_BARS_REQUIRED_TYPES_STALE:latest_required_ingest_date=2026-03-12:age_days=12",
+      "details": {
+        "super_stark": 19,
+        "stark": 5,
+        "sehr_schwach": 9,
+        "overnight_completion": 0.2,
+        "jobs_completed": 1
+      }
+    },
+    "breakout_v2": {
+      "name": "Breakout V2",
+      "type": "Momentum / Breakout Detection",
+      "universe_size": 13965,
+      "accuracy": null,
+      "accuracy_7d": null,
+      "accuracy_label": "No independent metric",
+      "trend": "stable",
+      "stale_days": 15,
+      "staleness_level": "critical",
+      "asof": "2026-03-11",
+      "report_age_hours": 125.3,
+      "report_date": null,
+      "stale_reason": "Best-setups snapshot depends on data as-of 2026-03-11"
+    },
+    "hist_probs": {
+      "name": "Historical Probabilities",
+      "type": "Event-Based Statistics",
+      "universe_size": 13965,
+      "accuracy": null,
+      "accuracy_7d": null,
+      "accuracy_label": "Passive source — no accuracy metric",
+      "trend": "active",
+      "stale_days": 15,
+      "staleness_level": "critical",
+      "asof": "2026-03-11",
+      "report_age_hours": 2,
+      "report_date": "2026-03-25T18:28:24.613Z",
+      "stale_reason": "Regime daily last market date 2026-03-11",
+      "regime": {
+        "market": "bull",
+        "volatility": "low_vol",
+        "breadth": "weak"
+      }
+    }
+  },
+  "legacy_weights": {
+    "short": {
+      "trend": 0.24,
+      "entry": 0.42,
+      "risk": 0.18,
+      "context": 0.16
+    },
+    "medium": {
+      "trend": 0.3,
+      "entry": 0.3,
+      "risk": 0.2,
+      "context": 0.2
+    },
+    "long": {
+      "trend": 0.36,
+      "entry": 0.18,
+      "risk": 0.16,
+      "context": 0.3
+    }
+  },
+  "v1_weights": {
+    "version": "default-prior",
+    "timestamp": "2026-03-25T18:48:15.465Z",
+    "fallback_level": "global_prior",
+    "trigger": "initialization",
+    "weights": {
+      "forecast": 0.2,
+      "scientific": 0.2,
+      "elliott": 0.15,
+      "quantlab": 0.15,
+      "breakout_v2": 0.15,
+      "hist_probs": 0.15
+    }
+  },
+  "v1_weight_history": [
+    {
+      "version": "w-20260323",
+      "timestamp": "2026-03-23T12:00:00Z",
+      "weights": {
+        "forecast": 0.2,
+        "scientific": 0.18,
+        "elliott": 0.16,
+        "quantlab": 0.14,
+        "breakout_v2": 0.17,
+        "hist_probs": 0.15
+      },
+      "fallback_level": "none"
+    },
+    {
+      "version": "w-20260324",
+      "timestamp": "2026-03-24T12:00:00Z",
+      "weights": {
+        "forecast": 0.18,
+        "scientific": 0.22,
+        "elliott": 0.14,
+        "quantlab": 0.16,
+        "breakout_v2": 0.15,
+        "hist_probs": 0.15
+      },
+      "fallback_level": "none"
+    }
+  ],
+  "v1_report": {
+    "mode": "shadow_v1",
+    "signals_today": 0,
+    "verdict_distribution": {
+      "BUY": 0,
+      "WAIT": 0,
+      "SELL": 0
+    },
+    "hit_rate": null,
+    "matured_signals": 0,
+    "top_sources": [
+      "forecast",
+      "scientific",
+      "elliott"
+    ],
+    "avg_evidence_quality": null,
+    "governance_warnings": null,
+    "fallback_usage": null,
+    "regime_transition_active": false,
+    "friction_impact_avg": null,
+    "report_date": "2026-03-25",
+    "report_timestamp": "2026-03-25T18:27:53.609Z",
+    "report_age_hours": 2
+  },
+  "pipeline_diagnostic": {
+    "diagnosis_code": "SNAPSHOT_NO_ETF_BUY_SIGNALS",
+    "severity": "medium",
+    "explanation": "ETFs now reach snapshot evaluation, but none currently satisfy BUY verdicts in the shared decision core.",
+    "stage_counts": {
+      "registry_etf_total": 20312,
+      "registry_stock_total": 74841,
+      "asset_opinions_total": 13965,
+      "asset_opinions_etf_total": 1529,
+      "asset_opinions_stock_total": 12436,
+      "publish_etf_total": 1529,
+      "publish_stock_total": 11422,
+      "snapshot_etf_total": 0,
+      "snapshot_stock_total": 0
+    },
+    "generated_at": "2026-03-20T08:29:14.826Z",
+    "age_hours": 132
+  },
+  "recommendations": [
+    {
+      "level": "warning",
+      "model": "forecast",
+      "text": "Forecast System v3.0: data 7 days behind. Check ingest pipeline."
+    },
+    {
+      "level": "warning",
+      "model": "scientific",
+      "text": "Scientific Analyzer v9.1: no source timestamp. Model may be inactive."
+    },
+    {
+      "level": "critical",
+      "model": "elliott",
+      "text": "Elliott Waves DFMSIF v1.0: accuracy below coin-flip (48.7%). Recalibration recommended."
+    },
+    {
+      "level": "critical",
+      "model": "elliott",
+      "text": "Elliott Waves DFMSIF v1.0: data 8 days stale. Pipeline may be broken."
+    },
+    {
+      "level": "critical",
+      "model": "quantlab",
+      "text": "Quant Lab System v4.0 Daily Report: data 12 days stale. Pipeline may be broken."
+    },
+    {
+      "level": "critical",
+      "model": "breakout_v2",
+      "text": "Breakout V2: data 15 days stale. Pipeline may be broken."
+    },
+    {
+      "level": "critical",
+      "model": "hist_probs",
+      "text": "Historical Probabilities: data 15 days stale. Pipeline may be broken."
+    }
+  ],
+  "history": [
+    {
+      "date": "2026-02-26",
+      "forecast_accuracy_7d": null,
+      "forecast_brier_7d": null,
+      "scientific_accuracy_7d": null,
+      "scientific_hit_rate_7d": null,
+      "elliott_accuracy_7d": null,
+      "stock_stability": null
+    },
+    {
+      "date": "2026-02-27",
+      "forecast_accuracy_7d": null,
+      "forecast_brier_7d": null,
+      "scientific_accuracy_7d": null,
+      "scientific_hit_rate_7d": null,
+      "elliott_accuracy_7d": null,
+      "stock_stability": 1
+    },
+    {
+      "date": "2026-03-02",
+      "forecast_accuracy_7d": null,
+      "forecast_brier_7d": null,
+      "scientific_accuracy_7d": null,
+      "scientific_hit_rate_7d": null,
+      "elliott_accuracy_7d": null,
+      "stock_stability": null
+    },
+    {
+      "date": "2026-03-04",
+      "forecast_accuracy_7d": null,
+      "forecast_brier_7d": null,
+      "scientific_accuracy_7d": null,
+      "scientific_hit_rate_7d": null,
+      "elliott_accuracy_7d": 0.6182,
+      "stock_stability": null
+    },
+    {
+      "date": "2026-03-05",
+      "forecast_accuracy_7d": 0.39,
+      "forecast_brier_7d": 0.2765,
+      "scientific_accuracy_7d": null,
+      "scientific_hit_rate_7d": null,
+      "elliott_accuracy_7d": 0.6182,
+      "stock_stability": null
+    },
+    {
+      "date": "2026-03-06",
+      "forecast_accuracy_7d": 0.37,
+      "forecast_brier_7d": 0.2757,
+      "scientific_accuracy_7d": null,
+      "scientific_hit_rate_7d": null,
+      "elliott_accuracy_7d": 0.6182,
+      "stock_stability": null
+    },
+    {
+      "date": "2026-03-07",
+      "forecast_accuracy_7d": 0.5223,
+      "forecast_brier_7d": 0.2431,
+      "scientific_accuracy_7d": null,
+      "scientific_hit_rate_7d": null,
+      "elliott_accuracy_7d": 0.5252,
+      "stock_stability": null
+    },
+    {
+      "date": "2026-03-10",
+      "forecast_accuracy_7d": 0.5223,
+      "forecast_brier_7d": 0.2431,
+      "scientific_accuracy_7d": null,
+      "scientific_hit_rate_7d": null,
+      "elliott_accuracy_7d": 0.5161,
+      "stock_stability": null
+    },
+    {
+      "date": "2026-03-11",
+      "forecast_accuracy_7d": 0.5709,
+      "forecast_brier_7d": 0.2392,
+      "scientific_accuracy_7d": 0.5462,
+      "scientific_hit_rate_7d": 0.0135,
+      "elliott_accuracy_7d": 0.4485,
+      "stock_stability": null
+    },
+    {
+      "date": "2026-03-12",
+      "forecast_accuracy_7d": 0.5609,
+      "forecast_brier_7d": 0.2416,
+      "scientific_accuracy_7d": 0.5204,
+      "scientific_hit_rate_7d": 0.013,
+      "elliott_accuracy_7d": 0.4567,
+      "stock_stability": null
+    },
+    {
+      "date": "2026-03-13",
+      "forecast_accuracy_7d": 0.5666,
+      "forecast_brier_7d": 0.2397,
+      "scientific_accuracy_7d": 0.5204,
+      "scientific_hit_rate_7d": 0.013,
+      "elliott_accuracy_7d": 0.4567,
+      "stock_stability": null
+    },
+    {
+      "date": "2026-03-14",
+      "forecast_accuracy_7d": 0.5662,
+      "forecast_brier_7d": 0.2407,
+      "scientific_accuracy_7d": 0.5204,
+      "scientific_hit_rate_7d": 0.013,
+      "elliott_accuracy_7d": 0.4567,
+      "stock_stability": null
+    },
+    {
+      "date": "2026-03-17",
+      "forecast_accuracy_7d": 0.5802,
+      "forecast_brier_7d": 0.239,
+      "scientific_accuracy_7d": 0.5478,
+      "scientific_hit_rate_7d": 0.013,
+      "elliott_accuracy_7d": 0.4548,
+      "stock_stability": null
+    },
+    {
+      "date": "2026-03-18",
+      "forecast_accuracy_7d": 0.5452,
+      "forecast_brier_7d": 0.2461,
+      "scientific_accuracy_7d": 0.5188,
+      "scientific_hit_rate_7d": 0.0117,
+      "elliott_accuracy_7d": 0.4732,
+      "stock_stability": null
+    },
+    {
+      "date": "2026-03-19",
+      "forecast_accuracy_7d": 0.5917,
+      "forecast_brier_7d": 0.2402,
+      "scientific_accuracy_7d": 0.5294,
+      "scientific_hit_rate_7d": 0.0098,
+      "elliott_accuracy_7d": 0.4832,
+      "stock_stability": null
+    },
+    {
+      "date": "2026-03-20",
+      "forecast_accuracy_7d": 0.5727,
+      "forecast_brier_7d": 0.2423,
+      "scientific_accuracy_7d": 0.538,
+      "scientific_hit_rate_7d": 0.0091,
+      "elliott_accuracy_7d": 0.4869,
+      "stock_stability": null
+    }
+  ],
+  "system": {
+    "overall_status": "CRITICAL",
+    "status_severity": "critical",
+    "status_detail": [
+      "Forecast System v3.0: data 7d behind",
+      "Scientific Analyzer v9.1: no current source timestamp",
+      "Elliott Waves DFMSIF v1.0: data 8d stale",
+      "Quant Lab System v4.0 Daily Report: data 12d stale"
+    ],
+    "learning_status": "VERBESSERUNG ✅",
+    "v1_mode": "shadow_v1",
+    "quantlab_readiness": 100,
+    "quantlab_implementation": 100,
+    "regime": {
+      "market": "bull",
+      "volatility": "low_vol",
+      "breadth": "weak",
+      "date": "2026-03-11"
+    }
+  },
+  "meta": {
+    "generated_at": "2026-03-25T20:30:18.533Z",
+    "source_files": {
+      "learning_report": {
+        "exists": true,
+        "date": "2026-03-20",
+        "age_hours": 84
+      },
+      "quantlab_report": {
+        "exists": true,
+        "date": "2026-03-25",
+        "age_hours": 13.5
+      },
+      "v1_audit_report": {
+        "exists": true,
+        "date": "2026-03-25",
+        "age_hours": 2
+      },
+      "v1_weights": {
+        "exists": true,
+        "version": "default-prior",
+        "age_hours": 1.7
+      },
+      "diagnostic": {
+        "exists": true,
+        "date": "2026-03-20T08:29:14.826Z",
+        "age_hours": 132
+      },
+      "regime_daily": {
+        "exists": true,
+        "date": "2026-03-11",
+        "age_hours": 2
+      },
+      "best_setups_snapshot": {
+        "exists": true,
+        "date": null,
+        "age_hours": 125.3
+      }
+    }
+  },
+  "operations": {
+    "autopilot": {
+      "generated_at": "2026-03-21T13:37:50Z",
+      "repo_root": "/Users/michaelpuchowezki/Dev/rubikvault-site",
+      "quant_root": "/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab",
+      "active_lock": null,
+      "jobs": {
+        "day": [
+          {
+            "job_dir": "/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/jobs/day_q1_safe_20260321_103005",
+            "updated_at": "2026-03-21T09:33:46Z",
+            "summary": {
+              "pending": 0,
+              "running": 0,
+              "done": 4,
+              "failed": 0,
+              "stopped_due_to_time_limit": false,
+              "stopped_due_to_consecutive_failures": false,
+              "stopped_due_to_system_guardrails": false,
+              "failed_by_class": {}
+            },
+            "refresh": {
+              "schema": "rv.v5.refresh.status.v1",
+              "mode": "day",
+              "job_dir": "/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/jobs/day_q1_safe_20260321_103005",
+              "repo_root": "/Users/michaelpuchowezki/Dev/rubikvault-site",
+              "quant_root": "/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab",
+              "created_at": "2026-03-21T10:30:00Z",
+              "steps": {
+                "forecast_run_daily": {
+                  "status": "failed",
+                  "started_at": "2026-03-21T13:30:01Z",
+                  "command": [
+                    "node",
+                    "scripts/forecast/run_daily.mjs"
+                  ],
+                  "finished_at": "2026-03-21T13:33:02Z",
+                  "returncode": 1
+                }
+              },
+              "started_at": "2026-03-21T13:30:01Z",
+              "status": "failed",
+              "failed_step": "forecast_run_daily",
+              "finished_at": "2026-03-21T13:33:02Z",
+              "outputs": {
+                "snapshot": {
+                  "path": "/Users/michaelpuchowezki/Dev/rubikvault-site/public/data/snapshots/best-setups-v4.json",
+                  "stocks": {
+                    "short": 10,
+                    "medium": 10,
+                    "long": 10
+                  },
+                  "etfs": {
+                    "short": 1,
+                    "medium": 1,
+                    "long": 1
+                  },
+                  "source": "shared_decision_core_quantlab_forecast_snapshot",
+                  "forecast_asof": null
+                },
+                "learning": {
+                  "path": "/Users/michaelpuchowezki/Dev/rubikvault-site/public/data/reports/learning-report-latest.json",
+                  "learning_status": "BOOTSTRAP",
+                  "precision_10": 0.4371,
+                  "precision_50": 0.438,
+                  "accuracy_all": 0.3783,
+                  "coverage_7d": 8.57,
+                  "predictions_today": 33,
+                  "safety_level": "BOOTSTRAP"
+                },
+                "etf_diagnostic": {
+                  "path": "/Users/michaelpuchowezki/Dev/rubikvault-site/public/data/reports/best-setups-etf-diagnostic-latest.json",
+                  "code": "SNAPSHOT_NO_ETF_BUY_SIGNALS",
+                  "severity": "medium"
+                },
+                "forecast_calibration": {
+                  "path": "/Users/michaelpuchowezki/Dev/rubikvault-site/mirrors/forecast/champion/calibration_latest.json",
+                  "end_date": "2026-03-20",
+                  "horizons": {
+                    "1d": {
+                      "sample_count_train": 4109,
+                      "sample_count_eval": 0,
+                      "brier_eval_raw": null,
+                      "brier_eval_calibrated": null
+                    },
+                    "5d": {
+                      "sample_count_train": 0,
+                      "sample_count_eval": 0,
+                      "brier_eval_raw": null,
+                      "brier_eval_calibrated": null
+                    },
+                    "20d": {
+                      "sample_count_train": 0,
+                      "sample_count_eval": 0,
+                      "brier_eval_raw": null,
+                      "brier_eval_calibrated": null
+                    }
+                  }
+                },
+                "ssot_parity": {
+                  "path": "/Users/michaelpuchowezki/Dev/rubikvault-site/mirrors/learning/reports/best-setups-ssot-parity-latest.json",
+                  "summary": {
+                    "total": 3,
+                    "ok": 3,
+                    "failed": 0
+                  }
+                },
+                "stability_5d": {
+                  "path": "/Users/michaelpuchowezki/Dev/rubikvault-site/public/data/reports/learning-stability-5d-latest.json",
+                  "days_covered": null
+                }
+              }
+            }
+          },
+          {
+            "job_dir": "/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/jobs/day_q1_safe_20260320_103000",
+            "updated_at": "2026-03-20T09:33:26Z",
+            "summary": {
+              "pending": 0,
+              "running": 0,
+              "done": 4,
+              "failed": 0,
+              "stopped_due_to_time_limit": false,
+              "stopped_due_to_consecutive_failures": false,
+              "stopped_due_to_system_guardrails": false,
+              "failed_by_class": {}
+            },
+            "refresh": {
+              "schema": "rv.v5.refresh.status.v1",
+              "mode": "day",
+              "job_dir": "/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/jobs/day_q1_safe_20260320_103000",
+              "repo_root": "/Users/michaelpuchowezki/Dev/rubikvault-site",
+              "quant_root": "/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab",
+              "created_at": "2026-03-20T10:30:05Z",
+              "steps": {
+                "forecast_run_daily": {
+                  "status": "failed",
+                  "started_at": "2026-03-20T16:30:03Z",
+                  "command": [
+                    "node",
+                    "scripts/forecast/run_daily.mjs"
+                  ],
+                  "finished_at": "2026-03-20T16:32:10Z",
+                  "returncode": 1
+                }
+              },
+              "started_at": "2026-03-20T16:30:03Z",
+              "status": "failed",
+              "failed_step": "forecast_run_daily",
+              "finished_at": "2026-03-20T16:32:10Z",
+              "outputs": {
+                "snapshot": {
+                  "path": "/Users/michaelpuchowezki/Dev/rubikvault-site/public/data/snapshots/best-setups-v4.json",
+                  "stocks": {
+                    "short": 10,
+                    "medium": 10,
+                    "long": 10
+                  },
+                  "etfs": {
+                    "short": 1,
+                    "medium": 1,
+                    "long": 1
+                  },
+                  "source": "shared_decision_core_quantlab_forecast_snapshot",
+                  "forecast_asof": null
+                },
+                "learning": {
+                  "path": "/Users/michaelpuchowezki/Dev/rubikvault-site/public/data/reports/learning-report-latest.json",
+                  "learning_status": "BOOTSTRAP",
+                  "precision_10": 0.4371,
+                  "precision_50": 0.438,
+                  "accuracy_all": 0.3783,
+                  "coverage_7d": 8.57,
+                  "predictions_today": 33,
+                  "safety_level": "BOOTSTRAP"
+                },
+                "etf_diagnostic": {
+                  "path": "/Users/michaelpuchowezki/Dev/rubikvault-site/public/data/reports/best-setups-etf-diagnostic-latest.json",
+                  "code": "SNAPSHOT_NO_ETF_BUY_SIGNALS",
+                  "severity": "medium"
+                },
+                "forecast_calibration": {
+                  "path": "/Users/michaelpuchowezki/Dev/rubikvault-site/mirrors/forecast/champion/calibration_latest.json",
+                  "end_date": "2026-03-20",
+                  "horizons": {
+                    "1d": {
+                      "sample_count_train": 4109,
+                      "sample_count_eval": 0,
+                      "brier_eval_raw": null,
+                      "brier_eval_calibrated": null
+                    },
+                    "5d": {
+                      "sample_count_train": 0,
+                      "sample_count_eval": 0,
+                      "brier_eval_raw": null,
+                      "brier_eval_calibrated": null
+                    },
+                    "20d": {
+                      "sample_count_train": 0,
+                      "sample_count_eval": 0,
+                      "brier_eval_raw": null,
+                      "brier_eval_calibrated": null
+                    }
+                  }
+                },
+                "ssot_parity": {
+                  "path": "/Users/michaelpuchowezki/Dev/rubikvault-site/mirrors/learning/reports/best-setups-ssot-parity-latest.json",
+                  "summary": {
+                    "total": 3,
+                    "ok": 3,
+                    "failed": 0
+                  }
+                },
+                "stability_5d": {
+                  "path": "/Users/michaelpuchowezki/Dev/rubikvault-site/public/data/reports/learning-stability-5d-latest.json",
+                  "days_covered": null
+                }
+              }
+            }
+          },
+          {
+            "job_dir": "/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/jobs/day_q1_safe_20260320_101809",
+            "updated_at": "2026-03-20T09:21:40Z",
+            "summary": {
+              "pending": 0,
+              "running": 0,
+              "done": 4,
+              "failed": 0,
+              "stopped_due_to_time_limit": false,
+              "stopped_due_to_consecutive_failures": false,
+              "stopped_due_to_system_guardrails": false,
+              "failed_by_class": {}
+            },
+            "refresh": {
+              "schema": "rv.v5.refresh.status.v1",
+              "mode": "day",
+              "job_dir": "/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/jobs/day_q1_safe_20260320_101809",
+              "repo_root": "/Users/michaelpuchowezki/Dev/rubikvault-site",
+              "quant_root": "/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab",
+              "created_at": "2026-03-20T09:23:00Z",
+              "steps": {
+                "forecast_run_daily": {
+                  "status": "failed",
+                  "started_at": "2026-03-20T09:23:00Z",
+                  "command": [
+                    "node",
+                    "scripts/forecast/run_daily.mjs"
+                  ],
+                  "finished_at": "2026-03-20T09:25:03Z",
+                  "returncode": 1
+                }
+              },
+              "started_at": "2026-03-20T09:23:00Z",
+              "status": "failed",
+              "failed_step": "forecast_run_daily",
+              "finished_at": "2026-03-20T09:25:03Z",
+              "outputs": {
+                "snapshot": {
+                  "path": "/Users/michaelpuchowezki/Dev/rubikvault-site/public/data/snapshots/best-setups-v4.json",
+                  "stocks": {
+                    "short": 0,
+                    "medium": 0,
+                    "long": 0
+                  },
+                  "etfs": {
+                    "short": 0,
+                    "medium": 0,
+                    "long": 0
+                  },
+                  "source": "shared_decision_core_quantlab_forecast_snapshot",
+                  "forecast_asof": "2026-03-20"
+                },
+                "learning": {
+                  "path": "/Users/michaelpuchowezki/Dev/rubikvault-site/public/data/reports/learning-report-latest.json",
+                  "learning_status": "BOOTSTRAP",
+                  "precision_10": 0.4371,
+                  "precision_50": 0.438,
+                  "accuracy_all": 0.3783,
+                  "coverage_7d": 8.57,
+                  "predictions_today": 0,
+                  "safety_level": "BOOTSTRAP"
+                },
+                "etf_diagnostic": {
+                  "path": "/Users/michaelpuchowezki/Dev/rubikvault-site/public/data/reports/best-setups-etf-diagnostic-latest.json",
+                  "code": "SNAPSHOT_NO_ETF_BUY_SIGNALS",
+                  "severity": "medium"
+                },
+                "forecast_calibration": {
+                  "path": "/Users/michaelpuchowezki/Dev/rubikvault-site/mirrors/forecast/champion/calibration_latest.json",
+                  "end_date": "2026-03-20",
+                  "horizons": {
+                    "1d": {
+                      "sample_count_train": 4109,
+                      "sample_count_eval": 0,
+                      "brier_eval_raw": null,
+                      "brier_eval_calibrated": null
+                    },
+                    "5d": {
+                      "sample_count_train": 0,
+                      "sample_count_eval": 0,
+                      "brier_eval_raw": null,
+                      "brier_eval_calibrated": null
+                    },
+                    "20d": {
+                      "sample_count_train": 0,
+                      "sample_count_eval": 0,
+                      "brier_eval_raw": null,
+                      "brier_eval_calibrated": null
+                    }
+                  }
+                },
+                "ssot_parity": {
+                  "path": "/Users/michaelpuchowezki/Dev/rubikvault-site/mirrors/learning/reports/best-setups-ssot-parity-latest.json",
+                  "summary": {
+                    "total": 3,
+                    "ok": 3,
+                    "failed": 0
+                  }
+                },
+                "stability_5d": {
+                  "path": "/Users/michaelpuchowezki/Dev/rubikvault-site/public/data/reports/learning-stability-5d-latest.json",
+                  "days_covered": null
+                }
+              }
+            }
+          },
+          {
+            "job_dir": "/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/jobs/day_q1_safe_20260311_174452",
+            "updated_at": "2026-03-11T16:49:44Z",
+            "summary": {
+              "pending": 0,
+              "running": 0,
+              "done": 4,
+              "failed": 2,
+              "stopped_due_to_time_limit": false,
+              "stopped_due_to_consecutive_failures": false,
+              "stopped_due_to_system_guardrails": false,
+              "failed_by_class": {
+                "unknown": 2
+              }
+            },
+            "refresh": null
+          },
+          {
+            "job_dir": "/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/jobs/day_q1_safe_20260311_171141",
+            "updated_at": "2026-03-11T16:19:40Z",
+            "summary": {
+              "pending": 0,
+              "running": 0,
+              "done": 4,
+              "failed": 2,
+              "stopped_due_to_time_limit": false,
+              "stopped_due_to_consecutive_failures": false,
+              "stopped_due_to_system_guardrails": false,
+              "failed_by_class": {
+                "unknown": 2
+              }
+            },
+            "refresh": null
+          }
+        ],
+        "night": [
+          {
+            "job_dir": "/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/jobs/overnight_q1_safe10h_20260320_230004",
+            "updated_at": "2026-03-20T22:04:29Z",
+            "summary": {
+              "pending": 0,
+              "running": 0,
+              "done": 8,
+              "failed": 0,
+              "stopped_due_to_time_limit": false,
+              "stopped_due_to_consecutive_failures": false,
+              "stopped_due_to_system_guardrails": false,
+              "failed_by_class": {}
+            },
+            "refresh": {
+              "schema": "rv.v5.refresh.status.v1",
+              "mode": "night",
+              "job_dir": "/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/jobs/overnight_q1_safe10h_20260320_230004",
+              "repo_root": "/Users/michaelpuchowezki/Dev/rubikvault-site",
+              "quant_root": "/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab",
+              "created_at": "2026-03-20T22:30:03Z",
+              "steps": {
+                "forecast_run_daily": {
+                  "status": "failed",
+                  "started_at": "2026-03-21T06:30:03Z",
+                  "command": [
+                    "node",
+                    "scripts/forecast/run_daily.mjs"
+                  ],
+                  "finished_at": "2026-03-21T06:33:03Z",
+                  "returncode": 1
+                }
+              },
+              "started_at": "2026-03-21T06:30:03Z",
+              "status": "failed",
+              "failed_step": "forecast_run_daily",
+              "finished_at": "2026-03-21T06:33:03Z",
+              "outputs": {
+                "snapshot": {
+                  "path": "/Users/michaelpuchowezki/Dev/rubikvault-site/public/data/snapshots/best-setups-v4.json",
+                  "stocks": {
+                    "short": 10,
+                    "medium": 10,
+                    "long": 10
+                  },
+                  "etfs": {
+                    "short": 1,
+                    "medium": 1,
+                    "long": 1
+                  },
+                  "source": "shared_decision_core_quantlab_forecast_snapshot",
+                  "forecast_asof": null
+                },
+                "learning": {
+                  "path": "/Users/michaelpuchowezki/Dev/rubikvault-site/public/data/reports/learning-report-latest.json",
+                  "learning_status": "BOOTSTRAP",
+                  "precision_10": 0.4371,
+                  "precision_50": 0.438,
+                  "accuracy_all": 0.3783,
+                  "coverage_7d": 8.57,
+                  "predictions_today": 33,
+                  "safety_level": "BOOTSTRAP"
+                },
+                "etf_diagnostic": {
+                  "path": "/Users/michaelpuchowezki/Dev/rubikvault-site/public/data/reports/best-setups-etf-diagnostic-latest.json",
+                  "code": "SNAPSHOT_NO_ETF_BUY_SIGNALS",
+                  "severity": "medium"
+                },
+                "forecast_calibration": {
+                  "path": "/Users/michaelpuchowezki/Dev/rubikvault-site/mirrors/forecast/champion/calibration_latest.json",
+                  "end_date": "2026-03-20",
+                  "horizons": {
+                    "1d": {
+                      "sample_count_train": 4109,
+                      "sample_count_eval": 0,
+                      "brier_eval_raw": null,
+                      "brier_eval_calibrated": null
+                    },
+                    "5d": {
+                      "sample_count_train": 0,
+                      "sample_count_eval": 0,
+                      "brier_eval_raw": null,
+                      "brier_eval_calibrated": null
+                    },
+                    "20d": {
+                      "sample_count_train": 0,
+                      "sample_count_eval": 0,
+                      "brier_eval_raw": null,
+                      "brier_eval_calibrated": null
+                    }
+                  }
+                },
+                "ssot_parity": {
+                  "path": "/Users/michaelpuchowezki/Dev/rubikvault-site/mirrors/learning/reports/best-setups-ssot-parity-latest.json",
+                  "summary": {
+                    "total": 3,
+                    "ok": 3,
+                    "failed": 0
+                  }
+                },
+                "stability_5d": {
+                  "path": "/Users/michaelpuchowezki/Dev/rubikvault-site/public/data/reports/learning-stability-5d-latest.json",
+                  "days_covered": null
+                }
+              }
+            }
+          },
+          {
+            "job_dir": "/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/jobs/overnight_q1_safe10h_20260319_230004",
+            "updated_at": "2026-03-19T22:04:22Z",
+            "summary": {
+              "pending": 0,
+              "running": 0,
+              "done": 8,
+              "failed": 0,
+              "stopped_due_to_time_limit": false,
+              "stopped_due_to_consecutive_failures": false,
+              "stopped_due_to_system_guardrails": false,
+              "failed_by_class": {}
+            },
+            "refresh": {
+              "schema": "rv.v5.refresh.status.v1",
+              "mode": "night",
+              "job_dir": "/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/jobs/overnight_q1_safe10h_20260319_230004",
+              "repo_root": "/Users/michaelpuchowezki/Dev/rubikvault-site",
+              "quant_root": "/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab",
+              "created_at": "2026-03-20T07:27:41Z",
+              "steps": {
+                "forecast_run_daily": {
+                  "status": "completed",
+                  "started_at": "2026-03-20T07:30:21Z",
+                  "command": [
+                    "node",
+                    "scripts/forecast/run_daily.mjs"
+                  ],
+                  "finished_at": "2026-03-20T07:32:42Z",
+                  "returncode": 0
+                },
+                "forecast_calibration": {
+                  "status": "completed",
+                  "started_at": "2026-03-20T07:32:42Z",
+                  "command": [
+                    "node",
+                    "scripts/forecast/calibrate_forecast.mjs"
+                  ],
+                  "finished_at": "2026-03-20T07:32:42Z",
+                  "returncode": 0
+                },
+                "build_best_setups": {
+                  "status": "completed",
+                  "started_at": "2026-03-20T07:32:42Z",
+                  "command": [
+                    "node",
+                    "scripts/build-best-setups-v4.mjs"
+                  ],
+                  "finished_at": "2026-03-20T07:32:46Z",
+                  "returncode": 0
+                },
+                "etf_diagnostic": {
+                  "status": "completed",
+                  "started_at": "2026-03-20T07:32:46Z",
+                  "command": [
+                    "node",
+                    "scripts/learning/diagnose-best-setups-etf-drop.mjs"
+                  ],
+                  "finished_at": "2026-03-20T07:32:47Z",
+                  "returncode": 0
+                },
+                "analyzer_backfill": {
+                  "status": "completed",
+                  "started_at": "2026-03-20T07:32:47Z",
+                  "command": [
+                    "node",
+                    "scripts/learning/backfill-stock-analyzer-history.mjs"
+                  ],
+                  "finished_at": "2026-03-20T07:32:47Z",
+                  "returncode": 0
+                },
+                "learning_daily": {
+                  "status": "completed",
+                  "started_at": "2026-03-20T07:34:06Z",
+                  "command": [
+                    "node",
+                    "scripts/learning/run-daily-learning-cycle.mjs"
+                  ],
+                  "finished_at": "2026-03-20T07:34:12Z",
+                  "returncode": 0
+                },
+                "learning_weekly": {
+                  "status": "completed",
+                  "started_at": "2026-03-20T07:34:12Z",
+                  "command": [
+                    "node",
+                    "scripts/learning/run-weekly-learning-cycle.mjs"
+                  ],
+                  "finished_at": "2026-03-20T07:34:12Z",
+                  "returncode": 0
+                },
+                "learning_monthly": {
+                  "status": "completed",
+                  "started_at": "2026-03-20T07:34:12Z",
+                  "command": [
+                    "node",
+                    "scripts/learning/run-monthly-learning-cycle.mjs"
+                  ],
+                  "finished_at": "2026-03-20T07:34:12Z",
+                  "returncode": 0
+                },
+                "ssot_parity_validation": {
+                  "status": "completed",
+                  "started_at": "2026-03-20T07:34:12Z",
+                  "command": [
+                    "node",
+                    "scripts/validate/best-setups-ssot-local-parity.mjs"
+                  ],
+                  "finished_at": "2026-03-20T07:34:19Z",
+                  "returncode": 0
+                }
+              },
+              "started_at": "2026-03-20T07:34:06Z",
+              "status": "completed",
+              "failed_step": "analyzer_backfill",
+              "finished_at": "2026-03-20T07:34:19Z",
+              "outputs": {
+                "snapshot": {
+                  "path": "/Users/michaelpuchowezki/Dev/rubikvault-site/public/data/snapshots/best-setups-v4.json",
+                  "stocks": {
+                    "short": 0,
+                    "medium": 0,
+                    "long": 0
+                  },
+                  "etfs": {
+                    "short": 0,
+                    "medium": 0,
+                    "long": 0
+                  },
+                  "source": "shared_decision_core_quantlab_forecast_snapshot",
+                  "forecast_asof": "2026-03-20"
+                },
+                "learning": {
+                  "path": "/Users/michaelpuchowezki/Dev/rubikvault-site/public/data/reports/learning-report-latest.json",
+                  "learning_status": "SAFE_MODE",
+                  "precision_10": 0.4585,
+                  "precision_50": 0.4594,
+                  "accuracy_all": 0.39,
+                  "coverage_7d": 7.43,
+                  "predictions_today": 0,
+                  "safety_level": "RED"
+                },
+                "etf_diagnostic": {
+                  "path": "/Users/michaelpuchowezki/Dev/rubikvault-site/public/data/reports/best-setups-etf-diagnostic-latest.json",
+                  "code": "SNAPSHOT_GATE_REJECTION",
+                  "severity": "medium"
+                },
+                "forecast_calibration": {
+                  "path": "/Users/michaelpuchowezki/Dev/rubikvault-site/mirrors/forecast/champion/calibration_latest.json",
+                  "end_date": "2026-03-20",
+                  "horizons": {
+                    "1d": {
+                      "sample_count_train": 4109,
+                      "sample_count_eval": 0,
+                      "brier_eval_raw": null,
+                      "brier_eval_calibrated": null
+                    },
+                    "5d": {
+                      "sample_count_train": 0,
+                      "sample_count_eval": 0,
+                      "brier_eval_raw": null,
+                      "brier_eval_calibrated": null
+                    },
+                    "20d": {
+                      "sample_count_train": 0,
+                      "sample_count_eval": 0,
+                      "brier_eval_raw": null,
+                      "brier_eval_calibrated": null
+                    }
+                  }
+                },
+                "ssot_parity": {
+                  "path": "/Users/michaelpuchowezki/Dev/rubikvault-site/mirrors/learning/reports/best-setups-ssot-parity-latest.json",
+                  "summary": {
+                    "total": 3,
+                    "ok": 3,
+                    "failed": 0
+                  }
+                }
+              }
+            }
+          },
+          {
+            "job_dir": "/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/jobs/overnight_q1_safe14h_20260314_214219",
+            "updated_at": "2026-03-14T20:43:20Z",
+            "summary": {
+              "pending": 0,
+              "running": 0,
+              "done": 0,
+              "failed": 6,
+              "stopped_due_to_time_limit": false,
+              "stopped_due_to_consecutive_failures": false,
+              "stopped_due_to_system_guardrails": false,
+              "failed_by_class": {
+                "unknown": 6
+              }
+            },
+            "refresh": null
+          },
+          {
+            "job_dir": "/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/jobs/overnight_q1_safe14h_20260313_223931",
+            "updated_at": "2026-03-13T21:46:56Z",
+            "summary": {
+              "pending": 0,
+              "running": 0,
+              "done": 12,
+              "failed": 6,
+              "stopped_due_to_time_limit": false,
+              "stopped_due_to_consecutive_failures": false,
+              "stopped_due_to_system_guardrails": false,
+              "failed_by_class": {
+                "unknown": 6
+              }
+            },
+            "refresh": null
+          },
+          {
+            "job_dir": "/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/jobs/overnight_q1_safe14h_20260312_230911",
+            "updated_at": "2026-03-12T22:16:41Z",
+            "summary": {
+              "pending": 0,
+              "running": 0,
+              "done": 12,
+              "failed": 6,
+              "stopped_due_to_time_limit": false,
+              "stopped_due_to_consecutive_failures": false,
+              "stopped_due_to_system_guardrails": false,
+              "failed_by_class": {
+                "unknown": 6
+              }
+            },
+            "refresh": null
+          }
+        ]
+      },
+      "snapshot": {
+        "path": "/Users/michaelpuchowezki/Dev/rubikvault-site/public/data/snapshots/best-setups-v4.json",
+        "source": "shared_decision_core_quantlab_forecast_snapshot",
+        "forecast_asof": null,
+        "verified_counts": {
+          "stocks": {
+            "short": 10,
+            "medium": 10,
+            "long": 10
+          },
+          "etfs": {
+            "short": 1,
+            "medium": 1,
+            "long": 1
+          }
+        },
+        "rejection_counts": {
+          "short": {
+            "rejected_non_buy_total": 72,
+            "rejected_non_high_total": 6,
+            "rejected_gated_total": 0,
+            "rejected_non_uptrend_total": 0,
+            "missing_doc_total": 0,
+            "by_asset_class": {
+              "stock": {
+                "rejected_non_buy_total": 71,
+                "rejected_non_high_total": 6,
+                "rejected_gated_total": 0,
+                "rejected_non_uptrend_total": 0,
+                "missing_doc_total": 0
+              },
+              "etf": {
+                "rejected_non_buy_total": 1,
+                "rejected_non_high_total": 0,
+                "rejected_gated_total": 0,
+                "rejected_non_uptrend_total": 0,
+                "missing_doc_total": 0
+              }
+            }
+          },
+          "medium": {
+            "rejected_non_buy_total": 86,
+            "rejected_non_high_total": 9,
+            "rejected_gated_total": 0,
+            "rejected_non_uptrend_total": 0,
+            "missing_doc_total": 0,
+            "by_asset_class": {
+              "stock": {
+                "rejected_non_buy_total": 85,
+                "rejected_non_high_total": 9,
+                "rejected_gated_total": 0,
+                "rejected_non_uptrend_total": 0,
+                "missing_doc_total": 0
+              },
+              "etf": {
+                "rejected_non_buy_total": 1,
+                "rejected_non_high_total": 0,
+                "rejected_gated_total": 0,
+                "rejected_non_uptrend_total": 0,
+                "missing_doc_total": 0
+              }
+            }
+          },
+          "long": {
+            "rejected_non_buy_total": 88,
+            "rejected_non_high_total": 0,
+            "rejected_gated_total": 0,
+            "rejected_non_uptrend_total": 4,
+            "missing_doc_total": 0,
+            "by_asset_class": {
+              "stock": {
+                "rejected_non_buy_total": 87,
+                "rejected_non_high_total": 0,
+                "rejected_gated_total": 0,
+                "rejected_non_uptrend_total": 4,
+                "missing_doc_total": 0
+              },
+              "etf": {
+                "rejected_non_buy_total": 1,
+                "rejected_non_high_total": 0,
+                "rejected_gated_total": 0,
+                "rejected_non_uptrend_total": 0,
+                "missing_doc_total": 0
+              }
+            }
+          }
+        }
+      },
+      "learning": {
+        "path": "/Users/michaelpuchowezki/Dev/rubikvault-site/public/data/reports/learning-report-latest.json",
+        "learning_status": "BOOTSTRAP",
+        "precision_10": 0.4371,
+        "precision_50": 0.438,
+        "accuracy_all": 0.3783,
+        "coverage_7d": 8.57,
+        "false_positive_classes_30d": {
+          "fake_breakout": 1,
+          "regime_mismatch": 1,
+          "weak_consensus": 164
+        },
+        "safety_switch": {
+          "level": "BOOTSTRAP",
+          "actions": [
+            "log_only"
+          ],
+          "trigger": "minimum_n_not_met",
+          "minimum_n_status": {
+            "global_per_horizon_threshold": 200,
+            "asset_class_horizon_threshold": 100,
+            "regime_horizon_threshold": 75,
+            "satisfied_horizons": 1,
+            "ready_for_safety": false,
+            "by_horizon": {
+              "1d": {
+                "outcomes_resolved": 51,
+                "satisfied": false
+              },
+              "5d": {
+                "outcomes_resolved": 0,
+                "satisfied": false
+              },
+              "20d": {
+                "outcomes_resolved": 216,
+                "satisfied": true
+              }
+            }
+          }
+        }
+      },
+      "etf_diagnostic": {
+        "path": "/Users/michaelpuchowezki/Dev/rubikvault-site/public/data/reports/best-setups-etf-diagnostic-latest.json",
+        "diagnosis": {
+          "code": "SNAPSHOT_NO_ETF_BUY_SIGNALS",
+          "severity": "medium",
+          "explanation": "ETFs now reach snapshot evaluation, but none currently satisfy BUY verdicts in the shared decision core."
+        }
+      },
+      "forecast_calibration": {
+        "path": "/Users/michaelpuchowezki/Dev/rubikvault-site/mirrors/forecast/champion/calibration_latest.json",
+        "end_date": "2026-03-20",
+        "horizons": {
+          "1d": {
+            "sample_count_train": 4109,
+            "sample_count_eval": 0,
+            "brier_eval_raw": null,
+            "brier_eval_calibrated": null
+          },
+          "5d": {
+            "sample_count_train": 0,
+            "sample_count_eval": 0,
+            "brier_eval_raw": null,
+            "brier_eval_calibrated": null
+          },
+          "20d": {
+            "sample_count_train": 0,
+            "sample_count_eval": 0,
+            "brier_eval_raw": null,
+            "brier_eval_calibrated": null
+          }
+        }
+      },
+      "weekly": {
+        "path": "/Users/michaelpuchowezki/Dev/rubikvault-site/public/data/reports/learning-weekly-latest.json",
+        "summary": {
+          "schema_version": "rv.learning.weekly.v1",
+          "generated_at": "2026-03-20T07:34:12.619Z",
+          "week_end": "2026-03-20",
+          "days_covered": 5,
+          "safety_status": {
+            "level": "RED",
+            "actions": [
+              "freeze_promotions",
+              "buy_eligible_false"
+            ],
+            "trigger": "precision_red"
+          },
+          "summary": {
+            "status": "VERBESSERUNG ✅",
+            "features_tracked": 4,
+            "analyzer_predictions_avg": 0,
+            "analyzer_precision_10_avg": 0.4493,
+            "analyzer_brier_7d_avg": 0.3931
+          },
+          "analyzer": {
+            "avg_predictions_today": 0,
+            "avg_precision_10": 0.4493,
+            "avg_precision_50": 0.4503,
+            "avg_brier_7d": 0.3931,
+            "avg_ece_7d": 0.416,
+            "avg_stock_stability": 0.3333,
+            "latest_learning_status": "SAFE_MODE",
+            "latest_gate_rejection_breakdown": {
+              "short": {
+                "rejected_non_buy_total": 245,
+                "rejected_non_high_total": 0,
+                "rejected_gated_total": 0,
+                "rejected_non_uptrend_total": 0,
+                "missing_doc_total": 0
+              },
+              "medium": {
+                "rejected_non_buy_total": 245,
+                "rejected_non_high_total": 0,
+                "rejected_gated_total": 0,
+                "rejected_non_uptrend_total": 0,
+                "missing_doc_total": 0
+              },
+              "long": {
+                "rejected_non_buy_total": 245,
+                "rejected_non_high_total": 0,
+                "rejected_gated_total": 0,
+                "rejected_non_uptrend_total": 0,
+                "missing_doc_total": 0
+              }
+            },
+            "latest_false_positive_classes_30d": {
+              "weak_consensus": 158
+            },
+            "gate_rejection_breakdown_7d_sum": {
+              "short": {
+                "rejected_non_buy_total": 498,
+                "rejected_non_high_total": 2,
+                "rejected_gated_total": 0,
+                "rejected_non_uptrend_total": 0,
+                "missing_doc_total": 0
+              },
+              "medium": {
+                "rejected_non_buy_total": 502,
+                "rejected_non_high_total": 2,
+                "rejected_gated_total": 0,
+                "rejected_non_uptrend_total": 0,
+                "missing_doc_total": 0
+              },
+              "long": {
+                "rejected_non_buy_total": 500,
+                "rejected_non_high_total": 0,
+                "rejected_gated_total": 0,
+                "rejected_non_uptrend_total": 1,
+                "missing_doc_total": 0
+              }
+            },
+            "latest_by_horizon": {
+              "1d": {
+                "predictions_total": 51,
+                "outcomes_resolved": 51,
+                "accuracy_all": 0.5294,
+                "brier_all": 0.2958,
+                "ece_all": 0.241,
+                "hit_rate_all": 0.5294,
+                "accuracy_7d": 0.5625,
+                "brier_7d": 0.2693,
+                "ece_7d": 0.2356,
+                "hit_rate_7d": 0.5625,
+                "precision_10": 0.5833,
+                "precision_50": 0.5833,
+                "coverage_per_day": 1.7,
+                "trend_accuracy": "improving",
+                "trend_brier": "improving"
+              },
+              "20d": {
+                "predictions_total": 208,
+                "outcomes_resolved": 208,
+                "accuracy_all": 0.3558,
+                "brier_all": 0.3882,
+                "ece_all": 0.4009,
+                "hit_rate_all": 0.3558,
+                "accuracy_7d": 0.2778,
+                "brier_7d": 0.4333,
+                "ece_7d": 0.4842,
+                "hit_rate_7d": 0.2778,
+                "precision_10": 0.3336,
+                "precision_50": 0.3354,
+                "coverage_per_day": 6.93,
+                "trend_accuracy": "declining",
+                "trend_brier": "declining"
+              }
+            },
+            "latest_by_asset_class": {
+              "stock": {
+                "predictions_total": 259,
+                "outcomes_resolved": 259,
+                "accuracy_all": 0.39,
+                "brier_all": 0.37,
+                "ece_all": 0.3694,
+                "hit_rate_all": 0.39,
+                "accuracy_7d": 0.3654,
+                "brier_7d": 0.3829,
+                "ece_7d": 0.4077,
+                "hit_rate_7d": 0.3654,
+                "precision_10": 0.4585,
+                "precision_50": 0.4594,
+                "coverage_per_day": 8.63,
+                "trend_accuracy": "improving",
+                "trend_brier": "improving",
+                "by_horizon": {
+                  "1d": {
+                    "predictions_total": 51,
+                    "outcomes_resolved": 51,
+                    "accuracy_all": 0.5294,
+                    "brier_all": 0.2958,
+                    "ece_all": 0.241,
+                    "hit_rate_all": 0.5294,
+                    "accuracy_7d": 0.5625,
+                    "brier_7d": 0.2693,
+                    "ece_7d": 0.2356,
+                    "hit_rate_7d": 0.5625,
+                    "precision_10": 0.5833,
+                    "precision_50": 0.5833,
+                    "coverage_per_day": 1.7,
+                    "trend_accuracy": "improving",
+                    "trend_brier": "improving"
+                  },
+                  "20d": {
+                    "predictions_total": 208,
+                    "outcomes_resolved": 208,
+                    "accuracy_all": 0.3558,
+                    "brier_all": 0.3882,
+                    "ece_all": 0.4009,
+                    "hit_rate_all": 0.3558,
+                    "accuracy_7d": 0.2778,
+                    "brier_7d": 0.4333,
+                    "ece_7d": 0.4842,
+                    "hit_rate_7d": 0.2778,
+                    "precision_10": 0.3336,
+                    "precision_50": 0.3354,
+                    "coverage_per_day": 6.93,
+                    "trend_accuracy": "declining",
+                    "trend_brier": "declining"
+                  }
+                }
+              }
+            },
+            "latest_source_meta": {
+              "source": "shared_decision_core_quantlab_forecast_snapshot",
+              "asof": "2026-03-20",
+              "fresh": true,
+              "stale_days": 0,
+              "gate_rejection_breakdown": {
+                "short": {
+                  "rejected_non_buy_total": 245,
+                  "rejected_non_high_total": 0,
+                  "rejected_gated_total": 0,
+                  "rejected_non_uptrend_total": 0,
+                  "missing_doc_total": 0
+                },
+                "medium": {
+                  "rejected_non_buy_total": 245,
+                  "rejected_non_high_total": 0,
+                  "rejected_gated_total": 0,
+                  "rejected_non_uptrend_total": 0,
+                  "missing_doc_total": 0
+                },
+                "long": {
+                  "rejected_non_buy_total": 245,
+                  "rejected_non_high_total": 0,
+                  "rejected_gated_total": 0,
+                  "rejected_non_uptrend_total": 0,
+                  "missing_doc_total": 0
+                }
+              },
+              "verified_counts": {
+                "stocks": {
+                  "short": 0,
+                  "medium": 0,
+                  "long": 0
+                },
+                "etfs": {
+                  "short": 0,
+                  "medium": 0,
+                  "long": 0
+                }
+              }
+            }
+          },
+          "forecast": {
+            "avg_accuracy_7d": 0.5767,
+            "avg_brier_7d": 0.2404
+          },
+          "scientific": {
+            "avg_accuracy_7d": 0.5309,
+            "avg_hit_rate_7d": 0.0113
+          },
+          "elliott": {
+            "avg_accuracy_7d": 0.471
+          },
+          "notes": {
+            "drift_basis": "daily_learning_reports",
+            "champion_vs_challenger": "forecast-specific champion/challenger remains managed by forecast weekly pipeline; this report summarizes learning-layer impact.",
+            "error_taxonomy": "gate rejection deltas and 30d stock-analyzer false-positive classes included."
+          }
+        }
+      },
+      "monthly": {
+        "path": "/Users/michaelpuchowezki/Dev/rubikvault-site/public/data/reports/learning-monthly-latest.json",
+        "summary": {
+          "schema_version": "rv.learning.monthly.v1",
+          "generated_at": "2026-03-20T07:34:12.680Z",
+          "month_id": "2026-03",
+          "end_date": "2026-03-20",
+          "days_covered": 18,
+          "summary": {
+            "status": "VERBESSERUNG ✅",
+            "features_tracked": 4,
+            "analyzer_predictions_avg_30d": 0,
+            "analyzer_precision_10_avg_30d": 0.4493,
+            "analyzer_brier_avg_30d": 0.3931
+          },
+          "analyzer": {
+            "latest": {
+              "name": "Stock Analyzer",
+              "type": "best_setups_horizon_buy_signals",
+              "predictions_total": 259,
+              "outcomes_resolved": 259,
+              "accuracy_all": 0.39,
+              "brier_all": 0.37,
+              "ece_all": 0.3694,
+              "hit_rate_all": 0.39,
+              "accuracy_7d": 0.3654,
+              "brier_7d": 0.3829,
+              "ece_7d": 0.4077,
+              "hit_rate_7d": 0.3654,
+              "precision_10": 0.4585,
+              "precision_50": 0.4594,
+              "precision_at_10": 0.4585,
+              "precision_at_50": 0.4594,
+              "coverage_per_day": 8.63,
+              "coverage_7d": 7.43,
+              "by_horizon": {
+                "1d": {
+                  "predictions_total": 51,
+                  "outcomes_resolved": 51,
+                  "accuracy_all": 0.5294,
+                  "brier_all": 0.2958,
+                  "ece_all": 0.241,
+                  "hit_rate_all": 0.5294,
+                  "accuracy_7d": 0.5625,
+                  "brier_7d": 0.2693,
+                  "ece_7d": 0.2356,
+                  "hit_rate_7d": 0.5625,
+                  "precision_10": 0.5833,
+                  "precision_50": 0.5833,
+                  "coverage_per_day": 1.7,
+                  "trend_accuracy": "improving",
+                  "trend_brier": "improving"
+                },
+                "20d": {
+                  "predictions_total": 208,
+                  "outcomes_resolved": 208,
+                  "accuracy_all": 0.3558,
+                  "brier_all": 0.3882,
+                  "ece_all": 0.4009,
+                  "hit_rate_all": 0.3558,
+                  "accuracy_7d": 0.2778,
+                  "brier_7d": 0.4333,
+                  "ece_7d": 0.4842,
+                  "hit_rate_7d": 0.2778,
+                  "precision_10": 0.3336,
+                  "precision_50": 0.3354,
+                  "coverage_per_day": 6.93,
+                  "trend_accuracy": "declining",
+                  "trend_brier": "declining"
+                }
+              },
+              "by_asset_class": {
+                "stock": {
+                  "predictions_total": 259,
+                  "outcomes_resolved": 259,
+                  "accuracy_all": 0.39,
+                  "brier_all": 0.37,
+                  "ece_all": 0.3694,
+                  "hit_rate_all": 0.39,
+                  "accuracy_7d": 0.3654,
+                  "brier_7d": 0.3829,
+                  "ece_7d": 0.4077,
+                  "hit_rate_7d": 0.3654,
+                  "precision_10": 0.4585,
+                  "precision_50": 0.4594,
+                  "coverage_per_day": 8.63,
+                  "trend_accuracy": "improving",
+                  "trend_brier": "improving",
+                  "by_horizon": {
+                    "1d": {
+                      "predictions_total": 51,
+                      "outcomes_resolved": 51,
+                      "accuracy_all": 0.5294,
+                      "brier_all": 0.2958,
+                      "ece_all": 0.241,
+                      "hit_rate_all": 0.5294,
+                      "accuracy_7d": 0.5625,
+                      "brier_7d": 0.2693,
+                      "ece_7d": 0.2356,
+                      "hit_rate_7d": 0.5625,
+                      "precision_10": 0.5833,
+                      "precision_50": 0.5833,
+                      "coverage_per_day": 1.7,
+                      "trend_accuracy": "improving",
+                      "trend_brier": "improving"
+                    },
+                    "20d": {
+                      "predictions_total": 208,
+                      "outcomes_resolved": 208,
+                      "accuracy_all": 0.3558,
+                      "brier_all": 0.3882,
+                      "ece_all": 0.4009,
+                      "hit_rate_all": 0.3558,
+                      "accuracy_7d": 0.2778,
+                      "brier_7d": 0.4333,
+                      "ece_7d": 0.4842,
+                      "hit_rate_7d": 0.2778,
+                      "precision_10": 0.3336,
+                      "precision_50": 0.3354,
+                      "coverage_per_day": 6.93,
+                      "trend_accuracy": "declining",
+                      "trend_brier": "declining"
+                    }
+                  }
+                }
+              },
+              "false_positive_classes": {
+                "weak_consensus": 158
+              },
+              "trend_accuracy": "improving",
+              "trend_brier": "improving",
+              "outcome_dates": [
+                "2026-02-19",
+                "2026-02-20",
+                "2026-02-23",
+                "2026-02-24",
+                "2026-02-25",
+                "2026-02-26",
+                "2026-02-27",
+                "2026-03-02",
+                "2026-03-03",
+                "2026-03-04",
+                "2026-03-05",
+                "2026-03-06",
+                "2026-03-09",
+                "2026-03-10",
+                "2026-03-11",
+                "2026-03-12",
+                "2026-03-13",
+                "2026-03-16",
+                "2026-03-17",
+                "2026-03-18",
+                "2026-03-19",
+                "2026-03-20"
+              ],
+              "stability": null,
+              "churn": null,
+              "learning_status": "SAFE_MODE",
+              "safety_switch": {
+                "level": "RED",
+                "actions": [
+                  "freeze_promotions",
+                  "buy_eligible_false"
+                ],
+                "trigger": "precision_red"
+              },
+              "false_positive_classes_30d": {
+                "weak_consensus": 158
+              },
+              "predictions_today": 0,
+              "source_meta": {
+                "source": "shared_decision_core_quantlab_forecast_snapshot",
+                "asof": "2026-03-20",
+                "fresh": true,
+                "stale_days": 0,
+                "gate_rejection_breakdown": {
+                  "short": {
+                    "rejected_non_buy_total": 245,
+                    "rejected_non_high_total": 0,
+                    "rejected_gated_total": 0,
+                    "rejected_non_uptrend_total": 0,
+                    "missing_doc_total": 0
+                  },
+                  "medium": {
+                    "rejected_non_buy_total": 245,
+                    "rejected_non_high_total": 0,
+                    "rejected_gated_total": 0,
+                    "rejected_non_uptrend_total": 0,
+                    "missing_doc_total": 0
+                  },
+                  "long": {
+                    "rejected_non_buy_total": 245,
+                    "rejected_non_high_total": 0,
+                    "rejected_gated_total": 0,
+                    "rejected_non_uptrend_total": 0,
+                    "missing_doc_total": 0
+                  }
+                },
+                "verified_counts": {
+                  "stocks": {
+                    "short": 0,
+                    "medium": 0,
+                    "long": 0
+                  },
+                  "etfs": {
+                    "short": 0,
+                    "medium": 0,
+                    "long": 0
+                  }
+                }
+              },
+              "gate_rejection_breakdown": {
+                "short": {
+                  "rejected_non_buy_total": 245,
+                  "rejected_non_high_total": 0,
+                  "rejected_gated_total": 0,
+                  "rejected_non_uptrend_total": 0,
+                  "missing_doc_total": 0
+                },
+                "medium": {
+                  "rejected_non_buy_total": 245,
+                  "rejected_non_high_total": 0,
+                  "rejected_gated_total": 0,
+                  "rejected_non_uptrend_total": 0,
+                  "missing_doc_total": 0
+                },
+                "long": {
+                  "rejected_non_buy_total": 245,
+                  "rejected_non_high_total": 0,
+                  "rejected_gated_total": 0,
+                  "rejected_non_uptrend_total": 0,
+                  "missing_doc_total": 0
+                }
+              }
+            },
+            "learning_status": "SAFE_MODE",
+            "latest_safety_switch": {
+              "level": "RED",
+              "actions": [
+                "freeze_promotions",
+                "buy_eligible_false"
+              ],
+              "trigger": "precision_red"
+            },
+            "latest_false_positive_classes_30d": {
+              "weak_consensus": 158
+            },
+            "latest_gate_rejection_breakdown": {
+              "short": {
+                "rejected_non_buy_total": 245,
+                "rejected_non_high_total": 0,
+                "rejected_gated_total": 0,
+                "rejected_non_uptrend_total": 0,
+                "missing_doc_total": 0
+              },
+              "medium": {
+                "rejected_non_buy_total": 245,
+                "rejected_non_high_total": 0,
+                "rejected_gated_total": 0,
+                "rejected_non_uptrend_total": 0,
+                "missing_doc_total": 0
+              },
+              "long": {
+                "rejected_non_buy_total": 245,
+                "rejected_non_high_total": 0,
+                "rejected_gated_total": 0,
+                "rejected_non_uptrend_total": 0,
+                "missing_doc_total": 0
+              }
+            },
+            "latest_by_horizon": {
+              "1d": {
+                "predictions_total": 51,
+                "outcomes_resolved": 51,
+                "accuracy_all": 0.5294,
+                "brier_all": 0.2958,
+                "ece_all": 0.241,
+                "hit_rate_all": 0.5294,
+                "accuracy_7d": 0.5625,
+                "brier_7d": 0.2693,
+                "ece_7d": 0.2356,
+                "hit_rate_7d": 0.5625,
+                "precision_10": 0.5833,
+                "precision_50": 0.5833,
+                "coverage_per_day": 1.7,
+                "trend_accuracy": "improving",
+                "trend_brier": "improving"
+              },
+              "20d": {
+                "predictions_total": 208,
+                "outcomes_resolved": 208,
+                "accuracy_all": 0.3558,
+                "brier_all": 0.3882,
+                "ece_all": 0.4009,
+                "hit_rate_all": 0.3558,
+                "accuracy_7d": 0.2778,
+                "brier_7d": 0.4333,
+                "ece_7d": 0.4842,
+                "hit_rate_7d": 0.2778,
+                "precision_10": 0.3336,
+                "precision_50": 0.3354,
+                "coverage_per_day": 6.93,
+                "trend_accuracy": "declining",
+                "trend_brier": "declining"
+              }
+            },
+            "latest_by_asset_class": {
+              "stock": {
+                "predictions_total": 259,
+                "outcomes_resolved": 259,
+                "accuracy_all": 0.39,
+                "brier_all": 0.37,
+                "ece_all": 0.3694,
+                "hit_rate_all": 0.39,
+                "accuracy_7d": 0.3654,
+                "brier_7d": 0.3829,
+                "ece_7d": 0.4077,
+                "hit_rate_7d": 0.3654,
+                "precision_10": 0.4585,
+                "precision_50": 0.4594,
+                "coverage_per_day": 8.63,
+                "trend_accuracy": "improving",
+                "trend_brier": "improving",
+                "by_horizon": {
+                  "1d": {
+                    "predictions_total": 51,
+                    "outcomes_resolved": 51,
+                    "accuracy_all": 0.5294,
+                    "brier_all": 0.2958,
+                    "ece_all": 0.241,
+                    "hit_rate_all": 0.5294,
+                    "accuracy_7d": 0.5625,
+                    "brier_7d": 0.2693,
+                    "ece_7d": 0.2356,
+                    "hit_rate_7d": 0.5625,
+                    "precision_10": 0.5833,
+                    "precision_50": 0.5833,
+                    "coverage_per_day": 1.7,
+                    "trend_accuracy": "improving",
+                    "trend_brier": "improving"
+                  },
+                  "20d": {
+                    "predictions_total": 208,
+                    "outcomes_resolved": 208,
+                    "accuracy_all": 0.3558,
+                    "brier_all": 0.3882,
+                    "ece_all": 0.4009,
+                    "hit_rate_all": 0.3558,
+                    "accuracy_7d": 0.2778,
+                    "brier_7d": 0.4333,
+                    "ece_7d": 0.4842,
+                    "hit_rate_7d": 0.2778,
+                    "precision_10": 0.3336,
+                    "precision_50": 0.3354,
+                    "coverage_per_day": 6.93,
+                    "trend_accuracy": "declining",
+                    "trend_brier": "declining"
+                  }
+                }
+              }
+            },
+            "latest_source_meta": {
+              "source": "shared_decision_core_quantlab_forecast_snapshot",
+              "asof": "2026-03-20",
+              "fresh": true,
+              "stale_days": 0,
+              "gate_rejection_breakdown": {
+                "short": {
+                  "rejected_non_buy_total": 245,
+                  "rejected_non_high_total": 0,
+                  "rejected_gated_total": 0,
+                  "rejected_non_uptrend_total": 0,
+                  "missing_doc_total": 0
+                },
+                "medium": {
+                  "rejected_non_buy_total": 245,
+                  "rejected_non_high_total": 0,
+                  "rejected_gated_total": 0,
+                  "rejected_non_uptrend_total": 0,
+                  "missing_doc_total": 0
+                },
+                "long": {
+                  "rejected_non_buy_total": 245,
+                  "rejected_non_high_total": 0,
+                  "rejected_gated_total": 0,
+                  "rejected_non_uptrend_total": 0,
+                  "missing_doc_total": 0
+                }
+              },
+              "verified_counts": {
+                "stocks": {
+                  "short": 0,
+                  "medium": 0,
+                  "long": 0
+                },
+                "etfs": {
+                  "short": 0,
+                  "medium": 0,
+                  "long": 0
+                }
+              }
+            }
+          },
+          "rolling_windows": {
+            "d30": {
+              "days_requested": 30,
+              "days_covered": 18,
+              "analyzer_precision_10_avg": 0.4493,
+              "analyzer_precision_50_avg": 0.4503,
+              "analyzer_brier_avg": 0.3931,
+              "analyzer_ece_avg": 0.416,
+              "analyzer_predictions_avg": 0,
+              "forecast_accuracy_avg": 0.5322,
+              "scientific_hit_rate_avg": 0.0107,
+              "elliott_accuracy_avg": 0.5108
+            },
+            "d90": {
+              "days_requested": 90,
+              "days_covered": 18,
+              "analyzer_precision_10_avg": 0.4493,
+              "analyzer_precision_50_avg": 0.4503,
+              "analyzer_brier_avg": 0.3931,
+              "analyzer_ece_avg": 0.416,
+              "analyzer_predictions_avg": 0,
+              "forecast_accuracy_avg": 0.5322,
+              "scientific_hit_rate_avg": 0.0107,
+              "elliott_accuracy_avg": 0.5108
+            },
+            "d180": {
+              "days_requested": 180,
+              "days_covered": 18,
+              "analyzer_precision_10_avg": 0.4493,
+              "analyzer_precision_50_avg": 0.4503,
+              "analyzer_brier_avg": 0.3931,
+              "analyzer_ece_avg": 0.416,
+              "analyzer_predictions_avg": 0,
+              "forecast_accuracy_avg": 0.5322,
+              "scientific_hit_rate_avg": 0.0107,
+              "elliott_accuracy_avg": 0.5108
+            }
+          },
+          "source_attribution": {
+            "analyzer_predictions_avg_30d": 0,
+            "forecast_predictions_avg_30d": 13605,
+            "scientific_predictions_avg_30d": 954.4444,
+            "elliott_predictions_avg_30d": 969.9444
+          },
+          "top_gate_rejection_classes_30d": [
+            {
+              "code": "rejected_non_buy_total",
+              "count": 1500
+            },
+            {
+              "code": "rejected_non_high_total",
+              "count": 4
+            },
+            {
+              "code": "rejected_non_uptrend_total",
+              "count": 1
+            },
+            {
+              "code": "rejected_gated_total",
+              "count": 0
+            },
+            {
+              "code": "missing_doc_total",
+              "count": 0
+            }
+          ],
+          "promotion_rollback_notes": {
+            "analyzer": "promotion/rollback automation not yet enabled; monthly report tracks readiness metrics only.",
+            "forecast": "forecast monthly pipeline remains separate and should be reviewed alongside this learning report."
+          }
+        }
+      },
+      "ssot_parity": {
+        "path": "/Users/michaelpuchowezki/Dev/rubikvault-site/mirrors/learning/reports/best-setups-ssot-parity-latest.json",
+        "summary": {
+          "total": 3,
+          "ok": 3,
+          "failed": 0
+        }
+      }
+    },
+    "candidate_counts": {
+      "quantlab_rows_total": 12951,
+      "quantlab_rows_stocks": 11422,
+      "quantlab_rows_etfs": 1529,
+      "analyzable_tickers": 120,
+      "quantlab_ranked": 120,
+      "quantlab_ranked_stocks": 119,
+      "quantlab_ranked_etfs": 1,
+      "forecast_short": 0,
+      "forecast_medium": 0,
+      "forecast_long": 0,
+      "unique_tickers": 120,
+      "shard_count": {
+        "stocks": 36,
+        "etfs": 14
+      }
+    },
+    "setup_phases": {
+      "early": 8,
+      "mid": 26,
+      "late": 17
+    },
+    "snapshots_date": null,
+    "verified_counts": {
+      "stocks": {
+        "short": 10,
+        "medium": 10,
+        "long": 10
+      },
+      "etfs": {
+        "short": 1,
+        "medium": 1,
+        "long": 1
+      }
+    }
+  },
+  "deep_diagnosis": {
+    "forecast": {
+      "name": "Forecast System v3.0",
+      "type": "price_direction_probability",
+      "predictions_total": 17172,
+      "outcomes_resolved": 17172,
+      "accuracy_all": 0.5676,
+      "brier_all": 0.242,
+      "hit_rate_all": 0.5676,
+      "accuracy_7d": 0.5727,
+      "brier_7d": 0.2423,
+      "hit_rate_7d": 0.5727,
+      "trend_accuracy": "improving",
+      "trend_brier": "stable",
+      "predictions_today": 2424,
+      "source_meta": {
+        "source": "forecast_latest_envelope",
+        "asof": "2026-03-19",
+        "fresh": false,
+        "stale_days": 1
+      }
+    },
+    "scientific": {
+      "name": "Scientific Analyzer v9.1",
+      "type": "setup_trigger_breakout",
+      "predictions_total": 9342,
+      "outcomes_resolved": 9342,
+      "accuracy_all": 0.5322,
+      "brier_all": 0.2871,
+      "hit_rate_all": 0.0104,
+      "accuracy_7d": 0.538,
+      "brier_7d": 0.2965,
+      "hit_rate_7d": 0.0091,
+      "trend_accuracy": "improving",
+      "trend_brier": "declining",
+      "predictions_today": 0,
+      "source_meta": {
+        "source": "scientific_missing",
+        "asof": null,
+        "fresh": false,
+        "stale_days": null
+      }
+    },
+    "elliott": {
+      "name": "Elliott Waves DFMSIF v1.0",
+      "type": "wave_direction_forecast",
+      "predictions_total": 7717,
+      "outcomes_resolved": 7717,
+      "accuracy_all": 0.4754,
+      "brier_all": 0.3533,
+      "hit_rate_all": 0.4754,
+      "accuracy_7d": 0.4869,
+      "brier_7d": 0.3479,
+      "hit_rate_7d": 0.4869,
+      "trend_accuracy": "improving",
+      "trend_brier": "improving",
+      "predictions_today": 1500,
+      "source_meta": {
+        "source": "marketphase_per_symbol",
+        "asof": "2026-03-18",
+        "fresh": false,
+        "stale_days": 2
+      }
+    },
+    "stock_analyzer": {
+      "name": "Stock Analyzer",
+      "type": "ranking_stability",
+      "stability": null,
+      "churn": null,
+      "rankings_today": 0,
+      "source_meta": {
+        "source": "v7_stock_rows",
+        "asof": null,
+        "fresh": false,
+        "stale_days": null
+      }
+    }
+  },
+  "weekly_comparison": {
+    "forecast": {
+      "metric_label": "Accuracy",
+      "this_week": 0.5704,
+      "last_week": 0.5093
+    },
+    "scientific": {
+      "metric_label": "Hit Rate",
+      "this_week": 0.0116,
+      "last_week": 0.0133
+    },
+    "elliott": {
+      "metric_label": "Accuracy",
+      "this_week": 0.4686,
+      "last_week": 0.5129
+    },
+    "quantlab": {
+      "metric_label": "Task Success Rate"
+    }
+  },
+  "improvements_active": [
+    "forecast_calibration_feedback",
+    "forecast_adaptive_confidence",
+    "scientific_signal_threshold_60",
+    "scientific_setup_decay_10d",
+    "elliott_quality_filter_top500",
+    "stock_ema_smoothing_alpha03",
+    "cross_feature_conviction",
+    "scientific_atr_breakout_threshold"
+  ]
+}
