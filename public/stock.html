@@ -258,6 +258,9 @@
     else if (_volPctile > 75 && riskLabel === 'Low') riskLabel = 'Medium';
   }
   let riskColor = riskLabel==='High'?'var(--red)':riskLabel==='Elevated'?'var(--yellow)':riskLabel==='Medium'?'var(--yellow)':riskLabel==='Unavailable'?'var(--text-dim)':'var(--green)';
+  if (riskLabel === 'Elevated' && _extremeVolPctile) {
+    _integrityItems.push({ text:'Risk classification qualified by mixed volatility signals', color:'var(--yellow)' });
+  }
   const trendColor=trendWord==='uptrend'?'var(--green)':trendWord==='downtrend'?'var(--red)':'var(--yellow)';
   const isExtremeVol = _states.volatility === 'EXTREME';
   const r52pct=_guard.corrections.r52pct ?? s.range_52w_pct;
@@ -1572,6 +1575,11 @@
       const hpDate = effectiveHpDoc.computed_at ? effectiveHpDoc.computed_at.slice(0,10) : effectiveHpDoc.latest_date || '\u2014';
       const hpSource = effectiveHpDoc.synthetic ? 'Source: synthetic baseline' : 'Source: public historical data';
       hpAsof.textContent = hpSource + ' · Event stats as-of: ' + hpDate + (regDoc?.date ? ' · Regime snapshot as-of: ' + regDoc.date : '');
+      if (regDoc?.date && hpDate && regDoc.date !== hpDate) {
+        _integrityItems.push({ text:'Historical and regime timelines differ', color:'var(--yellow)' });
+        const banner = document.getElementById('rv-integrity-banner');
+        if (banner) banner.innerHTML = window._renderIntegrityBanner();
+      }
     }
     const regBar = document.getElementById('hp-regime-bar');
     if (regBar && regDoc) {
