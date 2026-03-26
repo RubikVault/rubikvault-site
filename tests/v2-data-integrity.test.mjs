@@ -115,8 +115,14 @@ test('transformV2ToStockShape produces canonical fresh price and stats', () => {
         indicators: historicalIndicatorPayload.indicators,
       },
       historicalMeta: { status: 'stale', data_date: yesterday },
-      governanceData: null,
+      governanceData: {
+        evaluation_v4: {
+          scientific: { status: 'ok', as_of: yesterday, value: { direction: 'bullish' } }
+        }
+      },
       governanceMeta: { status: 'stale', data_date: yesterday },
+      fundamentalsData: { ticker: 'QCOM', marketCap: 1000, nextEarningsDate: '2026-04-29' },
+      fundamentalsMeta: { status: 'fresh', data_date: yesterday },
     }
   );
 
@@ -125,6 +131,8 @@ test('transformV2ToStockShape produces canonical fresh price and stats', () => {
   assert.equal(payload.data.market_stats.stats.rsi14, 37.4);
   assert.equal(payload.metadata.analysis.latestDataDate, yesterday);
   assert.equal(payload.metadata.analysis.integrity.status, 'ok');
+  assert.equal(payload.data.fundamentals.nextEarningsDate, '2026-04-29');
+  assert.equal(payload.evaluation_v4.scientific.status, 'ok');
 });
 
 test('deriveIntegrity flags missing metrics as partial', () => {

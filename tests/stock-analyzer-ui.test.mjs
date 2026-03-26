@@ -480,7 +480,7 @@ test('Live stock.html makes market context wording timeframe-aware', async () =>
 test('Live stock.html qualifies historical confidence strength', async () => {
   const fs = await import('node:fs');
   const content = fs.readFileSync(new URL('../public/stock.html', import.meta.url), 'utf-8');
-  assert.ok(content.includes('pooled sample'), 'Historical confidence qualifier is missing');
+  assert.ok(content.includes('pooled historical observations'), 'Historical confidence qualifier is missing');
 });
 
 test('Live stock.html exposes compact decision meta summary', async () => {
@@ -495,8 +495,9 @@ test('Live stock.html renders causal risk explanation from final risk state', as
   const fs = await import('node:fs');
   const content = fs.readFileSync(new URL('../public/stock.html', import.meta.url), 'utf-8');
   assert.ok(content.includes('Driver:'), 'Risk driver label is missing');
-  assert.ok(content.includes('Context:'), 'Risk context label is missing');
+  assert.ok(content.includes('Override applied:'), 'Risk override label is missing');
   assert.ok(content.includes('Risk override active → confidence moderated'), 'Risk override integrity copy is missing');
+  assert.ok(content.includes('displayLabel'), 'Final risk display label is missing');
 });
 
 test('Live stock.html hardens trade plan and checklist empty states', async () => {
@@ -511,8 +512,16 @@ test('Live stock.html enriches catalysts and signal hierarchy copy', async () =>
   const fs = await import('node:fs');
   const content = fs.readFileSync(new URL('../public/stock.html', import.meta.url), 'utf-8');
   assert.ok(content.includes('Next expected earnings window:'), 'Catalyst next-window copy is missing');
-  assert.ok(content.includes('Catalyst data currently limited'), 'Catalyst limited-data copy is missing');
-  assert.ok(content.includes('Weak broader trend · short-term rebound signals active · no override'), 'Signal hierarchy summary is missing');
+  assert.ok(content.includes('Catalyst feed currently limited'), 'Catalyst limited-data copy is missing');
+  assert.ok(content.includes('Primary trend: weak downtrend · Tactical rebound: active · Override status: none'), 'Signal hierarchy summary is missing');
+});
+
+test('Live stock.html differentiates volume omission reason and model evidence visibility', async () => {
+  const fs = await import('node:fs');
+  const content = fs.readFileSync(new URL('../public/stock.html', import.meta.url), 'utf-8');
+  assert.ok(content.includes('Volume classification omitted in current analysis mode.'), 'Volume omission wording is missing');
+  assert.ok(content.includes('_visibleModelEvidence.length ?'), 'Model evidence visibility guard is missing');
+  assert.ok(content.includes('Price as-of:'), 'Header price as-of label is missing');
 });
 
 // ─── K) Initial HTML State Tests ────────────────────────────────────────────

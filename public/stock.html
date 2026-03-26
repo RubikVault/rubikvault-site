@@ -48,7 +48,7 @@
       </a>
     </nav>
     <div class="rv-header-tools" aria-live="polite">
-      <div class="rv-data-updated" style="font-size: 12px; color: var(--rv-text-muted);">Snapshot: <span id="rv-data-updated-date">...</span> · Latest Data: <span id="rv-data-asof">...</span></div>
+      <div class="rv-data-updated" style="font-size: 12px; color: var(--rv-text-muted);">Snapshot: <span id="rv-data-updated-date">...</span> · Price as-of: <span id="rv-data-asof">...</span></div>
       <div class="rv-market-clock">
         <span class="rv-clock-time" id="rv-ny-time">NY: --:--:--</span>
         <span class="rv-clock-status">
@@ -234,11 +234,20 @@
     return parts.length ? '<span style="font-size:.5rem;color:var(--text-muted)">' + parts.join(' \u00B7 ') + '</span>' : '';
   };
 
+  const _fund = data.fundamentals || null;
+  const _volumeInputsAvailable = Number.isFinite(latestBar?.volume)
+    || Number.isFinite(prices?.volume)
+    || Number.isFinite(s.avg_volume_20d)
+    || Number.isFinite(s.volume_ma_20)
+    || Number.isFinite(s.volume_ratio_20d);
   const _normalizeExplanationLine = (line) => {
     const text = String(line || '').trim();
     if (!text) return text;
-    if (text === 'Volume data unavailable — classification omitted.') return 'Volume classification unavailable due to data gap.';
-    if (text === 'Volume data is insufficient for classification.') return 'Volume classification unavailable due to data gap.';
+    if (text === 'Volume data unavailable — classification omitted.' || text === 'Volume data is insufficient for classification.') {
+      return _volumeInputsAvailable
+        ? 'Volume classification omitted in current analysis mode.'
+        : 'Volume classification unavailable due to data feed issues.';
+    }
     return text;
   };
   const _ageDaysFrom = (value) => {
@@ -287,6 +296,7 @@
   const isExtremeVol = _states.volatility === 'EXTREME';
   const finalRisk = {
     label: riskLabel,
+    displayLabel: Boolean(riskInputsComplete && _extremeVolPctile && riskLabel === 'Elevated') ? `${riskLabel} (override)` : riskLabel,
     color: riskColor,
     regimeLabel: riskInputsComplete ? (isExtremeVol ? 'Extreme Volatility' : 'Normal') : 'Unavailable',
     driver: !riskInputsComplete ? 'Missing volatility inputs'
@@ -294,13 +304,16 @@
       : _elevatedVolPctile ? `Relative volatility elevated (${_volPctile.toFixed(0)}th percentile)`
       : 'Volatility inputs aligned',
     context: !riskInputsComplete ? 'Risk state unavailable until ATR and volatility inputs are complete.'
-      : _extremeVolPctile && riskLabel === 'Elevated' ? 'Moderated by low realized volatility and supportive structural context.'
+      : _extremeVolPctile && riskLabel === 'Elevated' ? 'Low realized volatility and supportive structural context moderate the final classification.'
       : _states.volatility === 'EXTREME' ? 'Structural volatility state confirms a high-risk regime.'
       : (_states.volatility === 'LOW' || _states.volatility === 'COMPRESSED') ? 'Low realized volatility tempers net risk.'
       : 'No additional volatility override active.',
     override: Boolean(riskInputsComplete && _extremeVolPctile && riskLabel === 'Elevated'),
     unavailable: !riskInputsComplete,
   };
+  finalRisk.summary = !riskInputsComplete
+    ? 'Risk state unavailable until ATR and volatility inputs are complete.'
+    : `${finalRisk.driver}. ${finalRisk.override ? 'Override applied: ' : 'Context: '}${finalRisk.context}`;
   window._rvCanonicalMetrics.finalRisk = finalRisk;
   if (finalRisk.override) {
     _integrityItems.push({ text:'Risk override active → confidence moderated', color:'var(--yellow)' });
@@ -346,7 +359,7 @@
   // Render Top Headline KPIs
   document.getElementById('sc-headline-kpis').innerHTML = [
     ['Trend', trendLabel, trendColor, 'Based on price vs SMA20/50/200 alignment'],
-    ['Risk', finalRisk.label, finalRisk.color, finalRisk.driver + '. ' + finalRisk.context],
+    ['Risk', finalRisk.displayLabel, finalRisk.color, finalRisk.summary],
     ['52W', r52Display, 'var(--text)', 'Position in 52-week range: (close\u2013low)/(high\u2013low)'],
     ['RSI', rsiFullLabel, rsiColor, 'Relative Strength Index (14d). <30 oversold, >70 overbought']
   ].map(x => '<div title="'+x[3]+'" style="padding:.4rem .6rem; border-radius:6px; background:rgba(255,255,255,0.02); border:1px solid var(--border); text-align:center; cursor:help"><div style="font-size:.6rem; color:var(--text-muted); text-transform:uppercase">'+x[0]+'</div><div style="font-weight:700; color:'+x[2]+'; font-size:.85rem">'+x[1]+'</div></div>').join('');
@@ -421,6 +434,39 @@
   const effectiveText = allHorizonsWait ? 'Neutral / Waiting stance'
     : hasHorizonSplit && baseVerdict === 'WAIT' ? 'Split consensus — no clear directional edge'
     : overallText;
+  const _modelEvidenceModules = (() => {
+    const ev4 = payload.evaluation_v4;
+    if (!ev4 || typeof ev4 !== 'object') return [];
+    const labels = { quantlab: 'QuantLab', elliott: 'Elliott', forecast: 'Forecast', scientific: 'Scientific' };
+    return Object.entries(labels).map(([key, label]) => {
+      const node = ev4[key];
+      if (!node || typeof node !== 'object') return null;
+      const status = node.status || (node.value ? 'ok' : 'unavailable');
+      const direction = node.value?.direction
+        || node.value?.signal
+        || node.value?.horizons?.['20d']?.direction
+        || node.value?.horizons?.['5d']?.direction
+        || node.value?.horizons?.['1d']?.direction
+        || (node.value?.active ? 'active' : null);
+      return {
+        key,
+        label,
+        status,
+        direction,
+        asOf: node.as_of || node.asOf || null,
+        reason: node.reason || null,
+      };
+    }).filter(Boolean);
+  })();
+  const _visibleModelEvidence = _modelEvidenceModules.filter((entry) => entry.status === 'ok');
+  const _decisionDrivers = (() => {
+    const set = new Set();
+    _visibleModelEvidence.forEach((entry) => set.add(entry.label));
+    const contributorHints = Object.values(horizonDecisionMap).map((slice) => slice?.scores?.contributors || {});
+    if (contributorHints.some((c) => Number.isFinite(c?.scientific_setup_score) || Number.isFinite(c?.scientific_trigger_score))) set.add('Scientific');
+    if (contributorHints.some((c) => Number.isFinite(c?.breakout_energy) || Number.isFinite(c?.vol_compression_20_60))) set.add('Breakout');
+    return [...set];
+  })();
 
   // Block status badges
   const _decisionBadge = _blockStatus([
@@ -474,7 +520,7 @@
   const items3D = [
     { label:'SMA 50', value:close>(s.sma50||0)?'Reclaimed':'Broken', badges:[], type: close>(s.sma50||0)?'bullish':'bearish' },
     { label:'Momentum', value:trendLabel, badges:[trendWord==='uptrend'?'Constructive':trendWord==='downtrend'?'Adverse':'Mixed'], type: trendWord==='uptrend'?'bullish':trendWord==='downtrend'?'bearish':'mixed' },
-    { label:'Risk', value:finalRisk.label, badges:(finalRisk.override?['Override active']:[]), type: finalRisk.label==='Low'?'bullish':finalRisk.label==='High'?'bearish':'mixed' }
+    { label:'Risk', value:finalRisk.displayLabel, badges:(finalRisk.override?['Override active']:[]), type: finalRisk.label==='Low'?'bullish':finalRisk.label==='High'?'bearish':'mixed' }
   ];
   const items1W = [
     { label:'MA Stack', value:maStack, badges:[maStack==='Constructive'?'Bullish':maStack==='Adverse'?'Bearish':'Neutral'], type: maStack==='Constructive'?'bullish':maStack==='Adverse'?'bearish':'mixed' },
@@ -844,13 +890,29 @@
   // Key Levels
   const levels=[];
   const addLvl=(l,p,src,hz)=>{if(p==null||!Number.isFinite(p))return;levels.push({label:l,price:p,kind:close>p?'support':'resistance',source:src,dist:((p-close)/close*100).toFixed(2),horizon:hz||'all'})};
+  const _levelSyncWarnings = [];
+  const _addWindowRangeLevels = (labelPrefix, windowBars, horizon) => {
+    if (!Array.isArray(windowBars) || !windowBars.length) return;
+    const highs = windowBars.map((b) => Number.isFinite(b?.high) ? Number(b.high) : Number(b?.close)).filter(Number.isFinite);
+    const lows = windowBars.map((b) => Number.isFinite(b?.low) ? Number(b.low) : Number(b?.close)).filter(Number.isFinite);
+    if (!highs.length || !lows.length) return;
+    let high = Math.max(...highs);
+    let low = Math.min(...lows);
+    if (Number.isFinite(close) && (close > high || close < low)) {
+      high = Math.max(high, close);
+      low = Math.min(low, close);
+      _levelSyncWarnings.push(`${labelPrefix} range synchronized to the latest close`);
+    }
+    addLvl(`${labelPrefix} High`, high, labelPrefix, horizon);
+    addLvl(`${labelPrefix} Low`, low, labelPrefix, horizon);
+  };
   addLvl('SMA 20',s.sma20,'MA','short');addLvl('SMA 50',s.sma50,'MA','mid');addLvl('SMA 200',s.sma200,'MA','long');
   addLvl('EMA 12',s.ema12,'EMA','short');addLvl('EMA 26',s.ema26,'EMA','mid');
   addLvl('BB Upper',s.bb_upper,'BB','short');addLvl('BB Lower',s.bb_lower,'BB','short');
   addLvl('52W High',s.high_52w,'52W','long');addLvl('52W Low',s.low_52w,'52W','long');
   if(s.high_52w!=null&&s.low_52w!=null){var fR=s.high_52w-s.low_52w;addLvl('Fib 23.6%',s.high_52w-fR*0.236,'Fib','mid');addLvl('Fib 38.2%',s.high_52w-fR*0.382,'Fib','mid');addLvl('Fib 50%',s.high_52w-fR*0.5,'Fib','mid');addLvl('Fib 61.8%',s.high_52w-fR*0.618,'Fib','long')}
-  if(bars.length>=5){var r5=bars.slice(-5);addLvl('5D High',Math.max(...r5.map(b=>b.high||b.close)),'5D','short');addLvl('5D Low',Math.min(...r5.map(b=>b.low||b.close)),'5D','short')}
-  if(bars.length>=20){var r20=bars.slice(-20);addLvl('20D High',Math.max(...r20.map(b=>b.high||b.close)),'20D','mid');addLvl('20D Low',Math.min(...r20.map(b=>b.low||b.close)),'20D','mid')}
+  if(bars.length>=5){var r5=bars.slice(-5);_addWindowRangeLevels('5D',r5,'short')}
+  if(bars.length>=20){var r20=bars.slice(-20);_addWindowRangeLevels('20D',r20,'mid')}
   if(bars.length>0){var lb=bars[bars.length-1],pH=lb.high||close,pL=lb.low||close,pC=lb.close||close,pv=(pH+pL+pC)/3;addLvl('Pivot',pv,'Pivot','short');addLvl('R1',2*pv-pL,'Pivot','short');addLvl('S1',2*pv-pH,'Pivot','short');addLvl('R2',pv+(pH-pL),'Pivot','mid');addLvl('S2',pv-(pH-pL),'Pivot','mid')}
   if(atr!=null){addLvl('ATR Support',close-atr,'ATR','short')}
   levels.sort((a,b)=>b.price-a.price);
@@ -897,6 +959,9 @@
     { check: levels.length > 0 && levels.length < 3, level: 'low_confidence', msg: 'Few levels available' },
     { check: atr == null, level: 'warning', msg: 'ATR-based levels unavailable' },
   ]);
+  if (_levelSyncWarnings.length) {
+    _integrityItems.push({ text: 'Key levels synchronized to the latest close', color: 'var(--yellow)' });
+  }
 
   // Dynamic Trade Plan values
   const targetRes = levels.find(l => l.kind === 'resistance');
@@ -971,10 +1036,10 @@
   else reboundConds.push('Near structure support bounds');
   const reboundPoints = reboundConds.map(r => '<li>'+r+'</li>').join('');
   const trendSignalSummary = trendWord === 'downtrend'
-    ? 'Weak broader trend · short-term rebound signals active · no override'
+    ? 'Primary trend: weak downtrend · Tactical rebound: active · Override status: none'
     : trendWord === 'uptrend'
-      ? 'Constructive broader trend · tactical pullback context'
-      : 'Mixed broader trend · tactical signals require confirmation';
+      ? 'Primary trend: constructive uptrend · Tactical context: pullback watch'
+      : 'Primary trend: mixed · Tactical signals require confirmation';
   const reboundQualifier = trendWord === 'downtrend'
     ? '<div style="font-size:.56rem;color:var(--text-muted);margin-top:.35rem;line-height:1.35">Short-term rebound signals do not override the weak broader trend.</div>'
     : '';
@@ -1098,7 +1163,7 @@
         <div style="border-top:1px solid rgba(255,255,255,0.04);margin-top:.75rem;padding-top:.5rem"><div style="font-size:.5rem;color:var(--text-muted);text-transform:uppercase;font-weight:700;letter-spacing:1px;margin-bottom:.3rem;opacity:.5">INTERPRETATION</div></div>
         ${renderStoryFlow()}
 
-        ${(()=>{const bullets=_normalizedBullets.slice(0,3);const gates=(_decision.trigger_gates||[]).slice(0,2);if(!bullets.length&&!gates.length)return '';const sentClr=_explanation.sentiment==='positive'?'var(--green)':_explanation.sentiment==='negative'?'var(--red)':'var(--yellow)';const sentIco=_explanation.sentiment==='positive'?'✓':_explanation.sentiment==='negative'?'✗':'•';const title=(effectiveVerdict==='BUY'||effectiveVerdict==='SELL')?'Why This Trade?':'Why No Trade?';return `<div style="margin-top:.75rem;margin-bottom:.5rem;padding:.6rem;border-radius:8px;background:rgba(255,255,255,0.01);border:1px solid rgba(255,255,255,0.03)"><div style="font-size:.62rem;color:var(--text-muted);text-transform:uppercase;font-weight:700;margin-bottom:.35rem">${title}</div><div style="display:grid;gap:3px">${bullets.map(b=>'<div style="font-size:.65rem;color:'+sentClr+';display:flex;gap:4px"><span>'+sentIco+'</span><span>'+_esc(b)+'</span></div>').join('')}${gates.map(g=>'<div style="font-size:.65rem;color:var(--yellow);display:flex;gap:4px"><span>⚠</span><span>'+_esc(g)+'</span></div>').join('')}</div></div>`})()}
+        ${(()=>{const bullets=_normalizedBullets.slice(0,3);const gates=(_decision.trigger_gates||[]).slice(0,2);if(!bullets.length&&!gates.length)return '';const sentClr=_explanation.sentiment==='positive'?'var(--green)':_explanation.sentiment==='negative'?'var(--red)':'var(--yellow)';const sentIco=_explanation.sentiment==='positive'?'✓':_explanation.sentiment==='negative'?'✗':'•';const title=(effectiveVerdict==='BUY'||effectiveVerdict==='SELL')?'Why This Trade?':'Why No Trade?';const rationaleRows=(effectiveVerdict==='BUY'||effectiveVerdict==='SELL'?bullets:bullets.map((b,idx)=>idx===0?'Primary blocker: '+b:idx===1?'Secondary context: '+b:b));return `<div style="margin-top:.75rem;margin-bottom:.5rem;padding:.6rem;border-radius:8px;background:rgba(255,255,255,0.01);border:1px solid rgba(255,255,255,0.03)"><div style="font-size:.62rem;color:var(--text-muted);text-transform:uppercase;font-weight:700;margin-bottom:.35rem">${title}</div><div style="display:grid;gap:3px">${rationaleRows.map(b=>'<div style="font-size:.65rem;color:'+sentClr+';display:flex;gap:4px"><span>'+sentIco+'</span><span>'+_esc(b)+'</span></div>').join('')}${gates.map(g=>'<div style="font-size:.65rem;color:var(--yellow);display:flex;gap:4px"><span>⚠</span><span>'+_esc(g)+'</span></div>').join('')}</div></div>`})()}
 
         <div style="border-top:1px solid rgba(255,255,255,0.04);margin-top:.75rem;padding-top:.5rem"><div style="font-size:.5rem;color:var(--text-muted);text-transform:uppercase;font-weight:700;letter-spacing:1px;margin-bottom:.3rem;opacity:.5">EVIDENCE</div></div>
         <div id="dyn-what-changed" style="margin-top:0.75rem;">
@@ -1137,9 +1202,9 @@
           </div>
           <div style="flex:1">
             <div style="font-size:.65rem;color:var(--text-muted)">RISK STATE</div>
-            <div style="font-size:1.2rem;font-weight:800;color:${finalRisk.color}">${finalRisk.label}</div>
+            <div style="font-size:1.2rem;font-weight:800;color:${finalRisk.color}">${finalRisk.displayLabel}</div>
             <div style="font-size:.58rem;color:var(--text-dim);margin-top:2px;font-style:italic;">Regime: <span style="color:${finalRisk.color};">${finalRisk.regimeLabel}</span></div>
-            <div style="font-size:.55rem;color:var(--text-dim);line-height:1.45;margin-top:3px">${riskInputsComplete ? '<span style="color:var(--text-muted)">Driver:</span> <span style="color:'+finalRisk.color+'">'+_esc(finalRisk.driver)+'</span><br><span style="color:var(--text-muted)">Context:</span> <span style="color:var(--text)">'+_esc(finalRisk.context)+'</span>' : 'Risk state unavailable — missing volatility inputs.'}</div>
+            <div style="font-size:.55rem;color:var(--text-dim);line-height:1.45;margin-top:3px">${riskInputsComplete ? '<span style="color:var(--text-muted)">Driver:</span> <span style="color:'+finalRisk.color+'">'+_esc(finalRisk.driver)+'</span><br><span style="color:var(--text-muted)">'+(finalRisk.override ? 'Override applied:' : 'Context:')+'</span> <span style="color:var(--text)">'+_esc(finalRisk.context)+'</span>' : 'Risk state unavailable — missing volatility inputs.'}</div>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:.2rem;margin-top:.3rem">
               <div title="Average True Range (14d) in dollar terms" style="font-size:.65rem;cursor:help"><span style="color:var(--text-muted)">ATR:</span> <span style="font-weight:600">${atr!=null?'$'+atr.toFixed(2):'—'}</span></div>
               <div title="ATR as percentage of price" style="font-size:.65rem;cursor:help"><span style="color:var(--text-muted)">ATR%:</span> <span style="font-weight:600">${atrPct!=null?atrPct.toFixed(2)+'%':'—'}</span></div>
@@ -1212,34 +1277,13 @@
             ${fund?.sector?`<div style="font-size:.55rem;color:var(--text-muted);margin-top:.3rem">${_esc(fund.sector)}${fund.industry?' · '+_esc(fund.industry):''}</div>`:''}
         </div>`;})()}
 
-        <div style="border-top:1px solid rgba(255,255,255,0.04);margin-top:.75rem;padding-top:.5rem"><div style="font-size:.5rem;color:var(--text-muted);text-transform:uppercase;font-weight:700;letter-spacing:1px;margin-bottom:.3rem;opacity:.5">MODEL EVIDENCE</div></div>
-        <!-- 4-Model Consensus -->
-        ${(()=>{const ev4=payload.evaluation_v4;const mg=_guard.panelGates.modelConsensus;if(!mg.show)return '';const ms=ev4?.input_states||{};const models=[{k:'quantlab',l:'QuantLab'},{k:'elliott',l:'Elliott'},{k:'forecast',l:'Forecast'},{k:'scientific',l:'Scientific'}];const dirMap=d=>d==='bullish'||d==='BUY'?{c:'var(--green)',l:'BUY'}:d==='bearish'||d==='SELL'||d==='AVOID'?{c:'var(--red)',l:String(d).toUpperCase()}:{c:'var(--yellow)',l:d?String(d).toUpperCase():'N/A'};return `
+        ${_visibleModelEvidence.length ? `<div style="border-top:1px solid rgba(255,255,255,0.04);margin-top:.75rem;padding-top:.5rem"><div style="font-size:.5rem;color:var(--text-muted);text-transform:uppercase;font-weight:700;letter-spacing:1px;margin-bottom:.3rem;opacity:.5">MODEL EVIDENCE</div></div>
         <div style="margin-top:0.6rem; padding:.5rem; border-radius:8px; background:rgba(255,255,255,0.01); border:1px solid rgba(255,255,255,0.03);">
-            <div style="font-size:.62rem; color:var(--text-dim); text-transform:uppercase; font-weight:700; margin-bottom:.35rem;">4-Model Consensus${mg.degraded?' <span style="font-size:.5rem;color:var(--yellow)">⚠ degraded</span>':''}</div>
-            <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:.25rem;">
-              ${models.map(m=>{const st=ms[m.k];const ok=st?.status==='ok';const dir=ok?dirMap(st?.featureStates?.direction||st?.direction||''):{c:'var(--text-muted)',l:'N/A'};return `<div style="text-align:center;padding:.3rem;border-radius:6px;background:rgba(255,255,255,0.02);border:1px solid var(--border);${!ok?'opacity:0.5':''}"><div style="font-size:.5rem;color:var(--text-muted);text-transform:uppercase">${m.l}</div><div style="font-size:.7rem;font-weight:800;color:${dir.c};margin-top:1px">${dir.l}</div></div>`}).join('')}
+            <div style="font-size:.62rem; color:var(--text-dim); text-transform:uppercase; font-weight:700; margin-bottom:.35rem;">Model modules contributing to the current analysis</div>
+            <div style="display:grid; grid-template-columns:repeat(${Math.min(4, Math.max(1, _visibleModelEvidence.length))},1fr); gap:.25rem;">
+              ${_visibleModelEvidence.map((entry)=>{const dir = String(entry.direction || entry.status || 'n/a').replace(/_/g,' ').toUpperCase();const dirColor = /BULL|BUY|ACTIVE/.test(dir)?'var(--green)':/BEAR|SELL|AVOID/.test(dir)?'var(--red)':'var(--yellow)';return `<div style="padding:.35rem;border-radius:6px;background:rgba(255,255,255,0.02);border:1px solid var(--border)"><div style="font-size:.5rem;color:var(--text-muted);text-transform:uppercase">${entry.label}</div><div style="font-size:.72rem;font-weight:800;color:${dirColor};margin-top:2px">${dir}</div><div style="font-size:.52rem;color:var(--text-dim);margin-top:2px">${entry.asOf ? 'as-of ' + _esc(String(entry.asOf).slice(0, 10)) : 'current module'}</div></div>`}).join('')}
             </div>
-        </div>`;})()}
-
-        <!-- Breakout Indicator (Mini) -->
-        <div style="margin-top:0.6rem; padding:.5rem; border-radius:8px; background:rgba(255,255,255,0.01); border:1px solid rgba(255,255,255,0.03);">
-            <div style="font-size: .62rem; color: var(--text-dim); text-transform: uppercase; font-weight: 700; margin-bottom: .25rem;">Breakout Indicator</div>
-            ${data.breakout_v2 && data.breakout_v2.state ? `
-            <div style="display:flex; justify-content:space-between; align-items:center;">
-                <span style="font-size: .75rem; font-weight: 800; color: ${data.breakout_v2.state === 'ARMED' ? 'var(--yellow)' : ['TRIGGERED','CONFIRMED'].includes(data.breakout_v2.state) ? 'var(--green)' : 'var(--accent)'}">${data.breakout_v2.state}</span>
-                <span style="font-size: .62rem; color: var(--text-dim); font-weight: 600;">Score: ${data.breakout_v2.scores?.total || 0}/100</span>
-            </div>
-            ${data.breakout_v2.scores?`<div style="display:flex;gap:.4rem;margin-top:4px">${['compression','volume','trigger'].filter(k=>data.breakout_v2.scores[k]!=null).map(k=>`<span style="font-size:.5rem;padding:1px 4px;border-radius:3px;background:rgba(255,255,255,0.03);border:1px solid var(--border);color:var(--text-dim)">${k.charAt(0).toUpperCase()+k.slice(1)}: <span style="font-weight:700;color:var(--accent)">${data.breakout_v2.scores[k]}</span></span>`).join('')}</div>`:''}
-            <div style="font-size: 0.58rem; color: var(--text-muted); margin-top: 3px; font-style: italic;">
-              ${_esc(data.breakout_v2.explanation || 'Wyckoff Absorption Model Setup')}
-            </div>
-            ` : `
-            <div style="font-size: 0.65rem; color: var(--text-muted); font-style: italic; margin-top: 2px;">
-              NONE — no breakout setup detected
-            </div>
-            `}
-        </div>
+        </div>` : ``}
 
       </div>
     </div>
@@ -1253,7 +1297,7 @@
         <div style="margin-bottom:0.75rem; padding:.6rem; border-radius:8px; background:rgba(255,255,255,0.01); border:1px solid rgba(255,255,255,0.03);">
             <div style="font-size: .62rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700; margin-bottom: .4rem;">Upcoming Catalysts</div>
             <div id="dyn-catalysts" style="display:flex; flex-direction:column; gap:4px;">
-                ${(()=>{const _fund=data.fundamentals||{};const nextWindow=_formatExpectedWindow(_fund.nextEarningsDate||_fund.earningsDate||_fund.next_earnings_date||null);if(nextWindow){return '<div style="font-size:0.68rem; color:var(--text-dim); font-style:italic;">0 confirmed catalysts in the 30-day forward window</div><div style="font-size:0.64rem;color:var(--text-muted)">Next expected earnings window: '+_esc(nextWindow)+' (unconfirmed)</div>';}if(!data.fundamentals){return '<div style="font-size:0.68rem; color:var(--text-dim); font-style:italic;">Catalyst data currently limited</div>';}return '<div style="font-size:0.68rem; color:var(--text-dim); font-style:italic;">0 confirmed catalysts in the 30-day forward window</div><div style="font-size:0.64rem;color:var(--text-muted)">No unconfirmed catalyst window available</div>';})()}
+                ${(()=>{const nextWindow=_formatExpectedWindow(_fund?.nextEarningsDate||_fund?.earningsDate||_fund?.next_earnings_date||null);const updatedAt=_fund?.updatedAt?String(_fund.updatedAt).slice(0,10):null;if(nextWindow){return '<div style="font-size:0.68rem; color:var(--text-dim); font-style:italic;">0 confirmed catalysts in the next 30 days</div><div style="font-size:0.64rem;color:var(--text-muted)">Next expected earnings window: '+_esc(nextWindow)+' (unconfirmed)</div>';}if(_fund){return '<div style="font-size:0.68rem; color:var(--text-dim); font-style:italic;">Catalyst feed currently limited</div><div style="font-size:0.64rem;color:var(--text-muted)">No confirmed events or next earnings window available from the active fundamentals source'+(updatedAt?' · profile as-of '+_esc(updatedAt):'')+'</div>';}return '<div style="font-size:0.68rem; color:var(--text-dim); font-style:italic;">Catalyst feed currently limited</div><div style="font-size:0.64rem;color:var(--text-muted)">Fundamentals source unavailable for this analysis.</div>';})()}
             </div>
         </div>
 
@@ -1577,7 +1621,7 @@
       <div style="flex:1;text-align:center"><div style="font-size:.55rem;color:var(--text-muted);text-transform:uppercase">Bias</div><div style="font-size:.85rem;font-weight:800;color:${biasColor}">${bias}</div></div>
       <div style="flex:1;text-align:center"><div style="font-size:.55rem;color:var(--text-muted);text-transform:uppercase">Events</div><div style="font-size:.85rem;font-weight:700;color:var(--text)">${keys.length}</div></div>
       <div style="flex:1;text-align:center"><div style="font-size:.55rem;color:var(--text-muted);text-transform:uppercase">Suspect</div><div style="font-size:.85rem;font-weight:700;color:${suspectCount>0?'var(--yellow)':'var(--text-muted)'}">${suspectCount}</div></div>
-      <div style="flex:1;text-align:center"><div style="font-size:.55rem;color:var(--text-muted);text-transform:uppercase">Confidence</div><div title="${confidence==='HIGH'?'High confidence is based on pooled historical sample size.':'Historical confidence is constrained by the current event sample.'}" style="font-size:.75rem;font-weight:700;color:${confColor}">${confidence}</div><div style="font-size:.48rem;color:var(--text-muted)">${totalN.toLocaleString('en-US')} obs${confidence==='HIGH'?' · pooled sample':''}</div></div>
+      <div style="flex:1;text-align:center"><div style="font-size:.55rem;color:var(--text-muted);text-transform:uppercase">Confidence</div><div title="${confidence==='HIGH'?'High confidence refers to the pooled historical dataset; individual event sample sizes may vary.':'Historical confidence is constrained by the current event sample.'}" style="font-size:.75rem;font-weight:700;color:${confColor}">${confidence}</div><div style="font-size:.48rem;color:var(--text-muted)">${confidence==='HIGH'?'Based on ':'Approximately '}${totalN.toLocaleString('en-US')} pooled historical observations</div></div>
     </div>`;
 
     // Build rows
@@ -1648,6 +1692,8 @@
     }
     const regBar = document.getElementById('hp-regime-bar');
     if (regBar && regDoc) {
+      const regimeAgeDays = _ageDaysFrom(regDoc.date);
+      const regimeDelayed = regimeAgeDays != null && regimeAgeDays > 2;
       const mColors={bull:'var(--green)',bear:'var(--red)'};
       const bColors={weak:'var(--red)',normal:'var(--yellow)',strong:'var(--green)'};
       const vMap={low_vol:'LOW',normal_vol:'NORMAL',high_vol:'HIGH'};
@@ -1658,7 +1704,7 @@
         {l:'Breadth %',v:(regDoc.breadth_above_ma50_pct!=null?regDoc.breadth_above_ma50_pct+'%':'-'),c:'var(--text-dim)'},
         {l:'Regime as-of',v:regDoc.date ? regDoc.date + ((_ageDaysFrom(regDoc.date) != null && _ageDaysFrom(regDoc.date) > 2) ? ' · stale' : '') : '-',c:'var(--text-muted)'}
       ];
-      regBar.innerHTML=pills.map(p=>`<div style="display:flex;flex-direction:column;align-items:center;padding:.3rem .65rem;border-radius:6px;background:rgba(255,255,255,0.02);border:1px solid var(--border)"><span style="font-size:.55rem;color:var(--text-muted);text-transform:uppercase;font-weight:700">${p.l}</span><span style="font-size:.72rem;font-weight:800;color:${p.c};margin-top:1px">${p.v}</span></div>`).join('');
+      regBar.innerHTML=pills.map(p=>`<div style="display:flex;flex-direction:column;align-items:center;padding:.3rem .65rem;border-radius:6px;background:${regimeDelayed?'rgba(251,191,36,0.05)':'rgba(255,255,255,0.02)'};border:1px solid ${regimeDelayed?'rgba(251,191,36,0.2)':'var(--border)'};${regimeDelayed?'opacity:0.8;':''}"><span style="font-size:.55rem;color:var(--text-muted);text-transform:uppercase;font-weight:700">${p.l}</span><span style="font-size:.72rem;font-weight:800;color:${p.c};margin-top:1px">${p.v}</span></div>`).join('') + (regimeDelayed ? `<div style="width:100%;font-size:.58rem;color:var(--yellow);margin-top:.1rem;line-height:1.35">Regime overlay is delayed relative to the event statistics.</div>` : '');
     }
     const climateBar = document.getElementById('sc-climate-bar');
     if (climateBar && regDoc) {
@@ -1685,17 +1731,21 @@
       const mp = (l, v, c) => '<span style="font-size:.48rem;font-weight:600;padding:1px 5px;border-radius:3px;background:rgba(255,255,255,0.03);border:1px solid ' + c + ';color:' + c + '">' + l + ': ' + v + '</span>';
 
       // PRIMARY: Per-symbol governance from decision payload
+      pills.push(mp('Mode', _rvDataSource === 'v2' ? 'V2' : 'V1 fallback', _rvDataSource === 'v2' ? 'var(--green)' : 'var(--yellow)'));
       if (_decision.fallback_level && _decision.fallback_level !== 'exact') pills.push(mp('Fallback', _decision.fallback_level, 'var(--yellow)'));
       if (_decision.regime_transition_active) pills.push(mp('Regime', 'TRANSITION', 'var(--red)'));
       if (_decision.wait_subtype) pills.push(mp('Wait', _decision.wait_subtype.replace(/_/g, ' '), 'var(--yellow)'));
-      if (_decision.data_quality_flags?.length > 0) pills.push(mp('Flags', _decision.data_quality_flags.length, 'var(--yellow)'));
+      pills.push(mp('Flags', _decision.data_quality_flags?.length || 0, (_decision.data_quality_flags?.length || 0) > 0 ? 'var(--yellow)' : 'var(--text-muted)'));
       if (_decision.confidence != null) {
         const cPct = (_decision.confidence * 100).toFixed(0);
         const cColor = _decision.confidence >= 0.7 ? 'var(--green)' : _decision.confidence >= 0.4 ? 'var(--yellow)' : 'var(--red)';
         pills.push(mp('Conf', cPct + '%', cColor));
+      } else {
+        pills.push(mp('Conf', confidence, confidence === 'LOW' ? 'var(--yellow)' : 'var(--text-muted)'));
       }
       const govAsOf = _decision.asof || _decision.created_at || latestDataDate;
       if (govAsOf) pills.push(mp('As-of', String(govAsOf).slice(0, 10), 'var(--text-muted)'));
+      if (_decisionDrivers.length) pills.push(mp('Drivers', _decisionDrivers.join(', '), 'var(--accent)'));
 
       govEl.innerHTML = pills.join('');
     } catch { /* graceful degradation */ }

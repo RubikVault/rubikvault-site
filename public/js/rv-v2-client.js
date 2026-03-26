@@ -139,6 +139,17 @@ export async function fetchV2Governance(ticker) {
   return { ok: true, data: payload.data, meta: payload.meta, source: 'v2_governance' };
 }
 
+export async function fetchFundamentalsProfile(ticker) {
+  const payload = await fetchJsonWithTimeout(`/api/fundamentals?ticker=${encodeURIComponent(ticker)}`);
+  return {
+    ok: !payload.error,
+    data: payload.data || null,
+    meta: payload.meta || payload.metadata || null,
+    source: 'fundamentals',
+    error: payload.error || null,
+  };
+}
+
 /**
  * Map V2 summary response to the shape stock.html expects from /api/stock.
  * @param {object} v2Data - The data field from V2 summary response
@@ -148,6 +159,8 @@ export async function fetchV2Governance(ticker) {
 export function transformV2ToStockShape(v2Data, v2Meta, extras = {}) {
   const historicalData = extras.historicalData || null;
   const governanceData = extras.governanceData || null;
+  const fundamentalsData = extras.fundamentalsData || null;
+  const fundamentalsMeta = extras.fundamentalsMeta || null;
   const v1FallbackPayload = extras.v1FallbackPayload || null;
   const bars = historicalData?.bars || v1FallbackPayload?.data?.bars || (v2Data.latest_bar ? [v2Data.latest_bar] : []);
   const liveBarPrice = v2Data.latest_bar ? {
@@ -193,6 +206,7 @@ export function transformV2ToStockShape(v2Data, v2Meta, extras = {}) {
       change,
       breakout_v2: historicalData?.breakout_v2 || null,
       governance: governanceData || null,
+      fundamentals: fundamentalsData || v2Data.fundamentals || v1FallbackPayload?.data?.fundamentals || null,
     },
     metadata: {
       request: {
@@ -208,11 +222,13 @@ export function transformV2ToStockShape(v2Data, v2Meta, extras = {}) {
       ...(v2Meta || {}),
       historical_status: extras.historicalMeta?.status || null,
       governance_status: extras.governanceMeta?.status || null,
+      fundamentals_status: fundamentalsMeta?.status || null,
     },
     states: v2Data.states || {},
     decision: v2Data.decision || {},
     explanation: v2Data.explanation || {},
     v6: v2Data.decision?.v6 || null,
+    evaluation_v4: governanceData?.evaluation_v4 || null,
     error: null,
     _rv_source: 'v2',
   };
@@ -229,14 +245,17 @@ export async function fetchWithFallback(ticker) {
 
   try {
     const v2 = await fetchV2Summary(ticker);
-    const [historicalResult, governanceResult] = await Promise.allSettled([
+    const [historicalResult, governanceResult, fundamentalsResult] = await Promise.allSettled([
       fetchV2Historical(ticker),
       fetchV2Governance(ticker),
+      fetchFundamentalsProfile(ticker),
     ]);
     let historicalData = null;
     let historicalMeta = null;
     let governanceData = null;
     let governanceMeta = null;
+    let fundamentalsData = null;
+    let fundamentalsMeta = null;
     if (historicalResult.status === 'fulfilled') {
       historicalData = historicalResult.value.data;
       historicalMeta = historicalResult.value.meta;
@@ -244,6 +263,10 @@ export async function fetchWithFallback(ticker) {
     if (governanceResult.status === 'fulfilled') {
       governanceData = governanceResult.value.data;
       governanceMeta = governanceResult.value.meta;
+    }
+    if (fundamentalsResult.status === 'fulfilled' && fundamentalsResult.value?.ok) {
+      fundamentalsData = fundamentalsResult.value.data;
+      fundamentalsMeta = fundamentalsResult.value.meta;
     }
 
     let v1FallbackPayload = null;
@@ -264,6 +287,8 @@ export async function fetchWithFallback(ticker) {
         historicalMeta,
         governanceData,
         governanceMeta,
+        fundamentalsData,
+        fundamentalsMeta,
         v1FallbackPayload,
       }),
       source: 'v2',
