@@ -6,6 +6,21 @@ import os from 'node:os';
 import { spawnSync } from 'node:child_process';
 
 const MODULES = ['universe', 'market-prices', 'market-stats', 'market-score'];
+const REGISTRY_FIXTURE = {
+  schema_version: '3.0',
+  generated_at: '2026-03-26T00:00:00.000Z',
+  modules: Object.fromEntries(
+    [...MODULES, 'market-health'].map((moduleName) => [
+      moduleName,
+      {
+        enabled: true,
+        tier: moduleName === 'universe' || moduleName === 'market-prices' ? 'critical' : 'standard',
+        domain: 'stocks',
+        counts: { expected: null, min: 1 }
+      }
+    ])
+  )
+};
 
 function assert(condition, message) {
   if (!condition) {
@@ -13,15 +28,20 @@ function assert(condition, message) {
   }
 }
 
+function writeRegistryFixture(baseDir) {
+  const registryDir = path.join(baseDir, 'public', 'data', 'registry');
+  fs.mkdirSync(registryDir, { recursive: true });
+  fs.writeFileSync(
+    path.join(registryDir, 'modules.json'),
+    JSON.stringify(REGISTRY_FIXTURE, null, 2) + '\n',
+    'utf-8'
+  );
+}
+
 (async () => {
   const base = fs.mkdtempSync(path.join(os.tmpdir(), 'rv-finalizer-test-'));
   const artifacts = path.join(base, 'artifacts');
-  const registryDir = path.join(base, 'public', 'data', 'registry');
-  fs.mkdirSync(registryDir, { recursive: true });
-  fs.copyFileSync(
-    path.join(process.cwd(), 'public', 'data', 'registry', 'modules.json'),
-    path.join(registryDir, 'modules.json')
-  );
+  writeRegistryFixture(base);
 
   const result = spawnSync(process.execPath, [path.resolve('scripts/aggregator/finalize.mjs')], {
     cwd: base,
@@ -48,12 +68,7 @@ function assert(condition, message) {
   // Regression: fail-loud by default when an invalid artifact exists; opt-in skip keeps run green.
   const base2 = fs.mkdtempSync(path.join(os.tmpdir(), 'rv-finalizer-skip-invalid-test-'));
   const artifacts2 = path.join(base2, 'artifacts');
-  const registryDir2 = path.join(base2, 'public', 'data', 'registry');
-  fs.mkdirSync(registryDir2, { recursive: true });
-  fs.copyFileSync(
-    path.join(process.cwd(), 'public', 'data', 'registry', 'modules.json'),
-    path.join(registryDir2, 'modules.json')
-  );
+  writeRegistryFixture(base2);
 
   // Create a deliberately invalid artifact (loaded by finalizer, then rejected by validation).
   // We force a digest mismatch so validateSnapshot fails.

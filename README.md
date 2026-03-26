@@ -124,11 +124,13 @@ open http://localhost:8788
 ### **Testing Workflows**
 
 ```bash
-# Test provider (market-health)
-node scripts/providers/market-health-v3.mjs
+# Core contract and publish checks
+npm run test:contracts
+npm run test:finalizer
 
-# Test finalizer (requires artifacts)
-ARTIFACTS_DIR=artifacts-organized node scripts/aggregator/finalize.mjs
+# Pipeline-focused suites
+npm run test:v7
+npm run test:runblock
 
 # Test cleanup (dry run)
 DRY_RUN=true ./scripts/cleanup-daily-snapshots.sh 7
@@ -142,17 +144,13 @@ DRY_RUN=true ./scripts/cleanup-daily-snapshots.sh 7
   - `OPS_BASE="https://<preview>.pages.dev" npm run test:ops-ui`
   - If browsers are missing: `npx playwright install`
 
-### **CI Gates (Local)**
+### **High-Signal Local Checks**
 
 ```bash
-# Run all CI checks
-npm run ci:gates
-
-# Individual checks
-npm run ci:budget
-npm run ci:schema
-npm run ci:integrity
-npm run ci:policies
+npm run test:contracts
+npm run test:ops
+npm run test:v7
+npm run test:runblock
 ```
 
 ---
@@ -273,29 +271,28 @@ rubikvault-site/
 ### **Adding New Modules**
 
 1. **Create Provider**: `scripts/providers/<module>-v3.mjs`
-2. **Add to Registry**: `public/data/registry/modules.json` → `"enabled": true`
-3. **Test Locally**: `node scripts/providers/<module>-v3.mjs`
+2. **Add to Registry**: update the module registry used by your deployment flow
+3. **Run Validation**: `npm run test:contracts`
 4. **Commit**: Scrape Template auto-includes enabled modules!
 
 ---
 
 ## 🧪 **Testing**
 
-### **Unit Tests** (Coming Soon)
+### **Core Test Suites**
 ```bash
-npm test
+npm run test:contracts
+npm run test:v7
+npm run test:runblock
 ```
 
 ### **Integration Tests**
 ```bash
-# Test provider
-npm run test:provider market-health
-
 # Test finalizer
 npm run test:finalizer
 
-# Test CI gates
-npm run test:ci
+# Test ops/dashboard flows
+npm run test:ops
 ```
 
 ### **Browser Testing**
