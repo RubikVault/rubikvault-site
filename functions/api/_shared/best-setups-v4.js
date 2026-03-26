@@ -219,7 +219,7 @@ export function mergeDiscoveryPools({ forecastPools = {}, quantlabCandidates = [
 
 export function buildVerifiedFrontpageRow(stockDoc, candidate) {
   const ticker = normalizeTicker(candidate?.ticker || stockDoc?.data?.ticker || '');
-  if (!ticker) return null;
+  if (!ticker) { console.log('DEBUG: buildVerifiedFrontpageRow rejected due to !ticker'); return null; }
 
   const decision = stockDoc?.decision || {};
   const horizon = String(candidate?.horizon || '').trim().toLowerCase() || 'medium';
@@ -227,13 +227,14 @@ export function buildVerifiedFrontpageRow(stockDoc, candidate) {
   const states = stockDoc?.states || {};
   const stats = stockDoc?.data?.market_stats?.stats || {};
   const gates = Array.isArray(decisionSlice?.trigger_gates) ? decisionSlice.trigger_gates : [];
-  if (String(decisionSlice?.verdict || '').toUpperCase() !== 'BUY') return null;
-  if (String(decisionSlice?.confidence_bucket || '').toUpperCase() !== 'HIGH') return null;
-  if (gates.length > 0) return null;
-  if (decisionSlice?.buy_eligible === false) return null;
-  if (!['UP', 'STRONG_UP'].includes(String(states.trend || '').toUpperCase())) return null;
+  
+  // Entfernung der Hard-Gates für V6 Top-K Relaxation. Wir geben alle Validen Zeilen strukturiert zurück.
+  // Sortierung erfolgt in horizonScore() / buildHorizonRows() basierend auf fundamentaler Stärke.
+  if (!decisionSlice) { console.log(`DEBUG: buildVerifiedFrontpageRow rejected due to !decisionSlice for ${ticker}`); return null; }
 
   const close = toNumber(stockDoc?.data?.market_prices?.close ?? stockDoc?.data?.latest_bar?.close);
+  if (close === null || isNaN(close)) { console.log(`DEBUG: buildVerifiedFrontpageRow rejected due to close is null for ${ticker}`); return null; }
+
   const composite = toNumber(decisionSlice?.scores?.composite);
   const trendScore = toNumber(decisionSlice?.scores?.trend);
   const entryScore = toNumber(decisionSlice?.scores?.entry);
@@ -257,10 +258,11 @@ export function buildVerifiedFrontpageRow(stockDoc, candidate) {
     ranking_score: candidateScore,
     setup_score: composite,
     trigger_score: composite,
-    trigger_fulfilled: true,
+    trigger_fulfilled: gates.length === 0,
     expected_return: null,
-    confidence: String(decisionSlice?.confidence_bucket || 'HIGH').toUpperCase(),
-    verdict: 'BUY',
+    confidence: String(decisionSlice?.confidence_bucket || 'NA').toUpperCase(),
+    verdict: String(decisionSlice?.verdict || 'WAIT').toUpperCase(),
+    setup_phase: decision?.setup_phase || null,
     horizon,
     horizon_key: candidate?.horizon_key || null,
     source: candidate?.source || 'stock_api_verified',

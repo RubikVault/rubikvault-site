@@ -1,5 +1,6 @@
 import { classifyAllStates } from './stock-states-v1.js';
 import { makeDecision } from './stock-decisions-v1.js';
+import { makeDecisionV2 } from './stock-decisions-v2.mjs';
 import { buildExplanation } from './stock-explanations-v1.js';
 
 const REASON_CODES = Object.freeze({
@@ -514,6 +515,7 @@ export function buildStockInsightsV4Evaluation({
   forecastMeta = null,
   inputFingerprints = null,
   runtimeControl = null,
+  breakoutState = null,
 }) {
   const safeBars = Array.isArray(bars) ? bars : [];
   const asOf = safeBars[safeBars.length - 1]?.date || scientificState?.as_of || forecastState?.as_of || elliottState?.as_of || null;
@@ -643,7 +645,7 @@ export function buildStockInsightsV4Evaluation({
 
   // Layer integration: STATE → DECISION → EXPLANATION
   const layerStates = classifyAllStates(stats, close);
-  const layerDecision = makeDecision({
+  const layerDecision = makeDecisionV2({
     states: layerStates,
     stats,
     close,
@@ -652,6 +654,11 @@ export function buildStockInsightsV4Evaluation({
     elliott: elliottState?.value || null,
     quantlab: quantlabState?.value || null,
     runtimeControl,
+    breakoutState,
+  }, {
+    active_events: 0,
+    contributing_clusters: 0,
+    data_quality_score: 80,
   });
   const layerExplanation = buildExplanation(ticker, layerDecision, layerStates);
 

@@ -57,6 +57,15 @@ export function buildDashKeys(now = new Date()) {
   };
 }
 
+export function buildV2DashKeys(now = new Date()) {
+  const day = isoDay(now);
+  return {
+    v2CallsDay: `DASH:V2:CALLS:DAY:${day}`,
+    v2EndpointsDay: `DASH:V2:ENDPOINTS:DAY:${day}`,
+    v2FallbacksDay: `DASH:V2:FALLBACKS:DAY:${day}`,
+  };
+}
+
 export function ttlForKey(key) {
   if (String(key).includes(':DAY:')) return DAY_TTL_SECONDS;
   if (String(key).includes(':WEEK:')) return WEEK_TTL_SECONDS;

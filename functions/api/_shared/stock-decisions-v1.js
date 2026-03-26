@@ -309,13 +309,15 @@ function evaluateHardGates(states) {
   return gates;
 }
 
-function deriveSetupType(states) {
+function deriveSetupType(states, breakoutState) {
   if (states?.trend === 'STRONG_UP' || states?.trend === 'UP') {
     if (states?.momentum === 'BULLISH' || states?.momentum === 'NEUTRAL') return SETUP_TYPE.TREND_FOLLOW;
     if (states?.momentum === 'OVERSOLD') return SETUP_TYPE.MEAN_REVERSION;
   }
   if (states?.volatility === 'COMPRESSED' || states?.volatility === 'LOW') {
-    return SETUP_TYPE.BREAKOUT;
+    // Only BREAKOUT if breakout tracker confirms; otherwise NONE
+    if (breakoutState && breakoutState !== 'NONE') return SETUP_TYPE.BREAKOUT;
+    return SETUP_TYPE.NONE;
   }
   if (states?.trend === 'DOWN' || states?.trend === 'STRONG_DOWN') {
     return SETUP_TYPE.DEFENSIVE;
@@ -329,7 +331,7 @@ function deriveStrategicBias(trendScore) {
   return STRATEGIC_BIAS.NEUTRAL;
 }
 
-function computeBaseScores({ stats = {}, close = null, states = {}, scientific = null, quantlab = null }) {
+function computeBaseScores({ stats = {}, close = null, states = {}, scientific = null, quantlab = null, runtimeControl = null }) {
   const sma20 = fin(stats?.sma20);
   const sma50 = fin(stats?.sma50);
   const sma200 = fin(stats?.sma200);
@@ -385,7 +387,12 @@ function computeBaseScores({ stats = {}, close = null, states = {}, scientific =
   const strongExperts = fin(quantlab?.consensus?.strongOrBetterExperts);
   const avgTopPercentile = fin(quantlab?.ranking?.avgTopPercentile);
   const buyLead = safeRatio((buyExperts ?? 0) - (avoidExperts ?? 0), (buyExperts ?? 0) + (avoidExperts ?? 0));
-  if (buyLead != null) context += buyLead * 10;
+  
+  // V6 QuantLab Dynamic Tuning: Scale bonus using recent model accuracy from learning cycle
+  const qlAccuracy = runtimeControl?.learningReport?.features?.quantlab?.accuracy_7d ?? 0.5;
+  const qlMultiplier = Math.max(0.2, (qlAccuracy / 0.5)); // Drops if accuracy < 50%, boosts if > 50%
+
+  if (buyLead != null) context += (buyLead * 10) * qlMultiplier;
   if (strongExperts != null && strongExperts >= 6) context += 3;
   if (avgTopPercentile != null && avgTopPercentile >= 80) trend += 2;
   if (avgTopPercentile != null && avgTopPercentile >= 90) trend += 2;
@@ -457,8 +464,8 @@ function tacticalActionForVerdict(verdict) {
   return 'HOLD';
 }
 
-function buildDecisionSlice({ horizon, scores, gates, states, stats, scientific, forecast, elliott, quantlab, runtimeControl }) {
-  const setupType = deriveSetupType(states);
+function buildDecisionSlice({ horizon, scores, gates, states, stats, scientific, forecast, elliott, quantlab, runtimeControl, breakoutState }) {
+  const setupType = deriveSetupType(states, breakoutState);
   const strategicBias = deriveStrategicBias(scores.trend);
   const regimeTag = deriveRegimeTag(stats, states);
 
@@ -480,13 +487,16 @@ function buildDecisionSlice({ horizon, scores, gates, states, stats, scientific,
   }
 
   const def = { trend: 68, entry: 60, risk: 45, context: 55 };
-  const policyThresholds = runtimeControl?.policy?.score_thresholds?.[META_LABELER_RULE_VERSION]?.defaults;
+  const horizonPolicy = runtimeControl?.policy?.threshold_policy?.horizons?.[horizon];
+  const policyThresholds = horizonPolicy?.buy || runtimeControl?.policy?.score_thresholds?.[META_LABELER_RULE_VERSION]?.defaults;
   const thres = policyThresholds || def;
+  const sellDef = { trend: 35, entry: 40, risk: 45 };
+  const sellThres = horizonPolicy?.sell || sellDef;
 
   let verdict = VERDICT.WAIT;
   if (scores.trend >= thres.trend && scores.entry >= thres.entry && scores.risk >= thres.risk && scores.context >= thres.context) {
     verdict = VERDICT.BUY;
-  } else if (scores.trend <= 35 && scores.entry <= 40 && scores.risk <= 45) {
+  } else if (scores.trend <= sellThres.trend && scores.entry <= sellThres.entry && scores.risk <= sellThres.risk) {
     verdict = VERDICT.SELL;
   }
 
@@ -552,7 +562,7 @@ function buildDecisionSlice({ horizon, scores, gates, states, stats, scientific,
   };
 }
 
-function buildOverallDecision(horizonSlices, states, runtimeControl) {
+function buildOverallDecision(horizonSlices, states, runtimeControl, scientific = null, breakoutState = null) {
   const short = horizonSlices.short;
   const medium = horizonSlices.medium;
   const long = horizonSlices.long;
@@ -570,7 +580,7 @@ function buildOverallDecision(horizonSlices, states, runtimeControl) {
     composite: clamp(((short?.scores?.composite || 0) + (medium?.scores?.composite || 0) + (long?.scores?.composite || 0)) / 3, 0, 100),
   };
 
-  const setupType = deriveSetupType(states);
+  const setupType = deriveSetupType(states, breakoutState);
   const strategicBias = deriveStrategicBias(averagedScores.trend);
 
   let verdict = VERDICT.WAIT;
@@ -595,8 +605,52 @@ function buildOverallDecision(horizonSlices, states, runtimeControl) {
     runtimeControl,
   });
 
+  const sciSetup = fin(scientific?.setup?.score) ?? fin(scientific?.value?.setup?.score) ?? -1;
+  const sciTriggerRaw = scientific?.trigger?.score ?? scientific?.value?.trigger?.score;
+  const trigger = typeof sciTriggerRaw === 'number' ? sciTriggerRaw : fin(sciTriggerRaw);
+  let accumulationStage = null;
+
+  const isValidTrigger = typeof trigger === 'number' && !Number.isNaN(trigger) && Number.isFinite(trigger) && trigger >= 0 && trigger <= 100;
+
+  if (verdict === VERDICT.WAIT && sciSetup >= 85 && isValidTrigger) {
+    if (trigger >= 40) {
+      accumulationStage = 'LATE';
+    } else if (trigger >= 25) {
+      accumulationStage = 'MID';
+    } else {
+      accumulationStage = 'EARLY';
+    }
+  }
+
+  // Classify wait subtype
+  let wait_subtype = null;
+  let wait_reason = null;
+  if (verdict === VERDICT.WAIT) {
+    const horizonVerdicts = [short?.verdict, medium?.verdict, long?.verdict].filter(Boolean);
+    const uniqueVerdicts = new Set(horizonVerdicts);
+    if (accumulationStage) {
+      wait_subtype = 'ACCUMULATION';
+      wait_reason = `Setup accumulation phase (${accumulationStage}) — high setup score but trigger not yet confirmed.`;
+    } else if (allGates.length > 0) {
+      wait_subtype = 'GATE_BLOCKED';
+      wait_reason = `Blocked by gate${allGates.length > 1 ? 's' : ''}: ${allGates.join(', ')}.`;
+    } else if (uniqueVerdicts.size > 1 && (uniqueVerdicts.has(VERDICT.BUY) || uniqueVerdicts.has(VERDICT.SELL))) {
+      wait_subtype = 'CONFLICTING_SIGNALS';
+      wait_reason = 'Horizons disagree on direction — no clear consensus for action.';
+    } else if (averagedScores.composite < 40) {
+      wait_subtype = 'INSUFFICIENT_SIGNALS';
+      wait_reason = `Composite score too low (${averagedScores.composite.toFixed(0)}) — not enough signal strength.`;
+    } else {
+      wait_subtype = 'NO_EDGE';
+      wait_reason = 'No actionable edge detected across horizons.';
+    }
+  }
+
   return {
     verdict,
+    setup_phase: accumulationStage,
+    wait_subtype,
+    wait_reason,
     confidence_bucket: confidence,
     confidence_calibrated: null,
     raw_probability: Number((averagedScores.composite / 100).toFixed(4)),
@@ -630,17 +684,18 @@ export function makeDecision(input = {}, legacyStats = null, legacyClose = null)
   const elliott = normalized.elliott || null;
   const quantlab = normalized.quantlab || null;
   const runtimeControl = normalized.runtimeControl || null;
+  normalized.breakoutState = normalized.breakoutState || null;
   const gates = evaluateHardGates(states);
-  const baseScores = computeBaseScores({ stats, close, states, scientific, quantlab });
+  const baseScores = computeBaseScores({ stats, close, states, scientific, quantlab, runtimeControl });
 
   const horizons = Object.fromEntries(
     Object.entries(HORIZON_POLICIES).map(([key, policy]) => {
       const scores = applyHorizonPolicy(baseScores, policy);
-      return [key, buildDecisionSlice({ horizon: key, scores, gates, states, stats, scientific, forecast, elliott, quantlab, runtimeControl })];
+      return [key, buildDecisionSlice({ horizon: key, scores, gates, states, stats, scientific, forecast, elliott, quantlab, runtimeControl, breakoutState: normalized.breakoutState })];
     }),
   );
 
-  const overall = buildOverallDecision(horizons, states, runtimeControl);
+  const overall = buildOverallDecision(horizons, states, runtimeControl, scientific, normalized.breakoutState);
 
   return {
     ...overall,

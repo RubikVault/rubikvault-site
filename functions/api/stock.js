@@ -1,6 +1,7 @@
 import { sha256Hex } from './_shared/digest.mjs';
 import { resolveSymbol, normalizeTicker as normalizeTickerStrict } from './_shared/symbol-resolver.mjs';
 import { fetchBarsWithProviderChain } from './_shared/eod-providers.mjs';
+import { processTickerSeries } from './_shared/breakout-core.mjs';
 import { recordFailure } from './_shared/circuit.js';
 import { computeIndicators } from './_shared/eod-indicators.mjs';
 // EODHD is the sole equity EOD provider (v13.1) — no tiingo-key import needed
@@ -26,10 +27,11 @@ import {
   makeContractState
 } from './_shared/stock-insights-v4.js';
 import { assembleDecisionInputs, loadRequestCoreInputs } from './_shared/decision-input-assembly.js';
+import { fetchEodhdFundamentals } from './_shared/fundamentals-eodhd.mjs';
 
 const MODULE_NAME = 'stock';
 const TICKER_MAX_LENGTH = 12;
-const VALID_TICKER_REGEX = /^[A-Z0-9.\-]+$/;
+const VALID_TICKER_REGEX = /^[A-Z0-9.\-:]+$/;
 const SNAPSHOT_PATH_TEMPLATES = [
   '/data/snapshots/{module}/latest.json',
   '/public/data/snapshots/{module}/latest.json',
@@ -348,8 +350,25 @@ function buildEodhdSymbol(symbol, exchange) {
 }
 
 function buildProviderSymbolMap(symbol, exchange) {
-  const cleanSymbol = normalizeTicker(symbol);
+  let cleanSymbol = normalizeTicker(symbol);
   if (!cleanSymbol) return null;
+
+  const scannerPrefixes = [
+    'US', 'XETR', 'LSE', 'MIL', 'AMS', 'BME', 'EBS', 'EPA', 
+    'AS', 'AT', 'BC', 'BE', 'CO', 'DU', 'F', 'HE', 
+    'MC', 'MI', 'MU', 'PA', 'ST', 'SW', 'VI', 'XETRA', 
+    'KLSE', 'HKEX', 'TYO', 'SGX', 'ASX', 'AU', 'HK', 'JA', 
+    'KO', 'SG', 'SR', 'TA', 'TH', '108', '109', 'BK'
+  ];
+
+  const separator = cleanSymbol.includes(':') ? ':' : cleanSymbol.includes('.') ? '.' : null;
+  if (separator && !exchange) {
+    const parts = cleanSymbol.split(separator);
+    if (parts.length === 2 && scannerPrefixes.includes(parts[0])) {
+      cleanSymbol = `${parts[1]}.${parts[0]}`;
+    }
+  }
+
   const eodhdSymbol = buildEodhdSymbol(cleanSymbol, exchange);
   return {
     eodhd: eodhdSymbol || cleanSymbol,
@@ -361,12 +380,33 @@ function buildProviderSymbolMap(symbol, exchange) {
 function findRecord(snapshot, symbol) {
   if (!snapshot || !snapshot.data) return null;
   const payload = snapshot.data;
-  if (Array.isArray(payload)) {
-    return payload.find((entry) => entry?.symbol === symbol) || null;
+
+  const lookup = (key) => {
+    if (Array.isArray(payload)) {
+      return payload.find((entry) => (entry?.symbol || entry?.ticker) === key) || null;
+    }
+    if (typeof payload === 'object') {
+      return payload[key] || null;
+    }
+    return null;
+  };
+
+  const result = lookup(symbol);
+  if (result) return result;
+
+  // Fallback for dot-notated or colon-notated tickers (e.g. US.AAPL or US:APA)
+  if (typeof symbol === 'string' && (symbol.includes('.') || symbol.includes(':'))) {
+    const replacement = symbol.includes('.') ? symbol.replace('.', ':') : symbol.replace(':', '.');
+    const fallback = lookup(replacement);
+    if (fallback) return fallback;
+    
+    const parts = symbol.includes('.') ? symbol.split('.') : symbol.split(':');
+    if (parts.length === 2) {
+      const directFallback = lookup(parts[1]);
+      if (directFallback) return directFallback;
+    }
   }
-  if (typeof payload === 'object') {
-    return payload[symbol] || null;
-  }
+
   return null;
 }
 
@@ -1395,7 +1435,20 @@ export async function onRequestGet(context) {
     universe: universePayload,
     market_prices: marketPricesPayload,
     market_stats: marketStatsPayload,
-    market_score: scoreEntry
+    market_score: scoreEntry,
+    breakout_v2: (() => {
+      try {
+        const stats = processTickerSeries(eodBars || [], {}, { regime_tag: 'UP' });
+        return {
+          state: stats.state,
+          max_level: stats.max_level,
+          scores: stats.scores,
+          history: stats.history ? stats.history.slice(-30) : []
+        };
+      } catch (e) {
+        return { state: 'ERROR', error: e.message };
+      }
+    })()
   };
 
   const asOf =
@@ -1544,6 +1597,7 @@ export async function onRequestGet(context) {
       forecastMeta: decisionInputs.forecastMeta,
       inputFingerprints: decisionInputs.input_fingerprints,
       runtimeControl: decisionInputs.runtimeControl,
+      breakoutState: payload.data?.breakout_v2?.state || null,
     });
     payload.meta.evaluation_v4 = {
       requested: true,
@@ -1558,6 +1612,19 @@ export async function onRequestGet(context) {
     payload.states = payload.evaluation_v4.states;
     payload.decision = payload.evaluation_v4.decision;
     payload.explanation = payload.evaluation_v4.explanation;
+    payload.v6 = payload.evaluation_v4.decision?.v6 || null;
+  }
+
+  // Fundamentals (best-effort, non-blocking)
+  try {
+    const fundResult = await fetchEodhdFundamentals(effectiveTicker, env);
+    if (fundResult.ok && fundResult.data) {
+      payload.data.fundamentals = fundResult.data;
+    } else {
+      payload.data.fundamentals = null;
+    }
+  } catch {
+    payload.data.fundamentals = null;
   }
 
   payload.metadata.digest = await computeDigest(payload);

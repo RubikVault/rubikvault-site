@@ -172,6 +172,10 @@ export function computeIndicators(bars) {
   const low52w = lows.length ? Math.min(...lows) : null;
   const range52wPct =
     Number.isFinite(high52w) && Number.isFinite(low52w) && high52w !== 0 ? (high52w - low52w) / high52w : null;
+  const close = closes.length ? closes[closes.length - 1] : null;
+  const position52w = (high52w > low52w && Number.isFinite(close))
+    ? (close - low52w) / (high52w - low52w)
+    : null;
 
   const avgVol20 = sma(volumes, 20);
   const volumeRatio20 =
@@ -438,6 +442,7 @@ export function computeIndicators(bars) {
     { id: 'high_52w', value: high52w },
     { id: 'low_52w', value: low52w },
     { id: 'range_52w_pct', value: range52wPct },
+    { id: 'position_in_52w_range', value: position52w },
     // Volume
     { id: 'avg_volume_20d', value: avgVol20 },
     { id: 'volume_ma_20', value: volumeMa20 },
