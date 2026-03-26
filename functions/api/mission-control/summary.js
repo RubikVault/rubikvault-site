@@ -8,9 +8,20 @@ import {
   validateSnapshot,
   trimErrors
 } from '../_shared/contracts.js';
+import { readFileSync } from 'node:fs';
+import { resolve, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { getBarNode } from '../../_ops/shape.js';
-import opsHealthPolicyRaw from "../../../policies/ops_health.json" with { type: 'json' };
-import missionControlSeverityPolicyRaw from "../../../policies/mission-control-severity.json" with { type: 'json' };
+
+function readPolicyJson(relativePath, fallbackValue) {
+  try {
+    const __dirname = dirname(fileURLToPath(import.meta.url));
+    const raw = readFileSync(resolve(__dirname, relativePath), 'utf8');
+    return JSON.parse(raw);
+  } catch {
+    return fallbackValue;
+  }
+}
 
 const MODULE_NAME = 'mission-control-summary';
 const SNAPSHOT_MODULES_HINT = ['universe', 'market-prices', 'market-stats', 'market-score'];
@@ -101,6 +112,9 @@ const DEFAULT_SEVERITY_POLICY = {
   degrading_codes: ['EOD_BATCH_MISSING', 'DATA_STALE', 'CACHE_MISS'],
   meta_status_allowed: ['ok', 'degraded', 'error']
 };
+
+const opsHealthPolicyRaw = readPolicyJson('../../../policies/ops_health.json', DEFAULT_OPS_POLICY);
+const missionControlSeverityPolicyRaw = readPolicyJson('../../../policies/mission-control-severity.json', DEFAULT_SEVERITY_POLICY);
 
 let LAST_CACHE = null;
 let LAST_CACHE_AT_MS = 0;
