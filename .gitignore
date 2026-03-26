@@ -1,113 +1,15 @@
-# macOS
-**/.DS_Store
+# RubikVault .gitignore
 
-# Node
-node_modules/
-.pnpm-debug.log*
-.package-lock.json
-# Cloudflare / Wrangler
-**/.cache/wrangler/
-**/.wrangler/
-.dev.vars
-.mf/
-# local env
+# Never commit: secrets and local env
 .env
 .env.*
+!.env.example
+.dev.vars
 *.local
-# misc
-_pre_codex_dirty.diff
-.tmp/
-logs/
-coverage/
-# local audit output
-audit-live.json
-# RubikVault: local debug artifacts
-/debug/**
-!/debug/*.js
-!/debug/*.mjs
-!/debug/*.md
-!/debug/*.json
-!/debug/*.jsonl
-!/debug/*.css
-!/debug/*.html
-!/public/debug/
-!/public/debug/**
-functions/api/_debug-trace.js
-internal/
-!public/internal/
-.artifacts/
-artifacts/
-# local workflow backups
-.github/workflows/*.bak.*
-# generated local backups
-*.bak
-scripts/generate-snapshots.mjs.bak
-scripts/generate-snapshots.mjs.bak.*
-# Local Python envs
-.venv-rvci*/
-# Python caches
-**/__pycache__/
-*.pyc
-# OS/editor noise
-# --- rubikvault local noise (added by rv_fix_untracked_and_smoke) ---
-.venv*/
-venv/
-backend/**/__pycache__/
-public/data/rvci/
-# Allow tracked RVCI outputs (keep other files ignored)
-!public/data/rvci/
-!public/data/rvci/rvci_top_short.json
-!public/data/rvci/rvci_top_mid.json
-!public/data/rvci/rvci_top_long.json
-!public/data/rvci/rvci_triggers.json
-!public/data/rvci/health.json
-# local noise (auto-added)
-nohup.out
-public/data/universe_spy50.json
-# local/CI debug reports
-# Playwright artifacts
-test-results/
-test-results/**
-.last-run.json
-# local backups (never commit)
-functions/api/_middleware.js.bak.*
-# generated / local-only
-# rubikvault: generated dirs (avoid privacy-guard false positives)
-mirrors/.locks/
-# standard noise (keep repo clean)
-# standard noise
-# generated dirs (avoid privacy-guard false positives)
 
-### RV_PRIVACY_GUARD_BLOCK ###
-# standard noise
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-debug/
-mirrors/.locks/
-*.tmp
-*.log
-tmp/
-
-_local_trash/
-functions/api/_bak/
-functions/api/_bak/**
-
-# Keep accidental local src/ trees out of Git, except explicit helpers.
-src/**
-!src/
-!src/lib/
-!src/lib/envelope.ts
-!src/lib/freshness.ts
-
-# Prevent nested repo clone accidents
-rubikvault-site/
-# Allow public debug traces
-!public/debug/
-!public/debug/**
-# Local environment (secrets)
-.env.local
-# --- AUTO (v6 hygiene) ---
+# Never commit: generated data and artifacts
+public/data/v3/series/adjusted_all/
+public/data/hist-probs/*.json
 mirrors/forecast/ledger/**
 mirrors/forecast/ops/**
 mirrors/forecast/snapshots/**
@@ -115,71 +17,109 @@ mirrors/forecast/ledger/outcomes/**
 mirrors/forecast/models/**
 mirrors/forecast/ledgers/
 mirrors/forecast/last_good/
-dev/Report10/**
-# public/data/marketphase/*.json
-!public/data/marketphase/index.json
-public/data/eod/bars/*.json
-public/data/forecast/reports/**
-# public/data/forecast/latest.json
-public/data/forecast/scorecards/tickers.json.gz
-# public/data/forecast/system/
-# public/data/forecast/system/status.json
-# public/data/forecast/system/last_good.json
-# public/data/forecast/v6/
-# public/data/snapshots/stock-analysis.json
-proof.html
-# v6 generated artifacts (do not commit)
+mirrors/forecast/champion/
+mirrors/quantlab/**
+mirrors/universe-v7/**
 public/data/forecast/v6/
-mirrors/forecast/ledgers/
-mirrors/forecast/last_good/
-# public/data/forecast/system/
+public/data/forecast/reports/**
+public/data/forecast/scorecards/tickers.json.gz
+public/data/eod/bars/*.json
+public/data/universe_spy50.json
+public/data/v3/derived/market/flow-learning.json
+public/data/v3/eod/US/etf-proxies.json
+artifacts/
+.artifacts/
+coverage/
+test-results/
+test-results/**
+.last-run.json
+.wrangler-pages-build-current/
+tmp/
+.tmp/
+logs/
+mirrors/.locks/
+proof.html
 public/proof.html
-
-# local audit artifacts
 Report/ProtectionAudit/
+Report/A/
+dev/Report10/**
+public/dashboard_v6_meta_data.*.json
 
-# generated runtime + published artifacts (Option A)
-# mirrors/
-# public/data/
+# Never commit: local runtime caches
+**/.cache/wrangler/
+**/.wrangler/
+.mf/
+quantlab/.pytest_cache/**
+quantlab/.ruff_cache/**
+quantlab/src/quantlab.egg-info/**
+quantlab/data/**
+quantlab/runs/**
+quantlab/jobs/**
+quantlab/ops/**
+quantlab/registry/**
+quantlab/models/**
+quantlab/artifacts/**
 
-# --- Quant/IP hygiene (local runtime only; keep code commitable) ---
-/mirrors/quantlab/**
-/mirrors/universe-v7/**
-/quantlab/.pytest_cache/**
-/quantlab/.ruff_cache/**
-/quantlab/src/quantlab.egg-info/**
-/quantlab/data/**
-/quantlab/runs/**
-/quantlab/jobs/**
-/quantlab/ops/**
-/quantlab/registry/**
-/quantlab/models/**
-/quantlab/artifacts/**
+# Allow tracked RVCI outputs, hide everything else in the folder
+public/data/rvci/*
+!public/data/rvci/
+!public/data/rvci/rvci_top_short.json
+!public/data/rvci/rvci_top_mid.json
+!public/data/rvci/rvci_top_long.json
+!public/data/rvci/rvci_triggers.json
+!public/data/rvci/health.json
 
-# --- local scratch / workstation-only ---
-/.claude/
-/.playwright-cli/
-/.vscode/
-/diff.txt
-/parse-registry.mjs
-/scrape_ui.mjs
-/prod_stock.html
-/prod_stock-features.js
-/test-search.js
-/test_eodhd_endpoints.mjs
-/test_keys.cjs
-/docs/runbooks/quant-v4/
-/docs/runbooks/v7-stocks-prio1-tomorrow.md
-/Report/A/
-/quantlab/
-/scripts/quantlab/
-/.github/workflows/quantlab-ci.yml
-/.github/workflows/quantlab-daily.yml
-/docs/universe-explorer-ui-variants.md
-/docs/universe-v7.1-implementation.md
-/eodhd-maximizer.mjs
-# CI test with local secrets — never commit
+# Noise: dependency installs, editor caches, local tooling
+node_modules/
+.pnpm-debug.log*
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.venv*/
+venv/
+**/__pycache__/
+*.pyc
+**/.DS_Store
+.claude/
+.playwright-cli/
+.vscode/
+.cursor/
+.cursorrules
+_local_trash/
+_pre_codex_dirty.diff
+diff.txt
+nohup.out
+*.tmp
+*.log
+*.bak
+
+# Noise: local debug and backup paths
+functions/api/_debug-trace.js
+functions/api/_bak/
+functions/api/_bak/**
+debug/
+!public/debug/
+!public/debug/**
+internal/
+!public/internal/
+rubikvault-site/
+.github/workflows/*.bak.*
+
+# Noise: workstation-only helpers
+check_dom_ids.py
+fix_dashboard*.py
+run_build_diag.py
+test_bars*.mjs
+test_dashboard.*
+test_import_decisions*.mjs
+test_ndx_bucket.mjs
+parse-registry.mjs
+scrape_ui.mjs
+prod_stock.html
+prod_stock-features.js
+test-search.js
+test_eodhd_endpoints.mjs
+test_keys.cjs
+eodhd-maximizer.mjs
+scripts/test/batch_stock_audit.mjs
 scripts/ci/test_eodhd.mjs
-/public/data/universe/v7/reports/marketphase_legacy_bridge_report.json
-/public/data/v3/derived/market/flow-learning.json
-/public/data/v3/eod/US/etf-proxies.json
