@@ -238,6 +238,57 @@
           Enter a stock name or ticker to start the analysis
         </p>
 
+        <!-- STOCKS BREAKOUTS (V2.0) -->
+        <div id="breakout-summary-home"
+          style="margin-top: 2.2rem; text-align: left; background: rgba(15, 23, 42, 0.35); border: 1px solid rgba(147, 197, 253, 0.2); border-radius: 12px; padding: 1rem; position: relative;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+            <div>
+              <div style="font-size: 1rem; font-weight: 700; color: #f8fafc; display:flex; align-items:center; gap:5px;">
+                <i class="fa-solid fa-bolt" style="color:#38bdf8"></i> Stocks Breakouts Tracker (V2.0)
+              </div>
+              <div style="font-size: 0.8rem; color: #94a3b8;">Wyckoff Absorption & Setup Pipeline</div>
+            </div>
+            <a href="/breakout-all" style="font-size:0.75rem; color: #38bdf8; text-decoration:none; font-weight:600;">View All <i class="fa-solid fa-arrow-right"></i></a>
+          </div>
+
+          <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.75rem; margin-bottom: 1rem;" id="brk-home-buttons">
+            <button onclick="toggleBreakoutHomeView('SETUP')" style="padding:0.75rem; background:rgba(245, 158, 11, 0.08); border:1px solid rgba(245, 158, 11, 0.2); border-radius:10px; cursor:pointer;" class="brk-home-btn" id="btn-h-setup">
+              <div style="font-size:1.5rem; font-weight:800; color:#f59e0b;" id="cnt-h-setup">-</div>
+              <div style="font-size:0.6rem; color:#94a3b8; font-weight:700;">SETUP</div>
+            </button>
+            <button onclick="toggleBreakoutHomeView('ARMED')" style="padding:0.75rem; background:rgba(249, 115, 22, 0.08); border:1px solid rgba(249, 115, 22, 0.2); border-radius:10px; cursor:pointer;" class="brk-home-btn" id="btn-h-armed">
+              <div style="font-size:1.5rem; font-weight:800; color:#f97316;" id="cnt-h-armed">-</div>
+              <div style="font-size:0.6rem; color:#94a3b8; font-weight:700;">ARMED</div>
+            </button>
+            <button onclick="toggleBreakoutHomeView('TRIGGERED')" style="padding:0.75rem; background:rgba(56, 189, 248, 0.08); border:1px solid rgba(56, 189, 248, 0.2); border-radius:10px; cursor:pointer;" class="brk-home-btn" id="btn-h-triggered">
+              <div style="font-size:1.5rem; font-weight:800; color:#38bdf8;" id="cnt-h-triggered">-</div>
+              <div style="font-size:0.6rem; color:#94a3b8; font-weight:700;">TRIGGERED</div>
+            </button>
+            <button onclick="toggleBreakoutHomeView('CONFIRMED')" style="padding:0.75rem; background:rgba(16, 185, 129, 0.08); border:1px solid rgba(16, 185, 129, 0.2); border-radius:10px; cursor:pointer;" class="brk-home-btn" id="btn-h-confirmed">
+              <div style="font-size:1.5rem; font-weight:800; color:#10b981;" id="cnt-h-confirmed">-</div>
+              <div style="font-size:0.6rem; color:#94a3b8; font-weight:700;">CONFIRMED</div>
+            </button>
+          </div>
+
+          <div id="brk-home-table-container" style="display:none; border-top:1px solid rgba(255,255,255,0.05); padding-top:0.75rem;">
+            <div style="font-size:0.75rem; color:#94a3b8; margin-bottom:0.5rem; font-weight:600;" id="brk-home-table-title">Stocks in ARMED State</div>
+            <div style="max-height: 250px; overflow-y: auto;">
+              <table style="width:100%; border-collapse:collapse; text-align:left;">
+                <thead>
+                  <tr style="font-size:0.65rem; color:#64748b; text-transform:uppercase; border-bottom:1px solid rgba(255,255,255,0.05);">
+                    <th style="padding:6px 8px;">Ticker</th>
+                    <th style="padding:6px 8px;">Name</th>
+                    <th style="padding:6px 8px;">Score</th>
+                    <th style="padding:6px 8px;">Explanation</th>
+                  </tr>
+                </thead>
+                <tbody id="brk-home-tbody" style="font-size:0.8rem; color:#e2e8f0;">
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
         <div id="best-setups-home"
           style="margin-top: 2.2rem; text-align: left; background: rgba(15, 23, 42, 0.35); border: 1px solid rgba(100, 116, 139, 0.22); border-radius: 12px; padding: 1rem;">
           <div
@@ -2608,19 +2659,21 @@
         .map((row) => {
           const date = String(row?.date || row?.trading_date || row?.d || '').slice(0, 10);
           if (!date) return null;
-          const close = Number(row?.close ?? row?.adjClose ?? row?.adjusted_close ?? row?.adj_close);
-          if (!Number.isFinite(close)) return null;
+          const rawClose = Number(row?.close);
+          const adjClose = Number(row?.adjClose ?? row?.adjusted_close ?? row?.adj_close ?? row?.close);
+          if (!Number.isFinite(adjClose) || adjClose <= 0) return null;
+          const factor = (Number.isFinite(rawClose) && rawClose > 0) ? adjClose / rawClose : 1;
           const open = Number(row?.open ?? row?.o);
           const high = Number(row?.high ?? row?.h);
           const low = Number(row?.low ?? row?.l);
           const volume = Number(row?.volume ?? row?.v);
           return {
             date,
-            open: Number.isFinite(open) ? open : close,
-            high: Number.isFinite(high) ? high : close,
-            low: Number.isFinite(low) ? low : close,
-            close,
-            adjClose: close,
+            open: Number.isFinite(open) ? open * factor : adjClose,
+            high: Number.isFinite(high) ? high * factor : adjClose,
+            low: Number.isFinite(low) ? low * factor : adjClose,
+            close: adjClose,
+            adjClose,
             volume: Number.isFinite(volume) ? volume : 0
           };
         })
@@ -3857,25 +3910,31 @@
             <p><strong>CRISIS:</strong> 3 conditions + Credit Z > 2.5 → scores dampened to 30%</p>
           </div>
         `)}
-        ${mhCard(`
-          <div style="font-size:0.88rem; font-weight:700; color:${MH.text}; margin-bottom:0.6rem;">Data Sources & Limitations</div>
-          <div style="font-size:0.8rem; color:${MH.muted}; line-height:1.6;">
-            <p><strong>Tier A (Primary):</strong> FRED, BIS, IMF, CFTC, EIA — <em>not yet integrated</em></p>
-            <p><strong>Tier B (Market Data):</strong> EODHD — all prices, ETF proxies, indices</p>
-            <p><strong>Tier C (Derived):</strong> ETF AUM proxies, price-derived flows, computed breadth</p>
-            <div style="margin-top:0.5rem; padding:0.5rem; background:${MH.surface}; border-radius:6px; border-left:3px solid ${MH.warn};">
-              <strong style="color:${MH.warn};">Known Limitations:</strong>
-              <ul style="margin:0.3rem 0 0 1rem; padding:0;">
-                <li>No real fund-flow data (EPFR/ICI) — flows from price trends only</li>
-                <li>No options/skew data — vol from realized returns only</li>
-                <li>No COT positioning data</li>
-                <li>No on-chain crypto data (Glassnode/CryptoQuant)</li>
-                <li>Breadth from ~2,450 US stocks, not full NYSE</li>
-                <li>Limited history (~20-30 days) — m60/m200 may be unavailable</li>
-              </ul>
+        ${(() => {
+          const _meta = globalMarketDoc?.meta || {};
+          const _dataDate = _meta.data_date || _meta.generated_at?.slice(0, 10) || '—';
+          const _staleMs = Date.now() - Date.parse(_dataDate + 'T00:00:00Z');
+          const _staleDays = Number.isFinite(_staleMs) ? Math.floor(_staleMs / 86400000) : null;
+          const _freshLabel = _staleDays == null ? 'Unknown' : _staleDays <= 1 ? 'Fresh' : _staleDays <= 3 ? 'Recent' : 'Stale';
+          const _freshColor = _staleDays == null ? MH.muted : _staleDays <= 1 ? MH.green : _staleDays <= 3 ? MH.warn : MH.red;
+          const _provider = _meta.provider || 'eodhd';
+          const _cardsBuilt = _meta.cards_built || 0;
+          const _symbolsAvail = _meta.symbols_available || 0;
+          return mhCard(`
+            <div style="font-size:0.88rem; font-weight:700; color:${MH.text}; margin-bottom:0.6rem;">Data Sources & Status</div>
+            <div style="font-size:0.8rem; color:${MH.muted}; line-height:1.6;">
+              <div style="margin-bottom:0.5rem; padding:0.5rem; background:${MH.surface}; border-radius:6px; border-left:3px solid ${_freshColor};">
+                <span style="color:${_freshColor}; font-weight:700;">${_freshLabel}</span>
+                · Data as of ${_dataDate}${_staleDays != null ? ' (' + _staleDays + 'd ago)' : ''}
+                · ${_cardsBuilt} instruments from ${_symbolsAvail} symbols
+                · Source: ${_provider}
+              </div>
+              <p><strong>Market Data:</strong> ${_provider.toUpperCase()} — prices, ETF proxies, indices</p>
+              <p><strong>Derived:</strong> ETF AUM proxies, price-derived flows, computed breadth (~2,450 US stocks)</p>
+              <p><strong>Volatility:</strong> Realized returns only (no options/skew data)</p>
             </div>
-          </div>
-        `)}
+          `);
+        })()}
       `;
     }
 
@@ -4861,6 +4920,7 @@
             clearSearch({ push: false, keepInput: true, focus: false });
             await loadTopSetupsDoc();
             await renderBestSetups();
+            try { await renderBreakoutSummary(); } catch(e) {}
           } else if (route === 'market') {
             await loadMarketDoc();
             await renderMarketView();
@@ -4872,6 +4932,66 @@
         }
       });
     });
+
+    let breakoutData = null;
+    async function loadBreakoutSnapshot() {
+      if (breakoutData) return breakoutData;
+      try {
+        const res = await fetch('/data/snapshots/breakout-all.json');
+        breakoutData = await res.json();
+      } catch(e) { console.error("Snapshot load failed:", e); }
+      return breakoutData;
+    }
+
+    async function renderBreakoutSummary() {
+      const data = await loadBreakoutSnapshot();
+      if (!data || !data.items) return;
+
+      const items = data.items;
+      const counts = {
+        SETUP: items.filter(i => i.state === 'SETUP').length,
+        ARMED: items.filter(i => i.state === 'ARMED').length,
+        TRIGGERED: items.filter(i => i.state === 'TRIGGERED').length,
+        CONFIRMED: items.filter(i => i.state === 'CONFIRMED').length
+      };
+
+      document.getElementById('cnt-h-setup').innerText = counts.SETUP;
+      document.getElementById('cnt-h-armed').innerText = counts.ARMED;
+      document.getElementById('cnt-h-triggered').innerText = counts.TRIGGERED;
+      document.getElementById('cnt-h-confirmed').innerText = counts.CONFIRMED;
+
+      window.toggleBreakoutHomeView = function(state) {
+        const container = document.getElementById('brk-home-table-container');
+        const tbody = document.getElementById('brk-home-tbody');
+        const btn = document.getElementById('btn-h-' + state.toLowerCase());
+
+        document.querySelectorAll('.brk-home-btn').forEach(b => b.style.borderColor = 'rgba(255,255,255,0.05)');
+        if(state==='SETUP') btn.style.borderColor = '#f59e0b';
+        if(state==='ARMED') btn.style.borderColor = '#f97316';
+        if(state==='TRIGGERED') btn.style.borderColor = '#38bdf8';
+        if(state==='CONFIRMED') btn.style.borderColor = '#10b981';
+
+        container.style.display = 'block';
+        document.getElementById('brk-home-table-title').innerText = `Stocks in ${state} State`;
+
+        const rowList = items.filter(i => i.state === state).slice(0, 10);
+        if (rowList.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:10px; color:#64748b;">Keine Aktien in diesem Status</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = rowList.map(i => {
+          const score = i.scores?.total || i.max_level || 0;
+          const expl = i.state === 'ARMED' ? 'Failed Low + Absorption found.' : i.state==='TRIGGERED' ? 'Breakout hit with high RVOL.' : 'Setup Stage identified.';
+          return `<tr style="border-bottom:1px solid rgba(255,255,255,0.02)">
+            <td style="padding:6px 8px;"><a href="/analyze/${encodeURIComponent(i.ticker.includes(':') ? i.ticker.split(':').reverse().join('.') : i.ticker)}" style="color:#60a5fa; text-decoration:none; font-weight:700;">${i.ticker}</a></td>
+            <td style="padding:6px 8px; font-size:0.7rem; color:#94a3b8;">${i.name || ''}</td>
+            <td style="padding:6px 8px; font-weight:800; color:#8b5cf6">${score}</td>
+            <td style="padding:6px 8px; font-size:0.75rem;">${expl}</td>
+          </tr>`;
+        }).join('');
+      };
+    }
 
     // Auto-route on page load — use readyState guard to avoid missed DOMContentLoaded
     async function _rvInitApp() {
@@ -4902,6 +5022,7 @@
           clearSearch({ push: false, keepInput: true, focus: true });
           await loadTopSetupsDoc();
           await renderBestSetups();
+          try { await renderBreakoutSummary(); } catch(e) {}
         }
       } catch (err) {
         console.error('[RV] Init error:', err);
