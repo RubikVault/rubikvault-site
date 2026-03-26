@@ -428,6 +428,66 @@ test('Live stock.html defines runtime variables used in template rendering', asy
   assert.ok(content.includes('window._rvCanonicalMetrics ='), '_rvCanonicalMetrics is not exposed in stock.html');
 });
 
+test('Live stock.html includes explicit operational banner tiers', async () => {
+  const fs = await import('node:fs');
+  const content = fs.readFileSync(new URL('../public/stock.html', import.meta.url), 'utf-8');
+  assert.ok(content.includes('Operational with minor warnings'), 'Minor-warning banner text is missing');
+  assert.ok(content.includes('Degraded — review integrity notes'), 'Degraded banner text is missing');
+});
+
+test('Live stock.html removes risk inconsistency warning copy', async () => {
+  const fs = await import('node:fs');
+  const content = fs.readFileSync(new URL('../public/stock.html', import.meta.url), 'utf-8');
+  assert.ok(!content.includes('possible data inconsistency'), 'Old risk inconsistency warning copy is still present');
+});
+
+test('Live stock.html clarifies historical timestamps explicitly', async () => {
+  const fs = await import('node:fs');
+  const content = fs.readFileSync(new URL('../public/stock.html', import.meta.url), 'utf-8');
+  assert.ok(content.includes('Event stats as-of:'), 'Historical event as-of label is missing');
+  assert.ok(content.includes('Regime snapshot as-of:'), 'Historical regime as-of label is missing');
+  assert.ok(content.includes('Regime as-of'), 'Regime pill label is missing');
+});
+
+test('Live stock.html sharpens trend vs rebound wording', async () => {
+  const fs = await import('node:fs');
+  const content = fs.readFileSync(new URL('../public/stock.html', import.meta.url), 'utf-8');
+  assert.ok(content.includes('CONSTRUCTIVE TREND SIGNALS'), 'Constructive trend heading is missing');
+  assert.ok(content.includes('Short-term rebound signals do not override the weak broader trend.'), 'Trend vs rebound qualifier is missing');
+});
+
+test('Live stock.html uses compact breakout none wording', async () => {
+  const fs = await import('node:fs');
+  const content = fs.readFileSync(new URL('../public/stock.html', import.meta.url), 'utf-8');
+  assert.ok(content.includes('Breakout Setup: None'), 'Compact breakout none wording is missing');
+});
+
+test('Live stock.html improves what-changed wording', async () => {
+  const fs = await import('node:fs');
+  const content = fs.readFileSync(new URL('../public/stock.html', import.meta.url), 'utf-8');
+  assert.ok(content.includes('Price closed below SMA20'), 'Improved SMA20 wording is missing');
+  assert.ok(content.includes('Daily change:'), 'Improved daily change wording is missing');
+});
+
+test('Live stock.html makes market context wording timeframe-aware', async () => {
+  const fs = await import('node:fs');
+  const content = fs.readFileSync(new URL('../public/stock.html', import.meta.url), 'utf-8');
+  assert.ok(content.includes('outperformance vs benchmarks'), 'Timeframe-aware benchmark wording is missing');
+  assert.ok(!content.includes('Broad Outperformance vs Benchmarks'), 'Old broad benchmark wording is still present');
+});
+
+test('Live stock.html qualifies historical confidence strength', async () => {
+  const fs = await import('node:fs');
+  const content = fs.readFileSync(new URL('../public/stock.html', import.meta.url), 'utf-8');
+  assert.ok(content.includes('pooled sample'), 'Historical confidence qualifier is missing');
+});
+
+test('Live stock.html exposes compact decision meta summary', async () => {
+  const fs = await import('node:fs');
+  const content = fs.readFileSync(new URL('../public/stock.html', import.meta.url), 'utf-8');
+  assert.ok(content.includes('rv-decision-reason-meta'), 'Decision reason meta block is missing');
+});
+
 // ─── K) Initial HTML State Tests ────────────────────────────────────────────
 
 test('Initial HTML has no pre-filled "Unsupported" badge', async () => {
