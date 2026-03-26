@@ -4,6 +4,105 @@
  */
 
 const V2_TIMEOUT_MS = 8000;
+const CORE_METRICS = ['rsi14', 'atr14', 'volatility_20d', 'volatility_percentile', 'bb_upper', 'bb_lower', 'high_52w', 'low_52w', 'range_52w_pct'];
+
+function parseDay(value) {
+  if (typeof value !== 'string' || !value.trim()) return null;
+  const direct = value.trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(direct)) return direct;
+  const parsed = Date.parse(direct);
+  return Number.isNaN(parsed) ? null : new Date(parsed).toISOString().slice(0, 10);
+}
+
+function dayToMillis(value) {
+  const normalized = parseDay(value);
+  if (!normalized) return null;
+  return Date.UTC(Number(normalized.slice(0, 4)), Number(normalized.slice(5, 7)) - 1, Number(normalized.slice(8, 10)));
+}
+
+function getIndicatorEntries(indicators) {
+  if (Array.isArray(indicators)) return indicators;
+  if (Array.isArray(indicators?.indicators)) return indicators.indicators;
+  return [];
+}
+
+export function statsFromIndicatorEntries(indicators, symbol, asOf) {
+  const entries = getIndicatorEntries(indicators);
+  if (!entries.length) return null;
+  const stats = {};
+  for (const item of entries) {
+    if (!item || typeof item.id !== 'string') continue;
+    stats[item.id] = item.value;
+  }
+  return { symbol, as_of: asOf || null, stats, coverage: null, warnings: [] };
+}
+
+function mergePreferPrimary(primary, secondary) {
+  if (!primary && !secondary) return null;
+  if (!primary) return secondary || null;
+  if (!secondary) return primary || null;
+  const merged = { ...secondary };
+  for (const [key, value] of Object.entries(primary)) {
+    if (value !== null && value !== undefined) merged[key] = value;
+  }
+  return merged;
+}
+
+export function chooseCanonicalPriceRecord(...records) {
+  const available = records.filter(Boolean);
+  if (!available.length) return null;
+  return available.sort((a, b) => {
+    const aTs = dayToMillis(a?.date) ?? -Infinity;
+    const bTs = dayToMillis(b?.date) ?? -Infinity;
+    return bTs - aTs;
+  }).reduce((selected, current) => (selected ? mergePreferPrimary(selected, current) : current), null);
+}
+
+export function chooseCanonicalStatsRecord(...records) {
+  const available = records.filter(Boolean);
+  if (!available.length) return null;
+  const score = (record) => {
+    const stats = record?.stats || {};
+    const complete = CORE_METRICS.filter((key) => Number.isFinite(stats[key])).length;
+    const freshness = dayToMillis(record?.as_of) ?? -Infinity;
+    return { complete, freshness };
+  };
+  return available.sort((a, b) => {
+    const aScore = score(a);
+    const bScore = score(b);
+    if (bScore.complete !== aScore.complete) return bScore.complete - aScore.complete;
+    return bScore.freshness - aScore.freshness;
+  }).reduce((selected, current) => (selected ? mergePreferPrimary(selected, current) : current), null);
+}
+
+function isOlderThan(dateValue, maxAgeDays) {
+  const ts = dayToMillis(dateValue);
+  if (ts == null) return true;
+  return Date.now() - ts > maxAgeDays * 86400000;
+}
+
+export function deriveIntegrity(priceRecord, statsRecord, meta = {}, statuses = {}) {
+  const issues = [];
+  const missingMetrics = CORE_METRICS.filter((key) => !Number.isFinite(statsRecord?.stats?.[key]));
+  const summaryDate = priceRecord?.date || meta?.data_date || null;
+  const historicalDate = statuses?.historicalAsOf || meta?.data_date || null;
+  if (meta?.status === 'error') issues.push('summary_error');
+  if (meta?.status === 'pending' && !parseDay(summaryDate)) issues.push('summary_pending');
+  if (statuses?.historical === 'error') issues.push('historical_error');
+  if (statuses?.historical === 'pending' && !parseDay(historicalDate)) issues.push('historical_pending');
+  if (statuses?.governance && !['fresh', 'stale', null, undefined].includes(statuses.governance)) issues.push(`governance_${statuses.governance}`);
+  if (isOlderThan(summaryDate, 2)) issues.push('stale_price_data');
+  if (statuses?.historical === 'stale' && isOlderThan(historicalDate, 2)) issues.push('historical_stale');
+  if (missingMetrics.length) issues.push('missing_core_metrics');
+  let status = 'ok';
+  if (issues.includes('stale_price_data') || issues.includes('summary_error') || issues.includes('summary_pending')) status = 'degraded';
+  else if (issues.length) status = 'partial';
+  return {
+    status,
+    issues,
+    missingMetrics,
+  };
+}
 
 async function fetchJsonWithTimeout(url) {
   const controller = new AbortController();
@@ -51,9 +150,40 @@ export function transformV2ToStockShape(v2Data, v2Meta, extras = {}) {
   const governanceData = extras.governanceData || null;
   const v1FallbackPayload = extras.v1FallbackPayload || null;
   const bars = historicalData?.bars || v1FallbackPayload?.data?.bars || (v2Data.latest_bar ? [v2Data.latest_bar] : []);
-  const marketPrices = v2Data.market_prices || v1FallbackPayload?.data?.market_prices || {};
-  const marketStats = v2Data.market_stats || v1FallbackPayload?.data?.market_stats || {};
+  const liveBarPrice = v2Data.latest_bar ? {
+    symbol: v2Data.ticker,
+    date: v2Data.latest_bar.date || null,
+    open: v2Data.latest_bar.open ?? null,
+    high: v2Data.latest_bar.high ?? null,
+    low: v2Data.latest_bar.low ?? null,
+    close: v2Data.latest_bar.close ?? null,
+    adj_close: v2Data.latest_bar.adjClose ?? v2Data.latest_bar.close ?? null,
+    volume: v2Data.latest_bar.volume ?? null,
+    currency: 'USD',
+    source_provider: v2Meta?.provider || null,
+  } : null;
+  const historicalStats = statsFromIndicatorEntries(historicalData?.indicators, v2Data.ticker, extras.historicalMeta?.data_date || v2Meta?.data_date || null);
+  const marketPrices = chooseCanonicalPriceRecord(v2Data.market_prices, liveBarPrice, v1FallbackPayload?.data?.market_prices) || {};
+  const marketStats = chooseCanonicalStatsRecord(v2Data.market_stats, historicalStats, v1FallbackPayload?.data?.market_stats) || {};
   const change = v2Data.change || v1FallbackPayload?.data?.change || {};
+  const analysis = {
+    snapshotTime: v2Meta?.generated_at || new Date().toISOString(),
+    latestDataDate: parseDay(v2Meta?.data_date) || parseDay(marketPrices.date) || parseDay(bars[bars.length - 1]?.date) || null,
+    priceAsOf: parseDay(marketPrices.date) || parseDay(bars[bars.length - 1]?.date) || null,
+    indicatorAsOf: parseDay(marketStats.as_of) || parseDay(extras.historicalMeta?.data_date) || parseDay(v2Meta?.data_date) || null,
+    moduleProvenance: {
+      summary: { asOf: parseDay(v2Meta?.data_date) || null, status: v2Meta?.status || null },
+      historical: { asOf: parseDay(extras.historicalMeta?.data_date) || null, status: extras.historicalMeta?.status || null },
+      governance: { asOf: parseDay(extras.governanceMeta?.data_date) || null, status: extras.governanceMeta?.status || null },
+      price: { asOf: parseDay(marketPrices.date) || null, status: isOlderThan(marketPrices.date, 2) ? 'stale' : 'current' },
+      indicators: { asOf: parseDay(marketStats.as_of) || null, status: deriveIntegrity(marketPrices, marketStats, v2Meta, { historical: extras.historicalMeta?.status || null }).missingMetrics.length ? 'partial' : 'ok' },
+    },
+  };
+  analysis.integrity = deriveIntegrity(marketPrices, marketStats, v2Meta, {
+    historical: extras.historicalMeta?.status || null,
+    historicalAsOf: extras.historicalMeta?.data_date || null,
+    governance: extras.governanceMeta?.status || null,
+  });
   return {
     data: {
       ticker: v2Data.ticker,
@@ -72,6 +202,7 @@ export function transformV2ToStockShape(v2Data, v2Meta, extras = {}) {
       },
       as_of: v2Meta?.data_date || null,
       source_chain: { primary: v2Meta?.provider, selected: v2Meta?.provider },
+      analysis,
     },
     meta: {
       ...(v2Meta || {}),

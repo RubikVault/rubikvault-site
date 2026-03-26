@@ -19,6 +19,8 @@ import {
   computeStatusFromDataDate,
   buildMarketPricesFromBar,
   buildMarketStatsFromIndicators,
+  selectCanonicalMarketPrices,
+  selectCanonicalMarketStats,
 } from './stock-helpers.js';
 
 function findRecord(snapshot, symbol) {
@@ -39,6 +41,12 @@ function findRecord(snapshot, symbol) {
     if (parts.length === 2) return lookup(parts[1]);
   }
   return null;
+}
+
+function countMissingCoreMetrics(statsRecord) {
+  const stats = statsRecord?.stats || {};
+  const required = ['rsi14', 'atr14', 'volatility_20d', 'volatility_percentile', 'bb_upper', 'bb_lower', 'high_52w', 'low_52w', 'range_52w_pct'];
+  return required.filter((key) => !Number.isFinite(stats[key]));
 }
 
 async function fetchSnapshotJson(moduleName, request, env) {
@@ -145,8 +153,8 @@ export async function fetchStockSummary(ticker, env, request) {
   const latestBar = pickLatestBar(bars);
   const change = computeDayChange(bars);
   const indicators = computeIndicators(bars);
-  const marketPrices = buildMarketPricesFromBar(latestBar, effectiveTicker, provider);
-  const marketStats = buildMarketStatsFromIndicators(indicators, effectiveTicker, latestBar?.date);
+  const liveMarketPrices = buildMarketPricesFromBar(latestBar, effectiveTicker, provider);
+  const liveMarketStats = buildMarketStatsFromIndicators(indicators, effectiveTicker, latestBar?.date);
   const dataDate = latestBar?.date || todayUtcDate();
   const status = computeStatusFromDataDate(dataDate, now, ttl.max_stale_days, ttl.pending_window_minutes);
 
@@ -213,6 +221,10 @@ export async function fetchStockSummary(ticker, env, request) {
     }
   } catch { /* snapshots optional */ }
 
+  const canonicalMarketPrices = selectCanonicalMarketPrices(snapshotMarketPrices, liveMarketPrices);
+  const canonicalMarketStats = selectCanonicalMarketStats(snapshotMarketStats, liveMarketStats);
+  const missingCoreMetrics = countMissingCoreMetrics(canonicalMarketStats);
+
   return {
     ok: true,
     data: {
@@ -221,8 +233,8 @@ export async function fetchStockSummary(ticker, env, request) {
       resolution: ctx.resolution,
       latest_bar: latestBar,
       change,
-      market_prices: snapshotMarketPrices || marketPrices,
-      market_stats: snapshotMarketStats || marketStats,
+      market_prices: canonicalMarketPrices,
+      market_stats: canonicalMarketStats,
       states,
       decision,
       explanation,
@@ -231,6 +243,9 @@ export async function fetchStockSummary(ticker, env, request) {
       status,
       generated_at: nowUtcIso(),
       data_date: dataDate,
+      price_date: canonicalMarketPrices?.date || null,
+      indicator_date: canonicalMarketStats?.as_of || null,
+      missing_core_metrics: missingCoreMetrics,
       provider,
       quality_flags: qualityFlags.length ? qualityFlags : undefined,
       version: 'v2',
@@ -285,19 +300,23 @@ export async function fetchStockHistorical(ticker, env, request) {
   const dataDate = latestBar?.date || todayUtcDate();
   const status = computeStatusFromDataDate(dataDate, now, ttl.max_stale_days, ttl.pending_window_minutes);
   const indicators = computeIndicators(bars);
+  const normalizedIndicators = Array.isArray(indicators?.indicators) ? indicators.indicators : [];
+  const indicatorIssues = Array.isArray(indicators?.issues) ? indicators.issues : [];
 
   let breakoutV2 = null;
   try {
     const result = processTickerSeries(effectiveTicker, bars);
     if (result) breakoutV2 = result;
   } catch { /* optional */ }
+  const historicalQualityFlags = [...new Set([...(qualityFlags.length ? qualityFlags : []), ...indicatorIssues])];
 
   return {
     ok: true,
     data: {
       ticker: effectiveTicker,
       bars,
-      indicators,
+      indicators: normalizedIndicators,
+      indicator_issues: indicatorIssues,
       breakout_v2: breakoutV2,
     },
     meta: {
@@ -305,7 +324,7 @@ export async function fetchStockHistorical(ticker, env, request) {
       generated_at: nowUtcIso(),
       data_date: dataDate,
       provider,
-      quality_flags: qualityFlags.length ? qualityFlags : undefined,
+      quality_flags: historicalQualityFlags.length ? historicalQualityFlags : undefined,
       version: 'v2',
     },
     error: null,
