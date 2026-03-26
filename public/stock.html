@@ -97,27 +97,10 @@
   let payload;
   let _rvDataSource = 'v1';
   try {
-    // V2 dual-path: try V2 summary if gate is open, fallback to V1
-    let _useV2 = false;
-    try {
-      const gateRes = await fetch('/api/v2/stocks/' + encodeURIComponent(ticker) + '/summary');
-      _useV2 = gateRes.ok;
-      if (_useV2) {
-        const v2Payload = await gateRes.json();
-        if (v2Payload.ok && v2Payload.data) {
-          const { transformV2ToStockShape } = await import('/js/rv-v2-client.js');
-          payload = transformV2ToStockShape(v2Payload.data, v2Payload.meta);
-          _rvDataSource = 'v2';
-        } else {
-          _useV2 = false;
-        }
-      }
-    } catch { _useV2 = false; }
-    if (!_useV2) {
-      const res = await fetch('/api/stock?ticker=' + encodeURIComponent(ticker));
-      payload = await res.json();
-      _rvDataSource = 'v1';
-    }
+    const { fetchWithFallback } = await import('/js/rv-v2-client.js');
+    const result = await fetchWithFallback(ticker);
+    payload = result.payload;
+    _rvDataSource = result.source === 'v2' ? 'v2' : 'v1';
   } catch(e) {
     console.error('[RV] API fetch failed:', e);
     document.getElementById('sc-content').innerHTML = '<div style="color:var(--red);text-align:center;padding:2rem">Unable to load data. Please try again.</div>'; return;
@@ -1189,6 +1172,73 @@
   window._hpHzMap = { short: 'h5d', mid: 'h20d', long: 'h60d' };
   window._hpHzLabel = { short: '5 days', mid: '20 days', long: '60 days' };
 
+  function _hpClose(bar) {
+    if (Number.isFinite(bar?.adjClose)) return Number(bar.adjClose);
+    if (Number.isFinite(bar?.close)) return Number(bar.close);
+    return null;
+  }
+
+  function _buildSyntheticHpMetric(sourceBars, horizon) {
+    const samples = [];
+    for (let i = 0; i + horizon < sourceBars.length; i++) {
+      const start = _hpClose(sourceBars[i]);
+      if (!(start > 0)) continue;
+      let minRet = 0;
+      let maxRet = 0;
+      let valid = true;
+      for (let j = 1; j <= horizon; j++) {
+        const closePoint = _hpClose(sourceBars[i + j]);
+        if (!(closePoint > 0)) {
+          valid = false;
+          break;
+        }
+        const ret = closePoint / start - 1;
+        if (ret < minRet) minRet = ret;
+        if (ret > maxRet) maxRet = ret;
+      }
+      if (!valid) continue;
+      const end = _hpClose(sourceBars[i + horizon]);
+      if (!(end > 0)) continue;
+      samples.push({
+        avgRet: end / start - 1,
+        mae: minRet,
+        mfe: maxRet,
+        maxDD: minRet,
+      });
+    }
+    if (samples.length < 20) return null;
+    const wins = samples.filter((sample) => sample.avgRet > 0).length;
+    const avg = (key) => samples.reduce((total, sample) => total + sample[key], 0) / samples.length;
+    return {
+      n: samples.length,
+      win_rate: wins / samples.length,
+      avg_return: avg('avgRet'),
+      mae: avg('mae'),
+      mfe: avg('mfe'),
+      max_drawdown: samples.reduce((worst, sample) => Math.min(worst, sample.maxDD), 0),
+    };
+  }
+
+  function _buildSyntheticHpDoc(tickerSymbol, sourceBars) {
+    if (!Array.isArray(sourceBars) || sourceBars.length < 25) return null;
+    const horizons = [['h5d', 5], ['h20d', 20], ['h60d', 60]];
+    const baseline = {};
+    for (const [label, horizon] of horizons) {
+      const metric = _buildSyntheticHpMetric(sourceBars, horizon);
+      if (metric) baseline[label] = metric;
+    }
+    if (!Object.keys(baseline).length) return null;
+    return {
+      ticker: tickerSymbol,
+      computed_at: new Date().toISOString(),
+      latest_date: sourceBars[sourceBars.length - 1]?.date || null,
+      synthetic: true,
+      events: {
+        event_price_history_baseline: baseline,
+      },
+    };
+  }
+
   window._switchHpHz = function(btn) {
     window._hpHz = btn.dataset.hz;
     document.querySelectorAll('#hp-hz-btns .hp-btn').forEach(b => b.classList.remove('active'));
@@ -1377,8 +1427,11 @@
       fetch('/data/hist-probs/' + encodeURIComponent(tkr.toUpperCase()) + '.json?_=' + ts).then(r => r.ok ? r.json() : null).catch(() => null),
       fetch('/data/hist-probs/regime-daily.json?_=' + ts).then(r => r.ok ? r.json() : null).catch(() => null)
     ]);
+    const effectiveHpDoc = hpDoc || _buildSyntheticHpDoc(tkr, bars);
     const hpAsof = document.getElementById('hp-asof');
-    if (hpAsof && hpDoc) hpAsof.textContent = 'as-of: ' + (hpDoc.computed_at ? hpDoc.computed_at.slice(0,10) : hpDoc.latest_date || '\u2014');
+    if (hpAsof && effectiveHpDoc) {
+      hpAsof.textContent = (effectiveHpDoc.synthetic ? 'derived: ' : 'as-of: ') + (effectiveHpDoc.computed_at ? effectiveHpDoc.computed_at.slice(0,10) : effectiveHpDoc.latest_date || '\u2014');
+    }
     const regBar = document.getElementById('hp-regime-bar');
     if (regBar && regDoc) {
       const mColors={bull:'var(--green)',bear:'var(--red)'};
@@ -1405,7 +1458,7 @@
       ];
       climateBar.innerHTML=cp.map(p=>`<div style="display:flex;flex-direction:column;align-items:center;padding:.25rem .5rem;border-radius:6px;background:rgba(255,255,255,0.02);border:1px solid var(--border)"><span style="font-size:.5rem;color:var(--text-muted);text-transform:uppercase;font-weight:700">${p.l}</span><span style="font-size:.68rem;font-weight:800;color:${p.c};margin-top:1px">${p.v}</span></div>`).join('');
     } else if (climateBar) { climateBar.innerHTML = ''; }
-    window._hpData = hpDoc;
+    window._hpData = effectiveHpDoc;
     window._renderHpBody();
   })();
 

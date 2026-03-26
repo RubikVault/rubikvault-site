@@ -1,21 +1,9 @@
-import { readFileSync } from 'node:fs';
-import { resolve, dirname } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { STATIC_FRESHNESS_TTL_V2 } from '../../../config/freshness-ttl.v2.js';
 
-let config;
-try {
-  // Cloudflare Workers: use static import (handled by bundler)
-  // Node.js: read file directly
-  const __dirname = dirname(fileURLToPath(import.meta.url));
-  const raw = readFileSync(resolve(__dirname, '../../../config/freshness-ttl.v2.json'), 'utf8');
-  config = JSON.parse(raw);
-} catch {
-  // Fallback defaults if file can't be read
-  config = {
-    defaults: { cache_ttl_seconds: 21600, swr_mark_ttl_seconds: 120, degrade_after_seconds: 86400, max_stale_days: 14, pending_window_minutes: 120 },
-    endpoints: {},
-  };
-}
+const config = STATIC_FRESHNESS_TTL_V2 || {
+  defaults: { cache_ttl_seconds: 21600, swr_mark_ttl_seconds: 120, degrade_after_seconds: 86400, max_stale_days: 14, pending_window_minutes: 120 },
+  endpoints: {},
+};
 
 const defaults = config.defaults || {};
 const endpoints = config.endpoints || {};

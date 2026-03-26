@@ -1,35 +1,34 @@
-import { readFileSync } from 'node:fs';
-import { resolve, dirname } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { STATIC_V2_GATES } from '../../../config/v2-gates.js';
 import { getJsonKV } from './cache-law.js';
 import { errorEnvelope } from './envelope.js';
 
-let gatesConfig;
-try {
-  const __dirname = dirname(fileURLToPath(import.meta.url));
-  const raw = readFileSync(resolve(__dirname, '../../../config/v2-gates.json'), 'utf8');
-  gatesConfig = JSON.parse(raw);
-} catch {
-  gatesConfig = { global_enabled: false, endpoints: {} };
-}
+const gatesConfig = STATIC_V2_GATES || { global_enabled: false, endpoints: {} };
 
 const KV_KEY = 'rv:v2:gates';
 
+function isEndpointEnabled(config, endpointId) {
+  if (!config || config.global_enabled !== true) return false;
+  const ep = config.endpoints?.[endpointId];
+  return ep?.enabled === true;
+}
+
 /**
  * Check if a V2 endpoint is enabled.
- * Priority: env override > KV runtime override > static config file.
+ * Priority: env override > static config > KV runtime opt-in.
  * @param {object} env - Cloudflare env bindings
  * @param {string} endpointId - e.g. 'v2_summary'
  * @returns {Promise<boolean>}
  */
 export async function isV2Enabled(env, endpointId) {
-  // 1. Env override: V2_GATE_V2_SUMMARY=true
   const envKey = `V2_GATE_${endpointId.toUpperCase()}`;
-  const envVal = env?.[envKey];
+  const envVal = env?.[envKey] ?? env?.V2_GATE_GLOBAL;
   if (envVal === 'true' || envVal === true) return true;
   if (envVal === 'false' || envVal === false) return false;
 
-  // 2. KV runtime override
+  if (isEndpointEnabled(gatesConfig, endpointId)) {
+    return true;
+  }
+
   try {
     const kvResult = await getJsonKV(env, KV_KEY);
     if (kvResult?.value && typeof kvResult.value === 'object') {
@@ -42,13 +41,10 @@ export async function isV2Enabled(env, endpointId) {
       }
     }
   } catch {
-    // KV unavailable, fall through to static config
+    // fall through
   }
 
-  // 3. Static config file
-  if (!gatesConfig.global_enabled) return false;
-  const ep = gatesConfig.endpoints?.[endpointId];
-  return ep?.enabled === true;
+  return false;
 }
 
 /**

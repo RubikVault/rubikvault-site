@@ -1,11 +1,11 @@
 {
   "schema_version": "v2",
-  "updated_at": "2026-03-24T00:00:00Z",
-  "global_enabled": false,
+  "updated_at": "2026-03-26T00:00:00Z",
+  "global_enabled": true,
   "endpoints": {
-    "v2_summary": { "enabled": false },
-    "v2_historical": { "enabled": false },
-    "v2_governance": { "enabled": false }
+    "v2_summary": { "enabled": true },
+    "v2_historical": { "enabled": true },
+    "v2_governance": { "enabled": true }
   },
-  "notes": "Set global_enabled to true and individual endpoints to true to activate V2. KV key 'rv:v2:gates' overrides this file at runtime."
+  "notes": "Static config is production-authoritative. Env flags can force on/off. KV can opt-in additional endpoints when static config is closed."
 }

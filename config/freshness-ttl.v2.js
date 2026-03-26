@@ -1,0 +1,37 @@
+export const STATIC_FRESHNESS_TTL_V2 = {
+  schema_version: 'v2',
+  updated_at: '2026-03-24T00:00:00Z',
+  defaults: {
+    cache_ttl_seconds: 21600,
+    swr_mark_ttl_seconds: 120,
+    degrade_after_seconds: 86400,
+    max_stale_days: 14,
+    pending_window_minutes: 120,
+  },
+  endpoints: {
+    stock: {
+      cache_ttl_seconds: 21600,
+      swr_mark_ttl_seconds: 120,
+      max_stale_days: 14,
+      pending_window_minutes: 120,
+    },
+    v2_summary: {
+      cache_ttl_seconds: 300,
+      swr_mark_ttl_seconds: 60,
+      max_stale_days: 7,
+      pending_window_minutes: 120,
+    },
+    v2_historical: {
+      cache_ttl_seconds: 21600,
+      swr_mark_ttl_seconds: 120,
+      max_stale_days: 30,
+      pending_window_minutes: 120,
+    },
+    v2_governance: {
+      cache_ttl_seconds: 3600,
+      swr_mark_ttl_seconds: 120,
+      max_stale_days: 14,
+      pending_window_minutes: 120,
+    },
+  },
+};
