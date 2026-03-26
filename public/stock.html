@@ -172,6 +172,7 @@
     asOf: latestDataDate,
     priceAsOf,
     indicatorAsOf,
+    finalRisk: null,
     integrity: analysisMeta.integrity || null,
   };
 
@@ -233,6 +234,30 @@
     return parts.length ? '<span style="font-size:.5rem;color:var(--text-muted)">' + parts.join(' \u00B7 ') + '</span>' : '';
   };
 
+  const _normalizeExplanationLine = (line) => {
+    const text = String(line || '').trim();
+    if (!text) return text;
+    if (text === 'Volume data unavailable — classification omitted.') return 'Volume classification unavailable due to data gap.';
+    if (text === 'Volume data is insufficient for classification.') return 'Volume classification unavailable due to data gap.';
+    return text;
+  };
+  const _ageDaysFrom = (value) => {
+    if (!value) return null;
+    const ts = Date.parse(value);
+    if (Number.isNaN(ts)) return null;
+    return Math.max(0, Math.floor((Date.now() - ts) / 86400000));
+  };
+  const _formatExpectedWindow = (value) => {
+    if (!value) return null;
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) return null;
+    const month = parsed.toLocaleString('en-US', { month: 'short', timeZone: 'UTC' });
+    const year = parsed.getUTCFullYear();
+    const day = parsed.getUTCDate();
+    const bucket = day <= 10 ? 'early' : day <= 20 ? 'mid' : 'late';
+    return `${bucket} ${month} ${year}`;
+  };
+
   // Display mappings from backend states (pure rendering, no business logic)
   const trendStateMap = {STRONG_UP:'Uptrend',UP:'Uptrend',RANGE:'Sideways',DOWN:'Downtrend',STRONG_DOWN:'Downtrend',UNKNOWN:'Unknown'};
   const trendWord = (_states.trend==='STRONG_UP'||_states.trend==='UP')?'uptrend':(_states.trend==='DOWN'||_states.trend==='STRONG_DOWN')?'downtrend':'mixed';
@@ -258,11 +283,28 @@
     else if (_volPctile > 75 && riskLabel === 'Low') riskLabel = 'Medium';
   }
   let riskColor = riskLabel==='High'?'var(--red)':riskLabel==='Elevated'?'var(--yellow)':riskLabel==='Medium'?'var(--yellow)':riskLabel==='Unavailable'?'var(--text-dim)':'var(--green)';
-  if (riskLabel === 'Elevated' && _extremeVolPctile) {
-    _integrityItems.push({ text:'Risk classification qualified by mixed volatility signals', color:'var(--yellow)' });
-  }
   const trendColor=trendWord==='uptrend'?'var(--green)':trendWord==='downtrend'?'var(--red)':'var(--yellow)';
   const isExtremeVol = _states.volatility === 'EXTREME';
+  const finalRisk = {
+    label: riskLabel,
+    color: riskColor,
+    regimeLabel: riskInputsComplete ? (isExtremeVol ? 'Extreme Volatility' : 'Normal') : 'Unavailable',
+    driver: !riskInputsComplete ? 'Missing volatility inputs'
+      : _extremeVolPctile ? `Relative volatility extreme (${_volPctile.toFixed(0)}th percentile)`
+      : _elevatedVolPctile ? `Relative volatility elevated (${_volPctile.toFixed(0)}th percentile)`
+      : 'Volatility inputs aligned',
+    context: !riskInputsComplete ? 'Risk state unavailable until ATR and volatility inputs are complete.'
+      : _extremeVolPctile && riskLabel === 'Elevated' ? 'Moderated by low realized volatility and supportive structural context.'
+      : _states.volatility === 'EXTREME' ? 'Structural volatility state confirms a high-risk regime.'
+      : (_states.volatility === 'LOW' || _states.volatility === 'COMPRESSED') ? 'Low realized volatility tempers net risk.'
+      : 'No additional volatility override active.',
+    override: Boolean(riskInputsComplete && _extremeVolPctile && riskLabel === 'Elevated'),
+    unavailable: !riskInputsComplete,
+  };
+  window._rvCanonicalMetrics.finalRisk = finalRisk;
+  if (finalRisk.override) {
+    _integrityItems.push({ text:'Risk override active → confidence moderated', color:'var(--yellow)' });
+  }
   const r52pct=_guard.corrections.r52pct ?? s.range_52w_pct;
   const r52label=_guard.corrections.r52label ?? (r52pct==null?null:r52pct>0.9?'Near High':r52pct>0.75?'Upper Range':r52pct>0.25?'Mid-Range':r52pct>0.1?'Lower Range':'Near Low');
   const has52wData = Number.isFinite(r52pct) && Number.isFinite(s.high_52w) && Number.isFinite(s.low_52w);
@@ -304,7 +346,7 @@
   // Render Top Headline KPIs
   document.getElementById('sc-headline-kpis').innerHTML = [
     ['Trend', trendLabel, trendColor, 'Based on price vs SMA20/50/200 alignment'],
-    ['Risk', riskLabel, riskColor, 'ATR volatility percentile rank (0\u2013100)'],
+    ['Risk', finalRisk.label, finalRisk.color, finalRisk.driver + '. ' + finalRisk.context],
     ['52W', r52Display, 'var(--text)', 'Position in 52-week range: (close\u2013low)/(high\u2013low)'],
     ['RSI', rsiFullLabel, rsiColor, 'Relative Strength Index (14d). <30 oversold, >70 overbought']
   ].map(x => '<div title="'+x[3]+'" style="padding:.4rem .6rem; border-radius:6px; background:rgba(255,255,255,0.02); border:1px solid var(--border); text-align:center; cursor:help"><div style="font-size:.6rem; color:var(--text-muted); text-transform:uppercase">'+x[0]+'</div><div style="font-weight:700; color:'+x[2]+'; font-size:.85rem">'+x[1]+'</div></div>').join('');
@@ -334,8 +376,9 @@
   const confidence = _decision.confidence_bucket || 'LOW';
 
   // Map backend explanation bullets to bull/bear reasons for display
-  const bullR = (_explanation.sentiment === 'positive' ? (_explanation.bullets || []).slice(0, 3) : []);
-  const bearR = (_explanation.sentiment === 'negative' ? (_explanation.bullets || []).slice(0, 3) : []);
+  const _normalizedBullets = (_explanation.bullets || []).map(_normalizeExplanationLine);
+  const bullR = (_explanation.sentiment === 'positive' ? _normalizedBullets.slice(0, 3) : []);
+  const bearR = (_explanation.sentiment === 'negative' ? _normalizedBullets.slice(0, 3) : []);
 
   // Horizon cards now come from the backend decision layer.
   const horizonDecisionMap = _decision.horizons || {};
@@ -356,7 +399,7 @@
       },
       score: {
         score: slice?.scores?.composite || 0,
-        reasons: (slice?.trigger_gates && slice.trigger_gates.length ? slice.trigger_gates : (_explanation.bullets||[]).slice(0,2))
+        reasons: (slice?.trigger_gates && slice.trigger_gates.length ? slice.trigger_gates : _normalizedBullets.slice(0,2))
       }
     };
   });
@@ -431,7 +474,7 @@
   const items3D = [
     { label:'SMA 50', value:close>(s.sma50||0)?'Reclaimed':'Broken', badges:[], type: close>(s.sma50||0)?'bullish':'bearish' },
     { label:'Momentum', value:trendLabel, badges:[trendWord==='uptrend'?'Constructive':trendWord==='downtrend'?'Adverse':'Mixed'], type: trendWord==='uptrend'?'bullish':trendWord==='downtrend'?'bearish':'mixed' },
-    { label:'Risk', value:riskLabel, badges:(riskLabel==='Elevated'?['Vol Percentile Override']:[]), type: riskLabel==='Low'?'bullish':riskLabel==='High'?'bearish':'mixed' }
+    { label:'Risk', value:finalRisk.label, badges:(finalRisk.override?['Override active']:[]), type: finalRisk.label==='Low'?'bullish':finalRisk.label==='High'?'bearish':'mixed' }
   ];
   const items1W = [
     { label:'MA Stack', value:maStack, badges:[maStack==='Constructive'?'Bullish':maStack==='Adverse'?'Bearish':'Neutral'], type: maStack==='Constructive'?'bullish':maStack==='Adverse'?'bearish':'mixed' },
@@ -859,7 +902,13 @@
   const targetRes = levels.find(l => l.kind === 'resistance');
   const targetPrice = targetRes ? targetRes.price : (close && atr ? close + atr * 2 : null);
   const stopPr = atr != null ? close - atr : null;
-  const rrRatio = (targetPrice && stopPr && close) ? ((targetPrice - close) / (close - stopPr)).toFixed(1) : '—';
+  const rrRatioNumber = (Number.isFinite(targetPrice) && Number.isFinite(stopPr) && Number.isFinite(close) && close !== stopPr) ? ((targetPrice - close) / (close - stopPr)) : null;
+  const rrRatio = Number.isFinite(rrRatioNumber) ? rrRatioNumber.toFixed(1) : '—';
+  const hasActiveTradeSetup = effectiveVerdict === 'BUY' || effectiveVerdict === 'SELL' || shouldRenderSetupPhase || setupType !== 'Mixed / No Clean Entry';
+  const tradePlanState = {
+    requested: effectiveVerdict === 'BUY' || effectiveVerdict === 'SELL',
+    complete: [close, stopPr, targetPrice, rrRatioNumber].every((value) => Number.isFinite(value)),
+  };
 
   const _levelGroupOrder = ['Structural Resistance', 'Tactical Resistance', 'Current', 'Tactical Support', 'Structural Support', 'Other Levels'];
   const _levelGroupLabels = {
@@ -903,7 +952,13 @@
   displayLevels.forEach(l => { l.yExact = ((1 - ((l.price - mnL) / rngL)) * 90 + 5); l.yText = l.yExact; });
   displayLevels.sort((a,b) => a.yText - b.yText);
   let lastY = -Infinity;
-  displayLevels.forEach(l => { if (l.yText < lastY + 3.4) { l.yText = lastY + 3.4; } lastY = l.yText; });
+  displayLevels.forEach(l => { if (l.yText < lastY + 3.8) { l.yText = lastY + 3.8; } lastY = l.yText; });
+  for (let i = displayLevels.length - 1; i >= 0; i--) {
+    const next = displayLevels[i + 1];
+    if (displayLevels[i].yText > 95) displayLevels[i].yText = 95;
+    if (next && displayLevels[i].yText > next.yText - 3.8) displayLevels[i].yText = next.yText - 3.8;
+    if (displayLevels[i].yText < 5) displayLevels[i].yText = 5;
+  }
 
   // Dynamic Structure / Weakness / Rebound
   const bullPoints = bullR.length ? bullR.map(r => '<li>'+_esc(r)+'</li>').join('') : '<li>None currently active</li>';
@@ -915,6 +970,11 @@
   if (close < (s.sma20 || Infinity) && close > (s.sma200 || 0)) reboundConds.push('Between SMA20 and SMA200 — pullback zone');
   else reboundConds.push('Near structure support bounds');
   const reboundPoints = reboundConds.map(r => '<li>'+r+'</li>').join('');
+  const trendSignalSummary = trendWord === 'downtrend'
+    ? 'Weak broader trend · short-term rebound signals active · no override'
+    : trendWord === 'uptrend'
+      ? 'Constructive broader trend · tactical pullback context'
+      : 'Mixed broader trend · tactical signals require confirmation';
   const reboundQualifier = trendWord === 'downtrend'
     ? '<div style="font-size:.56rem;color:var(--text-muted);margin-top:.35rem;line-height:1.35">Short-term rebound signals do not override the weak broader trend.</div>'
     : '';
@@ -943,10 +1003,12 @@
             ${shouldRenderSetupPhase ? `<div style="font-size:0.55rem; color:var(--text-dim); margin-top:2px; font-weight:700;">${setupPhaseSubtext}</div>` : ''}
             <div style="font-size:.65rem;color:var(--text-dim);font-weight:700;margin-top:2px;">${effectiveText}</div>
             ${_decision.wait_subtype ? `<div style="font-size:.55rem;color:var(--yellow);margin-top:2px;font-weight:600">${_esc(_decision.wait_subtype.replace(/_/g,' '))}</div><div style="font-size:.52rem;color:var(--text-muted);margin-top:1px">${_esc(_decision.wait_reason||'')}</div>` : ''}
-            <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px;margin-top:6px">
+            <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;margin-top:6px">
               <div style="padding:4px 6px;border-radius:6px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.04)"><div style="font-size:.48rem;color:var(--text-muted);text-transform:uppercase;font-weight:700">Verdict</div><div style="font-size:.66rem;font-weight:700;color:${effectiveColor}">${effectiveLabel}</div></div>
               <div style="padding:4px 6px;border-radius:6px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.04)"><div style="font-size:.48rem;color:var(--text-muted);text-transform:uppercase;font-weight:700">Confidence</div><div style="font-size:.66rem;font-weight:700;color:${confidence==='LOW'?'var(--yellow)':'var(--text)'}">${confidence}</div></div>
               <div style="padding:4px 6px;border-radius:6px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.04)"><div style="font-size:.48rem;color:var(--text-muted);text-transform:uppercase;font-weight:700">Setup</div><div style="font-size:.66rem;font-weight:700;color:var(--accent)">${setupType}</div></div>
+              <div style="padding:4px 6px;border-radius:6px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.04)"><div style="font-size:.48rem;color:var(--text-muted);text-transform:uppercase;font-weight:700">Flags</div><div style="font-size:.66rem;font-weight:700;color:${(_decision.data_quality_flags?.length||0)>0?'var(--yellow)':'var(--text)'}">${_decision.data_quality_flags?.length || 0}</div></div>
+              <div style="padding:4px 6px;border-radius:6px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.04)"><div style="font-size:.48rem;color:var(--text-muted);text-transform:uppercase;font-weight:700">As-of</div><div style="font-size:.66rem;font-weight:700;color:var(--text)">${_esc(_decision.asof || _decision.created_at || latestDataDate || 'Unavailable')}</div></div>
               <div style="padding:4px 6px;border-radius:6px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.04)"><div style="font-size:.48rem;color:var(--text-muted);text-transform:uppercase;font-weight:700">Reason</div><div id="rv-decision-reason-meta" style="font-size:.62rem;font-weight:600;color:var(--text-dim)">${_esc(_decision.wait_reason || 'Review narrative below')}</div></div>
             </div>
             ${_v6.bucket ? `<div style="display:flex;gap:4px;margin-top:4px;flex-wrap:wrap">${(()=>{const bC={HIGH_CONVICTION:'var(--green)',MODERATE:'var(--accent)',WEAK:'var(--yellow)',NO_TRADE:'var(--red)'};const hC={hold_strong:'var(--green)',hold_normal:'var(--text-dim)',hold_fading:'var(--yellow)',reduce:'var(--red)',exit_signal:'var(--red)'};const pill=(l,c)=>'<span style="font-size:.5rem;font-weight:700;padding:1px 6px;border-radius:3px;background:rgba(255,255,255,0.04);border:1px solid '+c+';color:'+c+'">'+l+'</span>';return pill(_v6.bucket.replace(/_/g,' '),bC[_v6.bucket]||'var(--text-dim)')+(_v6.hold_state?pill(_v6.hold_state.replace(/_/g,' '),hC[_v6.hold_state]||'var(--text-dim)'):'')})()}</div>` : ''}
@@ -962,7 +1024,7 @@
         </div>
 
         <!-- Trade Plan -->
-        ${effectiveVerdict === 'BUY' || effectiveVerdict === 'SELL' ? `<div style="display: flex; justify-content: space-between; font-size: 0.62rem; margin-bottom: 0.35rem; padding: 6px 10px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.04); border-radius: 6px;">
+        ${tradePlanState.requested && tradePlanState.complete ? `<div style="display: flex; justify-content: space-between; font-size: 0.62rem; margin-bottom: 0.35rem; padding: 6px 10px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.04); border-radius: 6px;">
             <div><span style="color:var(--text-muted)">Entry:</span> <span style="font-weight:600;">${close!=null?'$'+close.toFixed(2):'—'}</span></div>
             <div><span style="color:var(--text-muted)">Stop:</span> <span style="font-weight:600; color:var(--red);">${stopPr!=null?'$'+stopPr.toFixed(2):'—'}</span></div>
             <div><span style="color:var(--text-muted)">Target:</span> <span style="font-weight:600; color:var(--green);">${targetPrice!=null?'$'+targetPrice.toFixed(2):'—'}</span></div>
@@ -970,7 +1032,7 @@
         </div>
         <div style="font-size:0.58rem; color:var(--text-dim); text-align:center; margin-bottom:0.75rem; font-style:italic;">
           Entry: current price · Stop: below ATR · Target: next resistance level
-        </div>` : `<div style="display:flex;align-items:center;justify-content:center;font-size:0.62rem;margin-bottom:0.75rem;padding:8px 10px;background:rgba(255,255,255,0.01);border:1px dashed rgba(255,255,255,0.08);border-radius:6px;color:var(--text-muted)">No active trade plan — ${effectiveText}</div>`}
+        </div>` : tradePlanState.requested ? `<div style="display:flex;align-items:center;justify-content:center;font-size:0.62rem;margin-bottom:0.75rem;padding:8px 10px;background:rgba(255,255,255,0.01);border:1px dashed rgba(255,255,255,0.08);border-radius:6px;color:var(--text-muted)">Trade plan unavailable — missing required inputs</div>` : `<div style="display:flex;align-items:center;justify-content:center;font-size:0.62rem;margin-bottom:0.75rem;padding:8px 10px;background:rgba(255,255,255,0.01);border:1px dashed rgba(255,255,255,0.08);border-radius:6px;color:var(--text-muted)">No active trade plan — ${effectiveText}</div>`}
 
         ${_decision.scores ? `<div style="padding:6px 10px;margin-bottom:0.5rem;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.04);border-radius:6px;">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
@@ -997,6 +1059,7 @@
         </div>
 
         <!-- Structure / Weakness / Rebound + Checklist -->
+        <div style="font-size:.58rem;color:var(--text-muted);margin:-.1rem 0 .55rem;font-style:italic">${trendSignalSummary}</div>
         <table style="width:100%; border-collapse: collapse; margin-bottom: 1.25rem; table-layout: fixed;">
           <tr>
             <td style="width: 55%; vertical-align: top; padding-right: 1.25rem;">
@@ -1017,7 +1080,7 @@
               </div>
             </td>
             <td style="width: 45%; vertical-align: top; background:rgba(255,255,255,0.02); border:1px solid var(--border); border-radius:8px; padding:.6rem;">
-               <div style="display:flex; flex-direction:column; gap:.4rem; margin-bottom:.6rem;">
+               ${hasActiveTradeSetup ? `<div style="display:flex; flex-direction:column; gap:.4rem; margin-bottom:.6rem;">
                  <span style="font-size:.65rem;font-weight:700;color:var(--text-dim);text-transform:uppercase">Pre-Trade Checklist</span>
                  <div style="display:flex; gap:0; border-radius:4px; overflow:hidden; border:1px solid var(--border); align-self: flex-start;" id="cl-btns">
                    <button class="cl-btn active" data-hz="short" onclick="window._switchCL(this)">SHORT</button>
@@ -1027,7 +1090,7 @@
                </div>
                <div id="cl-short">${renderChecklist(checksShort)}</div>
                <div id="cl-mid" style="display:none">${renderChecklist(checksMid)}</div>
-               <div id="cl-long" style="display:none">${renderChecklist(checksLong)}</div>
+               <div id="cl-long" style="display:none">${renderChecklist(checksLong)}</div>` : `<div style="display:flex;align-items:center;justify-content:center;min-height:120px;font-size:.65rem;color:var(--text-muted);text-align:center">No active trade setup — checklist not applicable.</div>`}
             </td>
           </tr>
         </table>
@@ -1035,7 +1098,7 @@
         <div style="border-top:1px solid rgba(255,255,255,0.04);margin-top:.75rem;padding-top:.5rem"><div style="font-size:.5rem;color:var(--text-muted);text-transform:uppercase;font-weight:700;letter-spacing:1px;margin-bottom:.3rem;opacity:.5">INTERPRETATION</div></div>
         ${renderStoryFlow()}
 
-        ${(()=>{const bullets=(_explanation.bullets||[]).slice(0,3);const gates=(_decision.trigger_gates||[]).slice(0,2);if(!bullets.length&&!gates.length)return '';const sentClr=_explanation.sentiment==='positive'?'var(--green)':_explanation.sentiment==='negative'?'var(--red)':'var(--yellow)';const sentIco=_explanation.sentiment==='positive'?'✓':_explanation.sentiment==='negative'?'✗':'•';return `<div style="margin-top:.75rem;margin-bottom:.5rem;padding:.6rem;border-radius:8px;background:rgba(255,255,255,0.01);border:1px solid rgba(255,255,255,0.03)"><div style="font-size:.62rem;color:var(--text-muted);text-transform:uppercase;font-weight:700;margin-bottom:.35rem">Why This Trade?</div><div style="display:grid;gap:3px">${bullets.map(b=>'<div style="font-size:.65rem;color:'+sentClr+';display:flex;gap:4px"><span>'+sentIco+'</span><span>'+_esc(b)+'</span></div>').join('')}${gates.map(g=>'<div style="font-size:.65rem;color:var(--yellow);display:flex;gap:4px"><span>⚠</span><span>'+_esc(g)+'</span></div>').join('')}</div></div>`})()}
+        ${(()=>{const bullets=_normalizedBullets.slice(0,3);const gates=(_decision.trigger_gates||[]).slice(0,2);if(!bullets.length&&!gates.length)return '';const sentClr=_explanation.sentiment==='positive'?'var(--green)':_explanation.sentiment==='negative'?'var(--red)':'var(--yellow)';const sentIco=_explanation.sentiment==='positive'?'✓':_explanation.sentiment==='negative'?'✗':'•';const title=(effectiveVerdict==='BUY'||effectiveVerdict==='SELL')?'Why This Trade?':'Why No Trade?';return `<div style="margin-top:.75rem;margin-bottom:.5rem;padding:.6rem;border-radius:8px;background:rgba(255,255,255,0.01);border:1px solid rgba(255,255,255,0.03)"><div style="font-size:.62rem;color:var(--text-muted);text-transform:uppercase;font-weight:700;margin-bottom:.35rem">${title}</div><div style="display:grid;gap:3px">${bullets.map(b=>'<div style="font-size:.65rem;color:'+sentClr+';display:flex;gap:4px"><span>'+sentIco+'</span><span>'+_esc(b)+'</span></div>').join('')}${gates.map(g=>'<div style="font-size:.65rem;color:var(--yellow);display:flex;gap:4px"><span>⚠</span><span>'+_esc(g)+'</span></div>').join('')}</div></div>`})()}
 
         <div style="border-top:1px solid rgba(255,255,255,0.04);margin-top:.75rem;padding-top:.5rem"><div style="font-size:.5rem;color:var(--text-muted);text-transform:uppercase;font-weight:700;letter-spacing:1px;margin-bottom:.3rem;opacity:.5">EVIDENCE</div></div>
         <div id="dyn-what-changed" style="margin-top:0.75rem;">
@@ -1070,13 +1133,13 @@
         <!-- Risk Gauge -->
         <div style="display:flex;gap:1rem;align-items:center;background:rgba(255,255,255,0.01);padding:.75rem;border-radius:8px;border:1px solid rgba(255,255,255,0.03);margin-bottom:1rem">
           <div style="width:28px;height:70px;border:2px solid var(--border);border-radius:6px;position:relative;overflow:hidden;flex-shrink:0">
-            <div style="position:absolute;bottom:0;width:100%;height:${riskLabel==='High'||riskLabel==='Elevated'?90:riskLabel==='Medium'?55:riskLabel==='Unavailable'?0:30}%;background:${riskColor}"></div>
+            <div style="position:absolute;bottom:0;width:100%;height:${finalRisk.label==='High'||finalRisk.label==='Elevated'?90:finalRisk.label==='Medium'?55:finalRisk.label==='Unavailable'?0:30}%;background:${finalRisk.color}"></div>
           </div>
           <div style="flex:1">
             <div style="font-size:.65rem;color:var(--text-muted)">RISK STATE</div>
-            <div style="font-size:1.2rem;font-weight:800;color:${riskColor}">${riskLabel}</div>
-            <div style="font-size:.58rem;color:var(--text-dim);margin-top:2px;font-style:italic;">Regime: <span style="color:var(--yellow);">${riskInputsComplete ? (isExtremeVol?'Extreme Volatility':'Normal') : 'Unavailable'}</span></div>
-            <div style="font-size:.55rem;color:var(--text-dim);line-height:1.4;margin-top:3px">${(()=>{if(!riskInputsComplete)return 'Risk state unavailable — missing volatility inputs.';const d=[];if(_extremeVolPctile&&riskLabel==='High')d.push('<span style="color:var(--red)">+ Extreme volatility regime ('+_volPctile.toFixed(0)+'th percentile)</span>');else if(_extremeVolPctile)d.push('<span style="color:var(--yellow)">+ Volatility percentile '+_volPctile.toFixed(0)+'th (extreme)</span>');if(_states.volatility==='EXTREME'&&riskLabel==='High')d.push('<span style="color:var(--red)">+ Structural volatility state confirms a high-risk regime</span>');if(_extremeVolPctile&&riskLabel==='Elevated')d.push('<span style="color:var(--green)">\u2013 Final risk remains Elevated because realized volatility is still low and structural support tempers net risk</span>');if(_elevatedVolPctile&&!_extremeVolPctile)d.push('<span style="color:var(--yellow)">+ Volatility percentile elevated ('+_volPctile.toFixed(0)+'th)</span>');if((_states.volatility==='LOW'||_states.volatility==='COMPRESSED')&&!_extremeVolPctile)d.push('<span style="color:var(--green)">\u2013 Low realized volatility supports reduced risk</span>');return d.length?d.join('<br>'):'Risk inputs aligned.';})()}</div>
+            <div style="font-size:1.2rem;font-weight:800;color:${finalRisk.color}">${finalRisk.label}</div>
+            <div style="font-size:.58rem;color:var(--text-dim);margin-top:2px;font-style:italic;">Regime: <span style="color:${finalRisk.color};">${finalRisk.regimeLabel}</span></div>
+            <div style="font-size:.55rem;color:var(--text-dim);line-height:1.45;margin-top:3px">${riskInputsComplete ? '<span style="color:var(--text-muted)">Driver:</span> <span style="color:'+finalRisk.color+'">'+_esc(finalRisk.driver)+'</span><br><span style="color:var(--text-muted)">Context:</span> <span style="color:var(--text)">'+_esc(finalRisk.context)+'</span>' : 'Risk state unavailable — missing volatility inputs.'}</div>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:.2rem;margin-top:.3rem">
               <div title="Average True Range (14d) in dollar terms" style="font-size:.65rem;cursor:help"><span style="color:var(--text-muted)">ATR:</span> <span style="font-weight:600">${atr!=null?'$'+atr.toFixed(2):'—'}</span></div>
               <div title="ATR as percentage of price" style="font-size:.65rem;cursor:help"><span style="color:var(--text-muted)">ATR%:</span> <span style="font-weight:600">${atrPct!=null?atrPct.toFixed(2)+'%':'—'}</span></div>
@@ -1190,7 +1253,7 @@
         <div style="margin-bottom:0.75rem; padding:.6rem; border-radius:8px; background:rgba(255,255,255,0.01); border:1px solid rgba(255,255,255,0.03);">
             <div style="font-size: .62rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700; margin-bottom: .4rem;">Upcoming Catalysts</div>
             <div id="dyn-catalysts" style="display:flex; flex-direction:column; gap:4px;">
-                <div style="font-size:0.68rem; color:var(--text-dim); font-style:italic;">0 confirmed catalysts in the 30-day forward window</div>
+                ${(()=>{const _fund=data.fundamentals||{};const nextWindow=_formatExpectedWindow(_fund.nextEarningsDate||_fund.earningsDate||_fund.next_earnings_date||null);if(nextWindow){return '<div style="font-size:0.68rem; color:var(--text-dim); font-style:italic;">0 confirmed catalysts in the 30-day forward window</div><div style="font-size:0.64rem;color:var(--text-muted)">Next expected earnings window: '+_esc(nextWindow)+' (unconfirmed)</div>';}if(!data.fundamentals){return '<div style="font-size:0.68rem; color:var(--text-dim); font-style:italic;">Catalyst data currently limited</div>';}return '<div style="font-size:0.68rem; color:var(--text-dim); font-style:italic;">0 confirmed catalysts in the 30-day forward window</div><div style="font-size:0.64rem;color:var(--text-muted)">No unconfirmed catalyst window available</div>';})()}
             </div>
         </div>
 
@@ -1205,7 +1268,7 @@
           <div style="display:grid;grid-template-columns:1.2fr .8fr;gap:.5rem;align-items:stretch">
             <div style="display:flex;flex-direction:column;gap:.11rem;" class="custom-scroll">${rows.join('')}</div>
             <div style="position:relative;min-height:220px;background:rgba(255,255,255,0.01);border-radius:8px;border:1px solid rgba(255,255,255,0.04);padding:.5rem .3rem">
-              ${displayLevels.map(l=>{var c=l.kind==='support'?'var(--green)':'var(--red)';return '<div style="position:absolute;left:4px;right:4px;top:'+l.yExact+'%;height:1px;background:'+c+';opacity:0.25"></div><div style="position:absolute;right:2px;top:calc('+l.yText+'% - 4px);font-size:.42rem;color:'+c+';white-space:nowrap">'+l.label+'</div>'}).join('')}
+              ${displayLevels.map(l=>{var c=l.kind==='support'?'var(--green)':'var(--red)';return '<div style="position:absolute;left:4px;right:4px;top:'+l.yExact+'%;height:1px;background:'+c+';opacity:0.25"></div><div style="position:absolute;right:2px;top:calc('+l.yText+'% - 4px);font-size:.42rem;color:'+c+';white-space:nowrap;max-width:72px;overflow:hidden;text-overflow:ellipsis;text-align:right">'+l.label+'</div>'}).join('')}
               <div style="position:absolute;left:4px;right:4px;top:${((1-((close-mnL)/rngL))*90+5)}%;height:2px;background:var(--accent);z-index:1"></div>
               <div style="position:absolute;left:2px;top:calc(${((1-((close-mnL)/rngL))*90+5)}% - 7px);background:var(--accent);color:#000;padding:1px 3px;border-radius:2px;font-size:.55rem;font-weight:700;z-index:2">$${close.toFixed(2)}</div>
             </div>
@@ -1574,9 +1637,11 @@
     if (hpAsof && effectiveHpDoc) {
       const hpDate = effectiveHpDoc.computed_at ? effectiveHpDoc.computed_at.slice(0,10) : effectiveHpDoc.latest_date || '\u2014';
       const hpSource = effectiveHpDoc.synthetic ? 'Source: synthetic baseline' : 'Source: public historical data';
-      hpAsof.textContent = hpSource + ' · Event stats as-of: ' + hpDate + (regDoc?.date ? ' · Regime snapshot as-of: ' + regDoc.date : '');
+      const regimeAgeDays = _ageDaysFrom(regDoc?.date);
+      const regimeSuffix = regDoc?.date ? (regimeAgeDays != null && regimeAgeDays > 2 ? ' (stale, ' + regimeAgeDays + 'd old)' : ' (current)') : '';
+      hpAsof.textContent = hpSource + ' · Event stats as-of: ' + hpDate + (regDoc?.date ? ' · Regime snapshot: ' + regDoc.date + regimeSuffix : '');
       if (regDoc?.date && hpDate && regDoc.date !== hpDate) {
-        _integrityItems.push({ text:'Historical and regime timelines differ', color:'var(--yellow)' });
+        _integrityItems.push({ text:'Historical timeline mismatch → context dated', color:'var(--yellow)' });
         const banner = document.getElementById('rv-integrity-banner');
         if (banner) banner.innerHTML = window._renderIntegrityBanner();
       }
@@ -1591,7 +1656,7 @@
         {l:'Vol.',v:vMap[regDoc.volatility_regime]||(regDoc.volatility_regime||'-').toUpperCase(),c:'var(--text)'},
         {l:'Breadth',v:(regDoc.breadth_regime||'-').toUpperCase(),c:bColors[regDoc.breadth_regime]||'var(--text)'},
         {l:'Breadth %',v:(regDoc.breadth_above_ma50_pct!=null?regDoc.breadth_above_ma50_pct+'%':'-'),c:'var(--text-dim)'},
-        {l:'Regime as-of',v:regDoc.date||'-',c:'var(--text-muted)'}
+        {l:'Regime as-of',v:regDoc.date ? regDoc.date + ((_ageDaysFrom(regDoc.date) != null && _ageDaysFrom(regDoc.date) > 2) ? ' · stale' : '') : '-',c:'var(--text-muted)'}
       ];
       regBar.innerHTML=pills.map(p=>`<div style="display:flex;flex-direction:column;align-items:center;padding:.3rem .65rem;border-radius:6px;background:rgba(255,255,255,0.02);border:1px solid var(--border)"><span style="font-size:.55rem;color:var(--text-muted);text-transform:uppercase;font-weight:700">${p.l}</span><span style="font-size:.72rem;font-weight:800;color:${p.c};margin-top:1px">${p.v}</span></div>`).join('');
     }
@@ -1629,6 +1694,8 @@
         const cColor = _decision.confidence >= 0.7 ? 'var(--green)' : _decision.confidence >= 0.4 ? 'var(--yellow)' : 'var(--red)';
         pills.push(mp('Conf', cPct + '%', cColor));
       }
+      const govAsOf = _decision.asof || _decision.created_at || latestDataDate;
+      if (govAsOf) pills.push(mp('As-of', String(govAsOf).slice(0, 10), 'var(--text-muted)'));
 
       govEl.innerHTML = pills.join('');
     } catch { /* graceful degradation */ }

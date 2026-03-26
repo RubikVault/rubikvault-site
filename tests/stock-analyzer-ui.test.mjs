@@ -445,8 +445,9 @@ test('Live stock.html clarifies historical timestamps explicitly', async () => {
   const fs = await import('node:fs');
   const content = fs.readFileSync(new URL('../public/stock.html', import.meta.url), 'utf-8');
   assert.ok(content.includes('Event stats as-of:'), 'Historical event as-of label is missing');
-  assert.ok(content.includes('Regime snapshot as-of:'), 'Historical regime as-of label is missing');
+  assert.ok(content.includes('Regime snapshot:'), 'Historical regime snapshot label is missing');
   assert.ok(content.includes('Regime as-of'), 'Regime pill label is missing');
+  assert.ok(content.includes('Historical timeline mismatch → context dated'), 'Historical timeline mismatch copy is missing');
 });
 
 test('Live stock.html sharpens trend vs rebound wording', async () => {
@@ -486,6 +487,32 @@ test('Live stock.html exposes compact decision meta summary', async () => {
   const fs = await import('node:fs');
   const content = fs.readFileSync(new URL('../public/stock.html', import.meta.url), 'utf-8');
   assert.ok(content.includes('rv-decision-reason-meta'), 'Decision reason meta block is missing');
+  assert.ok(content.includes('Flags'), 'Flags meta card is missing');
+  assert.ok(content.includes('As-of'), 'As-of meta card is missing');
+});
+
+test('Live stock.html renders causal risk explanation from final risk state', async () => {
+  const fs = await import('node:fs');
+  const content = fs.readFileSync(new URL('../public/stock.html', import.meta.url), 'utf-8');
+  assert.ok(content.includes('Driver:'), 'Risk driver label is missing');
+  assert.ok(content.includes('Context:'), 'Risk context label is missing');
+  assert.ok(content.includes('Risk override active → confidence moderated'), 'Risk override integrity copy is missing');
+});
+
+test('Live stock.html hardens trade plan and checklist empty states', async () => {
+  const fs = await import('node:fs');
+  const content = fs.readFileSync(new URL('../public/stock.html', import.meta.url), 'utf-8');
+  assert.ok(content.includes('Trade plan unavailable — missing required inputs'), 'Trade plan missing-input state is missing');
+  assert.ok(content.includes('No active trade setup — checklist not applicable.'), 'Checklist inactive state is missing');
+  assert.ok(content.includes('Why No Trade?'), 'Why No Trade heading is missing');
+});
+
+test('Live stock.html enriches catalysts and signal hierarchy copy', async () => {
+  const fs = await import('node:fs');
+  const content = fs.readFileSync(new URL('../public/stock.html', import.meta.url), 'utf-8');
+  assert.ok(content.includes('Next expected earnings window:'), 'Catalyst next-window copy is missing');
+  assert.ok(content.includes('Catalyst data currently limited'), 'Catalyst limited-data copy is missing');
+  assert.ok(content.includes('Weak broader trend · short-term rebound signals active · no override'), 'Signal hierarchy summary is missing');
 });
 
 // ─── K) Initial HTML State Tests ────────────────────────────────────────────
