@@ -125,6 +125,26 @@
         .info-row { display:flex; justify-content:space-between; gap:.75rem; font-size:.72rem; color:var(--text-muted); margin-top:.25rem; }
         .info-row strong { color:var(--text); font-weight:600; text-align:right; }
         .soft-note { font-size:.74rem; color:var(--text-muted); line-height:1.45; margin-top:.45rem; }
+        .trust-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:.75rem; margin-bottom:1.5rem; }
+        .summary-list, .status-list { list-style:none; padding:0; margin:0; }
+        .summary-item, .status-item { padding:.55rem .75rem; margin-bottom:.45rem; border-radius:10px; border:1px solid rgba(255,255,255,0.06); background:rgba(255,255,255,0.02); font-size:.8rem; line-height:1.45; }
+        .summary-item strong, .status-item strong { color:#fff; }
+        .cause-item, .action-item { padding:.75rem .9rem; margin-bottom:.55rem; border-radius:10px; border:1px solid rgba(255,255,255,0.06); background:rgba(255,255,255,0.02); }
+        .cause-item.sev-critical, .action-item.sev-critical { border-color:rgba(239,68,68,0.22); background:rgba(239,68,68,0.08); }
+        .cause-item.sev-warning, .action-item.sev-warning { border-color:rgba(245,158,11,0.22); background:rgba(245,158,11,0.08); }
+        .cause-head, .action-head { display:flex; justify-content:space-between; gap:.75rem; align-items:flex-start; margin-bottom:.35rem; }
+        .cause-title, .action-title { font-size:.87rem; font-weight:700; }
+        .cause-meta, .action-meta { font-size:.72rem; color:var(--text-muted); text-transform:uppercase; font-weight:700; }
+        .cause-text, .action-text { font-size:.78rem; color:var(--text-muted); line-height:1.5; }
+        .action-text strong { color:#fff; }
+        .pill-row { display:flex; flex-wrap:wrap; gap:.35rem; margin-top:.5rem; }
+        .tiny-pill { display:inline-flex; align-items:center; gap:.25rem; padding:2px 8px; border-radius:999px; border:1px solid rgba(255,255,255,0.12); font-size:.68rem; color:var(--text-muted); }
+        .diagnostic-details { margin-top:1rem; border:1px solid rgba(255,255,255,0.08); border-radius:12px; background:rgba(255,255,255,0.02); overflow:hidden; }
+        .diagnostic-details summary { cursor:pointer; list-style:none; padding:.85rem 1rem; font-size:.84rem; font-weight:700; }
+        .diagnostic-details summary::-webkit-details-marker { display:none; }
+        .diagnostic-raw { padding:0 1rem 1rem; font-size:.74rem; color:var(--text-muted); white-space:pre-wrap; line-height:1.55; font-family:monospace; }
+        .delta-list { list-style:none; padding:0; margin:0; }
+        .delta-item { font-size:.78rem; color:var(--text-muted); padding:.35rem 0; border-bottom:1px solid rgba(255,255,255,0.03); }
 
         /* Ops */
         .ops-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:1rem; margin-bottom:1.5rem; }
@@ -157,6 +177,8 @@
         </div>
     </header>
 
+    <div class="trust-grid" id="trustGrid"></div>
+
     <!-- Tab Navigation -->
     <div class="tab-bar">
         <button class="tab-btn active" data-tab="health"><i class="fas fa-heartbeat"></i> System Health</button>
@@ -167,17 +189,41 @@
 
     <!-- Tab 1: System Health -->
     <div class="tab-panel active" id="tab-health">
-        <div class="health-row" id="healthRow"></div>
-        <div class="model-grid" id="modelGrid"></div>
         <div class="sections-grid">
-            <div class="section-box" id="recsBox">
-                <div class="section-title"><i class="fas fa-brain"></i> System Intelligence</div>
-                <div id="recsContent"></div>
+            <div class="section-box">
+                <div class="section-title"><i class="fas fa-clipboard-list"></i> Executive Summary</div>
+                <div id="executiveSummaryContent"></div>
+            </div>
+            <div class="section-box">
+                <div class="section-title"><i class="fas fa-compass"></i> System Betriebsmodus</div>
+                <div id="operatingModeContent"></div>
+            </div>
+        </div>
+        <div class="sections-grid">
+            <div class="section-box">
+                <div class="section-title"><i class="fas fa-triangle-exclamation"></i> Critical Root Causes</div>
+                <div id="rootCausesContent"></div>
             </div>
             <div class="section-box" id="diagBox">
                 <div class="section-title"><i class="fas fa-stethoscope"></i> Pipeline Diagnostic</div>
                 <div id="diagContent"><span style="color:var(--text-muted);font-size:.82rem">No diagnostic data</span></div>
             </div>
+        </div>
+        <div class="health-row" id="healthRow"></div>
+        <div class="model-grid" id="modelGrid"></div>
+        <div class="sections-grid">
+            <div class="section-box" id="recsBox">
+                <div class="section-title"><i class="fas fa-list-check"></i> Prioritized Action Queue</div>
+                <div id="recsContent"></div>
+            </div>
+            <div class="section-box">
+                <div class="section-title"><i class="fas fa-rotate"></i> What Changed Since Last Refresh</div>
+                <div id="refreshDeltaContent"><span style="color:var(--text-muted);font-size:.82rem">No prior refresh available</span></div>
+            </div>
+        </div>
+        <div class="section-box">
+            <div class="section-title"><i class="fas fa-terminal"></i> Diagnostic Mode</div>
+            <div id="diagnosticModeContent"></div>
         </div>
     </div>
 
@@ -241,6 +287,16 @@
             <div class="section-title"><i class="fas fa-robot"></i> V5 Training Autopilot</div>
             <div id="autopilotContent"><span style="color:var(--text-muted);font-size:.82rem">No autopilot data</span></div>
         </div>
+        <div class="sections-grid">
+            <div class="section-box">
+                <div class="section-title"><i class="fas fa-bug"></i> Recent Failures</div>
+                <div id="recentFailuresContent"><span style="color:var(--text-muted);font-size:.82rem">No failure data</span></div>
+            </div>
+            <div class="section-box">
+                <div class="section-title"><i class="fas fa-check-double"></i> Last Successful Jobs</div>
+                <div id="lastSuccessfulJobsContent"><span style="color:var(--text-muted);font-size:.82rem">No success data</span></div>
+            </div>
+        </div>
         <div class="section-box" style="margin-bottom:1.5rem">
             <div class="section-title"><i class="fas fa-globe"></i> Market Regime</div>
             <div id="regimeContent"><span style="color:var(--text-muted);font-size:.82rem">No regime data</span></div>
@@ -280,6 +336,8 @@ const FIX_HINTS = {
 
 let _accuracyChart = null;
 let _weightHistoryChart = null;
+const DASHBOARD_CACHE_KEY = 'rv.dashboard_v7.cache';
+const DASHBOARD_SUMMARY_KEY = 'rv.dashboard_v7.summary';
 
 // Tab switching
 document.querySelectorAll('.tab-btn').forEach(btn => {
@@ -299,6 +357,96 @@ function fmtShortDate(v) { if (!v) return 'N/A'; const d = new Date(v); return N
 function stalenessText(m) { return m.stale_days == null ? 'unknown' : `${m.stale_days}d (${m.staleness_level || 'unknown'})`; }
 function badgeClassForSeverity(level) { return level === 'critical' ? 'badge-red' : level === 'warning' ? 'badge-yellow' : 'badge-green'; }
 function statusIconForSeverity(level) { return level === 'critical' ? 'fa-triangle-exclamation' : level === 'warning' ? 'fa-circle-exclamation' : 'fa-check-circle'; }
+function escapeHtml(value) {
+    return String(value ?? '').replace(/[&<>"']/g, ch => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[ch]));
+}
+function readCache(key) {
+    try { return JSON.parse(localStorage.getItem(key) || 'null'); } catch { return null; }
+}
+function writeCache(key, value) {
+    try { localStorage.setItem(key, JSON.stringify(value)); } catch {}
+}
+function hoursSince(dateLike) {
+    if (!dateLike) return null;
+    const ts = new Date(dateLike).getTime();
+    if (!Number.isFinite(ts)) return null;
+    return Math.max(0, Math.round(((Date.now() - ts) / 3600000) * 10) / 10);
+}
+function summaryShape(data) {
+    return {
+        status: data.system?.overall_status || 'UNKNOWN',
+        rootCauseIds: (data.system?.root_causes || []).map(c => c.id),
+        primaryActionIds: (data.system?.primary_actions || []).map(a => a.id),
+    };
+}
+function computeDelta(previous, current) {
+    if (!previous) return { firstLoad: true, added: [], cleared: [], unchanged: current.rootCauseIds || [] };
+    const prevSet = new Set(previous.rootCauseIds || []);
+    const currSet = new Set(current.rootCauseIds || []);
+    return {
+        firstLoad: false,
+        added: [...currSet].filter(id => !prevSet.has(id)),
+        cleared: [...prevSet].filter(id => !currSet.has(id)),
+        unchanged: [...currSet].filter(id => prevSet.has(id)),
+        statusChanged: previous.status !== current.status ? { from: previous.status, to: current.status } : null,
+    };
+}
+function termHelp(term) {
+    return {
+        SHADOW_ONLY: 'V1 läuft beobachtend und steuert das Live-System noch nicht.',
+        BOOTSTRAP: 'Es fehlen noch genügend aufgelöste Outcomes für belastbare Automatisierung.',
+        FALLBACK_WEIGHTS: 'Fusion nutzt Default-/Fallback-Gewichte statt gelernter Gewichte.',
+        PROMOTION_BLOCKED: 'Promotion/Cutover ist blockiert, weil aktuelle Audit-/Signalbedingungen nicht erfüllt sind.',
+        CUTOVER_BLOCKED: 'Mindestens ein harter Blocker verhindert Produktionsreife.',
+        UNKNOWN: 'Der Zustand kann aus den verfügbaren Daten nicht sicher bestimmt werden.',
+        INACTIVE: 'Quelle liefert aktuell keine frischen Signale oder keinen Zeitstempel.',
+        STALE: 'Daten sind veraltet und sollten nicht als live betrachtet werden.',
+        CRITICAL: 'Der Zustand blockiert Vertrauen oder Produktionsfähigkeit.',
+    }[term] || '';
+}
+async function fetchDashboardPayload() {
+    const cache = readCache(DASHBOARD_CACHE_KEY);
+    const previousSummary = readCache(DASHBOARD_SUMMARY_KEY);
+    const failedAt = new Date().toISOString();
+    try {
+        const response = await fetch('/dashboard_v6_meta_data.json?_=' + Date.now(), { cache: 'no-store' });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const data = await response.json();
+        const fetchedAt = new Date().toISOString();
+        const currentSummary = summaryShape(data);
+        const delta = computeDelta(previousSummary, currentSummary);
+        writeCache(DASHBOARD_CACHE_KEY, { data, fetchedAt });
+        writeCache(DASHBOARD_SUMMARY_KEY, currentSummary);
+        return {
+            data,
+            runtime: {
+                fetch_status: 'ok',
+                stale_snapshot_mode: false,
+                fetch_error_message: null,
+                last_successful_fetch_at: fetchedAt,
+                last_failed_fetch_at: null,
+                snapshot_age_hours: 0,
+                delta,
+            },
+        };
+    } catch (err) {
+        if (cache?.data) {
+            return {
+                data: cache.data,
+                runtime: {
+                    fetch_status: 'failed',
+                    stale_snapshot_mode: true,
+                    fetch_error_message: err.message,
+                    last_successful_fetch_at: cache.fetchedAt || null,
+                    last_failed_fetch_at: failedAt,
+                    snapshot_age_hours: hoursSince(cache.fetchedAt),
+                    delta: computeDelta(previousSummary, summaryShape(cache.data)),
+                },
+            };
+        }
+        throw err;
+    }
+}
 
 function sparklineSVG(values, color, w = 200, h = 36) {
     const valid = values.filter(v => v != null);
@@ -319,6 +467,141 @@ function sparklineSVG(values, color, w = 200, h = 36) {
         <polyline points="${linePoints}" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
         <circle cx="${points[points.length-1].split(',')[0]}" cy="${points[points.length-1].split(',')[1]}" r="3" fill="${color}"/>
     </svg></div>`;
+}
+
+function renderTrustGrid(data, runtime) {
+    const fetchSeverity = runtime.fetch_status === 'failed' ? 'critical' : 'ok';
+    document.getElementById('trustGrid').innerHTML = [
+        hc('Live Refresh', runtime.fetch_status === 'failed' ? 'STALE SNAPSHOT' : 'LIVE OK', fetchSeverity === 'critical' ? 'var(--red)' : 'var(--green)'),
+        hc('Last Success', runtime.last_successful_fetch_at ? fmtShortDate(runtime.last_successful_fetch_at) : 'N/A', 'var(--text)'),
+        hc('Snapshot Age', runtime.stale_snapshot_mode ? fmtAgeHours(runtime.snapshot_age_hours) : '0.0h', runtime.stale_snapshot_mode ? 'var(--yellow)' : 'var(--green)'),
+        hc('Data Validity', data.system?.data_truth_state || 'Unknown', data.system?.status_severity === 'critical' ? 'var(--red)' : data.system?.status_severity === 'warning' ? 'var(--yellow)' : 'var(--green)'),
+    ].join('');
+}
+
+function renderExecutiveSummary(data, runtime) {
+    const summaryItems = [
+        { label:'Current state', value:`${data.system?.overall_status || 'UNKNOWN'} · ${runtime.fetch_status === 'failed' ? 'using cached snapshot' : 'live fetch healthy'}` },
+        { label:'Main blockers', value:(data.system?.root_causes || []).slice(0, 2).map(c => c.title).join(' · ') || 'No blockers detected' },
+        { label:'Operational risk', value:data.system?.status_severity === 'critical' ? 'High: critical upstream/data issues present.' : data.system?.status_severity === 'warning' ? 'Medium: partial degradation present.' : 'Low: no major blockers detected.' },
+        { label:'Readiness', value:data.system?.cutover_ready ? 'Cutover criteria currently satisfied.' : 'Cutover blocked by active data, pipeline, or audit issues.' },
+        { label:'Recommended next action', value:data.system?.primary_actions?.[0]?.action || 'No action queued.' },
+    ];
+    if (runtime.fetch_status === 'failed') {
+        summaryItems.unshift({ label:'Live fetch issue', value:`Latest refresh failed: ${runtime.fetch_error_message || 'unknown error'}` });
+    }
+    document.getElementById('executiveSummaryContent').innerHTML = `<ul class="summary-list">${summaryItems.map(item => `<li class="summary-item"><strong>${item.label}:</strong> ${escapeHtml(item.value)}</li>`).join('')}</ul>`;
+}
+
+function renderOperatingModes(data) {
+    const modes = data.system?.operating_modes || [];
+    const pills = modes.length
+        ? modes.map(mode => `<span class="tiny-pill" title="${escapeHtml(termHelp(mode))}">${mode.replace(/_/g, ' ')}</span>`).join('')
+        : '<span class="tiny-pill">NO SPECIAL MODE</span>';
+    const explanations = [
+        'SHADOW V1: V1 is observing, not primary.',
+        'BOOTSTRAP: not enough resolved outcomes for full automation.',
+        'UNKNOWN: source truth is incomplete.',
+        'CRITICAL: do not treat current output as production-ready.',
+    ];
+    document.getElementById('operatingModeContent').innerHTML = `
+        <div class="pill-row">${pills}</div>
+        <ul class="status-list" style="margin-top:.75rem">${explanations.map(text => `<li class="status-item">${escapeHtml(text)}</li>`).join('')}</ul>
+    `;
+}
+
+function renderRootCauses(data) {
+    const causes = data.system?.root_causes || [];
+    if (!causes.length) {
+        document.getElementById('rootCausesContent').innerHTML = '<div class="rec-item rec-ok">No critical root causes detected.</div>';
+        return;
+    }
+    document.getElementById('rootCausesContent').innerHTML = causes.slice(0, 5).map(cause => `
+        <div class="cause-item sev-${cause.severity}">
+            <div class="cause-head">
+                <div class="cause-title">${escapeHtml(cause.title)}</div>
+                <div class="cause-meta">${escapeHtml(cause.category.replace(/_/g, ' '))}</div>
+            </div>
+            <div class="cause-text"><strong>Why:</strong> ${escapeHtml(cause.why)}</div>
+            <div class="cause-text"><strong>Impact:</strong> ${escapeHtml(cause.impact)}</div>
+            <div class="pill-row">
+                <span class="tiny-pill">${escapeHtml(cause.severity.toUpperCase())}</span>
+                <span class="tiny-pill">${escapeHtml(cause.owner || 'Unowned')}</span>
+                <span class="tiny-pill">${escapeHtml(cause.subsystem || 'system')}</span>
+            </div>
+        </div>
+    `).join('');
+}
+
+function renderActionQueue(data) {
+    const actions = data.system?.primary_actions || [];
+    if (!actions.length) {
+        document.getElementById('recsContent').innerHTML = '<div class="rec-item rec-ok">No queued actions.</div>';
+        return;
+    }
+    document.getElementById('recsContent').innerHTML = actions.map(action => `
+        <div class="action-item sev-${action.severity}">
+            <div class="action-head">
+                <div class="action-title">${escapeHtml(action.title)}</div>
+                <div class="action-meta">${escapeHtml((action.owner || 'Unowned') + ' / ' + (action.subsystem || 'system'))}</div>
+            </div>
+            <div class="action-text"><strong>Why:</strong> ${escapeHtml(action.why)}</div>
+            <div class="action-text"><strong>Impact:</strong> ${escapeHtml(action.impact)}</div>
+            <div class="action-text"><strong>Fix:</strong> ${escapeHtml(action.action)}</div>
+            ${action.file_ref ? `<div class="action-text"><strong>File:</strong> ${escapeHtml(action.file_ref)}</div>` : ''}
+        </div>
+    `).join('');
+}
+
+function renderRefreshDelta(runtime, data) {
+    const delta = runtime.delta;
+    if (!delta) {
+        document.getElementById('refreshDeltaContent').innerHTML = '<span style="color:var(--text-muted);font-size:.82rem">No refresh comparison available</span>';
+        return;
+    }
+    const causeTitleById = new Map((data.system?.root_causes || []).map(cause => [cause.id, cause.title]));
+    const rows = [];
+    if (delta.firstLoad) rows.push('First successful refresh in this browser session.');
+    if (delta.statusChanged) rows.push(`System status changed: ${delta.statusChanged.from} → ${delta.statusChanged.to}`);
+    for (const id of delta.added || []) rows.push(`New blocker: ${causeTitleById.get(id) || id}`);
+    for (const id of delta.cleared || []) rows.push(`Cleared blocker: ${id}`);
+    if (!rows.length) rows.push('No material changes since the last successful refresh.');
+    document.getElementById('refreshDeltaContent').innerHTML = `<ul class="delta-list">${rows.map(row => `<li class="delta-item">${escapeHtml(row)}</li>`).join('')}</ul>`;
+}
+
+function renderDiagnosticMode(data, runtime) {
+    const diagnosticRaw = {
+        fetch: {
+            status: runtime.fetch_status,
+            stale_snapshot_mode: runtime.stale_snapshot_mode,
+            error: runtime.fetch_error_message,
+            last_successful_fetch_at: runtime.last_successful_fetch_at,
+            last_failed_fetch_at: runtime.last_failed_fetch_at,
+            snapshot_age_hours: runtime.snapshot_age_hours,
+        },
+        system: {
+            overall_status: data.system?.overall_status,
+            live_status: data.system?.live_status,
+            data_truth_state: data.system?.data_truth_state,
+            operating_modes: data.system?.operating_modes,
+            root_cause_count: data.system?.root_causes?.length || 0,
+        },
+        sources: Object.fromEntries(Object.entries(data.models || {}).map(([key, model]) => [key, {
+            data_asof: model.data_asof,
+            report_generated_at: model.report_generated_at,
+            source_file_age_hours: model.source_file_age_hours,
+            stale_days_now: model.stale_days_now,
+            pipeline_status: model.pipeline_status,
+            pipeline_error: model.pipeline_error,
+        }])),
+    };
+    document.getElementById('diagnosticModeContent').innerHTML = `
+        <div class="soft-note">Engineer view: cached fetch state, truth contract, and per-source pipeline fields.</div>
+        <details class="diagnostic-details">
+            <summary>Open raw diagnostic contract</summary>
+            <div class="diagnostic-raw">${escapeHtml(JSON.stringify(diagnosticRaw, null, 2))}</div>
+        </details>
+    `;
 }
 
 function deepDiagnosis(key, feat, history) {
@@ -361,18 +644,28 @@ function deepDiagnosis(key, feat, history) {
 
 async function loadDashboard() {
     try {
-        const data = await (await fetch('/dashboard_v6_meta_data.json?_='+Date.now())).json();
+        const { data, runtime } = await fetchDashboardPayload();
+        renderTrustGrid(data, runtime);
+        renderExecutiveSummary(data, runtime);
+        renderOperatingModes(data);
+        renderRootCauses(data);
+        renderActionQueue(data);
+        renderRefreshDelta(runtime, data);
+        renderDiagnosticMode(data, runtime);
 
         // === Global Banner ===
         const allModels = Object.values(data.models || {});
         const worstStale = allModels.reduce((w, m) => Math.max(w, m.stale_days || 0), 0);
         const banner = document.getElementById('govBanner');
-        if (worstStale > 7) {
+        if (runtime.fetch_status === 'failed') {
             banner.style.background = 'rgba(239,68,68,0.1)'; banner.style.borderColor = 'rgba(239,68,68,0.3)'; banner.style.color = 'var(--red)';
-            banner.innerHTML = `<i class="fas fa-exclamation-triangle"></i> CRITICAL: Data ${worstStale}d stale \u2014 Pipeline may be broken`;
-        } else if (worstStale > 3) {
+            banner.innerHTML = `<i class="fas fa-wifi"></i> LIVE FETCH FAILED: showing cached snapshot from ${runtime.last_successful_fetch_at ? fmtShortDate(runtime.last_successful_fetch_at) : 'unknown'} (${fmtAgeHours(runtime.snapshot_age_hours)} old)`;
+        } else if (data.system?.status_severity === 'critical' || worstStale > 7) {
+            banner.style.background = 'rgba(239,68,68,0.1)'; banner.style.borderColor = 'rgba(239,68,68,0.3)'; banner.style.color = 'var(--red)';
+            banner.innerHTML = `<i class="fas fa-exclamation-triangle"></i> CRITICAL: ${escapeHtml(data.system?.root_causes?.[0]?.title || `Data ${worstStale}d stale`)}`;
+        } else if (data.system?.status_severity === 'warning' || worstStale > 3) {
             banner.style.background = 'rgba(245,158,11,0.1)'; banner.style.borderColor = 'rgba(245,158,11,0.3)'; banner.style.color = 'var(--yellow)';
-            banner.innerHTML = `<i class="fas fa-exclamation-circle"></i> WARNING: Data ${worstStale}d behind \u2014 Check ingest pipeline`;
+            banner.innerHTML = `<i class="fas fa-exclamation-circle"></i> WARNING: ${escapeHtml(data.system?.root_causes?.[0]?.title || `Data ${worstStale}d behind`)}`;
         } else {
             banner.style.background = 'rgba(16,185,129,0.08)'; banner.style.borderColor = 'rgba(16,185,129,0.2)'; banner.style.color = 'var(--green)';
             banner.innerHTML = '<i class="fas fa-check-circle"></i> All systems operational';
@@ -385,13 +678,13 @@ async function loadDashboard() {
         modeBadge.className = 'badge ' + (mode === 'shadow_v1' ? 'badge-blue' : mode === 'v1_primary_with_legacy_audit' ? 'badge-green' : 'badge-muted');
         modeBadge.innerHTML = '<i class="fas fa-circle-dot"></i> ' + mode.toUpperCase().replace(/_/g, ' ');
         const learningBadge = document.getElementById('learningBadge');
-        learningBadge.className = 'badge badge-blue';
+        learningBadge.className = 'badge ' + (data.system?.operating_modes?.includes('BOOTSTRAP') ? 'badge-yellow' : 'badge-blue');
         learningBadge.innerHTML = '<i class="fas fa-chart-line"></i> ' + (data.system?.learning_status || 'UNKNOWN');
         const statusBadge = document.getElementById('statusBadge');
         const statusSeverity = data.system?.status_severity || 'ok';
         statusBadge.className = 'badge ' + badgeClassForSeverity(statusSeverity);
         statusBadge.innerHTML = `<i class="fas ${statusIconForSeverity(statusSeverity)}"></i> ${data.system?.overall_status || 'UNKNOWN'}`;
-        statusBadge.title = (data.system?.status_detail || []).join(' | ');
+        statusBadge.title = `${(data.system?.status_detail || []).join(' | ')}${runtime.fetch_status === 'failed' ? ` | Live fetch error: ${runtime.fetch_error_message}` : ''}`;
 
         // ═══════════════════════════════════════════
         // TAB 1: SYSTEM HEALTH
@@ -421,57 +714,38 @@ async function loadDashboard() {
             const univText = isQuant ? (m.active_universe||0).toLocaleString()+' / '+(m.universe_size||0).toLocaleString() : (m.universe_size||0).toLocaleString();
             const staleClass = 'staleness-'+(m.staleness_level||'unknown');
             const staleIcon = STALE_ICONS[m.staleness_level||'unknown'];
-            const inactive = (m.asof === null && m.predictions_today === 0) ? '<span class="badge badge-yellow" style="font-size:.65rem;padding:1px 6px;margin-left:.3rem">INACTIVE</span>' : '';
+            const inactive = (m.data_asof === null && m.predictions_today === 0) ? '<span class="badge badge-yellow" style="font-size:.65rem;padding:1px 6px;margin-left:.3rem" title="' + escapeHtml(termHelp('INACTIVE')) + '">INACTIVE</span>' : '';
             const trendBadge = m.trend === 'improving' || m.trend === 'active'
                 ? `<span class="badge badge-green" style="font-size:.65rem;padding:1px 6px"><i class="fas fa-arrow-up"></i> ${m.trend}</span>`
                 : `<span class="badge badge-blue" style="font-size:.65rem;padding:1px 6px">${m.trend}</span>`;
+            const pipelineBadge = `<span class="badge ${m.pipeline_status === 'failed' ? 'badge-red' : m.pipeline_status === 'stale' || m.pipeline_status === 'degraded' ? 'badge-yellow' : m.pipeline_status === 'ok' ? 'badge-green' : 'badge-muted'}" style="font-size:.65rem;padding:1px 6px">${(m.pipeline_status || 'unknown').toUpperCase()}</span>`;
 
             // Fix hint
             const hints = FIX_HINTS[key] || {};
             let fixHtml = '';
-            if (m.stale_days > 3 && hints.stale) fixHtml += `<div class="fix-content open" style="display:block;margin-top:.4rem"><b>Fix:</b> ${hints.stale}</div>`;
+            if (m.stale_days_now > 3 && hints.stale) fixHtml += `<div class="fix-content open" style="display:block;margin-top:.4rem"><b>Fix:</b> ${hints.stale}</div>`;
             else if (m.accuracy_7d != null && m.accuracy_7d < 0.50 && hints.low_accuracy) fixHtml += `<div class="fix-content open" style="display:block;margin-top:.4rem"><b>Fix:</b> ${hints.low_accuracy}</div>`;
 
             grid.innerHTML += `<div class="card">
                 <div class="card-header"><div><div class="model-name">${m.name}${inactive}</div><div class="model-type">${m.type}</div></div><i class="fas ${icon} card-icon"></i></div>
                 <div class="metric"><div class="metric-label">Universe</div><div class="metric-value">${univText}</div><div class="metric-sub">${isQuant?'Active / Total':'Coverage'}</div></div>
                 <div class="metric"><div class="metric-label">${accLabel}</div><div class="metric-value" style="color:${accColor}">${accValue}</div></div>
+                ${m.metric_na_reason && m.accuracy_7d == null ? `<div class="soft-note">${escapeHtml(m.metric_na_reason)}</div>` : ''}
                 <div class="info-stack">
-                    <div class="info-row"><span>Data as-of</span><strong>${m.asof || 'N/A'}${staleIcon}</strong></div>
+                    <div class="info-row"><span>Data as-of</span><strong>${m.data_asof || 'N/A'}${staleIcon}</strong></div>
                     <div class="info-row"><span>Staleness</span><strong class="${staleClass}">${stalenessText(m)}</strong></div>
-                    <div class="info-row"><span>Report</span><strong>${m.report_date ? fmtShortDate(m.report_date) : 'N/A'}${m.report_age_hours != null ? ' · ' + fmtAgeHours(m.report_age_hours) : ''}</strong></div>
+                    <div class="info-row"><span>Report</span><strong>${m.report_generated_at ? fmtShortDate(m.report_generated_at) : 'N/A'}${m.source_file_age_hours != null ? ' · ' + fmtAgeHours(m.source_file_age_hours) : ''}</strong></div>
+                    <div class="info-row"><span>Last success</span><strong>${m.last_successful_run_at ? fmtShortDate(m.last_successful_run_at) : 'N/A'}</strong></div>
                 </div>
-                ${m.stale_reason ? `<div class="soft-note">${m.stale_reason}</div>` : ''}
+                ${m.freshness_reason ? `<div class="soft-note">${escapeHtml(m.freshness_reason)}</div>` : ''}
+                ${m.pipeline_error ? `<div class="soft-note">${escapeHtml(m.pipeline_error)}</div>` : ''}
                 <div style="margin-top:auto;padding-top:.6rem;border-top:1px solid rgba(255,255,255,0.03);display:flex;justify-content:space-between;align-items:center">
-                    <span class="${staleClass}" style="font-size:.75rem;text-transform:uppercase;font-weight:700">${m.staleness_level || 'unknown'}</span>
-                    ${trendBadge}
+                    <span class="${staleClass}" style="font-size:.75rem;text-transform:uppercase;font-weight:700" title="${escapeHtml(termHelp((m.staleness_level || 'unknown').toUpperCase()))}">${m.staleness_level || 'unknown'}</span>
+                    <div style="display:flex;gap:.35rem;align-items:center">${pipelineBadge}${trendBadge}</div>
                 </div>
                 ${fixHtml}
             </div>`;
         }
-
-        // Recommendations
-        const rc = document.getElementById('recsContent');
-        let recsHtml = '';
-        if (data.recommendations?.length > 0) {
-            for (const r of data.recommendations) {
-                const cls = r.level === 'critical' ? 'rec-critical' : 'rec-warning';
-                const icon = r.level === 'critical' ? '\uD83D\uDD34' : '\uD83D\uDFE1';
-                const hint = FIX_HINTS[r.model];
-                const fixKey = r.text.includes('accuracy') || r.text.includes('coin-flip') ? 'low_accuracy' : 'stale';
-                const fixText = hint?.[fixKey] || '';
-                recsHtml += `<div class="rec-item ${cls}">${icon} ${r.text}`;
-                if (fixText) {
-                    const fixId = 'fix-' + r.model + '-' + fixKey;
-                    recsHtml += `<button class="fix-toggle" onclick="const el=document.getElementById('${fixId}');el.classList.toggle('open');el.style.display=el.classList.contains('open')?'block':'none'">How to fix</button>`;
-                    recsHtml += `<div class="fix-content" id="${fixId}">${fixText}</div>`;
-                }
-                recsHtml += '</div>';
-            }
-        } else {
-            recsHtml = '<div class="rec-item rec-ok">\u2705 All systems nominal</div>';
-        }
-        rc.innerHTML = recsHtml;
 
         // Pipeline diagnostic
         if (data.pipeline_diagnostic) {
@@ -479,13 +753,18 @@ async function loadDashboard() {
             const sevColor = pd.severity === 'high' ? 'var(--red)' : pd.severity === 'medium' ? 'var(--yellow)' : 'var(--text-muted)';
             let dhtml = `<div style="font-size:.82rem;font-weight:700;color:${sevColor};margin-bottom:.3rem">\u26A0 ${pd.diagnosis_code}</div>
                 <div style="font-size:.78rem;color:var(--text-muted);margin-bottom:.6rem">${pd.explanation}</div>
-                <div class="soft-note" style="margin-top:0;margin-bottom:.5rem">Generated: ${pd.generated_at ? fmtShortDate(pd.generated_at) : 'N/A'} · Age: ${fmtAgeHours(pd.age_hours)}</div>`;
-            if (pd.stage_counts) {
-                const sc = pd.stage_counts;
-                dhtml += `<div class="funnel-step"><span>Registry ETFs</span><b>${(sc.registry_etf_total||0).toLocaleString()}</b></div>`;
-                dhtml += `<div class="funnel-step"><span>\u2192 Opinions</span><b>${(sc.asset_opinions_etf_total||0).toLocaleString()}</b></div>`;
-                dhtml += `<div class="funnel-step"><span>\u2192 Published</span><b>${(sc.publish_etf_total||0).toLocaleString()}</b></div>`;
-                dhtml += `<div class="funnel-step"><span>\u2192 Snapshot</span><b style="color:${sc.snapshot_etf_total===0?'var(--red)':'var(--green)'}">${sc.snapshot_etf_total||0}</b></div>`;
+                <div class="soft-note" style="margin-top:0;margin-bottom:.5rem">Generated: ${pd.generated_at ? fmtShortDate(pd.generated_at) : 'N/A'} · Age: ${fmtAgeHours(pd.age_hours)}${pd.last_successful_generation_at ? ' · Last snapshot: ' + fmtShortDate(pd.last_successful_generation_at) : ''}</div>`;
+            if (pd.etf_stage_counts) {
+                const etf = pd.etf_stage_counts;
+                const stock = pd.stock_stage_counts || {};
+                dhtml += `<div class="info-row"><span>ETF funnel</span><strong>Registry ${etf.registry} → Opinions ${etf.opinions} → Published ${etf.published} → Snapshot ${etf.snapshot}</strong></div>`;
+                dhtml += `<div class="info-row"><span>Stock funnel</span><strong>Registry ${stock.registry || 0} → Opinions ${stock.opinions || 0} → Published ${stock.published || 0} → Snapshot ${stock.snapshot || 0}</strong></div>`;
+            }
+            if (pd.rejection_breakdown) {
+                dhtml += `<div class="soft-note" style="margin-bottom:.35rem">ETF rejection breakdown</div>`;
+                for (const [horizon, counts] of Object.entries(pd.rejection_breakdown)) {
+                    dhtml += `<div class="funnel-step"><span>${horizon}</span><b>non-buy ${counts.rejected_non_buy_total || 0} · gated ${counts.rejected_gated_total || 0}</b></div>`;
+                }
             }
             document.getElementById('diagContent').innerHTML = dhtml;
         }
@@ -606,6 +885,7 @@ async function loadDashboard() {
             let ghtml = '';
             const mp = (l,v,c) => `<span class="pill" style="border-color:${c};color:${c}">${l}: ${v}</span>`;
             if (data.system?.learning_status) ghtml += mp('Learning', data.system.learning_status, 'var(--green)');
+            if (data.system?.operating_modes?.length) ghtml += mp('Modes', data.system.operating_modes.join(', '), 'var(--yellow)');
             if (v1r.top_sources?.length) ghtml += mp('Top Sources', v1r.top_sources.join(', '), 'var(--blue)');
             if (v1r.fallback_usage) ghtml += mp('Fallback', Object.entries(v1r.fallback_usage).map(([k,v])=>k+':'+v).join(', '), 'var(--yellow)');
             if (v1r.regime_transition_active) ghtml += mp('Regime', 'TRANSITION', 'var(--red)');
@@ -661,8 +941,10 @@ async function loadDashboard() {
         if (vw?.fallback_level && vw.fallback_level !== 'none') cutoverIssues.push(`Fusion weights still use fallback: ${vw.fallback_level}`);
         if ((v1r?.signals_today || 0) === 0) cutoverIssues.push('V1 audit published 0 signals today');
         if ((v1r?.matured_signals || 0) === 0) cutoverIssues.push('No matured signals available for hit-rate validation');
-        if ((data.pipeline_diagnostic?.stage_counts?.snapshot_etf_total || 0) === 0) cutoverIssues.push('ETF snapshot stage currently outputs 0 rows');
-        const cutoverReady = cutoverIssues.length === 0 && (data.system?.status_severity || 'ok') === 'ok';
+        if ((data.pipeline_diagnostic?.etf_stage_counts?.snapshot || 0) === 0) cutoverIssues.push('ETF snapshot stage currently outputs 0 rows');
+        if ((data.pipeline_diagnostic?.stock_stage_counts?.snapshot || 0) === 0) cutoverIssues.push('Stock snapshot stage currently outputs 0 rows');
+        if ((data.system?.root_causes || []).some(cause => cause.severity === 'critical')) cutoverIssues.push('Critical root causes are still active');
+        const cutoverReady = Boolean(data.system?.cutover_ready) && cutoverIssues.length === 0;
         document.getElementById('cutoverContent').innerHTML = cutoverReady
             ? '<div class="rec-item rec-ok">Cutover criteria currently look clean. No blocking freshness or audit issues detected.</div>'
             : cutoverIssues.map(t => `<div class="rec-item rec-warning">${t}</div>`).join('');
@@ -696,7 +978,33 @@ async function loadDashboard() {
             }
             apHtml += '</div>';
             if (ops.snapshots_date) apHtml += `<div style="font-size:.72rem;color:var(--text-muted);margin-top:.3rem">Snapshot: ${new Date(ops.snapshots_date).toLocaleString()}</div>`;
+            if (ap.generated_at) apHtml += `<div style="font-size:.72rem;color:var(--text-muted);margin-top:.3rem">Ops report: ${fmtShortDate(ap.generated_at)}</div>`;
             document.getElementById('autopilotContent').innerHTML = apHtml;
+        }
+        if (ops?.recent_failures?.length) {
+            document.getElementById('recentFailuresContent').innerHTML = ops.recent_failures.map(item => `
+                <div class="action-item sev-critical">
+                    <div class="action-head">
+                        <div class="action-title">${escapeHtml(item.failed_step || 'failed_step')}</div>
+                        <div class="action-meta">${escapeHtml(item.mode || 'job')} · ${fmtAgeHours(item.age_hours)}</div>
+                    </div>
+                    <div class="action-text"><strong>When:</strong> ${escapeHtml(fmtShortDate(item.finished_at || item.updated_at))}</div>
+                    <div class="action-text"><strong>Why:</strong> ${escapeHtml(item.error || `returncode ${item.returncode ?? 'unknown'}`)}</div>
+                    <div class="action-text"><strong>Command:</strong> ${escapeHtml((item.command || []).join(' ') || 'N/A')}</div>
+                </div>
+            `).join('');
+        }
+        if (ops?.last_successful_jobs?.length) {
+            document.getElementById('lastSuccessfulJobsContent').innerHTML = ops.last_successful_jobs.map(item => `
+                <div class="action-item sev-warning">
+                    <div class="action-head">
+                        <div class="action-title">${escapeHtml(item.status || 'completed')}</div>
+                        <div class="action-meta">${escapeHtml(item.mode || 'job')} · ${fmtAgeHours(item.age_hours)}</div>
+                    </div>
+                    <div class="action-text"><strong>Finished:</strong> ${escapeHtml(fmtShortDate(item.finished_at || item.updated_at))}</div>
+                    <div class="action-text"><strong>Job:</strong> ${escapeHtml(item.job_dir || 'N/A')}</div>
+                </div>
+            `).join('');
         }
 
         // Regime
@@ -750,8 +1058,12 @@ async function loadDashboard() {
         }
 
     } catch (err) {
+        document.getElementById('govBanner').style.background = 'rgba(239,68,68,0.1)';
+        document.getElementById('govBanner').style.borderColor = 'rgba(239,68,68,0.3)';
+        document.getElementById('govBanner').style.color = 'var(--red)';
+        document.getElementById('govBanner').innerHTML = `<i class="fas fa-triangle-exclamation"></i> DASHBOARD UNAVAILABLE: ${escapeHtml(err.message)}`;
         document.getElementById('statusBadge').className = 'badge badge-red';
-        document.getElementById('statusBadge').innerHTML = '<i class="fas fa-exclamation-triangle"></i> ' + err.message;
+        document.getElementById('statusBadge').innerHTML = '<i class="fas fa-exclamation-triangle"></i> DASHBOARD OFFLINE';
     }
 }
 
