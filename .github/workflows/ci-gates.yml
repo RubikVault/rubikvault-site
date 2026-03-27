@@ -125,11 +125,15 @@ jobs:
 
       - name: Build stock UI support artifacts
         run: |
+          node scripts/dp4/pulse.v3.mjs
+          node scripts/dp8/market-hub.v3.mjs
           node scripts/ui/build-benchmarks-latest.mjs
           node scripts/ui/build-peers-latest.mjs
           node scripts/ui/build-correlations-latest.mjs
 
       - name: Verify stock UI support artifacts
+        env:
+          RV_STOCK_UI_STRICT: "1"
         run: node scripts/ci/verify-stock-ui-artifacts.mjs
 
       - name: Mission-control blocking gate (artifact-level)

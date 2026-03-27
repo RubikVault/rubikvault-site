@@ -2,7 +2,7 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
-import { loadLocalBars, resolveLocalAssetMeta } from '../lib/best-setups-local-loader.mjs';
+import zlib from 'node:zlib';
 import { computeIndicators } from '../../functions/api/_shared/eod-indicators.mjs';
 import { classifyAllStates } from '../../functions/api/_shared/stock-states-v1.js';
 import { makeDecision } from '../../functions/api/_shared/stock-decisions-v1.js';
@@ -49,6 +49,18 @@ function readNdjson(filePath) {
   }
 }
 
+function readGzipNdjson(filePath) {
+  try {
+    return zlib.gunzipSync(fs.readFileSync(filePath))
+      .toString('utf8')
+      .split('\n')
+      .filter(Boolean)
+      .map((line) => JSON.parse(line));
+  } catch {
+    return [];
+  }
+}
+
 function writeNdjson(filePath, rows) {
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
   fs.writeFileSync(filePath, rows.map((row) => JSON.stringify(row)).join('\n') + '\n', 'utf8');
@@ -89,6 +101,33 @@ function readQuantLabRows(assetClass) {
     }
   }
   return rows;
+}
+
+function loadAdjustedBars(ticker) {
+  const cleanTicker = String(ticker || '').trim().toUpperCase();
+  if (!cleanTicker) return [];
+  const rows = readGzipNdjson(path.join(ROOT, 'public/data/v3/series/adjusted', `US__${cleanTicker}.ndjson.gz`));
+  return rows
+    .map((row) => {
+      const date = isoDate(row?.date || row?.trading_date);
+      const close = Number(row?.adjusted_close ?? row?.adjClose ?? row?.adj_close ?? row?.close ?? 0);
+      if (!date || !Number.isFinite(close) || close <= 0) return null;
+      const open = Number(row?.open);
+      const high = Number(row?.high);
+      const low = Number(row?.low);
+      const volume = Number(row?.volume);
+      return {
+        date,
+        open: Number.isFinite(open) ? open : close,
+        high: Number.isFinite(high) ? high : close,
+        low: Number.isFinite(low) ? low : close,
+        close,
+        adjClose: close,
+        volume: Number.isFinite(volume) ? volume : 0,
+      };
+    })
+    .filter(Boolean)
+    .sort((a, b) => String(a.date).localeCompare(String(b.date)));
 }
 
 function buildReplayUniverse() {
@@ -193,17 +232,7 @@ async function main() {
   const replayDaysArg = process.argv.slice(2).find((arg) => arg.startsWith('--replay-days='));
   const endDate = dateArg ? dateArg.split('=')[1] : isoDate(new Date());
   const replayDays = Number(replayDaysArg?.split('=')[1] || 60);
-  const rawUniverse = buildReplayUniverse();
-  const metaRows = await Promise.all(rawUniverse.map(async (candidate) => ({
-    candidate,
-    meta: await resolveLocalAssetMeta(candidate.ticker),
-  })));
-  const universe = metaRows
-    .filter(({ meta }) => Number(meta?.bars_count || 0) >= 220)
-    .map(({ candidate, meta }) => ({
-      ...candidate,
-      asset_class: String(meta?.type_norm || '').toUpperCase() === 'ETF' ? 'etf' : candidate.asset_class,
-    }));
+  const universe = buildReplayUniverse();
   const predictionsByDate = new Map();
   const outcomesByDate = new Map();
   const maxHorizonDays = Math.max(...HORIZONS.map((item) => item.days));
@@ -211,7 +240,7 @@ async function main() {
   for (const candidate of universe) {
     const ticker = candidate.ticker;
     const assetClass = candidate.asset_class || 'stock';
-    const bars = await loadLocalBars(ticker);
+    const bars = loadAdjustedBars(ticker);
     if (!Array.isArray(bars) || bars.length < 220) continue;
     const endIdx = bars.findIndex((bar) => isoDate(bar?.date) === endDate);
     const lastIdx = endIdx >= 0 ? endIdx : bars.length - 1;
