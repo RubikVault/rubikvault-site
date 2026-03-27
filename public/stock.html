@@ -133,6 +133,8 @@
   const tkr = identity.ticker || ticker;
   const pageAsOf = identity.pageAsOf;
   const displayName = identity.name || tkr;
+  const _headerAsOf = document.getElementById('rv-data-asof');
+  if (_headerAsOf) _headerAsOf.textContent = pageAsOf ? `${pageAsOf} (EOD)` : 'unavailable';
 
   document.title = tkr + ' — Analysis · RubikVault';
 
@@ -1648,7 +1650,7 @@
   if (el) { el.textContent = new Date().toLocaleString('en-US', { timeZone:'America/New_York', month:'short', day:'numeric', hour:'2-digit', minute:'2-digit', hour12:false }) + ' ET'; }
   const elAsOf = document.getElementById("rv-data-asof");
   if (elAsOf && window._rvCanonicalMetrics?.asOf) { elAsOf.textContent = window._rvCanonicalMetrics.asOf + ' (EOD)'; }
-  else if (elAsOf) { elAsOf.textContent = '\u2014'; }
+  else if (elAsOf) { elAsOf.textContent = 'unavailable'; }
 })();
 
 // Search bar navigation

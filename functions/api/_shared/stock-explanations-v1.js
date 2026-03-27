@@ -34,7 +34,7 @@ const VOLUME_BULLETS = Object.freeze({
   NORMAL: 'Volume is at typical levels.',
   WEAK: 'Volume is below average, weakening confidence in the current move.',
   DRY: 'Volume has dried up significantly, signaling low participation.',
-  UNKNOWN: 'Volume data unavailable — classification omitted.',
+  UNKNOWN: 'Volume classification omitted in current analysis mode.',
 });
 
 const VOLATILITY_BULLETS = Object.freeze({
