@@ -42,6 +42,8 @@ export function classifyHistoricalFreshness(asOfValue, now = new Date()) {
       opacity: 0.45,
       badge: 'UNAVAILABLE',
       muted: true,
+      subtitle: 'Historical regime data unavailable.',
+      warningText: null,
     };
   }
   const ageBusinessDays = businessDaysBetween(asOfValue, now);
@@ -52,6 +54,8 @@ export function classifyHistoricalFreshness(asOfValue, now = new Date()) {
       opacity: 0.45,
       badge: 'UNAVAILABLE',
       muted: true,
+      subtitle: 'Historical regime data unavailable.',
+      warningText: null,
     };
   }
   if (ageBusinessDays <= 1) {
@@ -61,6 +65,8 @@ export function classifyHistoricalFreshness(asOfValue, now = new Date()) {
       opacity: 1,
       badge: 'LIVE',
       muted: false,
+      subtitle: 'Historical regime context is current.',
+      warningText: null,
     };
   }
   if (ageBusinessDays === 2) {
@@ -70,6 +76,19 @@ export function classifyHistoricalFreshness(asOfValue, now = new Date()) {
       opacity: 0.72,
       badge: 'DELAYED',
       muted: true,
+      subtitle: 'Historical regime context is delayed by 2 business days.',
+      warningText: null,
+    };
+  }
+  if (ageBusinessDays > 10) {
+    return {
+      status: 'stale',
+      ageBusinessDays,
+      opacity: 0.5,
+      badge: 'STALE',
+      muted: true,
+      subtitle: `Historical regime context is stale by ${ageBusinessDays} business days.`,
+      warningText: 'Historical regime overlay is delayed and may not reflect current market conditions.',
     };
   }
   return {
@@ -78,6 +97,8 @@ export function classifyHistoricalFreshness(asOfValue, now = new Date()) {
     opacity: 0.6,
     badge: 'STALE',
     muted: true,
+    subtitle: `Historical regime context is stale by ${ageBusinessDays} business days.`,
+    warningText: null,
   };
 }
 
@@ -162,6 +183,7 @@ export function buildRiskPresentation({ decision = {}, states = {}, stats = {} }
     regimeLabel,
     rawSignalBand: Number.isFinite(volPct) ? `${volPct.toFixed(0)}th percentile volatility` : regimeLabel,
     displaySentence,
+    scoreHelperText: 'Risk Quality measures structure quality and is not the final risk state.',
     volPercentile: volPct,
   };
 }
@@ -179,6 +201,7 @@ export function buildCatalystPresentation({ ticker, name, fundamentals, universe
   if (Array.isArray(fundamentals?.confirmedCatalysts) && fundamentals.confirmedCatalysts.length > 0) {
     return {
       status: 'confirmed',
+      renderMode: 'card',
       variant: 'card',
       items: fundamentals.confirmedCatalysts,
       title: 'Upcoming Catalysts',
@@ -188,7 +211,8 @@ export function buildCatalystPresentation({ ticker, name, fundamentals, universe
     const date = String(nextEarningsDate).slice(0, 10);
     return {
       status: 'estimated',
-      variant: 'compact-card',
+      renderMode: 'compact',
+      variant: 'compact',
       title: 'Upcoming Catalysts',
       primaryText: `Estimated earnings window: ${date}`,
       secondaryText: 'Unconfirmed schedule from fundamentals feed.',
@@ -197,6 +221,7 @@ export function buildCatalystPresentation({ ticker, name, fundamentals, universe
   if (assetClass === 'ETF') {
     return {
       status: 'unavailable',
+      renderMode: 'inline',
       variant: 'inline',
       title: 'Catalysts',
       primaryText: 'Catalyst feed unavailable for ETFs.',
@@ -205,6 +230,7 @@ export function buildCatalystPresentation({ ticker, name, fundamentals, universe
   }
   return {
     status: 'unavailable',
+    renderMode: 'inline',
     variant: 'inline',
     title: 'Catalysts',
     primaryText: 'Catalyst feed currently unavailable.',
@@ -306,11 +332,12 @@ export function computeTooltipFrame({ pointX, pointY, containerRect, tooltipWidt
 export function buildPageIdentity(payload = {}, requestedTicker = '') {
   const data = payload?.data || {};
   const meta = payload?.metadata || {};
+  const universe = payload?.universe || payload?.evaluation_v4?.universe || data?.universe || {};
   const prices = data?.market_prices || {};
   const bars = data?.bars || [];
   const lastBar = bars.length ? bars[bars.length - 1] : {};
   const ticker = meta?.request?.normalized_ticker || data?.ticker || requestedTicker || '';
-  const name = data?.name || data?.fundamentals?.companyName || ticker;
+  const name = data?.name || data?.fundamentals?.companyName || universe?.name || ticker;
   const priceDate = prices?.date || null;
   const barDate = lastBar?.date || null;
   const useBar = Boolean(barDate && (!priceDate || barDate >= priceDate));

@@ -20,6 +20,7 @@ describe('buildRiskPresentation', () => {
     assert.equal(risk.scoreLabel, 'Risk Quality');
     assert.equal(risk.finalState, 'Elevated');
     assert.equal(risk.overrideApplied, true);
+    assert.match(risk.scoreHelperText, /not the final risk state/i);
     assert.match(risk.displaySentence, /final risk is moderated to Elevated/i);
   });
 
@@ -41,7 +42,7 @@ describe('buildCatalystPresentation', () => {
       name: 'Qualcomm Incorporated',
       fundamentals: { nextEarningsDate: '2026-04-29T00:00:00Z' },
     });
-    assert.equal(catalyst.variant, 'compact-card');
+    assert.equal(catalyst.renderMode, 'compact');
     assert.match(catalyst.primaryText, /2026-04-29/);
   });
 
@@ -51,7 +52,7 @@ describe('buildCatalystPresentation', () => {
       name: 'SPDR S&P 500 ETF Trust',
       fundamentals: null,
     });
-    assert.equal(catalyst.variant, 'inline');
+    assert.equal(catalyst.renderMode, 'inline');
     assert.match(catalyst.primaryText, /ETF/i);
   });
 });
@@ -62,6 +63,13 @@ describe('classifyHistoricalFreshness', () => {
     assert.equal(freshness.status, 'stale');
     assert.equal(freshness.opacity <= 0.6, true);
     assert.equal(freshness.badge, 'STALE');
+  });
+
+  it('adds a stronger warning when regime data is very stale', () => {
+    const freshness = classifyHistoricalFreshness('2026-03-01', new Date('2026-03-27T12:00:00Z'));
+    assert.equal(freshness.status, 'stale');
+    assert.equal(freshness.opacity <= 0.5, true);
+    assert.match(freshness.warningText, /may not reflect current market conditions/i);
   });
 });
 
@@ -133,5 +141,21 @@ describe('buildPageIdentity', () => {
     }, 'QCOM');
     assert.equal(identity.name, 'Qualcomm Incorporated');
     assert.equal(identity.pageAsOf, '2026-03-26');
+  });
+
+  it('falls back to universe name before ticker-only rendering', () => {
+    const identity = buildPageIdentity({
+      data: {
+        ticker: 'QCOM',
+        market_prices: { close: 155.12, date: '2026-03-26' },
+      },
+      universe: {
+        name: 'Qualcomm Incorporated',
+      },
+      metadata: {
+        request: { normalized_ticker: 'QCOM' },
+      },
+    }, 'QCOM');
+    assert.equal(identity.name, 'Qualcomm Incorporated');
   });
 });

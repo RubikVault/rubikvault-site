@@ -6,6 +6,7 @@
  */
 
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 
 // ─── Helpers (extracted from stock.html / stock-features.js logic) ────────────
 
@@ -91,6 +92,8 @@ function computeBreakoutEnergy(vol20, vol60, volRecent5Avg, volPrior15Avg) {
     label: 'normal'
   };
 }
+
+const stockHtmlSource = readFileSync(new URL('../public/stock.html', import.meta.url), 'utf8');
 
 function scoreHorizonGates(verdictLabel, rawStatus, rsiHardGate, metricMismatch, rawUnknown) {
   if (rawStatus === 'INVALID') return 'SUPPRESSED';
@@ -301,6 +304,19 @@ test('Breakout Energy: high compression yields setup forming', () => {
   const result = computeBreakoutEnergy(0.005, 0.02, 300000, 800000);
   assert.equal(result.label, 'normal');
   assert.ok(result.energy > 50, `High compression energy should be > 50, got ${result.energy}`);
+});
+
+test('UI regression: verdict-aware explanation header is present', () => {
+  assert.match(stockHtmlSource, /const explanationHeading = effectiveVerdict === 'BUY' \|\| effectiveVerdict === 'SELL' \? 'Why This Trade\?' : 'Why No Trade\?';/);
+});
+
+test('UI regression: market context degraded fallback is present', () => {
+  assert.match(stockHtmlSource, /Benchmark data timed out|Benchmark data unavailable/);
+  assert.match(stockHtmlSource, /Degraded/);
+});
+
+test('UI regression: signal quality helper text is wired from risk presentation', () => {
+  assert.match(stockHtmlSource, /riskView\.scoreHelperText/);
 });
 
 // ─── E2) 52W Range Labels ────────────────────────────────────────────────────

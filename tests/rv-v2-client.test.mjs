@@ -77,6 +77,35 @@ describe('transformV2ToStockShape', () => {
     assert.equal(payload.data.market_prices.close, 130.54);
     assert.equal(payload.metadata.as_of, '2026-03-26');
   });
+
+  it('uses the planned identity fallback order for page name resolution', () => {
+    const payload = transformV2ToStockShape(
+      {
+        ticker: 'QCOM',
+        name: null,
+        market_prices: { close: 130.54, date: '2026-03-26' },
+      },
+      { data_date: '2026-03-26', provider: 'v2-summary' },
+      {
+        bars: [{ date: '2026-03-25', close: 129.5 }, { date: '2026-03-26', close: 130.54 }],
+      },
+      {
+        universe: { name: 'Universe Name' },
+      },
+      {
+        companyName: 'Fundamentals Name',
+      },
+      {},
+      {
+        data: {
+          name: 'Legacy Name',
+          market_prices: { close: 130.54, date: '2026-03-26' },
+        },
+      }
+    );
+
+    assert.equal(payload.data.name, 'Legacy Name');
+  });
 });
 
 describe('fetchV2StockPage', () => {
