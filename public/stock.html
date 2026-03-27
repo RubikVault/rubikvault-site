@@ -48,7 +48,7 @@
       </a>
     </nav>
     <div class="rv-header-tools" aria-live="polite">
-      <div class="rv-data-updated" style="font-size: 12px; color: var(--rv-text-muted);">Snapshot: <span id="rv-data-updated-date">...</span> · Latest Data: <span id="rv-data-asof">...</span></div>
+      <div class="rv-data-updated" style="font-size: 12px; color: var(--rv-text-muted);">Snapshot: <span id="rv-data-updated-date">...</span> · Price as-of: <span id="rv-data-asof">...</span></div>
       <div class="rv-market-clock">
         <span class="rv-clock-time" id="rv-ny-time">NY: --:--:--</span>
         <span class="rv-clock-status">
@@ -97,7 +97,9 @@
   const {
     buildPageIdentity,
     buildRiskPresentation,
+    buildFundamentalsPresentation,
     buildCatalystPresentation,
+    buildModelEvidencePresentation,
     classifyHistoricalFreshness,
     validateLevelConsistency,
     buildTradePlanModel,
@@ -198,7 +200,7 @@
   const macdLabel=s.macd_hist==null?'—':s.macd_hist>0?'Positive':'Negative';
   const volPct=s.volatility_20d!=null?(s.volatility_20d*100).toFixed(1):null;
   const riskView = buildRiskPresentation({ decision: _decision, states: _states, stats: s });
-  const riskLabel = riskView.finalState;
+  const riskLabel = riskView.displayLabel;
   const riskColor = riskView.finalColor;
   const _volPctile = riskView.volPercentile;
   const trendColor=trendWord==='uptrend'?'var(--green)':trendWord==='downtrend'?'var(--red)':'var(--yellow)';
@@ -237,7 +239,7 @@
   // Render Top Headline KPIs
   document.getElementById('sc-headline-kpis').innerHTML = [
     ['Trend', trendLabel, trendColor, 'Based on price vs SMA20/50/200 alignment'],
-    ['Risk', riskLabel, riskColor, 'ATR volatility percentile rank (0\u2013100)'],
+    ['Risk', riskView.displayLabel, riskColor, 'Final risk classification after override rules and volatility context'],
     ['52W', r52label || '—', 'var(--text)', 'Position in 52-week range: (close\u2013low)/(high\u2013low)'],
     ['RSI', rsiZone + (_guard.corrections.labels?.rsiSuffix || ''), rsiColor, 'Relative Strength Index (14d). <30 oversold, >70 overbought']
   ].map(x => '<div title="'+x[3]+'" style="padding:.4rem .6rem; border-radius:6px; background:rgba(255,255,255,0.02); border:1px solid var(--border); text-align:center; cursor:help"><div style="font-size:.6rem; color:var(--text-muted); text-transform:uppercase">'+x[0]+'</div><div style="font-weight:700; color:'+x[2]+'; font-size:.85rem">'+x[1]+'</div></div>').join('');
@@ -364,7 +366,7 @@
   const items3D = [
     { label:'SMA 50', value:close>(s.sma50||0)?'Reclaimed':'Broken', badges:[], type: close>(s.sma50||0)?'bullish':'bearish' },
     { label:'Momentum', value:trendLabel, badges:[trendWord==='uptrend'?'Constructive':trendWord==='downtrend'?'Adverse':'Mixed'], type: trendWord==='uptrend'?'bullish':trendWord==='downtrend'?'bearish':'mixed' },
-    { label:'Final Risk', value:riskLabel, badges:riskView.overrideApplied?['Override applied']:[], type: riskLabel==='Low'?'bullish':riskLabel==='High'?'bearish':'mixed' }
+    { label:'Final Risk', value:riskLabel, badges:riskView.overrideApplied?['Override applied']:[], type: riskView.finalState==='Low'?'bullish':riskView.finalState==='High'?'bearish':'mixed' }
   ];
   const items1W = [
     { label:'MA Stack', value:maStack, badges:[maStack==='Constructive'?'Bullish':maStack==='Adverse'?'Bearish':'Neutral'], type: maStack==='Constructive'?'bullish':maStack==='Adverse'?'bearish':'mixed' },
@@ -583,7 +585,7 @@
 
     if (_mktCtx.degraded && !_mktCtx.loaded) {
       return `
-        <div style="padding:.45rem .6rem; border-radius:8px; background:rgba(255,255,255,0.01); border:1px solid rgba(255,255,255,0.03);">
+        <div style="padding:.4rem .55rem; border-radius:8px; background:rgba(255,255,255,0.01); border:1px dashed rgba(255,255,255,0.06);">
           <div style="display:flex; justify-content:space-between; align-items:center; gap:.5rem;">
             <div>
               <div style="font-size: .62rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700;">Market Context</div>
@@ -613,11 +615,29 @@
     const sSpy = spyVal >= 0 ? 'var(--green)' : 'var(--red)';
     const sQqq = qqqVal >= 0 ? 'var(--green)' : 'var(--red)';
 
-    let note = "Mixed relative strength.";
-    if (spyVal > 0 && qqqVal < 0) note = "Outperforming SPY, Underperforming QQQ (Relative Tech Weakness)";
-    else if (spyVal < 0 && qqqVal > 0) note = "Underperforming SPY, Outperforming QQQ (Relative Tech Strength)";
-    else if (spyVal > 0 && qqqVal > 0) note = "Broad Outperformance vs Benchmarks";
-    else if (spyVal < 0 && qqqVal < 0) note = "Broad Underperformance vs Benchmarks";
+    let note = `${tf} mixed relative strength vs benchmarks.`;
+    if (spyVal > 0 && qqqVal < 0) note = `${tf} outperformance vs SPY, underperformance vs QQQ.`;
+    else if (spyVal < 0 && qqqVal > 0) note = `${tf} underperformance vs SPY, outperformance vs QQQ.`;
+    else if (spyVal > 0 && qqqVal > 0) note = `${tf} outperformance vs benchmarks.`;
+    else if (spyVal < 0 && qqqVal < 0) note = `${tf} underperformance vs benchmarks.`;
+
+    if (_mktCtx.degraded) {
+      return `
+      <div style="padding:.45rem .6rem; border-radius:8px; background:rgba(255,255,255,0.01); border:1px dashed rgba(255,255,255,0.06);">
+        <div style="display:flex; justify-content:space-between; align-items:center; gap:.5rem; margin-bottom:.25rem;">
+          <div style="display:flex;flex-direction:column;gap:2px;">
+            <div style="font-size: .62rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700;">Market Context</div>
+            <div style="font-size:.56rem;color:var(--yellow)">${_esc(_mktCtx.errorReason || 'Using cached benchmark data.')}</div>
+          </div>
+          <div style="display:flex; gap:2px;">${['1D', '1W', '1M', '1Y'].map(getBtn).join('')}</div>
+        </div>
+        <div style="display:flex;gap:.4rem;flex-wrap:wrap">
+          <span style="font-size:.62rem;padding:3px 6px;border-radius:999px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.05);color:${sSpy}">${tf} vs SPY ${spyStr}</span>
+          <span style="font-size:.62rem;padding:3px 6px;border-radius:999px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.05);color:${sQqq}">${tf} vs QQQ ${qqqStr}</span>
+        </div>
+        <div style="font-size:0.58rem; color:var(--text-dim); margin-top:.3rem; font-style:italic;">${note}</div>
+      </div>`;
+    }
 
     return `
       <div style="padding:.6rem; border-radius:8px; background:rgba(255,255,255,0.01); border:1px solid rgba(255,255,255,0.03);">
@@ -894,10 +914,17 @@
   var allLvl=displayLevels.map(l=>l.price).concat([close]);var mnL=Math.min(...allLvl)*0.99,mxL=Math.max(...allLvl)*1.01,rngL=mxL-mnL||1;
 
   // Collision adjuster for key levels labels
-  displayLevels.forEach(l => { l.yExact = ((1 - ((l.price - mnL) / rngL)) * 90 + 5); l.yText = l.yExact; });
+  displayLevels.forEach(l => {
+    l.yExact = ((1 - ((l.price - mnL) / rngL)) * 90 + 5);
+    l.yText = Math.max(6, Math.min(92, l.yExact));
+  });
   displayLevels.sort((a,b) => a.yText - b.yText);
   let lastY = -Infinity;
-  displayLevels.forEach(l => { if (l.yText < lastY + 3.4) { l.yText = lastY + 3.4; } lastY = l.yText; });
+  displayLevels.forEach(l => {
+    if (l.yText < lastY + 5.1) l.yText = lastY + 5.1;
+    l.yText = Math.min(94, l.yText);
+    lastY = l.yText;
+  });
 
   // Dynamic Structure / Weakness / Rebound
   const bullPoints = bullR.length ? bullR.map(r => '<li>'+_esc(r)+'</li>').join('') : '<li>No constructive signals detected</li>';
@@ -923,18 +950,29 @@
     ticker: tkr,
     name: displayName,
     fundamentals: data.fundamentals,
+    fundamentalsMeta: payload.meta?.fundamentals || null,
     universe: payload.universe || payload.evaluation_v4?.universe || null,
   });
   const catalystMode = catalystView.renderMode || catalystView.variant || 'inline';
+  const fundamentalsView = buildFundamentalsPresentation({
+    fundamentals: data.fundamentals,
+    meta: payload.meta?.fundamentals || null,
+  });
+  const modelEvidenceView = buildModelEvidencePresentation({
+    evaluationV4: payload.evaluation_v4,
+    breakout: data.breakout_v2,
+    assetClass: catalystView.assetClass || 'Stock',
+  });
   const isEtf = catalystView.assetClass === 'ETF';
   const explanationHeading = effectiveVerdict === 'BUY' || effectiveVerdict === 'SELL' ? 'Why This Trade?' : 'Why No Trade?';
   const checklistApplicable = tradePlan.status === 'ready' && (effectiveVerdict === 'BUY' || effectiveVerdict === 'SELL');
   const showDecisionTelemetry = (_v6.bucket || _v6.hold_state) && (effectiveVerdict === 'BUY' || effectiveVerdict === 'SELL');
+  if (riskView.overrideApplied) _integrityItems.push({ text:'Risk override active', color:'var(--yellow)' });
 
   // ── Construct Layout ──
   const _integrityBanner = _integrityItems.length === 0
     ? '<div style="padding:.35rem .6rem;margin-bottom:.75rem;border-radius:6px;background:rgba(16,185,129,0.06);border:1px solid rgba(16,185,129,0.12);font-size:.6rem;color:var(--green);display:flex;align-items:center;gap:.4rem">\u2713 All systems operational</div>'
-    : '<div style="padding:.35rem .6rem;margin-bottom:.75rem;border-radius:6px;background:rgba(245,158,11,0.06);border:1px solid rgba(245,158,11,0.12);font-size:.6rem;color:var(--yellow);display:flex;align-items:center;gap:.4rem;flex-wrap:wrap">\u26A0 ' + _integrityItems.length + ' integrity note(s): ' + _integrityItems.map(i => '<span style="color:'+i.color+';font-weight:600">'+i.text+'</span>').join(' \u00B7 ') + '</div>';
+    : '<div style="padding:.35rem .6rem;margin-bottom:.75rem;border-radius:6px;background:rgba(245,158,11,0.06);border:1px solid rgba(245,158,11,0.12);font-size:.6rem;color:var(--yellow);display:flex;align-items:center;gap:.4rem;flex-wrap:wrap">\u26A0 Operational with minor warnings: ' + _integrityItems.map(i => '<span style="color:'+i.color+';font-weight:600">'+i.text+'</span>').join(' \u00B7 ') + '</div>';
 
   const layout = `
   ${_integrityBanner}
@@ -996,7 +1034,7 @@
             ['context', 'Context']
           ].map(([key, label])=>{const v=_decision.scores[key+'_score']||_decision.scores[key]||0;const c=key==='risk'?riskView.scoreColor:(v>=65?'var(--green)':v>=40?'var(--yellow)':'var(--red)');return '<div style="display:flex;align-items:center;gap:4px;font-size:.58rem"><span style="color:var(--text-muted);width:68px">'+label+'</span><div style="flex:1;height:4px;background:rgba(255,255,255,0.05);border-radius:2px"><div style="width:'+Math.min(100,v)+'%;height:100%;background:'+c+';border-radius:2px"></div></div><span style="color:var(--text-dim);width:20px;text-align:right">'+v.toFixed(0)+'</span></div>'}).join('')}</div>
           <div style="font-size:.56rem;color:var(--text-muted);margin-top:6px;line-height:1.35">${_esc(riskView.scoreHelperText)}</div>
-          <div style="font-size:.58rem;color:var(--text-dim);margin-top:4px;line-height:1.4">${_esc(riskView.displaySentence)}${riskView.overrideApplied ? ` <span style="color:var(--yellow);font-weight:600">Override active.</span>` : ''}</div>
+          <div style="font-size:.58rem;color:var(--text-dim);margin-top:4px;line-height:1.4">${_esc(riskView.displaySentence)}</div>
         </div>` : ''}
 
         <!-- Horizons -->
@@ -1093,15 +1131,15 @@
         <!-- Risk Gauge -->
         <div style="display:flex;gap:1rem;align-items:center;background:rgba(255,255,255,0.01);padding:.75rem;border-radius:8px;border:1px solid rgba(255,255,255,0.03);margin-bottom:1rem">
           <div style="width:28px;height:70px;border:2px solid var(--border);border-radius:6px;position:relative;overflow:hidden;flex-shrink:0">
-            <div style="position:absolute;bottom:0;width:100%;height:${riskLabel==='High'||riskLabel==='Elevated'?90:riskLabel==='Medium'?55:30}%;background:${riskColor}"></div>
+            <div style="position:absolute;bottom:0;width:100%;height:${riskView.finalState==='High'||riskView.finalState==='Elevated'?90:riskView.finalState==='Medium'?55:30}%;background:${riskColor}"></div>
           </div>
           <div style="flex:1">
-            <div style="font-size:.65rem;color:var(--text-muted)">RISK STATE</div>
-            <div style="font-size:1.2rem;font-weight:800;color:${riskColor}">${riskLabel}${riskView.overrideApplied ? ' (override)' : ''}</div>
+            <div style="font-size:.65rem;color:var(--text-muted)">FINAL RISK</div>
+            <div style="font-size:1.2rem;font-weight:800;color:${riskColor}">${riskView.displayLabel}</div>
             <div style="font-size:.58rem;color:var(--text-dim);margin-top:2px;font-style:italic;">Regime: <span style="color:${riskColor};">${riskView.regimeLabel}</span></div>
             <div style="font-size:.55rem;color:var(--text-dim);line-height:1.4;margin-top:3px">${_esc(riskView.displaySentence)}</div>
-            <div style="font-size:.55rem;color:var(--text-dim);line-height:1.4;margin-top:3px">${_esc(riskView.rawSignalText)}</div>
-            <div style="font-size:.55rem;color:${riskView.overrideApplied ? 'var(--yellow)' : 'var(--text-dim)'};line-height:1.4;margin-top:2px">${_esc(riskView.overrideDisplayReason)}</div>
+            <div style="font-size:.55rem;color:var(--text-dim);line-height:1.4;margin-top:3px">${_esc(riskView.driverText)}</div>
+            <div style="font-size:.55rem;color:${riskView.overrideApplied ? 'var(--yellow)' : 'var(--text-dim)'};line-height:1.4;margin-top:2px">${_esc(riskView.contextText)}</div>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:.2rem;margin-top:.3rem">
               <div title="Average True Range (14d) in dollar terms" style="font-size:.65rem;cursor:help"><span style="color:var(--text-muted)">ATR:</span> <span style="font-weight:600">${atr!=null?'$'+atr.toFixed(2):'—'}</span></div>
               <div title="ATR as percentage of price" style="font-size:.65rem;cursor:help"><span style="color:var(--text-muted)">ATR%:</span> <span style="font-weight:600">${atrPct!=null?atrPct.toFixed(2)+'%':'—'}</span></div>
@@ -1162,21 +1200,10 @@
         </div>
 
         <!-- Fundamentals Panel -->
-        ${(()=>{const fund=data.fundamentals;const fg=_guard.panelGates.fundamentals;if(!fg.show)return '';const fmtCap=v=>{if(!v)return '—';if(v>=1e12)return '$'+(v/1e12).toFixed(2)+'T';if(v>=1e9)return '$'+(v/1e9).toFixed(1)+'B';if(v>=1e6)return '$'+(v/1e6).toFixed(0)+'M';return '$'+v.toLocaleString()};return `
-        <div style="margin-top:0.6rem; padding:.5rem; border-radius:8px; background:rgba(255,255,255,0.01); border:1px solid rgba(255,255,255,0.03);${fg.degraded?' border-color:rgba(251,191,36,0.2)':''}">
-            <div style="font-size:.62rem; color:var(--text-dim); text-transform:uppercase; font-weight:700; margin-bottom:.35rem; display:flex; justify-content:space-between; align-items:center;">Fundamentals${fg.degraded?' <span style="font-size:.5rem;color:var(--yellow)">⚠ some values out of range</span>':''}</div>
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:.3rem;">
-              <div style="padding:.3rem .4rem; border-radius:4px; background:rgba(255,255,255,0.02)"><span style="font-size:.55rem;color:var(--text-muted)">Market Cap</span><div style="font-size:.78rem;font-weight:700;color:var(--text)">${fmtCap(fund?.marketCap)}</div></div>
-              <div style="padding:.3rem .4rem; border-radius:4px; background:rgba(255,255,255,0.02)"><span style="font-size:.55rem;color:var(--text-muted)">P/E (TTM)</span><div style="font-size:.78rem;font-weight:700;color:var(--text)">${fund?.pe_ttm!=null?fund.pe_ttm.toFixed(1):'—'}</div></div>
-              <div style="padding:.3rem .4rem; border-radius:4px; background:rgba(255,255,255,0.02)"><span style="font-size:.55rem;color:var(--text-muted)">EPS (TTM)</span><div style="font-size:.78rem;font-weight:700;color:var(--text)">${fund?.eps_ttm!=null?'$'+fund.eps_ttm.toFixed(2):'—'}</div></div>
-              <div style="padding:.3rem .4rem; border-radius:4px; background:rgba(255,255,255,0.02)"><span style="font-size:.55rem;color:var(--text-muted)">Div Yield</span><div style="font-size:.78rem;font-weight:700;color:var(--text)">${fund?.dividendYield!=null?fund.dividendYield.toFixed(1)+'%':'—'}</div></div>
-            </div>
-            ${fund?.sector?`<div style="font-size:.55rem;color:var(--text-muted);margin-top:.3rem">${_esc(fund.sector)}${fund.industry?' · '+_esc(fund.industry):''}</div>`:''}
-        </div>`;})()}
+        ${(()=>{const fg=_guard.panelGates.fundamentals;if(!fg.show||fundamentalsView.renderMode==='hidden')return '';if(fundamentalsView.renderMode==='inline'){return `<div style="margin-top:0.6rem;padding:.42rem .55rem;border-radius:8px;background:rgba(255,255,255,0.01);border:1px dashed rgba(255,255,255,0.06);font-size:.62rem;color:var(--text-muted)">${_esc(fundamentalsView.helperText || 'Fundamentals currently unavailable.')}${fundamentalsView.profileLine?` <span style="color:var(--text-dim)">· ${_esc(fundamentalsView.profileLine)}</span>`:''}</div>`;}if(fundamentalsView.renderMode==='compact'){return `<div style="margin-top:0.6rem;padding:.45rem .55rem;border-radius:8px;background:rgba(255,255,255,0.01);border:1px solid rgba(255,255,255,0.03)"><div style="font-size:.62rem;color:var(--text-dim);text-transform:uppercase;font-weight:700;margin-bottom:.3rem">Fundamentals</div><div style="display:flex;justify-content:space-between;gap:.5rem;font-size:.66rem"><span style="color:var(--text-muted)">${fundamentalsView.metrics[0]?.label || 'Metric'}</span><span style="font-weight:700;color:var(--text)">${fundamentalsView.metrics[0]?.value || '—'}</span></div>${fundamentalsView.profileLine?`<div style="font-size:.55rem;color:var(--text-muted);margin-top:.25rem">${_esc(fundamentalsView.profileLine)}</div>`:''}</div>`;}return `<div style="margin-top:0.6rem; padding:.5rem; border-radius:8px; background:rgba(255,255,255,0.01); border:1px solid rgba(255,255,255,0.03);${fg.degraded?' border-color:rgba(251,191,36,0.2)':''}"><div style="font-size:.62rem; color:var(--text-dim); text-transform:uppercase; font-weight:700; margin-bottom:.35rem; display:flex; justify-content:space-between; align-items:center;">Fundamentals${fg.degraded?' <span style="font-size:.5rem;color:var(--yellow)">⚠ some values out of range</span>':''}</div><div style="display:grid; grid-template-columns:1fr 1fr; gap:.3rem;">${fundamentalsView.metrics.map(metric=>`<div style="padding:.3rem .4rem; border-radius:4px; background:rgba(255,255,255,0.02)"><span style="font-size:.55rem;color:var(--text-muted)">${metric.label}</span><div style="font-size:.78rem;font-weight:700;color:var(--text)">${metric.value}</div></div>`).join('')}</div>${fundamentalsView.profileLine?`<div style="font-size:.55rem;color:var(--text-muted);margin-top:.3rem">${_esc(fundamentalsView.profileLine)}</div>`:''}</div>`;})()}
 
-        <div style="border-top:1px solid rgba(255,255,255,0.04);margin-top:.75rem;padding-top:.5rem"><div style="font-size:.5rem;color:var(--text-muted);text-transform:uppercase;font-weight:700;letter-spacing:1px;margin-bottom:.3rem;opacity:.5">MODEL EVIDENCE</div></div>
-        <!-- 4-Model Consensus -->
-        ${(()=>{const ev4=payload.evaluation_v4;const mg=_guard.panelGates.modelConsensus;if(!ev4||!mg.show){if(isEtf)return '';return `<div style="margin-top:0.6rem; padding:.5rem; border-radius:8px; background:rgba(255,255,255,0.01); border:1px dashed rgba(255,255,255,0.08); font-size:.62rem; color:var(--text-muted); line-height:1.45;">Additional model evidence modules currently unavailable for this analysis.</div>`;}const ms=ev4?.input_states||{};const models=[{k:'quantlab',l:'QuantLab'},{k:'elliott',l:'Elliott'},{k:'forecast',l:'Forecast'},{k:'scientific',l:'Scientific'}];const dirMap=d=>d==='bullish'||d==='BUY'?{c:'var(--green)',l:'BUY'}:d==='bearish'||d==='SELL'||d==='AVOID'?{c:'var(--red)',l:String(d).toUpperCase()}:{c:'var(--yellow)',l:d?String(d).toUpperCase():'N/A'};return `
+        ${modelEvidenceView.showSection ? `<div style="border-top:1px solid rgba(255,255,255,0.04);margin-top:.75rem;padding-top:.5rem"><div style="font-size:.5rem;color:var(--text-muted);text-transform:uppercase;font-weight:700;letter-spacing:1px;margin-bottom:.3rem;opacity:.5">MODEL EVIDENCE</div></div>` : ''}
+        ${(()=>{const ev4=payload.evaluation_v4;const mg=_guard.panelGates.modelConsensus;if(!modelEvidenceView.showSection||!modelEvidenceView.showConsensus||!ev4||!mg.show)return '';const ms=ev4?.input_states||{};const models=[{k:'quantlab',l:'QuantLab'},{k:'elliott',l:'Elliott'},{k:'forecast',l:'Forecast'},{k:'scientific',l:'Scientific'}];const dirMap=d=>d==='bullish'||d==='BUY'?{c:'var(--green)',l:'BUY'}:d==='bearish'||d==='SELL'||d==='AVOID'?{c:'var(--red)',l:String(d).toUpperCase()}:{c:'var(--yellow)',l:d?String(d).toUpperCase():'N/A'};return `
         <div style="margin-top:0.6rem; padding:.5rem; border-radius:8px; background:rgba(255,255,255,0.01); border:1px solid rgba(255,255,255,0.03);">
             <div style="font-size:.62rem; color:var(--text-dim); text-transform:uppercase; font-weight:700; margin-bottom:.35rem;">4-Model Consensus${mg.degraded?' <span style="font-size:.5rem;color:var(--yellow)">⚠ degraded</span>':''}</div>
             <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:.25rem;">
@@ -1184,8 +1211,7 @@
             </div>
         </div>`;})()}
 
-        <!-- Breakout Indicator (Mini) -->
-        <div style="margin-top:0.6rem; padding:.5rem; border-radius:8px; background:rgba(255,255,255,0.01); border:1px solid rgba(255,255,255,0.03);">
+        ${modelEvidenceView.showSection && modelEvidenceView.showBreakoutMini ? `<div style="margin-top:0.6rem; padding:.5rem; border-radius:8px; background:rgba(255,255,255,0.01); border:1px solid rgba(255,255,255,0.03);">
             <div style="font-size: .62rem; color: var(--text-dim); text-transform: uppercase; font-weight: 700; margin-bottom: .25rem;">Breakout Indicator</div>
             ${data.breakout_v2 && data.breakout_v2.state ? `
             <div style="display:flex; justify-content:space-between; align-items:center;">
@@ -1201,7 +1227,7 @@
               NONE — no breakout setup detected
             </div>
             `}
-        </div>
+        </div>` : ''}
 
       </div>
     </div>
@@ -1212,7 +1238,7 @@
         <div style="display:flex;justify-content:space-between;align-items:baseline"><h2 style="margin:0">Narrative & Key Levels <span title="${_klBadge.tooltip}" style="color:${_klBadge.color};cursor:help;font-size:.55rem">${_klBadge.label}</span></h2>${_panelMeta(pageAsOf, null)}</div>
 
         <!-- Upcoming Catalysts -->
-        ${catalystMode === 'hidden' ? '' : `<div style="margin-bottom:0.75rem; padding:${catalystMode === 'inline' ? '.45rem .6rem' : catalystMode === 'compact' ? '.5rem .6rem' : '.6rem'}; border-radius:8px; background:rgba(255,255,255,0.01); border:1px solid rgba(255,255,255,0.03);">
+        ${catalystMode === 'hidden' ? '' : `<div style="margin-bottom:0.75rem; padding:${catalystMode === 'inline' ? '.4rem .55rem' : catalystMode === 'compact' ? '.5rem .6rem' : '.6rem'}; border-radius:8px; background:rgba(255,255,255,0.01); border:${catalystMode === 'inline' ? '1px dashed rgba(255,255,255,0.06)' : '1px solid rgba(255,255,255,0.03)'};">
             <div style="font-size: .62rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700; margin-bottom: ${catalystMode === 'inline' ? '.2rem' : '.4rem'};">${catalystView.title}</div>
             <div id="dyn-catalysts" style="display:flex; flex-direction:column; gap:4px;">
                 ${catalystView.status === 'confirmed'
@@ -1540,12 +1566,17 @@
         {l:'Breadth',v:(regDoc.breadth_regime||'-').toUpperCase(),c:bColors[regDoc.breadth_regime]||'var(--text)'},
         {l:'Breadth %',v:(regDoc.breadth_above_ma50_pct!=null?regDoc.breadth_above_ma50_pct+'%':'-'),c:'var(--text-dim)'}
       ];
+      const staleShell = freshness.status === 'fresh'
+        ? 'background:rgba(255,255,255,0.02);border:1px solid var(--border);'
+        : freshness.ageBusinessDays > 10
+          ? 'background:rgba(245,158,11,0.03);border:1px dashed rgba(245,158,11,0.16);'
+          : 'background:rgba(245,158,11,0.025);border:1px dashed rgba(245,158,11,0.12);';
       regBar.innerHTML=`<div style="display:flex;align-items:center;gap:.4rem;width:100%;margin-bottom:.15rem">
         <span style="font-size:.55rem;font-weight:800;padding:2px 6px;border-radius:999px;background:rgba(251,191,36,0.08);border:1px solid rgba(251,191,36,0.2);color:${freshness.status === 'fresh' ? 'var(--green)' : 'var(--yellow)'}">${freshness.badge}</span>
         <span style="font-size:.58rem;color:var(--text-muted)">Age: ${freshness.ageBusinessDays == null ? '—' : freshness.ageBusinessDays + ' business day' + (freshness.ageBusinessDays === 1 ? '' : 's')}</span>
         <span style="font-size:.58rem;color:var(--text-muted)">As-of: ${regDoc.date||'-'}</span>
       </div>
-      <div style="font-size:.56rem;color:var(--text-dim);margin-bottom:.3rem">${_esc(freshness.subtitle || 'Historical regime context availability unknown.')}</div>` + pills.map(p=>`<div style="display:flex;flex-direction:column;align-items:center;padding:.3rem .65rem;border-radius:6px;background:rgba(255,255,255,0.02);border:1px solid var(--border);opacity:${freshness.opacity}"><span style="font-size:.55rem;color:var(--text-muted);text-transform:uppercase;font-weight:700">${p.l}</span><span style="font-size:.72rem;font-weight:800;color:${freshness.muted && p.c !== 'var(--text-dim)' ? 'var(--text-dim)' : p.c};margin-top:1px">${p.v}</span></div>`).join('') + (freshness.warningText ? `<div style="grid-column:1 / -1;margin-top:.35rem;padding:.35rem .45rem;border-radius:6px;background:rgba(251,191,36,0.06);border:1px solid rgba(251,191,36,0.15);font-size:.58rem;color:var(--yellow)">${_esc(freshness.warningText)}</div>` : '');
+      <div style="font-size:.56rem;color:var(--text-dim);margin-bottom:.3rem">${_esc(freshness.subtitle || 'Historical regime context availability unknown.')}</div>` + pills.map(p=>`<div style="display:flex;flex-direction:column;align-items:center;padding:.3rem .65rem;border-radius:6px;${staleShell}opacity:${freshness.opacity}"><span style="font-size:.55rem;color:var(--text-muted);text-transform:uppercase;font-weight:700">${p.l}</span><span style="font-size:.72rem;font-weight:800;color:${freshness.muted && p.c !== 'var(--text-dim)' ? 'rgba(226,232,240,0.62)' : p.c};margin-top:1px">${p.v}</span></div>`).join('') + (freshness.warningText ? `<div style="grid-column:1 / -1;margin-top:.35rem;padding:.35rem .45rem;border-radius:6px;background:rgba(251,191,36,0.06);border:1px solid rgba(251,191,36,0.15);font-size:.58rem;color:var(--yellow)">${_esc(freshness.warningText)}</div>` : '');
     }
     const climateBar = document.getElementById('sc-climate-bar');
     if (climateBar && regDoc) {
@@ -1558,7 +1589,10 @@
         {l:'Volatility',v:vM[regDoc.volatility_regime]||(regDoc.volatility_regime||'-').toUpperCase(),c:'var(--text)'},
         {l:'Breadth',v:(regDoc.breadth_regime||'-').toUpperCase(),c:bC[regDoc.breadth_regime]||'var(--text)'}
       ];
-      climateBar.innerHTML=(climateFreshness.status === 'fresh' ? '' : `<span style="font-size:.55rem;font-weight:800;padding:2px 6px;border-radius:999px;background:rgba(251,191,36,0.08);border:1px solid rgba(251,191,36,0.2);color:var(--yellow);align-self:center">${climateFreshness.badge}</span>`) + cp.map(p=>`<div style="display:flex;flex-direction:column;align-items:center;padding:.25rem .5rem;border-radius:6px;background:rgba(255,255,255,0.02);border:1px solid var(--border);opacity:${climateFreshness.opacity}"><span style="font-size:.5rem;color:var(--text-muted);text-transform:uppercase;font-weight:700">${p.l}</span><span style="font-size:.68rem;font-weight:800;color:${climateFreshness.muted && p.c !== 'var(--text-dim)' ? 'var(--text-dim)' : p.c};margin-top:1px">${p.v}</span></div>`).join('');
+      const climateShell = climateFreshness.status === 'fresh'
+        ? 'background:rgba(255,255,255,0.02);border:1px solid var(--border);'
+        : 'background:rgba(245,158,11,0.03);border:1px dashed rgba(245,158,11,0.14);';
+      climateBar.innerHTML=(climateFreshness.status === 'fresh' ? '' : `<span style="font-size:.55rem;font-weight:800;padding:2px 6px;border-radius:999px;background:rgba(251,191,36,0.08);border:1px solid rgba(251,191,36,0.2);color:var(--yellow);align-self:center">${climateFreshness.badge}</span>`) + cp.map(p=>`<div style="display:flex;flex-direction:column;align-items:center;padding:.25rem .5rem;border-radius:6px;${climateShell}opacity:${climateFreshness.opacity}"><span style="font-size:.5rem;color:var(--text-muted);text-transform:uppercase;font-weight:700">${p.l}</span><span style="font-size:.68rem;font-weight:800;color:${climateFreshness.muted && p.c !== 'var(--text-dim)' ? 'rgba(226,232,240,0.62)' : p.c};margin-top:1px">${p.v}</span></div>`).join('');
     } else if (climateBar) { climateBar.innerHTML = ''; }
     window._hpData = hpDoc;
     window._renderHpBody();

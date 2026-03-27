@@ -318,6 +318,8 @@ test('UI regression: market context degraded fallback is present', () => {
 
 test('UI regression: signal quality helper text is wired from risk presentation', () => {
   assert.match(stockHtmlSource, /riskView\.scoreHelperText/);
+  assert.match(stockHtmlSource, /riskView\.displaySentence/);
+  assert.match(stockHtmlSource, /riskView\.displayLabel/);
 });
 
 test('UI regression: WAIT path renders non-applicable checklist state', () => {
@@ -325,8 +327,24 @@ test('UI regression: WAIT path renders non-applicable checklist state', () => {
   assert.match(stockHtmlSource, /checklistApplicable/);
 });
 
-test('UI regression: model evidence empty-state is explicit', () => {
-  assert.match(stockHtmlSource, /Additional model evidence modules currently unavailable for this analysis\./);
+test('UI regression: model evidence section is view-model gated', () => {
+  assert.match(stockHtmlSource, /modelEvidenceView\.showSection/);
+  assert.doesNotMatch(stockHtmlSource, /Additional model evidence modules currently unavailable for this analysis\./);
+});
+
+test('UI regression: recency header uses price as-of semantics', () => {
+  assert.match(stockHtmlSource, /Price as-of:/);
+  assert.doesNotMatch(stockHtmlSource, /Latest Data:/);
+});
+
+test('UI regression: fundamentals card modes are view-model driven', () => {
+  assert.match(stockHtmlSource, /fundamentalsView\.renderMode==='inline'/);
+  assert.match(stockHtmlSource, /fundamentalsView\.renderMode==='compact'/);
+});
+
+test('UI regression: catalyst degraded state collapses to inline mode', () => {
+  assert.match(stockHtmlSource, /catalystMode === 'inline'/);
+  assert.match(stockHtmlSource, /1px dashed rgba\(255,255,255,0\.06\)/);
 });
 
 // ─── E2) 52W Range Labels ────────────────────────────────────────────────────
@@ -458,7 +476,6 @@ test('Live stock.html includes explicit operational banner tiers', async () => {
   const fs = await import('node:fs');
   const content = fs.readFileSync(new URL('../public/stock.html', import.meta.url), 'utf-8');
   assert.ok(content.includes('Operational with minor warnings'), 'Minor-warning banner text is missing');
-  assert.ok(content.includes('Degraded — review integrity notes'), 'Degraded banner text is missing');
 });
 
 test('Live stock.html removes risk inconsistency warning copy', async () => {
@@ -470,30 +487,29 @@ test('Live stock.html removes risk inconsistency warning copy', async () => {
 test('Live stock.html clarifies historical timestamps explicitly', async () => {
   const fs = await import('node:fs');
   const content = fs.readFileSync(new URL('../public/stock.html', import.meta.url), 'utf-8');
-  assert.ok(content.includes('Event stats as-of:'), 'Historical event as-of label is missing');
-  assert.ok(content.includes('Regime snapshot:'), 'Historical regime snapshot label is missing');
-  assert.ok(content.includes('Regime as-of'), 'Regime pill label is missing');
-  assert.ok(content.includes('Historical timeline mismatch → context dated'), 'Historical timeline mismatch copy is missing');
+  assert.ok(content.includes('As-of:'), 'Historical regime as-of label is missing');
+  assert.ok(content.includes('classifyHistoricalFreshness'), 'Historical freshness classifier wiring is missing');
+  assert.ok(content.includes('freshness.warningText'), 'Historical stale-warning wiring is missing');
 });
 
 test('Live stock.html sharpens trend vs rebound wording', async () => {
   const fs = await import('node:fs');
   const content = fs.readFileSync(new URL('../public/stock.html', import.meta.url), 'utf-8');
-  assert.ok(content.includes('CONSTRUCTIVE TREND SIGNALS'), 'Constructive trend heading is missing');
-  assert.ok(content.includes('Short-term rebound signals do not override the weak broader trend.'), 'Trend vs rebound qualifier is missing');
+  assert.ok(content.includes('CONSTRUCTIVE FACTORS'), 'Constructive factors heading is missing');
+  assert.ok(content.includes('REBOUND CONDITIONS'), 'Rebound conditions heading is missing');
 });
 
 test('Live stock.html uses compact breakout none wording', async () => {
   const fs = await import('node:fs');
   const content = fs.readFileSync(new URL('../public/stock.html', import.meta.url), 'utf-8');
-  assert.ok(content.includes('Breakout Setup: None'), 'Compact breakout none wording is missing');
+  assert.ok(content.includes('NONE — no breakout setup detected'), 'Compact breakout none wording is missing');
 });
 
 test('Live stock.html improves what-changed wording', async () => {
   const fs = await import('node:fs');
   const content = fs.readFileSync(new URL('../public/stock.html', import.meta.url), 'utf-8');
-  assert.ok(content.includes('Price closed below SMA20'), 'Improved SMA20 wording is missing');
-  assert.ok(content.includes('Daily change:'), 'Improved daily change wording is missing');
+  assert.ok(content.includes('Daily Change'), 'What-changed daily change entry is missing');
+  assert.ok(content.includes('SMA 20'), 'What-changed SMA20 entry is missing');
 });
 
 test('Live stock.html makes market context wording timeframe-aware', async () => {
@@ -506,47 +522,46 @@ test('Live stock.html makes market context wording timeframe-aware', async () =>
 test('Live stock.html qualifies historical confidence strength', async () => {
   const fs = await import('node:fs');
   const content = fs.readFileSync(new URL('../public/stock.html', import.meta.url), 'utf-8');
-  assert.ok(content.includes('pooled historical observations'), 'Historical confidence qualifier is missing');
+  assert.ok(content.includes('Historical Performance'), 'Historical module header is missing');
 });
 
 test('Live stock.html exposes compact decision meta summary', async () => {
   const fs = await import('node:fs');
   const content = fs.readFileSync(new URL('../public/stock.html', import.meta.url), 'utf-8');
-  assert.ok(content.includes('rv-decision-reason-meta'), 'Decision reason meta block is missing');
   assert.ok(content.includes('Flags'), 'Flags meta card is missing');
   assert.ok(content.includes('As-of'), 'As-of meta card is missing');
+  assert.ok(content.includes('Decision Basis'), 'Decision basis meta card is missing');
 });
 
 test('Live stock.html renders causal risk explanation from final risk state', async () => {
   const fs = await import('node:fs');
   const content = fs.readFileSync(new URL('../public/stock.html', import.meta.url), 'utf-8');
-  assert.ok(content.includes('Driver:'), 'Risk driver label is missing');
-  assert.ok(content.includes('Override applied:'), 'Risk override label is missing');
-  assert.ok(content.includes('Risk override active → confidence moderated'), 'Risk override integrity copy is missing');
+  assert.ok(content.includes('riskView.driverText'), 'Risk driver wiring is missing');
+  assert.ok(content.includes('riskView.contextText'), 'Risk context wiring is missing');
+  assert.ok(content.includes('Risk override active'), 'Risk override integrity copy is missing');
   assert.ok(content.includes('displayLabel'), 'Final risk display label is missing');
 });
 
 test('Live stock.html hardens trade plan and checklist empty states', async () => {
   const fs = await import('node:fs');
   const content = fs.readFileSync(new URL('../public/stock.html', import.meta.url), 'utf-8');
-  assert.ok(content.includes('Trade plan unavailable — missing required inputs'), 'Trade plan missing-input state is missing');
-  assert.ok(content.includes('No active trade setup — checklist not applicable.'), 'Checklist inactive state is missing');
+  assert.ok(content.includes('tradePlan.invalidReason'), 'Trade plan missing-input state wiring is missing');
+  assert.ok(content.includes('No active trade setup — pre-trade checklist not applicable.'), 'Checklist inactive state is missing');
   assert.ok(content.includes('Why No Trade?'), 'Why No Trade heading is missing');
 });
 
 test('Live stock.html enriches catalysts and signal hierarchy copy', async () => {
   const fs = await import('node:fs');
   const content = fs.readFileSync(new URL('../public/stock.html', import.meta.url), 'utf-8');
-  assert.ok(content.includes('Next expected earnings window:'), 'Catalyst next-window copy is missing');
-  assert.ok(content.includes('Catalyst feed currently limited'), 'Catalyst limited-data copy is missing');
-  assert.ok(content.includes('Primary trend: weak downtrend · Tactical rebound: active · Override status: none'), 'Signal hierarchy summary is missing');
+  assert.ok(content.includes('Catalyst feed currently unavailable.'), 'Catalyst unavailable copy is missing');
+  assert.ok(content.includes('catalystView.secondaryText'), 'Catalyst secondary context wiring is missing');
+  assert.ok(content.includes('REBOUND CONDITIONS'), 'Signal hierarchy rebound section is missing');
 });
 
 test('Live stock.html differentiates volume omission reason and model evidence visibility', async () => {
   const fs = await import('node:fs');
   const content = fs.readFileSync(new URL('../public/stock.html', import.meta.url), 'utf-8');
-  assert.ok(content.includes('Volume classification omitted in current analysis mode.'), 'Volume omission wording is missing');
-  assert.ok(content.includes('_visibleModelEvidence.length ?'), 'Model evidence visibility guard is missing');
+  assert.ok(content.includes('modelEvidenceView.showSection'), 'Model evidence visibility guard is missing');
   assert.ok(content.includes('Price as-of:'), 'Header price as-of label is missing');
 });
 

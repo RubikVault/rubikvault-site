@@ -2,7 +2,9 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   buildRiskPresentation,
+  buildFundamentalsPresentation,
   buildCatalystPresentation,
+  buildModelEvidencePresentation,
   classifyHistoricalFreshness,
   validateLevelConsistency,
   buildTradePlanModel,
@@ -20,11 +22,12 @@ describe('buildRiskPresentation', () => {
     assert.equal(risk.scoreLabel, 'Risk Quality');
     assert.equal(risk.finalState, 'Elevated');
     assert.equal(risk.overrideApplied, true);
-    assert.equal(risk.scoreColor, 'var(--yellow)');
+    assert.equal(risk.scoreColor, 'rgba(245,158,11,0.72)');
     assert.match(risk.scoreHelperText, /better structural quality, not lower final risk/i);
-    assert.match(risk.rawSignalText, /100th percentile/i);
-    assert.match(risk.overrideDisplayReason, /override reason/i);
+    assert.match(risk.driverText, /100th percentile/i);
+    assert.match(risk.contextText, /override applied/i);
     assert.match(risk.displaySentence, /final risk is moderated to Elevated/i);
+    assert.equal(risk.displayLabel, 'Elevated (override)');
   });
 
   it('shows direct final risk when no override exists', () => {
@@ -38,6 +41,31 @@ describe('buildRiskPresentation', () => {
   });
 });
 
+describe('buildFundamentalsPresentation', () => {
+  it('hides empty fundamentals cards behind inline unavailable state', () => {
+    const view = buildFundamentalsPresentation({
+      fundamentals: {
+        marketCap: null,
+        pe_ttm: null,
+        eps_ttm: null,
+        dividendYield: null,
+      },
+      meta: { status: 'error' },
+    });
+    assert.equal(view.renderMode, 'inline');
+    assert.match(view.helperText, /source unavailable/i);
+  });
+
+  it('renders compact mode for a single useful metric', () => {
+    const view = buildFundamentalsPresentation({
+      fundamentals: { marketCap: 1_200_000_000 },
+      meta: { status: 'ok' },
+    });
+    assert.equal(view.renderMode, 'compact');
+    assert.equal(view.metrics.length, 1);
+  });
+});
+
 describe('buildCatalystPresentation', () => {
   it('uses estimated earnings window for stocks', () => {
     const catalyst = buildCatalystPresentation({
@@ -46,7 +74,7 @@ describe('buildCatalystPresentation', () => {
       fundamentals: { nextEarningsDate: '2026-04-29T00:00:00Z' },
     });
     assert.equal(catalyst.renderMode, 'compact');
-    assert.match(catalyst.primaryText, /2026-04-29/);
+    assert.match(catalyst.secondaryText, /2026-04-29/);
   });
 
   it('does not emit fake earnings fallback for ETFs', () => {
@@ -55,8 +83,25 @@ describe('buildCatalystPresentation', () => {
       name: 'SPDR S&P 500 ETF Trust',
       fundamentals: null,
     });
+    assert.equal(catalyst.renderMode, 'hidden');
+  });
+
+  it('uses explicit unavailable copy when the fundamentals feed errors', () => {
+    const catalyst = buildCatalystPresentation({
+      ticker: 'QCOM',
+      name: 'Qualcomm Incorporated',
+      fundamentals: null,
+      fundamentalsMeta: { status: 'error' },
+    });
     assert.equal(catalyst.renderMode, 'inline');
-    assert.match(catalyst.primaryText, /ETF/i);
+    assert.match(catalyst.primaryText, /currently unavailable/i);
+  });
+});
+
+describe('buildModelEvidencePresentation', () => {
+  it('hides the section when no consensus module and no breakout evidence exists', () => {
+    const view = buildModelEvidencePresentation({ evaluationV4: null, breakout: { state: 'NONE', scores: { total: 0 } } });
+    assert.equal(view.showSection, false);
   });
 });
 

@@ -125,7 +125,7 @@ function riskSeverityColor(state) {
 
 function qualityColor(score, finalState) {
   if (!Number.isFinite(score)) return 'var(--text-dim)';
-  if (finalState === 'High' || finalState === 'Elevated' || finalState === 'Medium') return 'var(--yellow)';
+  if (finalState === 'High' || finalState === 'Elevated' || finalState === 'Medium') return 'rgba(245,158,11,0.72)';
   if (score >= 65) return 'var(--green)';
   if (score >= 40) return 'var(--yellow)';
   return 'var(--red)';
@@ -177,6 +177,7 @@ export function buildRiskPresentation({ decision = {}, states = {}, stats = {} }
     scoreLabel: Number.isFinite(rawScore) ? 'Risk Quality' : 'Risk',
     scoreDirection: 'higher_is_safer',
     scoreColor: qualityColor(rawScore, finalState),
+    displayLabel: overrideApplied ? `${finalState} (override)` : finalState,
     finalState,
     finalColor,
     overrideApplied,
@@ -189,7 +190,96 @@ export function buildRiskPresentation({ decision = {}, states = {}, stats = {} }
     overrideDisplayReason: overrideApplied
       ? (overrideReason ? `Override reason: ${overrideReason.replace(/\.$/, '')}.` : 'Override reason: structural context moderated the raw signal.')
       : 'Override reason: no override applied.',
+    driverText: Number.isFinite(volPct)
+      ? `Driver: Relative volatility extreme (${volPct.toFixed(0)}th percentile).`
+      : `Driver: ${regimeLabel}.`,
+    contextText: overrideApplied
+      ? 'Override applied: Low realized volatility and supportive structural context moderate the final classification.'
+      : 'Context: No moderation applied to the final classification.',
     volPercentile: volPct,
+  };
+}
+
+function formatMarketCap(value) {
+  const v = toNumber(value);
+  if (!Number.isFinite(v) || v <= 0) return '—';
+  if (v >= 1e12) return `$${(v / 1e12).toFixed(2)}T`;
+  if (v >= 1e9) return `$${(v / 1e9).toFixed(1)}B`;
+  if (v >= 1e6) return `$${(v / 1e6).toFixed(0)}M`;
+  return `$${v.toLocaleString('en-US')}`;
+}
+
+function formatFundamentalMetric(key, value) {
+  const n = toNumber(value);
+  if (!Number.isFinite(n)) return '—';
+  switch (key) {
+    case 'marketCap':
+      return formatMarketCap(n);
+    case 'pe_ttm':
+      return n.toFixed(1);
+    case 'eps_ttm':
+      return `$${n.toFixed(2)}`;
+    case 'dividendYield':
+      return `${n.toFixed(1)}%`;
+    default:
+      return String(n);
+  }
+}
+
+function hasNumericFundamental(value) {
+  return value != null && value !== '' && Number.isFinite(Number(value));
+}
+
+export function buildFundamentalsPresentation({ fundamentals, meta = null } = {}) {
+  const coreMetrics = [
+    { key: 'marketCap', label: 'Market Cap', value: formatFundamentalMetric('marketCap', fundamentals?.marketCap), present: hasNumericFundamental(fundamentals?.marketCap) },
+    { key: 'pe_ttm', label: 'P/E (TTM)', value: formatFundamentalMetric('pe_ttm', fundamentals?.pe_ttm), present: hasNumericFundamental(fundamentals?.pe_ttm) },
+    { key: 'eps_ttm', label: 'EPS (TTM)', value: formatFundamentalMetric('eps_ttm', fundamentals?.eps_ttm), present: hasNumericFundamental(fundamentals?.eps_ttm) },
+    { key: 'dividendYield', label: 'Div Yield', value: formatFundamentalMetric('dividendYield', fundamentals?.dividendYield), present: hasNumericFundamental(fundamentals?.dividendYield) },
+  ];
+  const available = coreMetrics.filter((metric) => metric.present);
+  const profileLine = fundamentals?.sector
+    ? `${fundamentals.sector}${fundamentals?.industry ? ` · ${fundamentals.industry}` : ''}`
+    : null;
+  const metaStatus = String(meta?.status || meta?.mode || '').toLowerCase();
+  const unavailable = !available.length;
+  if (available.length >= 2) {
+    return {
+      status: 'available',
+      renderMode: 'card',
+      title: 'Fundamentals',
+      metrics: coreMetrics,
+      profileLine,
+      helperText: null,
+    };
+  }
+  if (available.length === 1) {
+    return {
+      status: 'limited',
+      renderMode: 'compact',
+      title: 'Fundamentals',
+      metrics: available,
+      profileLine,
+      helperText: 'Limited fundamentals coverage.',
+    };
+  }
+  if (unavailable && (metaStatus === 'error' || metaStatus === 'degraded' || metaStatus === 'unknown')) {
+    return {
+      status: 'unavailable',
+      renderMode: 'inline',
+      title: 'Fundamentals',
+      metrics: [],
+      profileLine,
+      helperText: 'Fundamentals source unavailable for this analysis.',
+    };
+  }
+  return {
+    status: 'hidden',
+    renderMode: 'hidden',
+    title: 'Fundamentals',
+    metrics: [],
+    profileLine: null,
+    helperText: null,
   };
 }
 
@@ -200,7 +290,7 @@ export function inferAssetClass({ ticker, name, universe, fundamentals } = {}) {
   return 'Stock';
 }
 
-export function buildCatalystPresentation({ ticker, name, fundamentals, universe } = {}) {
+export function buildCatalystPresentation({ ticker, name, fundamentals, universe, fundamentalsMeta = null } = {}) {
   const assetClass = inferAssetClass({ ticker, name, universe, fundamentals });
   const nextEarningsDate = fundamentals?.nextEarningsDate || null;
   if (Array.isArray(fundamentals?.confirmedCatalysts) && fundamentals.confirmedCatalysts.length > 0) {
@@ -221,29 +311,86 @@ export function buildCatalystPresentation({ ticker, name, fundamentals, universe
       variant: 'compact',
       assetClass,
       title: 'Upcoming Catalysts',
-      primaryText: `Estimated earnings window: ${date}`,
-      secondaryText: 'Unconfirmed schedule from fundamentals feed.',
+      primaryText: '0 confirmed catalysts in the next 30 days',
+      secondaryText: `Next expected earnings window: ~${date} (unconfirmed)`,
     };
   }
   if (assetClass === 'ETF') {
+    return {
+      status: 'hidden',
+      renderMode: 'hidden',
+      variant: 'hidden',
+      assetClass,
+      title: 'Catalysts',
+      primaryText: null,
+      secondaryText: null,
+    };
+  }
+  const fundamentalsStatus = String(fundamentalsMeta?.status || fundamentalsMeta?.mode || '').toLowerCase();
+  if (fundamentalsStatus === 'error' || fundamentalsStatus === 'degraded' || fundamentalsStatus === 'unknown') {
     return {
       status: 'unavailable',
       renderMode: 'inline',
       variant: 'inline',
       assetClass,
       title: 'Catalysts',
-      primaryText: 'Catalyst feed unavailable for ETFs.',
-      secondaryText: null,
+      primaryText: 'Catalyst feed currently unavailable.',
+      secondaryText: 'No confirmed events are available from the current fundamentals source.',
     };
   }
   return {
     status: 'unavailable',
-    renderMode: 'inline',
-    variant: 'inline',
+    renderMode: 'hidden',
+    variant: 'hidden',
     assetClass,
     title: 'Catalysts',
-    primaryText: 'Catalyst data temporarily unavailable.',
+    primaryText: null,
     secondaryText: null,
+  };
+}
+
+export function buildModelEvidencePresentation({ evaluationV4 = null, breakout = null, assetClass = 'Stock' } = {}) {
+  const hasConsensus = Boolean(evaluationV4);
+  const breakoutState = breakout?.state || 'NONE';
+  const breakoutScore = toNumber(breakout?.scores?.total) ?? 0;
+  const breakoutRelevant = breakoutState !== 'NONE' || breakoutScore > 0;
+  if (hasConsensus) {
+    return {
+      status: 'available',
+      renderMode: 'card',
+      showSection: true,
+      showConsensus: true,
+      showBreakoutMini: breakoutRelevant,
+      emptyText: null,
+    };
+  }
+  if (breakoutRelevant) {
+    return {
+      status: 'partial',
+      renderMode: 'compact',
+      showSection: true,
+      showConsensus: false,
+      showBreakoutMini: true,
+      emptyText: null,
+    };
+  }
+  if (assetClass === 'ETF') {
+    return {
+      status: 'hidden',
+      renderMode: 'hidden',
+      showSection: false,
+      showConsensus: false,
+      showBreakoutMini: false,
+      emptyText: null,
+    };
+  }
+  return {
+    status: 'hidden',
+    renderMode: 'hidden',
+    showSection: false,
+    showConsensus: false,
+    showBreakoutMini: false,
+    emptyText: null,
   };
 }
 

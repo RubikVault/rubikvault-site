@@ -9,9 +9,7 @@ import {
 } from '../functions/api/_shared/stock-helpers.js';
 
 import {
-  statsFromIndicatorEntries,
   transformV2ToStockShape,
-  deriveIntegrity,
 } from '../public/js/rv-v2-client.js';
 
 function test(name, fn) {
@@ -66,19 +64,21 @@ test('selectCanonicalMarketPrices prefers fresher live price record', () => {
 });
 
 test('selectCanonicalMarketStats prefers more complete record', () => {
+  const liveRecord = buildMarketStatsFromIndicators(historicalIndicatorPayload, 'QCOM', yesterday);
   const canonical = selectCanonicalMarketStats(
     { symbol: 'QCOM', as_of: staleDay, stats: { rsi14: null, atr14: null } },
-    { symbol: 'QCOM', as_of: yesterday, stats: statsFromIndicatorEntries(historicalIndicatorPayload, 'QCOM', yesterday).stats }
+    liveRecord
   );
   assert.equal(canonical.as_of, yesterday);
   assert.equal(canonical.stats.atr14, 4.03);
   assert.equal(canonical.stats.bb_upper, 143.6);
 });
 
-test('transformV2ToStockShape produces canonical fresh price and stats', () => {
+test('transformV2ToStockShape produces canonical fresh price and carries fundamentals/meta', () => {
   const payload = transformV2ToStockShape(
     {
       ticker: 'QCOM',
+      name: null,
       latest_bar: {
         date: yesterday,
         open: 130.16,
@@ -94,7 +94,7 @@ test('transformV2ToStockShape produces canonical fresh price and stats', () => {
         close: 143.09,
         source_provider: 'snapshot',
       },
-      market_stats: null,
+      market_stats: buildMarketStatsFromIndicators(historicalIndicatorPayload, 'QCOM', yesterday),
       change: { pct: 0.013 },
       states: { trend: 'STRONG_DOWN', momentum: 'BEARISH', volatility: 'LOW' },
       decision: { verdict: 'WAIT' },
@@ -107,41 +107,39 @@ test('transformV2ToStockShape produces canonical fresh price and stats', () => {
       provider: 'eodhd',
     },
     {
-      historicalData: {
-        bars: [
-          { date: isoDayOffset(-2), close: 128.67, adjClose: 128.67 },
-          { date: yesterday, close: 130.35, adjClose: 130.35 },
-        ],
-        indicators: historicalIndicatorPayload.indicators,
+      bars: [
+        { date: isoDayOffset(-2), close: 128.67, adjClose: 128.67 },
+        { date: yesterday, close: 130.35, adjClose: 130.35, volume: 6665800 },
+      ],
+      breakout_v2: { state: 'NONE', scores: { total: 0 } },
+    },
+    {
+      evaluation_v4: {
+        input_states: {
+          scientific: { status: 'ok', featureStates: { direction: 'bullish' } },
+        },
       },
-      historicalMeta: { status: 'stale', data_date: yesterday },
-      governanceData: {
-        evaluation_v4: {
-          scientific: { status: 'ok', as_of: yesterday, value: { direction: 'bullish' } }
-        }
+      universe: { name: 'Qualcomm Incorporated' },
+    },
+    { ticker: 'QCOM', marketCap: 1000, nextEarningsDate: '2026-04-29' },
+    {
+      historical: { status: 'stale', data_date: yesterday },
+      governance: { status: 'stale', data_date: yesterday },
+      fundamentals: { status: 'fresh', data_date: yesterday },
+    },
+    {
+      data: {
+        name: 'Qualcomm Incorporated',
+        market_prices: { symbol: 'QCOM', date: staleDay, close: 143.09 },
       },
-      governanceMeta: { status: 'stale', data_date: yesterday },
-      fundamentalsData: { ticker: 'QCOM', marketCap: 1000, nextEarningsDate: '2026-04-29' },
-      fundamentalsMeta: { status: 'fresh', data_date: yesterday },
     }
   );
 
   assert.equal(payload.data.market_prices.date, yesterday);
   assert.equal(payload.data.market_prices.close, 130.35);
   assert.equal(payload.data.market_stats.stats.rsi14, 37.4);
-  assert.equal(payload.metadata.analysis.latestDataDate, yesterday);
-  assert.equal(payload.metadata.analysis.integrity.status, 'ok');
+  assert.equal(payload.metadata.as_of, yesterday);
   assert.equal(payload.data.fundamentals.nextEarningsDate, '2026-04-29');
-  assert.equal(payload.evaluation_v4.scientific.status, 'ok');
-});
-
-test('deriveIntegrity flags missing metrics as partial', () => {
-  const integrity = deriveIntegrity(
-    { date: yesterday, close: 130.35 },
-    { as_of: yesterday, stats: { rsi14: 37.4 } },
-    { status: 'fresh', data_date: yesterday },
-    { historical: 'fresh', historicalAsOf: yesterday }
-  );
-  assert.equal(integrity.status, 'partial');
-  assert.ok(integrity.issues.includes('missing_core_metrics'));
+  assert.equal(payload.evaluation_v4.input_states.scientific.status, 'ok');
+  assert.equal(payload.data.name, 'Qualcomm Incorporated');
 });
