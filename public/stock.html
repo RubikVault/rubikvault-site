@@ -4,8 +4,8 @@
 <title>Analysis · RubikVault</title>
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#3b82f6" />
-<link rel="icon" type="image/png" sizes="32x32" href="/assets/rv-favicon.png" />
-<link rel="apple-touch-icon" sizes="180x180" href="/assets/rv-apple-icon.png" />
+<link rel="icon" type="image/svg+xml" href="/images/branding/rubikvault_stacked_logo.svg" />
+<link rel="apple-touch-icon" href="/images/branding/rubikvault_stacked_logo.svg" />
 <link rel="stylesheet" href="/style.css" />
 <style>
 :root{--bg:#020617;--card:rgba(15,23,42,0.92);--border:rgba(148,163,184,0.15);--text:#f1f5f9;--text-dim:#94a3b8;--text-muted:#64748b;--accent:#06b6d4;--accent-glow:rgba(6,182,212,0.12);--green:#10b981;--green-bg:rgba(16,185,129,0.08);--red:#f87171;--red-bg:rgba(248,113,113,0.08);--yellow:#fbbf24;--yellow-bg:rgba(251,191,36,0.08);--radius:16px;--radius-sm:10px}
@@ -30,7 +30,7 @@
 <header class="rv-header">
   <div class="rv-header-inner">
     <a class="rv-brand" href="/" aria-label="RubikVault">
-      <img class="rv-brand-icon" src="/assets/rv-icon.png" alt="" />
+      <img class="rv-brand-icon" src="/images/branding/rubikvault_stacked_logo.svg" alt="" />
       <span class="rv-brand-text">RubikVault</span>
     </a>
     <nav class="rv-nav">
@@ -75,7 +75,7 @@
   <div style="padding:1rem 0;border-bottom:1px solid var(--border);margin-bottom:1.5rem;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.75rem">
     <div>
       <div style="font-size:1.1rem;font-weight:700;margin:0 0 .2rem;color:var(--text)">Executive Dashboard</div>
-      <div style="font-size:.8rem;color:var(--text-muted)">Ticker: <strong id="sc-ticker" style="color:var(--text)">...</strong> · <span id="sc-price">Loading...</span></div>
+      <div style="font-size:.8rem;color:var(--text-muted)"><strong id="sc-ticker" style="color:var(--text)">...</strong> <span id="sc-symbol" style="color:var(--text-muted)"></span> · <span id="sc-price">Loading...</span></div>
     </div>
     <!-- Search Bar -->
     <div style="display:flex;align-items:center;gap:.5rem">
@@ -94,30 +94,23 @@
   const _esc = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   const pathMatch = window.location.pathname.match(/\/analyze\/([^/?]+)/i);
   const ticker = (pathMatch ? decodeURIComponent(pathMatch[1]).toUpperCase() : new URLSearchParams(location.search).get('ticker')?.toUpperCase()) || 'AAPL';
+  const {
+    buildPageIdentity,
+    buildRiskPresentation,
+    buildCatalystPresentation,
+    classifyHistoricalFreshness,
+    validateLevelConsistency,
+    buildTradePlanModel,
+    buildExecutiveGovernance,
+    computeTooltipFrame,
+  } = await import('/js/stock-page-view-model.js');
   let payload;
   let _rvDataSource = 'v1';
   try {
-    // V2 dual-path: try V2 summary if gate is open, fallback to V1
-    let _useV2 = false;
-    try {
-      const gateRes = await fetch('/api/v2/stocks/' + encodeURIComponent(ticker) + '/summary');
-      _useV2 = gateRes.ok;
-      if (_useV2) {
-        const v2Payload = await gateRes.json();
-        if (v2Payload.ok && v2Payload.data) {
-          const { transformV2ToStockShape } = await import('/js/rv-v2-client.js');
-          payload = transformV2ToStockShape(v2Payload.data, v2Payload.meta);
-          _rvDataSource = 'v2';
-        } else {
-          _useV2 = false;
-        }
-      }
-    } catch { _useV2 = false; }
-    if (!_useV2) {
-      const res = await fetch('/api/stock?ticker=' + encodeURIComponent(ticker));
-      payload = await res.json();
-      _rvDataSource = 'v1';
-    }
+    const { fetchWithFallback } = await import('/js/rv-v2-client.js');
+    const resolved = await fetchWithFallback(ticker);
+    payload = resolved.payload;
+    _rvDataSource = resolved.source === 'v2' ? 'v2' : 'v1';
   } catch(e) {
     console.error('[RV] API fetch failed:', e);
     document.getElementById('sc-content').innerHTML = '<div style="color:var(--red);text-align:center;padding:2rem">Unable to load data. Please try again.</div>'; return;
@@ -131,10 +124,13 @@
 
   const data = payload.data || {}, meta = payload.metadata || {}, s = data.market_stats?.stats || {}, prices = data.market_prices || {}, bars = data.bars || [], change = data.change || {};
   const lastBar = bars.length ? bars[bars.length-1] : {};
-  const close = prices.close ?? lastBar.close ?? null;
+  const identity = buildPageIdentity(payload, ticker);
+  const close = identity.pageClose;
   const atr = Number.isFinite(s.atr14) ? s.atr14 : null;
   const atrPct = close > 0 && atr != null ? (atr / close * 100) : null;
-  const tkr = meta?.request?.normalized_ticker || data?.ticker || ticker;
+  const tkr = identity.ticker || ticker;
+  const pageAsOf = identity.pageAsOf;
+  const displayName = identity.name || tkr;
 
   document.title = tkr + ' — Analysis · RubikVault';
 
@@ -164,7 +160,7 @@
     rsi14: Number.isFinite(s.rsi14) ? s.rsi14 : null,
     atr14: atr,
     atrPct,
-    asOf: prices.date || lastBar.date || null
+    asOf: pageAsOf
   };
 
   // Global integrity status
@@ -201,13 +197,10 @@
   const rsiColor = {OVERSOLD:'var(--green)',BEARISH:'#fb923c',NEUTRAL:'var(--text)',BULLISH:'var(--accent)',OVERBOUGHT:'var(--red)',UNKNOWN:'var(--text-dim)'}[_states.momentum] || 'var(--text-dim)';
   const macdLabel=s.macd_hist==null?'—':s.macd_hist>0?'Positive':'Negative';
   const volPct=s.volatility_20d!=null?(s.volatility_20d*100).toFixed(1):null;
-  let riskLabel = {EXTREME:'High',HIGH:'High',NORMAL:'Medium',LOW:'Low',COMPRESSED:'Low',UNKNOWN:'Unknown'}[_states.volatility] || 'Unknown';
-  const _volPctile = s.volatility_percentile;
-  if (Number.isFinite(_volPctile)) {
-    if (_volPctile > 90 && (riskLabel === 'Low' || riskLabel === 'Unknown')) riskLabel = 'Elevated';
-    else if (_volPctile > 75 && riskLabel === 'Low') riskLabel = 'Medium';
-  }
-  let riskColor = riskLabel==='High'?'var(--red)':riskLabel==='Elevated'?'var(--yellow)':riskLabel==='Medium'?'var(--yellow)':'var(--green)';
+  const riskView = buildRiskPresentation({ decision: _decision, states: _states, stats: s });
+  const riskLabel = riskView.finalState;
+  const riskColor = riskView.finalColor;
+  const _volPctile = riskView.volPercentile;
   const trendColor=trendWord==='uptrend'?'var(--green)':trendWord==='downtrend'?'var(--red)':'var(--yellow)';
   const isExtremeVol = _states.volatility === 'EXTREME';
   const r52pct=_guard.corrections.r52pct ?? s.range_52w_pct;
@@ -219,7 +212,8 @@
   const fmtP=v=>v==null?'—':(v>=0?'+':'')+((v)*100).toFixed(2)+'%';
 
   // Update Header
-  document.getElementById('sc-ticker').textContent = tkr;
+  document.getElementById('sc-ticker').textContent = displayName;
+  document.getElementById('sc-symbol').textContent = displayName === tkr ? '' : `(${tkr})`;
   // V2 source badge
   const _srcBadge = document.createElement('span');
   _srcBadge.style.cssText = 'font-size:.6rem;padding:1px 5px;border-radius:4px;margin-left:.4rem;font-weight:700;vertical-align:middle;';
@@ -238,7 +232,7 @@
     _fbExplain.textContent = 'Running in fallback mode (V1). Some advanced models are unavailable \u2014 results may differ from full analysis.' + (_decision.fallback_level && _decision.fallback_level !== 'exact' ? ' Level: ' + _decision.fallback_level : '');
     document.getElementById('sc-ticker').parentElement.appendChild(_fbExplain);
   }
-  document.getElementById('sc-price').innerHTML = close!=null?'$'+close.toFixed(2)+' <span style="color:'+((change.pct||0)>=0?'var(--green)':'var(--red)')+'">'+((change.pct||0)>=0?'+':'')+((change.pct||0)*100).toFixed(2)+'%</span> <span style="font-size:.7rem;color:var(--text-muted);margin-left:.4rem">'+(prices.date||'')+'</span>':'—';
+  document.getElementById('sc-price').innerHTML = close!=null?'$'+close.toFixed(2)+' <span style="color:'+((change.pct||0)>=0?'var(--green)':'var(--red)')+'">'+((change.pct||0)>=0?'+':'')+((change.pct||0)*100).toFixed(2)+'%</span> <span style="font-size:.7rem;color:var(--text-muted);margin-left:.4rem">'+(pageAsOf||'')+'</span>':'—';
 
   // Render Top Headline KPIs
   document.getElementById('sc-headline-kpis').innerHTML = [
@@ -370,7 +364,7 @@
   const items3D = [
     { label:'SMA 50', value:close>(s.sma50||0)?'Reclaimed':'Broken', badges:[], type: close>(s.sma50||0)?'bullish':'bearish' },
     { label:'Momentum', value:trendLabel, badges:[trendWord==='uptrend'?'Constructive':trendWord==='downtrend'?'Adverse':'Mixed'], type: trendWord==='uptrend'?'bullish':trendWord==='downtrend'?'bearish':'mixed' },
-    { label:'Risk', value:riskLabel, badges:riskLabel==='Elevated'?['Vol Percentile Override']:[], type: riskLabel==='Low'?'bullish':riskLabel==='High'?'bearish':'mixed' }
+    { label:'Final Risk', value:riskLabel, badges:riskView.overrideApplied?['Override applied']:[], type: riskLabel==='Low'?'bullish':riskLabel==='High'?'bearish':'mixed' }
   ];
   const items1W = [
     { label:'MA Stack', value:maStack, badges:[maStack==='Constructive'?'Bullish':maStack==='Adverse'?'Bearish':'Neutral'], type: maStack==='Constructive'?'bullish':maStack==='Adverse'?'bearish':'mixed' },
@@ -605,41 +599,62 @@
   // ── Render Chart Hover Handlers ──
   // ── Render Chart Hover Handlers ──
   window._svgHover = function(e, container) {
-    const data = container._chartData;
-    if (!data) return;
-    const { cl, dates, mn, mx, rn, height } = data;
-    const rect = container.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const w = rect.width;
-
-    const paddingLeft = 42, graphW = 750; // based on viewBox w=800
-    const graphLeftPx = (paddingLeft / 800) * w;
-    const graphWidthPx = (graphW / 800) * w;
-    
-    // Calculate ratio inside graph coordinates
-    const ratio = Math.max(0, Math.min(1, (x - graphLeftPx) / graphWidthPx));
-    const idx = Math.round(ratio * (cl.length - 1));
-    const price = cl[idx];
-    const date = dates[idx];
-
-    const marker = container.querySelector('#svg-marker');
-    const tooltip = container.querySelector('#svg-tooltip');
-    if (marker && tooltip) {
+    if (container._tooltipFrameRequested) {
+      container._lastPointerEvent = e;
+      return;
+    }
+    container._lastPointerEvent = e;
+    container._tooltipFrameRequested = true;
+    window.requestAnimationFrame(() => {
+      container._tooltipFrameRequested = false;
+      const evt = container._lastPointerEvent;
+      const data = container._chartData;
+      if (!evt || !data) return;
+      const { cl, dates } = data;
+      const rect = container.getBoundingClientRect();
+      const x = evt.clientX - rect.left;
+      const w = rect.width;
+      const paddingLeft = 42;
+      const graphW = 750;
+      const graphLeftPx = (paddingLeft / 800) * w;
+      const graphWidthPx = (graphW / 800) * w;
+      const ratio = Math.max(0, Math.min(1, (x - graphLeftPx) / graphWidthPx));
+      const idx = Math.round(ratio * (cl.length - 1));
+      const price = cl[idx];
+      const date = dates[idx];
+      const marker = container.querySelector('#svg-marker');
+      const tooltip = container.querySelector('#svg-tooltip');
+      if (!marker || !tooltip) return;
       marker.style.display = 'block';
-      // Adjust marker line left offset position accurately using left bounding
       marker.style.left = `${graphLeftPx + (idx / (cl.length - 1) * graphWidthPx)}px`;
       tooltip.style.display = 'block';
-      tooltip.style.left = `${e.clientX + 12}px`;
-      tooltip.style.top = `${e.clientY - 35}px`;
       tooltip.innerHTML = `<div style="font-weight:700;color:var(--text-dim);font-size:0.62rem">${date}</div><div style="font-weight:800;color:var(--accent);font-size:0.75rem;margin-top:1px;">$${price.toFixed(2)}</div>`;
-    }
+      const frame = computeTooltipFrame({
+        pointX: evt.clientX - rect.left,
+        pointY: evt.clientY - rect.top,
+        containerRect: { width: rect.width, height: rect.height },
+        tooltipWidth: tooltip.offsetWidth,
+        tooltipHeight: tooltip.offsetHeight,
+      });
+      tooltip.style.left = `${frame.left}px`;
+      tooltip.style.top = `${frame.top}px`;
+    });
   };
   window._svgLeave = function(container) {
     const marker = container.querySelector('#svg-marker');
     const tooltip = container.querySelector('#svg-tooltip');
     if (marker) marker.style.display = 'none';
     if (tooltip) tooltip.style.display = 'none';
+    container._lastPointerEvent = null;
   };
+  window.addEventListener('scroll', () => {
+    document.querySelectorAll('#svg-tooltip').forEach((tooltip) => { tooltip.style.display = 'none'; });
+    document.querySelectorAll('#svg-marker').forEach((marker) => { marker.style.display = 'none'; });
+  }, { passive: true });
+  window.addEventListener('resize', () => {
+    document.querySelectorAll('#svg-tooltip').forEach((tooltip) => { tooltip.style.display = 'none'; });
+    document.querySelectorAll('#svg-marker').forEach((marker) => { marker.style.display = 'none'; });
+  });
 
   // ── Render Chart ──
   function svgChart(height,id,bc){
@@ -700,7 +715,7 @@
         <div style="position:absolute; bottom:4px; right:${paddingRight + 4}px; font-size:0.55rem; color:var(--text-dim); font-weight:600;">${dates[dates.length-1]}</div>
 
         <!-- Floating Tooltip Container -->
-        <div id="svg-tooltip" style="position:fixed; display:none; background:rgba(15,23,42,0.95); border:1px solid var(--border); padding:0.4rem 0.6rem; border-radius:6px; pointer-events:none; z-index:9999; font-size:0.65rem; color:var(--text); box-shadow:0 10px 15px -3px rgba(0,0,0,0.4);"></div>
+        <div id="svg-tooltip" style="position:absolute; display:none; background:rgba(15,23,42,0.95); border:1px solid var(--border); padding:0.4rem 0.6rem; border-radius:6px; pointer-events:none; z-index:4; font-size:0.65rem; color:var(--text); box-shadow:0 10px 15px -3px rgba(0,0,0,0.4);"></div>
         
         <!-- Vertical Marker Line -->
         <div id="svg-marker" style="position:absolute; top:${paddingTop}px; bottom:${paddingBottom}px; width:1px; background:rgba(255,255,255,0.25); display:none; pointer-events:none;"></div>
@@ -722,6 +737,7 @@
   levels.sort((a,b)=>b.price-a.price);
   var uq=[];for(var li=0;li<levels.length;li++){var dp=false;for(var lj=0;lj<uq.length;lj++){if(Math.abs(levels[li].price-uq[lj].price)/close<0.001){dp=true;break}}if(!dp)uq.push(levels[li])}
   levels.length=0;uq.forEach(l=>levels.push(l));
+  const levelConsistency = validateLevelConsistency(levels, close);
 
   // Relevance scoring — proximity + type weighting
   const _allLevelsCount = levels.length;
@@ -762,13 +778,14 @@
     { check: levels.length === 0, level: 'invalid', msg: 'No levels available' },
     { check: levels.length > 0 && levels.length < 3, level: 'low_confidence', msg: 'Few levels available' },
     { check: atr == null, level: 'warning', msg: 'ATR-based levels unavailable' },
+    { check: levelConsistency.degraded, level: 'warning', msg: levelConsistency.issues.join('; ') },
   ]);
 
   // Dynamic Trade Plan values
-  const targetRes = levels.find(l => l.kind === 'resistance');
-  const targetPrice = targetRes ? targetRes.price : (close && atr ? close + atr * 2 : null);
-  const stopPr = atr != null ? close - atr : null;
-  const rrRatio = (targetPrice && stopPr && close) ? ((targetPrice - close) / (close - stopPr)).toFixed(1) : '—';
+  const tradePlan = buildTradePlanModel({ verdict: effectiveVerdict, close, atr, levels });
+  const targetPrice = tradePlan.target ?? null;
+  const stopPr = tradePlan.stop ?? null;
+  const rrRatio = Number.isFinite(tradePlan.rr) ? tradePlan.rr.toFixed(1) : '—';
 
   var rows=displayLevels.map(l=>{
     var c=l.kind==='support'?'var(--green)':'var(--red)';
@@ -800,6 +817,23 @@
   if (close < (s.sma20 || Infinity) && close > (s.sma200 || 0)) reboundConds.push('Between SMA20 and SMA200 — pullback zone');
   else reboundConds.push('Near structure support bounds');
   const reboundPoints = reboundConds.map(r => '<li>'+r+'</li>').join('');
+  const confidencePct = _decision.confidence != null ? `${(_decision.confidence * 100).toFixed(0)}%` : confidence;
+  const decisionFlags = _decision.data_quality_flags?.length ? _decision.data_quality_flags.join(', ') : 'None';
+  const decisionReason = _decision.wait_reason || _explanation.headline || _explanation.synthesis || effectiveText;
+  const executiveGridItems = [
+    ['As-of', _decision.asof || _decision.created_at || pageAsOf || '—'],
+    ['Confidence', confidencePct || '—'],
+    ['Flags', decisionFlags],
+    ['Setup', setupType],
+    ['Horizon View', `${shortV} / ${midV} / ${longV}`],
+    ['Decision Basis', decisionReason || '—'],
+  ];
+  const catalystView = buildCatalystPresentation({
+    ticker: tkr,
+    name: displayName,
+    fundamentals: data.fundamentals,
+    universe: payload.universe || payload.evaluation_v4?.universe || null,
+  });
 
   // ── Construct Layout ──
   const _integrityBanner = _integrityItems.length === 0
@@ -814,9 +848,8 @@
     <div>
       <div class="section">
         <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:.4rem; border-bottom:1px solid rgba(255,255,255,0.03); padding-bottom:.3rem;">
-           <span style="font-weight:800; font-size:1rem; color:#fff;">${data.name || tkr}</span>
+           <span style="font-weight:800; font-size:1rem; color:#fff;">${displayName}</span>
            <h2 style="margin:0; font-size:0.68rem; color:var(--text-muted); text-transform:uppercase;">Executive Decision <span title="${_decisionBadge.tooltip}" style="color:${_decisionBadge.color};cursor:help;font-size:.55rem">${_decisionBadge.label}</span></h2>
-           ${_panelMeta(_decision.asof || _decision.created_at || prices.date, null)}
         </div>
 
         <div style="font-size:.5rem;color:var(--text-muted);text-transform:uppercase;font-weight:700;letter-spacing:1px;margin-bottom:.3rem;opacity:.5">DECISION</div>
@@ -828,8 +861,6 @@
             ${confidence==='LOW'?`<div style="font-size:.5rem;color:var(--yellow);margin-top:2px;font-weight:600">\u26A0 Low confidence — limited signal strength</div>`:''}
             ${shouldRenderSetupPhase ? `<div style="font-size:0.55rem; color:var(--text-dim); margin-top:2px; font-weight:700;">${setupPhaseSubtext}</div>` : ''}
             <div style="font-size:.65rem;color:var(--text-dim);font-weight:700;margin-top:2px;">${effectiveText}</div>
-            ${_decision.wait_subtype ? `<div style="font-size:.55rem;color:var(--yellow);margin-top:2px;font-weight:600">${_esc(_decision.wait_subtype.replace(/_/g,' '))}</div><div style="font-size:.52rem;color:var(--text-muted);margin-top:1px">${_esc(_decision.wait_reason||'')}</div>` : ''}
-            <div style="font-size:.58rem;color:var(--text-muted);text-transform:uppercase;margin-top:3px;font-weight:600;">Setup: <span style="color:var(--accent)">${setupType}</span></div>
             ${_v6.bucket ? `<div style="display:flex;gap:4px;margin-top:4px;flex-wrap:wrap">${(()=>{const bC={HIGH_CONVICTION:'var(--green)',MODERATE:'var(--accent)',WEAK:'var(--yellow)',NO_TRADE:'var(--red)'};const hC={hold_strong:'var(--green)',hold_normal:'var(--text-dim)',hold_fading:'var(--yellow)',reduce:'var(--red)',exit_signal:'var(--red)'};const pill=(l,c)=>'<span style="font-size:.5rem;font-weight:700;padding:1px 6px;border-radius:3px;background:rgba(255,255,255,0.04);border:1px solid '+c+';color:'+c+'">'+l+'</span>';return pill(_v6.bucket.replace(/_/g,' '),bC[_v6.bucket]||'var(--text-dim)')+(_v6.hold_state?pill(_v6.hold_state.replace(/_/g,' '),hC[_v6.hold_state]||'var(--text-dim)'):'')})()}</div>` : ''}
             <div id="rv-decision-rationale" style="font-size:.55rem;color:var(--text-muted);margin-top:3px;font-style:italic"></div>
             <div id="rv-governance-info" style="display:flex;gap:4px;margin-top:3px;flex-wrap:wrap"></div>
@@ -842,23 +873,33 @@
           </div>
         </div>
 
+        <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px 10px;margin-bottom:0.75rem;padding:8px 10px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.04);border-radius:6px;">
+          ${executiveGridItems.map(([label, value]) => `<div style="display:flex;gap:6px;align-items:flex-start;font-size:0.6rem;min-width:0;"><span style="color:var(--text-muted);width:66px;flex-shrink:0;">${label}</span><span style="font-weight:700;color:var(--text);min-width:0;overflow:hidden;text-overflow:ellipsis;">${_esc(value)}</span></div>`).join('')}
+        </div>
+
         <!-- Trade Plan -->
-        ${effectiveVerdict === 'BUY' || effectiveVerdict === 'SELL' ? `<div style="display: flex; justify-content: space-between; font-size: 0.62rem; margin-bottom: 0.35rem; padding: 6px 10px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.04); border-radius: 6px;">
-            <div><span style="color:var(--text-muted)">Entry:</span> <span style="font-weight:600;">${close!=null?'$'+close.toFixed(2):'—'}</span></div>
-            <div><span style="color:var(--text-muted)">Stop:</span> <span style="font-weight:600; color:var(--red);">${stopPr!=null?'$'+stopPr.toFixed(2):'—'}</span></div>
-            <div><span style="color:var(--text-muted)">Target:</span> <span style="font-weight:600; color:var(--green);">${targetPrice!=null?'$'+targetPrice.toFixed(2):'—'}</span></div>
+        ${tradePlan.status === 'ready' ? `<div style="display: flex; justify-content: space-between; font-size: 0.62rem; margin-bottom: 0.35rem; padding: 6px 10px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.04); border-radius: 6px;">
+            <div><span style="color:var(--text-muted)">Entry:</span> <span style="font-weight:600;">${tradePlan.entry!=null?'$'+tradePlan.entry.toFixed(2):'—'}</span></div>
+            <div><span style="color:var(--text-muted)">Stop:</span> <span style="font-weight:600; color:var(--red);">${tradePlan.stop!=null?'$'+tradePlan.stop.toFixed(2):'—'}</span></div>
+            <div><span style="color:var(--text-muted)">Target:</span> <span style="font-weight:600; color:var(--green);">${tradePlan.target!=null?'$'+tradePlan.target.toFixed(2):'—'}</span></div>
             <div><span style="color:var(--text-muted)">R/R:</span> <span style="font-weight:700; color:var(--accent);">${rrRatio}x</span></div>
         </div>
         <div style="font-size:0.58rem; color:var(--text-dim); text-align:center; margin-bottom:0.75rem; font-style:italic;">
-          Entry: current price · Stop: below ATR · Target: next resistance level
-        </div>` : `<div style="display:flex;align-items:center;justify-content:center;font-size:0.62rem;margin-bottom:0.75rem;padding:8px 10px;background:rgba(255,255,255,0.01);border:1px dashed rgba(255,255,255,0.08);border-radius:6px;color:var(--text-muted)">No active trade plan — ${effectiveText}</div>`}
+          Entry: current price · Stop: ATR geometry · Target: nearest directional level
+        </div>` : `<div style="display:flex;align-items:center;justify-content:center;font-size:0.62rem;margin-bottom:0.75rem;padding:8px 10px;background:rgba(255,255,255,0.01);border:1px dashed rgba(255,255,255,0.08);border-radius:6px;color:var(--text-muted)">${_esc(tradePlan.invalidReason || ('No active trade plan — ' + effectiveText))}</div>`}
 
         ${_decision.scores ? `<div style="padding:6px 10px;margin-bottom:0.5rem;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.04);border-radius:6px;">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
             <span style="font-size:.58rem;color:var(--text-muted);text-transform:uppercase;font-weight:700">Signal Quality</span>
             <span style="font-size:.62rem;font-weight:700;color:var(--accent)">Composite: ${(_decision.scores.composite||0).toFixed(0)}</span>
           </div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px 12px;">${['trend','entry','risk','context'].map(k=>{const v=_decision.scores[k+'_score']||_decision.scores[k]||0;const c=v>=65?'var(--green)':v>=40?'var(--yellow)':'var(--red)';return '<div style="display:flex;align-items:center;gap:4px;font-size:.58rem"><span style="color:var(--text-muted);width:36px">'+k.charAt(0).toUpperCase()+k.slice(1)+'</span><div style="flex:1;height:4px;background:rgba(255,255,255,0.05);border-radius:2px"><div style="width:'+Math.min(100,v)+'%;height:100%;background:'+c+';border-radius:2px"></div></div><span style="color:var(--text-dim);width:20px;text-align:right">'+v.toFixed(0)+'</span></div>'}).join('')}</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px 12px;">${[
+            ['trend', 'Trend'],
+            ['entry', 'Entry'],
+            ['risk', riskView.scoreLabel],
+            ['context', 'Context']
+          ].map(([key, label])=>{const v=_decision.scores[key+'_score']||_decision.scores[key]||0;const c=key==='risk'?riskView.scoreColor:(v>=65?'var(--green)':v>=40?'var(--yellow)':'var(--red)');return '<div style="display:flex;align-items:center;gap:4px;font-size:.58rem"><span style="color:var(--text-muted);width:68px">'+label+'</span><div style="flex:1;height:4px;background:rgba(255,255,255,0.05);border-radius:2px"><div style="width:'+Math.min(100,v)+'%;height:100%;background:'+c+';border-radius:2px"></div></div><span style="color:var(--text-dim);width:20px;text-align:right">'+v.toFixed(0)+'</span></div>'}).join('')}</div>
+          <div style="font-size:.58rem;color:var(--text-dim);margin-top:6px;line-height:1.4">${_esc(riskView.displaySentence)}${riskView.overrideApplied ? ` <span style="color:var(--yellow);font-weight:600">Override active.</span>` : ''}</div>
         </div>` : ''}
 
         <!-- Horizons -->
@@ -954,14 +995,14 @@
           </div>
           <div style="flex:1">
             <div style="font-size:.65rem;color:var(--text-muted)">RISK STATE</div>
-            <div style="font-size:1.2rem;font-weight:800;color:${riskColor}">${riskLabel}</div>
-            <div style="font-size:.58rem;color:var(--text-dim);margin-top:2px;font-style:italic;">Regime: <span style="color:var(--yellow);">${isExtremeVol?'Extreme Volatility':'Normal'}</span></div>
-            <div style="font-size:.55rem;color:var(--text-dim);line-height:1.4;margin-top:3px">${(()=>{const d=[];if(Number.isFinite(_volPctile)&&_volPctile>90)d.push('<span style="color:var(--yellow)">+ Vol percentile '+_volPctile.toFixed(0)+'th (extreme)</span>');if(_states.volatility==='EXTREME')d.push('<span style="color:var(--yellow)">+ Extreme volatility regime</span>');if(isExtremeVol&&riskLabel!=='High')d.push('<span style="color:var(--green)">\u2013 Final risk moderated by structural context</span>');if(Number.isFinite(_volPctile)&&_volPctile>75&&_volPctile<=90)d.push('<span style="color:var(--yellow)">+ Vol percentile elevated ('+_volPctile.toFixed(0)+'th)</span>');if(_states.volatility==='LOW'||_states.volatility==='COMPRESSED')d.push('<span style="color:var(--green)">\u2013 Low volatility supports reduced risk</span>');return d.length?d.join('<br>'):'';})()}</div>
+            <div style="font-size:1.2rem;font-weight:800;color:${riskColor}">${riskLabel}${riskView.overrideApplied ? ' (override)' : ''}</div>
+            <div style="font-size:.58rem;color:var(--text-dim);margin-top:2px;font-style:italic;">Regime: <span style="color:${riskColor};">${riskView.regimeLabel}</span></div>
+            <div style="font-size:.55rem;color:var(--text-dim);line-height:1.4;margin-top:3px">${_esc(riskView.displaySentence)}</div>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:.2rem;margin-top:.3rem">
               <div title="Average True Range (14d) in dollar terms" style="font-size:.65rem;cursor:help"><span style="color:var(--text-muted)">ATR:</span> <span style="font-weight:600">${atr!=null?'$'+atr.toFixed(2):'—'}</span></div>
               <div title="ATR as percentage of price" style="font-size:.65rem;cursor:help"><span style="color:var(--text-muted)">ATR%:</span> <span style="font-weight:600">${atrPct!=null?atrPct.toFixed(2)+'%':'—'}</span></div>
               <div title="Daily realized volatility (20d rolling std of log returns)" style="font-size:.65rem;cursor:help"><span style="color:var(--text-muted)">20D Vol:</span> <span style="font-weight:600">${volPct!=null?volPct+'%':'—'}</span></div>
-              <div title="Volatility percentile vs 252-day history" style="font-size:.65rem;cursor:help"><span style="color:var(--text-muted)">Vol %ile:</span> <span style="font-weight:600">${s.volatility_percentile!=null?s.volatility_percentile.toFixed(0)+'th':'—'}${s.volatility_percentile!=null && s.volatility_percentile>90 && riskLabel!=='High'?' <span title="Percentile >90 but risk state is not High — possible data inconsistency" style="color:var(--yellow);cursor:help">⚠</span>':''}</span></div>
+              <div title="Volatility percentile vs 252-day history" style="font-size:.65rem;cursor:help"><span style="color:var(--text-muted)">Vol %ile:</span> <span style="font-weight:600">${s.volatility_percentile!=null?s.volatility_percentile.toFixed(0)+'th':'—'}</span></div>
             </div>
           </div>
         </div>
@@ -1067,10 +1108,13 @@
         <div style="display:flex;justify-content:space-between;align-items:baseline"><h2 style="margin:0">Narrative & Key Levels <span title="${_klBadge.tooltip}" style="color:${_klBadge.color};cursor:help;font-size:.55rem">${_klBadge.label}</span></h2>${_panelMeta(prices.date, null)}</div>
 
         <!-- Upcoming Catalysts -->
-        <div style="margin-bottom:0.75rem; padding:.6rem; border-radius:8px; background:rgba(255,255,255,0.01); border:1px solid rgba(255,255,255,0.03);">
-            <div style="font-size: .62rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700; margin-bottom: .4rem;">Upcoming Catalysts</div>
+        <div style="margin-bottom:0.75rem; padding:${catalystView.variant === 'inline' ? '.45rem .6rem' : '.6rem'}; border-radius:8px; background:rgba(255,255,255,0.01); border:1px solid rgba(255,255,255,0.03);">
+            <div style="font-size: .62rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700; margin-bottom: ${catalystView.variant === 'inline' ? '.2rem' : '.4rem'};">${catalystView.title}</div>
             <div id="dyn-catalysts" style="display:flex; flex-direction:column; gap:4px;">
-                <div style="font-size:0.68rem; color:var(--text-dim); font-style:italic;">0 confirmed catalysts in the 30-day forward window</div>
+                ${catalystView.status === 'confirmed'
+                  ? catalystView.items.map(item => `<div style="font-size:0.68rem;color:var(--text)">${_esc(item.title || item.label || String(item))}</div>`).join('')
+                  : `<div style="font-size:0.68rem; color:${catalystView.variant === 'inline' ? 'var(--text-muted)' : 'var(--text)'}; font-style:${catalystView.variant === 'inline' ? 'italic' : 'normal'};">${_esc(catalystView.primaryText || 'Catalyst feed currently unavailable.')}</div>${catalystView.secondaryText ? `<div style="font-size:0.58rem;color:var(--text-dim)">${_esc(catalystView.secondaryText)}</div>` : ''}`
+                }
             </div>
         </div>
 
@@ -1082,6 +1126,7 @@
         <!-- Key Levels Layout -->
         <div style="padding-top:.25rem">
           <div style="font-size:.68rem;color:var(--text-muted);text-transform:uppercase;font-weight:700;margin-bottom:.5rem">Key Levels</div>
+          ${levelConsistency.degraded ? `<div style="margin-bottom:.45rem;padding:.35rem .45rem;border-radius:6px;background:rgba(251,191,36,0.06);border:1px solid rgba(251,191,36,0.15);font-size:.58rem;color:var(--yellow)">${_esc(levelConsistency.issues.join(' · '))}</div>` : ''}
           <div style="display:grid;grid-template-columns:1.2fr .8fr;gap:.5rem;align-items:stretch">
             <div style="display:flex;flex-direction:column;gap:.11rem;" class="custom-scroll">${rows.join('')}</div>
             <div style="position:relative;min-height:220px;background:rgba(255,255,255,0.01);border-radius:8px;border:1px solid rgba(255,255,255,0.04);padding:.5rem .3rem">
@@ -1381,6 +1426,7 @@
     if (hpAsof && hpDoc) hpAsof.textContent = 'as-of: ' + (hpDoc.computed_at ? hpDoc.computed_at.slice(0,10) : hpDoc.latest_date || '\u2014');
     const regBar = document.getElementById('hp-regime-bar');
     if (regBar && regDoc) {
+      const freshness = classifyHistoricalFreshness(regDoc.date);
       const mColors={bull:'var(--green)',bear:'var(--red)'};
       const bColors={weak:'var(--red)',normal:'var(--yellow)',strong:'var(--green)'};
       const vMap={low_vol:'LOW',normal_vol:'NORMAL',high_vol:'HIGH'};
@@ -1388,10 +1434,13 @@
         {l:'Market',v:(regDoc.market_regime||'-').toUpperCase(),c:mColors[regDoc.market_regime]||'var(--text)'},
         {l:'Vol.',v:vMap[regDoc.volatility_regime]||(regDoc.volatility_regime||'-').toUpperCase(),c:'var(--text)'},
         {l:'Breadth',v:(regDoc.breadth_regime||'-').toUpperCase(),c:bColors[regDoc.breadth_regime]||'var(--text)'},
-        {l:'Breadth %',v:(regDoc.breadth_above_ma50_pct!=null?regDoc.breadth_above_ma50_pct+'%':'-'),c:'var(--text-dim)'},
-        {l:'As-of',v:regDoc.date||'-',c:'var(--text-muted)'}
+        {l:'Breadth %',v:(regDoc.breadth_above_ma50_pct!=null?regDoc.breadth_above_ma50_pct+'%':'-'),c:'var(--text-dim)'}
       ];
-      regBar.innerHTML=pills.map(p=>`<div style="display:flex;flex-direction:column;align-items:center;padding:.3rem .65rem;border-radius:6px;background:rgba(255,255,255,0.02);border:1px solid var(--border)"><span style="font-size:.55rem;color:var(--text-muted);text-transform:uppercase;font-weight:700">${p.l}</span><span style="font-size:.72rem;font-weight:800;color:${p.c};margin-top:1px">${p.v}</span></div>`).join('');
+      regBar.innerHTML=`<div style="display:flex;align-items:center;gap:.4rem;width:100%;margin-bottom:.15rem">
+        <span style="font-size:.55rem;font-weight:800;padding:2px 6px;border-radius:999px;background:rgba(251,191,36,0.08);border:1px solid rgba(251,191,36,0.2);color:${freshness.status === 'fresh' ? 'var(--green)' : 'var(--yellow)'}">${freshness.badge}</span>
+        <span style="font-size:.58rem;color:var(--text-muted)">Age: ${freshness.ageBusinessDays == null ? '—' : freshness.ageBusinessDays + ' business day' + (freshness.ageBusinessDays === 1 ? '' : 's')}</span>
+        <span style="font-size:.58rem;color:var(--text-muted)">As-of: ${regDoc.date||'-'}</span>
+      </div>` + pills.map(p=>`<div style="display:flex;flex-direction:column;align-items:center;padding:.3rem .65rem;border-radius:6px;background:rgba(255,255,255,0.02);border:1px solid var(--border);opacity:${freshness.opacity}"><span style="font-size:.55rem;color:var(--text-muted);text-transform:uppercase;font-weight:700">${p.l}</span><span style="font-size:.72rem;font-weight:800;color:${freshness.muted && p.c !== 'var(--text-dim)' ? 'var(--text-dim)' : p.c};margin-top:1px">${p.v}</span></div>`).join('');
     }
     const climateBar = document.getElementById('sc-climate-bar');
     if (climateBar && regDoc) {
@@ -1414,46 +1463,14 @@
     try {
       const govEl = document.getElementById('rv-governance-info');
       if (!govEl) return;
-      const pills = [];
-      const mp = (l, v, c) => '<span style="font-size:.48rem;font-weight:600;padding:1px 5px;border-radius:3px;background:rgba(255,255,255,0.03);border:1px solid ' + c + ';color:' + c + '">' + l + ': ' + v + '</span>';
-
-      // PRIMARY: Per-symbol governance from decision payload
-      if (_decision.fallback_level && _decision.fallback_level !== 'exact') pills.push(mp('Fallback', _decision.fallback_level, 'var(--yellow)'));
-      if (_decision.regime_transition_active) pills.push(mp('Regime', 'TRANSITION', 'var(--red)'));
-      if (_decision.wait_subtype) pills.push(mp('Wait', _decision.wait_subtype.replace(/_/g, ' '), 'var(--yellow)'));
-      if (_decision.data_quality_flags?.length > 0) pills.push(mp('Flags', _decision.data_quality_flags.length, 'var(--yellow)'));
-      if (_decision.confidence != null) {
-        const cPct = (_decision.confidence * 100).toFixed(0);
-        const cColor = _decision.confidence >= 0.7 ? 'var(--green)' : _decision.confidence >= 0.4 ? 'var(--yellow)' : 'var(--red)';
-        pills.push(mp('Conf', cPct + '%', cColor));
-      }
-
-      // SUPPLEMENTARY: Aggregate from daily report (if available)
+      let report = null;
       try {
         const res = await fetch('/data/reports/quantlab-v1-latest.json?_=' + Date.now());
-        if (res.ok) {
-          const rpt = await res.json();
-          if (rpt.timestamp || rpt.date) pills.push(mp('Report', (rpt.timestamp ? rpt.timestamp.slice(0,10) : rpt.date), 'var(--text-muted)'));
-          if (rpt.mode) pills.push(mp('Mode', rpt.mode, 'var(--text-dim)'));
-          if (rpt.top_sources?.length > 0) pills.push(mp('Drivers', rpt.top_sources.join(', '), 'var(--accent)'));
-          if (rpt.avg_evidence_quality != null) {
-            const eqPct = (rpt.avg_evidence_quality * 100).toFixed(0);
-            pills.push(mp('Ev.Q', eqPct + '%', rpt.avg_evidence_quality >= 0.7 ? 'var(--green)' : rpt.avg_evidence_quality < 0.5 ? 'var(--yellow)' : 'var(--text-dim)'));
-          }
-          if (rpt.fallback_usage) {
-            const levels = Object.keys(rpt.fallback_usage).filter(k => k !== 'exact');
-            if (levels.length > 0 && !_decision.fallback_level) pills.push(mp('Fallback', levels.join(', '), 'var(--yellow)'));
-          }
-          if (rpt.regime_transition_active && !_decision.regime_transition_active) pills.push(mp('Regime', 'TRANSITION', 'var(--red)'));
-          if (rpt.governance_warnings) {
-            const warnKeys = Object.keys(rpt.governance_warnings).slice(0, 2);
-            if (warnKeys.length > 0) pills.push(mp('Gov', warnKeys.join(', '), 'var(--yellow)'));
-          }
-          if (rpt.hit_rate_matured != null) pills.push(mp('Hit-Rate', (rpt.hit_rate_matured * 100).toFixed(0) + '%', rpt.hit_rate_matured > 0.55 ? 'var(--green)' : rpt.hit_rate_matured < 0.45 ? 'var(--red)' : 'var(--text-dim)'));
-        }
+        if (res.ok) report = await res.json();
       } catch { /* report fetch failed — per-symbol pills still render */ }
-
-      govEl.innerHTML = pills.join('');
+      const pills = buildExecutiveGovernance({ decision: _decision, report });
+      const mp = (l, v, c) => '<span style="font-size:.48rem;font-weight:600;padding:1px 5px;border-radius:3px;background:rgba(255,255,255,0.03);border:1px solid ' + c + ';color:' + c + '">' + l + ': ' + _esc(v) + '</span>';
+      govEl.innerHTML = pills.map((pill) => mp(pill.label, pill.value, pill.color)).join('');
     } catch { /* graceful degradation */ }
   })();
 
