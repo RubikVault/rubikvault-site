@@ -141,7 +141,7 @@ export function transformV2ToStockShape(v2Data, v2Meta, historicalData = null, g
   return {
     data: {
       ticker: v2Data.ticker,
-      name: v2Data.name || governanceData?.universe?.name || legacyPayload?.data?.name || mergedFundamentals?.companyName || null,
+      name: v2Data.name || legacyPayload?.data?.name || mergedFundamentals?.companyName || governanceData?.universe?.name || v2Data.ticker || null,
       bars,
       market_prices: marketPrices,
       market_stats: marketStats,
