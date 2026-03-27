@@ -4,7 +4,7 @@
 
 Validated against:
 
-- `origin/main` at `0dd6dca7ce06970332de9bc08816616113ee599e`
+- `origin/main` at `e07e1d2b11a3f41645bba7761112d69899b236ce`
 - live route: `https://rubikvault.com/analyze/QCOM?audit=1`
 - validation date: `2026-03-27`
 
@@ -28,12 +28,13 @@ Primary test surfaces:
 | 2 | Fundamentals card is large but empty | Valid | The current Fundamentals card renders even when all four core fields are `—`, which consumes card-sized space without value. |
 | 3 | Catalyst block is honest but still too low-value | Valid | `Catalyst data temporarily unavailable.` is truthful, but it still consumes card space without enough decision value or fallback nuance. |
 | 4 | Historical regime still looks too active | Valid | Freshness is already marked, but the colored regime pills still read too much like current signal rather than delayed background context. |
-| 5 | Market Context degraded state is still too large | Valid | The degraded state is honest, but the fallback still occupies card-style space instead of collapsing to a compact degraded mode. |
-| 6 | Model Evidence state is not fully standardized | Valid | The empty state is explicit, but the module still lacks a strict `card / compact / inline / hidden` contract shared with other optional modules. |
+| 5 | Market Context degraded state is still too large | Valid | The degraded state is honest and no longer hangs, but the fallback still occupies too much card space relative to its value. |
+| 6 | Model Evidence state is not fully standardized | Valid | The empty state is explicit, but it still needs the same hard `card / compact / inline / hidden` contract as other optional modules. |
 | 7 | Risk override hierarchy is not product-final | Partially valid | The current wording is understandable, but the repo still lacks one final, explicit product rule that fixes the relationship between raw extreme signal and final moderated state. |
 | 8 | Tooltip stability | Valid QA gate | The known regression class still requires permanent automated guarding. |
 | 9 | Key-level consistency vs canonical close | Valid QA gate | Guardrails exist, but the release contract still needs stronger explicit coverage. |
 | 10 | Trade-plan geometry | Valid QA gate | Geometry guards exist, but they remain a permanent release-critical invariant. |
+| 11 | Header / hero recency coherence | Valid QA gate | If canonical page recency is known, the header must not simultaneously imply that the latest data date is unknown. |
 
 ## Current Live Facts
 
@@ -45,8 +46,11 @@ Observed on `QCOM` live at the time of validation:
 - Fundamentals card renders with `— / — / — / —`
 - Catalyst card renders `Catalyst data temporarily unavailable.`
 - Historical regime block shows stale labeling but still uses strong regime pills
-- Market Context degraded block still renders as a card
-- Model Evidence renders an explicit empty state card
+- Company name is already fixed
+- Pre-trade checklist is already correctly degraded on `WAIT / Mixed / No Clean Entry`
+- Market Context is already honestly degraded and no longer hangs in loading
+- Model Evidence empty state is already explicit
+- Remaining problem is value-density and render-mode discipline, not ambiguity of state
 
 These facts make the residual criticism materially valid.
 
@@ -65,6 +69,13 @@ These facts make the residual criticism materially valid.
 - `canonical_as_of` is the only owner for visible recency messaging.
 - `stock-page-view-model.js` is the only place where module display semantics are decided.
 - `stock.html` must remain predominantly render-only.
+
+## Regression Invariants
+
+- Company identity must remain `name + ticker` whenever any valid upstream source knows the company name.
+- Pre-trade checklist must remain non-applicable on `WAIT / Mixed / No Clean Entry`.
+- Market Context must never regress to endless loading.
+- Model Evidence empty state must remain explicit whenever the module is relevant but unavailable.
 
 ## P0: Must Fix Before Next Release
 
@@ -88,7 +99,10 @@ Implementation:
   - `qualityHelperText`
   - `presentationPriority`
   - `renderSentence`
+- Treat this as the last major fast-scan semantic contradiction on the page.
 - Force `riskQuality` into neutral or amber presentation whenever `finalState` is `Elevated` or `High`.
+- Never allow strong safe-green structural-quality styling adjacent to `Elevated` or `High` final risk.
+- `finalRisk` must be visually dominant over `riskQuality` in label, color, placement, and supporting copy.
 - Remove ad hoc risk color logic from `stock.html`.
 - Render risk in one strict order:
   1. final risk
@@ -101,6 +115,7 @@ Acceptance:
 - A user can distinguish `Final Risk` from `Risk Quality` in a 2-second scan.
 - `Risk Quality` never appears strong-green next to `Elevated` or `High`.
 - Header KPI, risk panel, and executive card all derive from the same `riskView` contract.
+- `Final Risk` is the single dominant risk message in a 1-second scan.
 
 ### P0.2 Fundamentals Value Density
 
@@ -126,10 +141,25 @@ Implementation:
   - `hidden` when there is no value
 - `stock.html` must only render the mode emitted by the view model.
 
+Target render examples:
+
+- `card`
+  - `Market Cap: $155.2B`
+  - `P/E (TTM): 18.4`
+  - `EPS (TTM): $7.12`
+  - `Div Yield: 2.1%`
+- `compact`
+  - `Fundamentals: Market Cap $155.2B`
+- `inline`
+  - `Fundamentals data limited for this analysis.`
+- `hidden`
+  - no visible fundamentals block at all
+
 Acceptance:
 
 - No full Fundamentals card may render with only `—` values.
 - Thin fundamentals data cannot consume card-sized space.
+- Large low-value fundamentals cards become impossible by contract.
 
 ### P0.3 Catalyst Value Density
 
@@ -157,10 +187,24 @@ Implementation:
   - never fabricate earnings fallback
   - use ETF-specific `inline` or `hidden`
 
+Target render examples:
+
+- `card`
+  - `Earnings`
+  - `Apr 29, 2026 · confirmed`
+- `compact`
+  - `0 confirmed catalysts in the next 30 days`
+  - `Next expected earnings window: ~Apr 29, 2026 (unconfirmed)`
+- `inline`
+  - `Catalyst data temporarily unavailable.`
+- `hidden`
+  - no catalyst module at all
+
 Acceptance:
 
 - Stocks do not show a large low-value catalyst card for pure unavailability.
 - ETFs do not show stock-style earnings language.
+- Large low-value catalyst cards become impossible by contract.
 
 ## P1: Directly After P0
 
@@ -211,8 +255,9 @@ Implementation:
   - `inline`
   - `hidden`
 - When degraded and no live benchmark data exists:
-  - prefer `compact`
+  - aggressively prefer `compact`
   - do not render a full card shell
+  - do not keep chart, correlation grid, or large empty body scaffolding
 - Keep the degraded copy explicit:
   - `Benchmark comparison temporarily unavailable.`
 
@@ -220,6 +265,7 @@ Acceptance:
 
 - Degraded market context does not dominate the third column.
 - No endless loading state.
+- Degraded market context collapses aggressively instead of leaving a low-value card shell.
 
 ### P1.3 Model Evidence Standardization
 
@@ -236,6 +282,8 @@ Implementation:
   - `unavailable_but_relevant -> compact or inline`
   - `not_useful_here -> hidden`
 - Remove ambiguous card-vs-empty-state logic from `stock.html`.
+- Prefer `compact`, `inline`, or `hidden` for unavailable states.
+- Do not leave large empty shells for unavailable model evidence.
 - Hide the whole section when it provides no value.
 
 Acceptance:
@@ -314,6 +362,20 @@ Gate:
 - `SELL`: `target < entry < stop`
 - otherwise: unavailable state only
 
+### QA.4 Header / Hero Recency Coherence
+
+Files:
+
+- `/Users/michaelpuchowezki/Dev/rubikvault-site/public/stock.html`
+- `/Users/michaelpuchowezki/Dev/rubikvault-site/public/js/stock-page-view-model.js`
+- `/Users/michaelpuchowezki/Dev/rubikvault-site/tests/stock-analyzer-ui.test.mjs`
+
+Gate:
+
+- If `canonical_as_of` is visible anywhere in the header or hero region, no neighboring header copy may imply that latest data is unknown.
+- Header and hero recency copy must resolve from the same canonical recency owner.
+- `Latest Data: —` may not coexist with a visible canonical price date in the same top-of-page scan zone.
+
 ## Validation Matrix
 
 ### Repo Validation
@@ -351,6 +413,7 @@ Required assertions after implementation:
 - tooltip clamp test
 - key-level canonical-close sanity test
 - trade-plan geometry invariants
+- header / hero recency coherence test
 
 ## Rollout Order
 
@@ -371,5 +434,6 @@ The page is release-clean only when all of the following are true:
 - no card-sized empty-value module remains
 - no stale historical regime can be mistaken for live context in a fast scan
 - degraded modules collapse compactly instead of leaving low-value cards
+- no header / hero recency contradiction remains
 - risk, catalysts, fundamentals, and model evidence all use explicit render modes
 - repo tests and live route checks both pass against the same shipped `main`
