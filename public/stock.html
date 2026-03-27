@@ -4,8 +4,8 @@
 <title>Analysis · RubikVault</title>
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#3b82f6" />
-<link rel="icon" type="image/svg+xml" href="/assets/rv-favicon.svg" />
-<link rel="apple-touch-icon" href="/assets/rv-apple-icon.svg" />
+<link rel="icon" type="image/svg+xml" href="/images/branding/rubikvault_stacked_logo.svg" />
+<link rel="apple-touch-icon" href="/images/branding/rubikvault_stacked_logo.svg" />
 <link rel="stylesheet" href="/style.css" />
 <style>
 :root{--bg:#020617;--card:rgba(15,23,42,0.92);--border:rgba(148,163,184,0.15);--text:#f1f5f9;--text-dim:#94a3b8;--text-muted:#64748b;--accent:#06b6d4;--accent-glow:rgba(6,182,212,0.12);--green:#10b981;--green-bg:rgba(16,185,129,0.08);--red:#f87171;--red-bg:rgba(248,113,113,0.08);--yellow:#fbbf24;--yellow-bg:rgba(251,191,36,0.08);--radius:16px;--radius-sm:10px}
@@ -30,7 +30,7 @@
 <header class="rv-header">
   <div class="rv-header-inner">
     <a class="rv-brand" href="/" aria-label="RubikVault">
-      <img class="rv-brand-icon" src="/assets/rv-icon.svg" alt="" />
+      <img class="rv-brand-icon" src="/images/branding/rubikvault_stacked_logo.svg" alt="" />
       <span class="rv-brand-text">RubikVault</span>
     </a>
     <nav class="rv-nav">
@@ -48,7 +48,7 @@
       </a>
     </nav>
     <div class="rv-header-tools" aria-live="polite">
-      <div class="rv-data-updated" style="font-size: 12px; color: var(--rv-text-muted);">Snapshot: <span id="rv-data-updated-date">...</span> · Price as-of: <span id="rv-data-asof">...</span></div>
+      <div class="rv-data-updated" style="font-size: 12px; color: var(--rv-text-muted);">Snapshot: <span id="rv-data-updated-date">...</span> · Latest Data: <span id="rv-data-asof">...</span></div>
       <div class="rv-market-clock">
         <span class="rv-clock-time" id="rv-ny-time">NY: --:--:--</span>
         <span class="rv-clock-status">
@@ -75,7 +75,7 @@
   <div style="padding:1rem 0;border-bottom:1px solid var(--border);margin-bottom:1.5rem;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.75rem">
     <div>
       <div style="font-size:1.1rem;font-weight:700;margin:0 0 .2rem;color:var(--text)">Executive Dashboard</div>
-      <div style="font-size:.8rem;color:var(--text-muted)">Ticker: <strong id="sc-ticker" style="color:var(--text)">...</strong> · <span id="sc-price">Loading...</span></div>
+      <div style="font-size:.8rem;color:var(--text-muted)"><strong id="sc-ticker" style="color:var(--text)">...</strong> <span id="sc-symbol" style="color:var(--text-muted)"></span> · <span id="sc-price">Loading...</span></div>
     </div>
     <!-- Search Bar -->
     <div style="display:flex;align-items:center;gap:.5rem">
@@ -94,13 +94,23 @@
   const _esc = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   const pathMatch = window.location.pathname.match(/\/analyze\/([^/?]+)/i);
   const ticker = (pathMatch ? decodeURIComponent(pathMatch[1]).toUpperCase() : new URLSearchParams(location.search).get('ticker')?.toUpperCase()) || 'AAPL';
+  const {
+    buildPageIdentity,
+    buildRiskPresentation,
+    buildCatalystPresentation,
+    classifyHistoricalFreshness,
+    validateLevelConsistency,
+    buildTradePlanModel,
+    buildExecutiveGovernance,
+    computeTooltipFrame,
+  } = await import('/js/stock-page-view-model.js');
   let payload;
   let _rvDataSource = 'v1';
   try {
     const { fetchWithFallback } = await import('/js/rv-v2-client.js');
-    const result = await fetchWithFallback(ticker);
-    payload = result.payload;
-    _rvDataSource = result.source === 'v2' ? 'v2' : 'v1';
+    const resolved = await fetchWithFallback(ticker);
+    payload = resolved.payload;
+    _rvDataSource = resolved.source === 'v2' ? 'v2' : 'v1';
   } catch(e) {
     console.error('[RV] API fetch failed:', e);
     document.getElementById('sc-content').innerHTML = '<div style="color:var(--red);text-align:center;padding:2rem">Unable to load data. Please try again.</div>'; return;
@@ -112,34 +122,15 @@
   const _guard = guardPayload(payload, ticker);
   if (_guard.warnings.length) console.debug('[RV Guard]', _guard.warnings);
 
-  const _toDay = (value) => {
-    if (typeof value !== 'string' || !value.trim()) return null;
-    const direct = value.trim();
-    if (/^\d{4}-\d{2}-\d{2}$/.test(direct)) return direct;
-    const parsed = Date.parse(direct);
-    return Number.isNaN(parsed) ? null : new Date(parsed).toISOString().slice(0, 10);
-  };
-  const _dayTs = (value) => {
-    const day = _toDay(value);
-    if (!day) return null;
-    return Date.UTC(Number(day.slice(0, 4)), Number(day.slice(5, 7)) - 1, Number(day.slice(8, 10)));
-  };
-  const _isStaleDay = (value, maxAgeDays = 2) => {
-    const ts = _dayTs(value);
-    if (ts == null) return true;
-    return Date.now() - ts > maxAgeDays * 86400000;
-  };
-
-  const data = payload.data || {}, meta = payload.metadata || {}, analysisMeta = meta.analysis || {}, s = data.market_stats?.stats || {}, prices = data.market_prices || {}, bars = data.bars || [], change = data.change || {};
+  const data = payload.data || {}, meta = payload.metadata || {}, s = data.market_stats?.stats || {}, prices = data.market_prices || {}, bars = data.bars || [], change = data.change || {};
   const lastBar = bars.length ? bars[bars.length-1] : {};
-  const latestDataDate = analysisMeta.latestDataDate || _toDay(lastBar.date) || _toDay(prices.date) || null;
-  const priceAsOf = analysisMeta.priceAsOf || _toDay(prices.date) || _toDay(lastBar.date) || null;
-  const indicatorAsOf = analysisMeta.indicatorAsOf || data.market_stats?.as_of || latestDataDate || null;
-  const _priceIsOlderThanBars = _dayTs(priceAsOf) != null && _dayTs(lastBar.date) != null && _dayTs(priceAsOf) < _dayTs(lastBar.date);
-  const close = (!_priceIsOlderThanBars && Number.isFinite(prices.close)) ? prices.close : (lastBar.close ?? prices.close ?? null);
+  const identity = buildPageIdentity(payload, ticker);
+  const close = identity.pageClose;
   const atr = Number.isFinite(s.atr14) ? s.atr14 : null;
   const atrPct = close > 0 && atr != null ? (atr / close * 100) : null;
-  const tkr = meta?.request?.normalized_ticker || data?.ticker || ticker;
+  const tkr = identity.ticker || ticker;
+  const pageAsOf = identity.pageAsOf;
+  const displayName = identity.name || tkr;
 
   document.title = tkr + ' — Analysis · RubikVault';
 
@@ -169,56 +160,16 @@
     rsi14: Number.isFinite(s.rsi14) ? s.rsi14 : null,
     atr14: atr,
     atrPct,
-    asOf: latestDataDate,
-    priceAsOf,
-    indicatorAsOf,
-    finalRisk: null,
-    integrity: analysisMeta.integrity || null,
+    asOf: pageAsOf
   };
 
   // Global integrity status
-  const _integrity = analysisMeta.integrity || { status: 'partial', issues: [], missingMetrics: [] };
-  const _integrityIssueMap = {
-    stale_price_data: 'Technical price data stale',
-    missing_core_metrics: 'Core metrics incomplete',
-    summary_stale: 'Summary data stale',
-    summary_pending: 'Summary data pending',
-    summary_error: 'Summary data unavailable',
-    historical_stale: 'Historical module stale',
-    historical_pending: 'Historical module pending',
-    historical_error: 'Historical module unavailable',
-    governance_error: 'Governance module unavailable',
-    benchmark_unavailable: 'Benchmark context unavailable',
-    benchmark_timeout: 'Benchmark fetch timed out'
-  };
   const _integrityItems = [];
   if (_rvDataSource !== 'v2') _integrityItems.push({ text:'V1 Fallback active', color:'var(--yellow)' });
-  for (const issue of [...new Set(_integrity.issues || [])]) {
-    _integrityItems.push({ text: _integrityIssueMap[issue] || issue.replace(/_/g, ' '), color: issue.includes('error') ? 'var(--red)' : 'var(--yellow)' });
-  }
   if (_guard.warnings.length) _integrityItems.push({ text:_guard.warnings.length + ' guard warning(s)', color:'var(--yellow)' });
   if (_decision.fallback_level && _decision.fallback_level !== 'exact') _integrityItems.push({ text:'Decision fallback: ' + _decision.fallback_level, color:'var(--yellow)' });
   if (_decision.regime_transition_active) _integrityItems.push({ text:'Regime transition active', color:'var(--red)' });
   if (_decision.data_quality_flags?.length > 0) _integrityItems.push({ text:_decision.data_quality_flags.length + ' data quality flag(s)', color:'var(--yellow)' });
-  if (!latestDataDate) _integrityItems.push({ text:'Latest data unavailable', color:'var(--red)' });
-  window._rvBenchmarkIntegrityIssue = null;
-  window._renderIntegrityBanner = function() {
-    const items = [..._integrityItems];
-    if (window._rvBenchmarkIntegrityIssue) {
-      items.push({
-        text: _integrityIssueMap[window._rvBenchmarkIntegrityIssue] || 'Benchmark context unavailable',
-        color: window._rvBenchmarkIntegrityIssue === 'benchmark_timeout' ? 'var(--yellow)' : 'var(--red)'
-      });
-    }
-    const hasDegraded = items.some(i => i.color === 'var(--red)');
-    const bannerColor = hasDegraded ? 'var(--red)' : items.length ? 'var(--yellow)' : 'var(--green)';
-    const bannerBg = hasDegraded ? 'rgba(248,113,113,0.06)' : items.length ? 'rgba(245,158,11,0.06)' : 'rgba(16,185,129,0.06)';
-    const bannerBorder = hasDegraded ? 'rgba(248,113,113,0.14)' : items.length ? 'rgba(245,158,11,0.12)' : 'rgba(16,185,129,0.12)';
-    const headline = hasDegraded ? 'Degraded — review integrity notes' : items.length ? 'Operational with minor warnings' : 'All systems operational';
-    const icon = hasDegraded || items.length ? '\u26A0' : '\u2713';
-    const details = items.length ? ' \u00B7 ' + items.map(i => '<span style="color:'+i.color+';font-weight:600">'+i.text+'</span>').join(' \u00B7 ') : '';
-    return '<div style="padding:.35rem .6rem;margin-bottom:.75rem;border-radius:6px;background:'+bannerBg+';border:1px solid '+bannerBorder+';font-size:.6rem;color:'+bannerColor+';display:flex;align-items:center;gap:.4rem;flex-wrap:wrap">'+icon+' '+headline+details+'</div>';
-  };
 
   // Panel meta helper: standardized provenance line
   const _panelMeta = (asOf, gate) => {
@@ -234,105 +185,35 @@
     return parts.length ? '<span style="font-size:.5rem;color:var(--text-muted)">' + parts.join(' \u00B7 ') + '</span>' : '';
   };
 
-  const _fund = data.fundamentals || null;
-  const _latestBar = Array.isArray(bars) && bars.length ? bars[bars.length - 1] : null;
-  const _volumeInputsAvailable = Number.isFinite(_latestBar?.volume)
-    || Number.isFinite(prices?.volume)
-    || Number.isFinite(s.avg_volume_20d)
-    || Number.isFinite(s.volume_ma_20)
-    || Number.isFinite(s.volume_ratio_20d);
-  const _normalizeExplanationLine = (line) => {
-    const text = String(line || '').trim();
-    if (!text) return text;
-    if (text === 'Volume data unavailable — classification omitted.' || text === 'Volume data is insufficient for classification.') {
-      return _volumeInputsAvailable
-        ? 'Volume classification omitted in current analysis mode.'
-        : 'Volume classification unavailable due to data feed issues.';
-    }
-    return text;
-  };
-  const _ageDaysFrom = (value) => {
-    if (!value) return null;
-    const ts = Date.parse(value);
-    if (Number.isNaN(ts)) return null;
-    return Math.max(0, Math.floor((Date.now() - ts) / 86400000));
-  };
-  const _formatExpectedWindow = (value) => {
-    if (!value) return null;
-    const parsed = new Date(value);
-    if (Number.isNaN(parsed.getTime())) return null;
-    const month = parsed.toLocaleString('en-US', { month: 'short', timeZone: 'UTC' });
-    const year = parsed.getUTCFullYear();
-    const day = parsed.getUTCDate();
-    const bucket = day <= 10 ? 'early' : day <= 20 ? 'mid' : 'late';
-    return `${bucket} ${month} ${year}`;
-  };
-
   // Display mappings from backend states (pure rendering, no business logic)
   const trendStateMap = {STRONG_UP:'Uptrend',UP:'Uptrend',RANGE:'Sideways',DOWN:'Downtrend',STRONG_DOWN:'Downtrend',UNKNOWN:'Unknown'};
   const trendWord = (_states.trend==='STRONG_UP'||_states.trend==='UP')?'uptrend':(_states.trend==='DOWN'||_states.trend==='STRONG_DOWN')?'downtrend':'mixed';
   const trendLabel = trendStateMap[_states.trend] || 'Unknown';
   const maStack = trendWord==='uptrend'?'Constructive':trendWord==='downtrend'?'Adverse':'Mixed';
   const momentumMap = {OVERBOUGHT:'Overbought',BULLISH:'Positive',NEUTRAL:'Neutral',BEARISH:'Negative',OVERSOLD:'Oversold',UNKNOWN:'Unknown'};
-  const rsiValue = Number.isFinite(s.rsi14) ? s.rsi14 : null;
   const rsiZone = momentumMap[_states.momentum] || 'Unknown';
   const _rsiSuffix = _guard.corrections.labels?.rsiSuffix || '';
-  const rsiFullLabel = rsiValue != null ? (rsiZone + (_rsiSuffix ? ' \u00B7 ' + _rsiSuffix : '')) : 'Unavailable';
-  const rsiColor = rsiValue != null ? ({OVERSOLD:'var(--green)',BEARISH:'#fb923c',NEUTRAL:'var(--text)',BULLISH:'var(--accent)',OVERBOUGHT:'var(--red)',UNKNOWN:'var(--text-dim)'}[_states.momentum] || 'var(--text-dim)') : 'var(--text-dim)';
+  const rsiFullLabel = rsiZone + (_rsiSuffix ? ' \u00B7 ' + _rsiSuffix : '');
+  const rsiColor = {OVERSOLD:'var(--green)',BEARISH:'#fb923c',NEUTRAL:'var(--text)',BULLISH:'var(--accent)',OVERBOUGHT:'var(--red)',UNKNOWN:'var(--text-dim)'}[_states.momentum] || 'var(--text-dim)';
   const macdLabel=s.macd_hist==null?'—':s.macd_hist>0?'Positive':'Negative';
   const volPct=s.volatility_20d!=null?(s.volatility_20d*100).toFixed(1):null;
-  const riskInputsComplete = [s.atr14, s.volatility_20d, s.volatility_percentile].every((v) => Number.isFinite(v));
-  let riskLabel = riskInputsComplete ? ({EXTREME:'High',HIGH:'High',NORMAL:'Medium',LOW:'Low',COMPRESSED:'Low',UNKNOWN:'Unknown'}[_states.volatility] || 'Unknown') : 'Unavailable';
-  const _volPctile = s.volatility_percentile;
-  const _extremeVolPctile = Number.isFinite(_volPctile) && _volPctile >= 95;
-  const _elevatedVolPctile = Number.isFinite(_volPctile) && _volPctile >= 75;
-  const _lowRealizedVol = Number.isFinite(atrPct) && atrPct <= 3.5;
-  if (riskInputsComplete && Number.isFinite(_volPctile)) {
-    if (_extremeVolPctile) riskLabel = (_lowRealizedVol && (_states.volatility === 'LOW' || _states.volatility === 'COMPRESSED')) ? 'Elevated' : 'High';
-    else if (_volPctile > 90 && (riskLabel === 'Low' || riskLabel === 'Unknown')) riskLabel = 'Elevated';
-    else if (_volPctile > 75 && riskLabel === 'Low') riskLabel = 'Medium';
-  }
-  let riskColor = riskLabel==='High'?'var(--red)':riskLabel==='Elevated'?'var(--yellow)':riskLabel==='Medium'?'var(--yellow)':riskLabel==='Unavailable'?'var(--text-dim)':'var(--green)';
+  const riskView = buildRiskPresentation({ decision: _decision, states: _states, stats: s });
+  const riskLabel = riskView.finalState;
+  const riskColor = riskView.finalColor;
+  const _volPctile = riskView.volPercentile;
   const trendColor=trendWord==='uptrend'?'var(--green)':trendWord==='downtrend'?'var(--red)':'var(--yellow)';
   const isExtremeVol = _states.volatility === 'EXTREME';
-  const finalRisk = {
-    label: riskLabel,
-    displayLabel: Boolean(riskInputsComplete && _extremeVolPctile && riskLabel === 'Elevated') ? `${riskLabel} (override)` : riskLabel,
-    color: riskColor,
-    regimeLabel: riskInputsComplete ? (isExtremeVol ? 'Extreme Volatility' : 'Normal') : 'Unavailable',
-    driver: !riskInputsComplete ? 'Missing volatility inputs'
-      : _extremeVolPctile ? `Relative volatility extreme (${_volPctile.toFixed(0)}th percentile)`
-      : _elevatedVolPctile ? `Relative volatility elevated (${_volPctile.toFixed(0)}th percentile)`
-      : 'Volatility inputs aligned',
-    context: !riskInputsComplete ? 'Risk state unavailable until ATR and volatility inputs are complete.'
-      : _extremeVolPctile && riskLabel === 'Elevated' ? 'Low realized volatility and supportive structural context moderate the final classification.'
-      : _states.volatility === 'EXTREME' ? 'Structural volatility state confirms a high-risk regime.'
-      : (_states.volatility === 'LOW' || _states.volatility === 'COMPRESSED') ? 'Low realized volatility tempers net risk.'
-      : 'No additional volatility override active.',
-    override: Boolean(riskInputsComplete && _extremeVolPctile && riskLabel === 'Elevated'),
-    unavailable: !riskInputsComplete,
-  };
-  finalRisk.summary = !riskInputsComplete
-    ? 'Risk state unavailable until ATR and volatility inputs are complete.'
-    : `${finalRisk.driver}. ${finalRisk.override ? 'Override applied: ' : 'Context: '}${finalRisk.context}`;
-  window._rvCanonicalMetrics.finalRisk = finalRisk;
-  if (finalRisk.override) {
-    _integrityItems.push({ text:'Risk override active → confidence moderated', color:'var(--yellow)' });
-  }
   const r52pct=_guard.corrections.r52pct ?? s.range_52w_pct;
   const r52label=_guard.corrections.r52label ?? (r52pct==null?null:r52pct>0.9?'Near High':r52pct>0.75?'Upper Range':r52pct>0.25?'Mid-Range':r52pct>0.1?'Lower Range':'Near Low');
-  const has52wData = Number.isFinite(r52pct) && Number.isFinite(s.high_52w) && Number.isFinite(s.low_52w);
-  const r52Display = has52wData ? r52label : 'Unavailable';
   const chgColor=(change.pct||0)>=0?'var(--green)':'var(--red)';
   const emaCross=s.ema12!=null&&s.ema26!=null?(s.ema12>s.ema26?'Positive':'Negative'):null;
-  const hasBollingerData = Number.isFinite(s.bb_upper) && Number.isFinite(s.bb_lower) && close != null && s.bb_upper !== s.bb_lower;
-  const bbPctB=hasBollingerData?(close-s.bb_lower)/(s.bb_upper-s.bb_lower):null;
-  const _bbLabel = bbPctB!=null && bbPctB <= 0.2 ? 'Near Lower Band' : bbPctB >= 0.8 ? 'Near Upper Band' : bbPctB != null ? 'Range Midbound' : 'Unavailable';
+  const bbPctB=(s.bb_upper!=null&&s.bb_lower!=null&&close!=null)?(close-s.bb_lower)/(s.bb_upper-s.bb_lower):null;
   const fmt=v=>v==null?'—':'$'+Number(v).toFixed(2);
   const fmtP=v=>v==null?'—':(v>=0?'+':'')+((v)*100).toFixed(2)+'%';
 
   // Update Header
-  document.getElementById('sc-ticker').textContent = tkr;
+  document.getElementById('sc-ticker').textContent = displayName;
+  document.getElementById('sc-symbol').textContent = displayName === tkr ? '' : `(${tkr})`;
   // V2 source badge
   const _srcBadge = document.createElement('span');
   _srcBadge.style.cssText = 'font-size:.6rem;padding:1px 5px;border-radius:4px;margin-left:.4rem;font-weight:700;vertical-align:middle;';
@@ -351,18 +232,14 @@
     _fbExplain.textContent = 'Running in fallback mode (V1). Some advanced models are unavailable \u2014 results may differ from full analysis.' + (_decision.fallback_level && _decision.fallback_level !== 'exact' ? ' Level: ' + _decision.fallback_level : '');
     document.getElementById('sc-ticker').parentElement.appendChild(_fbExplain);
   }
-  document.getElementById('sc-price').innerHTML = close!=null?'$'+close.toFixed(2)+' <span style="color:'+((change.pct||0)>=0?'var(--green)':'var(--red)')+'">'+((change.pct||0)>=0?'+':'')+((change.pct||0)*100).toFixed(2)+'%</span> <span style="font-size:.7rem;color:var(--text-muted);margin-left:.4rem">'+(priceAsOf||'unavailable')+'</span>':'—';
-  const _snapshotEl = document.getElementById('rv-data-updated-date');
-  if (_snapshotEl) _snapshotEl.textContent = new Date().toLocaleString('en-US', { timeZone:'America/New_York', month:'short', day:'numeric', hour:'2-digit', minute:'2-digit', hour12:false }) + ' ET';
-  const _latestDataEl = document.getElementById('rv-data-asof');
-  if (_latestDataEl) _latestDataEl.textContent = latestDataDate ? (latestDataDate + ' (EOD)') : 'unavailable';
+  document.getElementById('sc-price').innerHTML = close!=null?'$'+close.toFixed(2)+' <span style="color:'+((change.pct||0)>=0?'var(--green)':'var(--red)')+'">'+((change.pct||0)>=0?'+':'')+((change.pct||0)*100).toFixed(2)+'%</span> <span style="font-size:.7rem;color:var(--text-muted);margin-left:.4rem">'+(pageAsOf||'')+'</span>':'—';
 
   // Render Top Headline KPIs
   document.getElementById('sc-headline-kpis').innerHTML = [
     ['Trend', trendLabel, trendColor, 'Based on price vs SMA20/50/200 alignment'],
-    ['Risk', finalRisk.displayLabel, finalRisk.color, finalRisk.summary],
-    ['52W', r52Display, 'var(--text)', 'Position in 52-week range: (close\u2013low)/(high\u2013low)'],
-    ['RSI', rsiFullLabel, rsiColor, 'Relative Strength Index (14d). <30 oversold, >70 overbought']
+    ['Risk', riskLabel, riskColor, 'ATR volatility percentile rank (0\u2013100)'],
+    ['52W', r52label || '—', 'var(--text)', 'Position in 52-week range: (close\u2013low)/(high\u2013low)'],
+    ['RSI', rsiZone + (_guard.corrections.labels?.rsiSuffix || ''), rsiColor, 'Relative Strength Index (14d). <30 oversold, >70 overbought']
   ].map(x => '<div title="'+x[3]+'" style="padding:.4rem .6rem; border-radius:6px; background:rgba(255,255,255,0.02); border:1px solid var(--border); text-align:center; cursor:help"><div style="font-size:.6rem; color:var(--text-muted); text-transform:uppercase">'+x[0]+'</div><div style="font-weight:700; color:'+x[2]+'; font-size:.85rem">'+x[1]+'</div></div>').join('');
 
   // ── Verdicts from backend decision layer ──
@@ -390,9 +267,8 @@
   const confidence = _decision.confidence_bucket || 'LOW';
 
   // Map backend explanation bullets to bull/bear reasons for display
-  const _normalizedBullets = (_explanation.bullets || []).map(_normalizeExplanationLine);
-  const bullR = (_explanation.sentiment === 'positive' ? _normalizedBullets.slice(0, 3) : []);
-  const bearR = (_explanation.sentiment === 'negative' ? _normalizedBullets.slice(0, 3) : []);
+  const bullR = (_explanation.sentiment === 'positive' ? (_explanation.bullets || []).slice(0, 3) : []);
+  const bearR = (_explanation.sentiment === 'negative' ? (_explanation.bullets || []).slice(0, 3) : []);
 
   // Horizon cards now come from the backend decision layer.
   const horizonDecisionMap = _decision.horizons || {};
@@ -413,7 +289,7 @@
       },
       score: {
         score: slice?.scores?.composite || 0,
-        reasons: (slice?.trigger_gates && slice.trigger_gates.length ? slice.trigger_gates : _normalizedBullets.slice(0,2))
+        reasons: (slice?.trigger_gates && slice.trigger_gates.length ? slice.trigger_gates : (_explanation.bullets||[]).slice(0,2))
       }
     };
   });
@@ -435,39 +311,6 @@
   const effectiveText = allHorizonsWait ? 'Neutral / Waiting stance'
     : hasHorizonSplit && baseVerdict === 'WAIT' ? 'Split consensus — no clear directional edge'
     : overallText;
-  const _modelEvidenceModules = (() => {
-    const ev4 = payload.evaluation_v4;
-    if (!ev4 || typeof ev4 !== 'object') return [];
-    const labels = { quantlab: 'QuantLab', elliott: 'Elliott', forecast: 'Forecast', scientific: 'Scientific' };
-    return Object.entries(labels).map(([key, label]) => {
-      const node = ev4[key];
-      if (!node || typeof node !== 'object') return null;
-      const status = node.status || (node.value ? 'ok' : 'unavailable');
-      const direction = node.value?.direction
-        || node.value?.signal
-        || node.value?.horizons?.['20d']?.direction
-        || node.value?.horizons?.['5d']?.direction
-        || node.value?.horizons?.['1d']?.direction
-        || (node.value?.active ? 'active' : null);
-      return {
-        key,
-        label,
-        status,
-        direction,
-        asOf: node.as_of || node.asOf || null,
-        reason: node.reason || null,
-      };
-    }).filter(Boolean);
-  })();
-  const _visibleModelEvidence = _modelEvidenceModules.filter((entry) => entry.status === 'ok');
-  const _decisionDrivers = (() => {
-    const set = new Set();
-    _visibleModelEvidence.forEach((entry) => set.add(entry.label));
-    const contributorHints = Object.values(horizonDecisionMap).map((slice) => slice?.scores?.contributors || {});
-    if (contributorHints.some((c) => Number.isFinite(c?.scientific_setup_score) || Number.isFinite(c?.scientific_trigger_score))) set.add('Scientific');
-    if (contributorHints.some((c) => Number.isFinite(c?.breakout_energy) || Number.isFinite(c?.vol_compression_20_60))) set.add('Breakout');
-    return [...set];
-  })();
 
   // Block status badges
   const _decisionBadge = _blockStatus([
@@ -477,9 +320,8 @@
     { check: effectiveVerdict !== baseVerdict, level: 'warning', msg: 'Verdict overridden by horizon sync' },
   ]);
   const _techBadge = _blockStatus([
-    { check: close == null, level: 'invalid', msg: 'No price data' },
-    { check: _isStaleDay(priceAsOf), level: 'stale', msg: 'Price data may be stale (>48h)' },
-    { check: (_integrity.missingMetrics || []).length > 0, level: 'low_confidence', msg: 'Core metrics incomplete' },
+    { check: !prices, level: 'invalid', msg: 'No price data' },
+    { check: prices && (!prices.date || (Date.now() - new Date(prices.date).getTime() > 2*86400000)), level: 'stale', msg: 'Price data may be stale (>48h)' },
     { check: atr == null, level: 'low_confidence', msg: 'ATR unavailable' },
   ]);
 
@@ -513,23 +355,24 @@
   }
 
   // What Changed Data (dynamic) — structured with label + value + badges
+  const _bbLabel = bbPctB!=null && bbPctB <= 0.2 ? 'Near Lower Band' : bbPctB >= 0.8 ? 'Near Upper Band' : 'Range Midbound';
   const items1D = [
-    { text:(rsiValue!=null?`RSI remains ${rsiZone.toLowerCase()} at ${rsiValue.toFixed(1)}`:'RSI unavailable'), type: rsiValue==null?'mixed':(rsiZone==='Oversold'||rsiZone==='Positive'?'bullish':rsiZone==='Overbought'||rsiZone==='Negative'?'bearish':'mixed') },
-    { text:`Daily change: ${fmtP(change.pct)}`, type: (change.pct||0)>=0?'bullish':'bearish' },
-    { text:(close>(s.sma20||0)?'Price closed above SMA20':'Price closed below SMA20'), type: close>(s.sma20||0)?'bullish':'bearish' }
+    { label:'RSI', value:(s.rsi14!=null?s.rsi14.toFixed(1):'—'), badges:[rsiZone, _rsiSuffix].filter(Boolean), type: rsiZone==='Oversold'||rsiZone==='Positive'?'bullish':rsiZone==='Overbought'||rsiZone==='Negative'?'bearish':'mixed' },
+    { label:'Daily Change', value:fmtP(change.pct), badges:[], type: (change.pct||0)>=0?'bullish':'bearish' },
+    { label:'SMA 20', value:close>(s.sma20||0)?'Above':'Below', badges:[], type: close>(s.sma20||0)?'bullish':'bearish' }
   ];
   const items3D = [
     { label:'SMA 50', value:close>(s.sma50||0)?'Reclaimed':'Broken', badges:[], type: close>(s.sma50||0)?'bullish':'bearish' },
     { label:'Momentum', value:trendLabel, badges:[trendWord==='uptrend'?'Constructive':trendWord==='downtrend'?'Adverse':'Mixed'], type: trendWord==='uptrend'?'bullish':trendWord==='downtrend'?'bearish':'mixed' },
-    { label:'Risk', value:finalRisk.displayLabel, badges:(finalRisk.override?['Override active']:[]), type: finalRisk.label==='Low'?'bullish':finalRisk.label==='High'?'bearish':'mixed' }
+    { label:'Final Risk', value:riskLabel, badges:riskView.overrideApplied?['Override applied']:[], type: riskLabel==='Low'?'bullish':riskLabel==='High'?'bearish':'mixed' }
   ];
   const items1W = [
     { label:'MA Stack', value:maStack, badges:[maStack==='Constructive'?'Bullish':maStack==='Adverse'?'Bearish':'Neutral'], type: maStack==='Constructive'?'bullish':maStack==='Adverse'?'bearish':'mixed' },
-    { label:'Bollinger %B', value:(bbPctB!=null?bbPctB.toFixed(2):'Unavailable'), badges:(bbPctB!=null?[_bbLabel]:[]), type: bbPctB==null?'mixed':((bbPctB>=0.8)?'bearish':(bbPctB<=0.2)?'bullish':'mixed') },
+    { label:'Bollinger %B', value:(bbPctB!=null?bbPctB.toFixed(2):'—'), badges:[_bbLabel], type: (bbPctB>=0.8)?'bearish':(bbPctB<=0.2)?'bullish':'mixed' },
     { label:'MACD', value:macdLabel, badges:[], type: macdLabel==='Positive'?'bullish':'bearish' }
   ];
   const items2W = [
-    { label:'52W Position', value:r52Display, badges:[], type: !has52wData?'mixed':(r52pct>0.8?'bearish':r52pct<0.2?'bullish':'mixed') },
+    { label:'52W Position', value:(r52label || 'Mid-Range'), badges:[], type: r52pct>0.8?'bearish':r52pct<0.2?'bullish':'mixed' },
     { label:'ATR', value:(atr!=null?'$'+atr.toFixed(2):'—'), badges:[], type: 'mixed' },
     { label:'Vol Percentile', value:(s.volatility_percentile!=null?s.volatility_percentile.toFixed(0)+'th':'—'), badges:[], type: 'mixed' }
   ];
@@ -573,8 +416,7 @@
   };
 
   // Market Context — fetch SPY & QQQ for real vs-benchmark comparison
-  const _mktCtx = { spy: null, qqq: null, corr: [], loaded: false, status: 'loading', note: 'Loading benchmark data...' };
-  const _BENCHMARK_TIMEOUT_MS = 6000;
+  const _mktCtx = { spy: null, qqq: null, corr: [], loaded: false };
 
   // Compute returns from bars for a given lookback
   function barsReturn(b, n) {
@@ -596,35 +438,24 @@
   }
 
   // Fetch benchmarks in background
-  async function fetchBenchmarkJson(url) {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), _BENCHMARK_TIMEOUT_MS);
-    try {
-      const res = await fetch(url, { signal: controller.signal });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      return await res.json();
-    } finally {
-      clearTimeout(timer);
-    }
-  }
-
   async function loadBenchmarks() {
     try {
       const [spyRes, qqqRes] = await Promise.all([
-        fetchBenchmarkJson('/api/v2/stocks/SPY/historical'),
-        fetchBenchmarkJson('/api/v2/stocks/QQQ/historical')
+        fetch('/api/stock?ticker=SPY').then(r=>r.json()),
+        fetch('/api/stock?ticker=QQQ').then(r=>r.json())
       ]);
       const spyD = spyRes.data || {}, qqqD = qqqRes.data || {};
       const spyBars = spyD.bars || [], qqqBars = qqqD.bars || [];
-      if (!spyBars.length || !qqqBars.length) throw new Error('Benchmark data unavailable');
+      const spyChg = spyD.change || {}, qqqChg = qqqD.change || {};
+      const spyS = spyD.market_stats?.stats || {}, qqqS = qqqD.market_stats?.stats || {};
 
       // Returns per timeframe: compute ticker return minus benchmark return
       const tfMap = { '1D': 1, '1W': 5, '1M': 20, '1Y': 252 };
       _mktCtx.spy = {}; _mktCtx.qqq = {};
       for (const [tf, n] of Object.entries(tfMap)) {
-        const tRet = barsReturn(bars, n);
-        const sRet = barsReturn(spyBars, n);
-        const qRet = barsReturn(qqqBars, n);
+        const tRet = n === 1 ? (change.pct || 0) : barsReturn(bars, n);
+        const sRet = n === 1 ? (spyChg.pct || 0) : barsReturn(spyBars, n);
+        const qRet = n === 1 ? (qqqChg.pct || 0) : barsReturn(qqqBars, n);
         _mktCtx.spy[tf] = tRet != null && sRet != null ? tRet - sRet : null;
         _mktCtx.qqq[tf] = tRet != null && qRet != null ? tRet - qRet : null;
       }
@@ -653,39 +484,21 @@
       ].sort((a,b) => Math.abs(b.c) - Math.abs(a.c));
 
       _mktCtx.loaded = true;
-      _mktCtx.status = 'ready';
-      _mktCtx.note = '';
-      window._rvBenchmarkIntegrityIssue = null;
-      const banner = document.getElementById('rv-integrity-banner');
-      if (banner) banner.innerHTML = window._renderIntegrityBanner();
       // Re-render
       const el = document.getElementById('dyn-market-context');
       if (el) el.innerHTML = window._renderMarketContext('1D');
       // Decision rationale: link market context to verdict
       const _ratEl = document.getElementById('rv-decision-rationale');
       if (_ratEl) {
-        const spyRel = _mktCtx.spy['1D'], v = effectiveVerdict;
+        const spyRel = _mktCtx.spy['1D'], v = '${effectiveVerdict}';
         let rat = '';
         if (spyRel > 0 && (v==='BUY')) rat = 'Market context supports asset strength';
         else if (spyRel < 0 && (v==='BUY')) rat = 'Asset strength overrides weak relative performance';
         else if (spyRel > 0 && (v==='WAIT'||v==='SELL'||v==='AVOID')) rat = 'Asset weakness overrides supportive market context';
         else if (spyRel < 0 && (v==='WAIT'||v==='SELL'||v==='AVOID')) rat = 'Weak market aligns with cautious asset stance';
-        if (rat) {
-          _ratEl.textContent = rat;
-          const _metaReason = document.getElementById('rv-decision-reason-meta');
-          if (_metaReason) _metaReason.textContent = rat;
-        }
+        if (rat) _ratEl.textContent = rat;
       }
-    } catch(e) {
-      _mktCtx.loaded = false;
-      _mktCtx.status = e?.name === 'AbortError' ? 'timeout' : 'error';
-      _mktCtx.note = e?.name === 'AbortError' ? 'Benchmark fetch timed out.' : 'Benchmark data unavailable.';
-      window._rvBenchmarkIntegrityIssue = e?.name === 'AbortError' ? 'benchmark_timeout' : 'benchmark_unavailable';
-      const banner = document.getElementById('rv-integrity-banner');
-      if (banner) banner.innerHTML = window._renderIntegrityBanner();
-      const el = document.getElementById('dyn-market-context');
-      if (el) el.innerHTML = window._renderMarketContext('1D');
-    }
+    } catch(e) { console.warn('Benchmark fetch failed:', e); }
   }
 
   if (tkr !== 'SPY' && tkr !== 'QQQ') loadBenchmarks();
@@ -693,14 +506,14 @@
   window._renderMarketContext = function(tf) {
     const getBtn = (t) => `<button class="tf-btn ${tf===t?'active':''}" style="font-size:0.55rem; padding:1px 4px;" onclick="window._switchContext('${t}')">${t}</button>`;
 
-    if (_mktCtx.status !== 'ready') {
+    if (!_mktCtx.loaded) {
       return `
         <div style="padding:.6rem; border-radius:8px; background:rgba(255,255,255,0.01); border:1px solid rgba(255,255,255,0.03);">
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: .4rem;">
             <div style="font-size: .62rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700;">Market Context</div>
             <div style="display:flex; gap:2px;">${['1D', '1W', '1M', '1Y'].map(getBtn).join('')}</div>
           </div>
-          <div style="font-size:0.65rem; color:${_mktCtx.status === 'loading' ? 'var(--text-dim)' : 'var(--yellow)'}; text-align:center; padding:.5rem;">${_mktCtx.note}</div>
+          <div style="font-size:0.65rem; color:var(--text-dim); text-align:center; padding:.5rem;">Loading benchmark data...</div>
         </div>`;
     }
 
@@ -712,11 +525,11 @@
     const sSpy = spyVal >= 0 ? 'var(--green)' : 'var(--red)';
     const sQqq = qqqVal >= 0 ? 'var(--green)' : 'var(--red)';
 
-    let note = `${tf} mixed relative strength vs benchmarks.`;
-    if (spyVal > 0 && qqqVal < 0) note = `${tf} outperformance vs SPY, underperformance vs QQQ`;
-    else if (spyVal < 0 && qqqVal > 0) note = `${tf} underperformance vs SPY, outperformance vs QQQ`;
-    else if (spyVal > 0 && qqqVal > 0) note = `${tf} outperformance vs benchmarks`;
-    else if (spyVal < 0 && qqqVal < 0) note = `${tf} underperformance vs benchmarks`;
+    let note = "Mixed relative strength.";
+    if (spyVal > 0 && qqqVal < 0) note = "Outperforming SPY, Underperforming QQQ (Relative Tech Weakness)";
+    else if (spyVal < 0 && qqqVal > 0) note = "Underperforming SPY, Outperforming QQQ (Relative Tech Strength)";
+    else if (spyVal > 0 && qqqVal > 0) note = "Broad Outperformance vs Benchmarks";
+    else if (spyVal < 0 && qqqVal < 0) note = "Broad Underperformance vs Benchmarks";
 
     return `
       <div style="padding:.6rem; border-radius:8px; background:rgba(255,255,255,0.01); border:1px solid rgba(255,255,255,0.03);">
@@ -786,41 +599,62 @@
   // ── Render Chart Hover Handlers ──
   // ── Render Chart Hover Handlers ──
   window._svgHover = function(e, container) {
-    const data = container._chartData;
-    if (!data) return;
-    const { cl, dates, mn, mx, rn, height } = data;
-    const rect = container.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const w = rect.width;
-
-    const paddingLeft = 42, graphW = 750; // based on viewBox w=800
-    const graphLeftPx = (paddingLeft / 800) * w;
-    const graphWidthPx = (graphW / 800) * w;
-    
-    // Calculate ratio inside graph coordinates
-    const ratio = Math.max(0, Math.min(1, (x - graphLeftPx) / graphWidthPx));
-    const idx = Math.round(ratio * (cl.length - 1));
-    const price = cl[idx];
-    const date = dates[idx];
-
-    const marker = container.querySelector('#svg-marker');
-    const tooltip = container.querySelector('#svg-tooltip');
-    if (marker && tooltip) {
+    if (container._tooltipFrameRequested) {
+      container._lastPointerEvent = e;
+      return;
+    }
+    container._lastPointerEvent = e;
+    container._tooltipFrameRequested = true;
+    window.requestAnimationFrame(() => {
+      container._tooltipFrameRequested = false;
+      const evt = container._lastPointerEvent;
+      const data = container._chartData;
+      if (!evt || !data) return;
+      const { cl, dates } = data;
+      const rect = container.getBoundingClientRect();
+      const x = evt.clientX - rect.left;
+      const w = rect.width;
+      const paddingLeft = 42;
+      const graphW = 750;
+      const graphLeftPx = (paddingLeft / 800) * w;
+      const graphWidthPx = (graphW / 800) * w;
+      const ratio = Math.max(0, Math.min(1, (x - graphLeftPx) / graphWidthPx));
+      const idx = Math.round(ratio * (cl.length - 1));
+      const price = cl[idx];
+      const date = dates[idx];
+      const marker = container.querySelector('#svg-marker');
+      const tooltip = container.querySelector('#svg-tooltip');
+      if (!marker || !tooltip) return;
       marker.style.display = 'block';
-      // Adjust marker line left offset position accurately using left bounding
       marker.style.left = `${graphLeftPx + (idx / (cl.length - 1) * graphWidthPx)}px`;
       tooltip.style.display = 'block';
-      tooltip.style.left = `${e.clientX + 12}px`;
-      tooltip.style.top = `${e.clientY - 35}px`;
       tooltip.innerHTML = `<div style="font-weight:700;color:var(--text-dim);font-size:0.62rem">${date}</div><div style="font-weight:800;color:var(--accent);font-size:0.75rem;margin-top:1px;">$${price.toFixed(2)}</div>`;
-    }
+      const frame = computeTooltipFrame({
+        pointX: evt.clientX - rect.left,
+        pointY: evt.clientY - rect.top,
+        containerRect: { width: rect.width, height: rect.height },
+        tooltipWidth: tooltip.offsetWidth,
+        tooltipHeight: tooltip.offsetHeight,
+      });
+      tooltip.style.left = `${frame.left}px`;
+      tooltip.style.top = `${frame.top}px`;
+    });
   };
   window._svgLeave = function(container) {
     const marker = container.querySelector('#svg-marker');
     const tooltip = container.querySelector('#svg-tooltip');
     if (marker) marker.style.display = 'none';
     if (tooltip) tooltip.style.display = 'none';
+    container._lastPointerEvent = null;
   };
+  window.addEventListener('scroll', () => {
+    document.querySelectorAll('#svg-tooltip').forEach((tooltip) => { tooltip.style.display = 'none'; });
+    document.querySelectorAll('#svg-marker').forEach((marker) => { marker.style.display = 'none'; });
+  }, { passive: true });
+  window.addEventListener('resize', () => {
+    document.querySelectorAll('#svg-tooltip').forEach((tooltip) => { tooltip.style.display = 'none'; });
+    document.querySelectorAll('#svg-marker').forEach((marker) => { marker.style.display = 'none'; });
+  });
 
   // ── Render Chart ──
   function svgChart(height,id,bc){
@@ -881,7 +715,7 @@
         <div style="position:absolute; bottom:4px; right:${paddingRight + 4}px; font-size:0.55rem; color:var(--text-dim); font-weight:600;">${dates[dates.length-1]}</div>
 
         <!-- Floating Tooltip Container -->
-        <div id="svg-tooltip" style="position:fixed; display:none; background:rgba(15,23,42,0.95); border:1px solid var(--border); padding:0.4rem 0.6rem; border-radius:6px; pointer-events:none; z-index:9999; font-size:0.65rem; color:var(--text); box-shadow:0 10px 15px -3px rgba(0,0,0,0.4);"></div>
+        <div id="svg-tooltip" style="position:absolute; display:none; background:rgba(15,23,42,0.95); border:1px solid var(--border); padding:0.4rem 0.6rem; border-radius:6px; pointer-events:none; z-index:4; font-size:0.65rem; color:var(--text); box-shadow:0 10px 15px -3px rgba(0,0,0,0.4);"></div>
         
         <!-- Vertical Marker Line -->
         <div id="svg-marker" style="position:absolute; top:${paddingTop}px; bottom:${paddingBottom}px; width:1px; background:rgba(255,255,255,0.25); display:none; pointer-events:none;"></div>
@@ -891,34 +725,19 @@
   // Key Levels
   const levels=[];
   const addLvl=(l,p,src,hz)=>{if(p==null||!Number.isFinite(p))return;levels.push({label:l,price:p,kind:close>p?'support':'resistance',source:src,dist:((p-close)/close*100).toFixed(2),horizon:hz||'all'})};
-  const _levelSyncWarnings = [];
-  const _addWindowRangeLevels = (labelPrefix, windowBars, horizon) => {
-    if (!Array.isArray(windowBars) || !windowBars.length) return;
-    const highs = windowBars.map((b) => Number.isFinite(b?.high) ? Number(b.high) : Number(b?.close)).filter(Number.isFinite);
-    const lows = windowBars.map((b) => Number.isFinite(b?.low) ? Number(b.low) : Number(b?.close)).filter(Number.isFinite);
-    if (!highs.length || !lows.length) return;
-    let high = Math.max(...highs);
-    let low = Math.min(...lows);
-    if (Number.isFinite(close) && (close > high || close < low)) {
-      high = Math.max(high, close);
-      low = Math.min(low, close);
-      _levelSyncWarnings.push(`${labelPrefix} range synchronized to the latest close`);
-    }
-    addLvl(`${labelPrefix} High`, high, labelPrefix, horizon);
-    addLvl(`${labelPrefix} Low`, low, labelPrefix, horizon);
-  };
   addLvl('SMA 20',s.sma20,'MA','short');addLvl('SMA 50',s.sma50,'MA','mid');addLvl('SMA 200',s.sma200,'MA','long');
   addLvl('EMA 12',s.ema12,'EMA','short');addLvl('EMA 26',s.ema26,'EMA','mid');
   addLvl('BB Upper',s.bb_upper,'BB','short');addLvl('BB Lower',s.bb_lower,'BB','short');
   addLvl('52W High',s.high_52w,'52W','long');addLvl('52W Low',s.low_52w,'52W','long');
   if(s.high_52w!=null&&s.low_52w!=null){var fR=s.high_52w-s.low_52w;addLvl('Fib 23.6%',s.high_52w-fR*0.236,'Fib','mid');addLvl('Fib 38.2%',s.high_52w-fR*0.382,'Fib','mid');addLvl('Fib 50%',s.high_52w-fR*0.5,'Fib','mid');addLvl('Fib 61.8%',s.high_52w-fR*0.618,'Fib','long')}
-  if(bars.length>=5){var r5=bars.slice(-5);_addWindowRangeLevels('5D',r5,'short')}
-  if(bars.length>=20){var r20=bars.slice(-20);_addWindowRangeLevels('20D',r20,'mid')}
+  if(bars.length>=5){var r5=bars.slice(-5);addLvl('5D High',Math.max(...r5.map(b=>b.high||b.close)),'5D','short');addLvl('5D Low',Math.min(...r5.map(b=>b.low||b.close)),'5D','short')}
+  if(bars.length>=20){var r20=bars.slice(-20);addLvl('20D High',Math.max(...r20.map(b=>b.high||b.close)),'20D','mid');addLvl('20D Low',Math.min(...r20.map(b=>b.low||b.close)),'20D','mid')}
   if(bars.length>0){var lb=bars[bars.length-1],pH=lb.high||close,pL=lb.low||close,pC=lb.close||close,pv=(pH+pL+pC)/3;addLvl('Pivot',pv,'Pivot','short');addLvl('R1',2*pv-pL,'Pivot','short');addLvl('S1',2*pv-pH,'Pivot','short');addLvl('R2',pv+(pH-pL),'Pivot','mid');addLvl('S2',pv-(pH-pL),'Pivot','mid')}
   if(atr!=null){addLvl('ATR Support',close-atr,'ATR','short')}
   levels.sort((a,b)=>b.price-a.price);
   var uq=[];for(var li=0;li<levels.length;li++){var dp=false;for(var lj=0;lj<uq.length;lj++){if(Math.abs(levels[li].price-uq[lj].price)/close<0.001){dp=true;break}}if(!dp)uq.push(levels[li])}
   levels.length=0;uq.forEach(l=>levels.push(l));
+  const levelConsistency = validateLevelConsistency(levels, close);
 
   // Relevance scoring — proximity + type weighting
   const _allLevelsCount = levels.length;
@@ -959,58 +778,27 @@
     { check: levels.length === 0, level: 'invalid', msg: 'No levels available' },
     { check: levels.length > 0 && levels.length < 3, level: 'low_confidence', msg: 'Few levels available' },
     { check: atr == null, level: 'warning', msg: 'ATR-based levels unavailable' },
+    { check: levelConsistency.degraded, level: 'warning', msg: levelConsistency.issues.join('; ') },
   ]);
-  if (_levelSyncWarnings.length) {
-    _integrityItems.push({ text: 'Key levels synchronized to the latest close', color: 'var(--yellow)' });
-  }
 
   // Dynamic Trade Plan values
-  const targetRes = levels.find(l => l.kind === 'resistance');
-  const targetPrice = targetRes ? targetRes.price : (close && atr ? close + atr * 2 : null);
-  const stopPr = atr != null ? close - atr : null;
-  const rrRatioNumber = (Number.isFinite(targetPrice) && Number.isFinite(stopPr) && Number.isFinite(close) && close !== stopPr) ? ((targetPrice - close) / (close - stopPr)) : null;
-  const rrRatio = Number.isFinite(rrRatioNumber) ? rrRatioNumber.toFixed(1) : '—';
-  const hasActiveTradeSetup = effectiveVerdict === 'BUY' || effectiveVerdict === 'SELL' || shouldRenderSetupPhase || setupType !== 'Mixed / No Clean Entry';
-  const tradePlanState = {
-    requested: effectiveVerdict === 'BUY' || effectiveVerdict === 'SELL',
-    complete: [close, stopPr, targetPrice, rrRatioNumber].every((value) => Number.isFinite(value)),
-  };
+  const tradePlan = buildTradePlanModel({ verdict: effectiveVerdict, close, atr, levels });
+  const targetPrice = tradePlan.target ?? null;
+  const stopPr = tradePlan.stop ?? null;
+  const rrRatio = Number.isFinite(tradePlan.rr) ? tradePlan.rr.toFixed(1) : '—';
 
-  const _levelGroupOrder = ['Structural Resistance', 'Tactical Resistance', 'Current', 'Tactical Support', 'Structural Support', 'Other Levels'];
-  const _levelGroupLabels = {
-    'Structural Resistance':'Structural Resistance',
-    'Tactical Resistance':'Tactical Resistance',
-    'Current':'Current Price',
-    'Tactical Support':'Tactical Support',
-    'Structural Support':'Structural Support',
-    'Other Levels':'Additional Levels'
-  };
-  const _levelGroupMap = new Map(_levelGroupOrder.map(g => [g, []]));
-  displayLevels.forEach(l => {
-    const group = l._role || 'Other Levels';
-    (_levelGroupMap.get(group) || _levelGroupMap.get('Other Levels')).push(l);
-  });
-  const _renderLevelRow = (l) => {
+  var rows=displayLevels.map(l=>{
     var c=l.kind==='support'?'var(--green)':'var(--red)';
     var hc=l.horizon==='short'?'var(--yellow)':l.horizon==='mid'?'var(--accent)':'#a78bfa';
     return `<div style="display:flex;align-items:center;gap:.25rem;padding:.2rem .35rem;border-radius:4px;background:rgba(255,255,255,0.01);border-left:2px solid ${c};font-size:.65rem">
       <span style="font-size:.52rem;color:${hc};font-weight:700;width:22px;text-transform:uppercase">${l.horizon}</span>
-      <span style="flex:1;font-weight:600;color:var(--text-dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${l.label}</span>
+      <span style="flex:1;font-weight:600;color:var(--text-dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${l.label}${l._role ? ' <span style="font-size:.45rem;color:var(--text-muted)">'+l._role+'</span>' : ''}</span>
       <span style="font-weight:700;color:var(--text);width:45px;text-align:right">$${l.price.toFixed(1)}</span>
       <span style="font-size:.55rem;color:${parseFloat(l.dist)>=0?'var(--green)':'var(--red)'};width:35px;text-align:right">${parseFloat(l.dist)>=0?'+':''}${l.dist}%</span>
     </div>`;
-  };
-  var rows=[];
-  _levelGroupOrder.forEach(group => {
-    if (group === 'Current') {
-      rows.push(`<div style="display:flex;align-items:center;gap:.25rem;padding:.2rem .35rem;border-radius:4px;background:rgba(6,182,212,0.1);border:1px solid var(--accent);font-size:.65rem"><span style="width:22px"></span><span style="flex:1;font-weight:700;color:var(--accent)">CURRENT</span><span style="font-weight:800;color:var(--accent)">$${close.toFixed(2)}</span></div>`);
-      return;
-    }
-    const items = _levelGroupMap.get(group) || [];
-    if (!items.length) return;
-    rows.push(`<div style="padding:.22rem .1rem .08rem;font-size:.5rem;color:var(--text-muted);text-transform:uppercase;font-weight:700;letter-spacing:.08em">${_levelGroupLabels[group]}</div>`);
-    items.forEach(l => rows.push(_renderLevelRow(l)));
   });
+  var pi=displayLevels.findIndex(l=>l.price<=close);
+  rows.splice(pi>=0?pi:rows.length,0,`<div style="display:flex;align-items:center;gap:.25rem;padding:.2rem .35rem;border-radius:4px;background:rgba(6,182,212,0.1);border:1px solid var(--accent);font-size:.65rem"><span style="width:22px"></span><span style="flex:1;font-weight:700;color:var(--accent)">CURRENT</span><span style="font-weight:800;color:var(--accent)">$${close.toFixed(2)}</span></div>`);
   if (_allLevelsCount > displayLevels.length) rows.push(`<div style="text-align:center;padding:.3rem;font-size:.58rem;color:var(--text-muted);cursor:pointer" onclick="this.parentElement.querySelectorAll('.kl-extra').forEach(e=>e.style.display=e.style.display==='none'?'flex':'none');this.textContent=this.textContent.includes('Show')?'Hide extra levels':'Show all ${_allLevelsCount} levels'">Show all ${_allLevelsCount} levels</div>`);
   var allLvl=displayLevels.map(l=>l.price).concat([close]);var mnL=Math.min(...allLvl)*0.99,mxL=Math.max(...allLvl)*1.01,rngL=mxL-mnL||1;
 
@@ -1018,45 +806,50 @@
   displayLevels.forEach(l => { l.yExact = ((1 - ((l.price - mnL) / rngL)) * 90 + 5); l.yText = l.yExact; });
   displayLevels.sort((a,b) => a.yText - b.yText);
   let lastY = -Infinity;
-  displayLevels.forEach(l => { if (l.yText < lastY + 3.8) { l.yText = lastY + 3.8; } lastY = l.yText; });
-  for (let i = displayLevels.length - 1; i >= 0; i--) {
-    const next = displayLevels[i + 1];
-    if (displayLevels[i].yText > 95) displayLevels[i].yText = 95;
-    if (next && displayLevels[i].yText > next.yText - 3.8) displayLevels[i].yText = next.yText - 3.8;
-    if (displayLevels[i].yText < 5) displayLevels[i].yText = 5;
-  }
+  displayLevels.forEach(l => { if (l.yText < lastY + 3.4) { l.yText = lastY + 3.4; } lastY = l.yText; });
 
   // Dynamic Structure / Weakness / Rebound
-  const bullPoints = bullR.length ? bullR.map(r => '<li>'+_esc(r)+'</li>').join('') : '<li>None currently active</li>';
+  const bullPoints = bullR.length ? bullR.map(r => '<li>'+_esc(r)+'</li>').join('') : '<li>No constructive signals detected</li>';
   const bearPoints = bearR.length ? bearR.map(r => '<li>'+_esc(r)+'</li>').join('') : '<li>No adverse signals detected</li>';
   const reboundConds = [];
-  if (rsiValue != null && (rsiZone === 'Oversold' || rsiZone === 'Negative')) reboundConds.push('RSI rebound trigger active');
-  else if (rsiValue != null) reboundConds.push('RSI not yet oversold');
-  else reboundConds.push('RSI signal unavailable');
+  if (rsiZone === 'Oversold' || rsiZone === 'Negative') reboundConds.push('RSI oversold trigger active');
+  else reboundConds.push('RSI not yet oversold');
   if (close < (s.sma20 || Infinity) && close > (s.sma200 || 0)) reboundConds.push('Between SMA20 and SMA200 — pullback zone');
   else reboundConds.push('Near structure support bounds');
   const reboundPoints = reboundConds.map(r => '<li>'+r+'</li>').join('');
-  const trendSignalSummary = trendWord === 'downtrend'
-    ? 'Primary trend: weak downtrend · Tactical rebound: active · Override status: none'
-    : trendWord === 'uptrend'
-      ? 'Primary trend: constructive uptrend · Tactical context: pullback watch'
-      : 'Primary trend: mixed · Tactical signals require confirmation';
-  const reboundQualifier = trendWord === 'downtrend'
-    ? '<div style="font-size:.56rem;color:var(--text-muted);margin-top:.35rem;line-height:1.35">Short-term rebound signals do not override the weak broader trend.</div>'
-    : '';
+  const confidencePct = _decision.confidence != null ? `${(_decision.confidence * 100).toFixed(0)}%` : confidence;
+  const decisionFlags = _decision.data_quality_flags?.length ? _decision.data_quality_flags.join(', ') : 'None';
+  const decisionReason = _decision.wait_reason || _explanation.headline || _explanation.synthesis || effectiveText;
+  const executiveGridItems = [
+    ['As-of', _decision.asof || _decision.created_at || pageAsOf || '—'],
+    ['Confidence', confidencePct || '—'],
+    ['Flags', decisionFlags],
+    ['Setup', setupType],
+    ['Horizon View', `${shortV} / ${midV} / ${longV}`],
+    ['Decision Basis', decisionReason || '—'],
+  ];
+  const catalystView = buildCatalystPresentation({
+    ticker: tkr,
+    name: displayName,
+    fundamentals: data.fundamentals,
+    universe: payload.universe || payload.evaluation_v4?.universe || null,
+  });
 
   // ── Construct Layout ──
+  const _integrityBanner = _integrityItems.length === 0
+    ? '<div style="padding:.35rem .6rem;margin-bottom:.75rem;border-radius:6px;background:rgba(16,185,129,0.06);border:1px solid rgba(16,185,129,0.12);font-size:.6rem;color:var(--green);display:flex;align-items:center;gap:.4rem">\u2713 All systems operational</div>'
+    : '<div style="padding:.35rem .6rem;margin-bottom:.75rem;border-radius:6px;background:rgba(245,158,11,0.06);border:1px solid rgba(245,158,11,0.12);font-size:.6rem;color:var(--yellow);display:flex;align-items:center;gap:.4rem;flex-wrap:wrap">\u26A0 ' + _integrityItems.length + ' integrity note(s): ' + _integrityItems.map(i => '<span style="color:'+i.color+';font-weight:600">'+i.text+'</span>').join(' \u00B7 ') + '</div>';
+
   const layout = `
-  <div id="rv-integrity-banner">${window._renderIntegrityBanner()}</div>
+  ${_integrityBanner}
   <div class="dash-grid">
 
     <!-- COLUMN 1: DECISION & ACTION -->
     <div>
       <div class="section">
         <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:.4rem; border-bottom:1px solid rgba(255,255,255,0.03); padding-bottom:.3rem;">
-           <span style="font-weight:800; font-size:1rem; color:#fff;">${data.name || tkr}</span>
+           <span style="font-weight:800; font-size:1rem; color:#fff;">${displayName}</span>
            <h2 style="margin:0; font-size:0.68rem; color:var(--text-muted); text-transform:uppercase;">Executive Decision <span title="${_decisionBadge.tooltip}" style="color:${_decisionBadge.color};cursor:help;font-size:.55rem">${_decisionBadge.label}</span></h2>
-           ${_panelMeta(_decision.asof || _decision.created_at || latestDataDate || priceAsOf, null)}
         </div>
 
         <div style="font-size:.5rem;color:var(--text-muted);text-transform:uppercase;font-weight:700;letter-spacing:1px;margin-bottom:.3rem;opacity:.5">DECISION</div>
@@ -1068,15 +861,6 @@
             ${confidence==='LOW'?`<div style="font-size:.5rem;color:var(--yellow);margin-top:2px;font-weight:600">\u26A0 Low confidence — limited signal strength</div>`:''}
             ${shouldRenderSetupPhase ? `<div style="font-size:0.55rem; color:var(--text-dim); margin-top:2px; font-weight:700;">${setupPhaseSubtext}</div>` : ''}
             <div style="font-size:.65rem;color:var(--text-dim);font-weight:700;margin-top:2px;">${effectiveText}</div>
-            ${_decision.wait_subtype ? `<div style="font-size:.55rem;color:var(--yellow);margin-top:2px;font-weight:600">${_esc(_decision.wait_subtype.replace(/_/g,' '))}</div><div style="font-size:.52rem;color:var(--text-muted);margin-top:1px">${_esc(_decision.wait_reason||'')}</div>` : ''}
-            <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;margin-top:6px">
-              <div style="padding:4px 6px;border-radius:6px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.04)"><div style="font-size:.48rem;color:var(--text-muted);text-transform:uppercase;font-weight:700">Verdict</div><div style="font-size:.66rem;font-weight:700;color:${effectiveColor}">${effectiveLabel}</div></div>
-              <div style="padding:4px 6px;border-radius:6px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.04)"><div style="font-size:.48rem;color:var(--text-muted);text-transform:uppercase;font-weight:700">Confidence</div><div style="font-size:.66rem;font-weight:700;color:${confidence==='LOW'?'var(--yellow)':'var(--text)'}">${confidence}</div></div>
-              <div style="padding:4px 6px;border-radius:6px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.04)"><div style="font-size:.48rem;color:var(--text-muted);text-transform:uppercase;font-weight:700">Setup</div><div style="font-size:.66rem;font-weight:700;color:var(--accent)">${setupType}</div></div>
-              <div style="padding:4px 6px;border-radius:6px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.04)"><div style="font-size:.48rem;color:var(--text-muted);text-transform:uppercase;font-weight:700">Flags</div><div style="font-size:.66rem;font-weight:700;color:${(_decision.data_quality_flags?.length||0)>0?'var(--yellow)':'var(--text)'}">${_decision.data_quality_flags?.length || 0}</div></div>
-              <div style="padding:4px 6px;border-radius:6px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.04)"><div style="font-size:.48rem;color:var(--text-muted);text-transform:uppercase;font-weight:700">As-of</div><div style="font-size:.66rem;font-weight:700;color:var(--text)">${_esc(_decision.asof || _decision.created_at || latestDataDate || 'Unavailable')}</div></div>
-              <div style="padding:4px 6px;border-radius:6px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.04)"><div style="font-size:.48rem;color:var(--text-muted);text-transform:uppercase;font-weight:700">Reason</div><div id="rv-decision-reason-meta" style="font-size:.62rem;font-weight:600;color:var(--text-dim)">${_esc(_decision.wait_reason || 'Review narrative below')}</div></div>
-            </div>
             ${_v6.bucket ? `<div style="display:flex;gap:4px;margin-top:4px;flex-wrap:wrap">${(()=>{const bC={HIGH_CONVICTION:'var(--green)',MODERATE:'var(--accent)',WEAK:'var(--yellow)',NO_TRADE:'var(--red)'};const hC={hold_strong:'var(--green)',hold_normal:'var(--text-dim)',hold_fading:'var(--yellow)',reduce:'var(--red)',exit_signal:'var(--red)'};const pill=(l,c)=>'<span style="font-size:.5rem;font-weight:700;padding:1px 6px;border-radius:3px;background:rgba(255,255,255,0.04);border:1px solid '+c+';color:'+c+'">'+l+'</span>';return pill(_v6.bucket.replace(/_/g,' '),bC[_v6.bucket]||'var(--text-dim)')+(_v6.hold_state?pill(_v6.hold_state.replace(/_/g,' '),hC[_v6.hold_state]||'var(--text-dim)'):'')})()}</div>` : ''}
             <div id="rv-decision-rationale" style="font-size:.55rem;color:var(--text-muted);margin-top:3px;font-style:italic"></div>
             <div id="rv-governance-info" style="display:flex;gap:4px;margin-top:3px;flex-wrap:wrap"></div>
@@ -1085,27 +869,37 @@
             <div style="display:flex; justify-content:space-between; font-size:0.62rem;"><span style="color:var(--text-muted)">Price:</span> <span style="font-weight:700; color:#fff;">${close!=null?'$'+close.toFixed(2):'—'}</span></div>
             <div style="display:flex; justify-content:space-between; font-size:0.62rem;"><span style="color:var(--text-muted)">ATR:</span> <span style="font-weight:700; color:#fff;">${atr!=null?'$'+atr.toFixed(2):'—'}</span></div>
             <div style="display:flex; justify-content:space-between; font-size:0.62rem;"><span style="color:var(--text-muted)">20D Vol:</span> <span style="font-weight:700; color:#fff;">${volPct!=null?volPct+'%':'—'}</span></div>
-            <div style="display:flex; justify-content:space-between; font-size:0.62rem;"><span style="color:var(--text-muted)">52W:</span> <span style="font-weight:700; color:#fff;">${r52Display}</span></div>
+            <div style="display:flex; justify-content:space-between; font-size:0.62rem;"><span style="color:var(--text-muted)">52W:</span> <span style="font-weight:700; color:#fff;">${r52label||'—'}</span></div>
           </div>
         </div>
 
+        <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px 10px;margin-bottom:0.75rem;padding:8px 10px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.04);border-radius:6px;">
+          ${executiveGridItems.map(([label, value]) => `<div style="display:flex;gap:6px;align-items:flex-start;font-size:0.6rem;min-width:0;"><span style="color:var(--text-muted);width:66px;flex-shrink:0;">${label}</span><span style="font-weight:700;color:var(--text);min-width:0;overflow:hidden;text-overflow:ellipsis;">${_esc(value)}</span></div>`).join('')}
+        </div>
+
         <!-- Trade Plan -->
-        ${tradePlanState.requested && tradePlanState.complete ? `<div style="display: flex; justify-content: space-between; font-size: 0.62rem; margin-bottom: 0.35rem; padding: 6px 10px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.04); border-radius: 6px;">
-            <div><span style="color:var(--text-muted)">Entry:</span> <span style="font-weight:600;">${close!=null?'$'+close.toFixed(2):'—'}</span></div>
-            <div><span style="color:var(--text-muted)">Stop:</span> <span style="font-weight:600; color:var(--red);">${stopPr!=null?'$'+stopPr.toFixed(2):'—'}</span></div>
-            <div><span style="color:var(--text-muted)">Target:</span> <span style="font-weight:600; color:var(--green);">${targetPrice!=null?'$'+targetPrice.toFixed(2):'—'}</span></div>
+        ${tradePlan.status === 'ready' ? `<div style="display: flex; justify-content: space-between; font-size: 0.62rem; margin-bottom: 0.35rem; padding: 6px 10px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.04); border-radius: 6px;">
+            <div><span style="color:var(--text-muted)">Entry:</span> <span style="font-weight:600;">${tradePlan.entry!=null?'$'+tradePlan.entry.toFixed(2):'—'}</span></div>
+            <div><span style="color:var(--text-muted)">Stop:</span> <span style="font-weight:600; color:var(--red);">${tradePlan.stop!=null?'$'+tradePlan.stop.toFixed(2):'—'}</span></div>
+            <div><span style="color:var(--text-muted)">Target:</span> <span style="font-weight:600; color:var(--green);">${tradePlan.target!=null?'$'+tradePlan.target.toFixed(2):'—'}</span></div>
             <div><span style="color:var(--text-muted)">R/R:</span> <span style="font-weight:700; color:var(--accent);">${rrRatio}x</span></div>
         </div>
         <div style="font-size:0.58rem; color:var(--text-dim); text-align:center; margin-bottom:0.75rem; font-style:italic;">
-          Entry: current price · Stop: below ATR · Target: next resistance level
-        </div>` : tradePlanState.requested ? `<div style="display:flex;align-items:center;justify-content:center;font-size:0.62rem;margin-bottom:0.75rem;padding:8px 10px;background:rgba(255,255,255,0.01);border:1px dashed rgba(255,255,255,0.08);border-radius:6px;color:var(--text-muted)">Trade plan unavailable — missing required inputs</div>` : `<div style="display:flex;align-items:center;justify-content:center;font-size:0.62rem;margin-bottom:0.75rem;padding:8px 10px;background:rgba(255,255,255,0.01);border:1px dashed rgba(255,255,255,0.08);border-radius:6px;color:var(--text-muted)">No active trade plan — ${effectiveText}</div>`}
+          Entry: current price · Stop: ATR geometry · Target: nearest directional level
+        </div>` : `<div style="display:flex;align-items:center;justify-content:center;font-size:0.62rem;margin-bottom:0.75rem;padding:8px 10px;background:rgba(255,255,255,0.01);border:1px dashed rgba(255,255,255,0.08);border-radius:6px;color:var(--text-muted)">${_esc(tradePlan.invalidReason || ('No active trade plan — ' + effectiveText))}</div>`}
 
         ${_decision.scores ? `<div style="padding:6px 10px;margin-bottom:0.5rem;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.04);border-radius:6px;">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
             <span style="font-size:.58rem;color:var(--text-muted);text-transform:uppercase;font-weight:700">Signal Quality</span>
             <span style="font-size:.62rem;font-weight:700;color:var(--accent)">Composite: ${(_decision.scores.composite||0).toFixed(0)}</span>
           </div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px 12px;">${['trend','entry','risk','context'].map(k=>{const v=_decision.scores[k+'_score']||_decision.scores[k]||0;const c=v>=65?'var(--green)':v>=40?'var(--yellow)':'var(--red)';return '<div style="display:flex;align-items:center;gap:4px;font-size:.58rem"><span style="color:var(--text-muted);width:36px">'+k.charAt(0).toUpperCase()+k.slice(1)+'</span><div style="flex:1;height:4px;background:rgba(255,255,255,0.05);border-radius:2px"><div style="width:'+Math.min(100,v)+'%;height:100%;background:'+c+';border-radius:2px"></div></div><span style="color:var(--text-dim);width:20px;text-align:right">'+v.toFixed(0)+'</span></div>'}).join('')}</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px 12px;">${[
+            ['trend', 'Trend'],
+            ['entry', 'Entry'],
+            ['risk', riskView.scoreLabel],
+            ['context', 'Context']
+          ].map(([key, label])=>{const v=_decision.scores[key+'_score']||_decision.scores[key]||0;const c=key==='risk'?riskView.scoreColor:(v>=65?'var(--green)':v>=40?'var(--yellow)':'var(--red)');return '<div style="display:flex;align-items:center;gap:4px;font-size:.58rem"><span style="color:var(--text-muted);width:68px">'+label+'</span><div style="flex:1;height:4px;background:rgba(255,255,255,0.05);border-radius:2px"><div style="width:'+Math.min(100,v)+'%;height:100%;background:'+c+';border-radius:2px"></div></div><span style="color:var(--text-dim);width:20px;text-align:right">'+v.toFixed(0)+'</span></div>'}).join('')}</div>
+          <div style="font-size:.58rem;color:var(--text-dim);margin-top:6px;line-height:1.4">${_esc(riskView.displaySentence)}${riskView.overrideApplied ? ` <span style="color:var(--yellow);font-weight:600">Override active.</span>` : ''}</div>
         </div>` : ''}
 
         <!-- Horizons -->
@@ -1125,13 +919,12 @@
         </div>
 
         <!-- Structure / Weakness / Rebound + Checklist -->
-        <div style="font-size:.58rem;color:var(--text-muted);margin:-.1rem 0 .55rem;font-style:italic">${trendSignalSummary}</div>
         <table style="width:100%; border-collapse: collapse; margin-bottom: 1.25rem; table-layout: fixed;">
           <tr>
             <td style="width: 55%; vertical-align: top; padding-right: 1.25rem;">
               <div style="display:grid; grid-template-columns:1fr; gap:.35rem;">
                 <div style="padding:.5rem;border-radius:6px;background:rgba(16,185,129,0.03);border:1px solid rgba(16,185,129,0.1)">
-                  <div style="font-size:.6rem;font-weight:800;color:var(--green);text-transform:uppercase;">CONSTRUCTIVE TREND SIGNALS</div>
+                  <div style="font-size:.6rem;font-weight:800;color:var(--green);text-transform:uppercase;">CONSTRUCTIVE FACTORS</div>
                   <ul style="margin:0;padding-left:.85rem;font-size:.65rem;line-height:1.3;color:var(--text-dim);">${bullPoints}</ul>
                 </div>
                 <div style="padding:.5rem;border-radius:6px;background:rgba(248,113,113,0.03);border:1px solid rgba(248,113,113,0.1)">
@@ -1139,14 +932,13 @@
                   <ul style="margin:0;padding-left:.85rem;font-size:.65rem;line-height:1.3;color:var(--text-dim);">${bearPoints}</ul>
                 </div>
                 <div style="padding:.5rem;border-radius:6px;background:rgba(6,182,212,0.03);border:1px solid rgba(6,182,212,0.1)">
-                  <div style="font-size:.6rem;font-weight:800;color:var(--accent);text-transform:uppercase;">TACTICAL REBOUND SIGNALS</div>
+                  <div style="font-size:.6rem;font-weight:800;color:var(--accent);text-transform:uppercase;">REBOUND CONDITIONS</div>
                   <ul style="margin:0;padding-left:.85rem;font-size:.65rem;line-height:1.3;color:var(--text-dim);">${reboundPoints}</ul>
-                  ${reboundQualifier}
                 </div>
               </div>
             </td>
             <td style="width: 45%; vertical-align: top; background:rgba(255,255,255,0.02); border:1px solid var(--border); border-radius:8px; padding:.6rem;">
-               ${hasActiveTradeSetup ? `<div style="display:flex; flex-direction:column; gap:.4rem; margin-bottom:.6rem;">
+               <div style="display:flex; flex-direction:column; gap:.4rem; margin-bottom:.6rem;">
                  <span style="font-size:.65rem;font-weight:700;color:var(--text-dim);text-transform:uppercase">Pre-Trade Checklist</span>
                  <div style="display:flex; gap:0; border-radius:4px; overflow:hidden; border:1px solid var(--border); align-self: flex-start;" id="cl-btns">
                    <button class="cl-btn active" data-hz="short" onclick="window._switchCL(this)">SHORT</button>
@@ -1156,7 +948,7 @@
                </div>
                <div id="cl-short">${renderChecklist(checksShort)}</div>
                <div id="cl-mid" style="display:none">${renderChecklist(checksMid)}</div>
-               <div id="cl-long" style="display:none">${renderChecklist(checksLong)}</div>` : `<div style="display:flex;align-items:center;justify-content:center;min-height:120px;font-size:.65rem;color:var(--text-muted);text-align:center">No active trade setup — checklist not applicable.</div>`}
+               <div id="cl-long" style="display:none">${renderChecklist(checksLong)}</div>
             </td>
           </tr>
         </table>
@@ -1164,7 +956,7 @@
         <div style="border-top:1px solid rgba(255,255,255,0.04);margin-top:.75rem;padding-top:.5rem"><div style="font-size:.5rem;color:var(--text-muted);text-transform:uppercase;font-weight:700;letter-spacing:1px;margin-bottom:.3rem;opacity:.5">INTERPRETATION</div></div>
         ${renderStoryFlow()}
 
-        ${(()=>{const bullets=_normalizedBullets.slice(0,3);const gates=(_decision.trigger_gates||[]).slice(0,2);if(!bullets.length&&!gates.length)return '';const sentClr=_explanation.sentiment==='positive'?'var(--green)':_explanation.sentiment==='negative'?'var(--red)':'var(--yellow)';const sentIco=_explanation.sentiment==='positive'?'✓':_explanation.sentiment==='negative'?'✗':'•';const title=(effectiveVerdict==='BUY'||effectiveVerdict==='SELL')?'Why This Trade?':'Why No Trade?';const rationaleRows=(effectiveVerdict==='BUY'||effectiveVerdict==='SELL'?bullets:bullets.map((b,idx)=>idx===0?'Primary blocker: '+b:idx===1?'Secondary context: '+b:b));return `<div style="margin-top:.75rem;margin-bottom:.5rem;padding:.6rem;border-radius:8px;background:rgba(255,255,255,0.01);border:1px solid rgba(255,255,255,0.03)"><div style="font-size:.62rem;color:var(--text-muted);text-transform:uppercase;font-weight:700;margin-bottom:.35rem">${title}</div><div style="display:grid;gap:3px">${rationaleRows.map(b=>'<div style="font-size:.65rem;color:'+sentClr+';display:flex;gap:4px"><span>'+sentIco+'</span><span>'+_esc(b)+'</span></div>').join('')}${gates.map(g=>'<div style="font-size:.65rem;color:var(--yellow);display:flex;gap:4px"><span>⚠</span><span>'+_esc(g)+'</span></div>').join('')}</div></div>`})()}
+        ${(()=>{const bullets=(_explanation.bullets||[]).slice(0,3);const gates=(_decision.trigger_gates||[]).slice(0,2);if(!bullets.length&&!gates.length)return '';const sentClr=_explanation.sentiment==='positive'?'var(--green)':_explanation.sentiment==='negative'?'var(--red)':'var(--yellow)';const sentIco=_explanation.sentiment==='positive'?'✓':_explanation.sentiment==='negative'?'✗':'•';return `<div style="margin-top:.75rem;margin-bottom:.5rem;padding:.6rem;border-radius:8px;background:rgba(255,255,255,0.01);border:1px solid rgba(255,255,255,0.03)"><div style="font-size:.62rem;color:var(--text-muted);text-transform:uppercase;font-weight:700;margin-bottom:.35rem">Why This Trade?</div><div style="display:grid;gap:3px">${bullets.map(b=>'<div style="font-size:.65rem;color:'+sentClr+';display:flex;gap:4px"><span>'+sentIco+'</span><span>'+_esc(b)+'</span></div>').join('')}${gates.map(g=>'<div style="font-size:.65rem;color:var(--yellow);display:flex;gap:4px"><span>⚠</span><span>'+_esc(g)+'</span></div>').join('')}</div></div>`})()}
 
         <div style="border-top:1px solid rgba(255,255,255,0.04);margin-top:.75rem;padding-top:.5rem"><div style="font-size:.5rem;color:var(--text-muted);text-transform:uppercase;font-weight:700;letter-spacing:1px;margin-bottom:.3rem;opacity:.5">EVIDENCE</div></div>
         <div id="dyn-what-changed" style="margin-top:0.75rem;">
@@ -1177,21 +969,21 @@
     <!-- COLUMN 2: TECHNICAL VITALITY -->
     <div>
       <div class="section">
-        <div style="display:flex;justify-content:space-between;align-items:baseline"><h2 style="margin:0">Technical Vitality <span title="${_techBadge.tooltip}" style="color:${_techBadge.color};cursor:help;font-size:.55rem">${_techBadge.label}</span></h2>${_panelMeta(indicatorAsOf || priceAsOf, null)}</div>
+        <div style="display:flex;justify-content:space-between;align-items:baseline"><h2 style="margin:0">Technical Vitality <span title="${_techBadge.tooltip}" style="color:${_techBadge.color};cursor:help;font-size:.55rem">${_techBadge.label}</span></h2>${_panelMeta(prices.date, null)}</div>
         <div style="font-size: 0.62rem; color: var(--text-dim); margin-bottom: 0.75rem; font-weight: 700; text-transform:uppercase;">Trend: <span style="color:${trendColor}">${trendLabel}</span> · MA Stack: <span style="color:${trendColor}">${maStack}</span></div>
 
         <!-- Gauges Row -->
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem;margin-bottom:1.25rem">
           <div title="Relative Strength Index (14d). &lt;30 oversold, &gt;70 overbought" style="padding:.75rem;border-radius:8px;background:rgba(255,255,255,0.01);border:1px solid rgba(255,255,255,0.03);text-align:center;cursor:help">
             <div style="font-size:.6rem;color:var(--text-muted)">RSI INDICATOR</div>
-            <div style="font-size:1.4rem;font-weight:800;color:${rsiColor}">${rsiValue!=null?rsiValue.toFixed(1):'—'}</div>
-            <div style="font-size:.62rem;color:var(--text-dim)">Zone: ${rsiValue!=null ? (rsiZone + (_guard.corrections.labels?.rsiSuffix || '')) : 'Unavailable'}</div>
-            <div style="height:4px;background:rgba(255,255,255,0.05);border-radius:2px;margin-top:5px"><div style="width:${rsiValue!=null?rsiValue:0}%;height:100%;background:${rsiColor};border-radius:2px"></div></div>
+            <div style="font-size:1.4rem;font-weight:800;color:${rsiColor}">${s.rsi14!=null?s.rsi14.toFixed(1):'—'}</div>
+            <div style="font-size:.62rem;color:var(--text-dim)">Zone: ${rsiZone}${_guard.corrections.labels?.rsiSuffix || ''}</div>
+            <div style="height:4px;background:rgba(255,255,255,0.05);border-radius:2px;margin-top:5px"><div style="width:${s.rsi14!=null?s.rsi14:0}%;height:100%;background:${rsiColor};border-radius:2px"></div></div>
           </div>
           <div title="Price within Bollinger Bands. &lt;0.2 near lower, &gt;0.8 near upper" style="padding:.75rem;border-radius:8px;background:rgba(255,255,255,0.01);border:1px solid rgba(255,255,255,0.03);text-align:center;cursor:help">
             <div style="font-size:.6rem;color:var(--text-muted)">BOLLINGER %B</div>
-            <div style="font-size:1.4rem;font-weight:800;color:${bbPctB!=null?'var(--accent)':'var(--text-dim)'}">${bbPctB!=null?bbPctB.toFixed(2):'—'}</div>
-            <div style="font-size:.62rem;color:var(--text-dim)">${_bbLabel}</div>
+            <div style="font-size:1.4rem;font-weight:800;color:var(--accent)">${bbPctB!=null?bbPctB.toFixed(2):'—'}</div>
+            <div style="font-size:.62rem;color:var(--text-dim)">${bbPctB!=null && bbPctB <= 0.2 ? 'Near Lower Band' : bbPctB >= 0.8 ? 'Near Upper Band' : 'Range Midbound'}</div>
             <div style="height:4px;background:rgba(255,255,255,0.05);border-radius:2px;margin-top:5px"><div style="width:${bbPctB!=null?Math.max(0,Math.min(100,bbPctB*100)):0}%;height:100%;background:var(--accent);border-radius:2px"></div></div>
           </div>
         </div>
@@ -1199,13 +991,13 @@
         <!-- Risk Gauge -->
         <div style="display:flex;gap:1rem;align-items:center;background:rgba(255,255,255,0.01);padding:.75rem;border-radius:8px;border:1px solid rgba(255,255,255,0.03);margin-bottom:1rem">
           <div style="width:28px;height:70px;border:2px solid var(--border);border-radius:6px;position:relative;overflow:hidden;flex-shrink:0">
-            <div style="position:absolute;bottom:0;width:100%;height:${finalRisk.label==='High'||finalRisk.label==='Elevated'?90:finalRisk.label==='Medium'?55:finalRisk.label==='Unavailable'?0:30}%;background:${finalRisk.color}"></div>
+            <div style="position:absolute;bottom:0;width:100%;height:${riskLabel==='High'||riskLabel==='Elevated'?90:riskLabel==='Medium'?55:30}%;background:${riskColor}"></div>
           </div>
           <div style="flex:1">
             <div style="font-size:.65rem;color:var(--text-muted)">RISK STATE</div>
-            <div style="font-size:1.2rem;font-weight:800;color:${finalRisk.color}">${finalRisk.displayLabel}</div>
-            <div style="font-size:.58rem;color:var(--text-dim);margin-top:2px;font-style:italic;">Regime: <span style="color:${finalRisk.color};">${finalRisk.regimeLabel}</span></div>
-            <div style="font-size:.55rem;color:var(--text-dim);line-height:1.45;margin-top:3px">${riskInputsComplete ? '<span style="color:var(--text-muted)">Driver:</span> <span style="color:'+finalRisk.color+'">'+_esc(finalRisk.driver)+'</span><br><span style="color:var(--text-muted)">'+(finalRisk.override ? 'Override applied:' : 'Context:')+'</span> <span style="color:var(--text)">'+_esc(finalRisk.context)+'</span>' : 'Risk state unavailable — missing volatility inputs.'}</div>
+            <div style="font-size:1.2rem;font-weight:800;color:${riskColor}">${riskLabel}${riskView.overrideApplied ? ' (override)' : ''}</div>
+            <div style="font-size:.58rem;color:var(--text-dim);margin-top:2px;font-style:italic;">Regime: <span style="color:${riskColor};">${riskView.regimeLabel}</span></div>
+            <div style="font-size:.55rem;color:var(--text-dim);line-height:1.4;margin-top:3px">${_esc(riskView.displaySentence)}</div>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:.2rem;margin-top:.3rem">
               <div title="Average True Range (14d) in dollar terms" style="font-size:.65rem;cursor:help"><span style="color:var(--text-muted)">ATR:</span> <span style="font-weight:600">${atr!=null?'$'+atr.toFixed(2):'—'}</span></div>
               <div title="ATR as percentage of price" style="font-size:.65rem;cursor:help"><span style="color:var(--text-muted)">ATR%:</span> <span style="font-weight:600">${atrPct!=null?atrPct.toFixed(2)+'%':'—'}</span></div>
@@ -1266,7 +1058,7 @@
         </div>
 
         <!-- Fundamentals Panel -->
-        ${(()=>{const fund=data.fundamentals;const fg=_guard.panelGates.fundamentals;if(!fg.show)return '';const fmtCap=v=>{if(!v)return '—';if(v>=1e12)return '$'+(v/1e12).toFixed(2)+'T';if(v>=1e9)return '$'+(v/1e9).toFixed(1)+'B';if(v>=1e6)return '$'+(v/1e6).toFixed(0)+'M';return '$'+v.toLocaleString('en-US')};return `
+        ${(()=>{const fund=data.fundamentals;const fg=_guard.panelGates.fundamentals;if(!fg.show)return '';const fmtCap=v=>{if(!v)return '—';if(v>=1e12)return '$'+(v/1e12).toFixed(2)+'T';if(v>=1e9)return '$'+(v/1e9).toFixed(1)+'B';if(v>=1e6)return '$'+(v/1e6).toFixed(0)+'M';return '$'+v.toLocaleString()};return `
         <div style="margin-top:0.6rem; padding:.5rem; border-radius:8px; background:rgba(255,255,255,0.01); border:1px solid rgba(255,255,255,0.03);${fg.degraded?' border-color:rgba(251,191,36,0.2)':''}">
             <div style="font-size:.62rem; color:var(--text-dim); text-transform:uppercase; font-weight:700; margin-bottom:.35rem; display:flex; justify-content:space-between; align-items:center;">Fundamentals${fg.degraded?' <span style="font-size:.5rem;color:var(--yellow)">⚠ some values out of range</span>':''}</div>
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:.3rem;">
@@ -1278,13 +1070,34 @@
             ${fund?.sector?`<div style="font-size:.55rem;color:var(--text-muted);margin-top:.3rem">${_esc(fund.sector)}${fund.industry?' · '+_esc(fund.industry):''}</div>`:''}
         </div>`;})()}
 
-        ${_visibleModelEvidence.length ? `<div style="border-top:1px solid rgba(255,255,255,0.04);margin-top:.75rem;padding-top:.5rem"><div style="font-size:.5rem;color:var(--text-muted);text-transform:uppercase;font-weight:700;letter-spacing:1px;margin-bottom:.3rem;opacity:.5">MODEL EVIDENCE</div></div>
+        <div style="border-top:1px solid rgba(255,255,255,0.04);margin-top:.75rem;padding-top:.5rem"><div style="font-size:.5rem;color:var(--text-muted);text-transform:uppercase;font-weight:700;letter-spacing:1px;margin-bottom:.3rem;opacity:.5">MODEL EVIDENCE</div></div>
+        <!-- 4-Model Consensus -->
+        ${(()=>{const ev4=payload.evaluation_v4;const mg=_guard.panelGates.modelConsensus;if(!mg.show)return '';const ms=ev4?.input_states||{};const models=[{k:'quantlab',l:'QuantLab'},{k:'elliott',l:'Elliott'},{k:'forecast',l:'Forecast'},{k:'scientific',l:'Scientific'}];const dirMap=d=>d==='bullish'||d==='BUY'?{c:'var(--green)',l:'BUY'}:d==='bearish'||d==='SELL'||d==='AVOID'?{c:'var(--red)',l:String(d).toUpperCase()}:{c:'var(--yellow)',l:d?String(d).toUpperCase():'N/A'};return `
         <div style="margin-top:0.6rem; padding:.5rem; border-radius:8px; background:rgba(255,255,255,0.01); border:1px solid rgba(255,255,255,0.03);">
-            <div style="font-size:.62rem; color:var(--text-dim); text-transform:uppercase; font-weight:700; margin-bottom:.35rem;">Model modules contributing to the current analysis</div>
-            <div style="display:grid; grid-template-columns:repeat(${Math.min(4, Math.max(1, _visibleModelEvidence.length))},1fr); gap:.25rem;">
-              ${_visibleModelEvidence.map((entry)=>{const dir = String(entry.direction || entry.status || 'n/a').replace(/_/g,' ').toUpperCase();const dirColor = /BULL|BUY|ACTIVE/.test(dir)?'var(--green)':/BEAR|SELL|AVOID/.test(dir)?'var(--red)':'var(--yellow)';return `<div style="padding:.35rem;border-radius:6px;background:rgba(255,255,255,0.02);border:1px solid var(--border)"><div style="font-size:.5rem;color:var(--text-muted);text-transform:uppercase">${entry.label}</div><div style="font-size:.72rem;font-weight:800;color:${dirColor};margin-top:2px">${dir}</div><div style="font-size:.52rem;color:var(--text-dim);margin-top:2px">${entry.asOf ? 'as-of ' + _esc(String(entry.asOf).slice(0, 10)) : 'current module'}</div></div>`}).join('')}
+            <div style="font-size:.62rem; color:var(--text-dim); text-transform:uppercase; font-weight:700; margin-bottom:.35rem;">4-Model Consensus${mg.degraded?' <span style="font-size:.5rem;color:var(--yellow)">⚠ degraded</span>':''}</div>
+            <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:.25rem;">
+              ${models.map(m=>{const st=ms[m.k];const ok=st?.status==='ok';const dir=ok?dirMap(st?.featureStates?.direction||st?.direction||''):{c:'var(--text-muted)',l:'N/A'};return `<div style="text-align:center;padding:.3rem;border-radius:6px;background:rgba(255,255,255,0.02);border:1px solid var(--border);${!ok?'opacity:0.5':''}"><div style="font-size:.5rem;color:var(--text-muted);text-transform:uppercase">${m.l}</div><div style="font-size:.7rem;font-weight:800;color:${dir.c};margin-top:1px">${dir.l}</div></div>`}).join('')}
             </div>
-        </div>` : ``}
+        </div>`;})()}
+
+        <!-- Breakout Indicator (Mini) -->
+        <div style="margin-top:0.6rem; padding:.5rem; border-radius:8px; background:rgba(255,255,255,0.01); border:1px solid rgba(255,255,255,0.03);">
+            <div style="font-size: .62rem; color: var(--text-dim); text-transform: uppercase; font-weight: 700; margin-bottom: .25rem;">Breakout Indicator</div>
+            ${data.breakout_v2 && data.breakout_v2.state ? `
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <span style="font-size: .75rem; font-weight: 800; color: ${data.breakout_v2.state === 'ARMED' ? 'var(--yellow)' : ['TRIGGERED','CONFIRMED'].includes(data.breakout_v2.state) ? 'var(--green)' : 'var(--accent)'}">${data.breakout_v2.state}</span>
+                <span style="font-size: .62rem; color: var(--text-dim); font-weight: 600;">Score: ${data.breakout_v2.scores?.total || 0}/100</span>
+            </div>
+            ${data.breakout_v2.scores?`<div style="display:flex;gap:.4rem;margin-top:4px">${['compression','volume','trigger'].filter(k=>data.breakout_v2.scores[k]!=null).map(k=>`<span style="font-size:.5rem;padding:1px 4px;border-radius:3px;background:rgba(255,255,255,0.03);border:1px solid var(--border);color:var(--text-dim)">${k.charAt(0).toUpperCase()+k.slice(1)}: <span style="font-weight:700;color:var(--accent)">${data.breakout_v2.scores[k]}</span></span>`).join('')}</div>`:''}
+            <div style="font-size: 0.58rem; color: var(--text-muted); margin-top: 3px; font-style: italic;">
+              ${_esc(data.breakout_v2.explanation || 'Wyckoff Absorption Model Setup')}
+            </div>
+            ` : `
+            <div style="font-size: 0.65rem; color: var(--text-muted); font-style: italic; margin-top: 2px;">
+              NONE — no breakout setup detected
+            </div>
+            `}
+        </div>
 
       </div>
     </div>
@@ -1292,13 +1105,16 @@
     <!-- COLUMN 3: NARRATIVE & KEY LEVELS -->
     <div>
       <div class="section">
-        <div style="display:flex;justify-content:space-between;align-items:baseline"><h2 style="margin:0">Narrative & Key Levels <span title="${_klBadge.tooltip}" style="color:${_klBadge.color};cursor:help;font-size:.55rem">${_klBadge.label}</span></h2>${_panelMeta(priceAsOf || latestDataDate, null)}</div>
+        <div style="display:flex;justify-content:space-between;align-items:baseline"><h2 style="margin:0">Narrative & Key Levels <span title="${_klBadge.tooltip}" style="color:${_klBadge.color};cursor:help;font-size:.55rem">${_klBadge.label}</span></h2>${_panelMeta(prices.date, null)}</div>
 
         <!-- Upcoming Catalysts -->
-        <div style="margin-bottom:0.75rem; padding:.6rem; border-radius:8px; background:rgba(255,255,255,0.01); border:1px solid rgba(255,255,255,0.03);">
-            <div style="font-size: .62rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700; margin-bottom: .4rem;">Upcoming Catalysts</div>
+        <div style="margin-bottom:0.75rem; padding:${catalystView.variant === 'inline' ? '.45rem .6rem' : '.6rem'}; border-radius:8px; background:rgba(255,255,255,0.01); border:1px solid rgba(255,255,255,0.03);">
+            <div style="font-size: .62rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700; margin-bottom: ${catalystView.variant === 'inline' ? '.2rem' : '.4rem'};">${catalystView.title}</div>
             <div id="dyn-catalysts" style="display:flex; flex-direction:column; gap:4px;">
-                ${(()=>{const nextWindow=_formatExpectedWindow(_fund?.nextEarningsDate||_fund?.earningsDate||_fund?.next_earnings_date||null);const updatedAt=_fund?.updatedAt?String(_fund.updatedAt).slice(0,10):null;if(nextWindow){return '<div style="font-size:0.68rem; color:var(--text-dim); font-style:italic;">0 confirmed catalysts in the next 30 days</div><div style="font-size:0.64rem;color:var(--text-muted)">Next expected earnings window: '+_esc(nextWindow)+' (unconfirmed)</div>';}if(_fund){return '<div style="font-size:0.68rem; color:var(--text-dim); font-style:italic;">Catalyst feed currently limited</div><div style="font-size:0.64rem;color:var(--text-muted)">No confirmed events or next earnings window available from the active fundamentals source'+(updatedAt?' · profile as-of '+_esc(updatedAt):'')+'</div>';}return '<div style="font-size:0.68rem; color:var(--text-dim); font-style:italic;">Catalyst feed currently limited</div><div style="font-size:0.64rem;color:var(--text-muted)">Fundamentals source unavailable for this analysis.</div>';})()}
+                ${catalystView.status === 'confirmed'
+                  ? catalystView.items.map(item => `<div style="font-size:0.68rem;color:var(--text)">${_esc(item.title || item.label || String(item))}</div>`).join('')
+                  : `<div style="font-size:0.68rem; color:${catalystView.variant === 'inline' ? 'var(--text-muted)' : 'var(--text)'}; font-style:${catalystView.variant === 'inline' ? 'italic' : 'normal'};">${_esc(catalystView.primaryText || 'Catalyst feed currently unavailable.')}</div>${catalystView.secondaryText ? `<div style="font-size:0.58rem;color:var(--text-dim)">${_esc(catalystView.secondaryText)}</div>` : ''}`
+                }
             </div>
         </div>
 
@@ -1310,10 +1126,11 @@
         <!-- Key Levels Layout -->
         <div style="padding-top:.25rem">
           <div style="font-size:.68rem;color:var(--text-muted);text-transform:uppercase;font-weight:700;margin-bottom:.5rem">Key Levels</div>
+          ${levelConsistency.degraded ? `<div style="margin-bottom:.45rem;padding:.35rem .45rem;border-radius:6px;background:rgba(251,191,36,0.06);border:1px solid rgba(251,191,36,0.15);font-size:.58rem;color:var(--yellow)">${_esc(levelConsistency.issues.join(' · '))}</div>` : ''}
           <div style="display:grid;grid-template-columns:1.2fr .8fr;gap:.5rem;align-items:stretch">
             <div style="display:flex;flex-direction:column;gap:.11rem;" class="custom-scroll">${rows.join('')}</div>
             <div style="position:relative;min-height:220px;background:rgba(255,255,255,0.01);border-radius:8px;border:1px solid rgba(255,255,255,0.04);padding:.5rem .3rem">
-              ${displayLevels.map(l=>{var c=l.kind==='support'?'var(--green)':'var(--red)';return '<div style="position:absolute;left:4px;right:4px;top:'+l.yExact+'%;height:1px;background:'+c+';opacity:0.25"></div><div style="position:absolute;right:2px;top:calc('+l.yText+'% - 4px);font-size:.42rem;color:'+c+';white-space:nowrap;max-width:72px;overflow:hidden;text-overflow:ellipsis;text-align:right">'+l.label+'</div>'}).join('')}
+              ${displayLevels.map(l=>{var c=l.kind==='support'?'var(--green)':'var(--red)';return '<div style="position:absolute;left:4px;right:4px;top:'+l.yExact+'%;height:1px;background:'+c+';opacity:0.25"></div><div style="position:absolute;right:2px;top:calc('+l.yText+'% - 4px);font-size:.42rem;color:'+c+';white-space:nowrap">'+l.label+'</div>'}).join('')}
               <div style="position:absolute;left:4px;right:4px;top:${((1-((close-mnL)/rngL))*90+5)}%;height:2px;background:var(--accent);z-index:1"></div>
               <div style="position:absolute;left:2px;top:calc(${((1-((close-mnL)/rngL))*90+5)}% - 7px);background:var(--accent);color:#000;padding:1px 3px;border-radius:2px;font-size:.55rem;font-weight:700;z-index:2">$${close.toFixed(2)}</div>
             </div>
@@ -1368,21 +1185,7 @@
 
   // ── Breakout V2.0 Render Layer ──
   const brk = data.breakout_v2 || {};
-  const _brkNoneState = !brk.state || brk.state === 'NONE' || (Number(brk.scores?.total || 0) === 0 && !['SETUP','ARMED','TRIGGERED','CONFIRMED'].includes(brk.state));
-  if (_brkNoneState) {
-       const compact = `
-         <div style="display:flex;align-items:center;justify-content:space-between;gap:1rem;background:rgba(255,255,255,0.01);padding:.75rem;border-radius:10px;border:1px solid rgba(255,255,255,0.03)">
-           <div>
-             <div style="font-size:.78rem;font-weight:800;color:var(--text)">Breakout Setup: None</div>
-             <div style="font-size:.62rem;color:var(--text-dim);margin-top:3px">No valid compression or trigger confirmation.</div>
-           </div>
-           <div style="font-size:.6rem;color:var(--text-muted);font-weight:700">SCORE 0</div>
-         </div>`;
-       const brkSection = document.getElementById('brk-section');
-       if (brkSection) {
-         brkSection.innerHTML = `<div class="section" style="height:auto"><h2 style="margin:0 0 .75rem">🎯 Breakout Setup Tracker (V2.0)</h2>${compact}</div>`;
-       }
-  } else if (brk.state) {
+  if (brk.state) {
        document.getElementById('brk-score').innerText = brk.scores?.total || 0;
        document.getElementById('brk-state').innerText = brk.state;
        
@@ -1414,6 +1217,15 @@
             return `<div style="width:6px;height:6px;background:${dc};border-radius:3px;cursor:help" title="${h.date}: ${h.state}"></div>`;
        }).join('');
        document.getElementById('brk-dots').innerHTML = dots;
+  } else {
+       if (document.getElementById('brk-score')) document.getElementById('brk-score').innerText = '0';
+       if (document.getElementById('brk-state')) {
+           document.getElementById('brk-state').innerText = 'NONE';
+           document.getElementById('brk-state').style.color = 'var(--text-muted)';
+       }
+       if (document.getElementById('brk-subtext')) {
+           document.getElementById('brk-subtext').innerText = 'NONE \u2014 no valid compression detected, no trigger confirmation';
+       }
   }
 
   // ── Historical Probabilities Layer ──
@@ -1421,73 +1233,6 @@
   window._hpHz = 'short';
   window._hpHzMap = { short: 'h5d', mid: 'h20d', long: 'h60d' };
   window._hpHzLabel = { short: '5 days', mid: '20 days', long: '60 days' };
-
-  function _hpClose(bar) {
-    if (Number.isFinite(bar?.adjClose)) return Number(bar.adjClose);
-    if (Number.isFinite(bar?.close)) return Number(bar.close);
-    return null;
-  }
-
-  function _buildSyntheticHpMetric(sourceBars, horizon) {
-    const samples = [];
-    for (let i = 0; i + horizon < sourceBars.length; i++) {
-      const start = _hpClose(sourceBars[i]);
-      if (!(start > 0)) continue;
-      let minRet = 0;
-      let maxRet = 0;
-      let valid = true;
-      for (let j = 1; j <= horizon; j++) {
-        const closePoint = _hpClose(sourceBars[i + j]);
-        if (!(closePoint > 0)) {
-          valid = false;
-          break;
-        }
-        const ret = closePoint / start - 1;
-        if (ret < minRet) minRet = ret;
-        if (ret > maxRet) maxRet = ret;
-      }
-      if (!valid) continue;
-      const end = _hpClose(sourceBars[i + horizon]);
-      if (!(end > 0)) continue;
-      samples.push({
-        avgRet: end / start - 1,
-        mae: minRet,
-        mfe: maxRet,
-        maxDD: minRet,
-      });
-    }
-    if (samples.length < 20) return null;
-    const wins = samples.filter((sample) => sample.avgRet > 0).length;
-    const avg = (key) => samples.reduce((total, sample) => total + sample[key], 0) / samples.length;
-    return {
-      n: samples.length,
-      win_rate: wins / samples.length,
-      avg_return: avg('avgRet'),
-      mae: avg('mae'),
-      mfe: avg('mfe'),
-      max_drawdown: samples.reduce((worst, sample) => Math.min(worst, sample.maxDD), 0),
-    };
-  }
-
-  function _buildSyntheticHpDoc(tickerSymbol, sourceBars) {
-    if (!Array.isArray(sourceBars) || sourceBars.length < 25) return null;
-    const horizons = [['h5d', 5], ['h20d', 20], ['h60d', 60]];
-    const baseline = {};
-    for (const [label, horizon] of horizons) {
-      const metric = _buildSyntheticHpMetric(sourceBars, horizon);
-      if (metric) baseline[label] = metric;
-    }
-    if (!Object.keys(baseline).length) return null;
-    return {
-      ticker: tickerSymbol,
-      computed_at: new Date().toISOString(),
-      latest_date: sourceBars[sourceBars.length - 1]?.date || null,
-      synthetic: true,
-      events: {
-        event_price_history_baseline: baseline,
-      },
-    };
-  }
 
   window._switchHpHz = function(btn) {
     window._hpHz = btn.dataset.hz;
@@ -1622,7 +1367,7 @@
       <div style="flex:1;text-align:center"><div style="font-size:.55rem;color:var(--text-muted);text-transform:uppercase">Bias</div><div style="font-size:.85rem;font-weight:800;color:${biasColor}">${bias}</div></div>
       <div style="flex:1;text-align:center"><div style="font-size:.55rem;color:var(--text-muted);text-transform:uppercase">Events</div><div style="font-size:.85rem;font-weight:700;color:var(--text)">${keys.length}</div></div>
       <div style="flex:1;text-align:center"><div style="font-size:.55rem;color:var(--text-muted);text-transform:uppercase">Suspect</div><div style="font-size:.85rem;font-weight:700;color:${suspectCount>0?'var(--yellow)':'var(--text-muted)'}">${suspectCount}</div></div>
-      <div style="flex:1;text-align:center"><div style="font-size:.55rem;color:var(--text-muted);text-transform:uppercase">Confidence</div><div title="${confidence==='HIGH'?'High confidence refers to the pooled historical dataset; individual event sample sizes may vary.':'Historical confidence is constrained by the current event sample.'}" style="font-size:.75rem;font-weight:700;color:${confColor}">${confidence}</div><div style="font-size:.48rem;color:var(--text-muted)">${confidence==='HIGH'?'Based on ':'Approximately '}${totalN.toLocaleString('en-US')} pooled historical observations</div></div>
+      <div style="flex:1;text-align:center"><div style="font-size:.55rem;color:var(--text-muted);text-transform:uppercase">Confidence</div><div style="font-size:.75rem;font-weight:700;color:${confColor}">${confidence}</div><div style="font-size:.48rem;color:var(--text-muted)">${totalN.toLocaleString()} obs</div></div>
     </div>`;
 
     // Build rows
@@ -1637,7 +1382,7 @@
       const sentiment=isBull?'POSITIVE':isBear?'NEGATIVE':'NEUTRAL';
       const _retColor = _isSuspect ? 'var(--text-muted)' : (parseFloat(retPct)>=0?'var(--green)':'var(--red)');
       const _retDisplay = _isSuspect ? `<span title="Implausible: |${retPct}%| exceeds plausible range for this horizon. Data may be corrupted.">\u26A0 ${retPct>0?'+':''}${retPct}%</span>` : `${retPct>0?'+':''}${retPct}%`;
-      return `<div style="display:grid;grid-template-columns:2.5fr 1fr 1fr 1fr 1fr 1fr;gap:.5rem;align-items:center;padding:.45rem .65rem;border-radius:8px;background:${bg};border:1px solid ${brd};margin-bottom:.3rem${_isSuspect?';opacity:0.7':''}"><div><div style="font-size:.72rem;font-weight:700;color:var(--text)">${humanLabel(k)}</div><div style="font-size:.58rem;color:var(--text-muted);margin-top:1px">${n.toLocaleString('en-US')} observations \u00B7 ${hLabel}</div></div><div style="text-align:center"><div style="font-size:.58rem;color:var(--text-muted)">Sentiment</div><div style="font-size:.7rem;font-weight:800;color:${clr}">${icon} ${sentiment}</div></div><div style="text-align:center"><div style="font-size:.58rem;color:var(--text-muted)">Win-Rate</div><div style="font-size:.85rem;font-weight:800;color:${clr}">${wrPct}%</div></div><div style="text-align:center"><div style="font-size:.58rem;color:var(--text-muted)">Avg Return</div><div style="font-size:.78rem;font-weight:700;color:${_retColor}">${_retDisplay}</div></div><div style="text-align:center"><div style="font-size:.58rem;color:var(--text-muted)">MAE / MFE</div><div style="font-size:.65rem;font-weight:600"><span style="color:var(--red)">${maePct}%</span> / <span style="color:var(--green)">+${mfePct}%</span></div></div><div style="text-align:center"><div style="font-size:.58rem;color:var(--text-muted)">Max DD</div><div style="font-size:.65rem;font-weight:600;color:var(--red)">${ddPct}%</div></div></div>`;
+      return `<div style="display:grid;grid-template-columns:2.5fr 1fr 1fr 1fr 1fr 1fr;gap:.5rem;align-items:center;padding:.45rem .65rem;border-radius:8px;background:${bg};border:1px solid ${brd};margin-bottom:.3rem${_isSuspect?';opacity:0.7':''}"><div><div style="font-size:.72rem;font-weight:700;color:var(--text)">${humanLabel(k)}</div><div style="font-size:.58rem;color:var(--text-muted);margin-top:1px">${n.toLocaleString()} observations \u00B7 ${hLabel}</div></div><div style="text-align:center"><div style="font-size:.58rem;color:var(--text-muted)">Sentiment</div><div style="font-size:.7rem;font-weight:800;color:${clr}">${icon} ${sentiment}</div></div><div style="text-align:center"><div style="font-size:.58rem;color:var(--text-muted)">Win-Rate</div><div style="font-size:.85rem;font-weight:800;color:${clr}">${wrPct}%</div></div><div style="text-align:center"><div style="font-size:.58rem;color:var(--text-muted)">Avg Return</div><div style="font-size:.78rem;font-weight:700;color:${_retColor}">${_retDisplay}</div></div><div style="text-align:center"><div style="font-size:.58rem;color:var(--text-muted)">MAE / MFE</div><div style="font-size:.65rem;font-weight:600"><span style="color:var(--red)">${maePct}%</span> / <span style="color:var(--green)">+${mfePct}%</span></div></div><div style="text-align:center"><div style="font-size:.58rem;color:var(--text-muted)">Max DD</div><div style="font-size:.65rem;font-weight:600;color:var(--red)">${ddPct}%</div></div></div>`;
     }).join('');
 
     const header = `<div style="display:grid;grid-template-columns:2.5fr 1fr 1fr 1fr 1fr 1fr;gap:.5rem;padding:0 .65rem .3rem;margin-bottom:.15rem"><div style="font-size:.58rem;color:var(--text-muted);text-transform:uppercase;font-weight:700">Event / State</div><div style="font-size:.58rem;color:var(--text-muted);text-transform:uppercase;font-weight:700;text-align:center">Rating</div><div style="font-size:.58rem;color:var(--text-muted);text-transform:uppercase;font-weight:700;text-align:center">Win-Rate</div><div style="font-size:.58rem;color:var(--text-muted);text-transform:uppercase;font-weight:700;text-align:center">Avg Return</div><div style="font-size:.58rem;color:var(--text-muted);text-transform:uppercase;font-weight:700;text-align:center">MAE / MFE</div><div style="font-size:.58rem;color:var(--text-muted);text-transform:uppercase;font-weight:700;text-align:center">Max DD</div></div>`;
@@ -1677,24 +1422,11 @@
       fetch('/data/hist-probs/' + encodeURIComponent(tkr.toUpperCase()) + '.json?_=' + ts).then(r => r.ok ? r.json() : null).catch(() => null),
       fetch('/data/hist-probs/regime-daily.json?_=' + ts).then(r => r.ok ? r.json() : null).catch(() => null)
     ]);
-    const effectiveHpDoc = hpDoc || _buildSyntheticHpDoc(tkr, bars);
     const hpAsof = document.getElementById('hp-asof');
-    if (hpAsof && effectiveHpDoc) {
-      const hpDate = effectiveHpDoc.computed_at ? effectiveHpDoc.computed_at.slice(0,10) : effectiveHpDoc.latest_date || '\u2014';
-      const hpSource = effectiveHpDoc.synthetic ? 'Source: synthetic baseline' : 'Source: public historical data';
-      const regimeAgeDays = _ageDaysFrom(regDoc?.date);
-      const regimeSuffix = regDoc?.date ? (regimeAgeDays != null && regimeAgeDays > 2 ? ' (stale, ' + regimeAgeDays + 'd old)' : ' (current)') : '';
-      hpAsof.textContent = hpSource + ' · Event stats as-of: ' + hpDate + (regDoc?.date ? ' · Regime snapshot: ' + regDoc.date + regimeSuffix : '');
-      if (regDoc?.date && hpDate && regDoc.date !== hpDate) {
-        _integrityItems.push({ text:'Historical timeline mismatch → context dated', color:'var(--yellow)' });
-        const banner = document.getElementById('rv-integrity-banner');
-        if (banner) banner.innerHTML = window._renderIntegrityBanner();
-      }
-    }
+    if (hpAsof && hpDoc) hpAsof.textContent = 'as-of: ' + (hpDoc.computed_at ? hpDoc.computed_at.slice(0,10) : hpDoc.latest_date || '\u2014');
     const regBar = document.getElementById('hp-regime-bar');
     if (regBar && regDoc) {
-      const regimeAgeDays = _ageDaysFrom(regDoc.date);
-      const regimeDelayed = regimeAgeDays != null && regimeAgeDays > 2;
+      const freshness = classifyHistoricalFreshness(regDoc.date);
       const mColors={bull:'var(--green)',bear:'var(--red)'};
       const bColors={weak:'var(--red)',normal:'var(--yellow)',strong:'var(--green)'};
       const vMap={low_vol:'LOW',normal_vol:'NORMAL',high_vol:'HIGH'};
@@ -1702,10 +1434,13 @@
         {l:'Market',v:(regDoc.market_regime||'-').toUpperCase(),c:mColors[regDoc.market_regime]||'var(--text)'},
         {l:'Vol.',v:vMap[regDoc.volatility_regime]||(regDoc.volatility_regime||'-').toUpperCase(),c:'var(--text)'},
         {l:'Breadth',v:(regDoc.breadth_regime||'-').toUpperCase(),c:bColors[regDoc.breadth_regime]||'var(--text)'},
-        {l:'Breadth %',v:(regDoc.breadth_above_ma50_pct!=null?regDoc.breadth_above_ma50_pct+'%':'-'),c:'var(--text-dim)'},
-        {l:'Regime as-of',v:regDoc.date ? regDoc.date + ((_ageDaysFrom(regDoc.date) != null && _ageDaysFrom(regDoc.date) > 2) ? ' · stale' : '') : '-',c:'var(--text-muted)'}
+        {l:'Breadth %',v:(regDoc.breadth_above_ma50_pct!=null?regDoc.breadth_above_ma50_pct+'%':'-'),c:'var(--text-dim)'}
       ];
-      regBar.innerHTML=pills.map(p=>`<div style="display:flex;flex-direction:column;align-items:center;padding:.3rem .65rem;border-radius:6px;background:${regimeDelayed?'rgba(251,191,36,0.05)':'rgba(255,255,255,0.02)'};border:1px solid ${regimeDelayed?'rgba(251,191,36,0.2)':'var(--border)'};${regimeDelayed?'opacity:0.8;':''}"><span style="font-size:.55rem;color:var(--text-muted);text-transform:uppercase;font-weight:700">${p.l}</span><span style="font-size:.72rem;font-weight:800;color:${p.c};margin-top:1px">${p.v}</span></div>`).join('') + (regimeDelayed ? `<div style="width:100%;font-size:.58rem;color:var(--yellow);margin-top:.1rem;line-height:1.35">Regime overlay is delayed relative to the event statistics.</div>` : '');
+      regBar.innerHTML=`<div style="display:flex;align-items:center;gap:.4rem;width:100%;margin-bottom:.15rem">
+        <span style="font-size:.55rem;font-weight:800;padding:2px 6px;border-radius:999px;background:rgba(251,191,36,0.08);border:1px solid rgba(251,191,36,0.2);color:${freshness.status === 'fresh' ? 'var(--green)' : 'var(--yellow)'}">${freshness.badge}</span>
+        <span style="font-size:.58rem;color:var(--text-muted)">Age: ${freshness.ageBusinessDays == null ? '—' : freshness.ageBusinessDays + ' business day' + (freshness.ageBusinessDays === 1 ? '' : 's')}</span>
+        <span style="font-size:.58rem;color:var(--text-muted)">As-of: ${regDoc.date||'-'}</span>
+      </div>` + pills.map(p=>`<div style="display:flex;flex-direction:column;align-items:center;padding:.3rem .65rem;border-radius:6px;background:rgba(255,255,255,0.02);border:1px solid var(--border);opacity:${freshness.opacity}"><span style="font-size:.55rem;color:var(--text-muted);text-transform:uppercase;font-weight:700">${p.l}</span><span style="font-size:.72rem;font-weight:800;color:${freshness.muted && p.c !== 'var(--text-dim)' ? 'var(--text-dim)' : p.c};margin-top:1px">${p.v}</span></div>`).join('');
     }
     const climateBar = document.getElementById('sc-climate-bar');
     if (climateBar && regDoc) {
@@ -1719,7 +1454,7 @@
       ];
       climateBar.innerHTML=cp.map(p=>`<div style="display:flex;flex-direction:column;align-items:center;padding:.25rem .5rem;border-radius:6px;background:rgba(255,255,255,0.02);border:1px solid var(--border)"><span style="font-size:.5rem;color:var(--text-muted);text-transform:uppercase;font-weight:700">${p.l}</span><span style="font-size:.68rem;font-weight:800;color:${p.c};margin-top:1px">${p.v}</span></div>`).join('');
     } else if (climateBar) { climateBar.innerHTML = ''; }
-    window._hpData = effectiveHpDoc;
+    window._hpData = hpDoc;
     window._renderHpBody();
   })();
 
@@ -1728,27 +1463,14 @@
     try {
       const govEl = document.getElementById('rv-governance-info');
       if (!govEl) return;
-      const pills = [];
-      const mp = (l, v, c) => '<span style="font-size:.48rem;font-weight:600;padding:1px 5px;border-radius:3px;background:rgba(255,255,255,0.03);border:1px solid ' + c + ';color:' + c + '">' + l + ': ' + v + '</span>';
-
-      // PRIMARY: Per-symbol governance from decision payload
-      pills.push(mp('Mode', _rvDataSource === 'v2' ? 'V2' : 'V1 fallback', _rvDataSource === 'v2' ? 'var(--green)' : 'var(--yellow)'));
-      if (_decision.fallback_level && _decision.fallback_level !== 'exact') pills.push(mp('Fallback', _decision.fallback_level, 'var(--yellow)'));
-      if (_decision.regime_transition_active) pills.push(mp('Regime', 'TRANSITION', 'var(--red)'));
-      if (_decision.wait_subtype) pills.push(mp('Wait', _decision.wait_subtype.replace(/_/g, ' '), 'var(--yellow)'));
-      pills.push(mp('Flags', _decision.data_quality_flags?.length || 0, (_decision.data_quality_flags?.length || 0) > 0 ? 'var(--yellow)' : 'var(--text-muted)'));
-      if (_decision.confidence != null) {
-        const cPct = (_decision.confidence * 100).toFixed(0);
-        const cColor = _decision.confidence >= 0.7 ? 'var(--green)' : _decision.confidence >= 0.4 ? 'var(--yellow)' : 'var(--red)';
-        pills.push(mp('Conf', cPct + '%', cColor));
-      } else {
-        pills.push(mp('Conf', confidence, confidence === 'LOW' ? 'var(--yellow)' : 'var(--text-muted)'));
-      }
-      const govAsOf = _decision.asof || _decision.created_at || latestDataDate;
-      if (govAsOf) pills.push(mp('As-of', String(govAsOf).slice(0, 10), 'var(--text-muted)'));
-      if (_decisionDrivers.length) pills.push(mp('Drivers', _decisionDrivers.join(', '), 'var(--accent)'));
-
-      govEl.innerHTML = pills.join('');
+      let report = null;
+      try {
+        const res = await fetch('/data/reports/quantlab-v1-latest.json?_=' + Date.now());
+        if (res.ok) report = await res.json();
+      } catch { /* report fetch failed — per-symbol pills still render */ }
+      const pills = buildExecutiveGovernance({ decision: _decision, report });
+      const mp = (l, v, c) => '<span style="font-size:.48rem;font-weight:600;padding:1px 5px;border-radius:3px;background:rgba(255,255,255,0.03);border:1px solid ' + c + ';color:' + c + '">' + l + ': ' + _esc(v) + '</span>';
+      govEl.innerHTML = pills.map((pill) => mp(pill.label, pill.value, pill.color)).join('');
     } catch { /* graceful degradation */ }
   })();
 

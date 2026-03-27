@@ -4,105 +4,6 @@
  */
 
 const V2_TIMEOUT_MS = 8000;
-const CORE_METRICS = ['rsi14', 'atr14', 'volatility_20d', 'volatility_percentile', 'bb_upper', 'bb_lower', 'high_52w', 'low_52w', 'range_52w_pct'];
-
-function parseDay(value) {
-  if (typeof value !== 'string' || !value.trim()) return null;
-  const direct = value.trim();
-  if (/^\d{4}-\d{2}-\d{2}$/.test(direct)) return direct;
-  const parsed = Date.parse(direct);
-  return Number.isNaN(parsed) ? null : new Date(parsed).toISOString().slice(0, 10);
-}
-
-function dayToMillis(value) {
-  const normalized = parseDay(value);
-  if (!normalized) return null;
-  return Date.UTC(Number(normalized.slice(0, 4)), Number(normalized.slice(5, 7)) - 1, Number(normalized.slice(8, 10)));
-}
-
-function getIndicatorEntries(indicators) {
-  if (Array.isArray(indicators)) return indicators;
-  if (Array.isArray(indicators?.indicators)) return indicators.indicators;
-  return [];
-}
-
-export function statsFromIndicatorEntries(indicators, symbol, asOf) {
-  const entries = getIndicatorEntries(indicators);
-  if (!entries.length) return null;
-  const stats = {};
-  for (const item of entries) {
-    if (!item || typeof item.id !== 'string') continue;
-    stats[item.id] = item.value;
-  }
-  return { symbol, as_of: asOf || null, stats, coverage: null, warnings: [] };
-}
-
-function mergePreferPrimary(primary, secondary) {
-  if (!primary && !secondary) return null;
-  if (!primary) return secondary || null;
-  if (!secondary) return primary || null;
-  const merged = { ...secondary };
-  for (const [key, value] of Object.entries(primary)) {
-    if (value !== null && value !== undefined) merged[key] = value;
-  }
-  return merged;
-}
-
-export function chooseCanonicalPriceRecord(...records) {
-  const available = records.filter(Boolean);
-  if (!available.length) return null;
-  return available.sort((a, b) => {
-    const aTs = dayToMillis(a?.date) ?? -Infinity;
-    const bTs = dayToMillis(b?.date) ?? -Infinity;
-    return bTs - aTs;
-  }).reduce((selected, current) => (selected ? mergePreferPrimary(selected, current) : current), null);
-}
-
-export function chooseCanonicalStatsRecord(...records) {
-  const available = records.filter(Boolean);
-  if (!available.length) return null;
-  const score = (record) => {
-    const stats = record?.stats || {};
-    const complete = CORE_METRICS.filter((key) => Number.isFinite(stats[key])).length;
-    const freshness = dayToMillis(record?.as_of) ?? -Infinity;
-    return { complete, freshness };
-  };
-  return available.sort((a, b) => {
-    const aScore = score(a);
-    const bScore = score(b);
-    if (bScore.complete !== aScore.complete) return bScore.complete - aScore.complete;
-    return bScore.freshness - aScore.freshness;
-  }).reduce((selected, current) => (selected ? mergePreferPrimary(selected, current) : current), null);
-}
-
-function isOlderThan(dateValue, maxAgeDays) {
-  const ts = dayToMillis(dateValue);
-  if (ts == null) return true;
-  return Date.now() - ts > maxAgeDays * 86400000;
-}
-
-export function deriveIntegrity(priceRecord, statsRecord, meta = {}, statuses = {}) {
-  const issues = [];
-  const missingMetrics = CORE_METRICS.filter((key) => !Number.isFinite(statsRecord?.stats?.[key]));
-  const summaryDate = priceRecord?.date || meta?.data_date || null;
-  const historicalDate = statuses?.historicalAsOf || meta?.data_date || null;
-  if (meta?.status === 'error') issues.push('summary_error');
-  if (meta?.status === 'pending' && !parseDay(summaryDate)) issues.push('summary_pending');
-  if (statuses?.historical === 'error') issues.push('historical_error');
-  if (statuses?.historical === 'pending' && !parseDay(historicalDate)) issues.push('historical_pending');
-  if (statuses?.governance && !['fresh', 'stale', null, undefined].includes(statuses.governance)) issues.push(`governance_${statuses.governance}`);
-  if (isOlderThan(summaryDate, 2)) issues.push('stale_price_data');
-  if (statuses?.historical === 'stale' && isOlderThan(historicalDate, 2)) issues.push('historical_stale');
-  if (missingMetrics.length) issues.push('missing_core_metrics');
-  let status = 'ok';
-  if (issues.includes('stale_price_data') || issues.includes('summary_error') || issues.includes('summary_pending')) status = 'degraded';
-  else if (issues.length) status = 'partial';
-  return {
-    status,
-    issues,
-    missingMetrics,
-  };
-}
 
 async function fetchJsonWithTimeout(url) {
   const controller = new AbortController();
@@ -122,9 +23,13 @@ async function fetchJsonWithTimeout(url) {
  * @returns {Promise<{ok:boolean, data:object, meta:object, source:string, error?:string}>}
  */
 export async function fetchV2Summary(ticker) {
-  const payload = await fetchJsonWithTimeout(`/api/v2/stocks/${encodeURIComponent(ticker)}/summary`);
-  if (!payload.ok) throw new Error(payload.error?.message || 'V2 response not ok');
-  return { ok: true, data: payload.data, meta: payload.meta, source: 'v2' };
+  try {
+    const payload = await fetchJsonWithTimeout(`/api/v2/stocks/${encodeURIComponent(ticker)}/summary`);
+    if (!payload.ok) throw new Error(payload.error?.message || 'V2 response not ok');
+    return { ok: true, data: payload.data, meta: payload.meta, source: 'v2' };
+  } catch (err) {
+    throw err;
+  }
 }
 
 export async function fetchV2Historical(ticker) {
@@ -139,14 +44,63 @@ export async function fetchV2Governance(ticker) {
   return { ok: true, data: payload.data, meta: payload.meta, source: 'v2_governance' };
 }
 
-export async function fetchFundamentalsProfile(ticker) {
+export async function fetchFundamentals(ticker) {
   const payload = await fetchJsonWithTimeout(`/api/fundamentals?ticker=${encodeURIComponent(ticker)}`);
+  return { ok: true, data: payload?.data || null, meta: payload?.meta || payload?.metadata || null, source: 'fundamentals' };
+}
+
+export async function fetchV1Stock(ticker) {
+  const payload = await fetchJsonWithTimeout(`/api/stock?ticker=${encodeURIComponent(ticker)}`);
+  return { ok: true, data: payload || null, source: 'v1_stock' };
+}
+
+export async function fetchV2StockPage(ticker) {
+  const [summary, historical, governance, fundamentals] = await Promise.all([
+    fetchV2Summary(ticker),
+    fetchV2Historical(ticker),
+    fetchV2Governance(ticker),
+    fetchFundamentals(ticker).catch(() => ({ ok: false, data: null, meta: null, source: 'fundamentals' })),
+  ]);
+  const latestHistoricalDate = historical?.data?.bars?.length
+    ? historical.data.bars[historical.data.bars.length - 1]?.date
+    : null;
+  const summaryDate = summary?.data?.market_prices?.date || summary?.meta?.data_date || null;
+  const needsLegacyEnrichment = Boolean(
+    !summary?.data?.name ||
+    !governance?.data?.universe?.name ||
+    (latestHistoricalDate && summaryDate && latestHistoricalDate > summaryDate)
+  );
+  const legacy = needsLegacyEnrichment
+    ? await fetchV1Stock(ticker).catch(() => ({ ok: false, data: null, source: 'v1_stock' }))
+    : { ok: false, data: null, source: 'v1_stock' };
+
+  const fullContractOk = Boolean(
+    summary?.data?.ticker &&
+    Array.isArray(historical?.data?.bars) &&
+    historical.data.bars.length > 1 &&
+    governance?.data
+  );
+
+  if (!fullContractOk) {
+    throw new Error('V2 page contract incomplete');
+  }
+
   return {
-    ok: !payload.error,
-    data: payload.data || null,
-    meta: payload.meta || payload.metadata || null,
-    source: 'fundamentals',
-    error: payload.error || null,
+    ok: true,
+    data: {
+      summary: summary.data,
+      historical: historical.data,
+      governance: governance.data,
+      fundamentals: fundamentals?.data || null,
+      legacy: legacy?.data || null,
+    },
+    meta: {
+      summary: summary.meta || null,
+      historical: historical.meta || null,
+      governance: governance.meta || null,
+      fundamentals: fundamentals?.meta || null,
+      legacy: legacy?.data?.metadata || null,
+    },
   };
 }
 
@@ -156,57 +110,44 @@ export async function fetchFundamentalsProfile(ticker) {
  * @param {object} v2Meta - The meta field from V2 summary response
  * @returns {object} - Compatible with stock.html destructuring
  */
-export function transformV2ToStockShape(v2Data, v2Meta, extras = {}) {
-  const historicalData = extras.historicalData || null;
-  const governanceData = extras.governanceData || null;
-  const fundamentalsData = extras.fundamentalsData || null;
-  const fundamentalsMeta = extras.fundamentalsMeta || null;
-  const v1FallbackPayload = extras.v1FallbackPayload || null;
-  const bars = historicalData?.bars || v1FallbackPayload?.data?.bars || (v2Data.latest_bar ? [v2Data.latest_bar] : []);
-  const liveBarPrice = v2Data.latest_bar ? {
-    symbol: v2Data.ticker,
-    date: v2Data.latest_bar.date || null,
-    open: v2Data.latest_bar.open ?? null,
-    high: v2Data.latest_bar.high ?? null,
-    low: v2Data.latest_bar.low ?? null,
-    close: v2Data.latest_bar.close ?? null,
-    adj_close: v2Data.latest_bar.adjClose ?? v2Data.latest_bar.close ?? null,
-    volume: v2Data.latest_bar.volume ?? null,
-    currency: 'USD',
-    source_provider: v2Meta?.provider || null,
+function isMeaningfulFundamentals(doc) {
+  if (!doc || typeof doc !== 'object') return false;
+  return Object.entries(doc).some(([key, value]) => !['ticker', 'updatedAt'].includes(key) && value != null);
+}
+
+function pickLatestMarketPrices(summaryPrices, latestBar, legacyPayload) {
+  const legacyPrices = legacyPayload?.data?.market_prices || null;
+  const barPrices = latestBar ? {
+    ticker: legacyPayload?.data?.ticker || null,
+    date: latestBar.date || null,
+    close: latestBar.close ?? null,
+    open: latestBar.open ?? null,
+    high: latestBar.high ?? null,
+    low: latestBar.low ?? null,
+    volume: latestBar.volume ?? null,
   } : null;
-  const historicalStats = statsFromIndicatorEntries(historicalData?.indicators, v2Data.ticker, extras.historicalMeta?.data_date || v2Meta?.data_date || null);
-  const marketPrices = chooseCanonicalPriceRecord(v2Data.market_prices, liveBarPrice, v1FallbackPayload?.data?.market_prices) || {};
-  const marketStats = chooseCanonicalStatsRecord(v2Data.market_stats, historicalStats, v1FallbackPayload?.data?.market_stats) || {};
-  const change = v2Data.change || v1FallbackPayload?.data?.change || {};
-  const analysis = {
-    snapshotTime: v2Meta?.generated_at || new Date().toISOString(),
-    latestDataDate: parseDay(v2Meta?.data_date) || parseDay(marketPrices.date) || parseDay(bars[bars.length - 1]?.date) || null,
-    priceAsOf: parseDay(marketPrices.date) || parseDay(bars[bars.length - 1]?.date) || null,
-    indicatorAsOf: parseDay(marketStats.as_of) || parseDay(extras.historicalMeta?.data_date) || parseDay(v2Meta?.data_date) || null,
-    moduleProvenance: {
-      summary: { asOf: parseDay(v2Meta?.data_date) || null, status: v2Meta?.status || null },
-      historical: { asOf: parseDay(extras.historicalMeta?.data_date) || null, status: extras.historicalMeta?.status || null },
-      governance: { asOf: parseDay(extras.governanceMeta?.data_date) || null, status: extras.governanceMeta?.status || null },
-      price: { asOf: parseDay(marketPrices.date) || null, status: isOlderThan(marketPrices.date, 2) ? 'stale' : 'current' },
-      indicators: { asOf: parseDay(marketStats.as_of) || null, status: deriveIntegrity(marketPrices, marketStats, v2Meta, { historical: extras.historicalMeta?.status || null }).missingMetrics.length ? 'partial' : 'ok' },
-    },
-  };
-  analysis.integrity = deriveIntegrity(marketPrices, marketStats, v2Meta, {
-    historical: extras.historicalMeta?.status || null,
-    historicalAsOf: extras.historicalMeta?.data_date || null,
-    governance: extras.governanceMeta?.status || null,
-  });
+  const candidates = [summaryPrices, legacyPrices, barPrices].filter(Boolean);
+  candidates.sort((a, b) => String(b?.date || '').localeCompare(String(a?.date || '')));
+  return candidates[0] || summaryPrices || {};
+}
+
+export function transformV2ToStockShape(v2Data, v2Meta, historicalData = null, governanceData = null, fundamentalsData = null, metaBundle = null, legacyPayload = null) {
+  const bars = historicalData?.bars || (v2Data.latest_bar ? [v2Data.latest_bar] : []);
+  const marketStats = v2Data.market_stats || {};
+  const latestBar = historicalData?.bars?.length ? historicalData.bars[historicalData.bars.length - 1] : v2Data.latest_bar;
+  const marketPrices = pickLatestMarketPrices(v2Data.market_prices || {}, latestBar, legacyPayload);
+  const mergedFundamentals = isMeaningfulFundamentals(fundamentalsData) ? fundamentalsData : (legacyPayload?.data?.fundamentals || fundamentalsData || null);
+  const pageAsOf = marketPrices?.date || latestBar?.date || v2Meta?.data_date || null;
   return {
     data: {
       ticker: v2Data.ticker,
+      name: v2Data.name || governanceData?.universe?.name || legacyPayload?.data?.name || mergedFundamentals?.companyName || null,
       bars,
       market_prices: marketPrices,
       market_stats: marketStats,
-      change,
+      change: v2Data.change || {},
       breakout_v2: historicalData?.breakout_v2 || null,
-      governance: governanceData || null,
-      fundamentals: fundamentalsData || v2Data.fundamentals || v1FallbackPayload?.data?.fundamentals || null,
+      fundamentals: mergedFundamentals,
     },
     metadata: {
       request: {
@@ -214,21 +155,23 @@ export function transformV2ToStockShape(v2Data, v2Meta, extras = {}) {
         normalized_ticker: v2Data.ticker,
         effective_ticker: v2Data.ticker,
       },
-      as_of: v2Meta?.data_date || null,
+      as_of: pageAsOf,
       source_chain: { primary: v2Meta?.provider, selected: v2Meta?.provider },
-      analysis,
     },
     meta: {
-      ...(v2Meta || {}),
-      historical_status: extras.historicalMeta?.status || null,
-      governance_status: extras.governanceMeta?.status || null,
-      fundamentals_status: fundamentalsMeta?.status || null,
+      summary: v2Meta || null,
+      historical: metaBundle?.historical || null,
+      governance: metaBundle?.governance || null,
+      fundamentals: metaBundle?.fundamentals || null,
+      legacy: metaBundle?.legacy || null,
     },
     states: v2Data.states || {},
     decision: v2Data.decision || {},
     explanation: v2Data.explanation || {},
     v6: v2Data.decision?.v6 || null,
     evaluation_v4: governanceData?.evaluation_v4 || null,
+    universe: governanceData?.universe || null,
+    market_score: governanceData?.market_score || null,
     error: null,
     _rv_source: 'v2',
   };
@@ -244,53 +187,17 @@ export async function fetchWithFallback(ticker) {
   window._rvFallbackLog = window._rvFallbackLog || [];
 
   try {
-    const v2 = await fetchV2Summary(ticker);
-    const [historicalResult, governanceResult, fundamentalsResult] = await Promise.allSettled([
-      fetchV2Historical(ticker),
-      fetchV2Governance(ticker),
-      fetchFundamentalsProfile(ticker),
-    ]);
-    let historicalData = null;
-    let historicalMeta = null;
-    let governanceData = null;
-    let governanceMeta = null;
-    let fundamentalsData = null;
-    let fundamentalsMeta = null;
-    if (historicalResult.status === 'fulfilled') {
-      historicalData = historicalResult.value.data;
-      historicalMeta = historicalResult.value.meta;
-    }
-    if (governanceResult.status === 'fulfilled') {
-      governanceData = governanceResult.value.data;
-      governanceMeta = governanceResult.value.meta;
-    }
-    if (fundamentalsResult.status === 'fulfilled' && fundamentalsResult.value?.ok) {
-      fundamentalsData = fundamentalsResult.value.data;
-      fundamentalsMeta = fundamentalsResult.value.meta;
-    }
-
-    let v1FallbackPayload = null;
-    if (!historicalData?.bars?.length) {
-      try {
-        const res = await fetch('/api/stock?ticker=' + encodeURIComponent(ticker));
-        if (res.ok) {
-          v1FallbackPayload = await res.json();
-        }
-      } catch {
-        v1FallbackPayload = null;
-      }
-    }
-
+    const v2 = await fetchV2StockPage(ticker);
     return {
-      payload: transformV2ToStockShape(v2.data, v2.meta, {
-        historicalData,
-        historicalMeta,
-        governanceData,
-        governanceMeta,
-        fundamentalsData,
-        fundamentalsMeta,
-        v1FallbackPayload,
-      }),
+      payload: transformV2ToStockShape(
+        v2.data.summary,
+        v2.meta.summary,
+        v2.data.historical,
+        v2.data.governance,
+        v2.data.fundamentals,
+        v2.meta,
+        v2.data.legacy
+      ),
       source: 'v2',
     };
   } catch (err) {
