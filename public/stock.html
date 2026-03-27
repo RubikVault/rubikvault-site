@@ -416,7 +416,47 @@
   };
 
   // Market Context — fetch SPY & QQQ for real vs-benchmark comparison
-  const _mktCtx = { spy: null, qqq: null, corr: [], loaded: false, loading: false, degraded: false, errorReason: '' };
+  const _mktCtx = { spy: null, qqq: null, corr: [], loaded: false, loading: false, degraded: false, cacheUsed: false, cacheAgeLabel: '', errorReason: '' };
+  const _mktCtxCacheKey = `rv-market-context:${tkr}`;
+  const _mktCtxCacheTtlMs = 24 * 60 * 60 * 1000;
+
+  function _formatCacheAge(ms) {
+    if (!(ms > 0)) return '';
+    if (ms < 3600000) return `${Math.max(1, Math.round(ms / 60000))}m old`;
+    if (ms < 86400000) return `${Math.max(1, Math.round(ms / 3600000))}h old`;
+    return `${Math.max(1, Math.round(ms / 86400000))}d old`;
+  }
+
+  function _readMarketContextCache() {
+    try {
+      const raw = window.localStorage.getItem(_mktCtxCacheKey);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      if (!parsed || typeof parsed !== 'object') return null;
+      if (!parsed.cachedAt || !parsed.spy || !parsed.qqq || !Array.isArray(parsed.corr)) return null;
+      return parsed;
+    } catch {
+      return null;
+    }
+  }
+
+  function _writeMarketContextCache(payload) {
+    try {
+      window.localStorage.setItem(_mktCtxCacheKey, JSON.stringify(payload));
+    } catch {}
+  }
+
+  function _applyMarketContextState(payload, { degraded = false, cacheUsed = false, errorReason = '' } = {}) {
+    _mktCtx.spy = payload?.spy || {};
+    _mktCtx.qqq = payload?.qqq || {};
+    _mktCtx.corr = Array.isArray(payload?.corr) ? payload.corr : [];
+    _mktCtx.loaded = Boolean(payload?.spy && payload?.qqq);
+    _mktCtx.loading = false;
+    _mktCtx.degraded = degraded;
+    _mktCtx.cacheUsed = cacheUsed;
+    _mktCtx.errorReason = errorReason;
+    _mktCtx.cacheAgeLabel = cacheUsed && payload?.cachedAt ? _formatCacheAge(Date.now() - new Date(payload.cachedAt).getTime()) : '';
+  }
 
   // Compute returns from bars for a given lookback
   function barsReturn(b, n) {
@@ -460,13 +500,14 @@
 
       // Returns per timeframe: compute ticker return minus benchmark return
       const tfMap = { '1D': 1, '1W': 5, '1M': 20, '1Y': 252 };
-      _mktCtx.spy = {}; _mktCtx.qqq = {};
+      const nextSpy = {};
+      const nextQqq = {};
       for (const [tf, n] of Object.entries(tfMap)) {
         const tRet = n === 1 ? (change.pct || 0) : barsReturn(bars, n);
         const sRet = n === 1 ? (spyChg.pct || 0) : barsReturn(spyBars, n);
         const qRet = n === 1 ? (qqqChg.pct || 0) : barsReturn(qqqBars, n);
-        _mktCtx.spy[tf] = tRet != null && sRet != null ? tRet - sRet : null;
-        _mktCtx.qqq[tf] = tRet != null && qRet != null ? tRet - qRet : null;
+        nextSpy[tf] = tRet != null && sRet != null ? tRet - sRet : null;
+        nextQqq[tf] = tRet != null && qRet != null ? tRet - qRet : null;
       }
 
       // Correlations: compute from daily returns
@@ -487,15 +528,18 @@
         if (c0 > 0 && c1 > 0) qqqRets.push((c1-c0)/c0);
       }
 
-      _mktCtx.corr = [
+      const nextCorr = [
         { t: 'SPY', c: pearson(tickerRets, spyRets) },
         { t: 'QQQ', c: pearson(tickerRets, qqqRets) }
       ].sort((a,b) => Math.abs(b.c) - Math.abs(a.c));
-
-      _mktCtx.loaded = true;
-      _mktCtx.loading = false;
-      _mktCtx.degraded = false;
-      _mktCtx.errorReason = '';
+      const cachePayload = {
+        spy: nextSpy,
+        qqq: nextQqq,
+        corr: nextCorr,
+        cachedAt: new Date().toISOString(),
+      };
+      _writeMarketContextCache(cachePayload);
+      _applyMarketContextState(cachePayload, { degraded: false, cacheUsed: false, errorReason: '' });
       // Re-render
       const el = document.getElementById('dyn-market-context');
       if (el) el.innerHTML = window._renderMarketContext('1D');
@@ -511,10 +555,22 @@
         if (rat) _ratEl.textContent = rat;
       }
     } catch(e) {
-      _mktCtx.loaded = false;
-      _mktCtx.loading = false;
-      _mktCtx.degraded = true;
-      _mktCtx.errorReason = e?.name === 'AbortError' ? 'Benchmark data timed out.' : 'Benchmark data unavailable.';
+      const cached = _readMarketContextCache();
+      const cacheAgeMs = cached?.cachedAt ? Date.now() - new Date(cached.cachedAt).getTime() : Number.POSITIVE_INFINITY;
+      if (cached && cacheAgeMs <= _mktCtxCacheTtlMs) {
+        _applyMarketContextState(cached, {
+          degraded: true,
+          cacheUsed: true,
+          errorReason: `Using cached benchmark data${_formatCacheAge(cacheAgeMs) ? ` · ${_formatCacheAge(cacheAgeMs)}` : ''}.`,
+        });
+      } else {
+        _mktCtx.loaded = false;
+        _mktCtx.loading = false;
+        _mktCtx.degraded = true;
+        _mktCtx.cacheUsed = false;
+        _mktCtx.cacheAgeLabel = '';
+        _mktCtx.errorReason = 'Benchmark comparison temporarily unavailable.';
+      }
       const el = document.getElementById('dyn-market-context');
       if (el) el.innerHTML = window._renderMarketContext('1D');
     }
@@ -525,13 +581,13 @@
   window._renderMarketContext = function(tf) {
     const getBtn = (t) => `<button class="tf-btn ${tf===t?'active':''}" style="font-size:0.55rem; padding:1px 4px;" onclick="window._switchContext('${t}')">${t}</button>`;
 
-    if (_mktCtx.degraded) {
+    if (_mktCtx.degraded && !_mktCtx.loaded) {
       return `
         <div style="padding:.45rem .6rem; border-radius:8px; background:rgba(255,255,255,0.01); border:1px solid rgba(255,255,255,0.03);">
           <div style="display:flex; justify-content:space-between; align-items:center; gap:.5rem;">
             <div>
               <div style="font-size: .62rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700;">Market Context</div>
-              <div style="font-size:0.62rem;color:var(--text-dim);margin-top:2px">${_esc(_mktCtx.errorReason || 'Benchmark data unavailable.')}</div>
+              <div style="font-size:0.62rem;color:var(--text-dim);margin-top:2px">${_esc(_mktCtx.errorReason || 'Benchmark comparison temporarily unavailable.')}</div>
             </div>
             <div style="font-size:.56rem;color:var(--yellow);font-weight:700;text-transform:uppercase">Degraded</div>
           </div>
@@ -566,7 +622,10 @@
     return `
       <div style="padding:.6rem; border-radius:8px; background:rgba(255,255,255,0.01); border:1px solid rgba(255,255,255,0.03);">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: .4rem;">
-          <div style="font-size: .62rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700;">Market Context</div>
+          <div style="display:flex;flex-direction:column;gap:2px;">
+            <div style="font-size: .62rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700;">Market Context</div>
+            ${_mktCtx.cacheUsed ? `<div style="font-size:.56rem;color:var(--yellow)">${_esc(_mktCtx.errorReason || `Using cached benchmark data${_mktCtx.cacheAgeLabel ? ` · ${_mktCtx.cacheAgeLabel}` : ''}.`)}</div>` : ''}
+          </div>
           <div style="display:flex; gap:2px;">${['1D', '1W', '1M', '1Y'].map(getBtn).join('')}</div>
         </div>
         <div style="display:grid; grid-template-columns: 1fr 1fr; gap:0.5rem;">
@@ -867,7 +926,10 @@
     universe: payload.universe || payload.evaluation_v4?.universe || null,
   });
   const catalystMode = catalystView.renderMode || catalystView.variant || 'inline';
+  const isEtf = catalystView.assetClass === 'ETF';
   const explanationHeading = effectiveVerdict === 'BUY' || effectiveVerdict === 'SELL' ? 'Why This Trade?' : 'Why No Trade?';
+  const checklistApplicable = tradePlan.status === 'ready' && (effectiveVerdict === 'BUY' || effectiveVerdict === 'SELL');
+  const showDecisionTelemetry = (_v6.bucket || _v6.hold_state) && (effectiveVerdict === 'BUY' || effectiveVerdict === 'SELL');
 
   // ── Construct Layout ──
   const _integrityBanner = _integrityItems.length === 0
@@ -895,7 +957,7 @@
             ${confidence==='LOW'?`<div style="font-size:.5rem;color:var(--yellow);margin-top:2px;font-weight:600">\u26A0 Low confidence — limited signal strength</div>`:''}
             ${shouldRenderSetupPhase ? `<div style="font-size:0.55rem; color:var(--text-dim); margin-top:2px; font-weight:700;">${setupPhaseSubtext}</div>` : ''}
             <div style="font-size:.65rem;color:var(--text-dim);font-weight:700;margin-top:2px;">${effectiveText}</div>
-            ${_v6.bucket ? `<div style="display:flex;gap:4px;margin-top:4px;flex-wrap:wrap">${(()=>{const bC={HIGH_CONVICTION:'var(--green)',MODERATE:'var(--accent)',WEAK:'var(--yellow)',NO_TRADE:'var(--red)'};const hC={hold_strong:'var(--green)',hold_normal:'var(--text-dim)',hold_fading:'var(--yellow)',reduce:'var(--red)',exit_signal:'var(--red)'};const pill=(l,c)=>'<span style="font-size:.5rem;font-weight:700;padding:1px 6px;border-radius:3px;background:rgba(255,255,255,0.04);border:1px solid '+c+';color:'+c+'">'+l+'</span>';return pill(_v6.bucket.replace(/_/g,' '),bC[_v6.bucket]||'var(--text-dim)')+(_v6.hold_state?pill(_v6.hold_state.replace(/_/g,' '),hC[_v6.hold_state]||'var(--text-dim)'):'')})()}</div>` : ''}
+            ${showDecisionTelemetry ? `<div style="display:flex;gap:4px;margin-top:4px;flex-wrap:wrap">${(()=>{const bC={HIGH_CONVICTION:'var(--green)',MODERATE:'var(--accent)',WEAK:'var(--yellow)',NO_TRADE:'var(--red)'};const hC={hold_strong:'var(--green)',hold_normal:'var(--text-dim)',hold_fading:'var(--yellow)',reduce:'var(--red)',exit_signal:'var(--red)'};const pill=(l,c)=>'<span style="font-size:.5rem;font-weight:700;padding:1px 6px;border-radius:3px;background:rgba(255,255,255,0.04);border:1px solid '+c+';color:'+c+'">'+l+'</span>';return (_v6.bucket ? pill(_v6.bucket.replace(/_/g,' '),bC[_v6.bucket]||'var(--text-dim)') : '')+(_v6.hold_state?pill(_v6.hold_state.replace(/_/g,' '),hC[_v6.hold_state]||'var(--text-dim)'):'')})()}</div>` : ''}
             <div id="rv-decision-rationale" style="font-size:.55rem;color:var(--text-muted);margin-top:3px;font-style:italic"></div>
             <div id="rv-governance-info" style="display:flex;gap:4px;margin-top:3px;flex-wrap:wrap"></div>
           </div>
@@ -973,6 +1035,7 @@
               </div>
             </td>
             <td style="width: 45%; vertical-align: top; background:rgba(255,255,255,0.02); border:1px solid var(--border); border-radius:8px; padding:.6rem;">
+               ${checklistApplicable ? `
                <div style="display:flex; flex-direction:column; gap:.4rem; margin-bottom:.6rem;">
                  <span style="font-size:.65rem;font-weight:700;color:var(--text-dim);text-transform:uppercase">Pre-Trade Checklist</span>
                  <div style="display:flex; gap:0; border-radius:4px; overflow:hidden; border:1px solid var(--border); align-self: flex-start;" id="cl-btns">
@@ -984,6 +1047,10 @@
                <div id="cl-short">${renderChecklist(checksShort)}</div>
                <div id="cl-mid" style="display:none">${renderChecklist(checksMid)}</div>
                <div id="cl-long" style="display:none">${renderChecklist(checksLong)}</div>
+               ` : `
+               <div style="font-size:.65rem;font-weight:700;color:var(--text-dim);text-transform:uppercase;margin-bottom:.45rem">Pre-Trade Checklist</div>
+               <div style="display:flex;align-items:center;justify-content:center;min-height:118px;padding:.75rem;border-radius:8px;background:rgba(255,255,255,0.01);border:1px dashed rgba(255,255,255,0.08);font-size:.64rem;line-height:1.45;color:var(--text-muted);text-align:center">No active trade setup — pre-trade checklist not applicable.</div>
+               `}
             </td>
           </tr>
         </table>
@@ -1033,6 +1100,8 @@
             <div style="font-size:1.2rem;font-weight:800;color:${riskColor}">${riskLabel}${riskView.overrideApplied ? ' (override)' : ''}</div>
             <div style="font-size:.58rem;color:var(--text-dim);margin-top:2px;font-style:italic;">Regime: <span style="color:${riskColor};">${riskView.regimeLabel}</span></div>
             <div style="font-size:.55rem;color:var(--text-dim);line-height:1.4;margin-top:3px">${_esc(riskView.displaySentence)}</div>
+            <div style="font-size:.55rem;color:var(--text-dim);line-height:1.4;margin-top:3px">${_esc(riskView.rawSignalText)}</div>
+            <div style="font-size:.55rem;color:${riskView.overrideApplied ? 'var(--yellow)' : 'var(--text-dim)'};line-height:1.4;margin-top:2px">${_esc(riskView.overrideDisplayReason)}</div>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:.2rem;margin-top:.3rem">
               <div title="Average True Range (14d) in dollar terms" style="font-size:.65rem;cursor:help"><span style="color:var(--text-muted)">ATR:</span> <span style="font-weight:600">${atr!=null?'$'+atr.toFixed(2):'—'}</span></div>
               <div title="ATR as percentage of price" style="font-size:.65rem;cursor:help"><span style="color:var(--text-muted)">ATR%:</span> <span style="font-weight:600">${atrPct!=null?atrPct.toFixed(2)+'%':'—'}</span></div>
@@ -1107,7 +1176,7 @@
 
         <div style="border-top:1px solid rgba(255,255,255,0.04);margin-top:.75rem;padding-top:.5rem"><div style="font-size:.5rem;color:var(--text-muted);text-transform:uppercase;font-weight:700;letter-spacing:1px;margin-bottom:.3rem;opacity:.5">MODEL EVIDENCE</div></div>
         <!-- 4-Model Consensus -->
-        ${(()=>{const ev4=payload.evaluation_v4;const mg=_guard.panelGates.modelConsensus;if(!mg.show)return '';const ms=ev4?.input_states||{};const models=[{k:'quantlab',l:'QuantLab'},{k:'elliott',l:'Elliott'},{k:'forecast',l:'Forecast'},{k:'scientific',l:'Scientific'}];const dirMap=d=>d==='bullish'||d==='BUY'?{c:'var(--green)',l:'BUY'}:d==='bearish'||d==='SELL'||d==='AVOID'?{c:'var(--red)',l:String(d).toUpperCase()}:{c:'var(--yellow)',l:d?String(d).toUpperCase():'N/A'};return `
+        ${(()=>{const ev4=payload.evaluation_v4;const mg=_guard.panelGates.modelConsensus;if(!ev4||!mg.show){if(isEtf)return '';return `<div style="margin-top:0.6rem; padding:.5rem; border-radius:8px; background:rgba(255,255,255,0.01); border:1px dashed rgba(255,255,255,0.08); font-size:.62rem; color:var(--text-muted); line-height:1.45;">Additional model evidence modules currently unavailable for this analysis.</div>`;}const ms=ev4?.input_states||{};const models=[{k:'quantlab',l:'QuantLab'},{k:'elliott',l:'Elliott'},{k:'forecast',l:'Forecast'},{k:'scientific',l:'Scientific'}];const dirMap=d=>d==='bullish'||d==='BUY'?{c:'var(--green)',l:'BUY'}:d==='bearish'||d==='SELL'||d==='AVOID'?{c:'var(--red)',l:String(d).toUpperCase()}:{c:'var(--yellow)',l:d?String(d).toUpperCase():'N/A'};return `
         <div style="margin-top:0.6rem; padding:.5rem; border-radius:8px; background:rgba(255,255,255,0.01); border:1px solid rgba(255,255,255,0.03);">
             <div style="font-size:.62rem; color:var(--text-dim); text-transform:uppercase; font-weight:700; margin-bottom:.35rem;">4-Model Consensus${mg.degraded?' <span style="font-size:.5rem;color:var(--yellow)">⚠ degraded</span>':''}</div>
             <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:.25rem;">
@@ -1480,6 +1549,7 @@
     }
     const climateBar = document.getElementById('sc-climate-bar');
     if (climateBar && regDoc) {
+      const climateFreshness = classifyHistoricalFreshness(regDoc.date);
       const mC={bull:'var(--green)',bear:'var(--red)'};
       const bC={weak:'var(--red)',normal:'var(--yellow)',strong:'var(--green)'};
       const vM={low_vol:'LOW',normal_vol:'NORMAL',high_vol:'HIGH'};
@@ -1488,7 +1558,7 @@
         {l:'Volatility',v:vM[regDoc.volatility_regime]||(regDoc.volatility_regime||'-').toUpperCase(),c:'var(--text)'},
         {l:'Breadth',v:(regDoc.breadth_regime||'-').toUpperCase(),c:bC[regDoc.breadth_regime]||'var(--text)'}
       ];
-      climateBar.innerHTML=cp.map(p=>`<div style="display:flex;flex-direction:column;align-items:center;padding:.25rem .5rem;border-radius:6px;background:rgba(255,255,255,0.02);border:1px solid var(--border)"><span style="font-size:.5rem;color:var(--text-muted);text-transform:uppercase;font-weight:700">${p.l}</span><span style="font-size:.68rem;font-weight:800;color:${p.c};margin-top:1px">${p.v}</span></div>`).join('');
+      climateBar.innerHTML=(climateFreshness.status === 'fresh' ? '' : `<span style="font-size:.55rem;font-weight:800;padding:2px 6px;border-radius:999px;background:rgba(251,191,36,0.08);border:1px solid rgba(251,191,36,0.2);color:var(--yellow);align-self:center">${climateFreshness.badge}</span>`) + cp.map(p=>`<div style="display:flex;flex-direction:column;align-items:center;padding:.25rem .5rem;border-radius:6px;background:rgba(255,255,255,0.02);border:1px solid var(--border);opacity:${climateFreshness.opacity}"><span style="font-size:.5rem;color:var(--text-muted);text-transform:uppercase;font-weight:700">${p.l}</span><span style="font-size:.68rem;font-weight:800;color:${climateFreshness.muted && p.c !== 'var(--text-dim)' ? 'var(--text-dim)' : p.c};margin-top:1px">${p.v}</span></div>`).join('');
     } else if (climateBar) { climateBar.innerHTML = ''; }
     window._hpData = hpDoc;
     window._renderHpBody();

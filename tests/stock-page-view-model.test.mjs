@@ -20,7 +20,10 @@ describe('buildRiskPresentation', () => {
     assert.equal(risk.scoreLabel, 'Risk Quality');
     assert.equal(risk.finalState, 'Elevated');
     assert.equal(risk.overrideApplied, true);
-    assert.match(risk.scoreHelperText, /not the final risk state/i);
+    assert.equal(risk.scoreColor, 'var(--yellow)');
+    assert.match(risk.scoreHelperText, /better structural quality, not lower final risk/i);
+    assert.match(risk.rawSignalText, /100th percentile/i);
+    assert.match(risk.overrideDisplayReason, /override reason/i);
     assert.match(risk.displaySentence, /final risk is moderated to Elevated/i);
   });
 
@@ -69,6 +72,7 @@ describe('classifyHistoricalFreshness', () => {
     const freshness = classifyHistoricalFreshness('2026-03-01', new Date('2026-03-27T12:00:00Z'));
     assert.equal(freshness.status, 'stale');
     assert.equal(freshness.opacity <= 0.5, true);
+    assert.match(freshness.subtitle, /background context only/i);
     assert.match(freshness.warningText, /may not reflect current market conditions/i);
   });
 });
