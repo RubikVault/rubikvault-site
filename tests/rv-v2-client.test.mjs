@@ -104,7 +104,7 @@ describe('transformV2ToStockShape', () => {
       }
     );
 
-    assert.equal(payload.data.name, 'Legacy Name');
+    assert.equal(payload.data.name, 'Fundamentals Name');
   });
 });
 

@@ -76,7 +76,7 @@ export function classifyHistoricalFreshness(asOfValue, now = new Date()) {
       opacity: 0.72,
       badge: 'DELAYED',
       muted: true,
-      subtitle: 'Historical regime context is delayed by 2 business days.',
+      subtitle: 'Delayed regime overlay — background context only.',
       warningText: null,
     };
   }
@@ -87,7 +87,7 @@ export function classifyHistoricalFreshness(asOfValue, now = new Date()) {
       opacity: 0.5,
       badge: 'STALE',
       muted: true,
-      subtitle: `Historical regime context is stale by ${ageBusinessDays} business days.`,
+      subtitle: `Historical regime data is ${ageBusinessDays} business days old. Background context only.`,
       warningText: 'Historical regime overlay is delayed and may not reflect current market conditions.',
     };
   }
@@ -97,7 +97,7 @@ export function classifyHistoricalFreshness(asOfValue, now = new Date()) {
     opacity: 0.6,
     badge: 'STALE',
     muted: true,
-    subtitle: `Historical regime context is stale by ${ageBusinessDays} business days.`,
+    subtitle: `Historical regime data is ${ageBusinessDays} business days old. Background context only.`,
     warningText: null,
   };
 }
@@ -123,8 +123,9 @@ function riskSeverityColor(state) {
   }[state] || 'var(--text-dim)';
 }
 
-function qualityColor(score) {
+function qualityColor(score, finalState) {
   if (!Number.isFinite(score)) return 'var(--text-dim)';
+  if (finalState === 'High' || finalState === 'Elevated' || finalState === 'Medium') return 'var(--yellow)';
   if (score >= 65) return 'var(--green)';
   if (score >= 40) return 'var(--yellow)';
   return 'var(--red)';
@@ -175,7 +176,7 @@ export function buildRiskPresentation({ decision = {}, states = {}, stats = {} }
     scoreRaw: rawScore,
     scoreLabel: Number.isFinite(rawScore) ? 'Risk Quality' : 'Risk',
     scoreDirection: 'higher_is_safer',
-    scoreColor: qualityColor(rawScore),
+    scoreColor: qualityColor(rawScore, finalState),
     finalState,
     finalColor,
     overrideApplied,
@@ -183,7 +184,11 @@ export function buildRiskPresentation({ decision = {}, states = {}, stats = {} }
     regimeLabel,
     rawSignalBand: Number.isFinite(volPct) ? `${volPct.toFixed(0)}th percentile volatility` : regimeLabel,
     displaySentence,
-    scoreHelperText: 'Risk Quality measures structure quality and is not the final risk state.',
+    scoreHelperText: 'Higher = better structural quality, not lower final risk.',
+    rawSignalText: Number.isFinite(volPct) ? `Raw signal: relative volatility at the ${volPct.toFixed(0)}th percentile.` : `Raw signal: ${regimeLabel}.`,
+    overrideDisplayReason: overrideApplied
+      ? (overrideReason ? `Override reason: ${overrideReason.replace(/\.$/, '')}.` : 'Override reason: structural context moderated the raw signal.')
+      : 'Override reason: no override applied.',
     volPercentile: volPct,
   };
 }
@@ -203,6 +208,7 @@ export function buildCatalystPresentation({ ticker, name, fundamentals, universe
       status: 'confirmed',
       renderMode: 'card',
       variant: 'card',
+      assetClass,
       items: fundamentals.confirmedCatalysts,
       title: 'Upcoming Catalysts',
     };
@@ -213,6 +219,7 @@ export function buildCatalystPresentation({ ticker, name, fundamentals, universe
       status: 'estimated',
       renderMode: 'compact',
       variant: 'compact',
+      assetClass,
       title: 'Upcoming Catalysts',
       primaryText: `Estimated earnings window: ${date}`,
       secondaryText: 'Unconfirmed schedule from fundamentals feed.',
@@ -223,6 +230,7 @@ export function buildCatalystPresentation({ ticker, name, fundamentals, universe
       status: 'unavailable',
       renderMode: 'inline',
       variant: 'inline',
+      assetClass,
       title: 'Catalysts',
       primaryText: 'Catalyst feed unavailable for ETFs.',
       secondaryText: null,
@@ -232,8 +240,9 @@ export function buildCatalystPresentation({ ticker, name, fundamentals, universe
     status: 'unavailable',
     renderMode: 'inline',
     variant: 'inline',
+    assetClass,
     title: 'Catalysts',
-    primaryText: 'Catalyst feed currently unavailable.',
+    primaryText: 'Catalyst data temporarily unavailable.',
     secondaryText: null,
   };
 }
