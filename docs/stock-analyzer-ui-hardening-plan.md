@@ -46,6 +46,15 @@ Primary contract modules:
 - If any valid upstream knows the company name, ticker-only rendering is not allowed.
 - Governance metadata must never duplicate primary executive metadata.
 
+## Do Not Do
+
+- Do not solve Phase 0 with a broad refactor.
+- Do not leave visible UX contradictions in place while moving logic into deeper architecture layers.
+- Do not render large optional cards with no user value.
+- Do not duplicate executive metadata across grid, governance, and rationale surfaces.
+- Do not use non-canonical close or as-of values in section-local calculations.
+- Do not render ticker-only identity if any valid upstream source knows the company name.
+
 ## Canonical Ownership Rules
 
 ### Identity
@@ -103,6 +112,13 @@ Goal:
 
 Close the remaining visible UX contradictions before deeper architecture work.
 
+Constraint:
+
+- No broad refactor in Phase 0.
+- No contract migration prerequisite in Phase 0.
+- Fix only visible UX contradictions and render-state errors first.
+- Preserve existing data flow unless a specific visible bug requires a targeted data-path change.
+
 ### 0.1 Risk Quality vs Final Risk
 
 Files:
@@ -116,6 +132,8 @@ Implementation:
 - Add direct helper text:
   - `Higher = better structural quality, not lower final risk.`
 - When final risk is `Elevated` or `High`, do not render the quality score in strong safe-green.
+- If final risk is `Elevated` or `High`, helper text alone is not enough if score color still implies safety.
+- Score color must be neutral, muted, or caution-aligned whenever final risk is not low.
 - Render risk information in one fixed order:
   1. `Final Risk`
   2. `Raw signal`
@@ -127,6 +145,7 @@ Acceptance:
 - A 2-second scan makes clear what `Risk Quality` means.
 - `Final Risk` is the only primary risk statement.
 - No strong green score appears adjacent to `Elevated` or `High` final risk without direct helper text.
+- A user must not be able to confuse `Risk Quality` with `Final Risk` in a 2-second scan.
 - Final risk, raw signal, and override reason are readable in one place.
 
 ### 0.2 Executive / Governance Ownership Cleanup
@@ -152,9 +171,19 @@ Implementation:
   - `Runtime Flags`
 - Strategic rationale must add narrative, not repeat metadata.
 
+Forbidden in governance row:
+
+- `As-of`
+- `Confidence`
+- `Flags`
+- `Decision Basis`
+- `Setup`
+- any verdict synonym such as `WAIT`, `NO EDGE`, or `NO TRADE` if already shown in the executive grid
+
 Acceptance:
 
 - `As-of`, `Confidence`, `Flags`, and `Decision Basis` appear prominently at most once inside the executive card.
+- `As-of`, `Confidence`, `Flags`, `Setup`, and `Decision Basis` each appear prominently at most once within the executive card surface.
 - Governance row contains no duplicated primary metadata.
 - `WAIT` / `NO EDGE` subtype is not repeated across multiple prominent surfaces.
 
@@ -168,12 +197,17 @@ Files:
 Implementation:
 
 - Render active pre-trade checklist only when there is a real tradeable setup:
-  - `BUY`
-  - `SELL`
-  - or explicit setup state marked actionable
+  - `tradePlan.status === 'ready'`
+  - or `decision.verdict` is `BUY` or `SELL`
 - For `WAIT`, `Mixed / No Clean Entry`, or no active setup:
   - replace checklist with:
   - `No active trade setup — pre-trade checklist not applicable.`
+
+Forbidden:
+
+- No active checklist bullets may render for `WAIT`.
+- No active checklist bullets may render for `Mixed / No Clean Entry`.
+- No active checklist bullets may render when geometry is missing or invalid.
 
 Acceptance:
 
@@ -201,6 +235,16 @@ Implementation:
 - `compact` for estimated earnings window or similarly useful near-term fallback.
 - `inline` for temporary unavailability.
 - `hidden` when the module adds no value in the current context.
+
+Forbidden:
+
+- `card` mode may not be used for pure unavailability copy.
+- `card` mode requires at least one dated or estimated event with user value.
+
+Fallback rule:
+
+- If next earnings window exists, prefer `compact`.
+- If neither confirmed nor estimated value exists, use `inline` or `hidden`, never full card.
 
 Acceptance:
 
@@ -231,8 +275,17 @@ Implementation:
   - opacity `<= 0.6`
   - colors muted
   - subtitle visible without hover
+- semantic pill colors must not read as live-strength green/red when stale or very stale
+- stale pills must visually read as background context, not current signal
+- subtitle must explicitly communicate one of:
+  - `Background context only`
+  - `Not current`
+  - `Delayed regime overlay`
 - If `staleness_days > 10`:
   - stronger visual degradation
+  - lower opacity than normal stale
+  - stronger badge contrast
+  - explicit caution subtitle
   - inline warning:
   - `Historical regime data is 12 business days old. Use as background context only.`
 
@@ -254,10 +307,12 @@ Implementation:
 - Prefer real benchmark output.
 - If benchmark fetch fails:
   - retry once
+  - then prefer recent cached benchmark data with degraded freshness label
   - then use compact degraded state
 - Degraded state text:
   - `Benchmark comparison temporarily unavailable.`
 - Degraded state must be visually compact, not card-dominant.
+- Never leave the module in a loading state after timeout.
 
 Acceptance:
 
@@ -301,6 +356,11 @@ Implementation:
 - If minimum contract unavailable:
   - hard-fallback to V1
   - or composite V2 load with explicit merge strategy
+
+Hard block:
+
+- Thin V2 summary payloads must not render the stock page shell as if full-page semantics exist.
+- If parity minimum is not met, abort to V1 fallback or explicit degraded composite mode.
 
 Acceptance:
 
@@ -358,10 +418,18 @@ Required module-state rule:
   - `inline`
   - `hidden`
 
+Render mode semantics:
+
+- `card`: module has meaningful standalone value and deserves normal panel space
+- `compact`: module has secondary but still useful value
+- `inline`: module is degraded or informational only
+- `hidden`: module adds no value in current state
+
 Required semantic rule:
 
 - Empty, degraded, unavailable, and hidden states are explicit.
 - No panel invents display semantics inline in `stock.html`.
+- No module may reserve card-sized height in `inline` or `hidden` state.
 
 Acceptance:
 
@@ -451,6 +519,7 @@ Implementation:
 - Validate `5D` / `20D` levels against `canonical_close`.
 - If inconsistent:
   - explicit degraded state
+  - explicit degraded note or suppression of conflicting derived levels
   - never silently display contradictory values
 
 Acceptance:
@@ -472,6 +541,11 @@ Geometry rules:
 Invalid fallback:
 
 - `Trade plan unavailable — missing or invalid inputs`
+
+Required gate:
+
+- Trade plan must not render if any of `entry`, `stop`, `target`, `direction`, or `rr` is invalid.
+- This gate applies even when verdict is `BUY` or `SELL`.
 
 Acceptance:
 
@@ -522,6 +596,18 @@ Files:
 - key-level consistency tests
 - trade-plan gate tests
 
+## Release Gates
+
+Release must be blocked if any of the following is still true:
+
+- Risk Quality still looks visually safer than Final Risk suggests.
+- `WAIT` / `Mixed / No Clean Entry` still shows an active checklist.
+- Executive card still duplicates `As-of`, `Confidence`, `Flags`, or `Decision Basis`.
+- Catalyst module still renders as a large low-value card.
+- Thin V2 payload can still render as a full stock page.
+- Trade plan can still render partial or invalid geometry.
+- Key levels can still silently contradict `canonical_close`.
+
 ## Definition of Done
 
 - Risk Quality and Final Risk are visually unambiguous.
@@ -546,4 +632,3 @@ Files:
 3. `public/js/rv-v2-client.js`
 4. stock analyzer tests
 5. V2 contract/parity tests
-
