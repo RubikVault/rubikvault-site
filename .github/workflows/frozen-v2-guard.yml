@@ -1,0 +1,30 @@
+name: frozen-v2-guard
+
+on:
+  pull_request:
+    paths:
+      - "public/stock.html"
+      - "public/_redirects"
+      - "scripts/ci/assert-frozen-v2-owner.mjs"
+      - ".github/workflows/frozen-v2-guard.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  frozen-v2-owner:
+    name: Frozen V2 Owner Guard
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Assert frozen V2 owner
+        run: node scripts/ci/assert-frozen-v2-owner.mjs

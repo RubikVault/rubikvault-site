@@ -20,9 +20,14 @@
 # Unified Dashboard V7
 /dashboard /dashboard_v7.html 200
 /ops/dashboard /dashboard_v7.html 200
-# Deep Links (Stock Analyzer) — stock.html is the UI owner for /analyze/:ticker
+# Deep Links (Stock Analyzer)
+# /analyze is the frozen MAIN V2 owner and must stay stable.
+# Any future V4 work must live outside this owner path.
 /analyze /stock 200
 /analyze/* /stock 200
+# Reserved V4 preview owner. Keep MAIN V2 on /analyze and iterate V4 here only.
+/analyze-v4 /stock 200
+/analyze-v4/* /stock 200
 /market / 200
 /ideas / 200
 /module/* / 200
