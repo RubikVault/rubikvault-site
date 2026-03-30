@@ -1,6 +1,6 @@
 # Web Features v4 (Forecast / Scientific / Elliott) – Non-Breaking Runbook
 
-Stand: 2026-03-08
+Stand: 2026-03-27
 
 ## Ziel
 
@@ -90,6 +90,23 @@ Reports:
 - `/Users/michaelpuchowezki/Dev/rubikvault-site/mirrors/features-v4/reports/stock-v4-local-vs-main-5ticker.json`
 - `/Users/michaelpuchowezki/Dev/rubikvault-site/public/data/features-v4/reports/stock-v4-local-vs-main-5ticker.json`
 
+Zusatz-Gate fuer Nicht-Verschlechterung:
+
+```bash
+cd /Users/michaelpuchowezki/Dev/rubikvault-site
+node scripts/validate/stock-analyzer-non-regression-gate.mjs --local-base http://127.0.0.1:8788 --benchmark-base https://56a89a60.rubikvault-site.pages.dev --ticker AAPL
+```
+
+Weitere Reports:
+
+- `/Users/michaelpuchowezki/Dev/rubikvault-site/mirrors/features-v4/reports/stock-analyzer-non-regression-gate.json`
+- `/Users/michaelpuchowezki/Dev/rubikvault-site/public/data/features-v4/reports/stock-analyzer-non-regression-gate.json`
+
+Optionale Browser-Traces bei verfuegbarem lokalen HTTP:
+
+- `/Users/michaelpuchowezki/Dev/rubikvault-site/mirrors/features-v4/reports/ui-path.local.trace.json`
+- `/Users/michaelpuchowezki/Dev/rubikvault-site/mirrors/features-v4/reports/ui-path.benchmark.trace.json`
+
 ## Latest Local Verification (2026-03-08)
 
 Executed with local Pages server + v4 scripts:
@@ -113,4 +130,6 @@ Current status: v4 is locally shadow-ready under flag, production default remain
 2. v4 läuft read-only parallel.
 3. Bei ungültigem v4-Contract sofortiger Fallback auf v2/v1.
 4. Keine QuantLab-Artefakte im Web-Rollout anfassen.
-5. Commit/Push erst nach bestandenem lokalen Paritäts-/Abgleich-Report und manueller Verifikation.
+5. `Scientific` und `Elliott` behalten einen statischen Rueckfall-Layer.
+6. Lernende Challenger duerfen nur per Shadow-first + Nicht-Verschlechterungs-Gate promotet werden.
+7. Commit/Push erst nach bestandenem lokalen Paritäts-/Abgleich-Report, Nicht-Verschlechterungs-Gate und manueller Verifikation.

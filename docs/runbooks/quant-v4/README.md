@@ -206,4 +206,5 @@ Das ist beabsichtigt: lieber harter, transparenter Data-Truth-Abbruch als alte S
 - `04-overnight-ops-profile.md`
 - `05-low-reasoning-operator-handoff.md`
 - `06-local-storage-layout-and-automation.md`
+- `07-quantlab-local-self-heal-runbook.md`
 - `/Users/michaelpuchowezki/Dev/rubikvault-site/docs/runbooks/web-features-v2-non-breaking.md` (additiver Web-v2 Shadow-Pfad für Forecast/Scientific/Elliott)

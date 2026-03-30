@@ -200,6 +200,8 @@ export function evaluateV2PromotionGate(v2, legacyPayload = null) {
     'learning_bootstrap',
     'minimum_n_not_met',
     'fundamentals_incomplete',
+    'summary_market_stats_incomplete',
+    'identity_incomplete',
   ]);
   const blockingReasons = reasons.filter((reason) => !warningOnlyReasons.has(reason));
 

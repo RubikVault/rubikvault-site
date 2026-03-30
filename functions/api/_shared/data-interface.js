@@ -386,9 +386,9 @@ export async function fetchStockSummary(ticker, env, request) {
   const latestBar = pickLatestBar(bars);
   const change = computeDayChange(bars);
   const indicatorResult = computeIndicators(bars);
-  const indicators = Array.isArray(indicatorResult) ? indicatorResult : (Array.isArray(indicatorResult?.indicators) ? indicatorResult.indicators : []);
+  const indicatorArray = Array.isArray(indicatorResult) ? indicatorResult : (indicatorResult?.indicators || []);
   const marketPrices = buildMarketPricesFromBar(latestBar, effectiveTicker, provider);
-  const marketStats = buildMarketStatsFromIndicators(indicators, effectiveTicker, latestBar?.date);
+  const marketStats = buildMarketStatsFromIndicators(indicatorArray, effectiveTicker, latestBar?.date);
   const dataDate = latestBar?.date || todayUtcDate();
   const status = computeStatusFromDataDate(dataDate, now, ttl.max_stale_days, ttl.pending_window_minutes);
 
@@ -431,6 +431,10 @@ export async function fetchStockSummary(ticker, env, request) {
     explanation = evaluation?.explanation || null;
   } catch { /* evaluation unavailable */ }
 
+  // Fallback name resolution from existing snapshots if still missing
+  let fallbackName = null;
+  // (We'll use universe snapshot below)
+
   // Snapshot joins for universe, market-prices, market-stats
   let universe = null;
   let snapshotMarketPrices = null;
@@ -455,6 +459,22 @@ export async function fetchStockSummary(ticker, env, request) {
     }
   } catch { /* snapshots optional */ }
 
+  // Fetch fundamentals as enrichment (with timeout to prevent Worker crash)
+  let fundamentals = null;
+  try {
+    const origin = new URL(request.url).origin;
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 1500);
+    const fRes = await fetch(new URL(`/api/fundamentals?ticker=${effectiveTicker}`, origin).toString(), {
+      signal: controller.signal
+    });
+    clearTimeout(timeout);
+    if (fRes.ok) {
+      const fPayload = await fRes.json();
+      if (fPayload.data) fundamentals = fPayload.data;
+    }
+  } catch { /* optional */ }
+
   const selectedMarketPrices = choosePreferredMarketPrices(snapshotMarketPrices, marketPrices) || marketPrices;
   const selectedMarketStats = choosePreferredMarketStats(snapshotMarketStats, marketStats) || marketStats;
 
@@ -462,12 +482,13 @@ export async function fetchStockSummary(ticker, env, request) {
     ok: true,
     data: {
       ticker: effectiveTicker,
-      name: ctx.name || universe?.name || null,
+      name: ctx.name || universe?.name || fallbackName || effectiveTicker,
       resolution: ctx.resolution,
       latest_bar: latestBar,
       change,
       market_prices: selectedMarketPrices,
       market_stats: selectedMarketStats,
+      fundamentals,
       states,
       decision,
       explanation,
@@ -547,7 +568,7 @@ export async function fetchStockHistorical(ticker, env, request) {
   const dataDate = latestBar?.date || todayUtcDate();
   const status = computeStatusFromDataDate(dataDate, now, ttl.max_stale_days, ttl.pending_window_minutes);
   const indicatorResult = computeIndicators(bars);
-  const indicators = Array.isArray(indicatorResult) ? indicatorResult : (Array.isArray(indicatorResult?.indicators) ? indicatorResult.indicators : []);
+  const indicatorArray = Array.isArray(indicatorResult) ? indicatorResult : (indicatorResult?.indicators || []);
 
   let breakoutV2 = null;
   try {
