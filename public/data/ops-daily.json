@@ -1,14 +1,15 @@
 {
   "schema_version": "1.0",
-  "asOf": "2026-03-30T08:53:35.231Z",
+  "asOf": "2026-03-30T22:54:09.526Z",
   "baseline": {
     "expectedUniverse": 2453,
     "pipeline": {
       "expected": 2453,
-      "fetched": 100,
-      "validatedStored": 100,
+      "fetched": 0,
+      "validatedStored": 0,
       "computed": 2447,
       "staticReady": 2447,
+      "reason": "PROVIDER_EMPTY",
       "missing": [
         {
           "ticker": "AKE",
@@ -155,7 +156,7 @@
     "cloudflare": {
       "requestsToday": null,
       "requestsLast24h": null,
-      "notes": "ok"
+      "notes": "CF analytics not configured"
     },
     "safety": {
       "kvWritesToday": 0,
@@ -167,18 +168,199 @@
       "universe": "nasdaq100",
       "counts": {
         "expected": 100,
-        "fetched": 100,
-        "validated": 100,
+        "fetched": 0,
+        "validated": 0,
         "computed": 2447,
         "static_ready": 2447
       },
       "degraded_summary": {
-        "count": 0,
-        "classes": {},
-        "sample": []
+        "count": 100,
+        "classes": {
+          "RATE_LIMIT": 100
+        },
+        "sample": [
+          {
+            "symbol": "AAPL",
+            "stage": "fetch",
+            "class": "RATE_LIMIT",
+            "hint": "Upstream rate limit hit (provider=tiingo)",
+            "since": "2026-03-30T22:53:35.262Z"
+          },
+          {
+            "symbol": "ABNB",
+            "stage": "fetch",
+            "class": "RATE_LIMIT",
+            "hint": "Upstream rate limit hit (provider=tiingo)",
+            "since": "2026-03-30T22:53:35.262Z"
+          },
+          {
+            "symbol": "ADBE",
+            "stage": "fetch",
+            "class": "RATE_LIMIT",
+            "hint": "Upstream rate limit hit (provider=tiingo)",
+            "since": "2026-03-30T22:53:35.262Z"
+          },
+          {
+            "symbol": "ADI",
+            "stage": "fetch",
+            "class": "RATE_LIMIT",
+            "hint": "Upstream rate limit hit (provider=tiingo)",
+            "since": "2026-03-30T22:53:35.262Z"
+          },
+          {
+            "symbol": "ADP",
+            "stage": "fetch",
+            "class": "RATE_LIMIT",
+            "hint": "Upstream rate limit hit (provider=tiingo)",
+            "since": "2026-03-30T22:53:35.262Z"
+          },
+          {
+            "symbol": "ADSK",
+            "stage": "fetch",
+            "class": "RATE_LIMIT",
+            "hint": "Upstream rate limit hit (provider=tiingo)",
+            "since": "2026-03-30T22:53:35.262Z"
+          },
+          {
+            "symbol": "AEP",
+            "stage": "fetch",
+            "class": "RATE_LIMIT",
+            "hint": "Upstream rate limit hit (provider=tiingo)",
+            "since": "2026-03-30T22:53:35.262Z"
+          },
+          {
+            "symbol": "AMAT",
+            "stage": "fetch",
+            "class": "RATE_LIMIT",
+            "hint": "Upstream rate limit hit (provider=tiingo)",
+            "since": "2026-03-30T22:53:35.262Z"
+          },
+          {
+            "symbol": "AMD",
+            "stage": "fetch",
+            "class": "RATE_LIMIT",
+            "hint": "Upstream rate limit hit (provider=tiingo)",
+            "since": "2026-03-30T22:53:35.262Z"
+          },
+          {
+            "symbol": "AMGN",
+            "stage": "fetch",
+            "class": "RATE_LIMIT",
+            "hint": "Upstream rate limit hit (provider=tiingo)",
+            "since": "2026-03-30T22:53:35.262Z"
+          },
+          {
+            "symbol": "AMZN",
+            "stage": "fetch",
+            "class": "RATE_LIMIT",
+            "hint": "Upstream rate limit hit (provider=tiingo)",
+            "since": "2026-03-30T22:53:35.262Z"
+          },
+          {
+            "symbol": "APP",
+            "stage": "fetch",
+            "class": "RATE_LIMIT",
+            "hint": "Upstream rate limit hit (provider=tiingo)",
+            "since": "2026-03-30T22:53:35.262Z"
+          },
+          {
+            "symbol": "ARM",
+            "stage": "fetch",
+            "class": "RATE_LIMIT",
+            "hint": "Upstream rate limit hit (provider=tiingo)",
+            "since": "2026-03-30T22:53:35.262Z"
+          },
+          {
+            "symbol": "ASML",
+            "stage": "fetch",
+            "class": "RATE_LIMIT",
+            "hint": "Upstream rate limit hit (provider=tiingo)",
+            "since": "2026-03-30T22:53:35.262Z"
+          },
+          {
+            "symbol": "AVGO",
+            "stage": "fetch",
+            "class": "RATE_LIMIT",
+            "hint": "Upstream rate limit hit (provider=tiingo)",
+            "since": "2026-03-30T22:53:35.262Z"
+          },
+          {
+            "symbol": "AXON",
+            "stage": "fetch",
+            "class": "RATE_LIMIT",
+            "hint": "Upstream rate limit hit (provider=tiingo)",
+            "since": "2026-03-30T22:53:35.262Z"
+          },
+          {
+            "symbol": "AZN",
+            "stage": "fetch",
+            "class": "RATE_LIMIT",
+            "hint": "Upstream rate limit hit (provider=tiingo)",
+            "since": "2026-03-30T22:53:35.262Z"
+          },
+          {
+            "symbol": "BIIB",
+            "stage": "fetch",
+            "class": "RATE_LIMIT",
+            "hint": "Upstream rate limit hit (provider=tiingo)",
+            "since": "2026-03-30T22:53:35.262Z"
+          },
+          {
+            "symbol": "BKNG",
+            "stage": "fetch",
+            "class": "RATE_LIMIT",
+            "hint": "Upstream rate limit hit (provider=tiingo)",
+            "since": "2026-03-30T22:53:35.262Z"
+          },
+          {
+            "symbol": "BKR",
+            "stage": "fetch",
+            "class": "RATE_LIMIT",
+            "hint": "Upstream rate limit hit (provider=tiingo)",
+            "since": "2026-03-30T22:53:35.262Z"
+          },
+          {
+            "symbol": "CCEP",
+            "stage": "fetch",
+            "class": "RATE_LIMIT",
+            "hint": "Upstream rate limit hit (provider=tiingo)",
+            "since": "2026-03-30T22:53:35.262Z"
+          },
+          {
+            "symbol": "CDNS",
+            "stage": "fetch",
+            "class": "RATE_LIMIT",
+            "hint": "Upstream rate limit hit (provider=tiingo)",
+            "since": "2026-03-30T22:53:35.262Z"
+          },
+          {
+            "symbol": "CDW",
+            "stage": "fetch",
+            "class": "RATE_LIMIT",
+            "hint": "Upstream rate limit hit (provider=tiingo)",
+            "since": "2026-03-30T22:53:35.262Z"
+          },
+          {
+            "symbol": "CHTR",
+            "stage": "fetch",
+            "class": "RATE_LIMIT",
+            "hint": "Upstream rate limit hit (provider=tiingo)",
+            "since": "2026-03-30T22:53:35.262Z"
+          },
+          {
+            "symbol": "CMCSA",
+            "stage": "fetch",
+            "class": "RATE_LIMIT",
+            "hint": "Upstream rate limit hit (provider=tiingo)",
+            "since": "2026-03-30T22:53:35.262Z"
+          }
+        ]
       },
-      "root_failure": null,
-      "generated_at": "2026-03-27T22:53:37.225Z"
+      "root_failure": {
+        "class": "PROVIDER_EMPTY",
+        "hint": "All providers returned empty/invalid rows; keeping last_good artifacts."
+      },
+      "generated_at": "2026-03-30T22:53:35.262Z"
     }
   }
 }
