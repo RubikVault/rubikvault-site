@@ -21,6 +21,13 @@ import {
   buildMarketStatsFromIndicators,
 } from './stock-helpers.js';
 
+let v7SearchExactCache = null;
+let v7SearchExactCachedAt = 0;
+const V7_SEARCH_EXACT_TTL_MS = 5 * 60 * 1000;
+let v3UniverseCache = null;
+let v3UniverseCachedAt = 0;
+const V3_UNIVERSE_TTL_MS = 5 * 60 * 1000;
+
 function findRecord(snapshot, symbol) {
   if (!snapshot || !snapshot.data) return null;
   const payload = snapshot.data;
@@ -39,6 +46,213 @@ function findRecord(snapshot, symbol) {
     if (parts.length === 2) return lookup(parts[1]);
   }
   return null;
+}
+
+function parseIsoDateSafe(value) {
+  if (typeof value !== 'string' || value.length < 10) return null;
+  const iso = value.slice(0, 10);
+  return /^\d{4}-\d{2}-\d{2}$/.test(iso) ? iso : null;
+}
+
+function isSeedSourceProvider(value) {
+  return String(value || '').toLowerCase() === 'stock-analysis-seed';
+}
+
+function hasUsableUniverse(record) {
+  if (!record || typeof record !== 'object') return false;
+  return Boolean(record.name || record.asset_class || record.security_type || record.industry || record.sector);
+}
+
+function hasUsableMarketPrices(record) {
+  if (!record || typeof record !== 'object') return false;
+  return Number.isFinite(Number(record.close)) && Boolean(parseIsoDateSafe(record.date));
+}
+
+function hasUsableMarketStats(record) {
+  const stats = record?.stats;
+  if (!stats || typeof stats !== 'object') return false;
+  const required = ['rsi14', 'sma20', 'sma50', 'sma200', 'atr14'];
+  const available = required.filter((key) => Number.isFinite(Number(stats[key]))).length;
+  return available >= 3;
+}
+
+async function fetchJsonMaybeGzip(url) {
+  try {
+    const response = await fetch(url.toString());
+    if (!response.ok) return null;
+    if (typeof DecompressionStream === 'function' && response.body) {
+      const clone = response.clone();
+      try {
+        const decompressed = response.body.pipeThrough(new DecompressionStream('gzip'));
+        const text = await new Response(decompressed).text();
+        return JSON.parse(text);
+      } catch {
+        return await clone.json();
+      }
+    }
+    return await response.json();
+  } catch {
+    return null;
+  }
+}
+
+async function fetchV7SearchExactEntry(request, symbol) {
+  const now = Date.now();
+  if (!v7SearchExactCache || (now - v7SearchExactCachedAt) > V7_SEARCH_EXACT_TTL_MS) {
+    const baseUrl = new URL(request.url);
+    const payload = await fetchJsonMaybeGzip(new URL('/data/universe/v7/search/search_exact_by_symbol.json.gz', baseUrl));
+    if (payload && typeof payload === 'object') {
+      v7SearchExactCache = payload;
+      v7SearchExactCachedAt = now;
+    }
+  }
+  const bySymbol = v7SearchExactCache?.by_symbol;
+  if (!bySymbol || typeof bySymbol !== 'object') return null;
+  const row = bySymbol[String(symbol || '').toUpperCase()];
+  if (!row || typeof row !== 'object') return null;
+  const canonical = typeof row.canonical_id === 'string' ? row.canonical_id : null;
+  const canonicalExchange = canonical && canonical.includes(':') ? canonical.split(':')[0] : null;
+  return {
+    canonical_id: canonical,
+    symbol: typeof row.symbol === 'string' && row.symbol.trim() ? row.symbol.trim().toUpperCase() : normalizeTicker(symbol),
+    name: typeof row.name === 'string' && row.name.trim() ? row.name.trim() : null,
+    exchange: typeof row.exchange === 'string' && row.exchange.trim() ? row.exchange : (canonicalExchange || null),
+    country: typeof row.country === 'string' && row.country.trim() ? row.country : null,
+  };
+}
+
+async function fetchV3UniverseMeta(request, symbol) {
+  const now = Date.now();
+  if (!v3UniverseCache || (now - v3UniverseCachedAt) > V3_UNIVERSE_TTL_MS) {
+    const baseUrl = new URL(request.url);
+    const [universePayload, mappingPayload] = await Promise.all([
+      fetchJsonMaybeGzip(new URL('/data/v3/universe/universe.json', baseUrl)),
+      fetchJsonMaybeGzip(new URL('/data/v3/universe/symbol-mapping.json', baseUrl)),
+    ]);
+    v3UniverseCache = {
+      universe: universePayload,
+      mapping: mappingPayload,
+    };
+    v3UniverseCachedAt = now;
+  }
+
+  const normalized = normalizeTicker(symbol);
+  if (!normalized) return null;
+
+  const universeSymbols = Array.isArray(v3UniverseCache?.universe?.symbols) ? v3UniverseCache.universe.symbols : [];
+  const universeHit = universeSymbols.find((row) => normalizeTicker(row?.ticker) === normalized) || null;
+
+  const mappings = v3UniverseCache?.mapping?.mappings && typeof v3UniverseCache.mapping.mappings === 'object'
+    ? v3UniverseCache.mapping.mappings
+    : null;
+  let mappingHit = null;
+  if (mappings) {
+    for (const [canonicalId, row] of Object.entries(mappings)) {
+      if (normalizeTicker(row?.ticker) === normalized) {
+        mappingHit = { canonicalId, row };
+        break;
+      }
+    }
+  }
+
+  if (!universeHit && !mappingHit) return null;
+
+  return {
+    canonical_id: universeHit?.canonical_id || mappingHit?.canonicalId || null,
+    symbol: normalized,
+    name: typeof universeHit?.name === 'string' && universeHit.name.trim() ? universeHit.name.trim() : null,
+    exchange: typeof mappingHit?.row?.exchange === 'string' && mappingHit.row.exchange.trim() ? mappingHit.row.exchange.trim() : null,
+    country: typeof universeHit?.country === 'string' && universeHit.country.trim() ? universeHit.country.trim() : null,
+    provider_ids: mappingHit?.row?.provider_ids || null,
+  };
+}
+
+function buildEodhdSymbol(symbol, exchange) {
+  const cleanSymbol = normalizeTicker(symbol);
+  const cleanExchange = String(exchange || '').trim().toUpperCase();
+  if (!cleanSymbol) return null;
+  if (!cleanExchange) return cleanSymbol;
+  return `${cleanSymbol}.${cleanExchange}`;
+}
+
+function buildProviderSymbolMap(symbol, exchange, providerIds = null) {
+  let cleanSymbol = normalizeTicker(symbol);
+  if (!cleanSymbol) return null;
+
+  const eodhdFromProviderIds = typeof providerIds?.eodhd === 'string' && providerIds.eodhd.trim()
+    ? providerIds.eodhd.trim().toUpperCase()
+    : null;
+  const tiingoFromProviderIds = typeof providerIds?.tiingo === 'string' && providerIds.tiingo.trim()
+    ? providerIds.tiingo.trim().toUpperCase()
+    : null;
+  const twelvedataFromProviderIds = typeof providerIds?.twelvedata === 'string' && providerIds.twelvedata.trim()
+    ? providerIds.twelvedata.trim().toUpperCase()
+    : null;
+
+  const scannerPrefixes = [
+    'US', 'XETR', 'LSE', 'MIL', 'AMS', 'BME', 'EBS', 'EPA',
+    'AS', 'AT', 'BC', 'BE', 'CO', 'DU', 'F', 'HE',
+    'MC', 'MI', 'MU', 'PA', 'ST', 'SW', 'VI', 'XETRA',
+    'KLSE', 'HKEX', 'TYO', 'SGX', 'ASX', 'AU', 'HK', 'JA',
+    'KO', 'SG', 'SR', 'TA', 'TH', '108', '109', 'BK'
+  ];
+
+  const separator = cleanSymbol.includes(':') ? ':' : cleanSymbol.includes('.') ? '.' : null;
+  if (separator && !exchange) {
+    const parts = cleanSymbol.split(separator);
+    if (parts.length === 2 && scannerPrefixes.includes(parts[0])) {
+      cleanSymbol = `${parts[1]}.${parts[0]}`;
+    }
+  }
+
+  const eodhdSymbol = eodhdFromProviderIds || buildEodhdSymbol(cleanSymbol, exchange);
+  return {
+    eodhd: eodhdSymbol || cleanSymbol,
+    tiingo: tiingoFromProviderIds || cleanSymbol,
+    twelvedata: twelvedataFromProviderIds || cleanSymbol,
+  };
+}
+
+async function loadStaticBarsFallback(symbol, request) {
+  try {
+    const { getStaticBars } = await import('./history-store.mjs');
+    const bars = await getStaticBars(symbol, new URL(request.url).origin);
+    return Array.isArray(bars) && bars.length ? bars : [];
+  } catch {
+    return [];
+  }
+}
+
+export function choosePreferredMarketPrices(snapshotRecord, barRecord) {
+  const snapshotOk = hasUsableMarketPrices(snapshotRecord);
+  const barOk = hasUsableMarketPrices(barRecord);
+  if (!snapshotOk && !barOk) return snapshotRecord || barRecord || null;
+  if (!snapshotOk) return barRecord;
+  if (!barOk) return snapshotRecord;
+
+  const snapshotDate = parseIsoDateSafe(snapshotRecord?.date);
+  const barDate = parseIsoDateSafe(barRecord?.date);
+  if (isSeedSourceProvider(snapshotRecord?.source_provider) && barDate) return barRecord;
+  if (barDate && snapshotDate && barDate >= snapshotDate) return barRecord;
+  return snapshotRecord;
+}
+
+export function choosePreferredMarketStats(snapshotRecord, derivedRecord) {
+  const snapshotOk = hasUsableMarketStats(snapshotRecord);
+  const derivedOk = hasUsableMarketStats(derivedRecord);
+  if (!snapshotOk && !derivedOk) return snapshotRecord || derivedRecord || null;
+  if (!snapshotOk) return derivedRecord;
+  if (!derivedOk) return snapshotRecord;
+
+  const snapshotDate = parseIsoDateSafe(snapshotRecord?.as_of);
+  const derivedDate = parseIsoDateSafe(derivedRecord?.as_of);
+  if (isSeedSourceProvider(snapshotRecord?.source_provider) && derivedDate) return derivedRecord;
+  if (derivedDate && snapshotDate && derivedDate > snapshotDate) return derivedRecord;
+  if (derivedDate && snapshotDate && derivedDate === snapshotDate) {
+    if (isSeedSourceProvider(snapshotRecord?.source_provider)) return derivedRecord;
+    return snapshotRecord;
+  }
+  return snapshotRecord;
 }
 
 async function fetchSnapshotJson(moduleName, request, env) {
@@ -87,11 +301,27 @@ async function resolveTickerContext(ticker, request) {
     }
   } catch { /* ignore */ }
 
+  let v7ExactMeta = null;
+  if (resolvedTicker) {
+    try {
+      v7ExactMeta = await fetchV7SearchExactEntry(request, resolvedTicker);
+    } catch { /* ignore */ }
+  }
+  if (!v7ExactMeta && resolvedTicker) {
+    try {
+      v7ExactMeta = await fetchV3UniverseMeta(request, resolvedTicker);
+    } catch { /* ignore */ }
+  }
+  if (!name) name = v7ExactMeta?.name || null;
+  if (!exchange) exchange = v7ExactMeta?.exchange || null;
+  if (!country) country = v7ExactMeta?.country || null;
+  if (!canonicalId) canonicalId = v7ExactMeta?.canonical_id || null;
+
   return {
     ok: true,
     ticker: resolvedTicker,
     name, exchange, country, canonicalId,
-    resolution: { ticker: resolvedTicker, canonical_id: canonicalId, exchange },
+    resolution: { ticker: resolvedTicker, canonical_id: canonicalId, exchange, provider_ids: v7ExactMeta?.provider_ids || null },
   };
 }
 
@@ -107,6 +337,7 @@ export async function fetchStockSummary(ticker, env, request) {
   const effectiveTicker = ctx.ticker;
   const now = new Date();
   const qualityFlags = [];
+  const providerSymbolMap = buildProviderSymbolMap(effectiveTicker, ctx.exchange, ctx.resolution?.provider_ids);
 
   // Fetch bars via provider chain
   let bars = [];
@@ -117,6 +348,7 @@ export async function fetchStockSummary(ticker, env, request) {
     const chainResult = await fetchBarsWithProviderChain(effectiveTicker, env, {
       outputsize: '300',
       allowFailover: true,
+      providerSymbols: providerSymbolMap,
     });
     sourceChain = buildSourceChainMetadata(chainResult.chain);
     if (chainResult.ok) {
@@ -135,6 +367,15 @@ export async function fetchStockSummary(ticker, env, request) {
   } catch { /* fall through */ }
 
   if (!bars.length) {
+    const staticBars = await loadStaticBarsFallback(effectiveTicker, request);
+    if (staticBars.length) {
+      bars = staticBars;
+      provider = 'static_store';
+      qualityFlags.push('STATIC_FALLBACK_HISTORY');
+    }
+  }
+
+  if (!bars.length) {
     return {
       ok: false, data: null,
       meta: { status: 'error', provider, data_date: todayUtcDate(), version: 'v2' },
@@ -144,7 +385,8 @@ export async function fetchStockSummary(ticker, env, request) {
 
   const latestBar = pickLatestBar(bars);
   const change = computeDayChange(bars);
-  const indicators = computeIndicators(bars);
+  const indicatorResult = computeIndicators(bars);
+  const indicators = Array.isArray(indicatorResult) ? indicatorResult : (Array.isArray(indicatorResult?.indicators) ? indicatorResult.indicators : []);
   const marketPrices = buildMarketPricesFromBar(latestBar, effectiveTicker, provider);
   const marketStats = buildMarketStatsFromIndicators(indicators, effectiveTicker, latestBar?.date);
   const dataDate = latestBar?.date || todayUtcDate();
@@ -201,7 +443,7 @@ export async function fetchStockSummary(ticker, env, request) {
     ]);
     if (uSnap) {
       const uRec = findRecord(uSnap, effectiveTicker);
-      if (uRec) universe = uRec;
+      if (hasUsableUniverse(uRec)) universe = uRec;
     }
     if (mpSnap) {
       const mpRec = findRecord(mpSnap, effectiveTicker);
@@ -213,6 +455,9 @@ export async function fetchStockSummary(ticker, env, request) {
     }
   } catch { /* snapshots optional */ }
 
+  const selectedMarketPrices = choosePreferredMarketPrices(snapshotMarketPrices, marketPrices) || marketPrices;
+  const selectedMarketStats = choosePreferredMarketStats(snapshotMarketStats, marketStats) || marketStats;
+
   return {
     ok: true,
     data: {
@@ -221,11 +466,17 @@ export async function fetchStockSummary(ticker, env, request) {
       resolution: ctx.resolution,
       latest_bar: latestBar,
       change,
-      market_prices: snapshotMarketPrices || marketPrices,
-      market_stats: snapshotMarketStats || marketStats,
+      market_prices: selectedMarketPrices,
+      market_stats: selectedMarketStats,
       states,
       decision,
       explanation,
+      module_freshness: {
+        price_as_of: selectedMarketPrices?.date || dataDate,
+        historical_as_of: dataDate,
+        market_stats_as_of: selectedMarketStats?.as_of || dataDate,
+        decision_as_of: decision?.asof || decision?.created_at || null,
+      },
     },
     meta: {
       status,
@@ -250,6 +501,7 @@ export async function fetchStockHistorical(ticker, env, request) {
   const effectiveTicker = ctx.ticker;
   const now = new Date();
   const qualityFlags = [];
+  const providerSymbolMap = buildProviderSymbolMap(effectiveTicker, ctx.exchange, ctx.resolution?.provider_ids);
 
   let bars = [];
   let provider = 'eodhd';
@@ -257,6 +509,7 @@ export async function fetchStockHistorical(ticker, env, request) {
     const chainResult = await fetchBarsWithProviderChain(effectiveTicker, env, {
       outputsize: '300',
       allowFailover: true,
+      providerSymbols: providerSymbolMap,
     });
     if (chainResult.ok) {
       bars = Array.isArray(chainResult.bars) ? chainResult.bars : [];
@@ -274,6 +527,15 @@ export async function fetchStockHistorical(ticker, env, request) {
   } catch { /* fall through */ }
 
   if (!bars.length) {
+    const staticBars = await loadStaticBarsFallback(effectiveTicker, request);
+    if (staticBars.length) {
+      bars = staticBars;
+      provider = 'static_store';
+      qualityFlags.push('STATIC_FALLBACK_HISTORY');
+    }
+  }
+
+  if (!bars.length) {
     return {
       ok: false, data: null,
       meta: { status: 'error', provider, data_date: todayUtcDate(), version: 'v2' },
@@ -284,7 +546,8 @@ export async function fetchStockHistorical(ticker, env, request) {
   const latestBar = pickLatestBar(bars);
   const dataDate = latestBar?.date || todayUtcDate();
   const status = computeStatusFromDataDate(dataDate, now, ttl.max_stale_days, ttl.pending_window_minutes);
-  const indicators = computeIndicators(bars);
+  const indicatorResult = computeIndicators(bars);
+  const indicators = Array.isArray(indicatorResult) ? indicatorResult : (Array.isArray(indicatorResult?.indicators) ? indicatorResult.indicators : []);
 
   let breakoutV2 = null;
   try {

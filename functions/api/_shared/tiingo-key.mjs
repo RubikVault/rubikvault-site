@@ -1,7 +1,8 @@
 export function getTiingoKeyInfo(env) {
-  const primary = String(env?.TIINGO_API_KEY || "").trim();
+  const processEnv = typeof process !== 'undefined' && process?.env ? process.env : {};
+  const primary = String(env?.TIINGO_API_KEY || processEnv.TIINGO_API_KEY || "").trim();
   if (primary) return { key: primary, source: "TIINGO_API_KEY" };
-  const alias = String(env?.TIIANGO_API_KEY || "").trim();
+  const alias = String(env?.TIIANGO_API_KEY || processEnv.TIIANGO_API_KEY || "").trim();
   if (alias) {
     console.warn('[DEPRECATED] Using TIIANGO_API_KEY (typo). Please migrate to TIINGO_API_KEY.');
     return { key: alias, source: "TIIANGO_API_KEY (DEPRECATED)" };

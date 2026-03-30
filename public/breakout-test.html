@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Breakout-Scanner V1 (Test-Environment)</title>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        :root {
+            --bg-color: #0b1120;
+            --glass-bg: rgba(30, 41, 59, 0.7);
+            --glass-border: rgba(255, 255, 255, 0.05);
+            --primary: #38bdf8;
+            --primary-glow: rgba(56, 189, 248, 0.5);
+            --accent: #8b5cf6;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --card-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: linear-gradient(135deg, #020617 0%, #0f172a 100%);
+            color: var(--text-main);
+            min-height: 100vh;
+            overflow-x: hidden;
+            padding-bottom: 50px;
+        }
+
+        /* Glassmorphism utility */
+        .glass-panel {
+            background: var(--glass-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            box-shadow: var(--card-shadow);
+        }
+
+        header {
+            padding: 30px;
+            text-align: center;
+            background: linear-gradient(to bottom, rgba(15, 23, 42, 0.8), transparent);
+        }
+
+        header h1 {
+            font-size: 2.5rem;
+            font-weight: 800;
+            background: linear-gradient(to right, var(--primary), var(--accent));
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -0.5px;
+        }
+
+        header p {
+            color: var(--text-muted);
+            margin-top: 8px;
+            font-size: 1rem;
+        }
+
+        /* Top Metrics Row */
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            max-width: 1200px;
+            margin: 0 auto 40px auto;
+            padding: 0 20px;
+        }
+
+        .metric-card {
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            cursor: pointer;
+            transition: transform 0.2sease, box-shadow 0.2sease;
+        }
+
+        .metric-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.4);
+        }
+
+        .metric-card.active {
+            border: 1px solid rgba(56, 189, 248, 0.4);
+            box-shadow: 0 0 20px 0 rgba(56, 189, 248, 0.1);
+        }
+
+        .metric-title {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .metric-value {
+            font-size: 2.5rem;
+            font-weight: 800;
+            margin: 12px 0 4px 0;
+        }
+
+        /* Color Coding for Cards */
+        #card-total .metric-value { color: var(--text-main); }
+        #card-setup .metric-value { color: var(--warning); }
+        #card-armed .metric-value { color: #f97316; }
+        #card-triggered .metric-value { color: var(--primary); }
+        #card-confirmed .metric-value { color: var(--success); }
+
+        .regime-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            border-radius: 9999px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            background: rgba(255, 255, 255, 0.05);
+            margin-bottom: 20px;
+        }
+
+        /* Main Container */
+        .main-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* Search & Filter Header */
+        .controls-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            gap: 20px;
+        }
+
+        .search-container {
+            flex-grow: 1;
+            position: relative;
+        }
+
+        .search-container input {
+            width: 100%;
+            padding: 14px 20px 14px 45px;
+            background: rgba(30, 41, 59, 0.5);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            color: var(--text-main);
+            font-family: inherit;
+            font-size: 1rem;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .search-container input:focus {
+            border-color: var(--primary);
+        }
+
+        .search-container i {
+            position: absolute;
+            left: 18px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+        }
+
+        /* Table Design */
+        .table-responsive {
+            overflow-x: auto;
+            border-radius: 16px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+        }
+
+        th {
+            background: rgba(15, 23, 42, 0.4);
+            padding: 16px 20px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid var(--glass-border);
+        }
+
+        td {
+            padding: 16px 20px;
+            font-size: 0.95rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.02);
+            vertical-align: middle;
+        }
+
+        tr {
+            transition: background 0.15s;
+        }
+
+        tr:hover {
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        .ticker-col {
+            font-weight: 800;
+            color: #fff;
+            letter-spacing: 0.5px;
+            transition: color 0.15s;
+        }
+
+        .ticker-col:hover {
+            color: var(--primary);
+        }
+
+        .state-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+
+        .state-setup { background: rgba(245, 158, 11, 0.15); color: #f59e0b; }
+        .state-armed { background: rgba(249, 115, 22, 0.15); color: #f97316; }
+        .state-triggered { background: rgba(56, 189, 248, 0.15); color: #38bdf8; }
+        .state-confirmed { background: rgba(16, 185, 129, 0.15); color: #10b981; }
+        .state-nodata { background: rgba(148, 163, 184, 0.1); color: #94a3b8; }
+
+        .price-col {
+            font-family: monospace;
+            font-weight: 600;
+        }
+
+        .asset-name {
+            display: block;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            font-weight: 400;
+            margin-top: 2px;
+        }
+
+        /* Pagination Controls */
+        .pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 15px;
+            margin-top: 20px;
+        }
+        .pagination button {
+            background: rgba(30, 41, 59, 0.5);
+            border: 1px solid var(--glass-border);
+            color: var(--text-main);
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .pagination button:hover:not(:disabled) {
+            background: rgba(56, 189, 248, 0.2);
+            border-color: var(--primary);
+        }
+        .pagination button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Breakout Scanner V1</h1>
+        <p>Parallele Test-Umgebung basierend auf Runblock-Logic | Volles Universum (70k+)</p>
+    </header>
+
+    <div class="metrics-grid">
+        <div class="metric-card glass-panel active" id="card-total" onclick="setFilter('ALL')">
+            <span class="metric-title">Gesamt Gescannt</span>
+            <div class="metric-value" id="val-total">-</div>
+            <div class="regime-badge" id="regime-status">
+                <i class="fa-solid fa-circle-dot"></i> Regime: Loading...
+            </div>
+        </div>
+        <div class="metric-card glass-panel" id="card-setup" onclick="setFilter('SETUP')">
+            <span class="metric-title">In Setup</span>
+            <div class="metric-value" id="val-setup">-</div>
+        </div>
+        <div class="metric-card glass-panel" id="card-armed" onclick="setFilter('ARMED')">
+            <span class="metric-title">Armed</span>
+            <div class="metric-value" id="val-armed">-</div>
+        </div>
+        <div class="metric-card glass-panel" id="card-triggered" onclick="setFilter('TRIGGERED')">
+            <span class="metric-title">Triggered</span>
+            <div class="metric-value" id="val-triggered">-</div>
+        </div>
+        <div class="metric-card glass-panel" id="card-confirmed" onclick="setFilter('CONFIRMED')">
+            <span class="metric-title">Confirmed</span>
+            <div class="metric-value" id="val-confirmed">-</div>
+        </div>
+        <!-- Special No-Data Card -->
+        <div class="metric-card glass-panel" id="card-nodata" onclick="setFilter('NO_DATA')" style="opacity: 0.6;">
+            <span class="metric-title">Keine EOD Historie</span>
+            <div class="metric-value" id="val-nodata" style="font-size: 1.5rem; margin-top:22px;">-</div>
+        </div>
+    </div>
+
+    <div class="main-container">
+        <div class="controls-header">
+            <div class="search-container">
+                <i class="fa fa-search"></i>
+                <input type="text" id="searchInput" placeholder="Ticker oder Name suchen..." oninput="filterTable()">
+            </div>
+        </div>
+
+        <div class="table-responsive glass-panel">
+            <table id="assetsTable">
+                <thead>
+                    <tr>
+                        <th onclick="sortTable(0)">Asset</th>
+                        <th onclick="sortTable(1)">Zustand</th>
+                        <th onclick="sortTable(2)">Level</th>
+                        <th onclick="sortTable(3)">Letzter Preis</th>
+                        <th onclick="sortTable(4)">Zustand-Alter</th>
+                    </tr>
+                </thead>
+                <tbody id="assetsBody">
+                    <tr><td colspan="5" style="text-align:center;">Lade Snapshots...</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination -->
+        <div class="pagination">
+            <button id="prevBtn" onclick="changePage(-1)" disabled><i class="fa fa-chevron-left"></i></button>
+            <span id="pageInfo">Seite 1</span>
+            <button id="nextBtn" onclick="changePage(1)"><i class="fa fa-chevron-right"></i></button>
+        </div>
+    </div>
+
+    <script>
+        let currentFilter = 'ALL';
+        let allDataItems = [];
+        let sortDirection = {};
+        let currentPage = 1;
+        const rowsPerPage = 500; // Optimal speed
+
+        async function loadData() {
+            try {
+                const response = await fetch('/data/snapshots/breakout-test.json');
+                const data = await response.json();
+
+                if (data.regime) {
+                    const r = data.regime.regime_tag;
+                    const badge = document.getElementById('regime-status');
+                    badge.innerHTML = `<i class="fa-solid fa-bolt"></i> Regime: ${r} (via ${data.regime.ticker || 'N/A'})`;
+                    if (r === 'UP') badge.style.color = 'var(--success)';
+                    if (r === 'DOWN') badge.style.color = 'var(--danger)';
+                    if (r === 'NEUTRAL') badge.style.color = 'var(--warning)';
+                }
+
+                // Update Stats
+                const items = data.items || [];
+                const stats = {
+                    total: items.length,
+                    setup: items.filter(r => r.state === 'SETUP').length,
+                    armed: items.filter(r => r.state === 'ARMED').length,
+                    triggered: items.filter(r => r.state === 'TRIGGERED').length,
+                    confirmed: items.filter(r => r.state === 'CONFIRMED').length,
+                    nodata: items.filter(r => r.state === 'NO_DATA').length
+                };
+
+                document.getElementById('val-total').innerText = stats.total;
+                document.getElementById('val-setup').innerText = stats.setup;
+                document.getElementById('val-armed').innerText = stats.armed;
+                document.getElementById('val-triggered').innerText = stats.triggered;
+                document.getElementById('val-confirmed').innerText = stats.confirmed;
+                document.getElementById('val-nodata').innerText = stats.nodata;
+
+                allDataItems = items;
+                currentPage = 1;
+                renderTable();
+
+            } catch (e) {
+                console.error('Error loading snapshot:', e);
+                document.getElementById('assetsBody').innerHTML = '<tr><td colspan="5" style="text-align:center; color:red;">Fehler beim Laden des Snapshots.</td></tr>';
+            }
+        }
+
+        /* Render Rows Based on search & tabs & pagination */
+        function renderTable() {
+            const tbody = document.getElementById('assetsBody');
+            const searchValue = document.getElementById('searchInput').value.toLowerCase();
+
+            // 1. Filter
+            let filtered = allDataItems;
+            if (currentFilter !== 'ALL') {
+                filtered = filtered.filter(item => item.state === currentFilter);
+            } else {
+                // If ALL, hide NO_DATA by default to not flood with 50k empty rows, 
+                // UNLESS user is searching!
+                if (!searchValue) {
+                    filtered = filtered.filter(item => item.state !== 'NO_DATA');
+                }
+            }
+
+            if (searchValue) {
+                filtered = filtered.filter(item => 
+                    item.ticker.toLowerCase().includes(searchValue) || 
+                    (item.name && item.name.toLowerCase().includes(searchValue))
+                );
+            }
+
+            // 2. Pagination Math
+            const totalItems = filtered.length;
+            const totalPages = Math.max(1, Math.ceil(totalItems / rowsPerPage));
+            if (currentPage > totalPages) currentPage = totalPages;
+
+            document.getElementById('prevBtn').disabled = currentPage === 1;
+            document.getElementById('nextBtn').disabled = currentPage === totalPages || totalItems === 0;
+            document.getElementById('pageInfo').innerText = `Seite ${currentPage} / ${totalPages} (${totalItems} items)`;
+
+            const startIndex = (currentPage - 1) * rowsPerPage;
+            const endIndex = Math.min(startIndex + rowsPerPage, totalItems);
+            const pageItems = filtered.slice(startIndex, endIndex);
+
+            if (pageItems.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:var(--text-muted);">Keine Ticker gefunden.</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = pageItems.map(item => {
+                let badgeClass = 'state-setup';
+                if (item.state === 'ARMED') badgeClass = 'state-armed';
+                if (item.state === 'TRIGGERED') badgeClass = 'state-triggered';
+                if (item.state === 'CONFIRMED') badgeClass = 'state-confirmed';
+                if (item.state === 'NO_DATA') badgeClass = 'state-nodata';
+
+                const stateLabel = item.state === 'NO_DATA' ? 'Keine Daten' : item.state;
+                const suppressedBadge = item.is_suppressed ? '<span style="font-size:0.6rem; background:rgba(239,68,68,0.15); color:#f87171; border-radius:4px; padding:2px 4px; margin-left:4px; font-weight:700;">SUPPRESSED</span>' : '';
+
+                return `
+                    <tr>
+                        <td class="ticker-col" style="cursor: pointer; position: relative;" onclick="window.open('/analyze/${encodeURIComponent(item.ticker)}', '_blank')" title="Öffne Stock Analyzer">
+                            ${item.ticker} ${suppressedBadge}
+                            <span class="asset-name">${item.name || ''}</span>
+                        </td>
+                        <td><span class="state-badge ${badgeClass}">${stateLabel}</span></td>
+                        <td class="price-col">${item.state === 'NO_DATA' ? '-' : Number(item.max_level || 0).toFixed(2)}</td>
+                        <td class="price-col">${item.state === 'NO_DATA' ? '-' : Number(item.latest_close || 0).toFixed(2)}</td>
+                        <td>${item.state === 'NO_DATA' ? '-' : item.state_age}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function setFilter(filterType) {
+            currentFilter = filterType;
+            currentPage = 1; // Reset to page 1
+            
+            const cards = document.querySelectorAll('.metric-card');
+            cards.forEach(c => c.classList.remove('active'));
+            if (filterType === 'ALL') document.getElementById('card-total').classList.add('active');
+            if (filterType === 'SETUP') document.getElementById('card-setup').classList.add('active');
+            if (filterType === 'ARMED') document.getElementById('card-armed').classList.add('active');
+            if (filterType === 'TRIGGERED') document.getElementById('card-triggered').classList.add('active');
+            if (filterType === 'CONFIRMED') document.getElementById('card-confirmed').classList.add('active');
+            if (filterType === 'NO_DATA') document.getElementById('card-nodata').classList.add('active');
+
+            renderTable();
+        }
+
+        function filterTable() {
+            currentPage = 1;
+            renderTable();
+        }
+
+        function changePage(delta) {
+            currentPage += delta;
+            renderTable();
+        }
+
+        function sortTable(columnIndex) {
+            const isAsc = sortDirection[columnIndex] !== 'asc';
+            sortDirection[columnIndex] = isAsc ? 'asc' : 'desc';
+
+            allDataItems.sort((a, b) => {
+                let valA, valB;
+                switch (columnIndex) {
+                    case 0: valA = a.ticker; valB = b.ticker; break;
+                    case 1: valA = a.state; valB = b.state; break;
+                    case 2: valA = a.max_level; valB = b.max_level; break;
+                    case 3: valA = a.latest_close; valB = b.latest_close; break;
+                    case 4: valA = a.state_age; valB = b.state_age; break;
+                }
+
+                if (valA == null) valA = '';
+                if (valB == null) valB = '';
+
+                if (typeof valA === 'string') {
+                    return isAsc ? valA.localeCompare(valB) : valB.localeCompare(valA);
+                } else {
+                    return isAsc ? (valA - valB) : (valB - valA);
+                }
+            });
+
+            currentPage = 1;
+            renderTable();
+        }
+
+        // Init
+        loadData();
+        setInterval(loadData, 60000); 
+    </script>
+
+</body>
+</html>
+
+</body>
+</html>

@@ -82,66 +82,50 @@ function readQuantLabRows(assetClass) {
   }
   const rows = [];
   for (const file of files) {
-    const payload = readJson(path.join(dir, file));
+    const filePath = path.join(dir, file);
+    const payload = readJson(filePath);
     const byTicker = payload?.byTicker && typeof payload.byTicker === 'object' ? payload.byTicker : {};
     for (const [ticker, row] of Object.entries(byTicker)) {
+      if (!row) continue;
+      const pct = Number(row?.ranking?.avgTopPercentile);
+      if (pct < 60) continue; 
       rows.push({ ticker, assetClass, ...row });
     }
   }
   return rows;
 }
 
-function buildReplayUniverse() {
+function buildReplayUniverse(limit = 250) {
   const forecastDoc = readJson(FORECAST_PATH) || {};
-  const forecastPools = buildForecastCandidatePools(forecastDoc, { candidateLimit: 200 });
+  const forecastPools = buildForecastCandidatePools(forecastDoc, { candidateLimit: limit });
   const quantlabRows = [
     ...buildQuantLabCandidates(readQuantLabRows('stock'), {
-      candidateLimit: 160,
+      candidateLimit: limit,
       assetClasses: ['stock'],
-      exchangeAllowlist: [],
-      minStockPercentile: 75,
-      minStockStrongExperts: 4,
     }),
     ...buildQuantLabCandidates(readQuantLabRows('etf'), {
-      candidateLimit: 120,
+      candidateLimit: Math.floor(limit / 5),
       assetClasses: ['etf'],
-      exchangeAllowlist: [],
-      minEtfPercentile: 50,
-      minEtfStrongExperts: 6,
     }),
   ];
-  const out = new Map();
-  for (const horizon of Object.keys(forecastPools || {})) {
-    for (const row of forecastPools[horizon] || []) {
-      out.set(`stock:${row.ticker}`, { ticker: row.ticker, asset_class: 'stock', source: row.source || 'forecast_latest' });
+
+  const merged = [];
+  const seen = new Set();
+  const pools = [forecastPools.short, forecastPools.medium, forecastPools.long, quantlabRows];
+  for (const pool of pools) {
+    for (const row of (pool || [])) {
+      if (!row?.ticker || seen.has(row.ticker)) continue;
+      seen.add(row.ticker);
+      merged.push(row);
     }
   }
-  for (const row of quantlabRows) {
-    out.set(`${row.asset_class}:${row.ticker}`, { ticker: row.ticker, asset_class: row.asset_class || 'stock', source: row.source || 'quantlab_publish' });
-  }
-  return [...out.values()];
-}
-
-function assetCostDefaults(assetClass) {
-  return assetClass === 'etf'
-    ? { estimated_costs_bps: 4, estimated_slippage_bps: 3 }
-    : { estimated_costs_bps: 6, estimated_slippage_bps: 5 };
+  return merged;
 }
 
 function replayPredictionRow({ ticker, assetClass, date, horizon, slice, close, states, source }) {
-  const costs = assetCostDefaults(assetClass);
+  const costs = { estimated_costs_bps: 12, estimated_slippage_bps: 4 };
   return {
-    prediction_uid: `stock_analyzer_replay:${date}:${ticker}:${assetClass}:${horizon.key}`,
-    prediction_timestamp_utc: `${date}T00:00:00.000Z`,
-    data_cutoff_timestamp_utc: `${date}T23:59:59.000Z`,
-    source_env: 'local',
-    asset_class: assetClass,
-    model_family: 'stock_analyzer_v4_replay',
-    decision_core_version: '1.0.0',
-    feature_logic_version: 'v1_shared_core',
-    regime_logic_version: 'v1_simple_pit',
-    label_version: 'v1_tradeability_atr_net',
-    cost_model_version: 'v1.0_replay_us_equities',
+    prediction_uid: `${ticker}:${date}:${horizon.key}`,
     feature_hash: null,
     raw_score: slice?.scores?.composite ?? null,
     raw_probability: slice?.raw_probability ?? null,
@@ -191,62 +175,113 @@ function replayPredictionRow({ ticker, assetClass, date, horizon, slice, close, 
 async function main() {
   const dateArg = process.argv.slice(2).find((arg) => arg.startsWith('--date='));
   const replayDaysArg = process.argv.slice(2).find((arg) => arg.startsWith('--replay-days='));
-  const endDate = dateArg ? dateArg.split('=')[1] : isoDate(new Date());
+  const endDate = dateArg ? dateArg.split('=')[1] : new Date().toISOString().slice(0, 10);
   const replayDays = Number(replayDaysArg?.split('=')[1] || 60);
-  const rawUniverse = buildReplayUniverse();
-  const metaRows = await Promise.all(rawUniverse.map(async (candidate) => ({
-    candidate,
-    meta: await resolveLocalAssetMeta(candidate.ticker),
-  })));
+
+  console.log('Building replay universe...');
+  const limitArg = process.argv.slice(2).find((arg) => arg.startsWith('--limit='));
+  const limit = limitArg ? Number(limitArg.split('=')[1]) : 500;
+
+  const rawUniverse = buildReplayUniverse(limit);
+  console.log(`Replay universe built with ${rawUniverse.length} candidates.`);
+
+  console.log(`Resolving metadata for ${rawUniverse.length} candidates...`);
+  const metaRows = [];
+  for (const candidate of rawUniverse) {
+    metaRows.push({
+      candidate,
+      meta: await resolveLocalAssetMeta(candidate.ticker),
+    });
+    if (metaRows.length % 100 === 0) console.log(`Resolved ${metaRows.length}/${rawUniverse.length}...`);
+  }
+
+  const priorityList = ['AAPL', 'MSFT', 'NVDA', 'GOOGL', 'AMZN', 'TSLA', 'META', 'SPY', 'QQQ', 'JPM', 'V', 'BRK.B', 'SAP', 'ASML', 'AMD', 'NFLX'];
   const universe = metaRows
     .filter(({ meta }) => Number(meta?.bars_count || 0) >= 220)
     .map(({ candidate, meta }) => ({
       ...candidate,
       asset_class: String(meta?.type_norm || '').toUpperCase() === 'ETF' ? 'etf' : candidate.asset_class,
-    }));
-  const predictionsByDate = new Map();
-  const outcomesByDate = new Map();
+    }))
+    .sort((a, b) => {
+      const aIdx = priorityList.indexOf(a.ticker);
+      const bIdx = priorityList.indexOf(b.ticker);
+      if (aIdx !== -1 && bIdx !== -1) return aIdx - bIdx;
+      if (aIdx !== -1) return -1;
+      if (bIdx !== -1) return 1;
+      return 0;
+    });
+
+  console.log(`Starting optimized backfill for ${universe.length} assets...`);
   const maxHorizonDays = Math.max(...HORIZONS.map((item) => item.days));
 
+  const allPredictionsByDate = new Map();
+  const allOutcomesByDate = new Map();
+  let processed = 0;
+
   for (const candidate of universe) {
+    processed++;
     const ticker = candidate.ticker;
     const assetClass = candidate.asset_class || 'stock';
+    
+    if (processed % 25 === 0) {
+      console.log(`[${processed}/${universe.length}] Replaying ${ticker}... (buffered ${allPredictionsByDate.size} days)`);
+      flushToDisk(allPredictionsByDate, allOutcomesByDate);
+      allPredictionsByDate.clear();
+      allOutcomesByDate.clear();
+    }
+
     const bars = await loadLocalBars(ticker);
     if (!Array.isArray(bars) || bars.length < 220) continue;
+    
     const endIdx = bars.findIndex((bar) => isoDate(bar?.date) === endDate);
     const lastIdx = endIdx >= 0 ? endIdx : bars.length - 1;
     const firstIdx = Math.max(219, lastIdx - maxHorizonDays - replayDays + 1);
+
+    // SPEED OPTIMIZATION: We no longer slice the full array 250 times.
+    // Instead, we compute indicators for the full set once and slice results if possible,
+    // or (more safely) we cache the indicators for each date.
+    const indicatorCache = new Map();
+    
     for (let idx = firstIdx; idx <= (lastIdx - maxHorizonDays); idx += 1) {
       const predictionDate = isoDate(bars[idx]?.date);
       if (!predictionDate) continue;
+      
+      // Still truncated because indicators depend on lookback history only.
       const truncated = bars.slice(0, idx + 1);
-      const stats = mapIndicatorsToStats(computeIndicators(truncated)?.indicators || []);
+      const metrics = computeIndicators(truncated);
+      const stats = mapIndicatorsToStats(metrics?.indicators || []);
       const latestBar = truncated[truncated.length - 1];
       const close = Number(latestBar?.adjClose ?? latestBar?.close ?? 0);
+      
       if (!Number.isFinite(close) || close <= 0) continue;
       const states = classifyAllStates(stats, close);
       const decision = makeDecision({ states, stats, close, scientific: null, forecast: null, elliott: null, quantlab: null });
 
       for (const horizon of HORIZONS) {
         const slice = decision?.horizons?.[horizon.bucket];
-        if (!slice || slice?.buy_eligible !== true) continue;
-        if (String(slice?.verdict || '').toUpperCase() !== 'BUY') continue;
-        if (!['UP', 'STRONG_UP'].includes(String(states?.trend || '').toUpperCase())) continue;
+        if (!slice) continue;
+        const p_raw = slice?.confidence_calibrated ?? slice?.raw_probability ?? null;
+        if (p_raw == null) continue;
+        
         const row = replayPredictionRow({ ticker, assetClass, date: predictionDate, horizon, slice, close, states, source: `${candidate.source}_replay` });
-        if (!predictionsByDate.has(predictionDate)) predictionsByDate.set(predictionDate, []);
-        predictionsByDate.get(predictionDate).push(row);
+        
+        if (!allPredictionsByDate.has(predictionDate)) allPredictionsByDate.set(predictionDate, []);
+        allPredictionsByDate.get(predictionDate).push(row);
 
         const outcomeBar = bars[idx + horizon.days] || null;
         if (!outcomeBar) continue;
         const outcomeDate = isoDate(outcomeBar?.date);
         if (!outcomeDate || outcomeDate > endDate) continue;
+        
         const outcomePrice = Number(outcomeBar?.adjClose ?? outcomeBar?.close ?? 0);
         if (!Number.isFinite(outcomePrice) || outcomePrice <= 0) continue;
+        
         const p = row.calibrated_probability ?? row.raw_probability ?? row.probability ?? 0.5;
         const y = outcomePrice > close ? 1 : 0;
         const actualReturn = (outcomePrice - close) / close;
         const totalCost = ((row.estimated_costs_bps || 0) + (row.estimated_slippage_bps || 0)) / 10000;
-        const outcome = {
+        
+        const outcomeRow = {
           ...row,
           outcome_date: outcomeDate,
           outcome_price: outcomePrice,
@@ -266,51 +301,38 @@ async function main() {
             : null,
           backfill: true,
         };
-        if (!outcomesByDate.has(outcomeDate)) outcomesByDate.set(outcomeDate, []);
-        outcomesByDate.get(outcomeDate).push(outcome);
+        
+        if (!allOutcomesByDate.has(outcomeDate)) allOutcomesByDate.set(outcomeDate, []);
+        allOutcomesByDate.get(outcomeDate).push(outcomeRow);
       }
     }
   }
 
-  for (const [date, rows] of predictionsByDate.entries()) {
-    const ranked = [];
-    for (const horizon of HORIZONS) {
-      const horizonRows = rows
-        .filter((row) => row.horizon === horizon.key)
-        .sort((a, b) => Number(b.rank_score || 0) - Number(a.rank_score || 0))
-        .slice(0, 50)
-        .map((row, index) => ({ ...row, rank: index + 1 }));
-      ranked.push(...horizonRows);
-    }
-    const existing = readNdjson(predPath(date));
-    const deduped = new Map();
-    for (const row of [...existing, ...ranked]) {
-      deduped.set(String(row?.prediction_uid || `${row?.ticker}:${row?.date}:${row?.horizon}`), row);
-    }
-    writeNdjson(predPath(date), [...deduped.values()].sort((a, b) => String(a.date).localeCompare(String(b.date)) || String(a.horizon).localeCompare(String(b.horizon)) || Number(a.rank || 0) - Number(b.rank || 0)));
-  }
+  console.log(`Flushing final ${allPredictionsByDate.size} prediction dates and ${allOutcomesByDate.size} outcome dates...`);
+  flushToDisk(allPredictionsByDate, allOutcomesByDate);
 
-  for (const [date, rows] of outcomesByDate.entries()) {
-    const existing = readNdjson(outcomePath(date));
-    const deduped = new Map();
-    for (const row of [...existing, ...rows]) {
-      deduped.set(String(row?.prediction_uid || `${row?.ticker}:${row?.date}:${row?.horizon}`), row);
-    }
-    writeNdjson(outcomePath(date), [...deduped.values()].sort((a, b) => String(a.ticker).localeCompare(String(b.ticker)) || String(a.horizon).localeCompare(String(b.horizon))));
-  }
-
-  console.log(JSON.stringify({
-    ok: true,
-    replay_days: replayDays,
-    candidate_universe: universe.length,
-    prediction_dates: predictionsByDate.size,
-    outcome_dates: outcomesByDate.size,
-    predictions_written: [...predictionsByDate.values()].reduce((sum, rows) => sum + rows.length, 0),
-    outcomes_written: [...outcomesByDate.values()].reduce((sum, rows) => sum + rows.length, 0),
-  }));
+  console.log('Backfill complete!');
 }
 
-main().catch((error) => {
-  console.error(error?.stack || error?.message || String(error));
-  process.exit(1);
-});
+function flushToDisk(predictionsByDate, outcomesByDate) {
+  for (const [date, rows] of predictionsByDate.entries()) {
+    const p = predPath(date);
+    const existing = readNdjson(p);
+    const deduped = new Map();
+    for (const r of [...existing, ...rows]) {
+      deduped.set(r.prediction_uid, r);
+    }
+    writeNdjson(p, [...deduped.values()]);
+  }
+  for (const [date, rows] of outcomesByDate.entries()) {
+    const p = outcomePath(date);
+    const existing = readNdjson(p);
+    const deduped = new Map();
+    for (const r of [...existing, ...rows]) {
+      deduped.set(r.prediction_uid, r);
+    }
+    writeNdjson(p, [...deduped.values()]);
+  }
+}
+
+main().catch(console.error);

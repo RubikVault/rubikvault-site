@@ -85,6 +85,8 @@ export function computeStatusFromDataDate(dataDate, now, maxStaleDays, pendingWi
   if (normalized === today) return 'fresh';
   const ageDays = diffDays(normalized, today);
   if (ageDays === 1 && minutesSinceUtcMidnight(now) <= pendingWindowMinutes) return 'pending';
+  // Standard daily stock data: yesterday's close is 'fresh' until today's close arrives.
+  if (ageDays <= 1) return 'fresh';
   if (ageDays <= maxStaleDays) return 'stale';
   return 'error';
 }

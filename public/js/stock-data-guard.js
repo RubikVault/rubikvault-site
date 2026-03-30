@@ -46,14 +46,22 @@ export function guardPayload(payload, ticker) {
   const tp = guardTradePlan(close, s.atr14, decision);
   const fundGuard = guardFundamentals(fund);
   const consensusGuard = guardModelConsensus(decision, ev4);
+  corrections.fundamentals = {
+    availablePrimaryFields: fundGuard.availablePrimaryFields || 0,
+  };
+  corrections.modelConsensus = {
+    available: consensusGuard.available || 0,
+    missingModels: consensusGuard.missingModels || [],
+    degraded: Boolean(consensusGuard.degraded),
+  };
 
   // Panel gates
   const panelGates = {
     tradePlan: guardPanelGate('tradePlan', { close, atr: s.atr14, verdict: decision.verdict, tradePlanValid: tp.valid }),
-    fundamentals: guardPanelGate('fundamentals', { fund, fundValid: fundGuard.valid }),
+    fundamentals: guardPanelGate('fundamentals', { fund, fundValid: fundGuard.valid, fundCoverage: fundGuard.availablePrimaryFields }),
     historical: guardPanelGate('historical', { hasData: true }), // re-evaluated at render time
     breakout: guardPanelGate('breakout', { brk }),
-    modelConsensus: guardPanelGate('modelConsensus', { ev4, consensusValid: consensusGuard.valid }),
+    modelConsensus: guardPanelGate('modelConsensus', { ev4, consensusValid: consensusGuard.valid, consensusDegraded: consensusGuard.degraded }),
   };
 
   if (tp.warning) warnings.push(tp.warning);
@@ -135,7 +143,8 @@ export function guardFundamentals(fund) {
   }
 
   const valid = warnings.length === 0;
-  return { valid, warning: warnings.length ? warnings.join('; ') : null };
+  const availablePrimaryFields = ['marketCap', 'pe_ttm', 'eps_ttm', 'dividendYield'].filter((key) => fund?.[key] != null).length;
+  return { valid, warning: warnings.length ? warnings.join('; ') : null, availablePrimaryFields };
 }
 
 export function guardStructure(states, stats, close) {
@@ -274,11 +283,17 @@ export function guardModelConsensus(decision, ev4) {
   const hasElliott = states.elliott?.status === 'ok';
   const hasQuantlab = states.quantlab?.status === 'ok';
   const available = [hasScientific, hasForecast, hasElliott, hasQuantlab].filter(Boolean).length;
+  const missingModels = [
+    !hasQuantlab ? 'QuantLab' : null,
+    !hasElliott ? 'Elliott' : null,
+    !hasForecast ? 'Forecast' : null,
+    !hasScientific ? 'Scientific' : null,
+  ].filter(Boolean);
 
-  if (available === 0) return { valid: false, warning: 'Model consensus: no model data available' };
-  if (available < 3) return { valid: true, warning: `Model consensus: only ${available}/4 models available`, degraded: true };
+  if (available === 0) return { valid: false, warning: 'Model consensus: no model data available', available, missingModels, degraded: true };
+  if (available < 3) return { valid: true, warning: `Model consensus: only ${available}/4 models available`, degraded: true, available, missingModels };
 
-  return { valid: true, warning: null };
+  return { valid: true, warning: null, available, missingModels, degraded: available < 4 };
 }
 
 export function guardPanelGate(panel, ctx) {
@@ -291,7 +306,8 @@ export function guardPanelGate(panel, ctx) {
       return { show: true };
     }
     case 'fundamentals': {
-      if (!ctx.fund) return { show: false, reason: 'No fundamentals data' };
+      if (!ctx.fund) return { show: true, degraded: true, reason: 'No fundamentals data' };
+      if (!ctx.fundCoverage) return { show: true, degraded: true, reason: 'No verified fundamentals fields' };
       if (!ctx.fundValid) return { show: true, degraded: true, reason: 'Some values out of range' };
       return { show: true };
     }
@@ -306,6 +322,7 @@ export function guardPanelGate(panel, ctx) {
     case 'modelConsensus': {
       if (!ctx.ev4) return { show: false, reason: 'No evaluation data' };
       if (!ctx.consensusValid) return { show: false, reason: 'No model data' };
+      if (ctx.consensusDegraded) return { show: true, degraded: true, reason: 'Partial model coverage' };
       return { show: true };
     }
     default:

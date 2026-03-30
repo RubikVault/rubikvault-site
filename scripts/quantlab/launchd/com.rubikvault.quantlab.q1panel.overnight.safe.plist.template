@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.rubikvault.quantlab.q1panel.overnight.safe</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/bash</string>
+    <string>/Users/michaelpuchowezki/Dev/rubikvault-site/scripts/quantlab/run_overnight_q1_training_sweep_safe.sh</string>
+  </array>
+
+  <key>WorkingDirectory</key>
+  <string>/Users/michaelpuchowezki/Dev/rubikvault-site</string>
+
+  <!-- Default overnight start: 22:05 local time -->
+  <key>StartCalendarInterval</key>
+  <dict>
+    <key>Hour</key>
+    <integer>22</integer>
+    <key>Minute</key>
+    <integer>5</integer>
+  </dict>
+
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>QUANT_ROOT</key>
+    <string>/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab</string>
+    <key>MAX_HOURS</key>
+    <string>9.5</string>
+    <key>THREADS_CAP</key>
+    <string>4</string>
+    <key>MAX_RSS_GIB</key>
+    <string>11.5</string>
+    <key>TASK_TIMEOUT_MINUTES</key>
+    <string>210</string>
+  </dict>
+
+  <key>RunAtLoad</key>
+  <false/>
+
+  <key>StandardOutPath</key>
+  <string>/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/logs/launchd_q1_overnight_safe.out.log</string>
+  <key>StandardErrorPath</key>
+  <string>/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/logs/launchd_q1_overnight_safe.err.log</string>
+</dict>
+</plist>

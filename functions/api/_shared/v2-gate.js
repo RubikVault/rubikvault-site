@@ -23,9 +23,11 @@ const KV_KEY = 'rv:v2:gates';
  * @returns {Promise<boolean>}
  */
 export async function isV2Enabled(env, endpointId) {
+  if (env?.V2_GATE_FORCE_V1 === 'true' || env?.V2_GATE_FORCE_V1 === true) return false;
+
   // 1. Env override: V2_GATE_V2_SUMMARY=true
   const envKey = `V2_GATE_${endpointId.toUpperCase()}`;
-  const envVal = env?.[envKey];
+  const envVal = env?.[envKey] || env?.V2_GATE_GLOBAL;
   if (envVal === 'true' || envVal === true) return true;
   if (envVal === 'false' || envVal === false) return false;
 
@@ -34,6 +36,7 @@ export async function isV2Enabled(env, endpointId) {
     const kvResult = await getJsonKV(env, KV_KEY);
     if (kvResult?.value && typeof kvResult.value === 'object') {
       const kvGates = kvResult.value;
+      if (kvGates.kill_switch_force_v1 === true) return false;
       if (kvGates.global_enabled === false) return false;
       if (kvGates.global_enabled === true) {
         const ep = kvGates.endpoints?.[endpointId];
@@ -46,6 +49,7 @@ export async function isV2Enabled(env, endpointId) {
   }
 
   // 3. Static config file
+  if (gatesConfig.kill_switch_force_v1 === true) return false;
   if (!gatesConfig.global_enabled) return false;
   const ep = gatesConfig.endpoints?.[endpointId];
   return ep?.enabled === true;

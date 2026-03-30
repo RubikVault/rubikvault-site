@@ -1395,6 +1395,22 @@
       });
     }
 
+    function describeQuantlabFreshness(report) {
+      const freshness = report?.currentState?.dataFreshness || report?.dataSafety?.freshness || {};
+      const summary = freshness?.summary || {};
+      const publishAsof = freshness?.stockPublish?.asOfDate || freshness?.featureStore?.asOfDate || '';
+      const rawCanonical = freshness?.rawBars?.latestCanonicalRequiredDataDate || freshness?.rawBars?.latestCanonicalRequiredIngestDate || '';
+      const rawAny = freshness?.rawBars?.latestAnyRequiredDataDate || freshness?.rawBars?.latestAnyRequiredIngestDate || '';
+      const bridgeLag = Number(freshness?.rawBars?.bridgeOnlyAdvanceCalendarDays || 0);
+      if (!publishAsof && !rawCanonical) return 'Datenstand unbekannt';
+      if (summary?.severity === 'ok') return `Datenstand ${publishAsof || rawCanonical} · aktuell`;
+      const parts = [`Datenstand ${publishAsof || 'unbekannt'} · ${summary?.label || 'veraltet'}`];
+      if (rawCanonical) parts.push(`Raw canonical ${rawCanonical}`);
+      if (rawAny && rawAny !== rawCanonical) parts.push(`Raw any ${rawAny}`);
+      if (bridgeLag > 0) parts.push(`Bridge-only +${bridgeLag}d`);
+      return parts.join(' · ');
+    }
+
     function setButtonBusy(isBusy) {
       const button = document.getElementById('reload-report');
       if (!button) return;
@@ -1813,6 +1829,7 @@
 
       document.getElementById('meta-row').innerHTML = `
         <div class="pill">Generiert: ${escapeHtml(report.generatedAt)}</div>
+        <div class="pill">${escapeHtml(describeQuantlabFreshness(report))}</div>
         <div class="pill">Kanonische Lane: ${escapeHtml(report.objective.canonicalLane.featureStoreVersion)} · top${escapeHtml(report.objective.canonicalLane.topLiquidN)}</div>
         <div class="pill">Snapshot: ${escapeHtml(report.objective.canonicalLane.snapshotId)}</div>
         <div class="pill">Training ist Teil der Fertigstellung: ${report.trainingScope.trainingIsPartOfCompletion ? 'ja' : 'nein'}</div>
@@ -2063,9 +2080,7 @@
       }
       currentReport = report;
       currentMarket = marketData;
-      const berlin = berlinNow();
-      const freshness = report.reportDate === berlin.dateId ? 'heute frisch' : `noch ${report.reportDate}`;
-      setRefreshStatus(`Letzte Report-Zeit: ${report.generatedAt} · Status: ${freshness} · Auto-Check jede Minute.`);
+      setRefreshStatus(`Letzte Report-Zeit: ${report.generatedAt} · ${describeQuantlabFreshness(report)} · Auto-Check jede Minute.`);
       return report;
     }
 

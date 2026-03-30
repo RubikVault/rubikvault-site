@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.rubikvault.stock-analyzer.overnight-autopilot</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/bash</string>
+    <string>/Users/michaelpuchowezki/Dev/rubikvault-site/scripts/stock-analyzer/run_overnight_autopilot.sh</string>
+  </array>
+
+  <key>WorkingDirectory</key>
+  <string>/Users/michaelpuchowezki/Dev/rubikvault-site</string>
+
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PATH</key>
+    <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+    <key>TARGET_V7_WORKERS</key>
+    <string>4</string>
+    <key>MAX_STEP_RETRIES</key>
+    <string>2</string>
+    <key>OVERNIGHT_CUTOFF_HOUR</key>
+    <string>7</string>
+    <key>OVERNIGHT_CUTOFF_MINUTE</key>
+    <string>30</string>
+    <key>FULL_REBUILD_MAX_CYCLES</key>
+    <string>1</string>
+    <key>POST_FULL_REBUILD_CADENCE</key>
+    <string>maintenance</string>
+  </dict>
+
+  <key>StartCalendarInterval</key>
+  <dict>
+    <key>Hour</key>
+    <integer>21</integer>
+    <key>Minute</key>
+    <integer>45</integer>
+  </dict>
+
+  <key>KeepAlive</key>
+  <dict>
+    <key>SuccessfulExit</key>
+    <false/>
+  </dict>
+
+  <key>RunAtLoad</key>
+  <false/>
+
+  <key>StandardOutPath</key>
+  <string>/Users/michaelpuchowezki/Dev/rubikvault-site/mirrors/ops/logs/launchd_stock_analyzer_overnight.out.log</string>
+  <key>StandardErrorPath</key>
+  <string>/Users/michaelpuchowezki/Dev/rubikvault-site/mirrors/ops/logs/launchd_stock_analyzer_overnight.err.log</string>
+</dict>
+</plist>

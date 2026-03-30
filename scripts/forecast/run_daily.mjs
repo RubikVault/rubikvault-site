@@ -15,7 +15,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { buildFeatureSnapshot } from './build_features.mjs';
 import { loadPolicy, loadChampion, computePolicyHash, generateForecast, loadCalibrationArtifact } from './forecast_engine.mjs';
-import { writeForecastRecords, writeOutcomeRecords, readLedgerRangeAsync } from './ledger_writer.mjs';
+import { writeForecastRecords, writeOutcomeRecords, iterateLedgerRangeAsync } from './ledger_writer.mjs';
 import { computeOutcome, createOutcomeRecord } from './evaluator.mjs';
 import { generateDailyReport, writeReport, generateScorecards, writeScorecards, updateStatus, updateLatest, updateLastGood, publishLatestFromLastGood } from './report_generator.mjs';
 import { ingestSnapshots, loadPriceHistory, loadUniverse } from './snapshot_ingest.mjs';
@@ -172,17 +172,13 @@ async function evaluateMaturedForecasts({
     const startDate = new Date(today);
     startDate.setMonth(startDate.getMonth() - maxMonths);
 
-    const forecasts = await readLedgerRangeAsync(
+    for await (const forecast of iterateLedgerRangeAsync(
         repoRoot,
         'forecasts',
         startDate.toISOString().slice(0, 10),
         tradingDate
-    );
-
-    // Filter to live forecasts only
-    const liveForecasts = forecasts.filter(f => f.provenance === 'live');
-
-    for (const forecast of liveForecasts) {
+    )) {
+        if (forecast?.provenance !== 'live') continue;
         const horizonDays = HORIZON_DAYS[forecast.horizon] ?? 1;
         const outcomeDate = getHorizonOutcomeDate(forecast.trading_date, horizonDays);
 

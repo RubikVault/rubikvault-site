@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.rubikvault.quantlab.v5-training.night</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/usr/bin/caffeinate</string>
+    <string>-dimsu</string>
+    <string>/bin/bash</string>
+    <string>/Users/michaelpuchowezki/Dev/rubikvault-site/scripts/quantlab/start_q1_operator_safe.sh</string>
+    <string>night</string>
+  </array>
+  <key>WorkingDirectory</key>
+  <string>/Users/michaelpuchowezki/Dev/rubikvault-site</string>
+  <key>StartCalendarInterval</key>
+  <dict>
+    <key>Hour</key>
+    <integer>23</integer>
+    <key>Minute</key>
+    <integer>0</integer>
+  </dict>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PATH</key>
+    <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+    <key>QUANT_ROOT</key>
+    <string>/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab</string>
+    <key>Q1_SAFE_TOP_LIQUID_LIST</key>
+    <string>2500,3500</string>
+    <key>Q1_SAFE_PANEL_DAYS_LIST</key>
+    <string>90</string>
+    <key>Q1_SAFE_PANEL_MAX_ASSETS</key>
+    <string>5000</string>
+    <key>Q1_SAFE_FEATURE_STORE_VERSION</key>
+    <string>v4_q1panel_overnight</string>
+    <key>Q1_SAFE_PREFLIGHT_FAILURE_MODE</key>
+    <string>warn</string>
+    <key>MAX_HOURS</key>
+    <string>8.25</string>
+    <key>WATCH_HOURS</key>
+    <string>8.6</string>
+    <key>THREADS_CAP</key>
+    <string>1</string>
+    <key>MAX_RSS_GIB</key>
+    <string>8.3</string>
+    <key>TASK_TIMEOUT_MINUTES</key>
+    <string>80</string>
+    <key>NIGHT_ASOF_DATES_COUNT</key>
+    <string>4</string>
+    <key>SLEEP_BETWEEN_TASKS_SEC</key>
+    <string>10</string>
+    <key>STOP_AFTER_CONSECUTIVE_FAILURES</key>
+    <string>6</string>
+    <key>GLOBAL_LOCK_NAME</key>
+    <string>overnight_q1_training_sweep_safe</string>
+  </dict>
+  <key>RunAtLoad</key>
+  <false/>
+  <key>StandardOutPath</key>
+  <string>/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/logs/launchd_v5_training_night.out.log</string>
+  <key>StandardErrorPath</key>
+  <string>/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/logs/launchd_v5_training_night.err.log</string>
+</dict>
+</plist>

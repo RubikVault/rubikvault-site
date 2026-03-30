@@ -15,6 +15,46 @@ function parseDate(value) {
   return Number.isNaN(d.getTime()) ? null : d;
 }
 
+function normalizeAsOf(value) {
+  if (!value) return null;
+  return String(value).slice(0, 10);
+}
+
+function calendarDaysBetween(startValue, endValue = new Date()) {
+  const start = parseDate(startValue);
+  const end = parseDate(endValue);
+  if (!start || !end) return null;
+  const a = new Date(start);
+  const b = new Date(end);
+  a.setHours(0, 0, 0, 0);
+  b.setHours(0, 0, 0, 0);
+  return Math.max(0, Math.round((b.getTime() - a.getTime()) / 86400000));
+}
+
+function formatMarketCap(value) {
+  const n = toNumber(value);
+  if (n == null || n === 0) return null;
+  if (n >= 1e12) return `$${(n / 1e12).toFixed(2)}T`;
+  if (n >= 1e9) return `$${(n / 1e9).toFixed(1)}B`;
+  if (n >= 1e6) return `$${(n / 1e6).toFixed(0)}M`;
+  return `$${n.toLocaleString()}`;
+}
+
+function formatMoney(value, digits = 2) {
+  const n = toNumber(value);
+  return n == null ? null : `$${n.toFixed(digits)}`;
+}
+
+function formatRatio(value, digits = 1) {
+  const n = toNumber(value);
+  return (n == null || n === 0) ? null : n.toFixed(digits);
+}
+
+function formatPercent(value, digits = 1) {
+  const n = toNumber(value);
+  return n == null ? null : `${n.toFixed(digits)}%`;
+}
+
 export function businessDaysBetween(startValue, endValue = new Date()) {
   const start = parseDate(startValue);
   const end = parseDate(endValue);
@@ -163,6 +203,7 @@ export function buildRiskPresentation({ decision = {}, states = {}, stats = {} }
           ? 'Normal volatility'
           : 'Unknown regime';
 
+  const verdict = String(decision?.verdict || decision?.final_verdict || '').toUpperCase();
   let displaySentence = `Final risk is ${finalState}.`;
   if (overrideApplied && Number.isFinite(volPct)) {
     displaySentence = `Raw volatility is extreme at the ${volPct.toFixed(0)}th percentile, but final risk is moderated to ${finalState} by structural context.`;
@@ -170,6 +211,9 @@ export function buildRiskPresentation({ decision = {}, states = {}, stats = {} }
     displaySentence = `Final risk is ${finalState} based on ${regimeLabel.toLowerCase()} and ${volPct.toFixed(0)}th-percentile volatility.`;
   } else if (regimeLabel) {
     displaySentence = `Final risk is ${finalState} in a ${regimeLabel.toLowerCase()} regime.`;
+  }
+  if (verdict === 'WAIT' || verdict === 'AVOID') {
+    displaySentence += ' This measures structural conditions, not trade readiness.';
   }
 
   return {
@@ -184,7 +228,7 @@ export function buildRiskPresentation({ decision = {}, states = {}, stats = {} }
     regimeLabel,
     rawSignalBand: Number.isFinite(volPct) ? `${volPct.toFixed(0)}th percentile volatility` : regimeLabel,
     displaySentence,
-    scoreHelperText: 'Higher = better structural quality, not lower final risk.',
+    scoreHelperText: 'Higher = better setup quality. Final verdict can still be WAIT when confirmation or risk is insufficient.',
     rawSignalText: Number.isFinite(volPct) ? `Raw signal: relative volatility at the ${volPct.toFixed(0)}th percentile.` : `Raw signal: ${regimeLabel}.`,
     overrideDisplayReason: overrideApplied
       ? (overrideReason ? `Override reason: ${overrideReason.replace(/\.$/, '')}.` : 'Override reason: structural context moderated the raw signal.')
@@ -203,6 +247,7 @@ export function inferAssetClass({ ticker, name, universe, fundamentals } = {}) {
 export function buildCatalystPresentation({ ticker, name, fundamentals, universe } = {}) {
   const assetClass = inferAssetClass({ ticker, name, universe, fundamentals });
   const nextEarningsDate = fundamentals?.nextEarningsDate || null;
+  const asOf = normalizeAsOf(fundamentals?.updatedAt);
   if (Array.isArray(fundamentals?.confirmedCatalysts) && fundamentals.confirmedCatalysts.length > 0) {
     return {
       status: 'confirmed',
@@ -222,7 +267,7 @@ export function buildCatalystPresentation({ ticker, name, fundamentals, universe
       assetClass,
       title: 'Upcoming Catalysts',
       primaryText: `Estimated earnings window: ${date}`,
-      secondaryText: 'Unconfirmed schedule from fundamentals feed.',
+      secondaryText: `Unconfirmed schedule from fundamentals feed${asOf ? ` as of ${asOf}` : ''}.`,
     };
   }
   if (assetClass === 'ETF') {
@@ -232,8 +277,8 @@ export function buildCatalystPresentation({ ticker, name, fundamentals, universe
       variant: 'inline',
       assetClass,
       title: 'Catalysts',
-      primaryText: 'Catalyst feed unavailable for ETFs.',
-      secondaryText: null,
+      primaryText: `No verified fund-specific catalyst data${asOf ? ` as of ${asOf}` : ''}.`,
+      secondaryText: 'ETF catalyst coverage is informational only until a confirmed event feed is available.',
     };
   }
   return {
@@ -242,9 +287,76 @@ export function buildCatalystPresentation({ ticker, name, fundamentals, universe
     variant: 'inline',
     assetClass,
     title: 'Catalysts',
-    primaryText: 'Catalyst data temporarily unavailable.',
-    secondaryText: null,
+    primaryText: `No verified catalyst data available${asOf ? ` as of ${asOf}` : ''}.`,
+    secondaryText: 'Upcoming earnings or event feed did not return a confirmed item.',
   };
+}
+
+export function buildFundamentalsPresentation({ ticker, name, fundamentals, universe } = {}) {
+  const assetClass = inferAssetClass({ ticker, name, universe, fundamentals });
+  const asOf = normalizeAsOf(fundamentals?.updatedAt);
+  const metrics = [
+    { label: 'Market Cap', value: formatMarketCap(fundamentals?.marketCap) },
+    { label: 'P/E (TTM)', value: formatRatio(fundamentals?.pe_ttm, 1) },
+    { label: 'EPS (TTM)', value: formatMoney(fundamentals?.eps_ttm, 2) },
+    { label: 'Div Yield', value: formatPercent(fundamentals?.dividendYield, 1) },
+  ];
+  const availableCount = metrics.filter((metric) => metric.value != null).length;
+  const sectorLine = [fundamentals?.sector, fundamentals?.industry].filter(Boolean).join(' · ') || null;
+
+  if (!fundamentals || availableCount === 0) {
+    return {
+      status: 'unavailable',
+      renderMode: asOf ? 'inline' : 'hidden',
+      assetClass,
+      title: 'Fundamentals',
+      asOf,
+      metrics: [],
+      sectorLine,
+      primaryText: `Fundamentals temporarily unavailable${asOf ? ` as of ${asOf}` : ''}.`,
+      secondaryText: assetClass === 'ETF'
+        ? 'ETF fundamentals coverage is currently limited.'
+        : 'The fundamentals feed returned no verified valuation fields.',
+    };
+  }
+
+  return {
+    status: availableCount >= 3 ? 'ready' : 'degraded',
+    renderMode: availableCount >= 3 ? 'card' : 'compact',
+    assetClass,
+    title: 'Fundamentals',
+    asOf,
+    metrics,
+    sectorLine,
+    primaryText: null,
+    secondaryText: availableCount >= 3 ? null : `Only ${availableCount}/4 primary fundamentals fields are currently available.`,
+  };
+}
+
+export function buildModuleFreshnessPresentation(payload = {}, now = new Date()) {
+  const data = payload?.data || {};
+  const prices = data?.market_prices || {};
+  const bars = data?.bars || [];
+  const evaluation = payload?.evaluation_v4 || {};
+  const moduleFreshness = data?.module_freshness || {};
+  const historicalAsOf = normalizeAsOf(moduleFreshness.historical_as_of || bars[bars.length - 1]?.date);
+  const items = [
+    { label: 'Price', value: normalizeAsOf(moduleFreshness.price_as_of || prices?.date) },
+    { label: 'Historical', value: historicalAsOf },
+    { label: 'Scientific', value: normalizeAsOf(moduleFreshness.scientific_as_of || evaluation?.input_states?.scientific?.as_of) },
+    { label: 'Forecast', value: normalizeAsOf(moduleFreshness.forecast_as_of || evaluation?.input_states?.forecast?.as_of) },
+    { label: 'QuantLab', value: normalizeAsOf(moduleFreshness.quantlab_as_of || evaluation?.input_states?.quantlab?.as_of) },
+    { label: 'Fundamentals', value: normalizeAsOf(moduleFreshness.fundamentals_as_of || data?.fundamentals?.updatedAt) },
+  ].filter((item) => item.value);
+
+  return items.map((item) => {
+    const ageDays = calendarDaysBetween(item.value, now);
+    return {
+      ...item,
+      ageDays,
+      state: ageDays == null ? 'unknown' : ageDays > 5 ? 'stale' : ageDays > 2 ? 'delayed' : 'fresh',
+    };
+  });
 }
 
 export function validateLevelConsistency(levels, close) {
@@ -315,18 +427,7 @@ export function buildTradePlanModel({ verdict, close, atr, levels = [] } = {}) {
 }
 
 export function buildExecutiveGovernance({ decision = {}, report = {} } = {}) {
-  const pills = [];
-  if (report?.mode) pills.push({ label: 'Mode', value: report.mode, color: 'var(--text-dim)' });
-  if (Array.isArray(report?.top_sources) && report.top_sources.length) {
-    pills.push({ label: 'Drivers', value: report.top_sources.join(', '), color: 'var(--accent)' });
-  }
-  if (decision?.fallback_level && decision.fallback_level !== 'exact') {
-    pills.push({ label: 'Fallback', value: decision.fallback_level, color: 'var(--yellow)' });
-  }
-  if (decision?.regime_transition_active) {
-    pills.push({ label: 'Runtime', value: 'Regime transition', color: 'var(--red)' });
-  }
-  return pills;
+  return [];
 }
 
 export function computeTooltipFrame({ pointX, pointY, containerRect, tooltipWidth, tooltipHeight, padding = 12 }) {

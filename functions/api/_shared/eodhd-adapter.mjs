@@ -15,7 +15,8 @@ function toNumber(value) {
 }
 
 export async function fetchEodhdBarsRaw(symbol, env, options = {}) {
-    const apiKey = env?.EODHD_API_KEY || env?.EODHD_API_TOKEN;
+    const processEnv = typeof process !== 'undefined' && process?.env ? process.env : {};
+    const apiKey = env?.EODHD_API_KEY || env?.EODHD_API_TOKEN || processEnv.EODHD_API_KEY || processEnv.EODHD_API_TOKEN;
     if (!apiKey) {
         return {
             ok: false,

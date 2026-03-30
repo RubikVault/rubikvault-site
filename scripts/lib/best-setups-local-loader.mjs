@@ -7,6 +7,7 @@ import { buildStockInsightsV4Evaluation } from '../../functions/api/_shared/stoc
 import { assembleDecisionInputs } from '../../functions/api/_shared/decision-input-assembly.js';
 
 export const REPO_ROOT = process.cwd();
+const LOCAL_BAR_STALE_DAYS = Math.max(1, Number(process.env.LOCAL_BAR_STALE_DAYS || 3));
 const SEARCH_EXACT_PATH = 'public/data/universe/v7/search/search_exact_by_symbol.json.gz';
 const STOCK_SYMBOLS_PATH = 'public/data/universe/v7/ssot/stocks.max.symbols.json';
 const REGISTRY_PATH = 'public/data/universe/v7/registry/registry.ndjson.gz';
@@ -14,6 +15,7 @@ const EOD_LATEST_PATH = 'public/data/v3/eod/US/latest.ndjson.gz';
 const HISTORY_BASE = 'mirrors/universe-v7';
 
 const jsonCache = new Map();
+const stooqBarsCache = new Map();
 let searchExactCache = null;
 let stockSymbolsCache = null;
 let registryIndexCache = null;
@@ -77,6 +79,78 @@ function normalizeRows(rows) {
     .sort((a, b) => a.date.localeCompare(b.date));
 }
 
+function daysFromToday(dateText) {
+  if (!dateText) return null;
+  const ts = Date.parse(String(dateText).slice(0, 10));
+  if (!Number.isFinite(ts)) return null;
+  return Math.max(0, Math.round((Date.now() - ts) / 86400000));
+}
+
+function looksLikeUsTicker(ticker) {
+  return /^[A-Z]{1,5}(-[A-Z])?$/.test(String(ticker || '').trim().toUpperCase());
+}
+
+function stooqSymbol(ticker) {
+  return `${String(ticker || '').trim().replace(/-/g, '.').toLowerCase()}.us`;
+}
+
+function adjustedSeriesPath(ticker) {
+  return path.join(REPO_ROOT, `public/data/v3/series/adjusted/US__${ticker}.ndjson.gz`);
+}
+
+async function writeNdjsonGzAbs(absPath, rows) {
+  const payload = rows.map((row) => JSON.stringify(row)).join('\n') + '\n';
+  const gz = zlib.gzipSync(payload);
+  const tmpPath = `${absPath}.${process.pid}.tmp`;
+  await fs.mkdir(path.dirname(absPath), { recursive: true });
+  await fs.writeFile(tmpPath, gz);
+  await fs.rename(tmpPath, absPath);
+}
+
+async function fetchStooqAdjustedSeries(ticker) {
+  const cleanTicker = normalizeTicker(ticker);
+  if (!cleanTicker || !looksLikeUsTicker(cleanTicker)) return [];
+  const cached = stooqBarsCache.get(cleanTicker);
+  if (cached) return cached;
+
+  try {
+    const response = await fetch(`https://stooq.com/q/d/l/?s=${encodeURIComponent(stooqSymbol(cleanTicker))}&i=d`, {
+      headers: { 'user-agent': 'RubikVault-local-bars/1.0' },
+    });
+    if (!response.ok) return [];
+    const csv = await response.text();
+    const lines = csv.split('\n').map((line) => line.trim()).filter(Boolean);
+    if (lines.length < 2 || !/^Date,Open,High,Low,Close,Volume$/i.test(lines[0])) return [];
+    const rows = [];
+    for (const line of lines.slice(1)) {
+      const [trading_date, open, high, low, close, volume] = line.split(',');
+      if (!trading_date || trading_date === 'Date' || !close) continue;
+      const closeNum = Number(close);
+      if (!Number.isFinite(closeNum) || closeNum <= 0) continue;
+      rows.push({
+        canonical_id: `US:${cleanTicker}`,
+        ticker: cleanTicker,
+        exchange: 'US',
+        trading_date,
+        open: Number.isFinite(Number(open)) ? Number(open) : closeNum,
+        high: Number.isFinite(Number(high)) ? Number(high) : closeNum,
+        low: Number.isFinite(Number(low)) ? Number(low) : closeNum,
+        close: closeNum,
+        adjusted_close: closeNum,
+        volume: Number.isFinite(Number(volume)) ? Number(volume) : 0,
+        provider: 'stooq',
+      });
+    }
+    if (!rows.length) return [];
+    await writeNdjsonGzAbs(adjustedSeriesPath(cleanTicker), rows);
+    const normalized = normalizeRows(rows);
+    stooqBarsCache.set(cleanTicker, normalized);
+    return normalized;
+  } catch {
+    return [];
+  }
+}
+
 function normalizeRegistryRow(row = {}) {
   const symbol = normalizeTicker(row?.symbol);
   const canonicalId = normalizeCanonicalId(row?.canonical_id);
@@ -129,9 +203,11 @@ export async function readJsonGzAbs(absPath) {
 }
 
 export async function readNdjsonGzAbs(absPath) {
+  const cached = jsonCache.get(absPath);
+  if (cached) return cached;
   try {
     const raw = await fs.readFile(absPath);
-    return zlib.gunzipSync(raw)
+    const decoded = zlib.gunzipSync(raw)
       .toString('utf8')
       .split('\n')
       .filter(Boolean)
@@ -143,6 +219,8 @@ export async function readNdjsonGzAbs(absPath) {
         }
       })
       .filter(Boolean);
+    jsonCache.set(absPath, decoded);
+    return decoded;
   } catch {
     return [];
   }
@@ -248,8 +326,13 @@ export async function loadLocalBars(ticker) {
   const cleanTicker = normalizeTicker(ticker);
   if (!cleanTicker) return [];
 
-  const seriesRows = await readNdjsonGzAbs(path.join(REPO_ROOT, `public/data/v3/series/adjusted/US__${cleanTicker}.ndjson.gz`));
-  const seriesBars = normalizeRows(seriesRows);
+  const seriesRows = await readNdjsonGzAbs(adjustedSeriesPath(cleanTicker));
+  let seriesBars = normalizeRows(seriesRows);
+  const latestSeriesDate = seriesBars[seriesBars.length - 1]?.date || null;
+  if ((!seriesBars.length || (daysFromToday(latestSeriesDate) ?? Infinity) > LOCAL_BAR_STALE_DAYS) && looksLikeUsTicker(cleanTicker)) {
+    const refreshedBars = await fetchStooqAdjustedSeries(cleanTicker);
+    if (refreshedBars.length) seriesBars = refreshedBars;
+  }
 
   const assetMeta = await resolveLocalAssetMeta(cleanTicker);
   const packBars = await loadBarsFromHistoryPack(assetMeta);

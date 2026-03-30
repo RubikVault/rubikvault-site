@@ -168,7 +168,7 @@
     <header>
         <div>
             <h1>Unified Dashboard V7</h1>
-            <p style="color:var(--text-muted);font-size:.8rem" id="genTimestamp">Loading...</p>
+            <p style="color:var(--text-muted);font-size:.8rem" id="genTimestamp">Dashboard generated: Loading...</p>
         </div>
         <div class="header-right">
             <span class="badge badge-muted" id="modeBadge"><i class="fas fa-circle-dot"></i> —</span>
@@ -195,26 +195,22 @@
                 <div id="executiveSummaryContent"></div>
             </div>
             <div class="section-box">
-                <div class="section-title"><i class="fas fa-compass"></i> System Betriebsmodus</div>
-                <div id="operatingModeContent"></div>
+                <div class="section-title"><i class="fas fa-traffic-light"></i> Operational Readiness</div>
+                <div id="operationalReadinessContent"></div>
             </div>
         </div>
         <div class="sections-grid">
-            <div class="section-box">
-                <div class="section-title"><i class="fas fa-triangle-exclamation"></i> Critical Root Causes</div>
-                <div id="rootCausesContent"></div>
-            </div>
-            <div class="section-box" id="diagBox">
-                <div class="section-title"><i class="fas fa-stethoscope"></i> Pipeline Diagnostic</div>
-                <div id="diagContent"><span style="color:var(--text-muted);font-size:.82rem">No diagnostic data</span></div>
+            <div class="section-box" style="grid-column: span 2">
+                <div class="section-title"><i class="fas fa-triangle-exclamation"></i> Critical Issues & Actions</div>
+                <div id="criticalIssuesActionsContent"></div>
             </div>
         </div>
         <div class="health-row" id="healthRow"></div>
         <div class="model-grid" id="modelGrid"></div>
         <div class="sections-grid">
-            <div class="section-box" id="recsBox">
-                <div class="section-title"><i class="fas fa-list-check"></i> Prioritized Action Queue</div>
-                <div id="recsContent"></div>
+            <div class="section-box">
+                <div class="section-title"><i class="fas fa-stethoscope"></i> Technical Pipeline Diagnostic</div>
+                <div id="diagContentV2"></div>
             </div>
             <div class="section-box">
                 <div class="section-title"><i class="fas fa-rotate"></i> What Changed Since Last Refresh</div>
@@ -289,6 +285,16 @@
         </div>
         <div class="sections-grid">
             <div class="section-box">
+                <div class="section-title"><i class="fas fa-sitemap"></i> Dependency Chain</div>
+                <div id="dependencyChainContent"><span style="color:var(--text-muted);font-size:.82rem">No dependency data</span></div>
+            </div>
+            <div class="section-box">
+                <div class="section-title"><i class="fas fa-wave-square"></i> Automation Health</div>
+                <div id="automationHealthContent"><span style="color:var(--text-muted);font-size:.82rem">No automation summary</span></div>
+            </div>
+        </div>
+        <div class="sections-grid">
+            <div class="section-box">
                 <div class="section-title"><i class="fas fa-bug"></i> Recent Failures</div>
                 <div id="recentFailuresContent"><span style="color:var(--text-muted);font-size:.82rem">No failure data</span></div>
             </div>
@@ -322,16 +328,19 @@ const FEATURE_META = {
     forecast: { icon:'<i class="fas fa-bolt" style="color:#3b82f6"></i>', color:'#3b82f6', label:'Direction Forecast', metricKey:'forecast_accuracy_7d' },
     scientific: { icon:'<i class="fas fa-flask" style="color:#10b981"></i>', color:'#10b981', label:'Setup/Trigger', metricKey:'scientific_hit_rate_7d' },
     elliott: { icon:'<i class="fas fa-wave-square" style="color:#8b5cf6"></i>', color:'#8b5cf6', label:'Wave Analysis', metricKey:'elliott_accuracy_7d' },
+    quantlab: { icon:'<i class="fas fa-brain" style="color:#f59e0b"></i>', color:'#f59e0b', label:'Expert Swarm', metricKey:'quantlab_accuracy_7d' },
+    breakout_v2: { icon:'<i class="fas fa-arrow-trend-up" style="color:#ef4444"></i>', color:'#ef4444', label:'Breakout Detection', metricKey:null },
+    hist_probs: { icon:'<i class="fas fa-chart-bar" style="color:#06b6d4"></i>', color:'#06b6d4', label:'Event Probabilities', metricKey:null },
     stock_analyzer: { icon:'<i class="fas fa-ranking-star" style="color:#f59e0b"></i>', color:'#f59e0b', label:'Universe Ranking', metricKey:'stock_analyzer_stability' },
 };
 
 const FIX_HINTS = {
-    forecast: { stale:'Run: node scripts/learning/run-daily-learning-cycle.mjs', low_accuracy:'Check forecast calibration. Consider adjusting forecast_calibration_feedback threshold in scripts/forecast/forecast_engine.mjs' },
-    scientific: { stale:'Run: node scripts/learning/run-daily-learning-cycle.mjs', low_accuracy:'Increase signal threshold (currently 60) in build-scientific-summary.mjs' },
+    forecast: { stale:'Run: node scripts/forecast/run_daily.mjs, then regenerate the learning report.', low_accuracy:'Check forecast calibration. Consider adjusting forecast_calibration_feedback threshold in scripts/forecast/forecast_engine.mjs' },
+    scientific: { stale:'Run: node scripts/build-scientific-summary.mjs, then regenerate the learning report.', low_accuracy:'Increase signal threshold (currently 60) in build-scientific-summary.mjs' },
     elliott: { stale:'Regenerate: node scripts/marketphase/run-marketphase.mjs', low_accuracy:'Check quality filter: elliott_quality_filter_top500. Reduce prediction volume via confidence filter.' },
-    quantlab: { stale:'QuantLab data from mirrors/quantlab/. Check sync pipeline.', low_accuracy:'Review expert consensus thresholds in stock-decisions-v1.js' },
-    breakout_v2: { stale:'Breakout data generated at API call time. Check if API is running.' },
-    hist_probs: { stale:'Run: node scripts/lib/hist-probs/run-hist-probs.mjs' },
+    quantlab: { stale:'Repair the raw-bar ingest chain: refresh v7 history, run delta ingest, then rebuild the QuantLab daily report.', low_accuracy:'Review expert consensus thresholds in stock-decisions-v1.js' },
+    breakout_v2: { stale:'Rebuild the snapshot: node scripts/build-best-setups-v4.mjs, then rerun the ETF diagnostic.' },
+    hist_probs: { stale:'Advance the raw bars first, then rerun: node scripts/lib/hist-probs/run-hist-probs.mjs' },
 };
 
 let _accuracyChart = null;
@@ -353,10 +362,19 @@ function pct(v) { return v != null ? (v * 100).toFixed(1) + '%' : '\u2014'; }
 function num(v) { return v != null ? v.toFixed(3) : '\u2014'; }
 function hc(label, value, color) { return `<div class="health-cell"><div class="health-label">${label}</div><div class="health-value" style="color:${color}">${value}</div></div>`; }
 function fmtAgeHours(v) { return v == null || v < 0 ? 'n/a' : (v < 24 ? `${v.toFixed(1)}h` : `${(v / 24).toFixed(1)}d`); }
-function fmtShortDate(v) { if (!v) return 'N/A'; const d = new Date(v); return Number.isNaN(d.getTime()) ? String(v) : d.toLocaleString(); }
-function stalenessText(m) { return m.stale_days == null ? 'unknown' : `${m.stale_days}d (${m.staleness_level || 'unknown'})`; }
+function fmtShortDate(v) { if (!v) return 'Not reported'; const d = new Date(v); return Number.isNaN(d.getTime()) ? String(v) : d.toLocaleString(); }
+function stalenessText(m) {
+    const days = m.stale_days_now ?? m.stale_days;
+    return days == null ? 'unknown' : `${days}d (${m.staleness_level || 'unknown'})`;
+}
 function badgeClassForSeverity(level) { return level === 'critical' ? 'badge-red' : level === 'warning' ? 'badge-yellow' : 'badge-green'; }
 function statusIconForSeverity(level) { return level === 'critical' ? 'fa-triangle-exclamation' : level === 'warning' ? 'fa-circle-exclamation' : 'fa-check-circle'; }
+function cleanLearningStatus(value, systemSeverity = 'ok') {
+    const raw = String(value || '').trim();
+    if (!raw) return 'LEARNING OK';
+    if (systemSeverity === 'ok') return 'LEARNING OK';
+    return raw.replace('⚠️', '').replace(/\s+/g, ' ').trim().toUpperCase();
+}
 function escapeHtml(value) {
     return String(value ?? '').replace(/[&<>"']/g, ch => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[ch]));
 }
@@ -470,85 +488,81 @@ function sparklineSVG(values, color, w = 200, h = 36) {
 }
 
 function renderTrustGrid(data, runtime) {
-    const fetchSeverity = runtime.fetch_status === 'failed' ? 'critical' : 'ok';
+    const allModels = Object.values(data.models || {});
+    const worstModel = [...allModels].sort((a, b) => ((b.stale_days_now ?? b.stale_days ?? 0) - (a.stale_days_now ?? a.stale_days ?? 0)))[0];
+    const hasCriticalInput = (data.system?.root_causes || []).some(cause => cause.severity === 'critical');
+    const oldestCriticalText = hasCriticalInput && worstModel
+        ? `${worstModel.name}: ${worstModel.stale_days_now ?? worstModel.stale_days ?? 0}d`
+        : 'No critical inputs';
+    const oldestCriticalColor = hasCriticalInput
+        ? ((worstModel?.stale_days_now ?? worstModel?.stale_days ?? 0) > 7 ? 'var(--red)' : (worstModel?.stale_days_now ?? worstModel?.stale_days ?? 0) > 3 ? 'var(--yellow)' : 'var(--green)')
+        : 'var(--green)';
+
     document.getElementById('trustGrid').innerHTML = [
-        hc('Live Refresh', runtime.fetch_status === 'failed' ? 'STALE SNAPSHOT' : 'LIVE OK', fetchSeverity === 'critical' ? 'var(--red)' : 'var(--green)'),
-        hc('Last Success', runtime.last_successful_fetch_at ? fmtShortDate(runtime.last_successful_fetch_at) : 'N/A', 'var(--text)'),
-        hc('Snapshot Age', runtime.stale_snapshot_mode ? fmtAgeHours(runtime.snapshot_age_hours) : '0.0h', runtime.stale_snapshot_mode ? 'var(--yellow)' : 'var(--green)'),
-        hc('Data Validity', data.system?.data_truth_state || 'Unknown', data.system?.status_severity === 'critical' ? 'var(--red)' : data.system?.status_severity === 'warning' ? 'var(--yellow)' : 'var(--green)'),
+        hc('Fetch Status', runtime.fetch_status === 'failed' ? 'FAILED - USING SNAPSHOT' : 'OK (LIVE)', runtime.fetch_status === 'failed' ? 'var(--red)' : 'var(--green)'),
+        hc('System Health', data.system?.overall_status || 'UNKNOWN', data.system?.status_severity === 'critical' ? 'var(--red)' : data.system?.status_severity === 'warning' ? 'var(--yellow)' : 'var(--green)'),
+        hc('Critical Inputs', oldestCriticalText, oldestCriticalColor),
+        hc('Dashboard Snapshot Age', runtime.stale_snapshot_mode ? fmtAgeHours(runtime.snapshot_age_hours) : 'LIVE', runtime.stale_snapshot_mode ? 'var(--yellow)' : 'var(--green)'),
     ].join('');
 }
 
 function renderExecutiveSummary(data, runtime) {
     const summaryItems = [
-        { label:'Current state', value:`${data.system?.overall_status || 'UNKNOWN'} · ${runtime.fetch_status === 'failed' ? 'using cached snapshot' : 'live fetch healthy'}` },
+        { label:'System state', value:data.system?.overall_status || 'UNKNOWN' },
+        { label:'Fetch state', value:runtime.fetch_status === 'failed' ? `FAILED: ${runtime.fetch_error_message}` : 'OK - dashboard can reach live data' },
         { label:'Main blockers', value:(data.system?.root_causes || []).slice(0, 2).map(c => c.title).join(' · ') || 'No blockers detected' },
         { label:'Operational risk', value:data.system?.status_severity === 'critical' ? 'High: critical upstream/data issues present.' : data.system?.status_severity === 'warning' ? 'Medium: partial degradation present.' : 'Low: no major blockers detected.' },
-        { label:'Readiness', value:data.system?.cutover_ready ? 'Cutover criteria currently satisfied.' : 'Cutover blocked by active data, pipeline, or audit issues.' },
         { label:'Recommended next action', value:data.system?.primary_actions?.[0]?.action || 'No action queued.' },
     ];
-    if (runtime.fetch_status === 'failed') {
-        summaryItems.unshift({ label:'Live fetch issue', value:`Latest refresh failed: ${runtime.fetch_error_message || 'unknown error'}` });
-    }
     document.getElementById('executiveSummaryContent').innerHTML = `<ul class="summary-list">${summaryItems.map(item => `<li class="summary-item"><strong>${item.label}:</strong> ${escapeHtml(item.value)}</li>`).join('')}</ul>`;
 }
 
-function renderOperatingModes(data) {
-    const modes = data.system?.operating_modes || [];
-    const pills = modes.length
-        ? modes.map(mode => `<span class="tiny-pill" title="${escapeHtml(termHelp(mode))}">${mode.replace(/_/g, ' ')}</span>`).join('')
-        : '<span class="tiny-pill">NO SPECIAL MODE</span>';
-    const explanations = [
-        'SHADOW V1: V1 is observing, not primary.',
-        'BOOTSTRAP: not enough resolved outcomes for full automation.',
-        'UNKNOWN: source truth is incomplete.',
-        'CRITICAL: do not treat current output as production-ready.',
+function renderOperationalReadiness(data) {
+    const isReady = data.system?.production_ready || false;
+    const isShadow = data.system?.v1_mode === 'shadow_v1';
+    const issues = (data.system?.operating_modes || []).filter(m => ['BOOTSTRAP', 'FALLBACK_WEIGHTS', 'PROMOTION_BLOCKED', 'CUTOVER_BLOCKED'].includes(m));
+    
+    let status = 'NOT PRODUCTION-READY';
+    let color = 'var(--red)';
+    if (isReady) { status = 'READY FOR PROMOTION'; color = 'var(--green)'; }
+    else if (isShadow) { status = 'SHADOW ONLY'; color = 'var(--yellow)'; }
+
+    let html = `<div class="rec-item" style="background:${color}15; border-color:${color}40; color:${color}; font-weight:800; text-align:center; font-size:1rem; padding:1rem; margin-bottom:1rem">
+        <i class="fas fa-traffic-light"></i> ${status}
+    </div>`;
+    
+    const readinessItems = [
+        { label: 'Decision funnel', value: (data.pipeline_diagnostic?.stage_counts?.snapshot_etf_total || 0) + (data.pipeline_diagnostic?.stage_counts?.snapshot_stock_total || 0) === 0 ? 'EMPTY' : 'ACTIVE' },
+        { label: 'Evidence weight', value: data.v1_weights?.fallback_level === 'none' ? 'LEARNED' : 'FALLBACK' },
+        { label: 'Audit status', value: data.v1_report?.hit_rate != null ? 'AUDITED' : 'BOOTSTRAP' }
     ];
-    document.getElementById('operatingModeContent').innerHTML = `
-        <div class="pill-row">${pills}</div>
-        <ul class="status-list" style="margin-top:.75rem">${explanations.map(text => `<li class="status-item">${escapeHtml(text)}</li>`).join('')}</ul>
-    `;
+
+    html += `<ul class="summary-list">${readinessItems.map(item => `<li class="summary-item"><strong>${item.label}:</strong> ${item.value}</li>`).join('')}</ul>`;
+    if (issues.length) {
+        html += `<div style="margin-top:.75rem">${issues.map(i => `<span class="tiny-pill" style="border-color:var(--yellow); color:var(--yellow)">${i.replace(/_/g, ' ')}</span>`).join('')}</div>`;
+    }
+    document.getElementById('operationalReadinessContent').innerHTML = html;
 }
 
-function renderRootCauses(data) {
+function renderCriticalIssuesActions(data) {
     const causes = data.system?.root_causes || [];
+    const title = document.querySelector('#criticalIssuesActionsContent')?.previousElementSibling;
+    if (title) title.innerHTML = `<i class="fas fa-triangle-exclamation"></i> ${causes.length ? 'Issues & Actions' : 'Health & Actions'}`;
     if (!causes.length) {
-        document.getElementById('rootCausesContent').innerHTML = '<div class="rec-item rec-ok">No critical root causes detected.</div>';
+        document.getElementById('criticalIssuesActionsContent').innerHTML = '<div class="rec-item rec-ok">No issues detected.</div>';
         return;
     }
-    document.getElementById('rootCausesContent').innerHTML = causes.slice(0, 5).map(cause => `
+    document.getElementById('criticalIssuesActionsContent').innerHTML = causes.map(cause => `
         <div class="cause-item sev-${cause.severity}">
             <div class="cause-head">
                 <div class="cause-title">${escapeHtml(cause.title)}</div>
-                <div class="cause-meta">${escapeHtml(cause.category.replace(/_/g, ' '))}</div>
+                <div class="cause-meta">${escapeHtml(cause.owner || 'Unowned')} / ${escapeHtml(cause.file_ref || 'system')}</div>
             </div>
-            <div class="cause-text"><strong>Why:</strong> ${escapeHtml(cause.why)}</div>
+            <div class="cause-text" style="font-size:.85rem; color:var(--text); margin-bottom:.4rem"><strong>Why:</strong> ${escapeHtml(cause.why)}</div>
             <div class="cause-text"><strong>Impact:</strong> ${escapeHtml(cause.impact)}</div>
-            <div class="pill-row">
-                <span class="tiny-pill">${escapeHtml(cause.severity.toUpperCase())}</span>
-                <span class="tiny-pill">${escapeHtml(cause.owner || 'Unowned')}</span>
-                <span class="tiny-pill">${escapeHtml(cause.subsystem || 'system')}</span>
+            <div class="action-item sev-${cause.severity}" style="margin-top:.75rem; border:none; background:rgba(0,0,0,0.2); padding:.6rem">
+                <div class="action-text"><strong>Next fix:</strong> ${escapeHtml(cause.fix || 'No fix action defined')}</div>
             </div>
-        </div>
-    `).join('');
-}
-
-function renderActionQueue(data) {
-    const actions = data.system?.primary_actions || [];
-    if (!actions.length) {
-        document.getElementById('recsContent').innerHTML = '<div class="rec-item rec-ok">No queued actions.</div>';
-        return;
-    }
-    document.getElementById('recsContent').innerHTML = actions.map(action => `
-        <div class="action-item sev-${action.severity}">
-            <div class="action-head">
-                <div class="action-title">${escapeHtml(action.title)}</div>
-                <div class="action-meta">${escapeHtml((action.owner || 'Unowned') + ' / ' + (action.subsystem || 'system'))}</div>
-            </div>
-            <div class="action-text"><strong>Why:</strong> ${escapeHtml(action.why)}</div>
-            <div class="action-text"><strong>Impact:</strong> ${escapeHtml(action.impact)}</div>
-            <div class="action-text"><strong>Fix:</strong> ${escapeHtml(action.action)}</div>
-            ${action.file_ref ? `<div class="action-text"><strong>File:</strong> ${escapeHtml(action.file_ref)}</div>` : ''}
         </div>
     `).join('');
 }
@@ -585,6 +599,8 @@ function renderDiagnosticMode(data, runtime) {
             data_truth_state: data.system?.data_truth_state,
             operating_modes: data.system?.operating_modes,
             root_cause_count: data.system?.root_causes?.length || 0,
+            automation_health: data.system?.automation_health || null,
+            dependency_health: data.system?.dependency_health || [],
         },
         sources: Object.fromEntries(Object.entries(data.models || {}).map(([key, model]) => [key, {
             data_asof: model.data_asof,
@@ -619,26 +635,26 @@ function deepDiagnosis(key, feat, history) {
     const sections = [];
 
     if (key === 'forecast') {
-        if (preds === 0) sections.push({ title:'\uD83D\uDD34 No Predictions today', severity:'critical', text:'The Forecast pipeline did not deliver predictions today.', fixes:[{ what:'Check pipeline schedule', how:'GitHub Actions forecast-daily.yml must run BEFORE the Learning Cycle (19:00 UTC)', file:'.github/workflows/forecast-daily.yml' }] });
-        if (acc != null && acc < 0.50) sections.push({ title:'\uD83D\uDD34 Accuracy below 50%', severity:'critical', text:`Accuracy: ${pct(acc)}. Worse than coin toss. Likely overfitted champion selection.`, fixes:[{ what:'Redesign champion selection', how:'Replace with Walk-Forward Validation using 5-day OOS window', file:'scripts/forecast/forecast_engine.mjs \u2192 selectChampion()' },{ what:'Implement regime filter', how:'If VIX > 25 or SPY drawdown > 3%: set confidence to 0.50', file:'scripts/forecast/forecast_engine.mjs' }] });
-        else if (acc != null && acc < 0.55) sections.push({ title:'\uD83D\uDFE1 Accuracy 50-55%', severity:'warning', text:`Accuracy: ${pct(acc)}. Barely above random.`, fixes:[{ what:'Enable Platt Scaling', how:'Train Logistic Regression on raw scores for calibrated confidence', file:'scripts/forecast/forecast_engine.mjs' }] });
-        else if (acc != null && acc >= 0.60) sections.push({ title:'\uD83D\uDFE2 Accuracy above 60%', severity:'ok', text:`Accuracy: ${pct(acc)}. Good performance.`, fixes:[] });
-        if (brier != null && brier > 0.25) sections.push({ title:'\uD83D\uDFE1 Brier Score too high', severity:'warning', text:`Brier: ${num(brier)} (Target: < 0.20). Probabilities unreliable.`, fixes:[{ what:'Temperature Scaling', how:'Learn parameter T that divides logits. Minimizes Brier on validation.', file:'scripts/forecast/forecast_engine.mjs' }] });
-        if (trendAcc === 'declining') sections.push({ title:'\uD83D\uDD34 Accuracy declining', severity:'critical', text:'7d accuracy falling. Feature drift or regime shift.', fixes:[{ what:'Enable rolling retrain', how:'Retrain every 5 days on last 60 days', file:'scripts/forecast/run_daily.mjs' }] });
+        if (preds === 0) sections.push({ title:'\uD83D\uDD34 No Predictions today', severity:'critical', text:'The Forecast pipeline did not deliver predictions today.', fixes:[{ what:'Inspect forecast failure artifacts', how:'Review recent forecast run logs, failed_step metadata, and the latest successful output before changing pipeline timing.', file:'scripts/forecast/run_daily.mjs' }] });
+        if (acc != null && acc < 0.50) sections.push({ title:'\uD83D\uDD34 Accuracy below 50%', severity:'critical', text:`Accuracy: ${pct(acc)}. Below baseline. Current artifacts do not prove root cause; inspect recent forecast outputs, validation slices, and failure logs first.`, fixes:[{ what:'Audit latest forecast outputs', how:'Compare the latest successful forecast output with the current failure window and confirm prediction joins, universe size, and scoring artifacts.', file:'scripts/forecast/run_daily.mjs' },{ what:'Verify calibration inputs', how:'Check whether probability outputs, outcome joins, and validation windows were generated successfully before altering model logic.', file:'scripts/forecast/forecast_engine.mjs' }] });
+        else if (acc != null && acc < 0.55) sections.push({ title:'\uD83D\uDFE1 Accuracy 50-55%', severity:'warning', text:`Accuracy: ${pct(acc)}. Marginal edge. Validate calibration and out-of-sample stability before promoting changes.`, fixes:[{ what:'Audit recent validation slices', how:'Confirm the current metric holds outside the latest batch and is not driven by a small or stale sample.', file:'scripts/forecast/forecast_engine.mjs' }] });
+        else if (acc != null && acc >= 0.60) sections.push({ title:'\uD83D\uDFE2 Accuracy above 60%', severity:'ok', text:`Accuracy: ${pct(acc)}. Good recent performance.`, fixes:[] });
+        if (brier != null && brier > 0.25) sections.push({ title:'\uD83D\uDFE1 Brier Score too high', severity:'warning', text:`Brier: ${num(brier)} (Target: < 0.20). Probabilities look weakly calibrated.`, fixes:[{ what:'Inspect calibration artifacts', how:'Verify whether forecast probabilities and realized outcomes still align in the latest validation output.', file:'scripts/forecast/forecast_engine.mjs' }] });
+        if (trendAcc === 'declining') sections.push({ title:'\uD83D\uDD34 Accuracy declining', severity:'critical', text:'7d accuracy is falling. Investigate freshness, input drift, and recent failed forecast runs before changing strategy logic.', fixes:[{ what:'Compare healthy vs degraded windows', how:'Use the latest ops artifacts to isolate what changed across the decline window.', file:'scripts/forecast/run_daily.mjs' }] });
     }
     if (key === 'scientific') {
-        if (preds === 0) sections.push({ title:'\uD83D\uDD34 No Scientific predictions', severity:'critical', text:'No setup/trigger signals extracted.', fixes:[{ what:'Check data source', how:'Verify public/data/supermodules/scientific-summary.json exists and is < 24h old', file:'scripts/build-supermodules.mjs' }] });
-        if (hr != null && hr < 0.30) sections.push({ title:'\uD83D\uDD34 Hit Rate below 30%', severity:'critical', text:`Hit Rate: ${pct(hr)}. Setup/Trigger too permissive.`, fixes:[{ what:'Raise signal threshold', how:'Set strength > 70 (currently > 0)', file:'scripts/build-scientific-summary.mjs' },{ what:'Add volume confirmation', how:'Volume > 1.5x Avg AND Price > Resistance', file:'scripts/supermodules/' }] });
-        else if (hr != null && hr < 0.40) sections.push({ title:'\uD83D\uDFE1 Hit Rate 30-40%', severity:'warning', text:`Hit Rate: ${pct(hr)}. Improvable.`, fixes:[{ what:'Multi-timeframe confirmation', how:'Require Daily AND Weekly consistency', file:'scripts/supermodules/' }] });
+        if (preds === 0) sections.push({ title:'\uD83D\uDD34 No Scientific predictions', severity:'critical', text:'No setup/trigger signals were extracted from the current scientific source.', fixes:[{ what:'Inspect scientific source artifact', how:'Verify the latest scientific summary exists, carries a current timestamp, and contains non-empty signal rows.', file:'scripts/build-scientific-summary.mjs' }] });
+        if (hr != null && hr < 0.30) sections.push({ title:'\uD83D\uDD34 Hit Rate below 30%', severity:'critical', text:`Hit Rate: ${pct(hr)}. Filter quality is weak. Confirm recent source integrity and rule outputs before retuning thresholds.`, fixes:[{ what:'Audit recent scientific rows', how:'Review recent emitted signals, timestamps, and filters to isolate whether source completeness or filtering quality is the blocker.', file:'scripts/build-scientific-summary.mjs' }] });
+        else if (hr != null && hr < 0.40) sections.push({ title:'\uD83D\uDFE1 Hit Rate 30-40%', severity:'warning', text:`Hit Rate: ${pct(hr)}. Borderline. Validate whether the current sample is representative before changing rules.`, fixes:[{ what:'Compare recent signal cohorts', how:'Check whether low-hit cohorts share a timestamp, universe, or gating pattern.', file:'scripts/build-scientific-summary.mjs' }] });
         else if (hr != null && hr >= 0.40) sections.push({ title:'\uD83D\uDFE2 Hit Rate above 40%', severity:'ok', text:`Hit Rate: ${pct(hr)}. Effective filtering.`, fixes:[] });
     }
     if (key === 'elliott') {
-        if (acc != null && acc < 0.50) sections.push({ title:'\uD83D\uDD34 Elliott Accuracy below 50%', severity:'critical', text:`Accuracy: ${pct(acc)}. Wave counts unreliable.`, fixes:[{ what:'Confidence filter', how:'Only use predictions with wave_confidence > 0.6', file:'scripts/learning/run-daily-learning-cycle.mjs' },{ what:'Use invalidation levels', how:'If price > invalidation level \u2192 switch to alternative count', file:'functions/api/elliott-scanner.js' }] });
-        else if (acc != null && acc < 0.55) sections.push({ title:'\uD83D\uDFE1 Elliott Accuracy 50-55%', severity:'warning', text:`Accuracy: ${pct(acc)}. Minimal edge.`, fixes:[{ what:'Top-confidence filter', how:'Only top 200 highest confidence instead of all 50k+', file:'scripts/learning/run-daily-learning-cycle.mjs' }] });
-        if (preds > 10000) sections.push({ title:'\u26A0\uFE0F Too many predictions', severity:'warning', text:`${preds.toLocaleString()} predictions dilute accuracy.`, fixes:[{ what:'Reduce volume', how:'Only wave_quality > 70 into ledger \u2192 ~500-2000 predictions', file:'scripts/learning/run-daily-learning-cycle.mjs' }] });
+        if (acc != null && acc < 0.50) sections.push({ title:'\uD83D\uDD34 Elliott Accuracy below 50%', severity:'critical', text:`Accuracy: ${pct(acc)}. The current Elliott output is not trustworthy enough for promotion.`, fixes:[{ what:'Inspect Elliott source freshness', how:'Confirm the market phase source advanced and the latest prediction batch matches the reported data_asof.', file:'scripts/marketphase/run-marketphase.mjs' },{ what:'Audit recent Elliott outputs', how:'Review confidence, invalidation, and batch size fields in the latest output before narrowing the stream.', file:'scripts/learning/run-daily-learning-cycle.mjs' }] });
+        else if (acc != null && acc < 0.55) sections.push({ title:'\uD83D\uDFE1 Elliott Accuracy 50-55%', severity:'warning', text:`Accuracy: ${pct(acc)}. Minimal edge. Confirm whether the latest batch quality is stable before widening usage.`, fixes:[{ what:'Review recent prediction cohorts', how:'Compare the most recent high-confidence and low-confidence Elliott outputs against realized outcomes.', file:'scripts/learning/run-daily-learning-cycle.mjs' }] });
+        if (preds > 10000) sections.push({ title:'\u26A0\uFE0F Too many predictions', severity:'warning', text:`${preds.toLocaleString()} predictions may dilute the signal set.`, fixes:[{ what:'Inspect emitted prediction volume', how:'Check whether the latest batch includes overly broad or duplicated Elliott rows before tightening filters.', file:'scripts/learning/run-daily-learning-cycle.mjs' }] });
     }
-    if (weekTrend != null && weekTrend < -0.02) sections.push({ title:`\uD83D\uDCC9 Weekly decline: ${(weekTrend*100).toFixed(1)}%`, severity:'warning', text:`Main metric dropped ${(Math.abs(weekTrend)*100).toFixed(1)} pp this week.`, fixes:[{ what:'Check market context', how:'Regime shift? Adjust parameters for new regime.', file:'' }] });
-    if (monthTrend != null && monthTrend < -0.03) sections.push({ title:`\uD83D\uDCC9 Monthly decline: ${(monthTrend*100).toFixed(1)}%`, severity:'critical', text:'Sustained decline over 30 days. Feature not learning effectively.', fixes:[{ what:'Fundamental redesign', how:'Analyze failed predictions for patterns. Consider alternative approach.', file:'' }] });
+    if (weekTrend != null && weekTrend < -0.02) sections.push({ title:`\uD83D\uDCC9 Weekly decline: ${(weekTrend*100).toFixed(1)}%`, severity:'warning', text:`Main metric dropped ${(Math.abs(weekTrend)*100).toFixed(1)} pp this week.`, fixes:[{ what:'Inspect recent change window', how:'Compare the latest week of inputs, freshness, and pipeline state against the previous healthy week.', file:'' }] });
+    if (monthTrend != null && monthTrend < -0.03) sections.push({ title:`\uD83D\uDCC9 Monthly decline: ${(monthTrend*100).toFixed(1)}%`, severity:'critical', text:'Sustained decline over 30 days. Treat this as a reliability warning until source health and pipeline state are verified.', fixes:[{ what:'Review month-over-month degradation', how:'Trace the decline against source freshness, pipeline errors, and sample size before redesigning the feature.', file:'' }] });
     return sections;
 }
 
@@ -647,9 +663,8 @@ async function loadDashboard() {
         const { data, runtime } = await fetchDashboardPayload();
         renderTrustGrid(data, runtime);
         renderExecutiveSummary(data, runtime);
-        renderOperatingModes(data);
-        renderRootCauses(data);
-        renderActionQueue(data);
+        renderOperationalReadiness(data);
+        renderCriticalIssuesActions(data);
         renderRefreshDelta(runtime, data);
         renderDiagnosticMode(data, runtime);
 
@@ -672,14 +687,14 @@ async function loadDashboard() {
         }
 
         // === Header ===
-        document.getElementById('genTimestamp').textContent = 'Generated: ' + (data.generated_at ? new Date(data.generated_at).toLocaleString() : '\u2014');
+        document.getElementById('genTimestamp').textContent = 'Dashboard generated: ' + (data.generated_at ? new Date(data.generated_at).toLocaleString() : '\u2014');
         const mode = data.system?.v1_mode || '\u2014';
         const modeBadge = document.getElementById('modeBadge');
         modeBadge.className = 'badge ' + (mode === 'shadow_v1' ? 'badge-blue' : mode === 'v1_primary_with_legacy_audit' ? 'badge-green' : 'badge-muted');
         modeBadge.innerHTML = '<i class="fas fa-circle-dot"></i> ' + mode.toUpperCase().replace(/_/g, ' ');
         const learningBadge = document.getElementById('learningBadge');
-        learningBadge.className = 'badge ' + (data.system?.operating_modes?.includes('BOOTSTRAP') ? 'badge-yellow' : 'badge-blue');
-        learningBadge.innerHTML = '<i class="fas fa-chart-line"></i> ' + (data.system?.learning_status || 'UNKNOWN');
+        learningBadge.className = 'badge ' + (data.system?.status_severity === 'ok' ? 'badge-green' : data.system?.operating_modes?.includes('BOOTSTRAP') ? 'badge-yellow' : 'badge-blue');
+        learningBadge.innerHTML = '<i class="fas fa-chart-line"></i> ' + cleanLearningStatus(data.system?.learning_status, data.system?.status_severity || 'ok');
         const statusBadge = document.getElementById('statusBadge');
         const statusSeverity = data.system?.status_severity || 'ok';
         statusBadge.className = 'badge ' + badgeClassForSeverity(statusSeverity);
@@ -695,9 +710,9 @@ async function loadDashboard() {
         const regime = data.system?.regime;
         document.getElementById('healthRow').innerHTML = [
             hc('Mode', mode.replace(/_/g,' ').toUpperCase(), 'var(--blue)'),
-            hc('Hit Rate (Matured)', v1r?.hit_rate != null ? (v1r.hit_rate*100).toFixed(0)+'%' : 'N/A', v1r?.hit_rate == null ? 'var(--text-muted)' : v1r?.hit_rate > 0.55 ? 'var(--green)' : 'var(--yellow)'),
-            hc('Signals Today', v1r?.signals_today ?? '\u2014', 'var(--text)'),
-            hc('Evidence Q (Matured)', v1r?.avg_evidence_quality != null ? (v1r.avg_evidence_quality*100).toFixed(0)+'%' : 'N/A', v1r?.avg_evidence_quality == null ? 'var(--text-muted)' : v1r?.avg_evidence_quality >= 0.7 ? 'var(--green)' : 'var(--yellow)'),
+            hc('Awaiting Outcomes', v1r?.hit_rate != null ? (v1r.hit_rate*100).toFixed(0)+'%' : 'AWAITING OUTCOMES', v1r?.hit_rate == null ? 'var(--text-muted)' : v1r?.hit_rate > 0.55 ? 'var(--green)' : 'var(--yellow)'),
+            hc('Signals Today', v1r?.signals_today > 0 ? v1r.signals_today : 'No audited signals today', (v1r?.signals_today || 0) > 0 ? 'var(--text)' : 'var(--text-muted)'),
+            hc('Awaiting Matured Evidence', v1r?.avg_evidence_quality != null ? (v1r.avg_evidence_quality*100).toFixed(0)+'%' : 'AWAITING MATURED EVIDENCE', v1r?.avg_evidence_quality == null ? 'var(--text-muted)' : v1r?.avg_evidence_quality >= 0.7 ? 'var(--green)' : 'var(--yellow)'),
             hc('Regime', regime ? regime.market?.toUpperCase() : '\u2014', regime?.market === 'bull' ? 'var(--green)' : 'var(--red)'),
             hc('Breadth', regime?.breadth?.toUpperCase() || '\u2014', regime?.breadth === 'strong' ? 'var(--green)' : regime?.breadth === 'weak' ? 'var(--red)' : 'var(--yellow)'),
         ].join('');
@@ -708,7 +723,7 @@ async function loadDashboard() {
         for (const [key, m] of Object.entries(data.models)) {
             const icon = MODEL_ICONS[key] || 'fa-cube';
             const accLabel = m.accuracy_label || '7D Accuracy';
-            const accValue = m.accuracy_7d != null ? (m.accuracy_7d*100).toFixed(1)+'%' : 'N/A';
+            const accValue = m.accuracy_7d != null ? (m.accuracy_7d*100).toFixed(1)+'%' : (m.metric_na_reason ? 'SEE NOTE' : 'UNAVAILABLE');
             const accColor = m.accuracy_7d == null ? 'var(--text-muted)' : m.accuracy_7d > 0.55 ? 'var(--green)' : m.accuracy_7d < 0.50 ? 'var(--red)' : 'var(--yellow)';
             const isQuant = key === 'quantlab';
             const univText = isQuant ? (m.active_universe||0).toLocaleString()+' / '+(m.universe_size||0).toLocaleString() : (m.universe_size||0).toLocaleString();
@@ -719,6 +734,12 @@ async function loadDashboard() {
                 ? `<span class="badge badge-green" style="font-size:.65rem;padding:1px 6px"><i class="fas fa-arrow-up"></i> ${m.trend}</span>`
                 : `<span class="badge badge-blue" style="font-size:.65rem;padding:1px 6px">${m.trend}</span>`;
             const pipelineBadge = `<span class="badge ${m.pipeline_status === 'failed' ? 'badge-red' : m.pipeline_status === 'stale' || m.pipeline_status === 'degraded' ? 'badge-yellow' : m.pipeline_status === 'ok' ? 'badge-green' : 'badge-muted'}" style="font-size:.65rem;padding:1px 6px">${(m.pipeline_status || 'unknown').toUpperCase()}</span>`;
+            const quantlabStatusRows = key === 'quantlab' ? `
+                <div class="info-row"><span>Publish as-of</span><strong>${m.details?.stock_publish_asof || 'Unknown'}</strong></div>
+                <div class="info-row"><span>Feature store as-of</span><strong>${m.details?.feature_store_asof || 'Unknown'}</strong></div>
+                <div class="info-row"><span>Raw canonical</span><strong>${m.details?.raw_canonical_asof || 'Unknown'}</strong></div>
+                <div class="info-row"><span>Raw any</span><strong>${m.details?.raw_any_asof || 'Unknown'}</strong></div>
+            ` : '';
 
             // Fix hint
             const hints = FIX_HINTS[key] || {};
@@ -730,12 +751,14 @@ async function loadDashboard() {
                 <div class="card-header"><div><div class="model-name">${m.name}${inactive}</div><div class="model-type">${m.type}</div></div><i class="fas ${icon} card-icon"></i></div>
                 <div class="metric"><div class="metric-label">Universe</div><div class="metric-value">${univText}</div><div class="metric-sub">${isQuant?'Active / Total':'Coverage'}</div></div>
                 <div class="metric"><div class="metric-label">${accLabel}</div><div class="metric-value" style="color:${accColor}">${accValue}</div></div>
-                ${m.metric_na_reason && m.accuracy_7d == null ? `<div class="soft-note">${escapeHtml(m.metric_na_reason)}</div>` : ''}
+                ${m.metric_na_reason && m.accuracy_7d == null ? `<div class="soft-note"><i class="fas fa-info-circle"></i> ${escapeHtml(m.metric_na_reason)}</div>` : ''}
                 <div class="info-stack">
-                    <div class="info-row"><span>Data as-of</span><strong>${m.data_asof || 'N/A'}${staleIcon}</strong></div>
+                    <div class="info-row"><span>Data as-of</span><strong>${m.data_asof || 'Unknown'}${staleIcon}</strong></div>
                     <div class="info-row"><span>Staleness</span><strong class="${staleClass}">${stalenessText(m)}</strong></div>
-                    <div class="info-row"><span>Report</span><strong>${m.report_generated_at ? fmtShortDate(m.report_generated_at) : 'N/A'}${m.source_file_age_hours != null ? ' · ' + fmtAgeHours(m.source_file_age_hours) : ''}</strong></div>
-                    <div class="info-row"><span>Last success</span><strong>${m.last_successful_run_at ? fmtShortDate(m.last_successful_run_at) : 'N/A'}</strong></div>
+                    <div class="info-row"><span>Why stale?</span><strong>${escapeHtml(m.stale_reason || m.freshness_reason || 'No freshness reason reported')}</strong></div>
+                    ${quantlabStatusRows}
+                    <div class="info-row"><span>Report generated</span><strong>${m.report_generated_at ? fmtShortDate(m.report_generated_at) : 'Not reported'}${m.source_file_age_hours != null ? ' · ' + fmtAgeHours(m.source_file_age_hours) : ''}</strong></div>
+                    <div class="info-row"><span>Last successful run</span><strong>${m.last_successful_run_at ? fmtShortDate(m.last_successful_run_at) : 'No successful run recorded'}</strong></div>
                 </div>
                 ${m.freshness_reason ? `<div class="soft-note">${escapeHtml(m.freshness_reason)}</div>` : ''}
                 ${m.pipeline_error ? `<div class="soft-note">${escapeHtml(m.pipeline_error)}</div>` : ''}
@@ -751,22 +774,23 @@ async function loadDashboard() {
         if (data.pipeline_diagnostic) {
             const pd = data.pipeline_diagnostic;
             const sevColor = pd.severity === 'high' ? 'var(--red)' : pd.severity === 'medium' ? 'var(--yellow)' : 'var(--text-muted)';
-            let dhtml = `<div style="font-size:.82rem;font-weight:700;color:${sevColor};margin-bottom:.3rem">\u26A0 ${pd.diagnosis_code}</div>
+            let dhtml = `<div class="diagnose-card" style="background:rgba(0,0,0,0.2)">
+                <div style="font-size:.82rem;font-weight:700;color:${sevColor};margin-bottom:.3rem">\u26A0 ${pd.diagnosis_code}</div>
                 <div style="font-size:.78rem;color:var(--text-muted);margin-bottom:.6rem">${pd.explanation}</div>
-                <div class="soft-note" style="margin-top:0;margin-bottom:.5rem">Generated: ${pd.generated_at ? fmtShortDate(pd.generated_at) : 'N/A'} · Age: ${fmtAgeHours(pd.age_hours)}${pd.last_successful_generation_at ? ' · Last snapshot: ' + fmtShortDate(pd.last_successful_generation_at) : ''}</div>`;
-            if (pd.etf_stage_counts) {
-                const etf = pd.etf_stage_counts;
-                const stock = pd.stock_stage_counts || {};
-                dhtml += `<div class="info-row"><span>ETF funnel</span><strong>Registry ${etf.registry} → Opinions ${etf.opinions} → Published ${etf.published} → Snapshot ${etf.snapshot}</strong></div>`;
-                dhtml += `<div class="info-row"><span>Stock funnel</span><strong>Registry ${stock.registry || 0} → Opinions ${stock.opinions || 0} → Published ${stock.published || 0} → Snapshot ${stock.snapshot || 0}</strong></div>`;
+                <div class="soft-note" style="margin-top:0;margin-bottom:.5rem">Report generated: ${pd.generated_at ? fmtShortDate(pd.generated_at) : 'Not reported'} · Age: ${fmtAgeHours(pd.age_hours)}${pd.last_successful_generation_at ? ' · Last snapshot: ' + fmtShortDate(pd.last_successful_generation_at) : ''}</div>`;
+            if (pd.stage_counts) {
+                const s = pd.stage_counts;
+                dhtml += `<div class="funnel-step"><span>ETF funnel</span><b>${s.registry_etf_total} \u2192 ${s.asset_opinions_etf_total} \u2192 ${s.publish_etf_total} \u2192 ${s.snapshot_etf_total}</b></div>`;
+                dhtml += `<div class="funnel-step"><span>Stock funnel</span><b>${s.registry_stock_total} \u2192 ${s.asset_opinions_stock_total} \u2192 ${s.publish_stock_total} \u2192 ${s.snapshot_stock_total}</b></div>`;
             }
             if (pd.rejection_breakdown) {
-                dhtml += `<div class="soft-note" style="margin-bottom:.35rem">ETF rejection breakdown</div>`;
-                for (const [horizon, counts] of Object.entries(pd.rejection_breakdown)) {
-                    dhtml += `<div class="funnel-step"><span>${horizon}</span><b>non-buy ${counts.rejected_non_buy_total || 0} · gated ${counts.rejected_gated_total || 0}</b></div>`;
-                }
+                 dhtml += `<div class="soft-note" style="margin-bottom:.35rem">Rejection Reasons (ETF)</div>`;
+                 for (const [horizon, counts] of Object.entries(pd.rejection_breakdown)) {
+                    dhtml += `<div class="info-row"><span>${horizon.toUpperCase()} rejection</span><strong>Non-Buy: ${counts.rejected_non_buy_total||0} | Gated: ${counts.rejected_gated_total||0}</strong></div>`;
+                 }
             }
-            document.getElementById('diagContent').innerHTML = dhtml;
+            dhtml += `</div>`;
+            document.getElementById('diagContentV2').innerHTML = dhtml;
         }
 
         // ═══════════════════════════════════════════
@@ -875,7 +899,7 @@ async function loadDashboard() {
                 legendHtml += `<span style="font-size:.8rem;color:${colors[k]||'var(--text)'};font-weight:700">${k}: ${v} (${p}%)</span> `;
             }
             document.getElementById('verdictContent').innerHTML = `<div class="verdict-bar">${barHtml}</div><div style="margin-bottom:.5rem">${legendHtml}</div>
-                <div style="font-size:.78rem;color:var(--text-muted)">Total: ${total} \u00B7 Hit Rate: ${v1r.hit_rate!=null?(v1r.hit_rate*100).toFixed(0)+'%':'N/A'} \u00B7 Evidence Q: ${v1r.avg_evidence_quality!=null?(v1r.avg_evidence_quality*100).toFixed(0)+'%':'N/A'} \u00B7 Matured: ${v1r.matured_signals||0}</div>
+                <div style="font-size:.78rem;color:var(--text-muted)">Total: ${total} \u00B7 Hit Rate: ${v1r.hit_rate!=null?(v1r.hit_rate*100).toFixed(0)+'%':'Awaiting outcomes'} \u00B7 Evidence Q: ${v1r.avg_evidence_quality!=null?(v1r.avg_evidence_quality*100).toFixed(0)+'%':'Awaiting matured evidence'} \u00B7 Matured: ${v1r.matured_signals||0}</div>
                 ${total === 0 ? '<div class="soft-note">No V1 verdicts were published in the current audit report.</div>' : ''}`;
         }
 
@@ -891,7 +915,7 @@ async function loadDashboard() {
             if (v1r.regime_transition_active) ghtml += mp('Regime', 'TRANSITION', 'var(--red)');
             if (v1r.governance_warnings) ghtml += mp('Flags', Object.keys(v1r.governance_warnings).slice(0,3).join(', '), 'var(--yellow)');
             if (v1r.friction_impact_avg) ghtml += mp('Friction', v1r.friction_impact_avg, 'var(--text-muted)');
-            if (v1r.report_date || v1r.report_age_hours != null) ghtml += `<div style="font-size:.7rem;color:var(--text-muted);margin-top:.4rem">Report: ${v1r.report_date || 'N/A'} · Age: ${fmtAgeHours(v1r.report_age_hours)}</div>`;
+            if (v1r.report_date || v1r.report_age_hours != null) ghtml += `<div style="font-size:.7rem;color:var(--text-muted);margin-top:.4rem">Report: ${v1r.report_date || 'Not reported'} · Age: ${fmtAgeHours(v1r.report_age_hours)}</div>`;
             gc.innerHTML = ghtml || '<span style="color:var(--text-muted);font-size:.82rem">No governance data</span>';
         }
 
@@ -966,6 +990,7 @@ async function loadDashboard() {
             const ap = ops.autopilot;
             const active = ap.active_lock;
             const learning = ap.learning || {};
+            const automation = ops.automation_summary || data.system?.automation_health || null;
             let apHtml = `<div class="ops-grid">
                 <div class="ops-cell"><div class="ops-cell-label">Job Status</div><div class="ops-cell-value" style="color:${active?'var(--yellow)':'var(--green)'}">${active?'Running...':'Ready'}</div><div class="ops-cell-sub">Lock PID: ${active?active.pid:'none'}</div></div>
                 <div class="ops-cell"><div class="ops-cell-label">Learning (P10)</div><div class="ops-cell-value" style="color:var(--yellow)">${((learning.precision_10||0)*100).toFixed(1)}%</div><div class="ops-cell-sub">State: ${learning.learning_status||'Unknown'}</div></div>`;
@@ -979,7 +1004,42 @@ async function loadDashboard() {
             apHtml += '</div>';
             if (ops.snapshots_date) apHtml += `<div style="font-size:.72rem;color:var(--text-muted);margin-top:.3rem">Snapshot: ${new Date(ops.snapshots_date).toLocaleString()}</div>`;
             if (ap.generated_at) apHtml += `<div style="font-size:.72rem;color:var(--text-muted);margin-top:.3rem">Ops report: ${fmtShortDate(ap.generated_at)}</div>`;
+            if (automation?.latest_refresh?.failed_step) apHtml += `<div class="soft-note" style="margin-top:.5rem">Latest automation failure: ${escapeHtml(automation.latest_refresh.failed_step)} at ${escapeHtml(fmtShortDate(automation.latest_refresh.finished_at))}</div>`;
             document.getElementById('autopilotContent').innerHTML = apHtml;
+        }
+        if (ops?.automation_summary) {
+            const automation = ops.automation_summary;
+            const sevColor = automation.severity === 'critical' ? 'var(--red)' : automation.severity === 'warning' ? 'var(--yellow)' : 'var(--green)';
+            let ahtml = `<div class="rec-item" style="background:${sevColor}15;border:1px solid ${sevColor}40;color:${sevColor}"><strong>${escapeHtml((automation.severity || 'unknown').toUpperCase())}</strong> · ${escapeHtml(automation.summary || 'No automation summary')}</div>`;
+            if (automation.latest_refresh) {
+                ahtml += `<div class="funnel-step"><span>Latest refresh</span><b>${escapeHtml(automation.latest_refresh.failed_step || automation.latest_refresh.status || 'unknown')}</b></div>`;
+                ahtml += `<div class="soft-note" style="margin-top:0;margin-bottom:.35rem">${escapeHtml(fmtShortDate(automation.latest_refresh.finished_at || automation.latest_refresh.created_at))}</div>`;
+            }
+            if (automation.latest_forecast_run) {
+                ahtml += `<div class="funnel-step"><span>Forecast run_daily</span><b>${escapeHtml(automation.latest_forecast_run.status || 'unknown')}</b></div>`;
+            }
+            if (automation.latest_forecast_backfill) {
+                ahtml += `<div class="funnel-step"><span>Forecast backfill_outcomes</span><b>${escapeHtml(automation.latest_forecast_backfill.status || 'unknown')}</b></div>`;
+            }
+            if ((automation.recovered_steps || []).length) {
+                ahtml += `<div class="soft-note">Recovered steps: ${escapeHtml(automation.recovered_steps.join(', '))}</div>`;
+            }
+            document.getElementById('automationHealthContent').innerHTML = ahtml;
+        }
+        if (ops?.dependency_chain?.length) {
+            document.getElementById('dependencyChainContent').innerHTML = ops.dependency_chain.map((edge) => {
+                const blocked = (edge.blocked_by_labels || []).length ? `Blocked by: ${(edge.blocked_by_labels || []).join(', ')}` : null;
+                const degraded = (edge.degraded_by_labels || []).length ? `Degraded by: ${(edge.degraded_by_labels || []).join(', ')}` : null;
+                return `<div class="action-item ${blocked ? 'sev-critical' : degraded ? 'sev-warning' : 'sev-warning'}">
+                    <div class="action-head">
+                        <div class="action-title">${escapeHtml(edge.step_label || edge.id)}</div>
+                        <div class="action-meta">${blocked ? 'blocked' : degraded ? 'degraded' : 'clear'}</div>
+                    </div>
+                    <div class="action-text">${escapeHtml(edge.reason || 'No dependency reason recorded')}</div>
+                    ${blocked ? `<div class="action-text"><strong>Blocked by:</strong> ${escapeHtml(blocked.replace('Blocked by: ', ''))}</div>` : ''}
+                    ${!blocked && degraded ? `<div class="action-text"><strong>Degraded by:</strong> ${escapeHtml(degraded.replace('Degraded by: ', ''))}</div>` : ''}
+                </div>`;
+            }).join('');
         }
         if (ops?.recent_failures?.length) {
             document.getElementById('recentFailuresContent').innerHTML = ops.recent_failures.map(item => `
@@ -990,7 +1050,7 @@ async function loadDashboard() {
                     </div>
                     <div class="action-text"><strong>When:</strong> ${escapeHtml(fmtShortDate(item.finished_at || item.updated_at))}</div>
                     <div class="action-text"><strong>Why:</strong> ${escapeHtml(item.error || `returncode ${item.returncode ?? 'unknown'}`)}</div>
-                    <div class="action-text"><strong>Command:</strong> ${escapeHtml((item.command || []).join(' ') || 'N/A')}</div>
+                    <div class="action-text"><strong>Command:</strong> ${escapeHtml((item.command || []).join(' ') || 'Not recorded')}</div>
                 </div>
             `).join('');
         }
@@ -1002,7 +1062,7 @@ async function loadDashboard() {
                         <div class="action-meta">${escapeHtml(item.mode || 'job')} · ${fmtAgeHours(item.age_hours)}</div>
                     </div>
                     <div class="action-text"><strong>Finished:</strong> ${escapeHtml(fmtShortDate(item.finished_at || item.updated_at))}</div>
-                    <div class="action-text"><strong>Job:</strong> ${escapeHtml(item.job_dir || 'N/A')}</div>
+                    <div class="action-text"><strong>Job:</strong> ${escapeHtml(item.job_dir || 'Not recorded')}</div>
                 </div>
             `).join('');
         }
@@ -1051,7 +1111,7 @@ async function loadDashboard() {
                 const age = info.age_hours;
                 const ageText = age >= 0 ? (age < 24 ? age+'h' : Math.round(age/24)+'d') : '?';
                 const ageColor = age < 0 ? 'var(--text-muted)' : age < 24 ? 'var(--green)' : age < 72 ? 'var(--yellow)' : 'var(--red)';
-                const detail = info.date || info.version || 'N/A';
+                const detail = info.date || info.version || 'Unknown';
                 shtml += `<div class="funnel-step"><span>${name.replace(/_/g,' ')}</span><span style="color:${ageColor};font-weight:600">${info.exists?'\u2705':'\\u274C'} ${ageText}</span></div><div class="soft-note" style="margin-top:0;margin-bottom:.35rem">${detail}</div>`;
             }
             document.getElementById('sourcesContent').innerHTML = shtml;

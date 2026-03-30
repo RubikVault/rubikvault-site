@@ -1,0 +1,45 @@
+schema_version: event.v6
+
+lifecycle:
+  promote:
+    min_oos_months: 6
+    min_sharpe: 0.5
+    min_hit_rate: 0.55
+  deprecate:
+    max_hit_rate_12m: 0.45
+    min_sharpe_floor: 0.1
+
+cooldowns:
+  same_event_id: 365
+  near_duplicate: 180
+  same_family_new_params: 90
+
+near_duplicate_threshold: 0.60
+max_active_duration_days: 5
+
+signal_types:
+  - ts
+  - cs
+
+cluster_freshness_overrides:
+  mean_reversion:
+    fresh_end: 3
+    aging_end: 8
+  trend:
+    fresh_end: 10
+    aging_end: 30
+  breakout:
+    fresh_end: 5
+    aging_end: 15
+  momentum:
+    fresh_end: 7
+    aging_end: 20
+  relative_strength:
+    fresh_end: 10
+    aging_end: 25
+  volume:
+    fresh_end: 3
+    aging_end: 10
+  volatility:
+    fresh_end: 5
+    aging_end: 15

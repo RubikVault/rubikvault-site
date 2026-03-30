@@ -1,6 +1,6 @@
 import { buildProviderError, fetchWithRetry, normalizeProviderDetails } from "./_shared.js";
 
-const BASE_URL = "https://financialmodelingprep.com/api";
+const BASE_URL = "https://financialmodelingprep.com/stable";
 
 async function fetchFmpJson(ctx, path, params) {
   const apiKey = process.env.FMP_API_KEY || "";
@@ -55,7 +55,7 @@ async function fetchFmpJson(ctx, path, params) {
 
 export async function fetchFmpEarningsCalendar(ctx, { limit = 10 } = {}) {
   const requestCtx = ctx ? (ctx.endpoint ? ctx : { ...ctx, endpoint: "earnings-calendar" }) : { endpoint: "earnings-calendar" };
-  const { payload, url } = await fetchFmpJson(requestCtx, "/v3/earning_calendar", { limit });
+  const { payload, url } = await fetchFmpJson(requestCtx, "/earning_calendar", { limit });
   const rows = Array.isArray(payload) ? payload : [];
   const dataAt = rows
     .map((row) => row.date)
@@ -67,7 +67,7 @@ export async function fetchFmpEarningsCalendar(ctx, { limit = 10 } = {}) {
 
 export async function fetchFmpInsiderTrades(ctx, { limit = 10 } = {}) {
   const requestCtx = ctx ? (ctx.endpoint ? ctx : { ...ctx, endpoint: "insider-trading" }) : { endpoint: "insider-trading" };
-  const { payload, url } = await fetchFmpJson(requestCtx, "/v4/insider-trading", { limit });
+  const { payload, url } = await fetchFmpJson(requestCtx, "/insider-trading", { limit });
   const rows = Array.isArray(payload) ? payload : [];
   const dataAt = rows
     .map((row) => row.transactionDate || row.date)
@@ -79,7 +79,7 @@ export async function fetchFmpInsiderTrades(ctx, { limit = 10 } = {}) {
 
 export async function fetchFmpAnalystRevisions(ctx, { symbol = "SPY" } = {}) {
   const requestCtx = ctx ? (ctx.endpoint ? ctx : { ...ctx, endpoint: "analyst-revisions" }) : { endpoint: "analyst-revisions" };
-  const { payload, url } = await fetchFmpJson(requestCtx, "/v3/analyst-stock-recommendations", { symbol });
+  const { payload, url } = await fetchFmpJson(requestCtx, "/analyst-stock-recommendations", { symbol });
   const rows = Array.isArray(payload) ? payload : [];
   const dataAt = rows
     .map((row) => row.date)

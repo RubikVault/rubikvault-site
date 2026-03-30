@@ -99,6 +99,13 @@ export function readLedgerRange(repoRoot, ledgerType, startDate, endDate) {
 
 export async function readLedgerRangeAsync(repoRoot, ledgerType, startDate, endDate) {
     const records = [];
+    for await (const record of iterateLedgerRangeAsync(repoRoot, ledgerType, startDate, endDate)) {
+        records.push(record);
+    }
+    return records;
+}
+
+export async function* iterateLedgerRangeAsync(repoRoot, ledgerType, startDate, endDate) {
     const start = new Date(startDate);
     const end = new Date(endDate);
 
@@ -123,14 +130,12 @@ export async function readLedgerRangeAsync(repoRoot, ledgerType, startDate, endD
                 if (!record) continue;
                 const recordDate = record.trading_date || record.forecast_trading_date || record.outcome_trading_date || record.as_of?.slice(0, 10);
                 if (recordDate && recordDate >= startDate && recordDate <= endDate) {
-                    records.push(record);
+                    yield record;
                 }
             }
         }
         current.setMonth(current.getMonth() + 1);
     }
-
-    return records;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -149,29 +154,10 @@ export function appendToLedger(repoRoot, ledgerType, records, partitionDate) {
 
     const ledgerPath = getLedgerPath(repoRoot, ledgerType, partitionDate);
     ensureDir(ledgerPath);
-
-    // Read existing records
-    const existingRecords = readLedger(ledgerPath);
-
-    // Check for duplicates (by ID)
-    const existingIds = new Set(existingRecords.map(r => r.forecast_id || r.outcome_id || r.promotion_id));
-    const newRecords = records.filter(r => {
-        const id = r.forecast_id || r.outcome_id || r.promotion_id;
-        return !existingIds.has(id);
-    });
-
-    if (newRecords.length === 0) {
-        console.log(`[Ledger] No new records to append for ${partitionDate}`);
-        return;
-    }
-
-    // Append new records
-    const allRecords = [...existingRecords, ...newRecords];
-    const ndjson = allRecords.map(r => JSON.stringify(r)).join('\n') + '\n';
-    const compressed = zlib.gzipSync(Buffer.from(ndjson, 'utf8'));
-
-    fs.writeFileSync(ledgerPath, compressed);
-    console.log(`[Ledger] Appended ${newRecords.length} records to ${ledgerPath}`);
+    const serialized = records.map((record) => JSON.stringify(record)).join('\n') + '\n';
+    const compressed = zlib.gzipSync(Buffer.from(serialized, 'utf8'));
+    fs.appendFileSync(ledgerPath, compressed);
+    console.log(`[Ledger] Appended ${records.length} records to ${ledgerPath}`);
 }
 
 /**
@@ -281,6 +267,7 @@ export default {
     readLedger,
     readLedgerRange,
     readLedgerRangeAsync,
+    iterateLedgerRangeAsync,
     appendToLedger,
     writeForecastRecords,
     writeOutcomeRecords,

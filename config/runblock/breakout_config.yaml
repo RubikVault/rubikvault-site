@@ -1,0 +1,36 @@
+# Breakout-Scanner V1.0 - Parameter SSOT
+# Configured for Runblock V3 integration
+
+schema_version: "breakout_scanner.v1"
+generated_at: "2026-03-22"
+
+# ---------------------------------------------------------
+# Universe Hygiene & Universe Filtering
+# ---------------------------------------------------------
+universe_filter:
+  min_history_bars: 252           # Mindesthistorie für Indikatoren
+  min_close: 5.0                  # Mindestpreis in USD
+  min_dollar_vol_20d: 3000000     # Mindest-Umsatz pro Tag (Dollar)
+
+# ---------------------------------------------------------
+# Layer 0: Market Regime Settings
+# ---------------------------------------------------------
+market_regime:
+  index_ticker: "SPY"             # Referenz-Index (z.B. SPY oder QQQ)
+  sma_period: 200                 # SMA für Trendbestimmung
+  return_period: 20               # Tage für Return-Messung
+  suppress_states: ["TRIGGERED", "CONFIRMED"] # Signale im regime DOWN blockieren
+
+# ---------------------------------------------------------
+# State Machine Logics & Thresholds
+# ---------------------------------------------------------
+state_machine:
+  base_window: 60                 # Lookback für Base-Struktur (Tage)
+  close_vs_high_min: 0.92         # Mindestens 92% am Hoch der Base
+  breakout_buffer_atr: 0.15       # Pufferzone unter Breakout-High (in ATR)
+  rvol_trigger: 1.5               # Relatives Volumen (z.B. 1.5x) bei Trigger
+  
+  # Staleness & Aging
+  max_setup_age_bars: 90          # Maximale Dauer im Setup
+  max_armed_age_bars: 10          # Maximale Dauer im Armed
+  failed_cooldown_bars: 10        # Sperrfrist nach FAILED

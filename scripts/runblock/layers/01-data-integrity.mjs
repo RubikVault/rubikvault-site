@@ -195,3 +195,55 @@ export function detectAnomalies(bars, config = {}) {
 
   return { state: 'PASS', anomaly_score, reason_codes: [] };
 }
+
+/**
+ * V6.0: Compute quantitative data quality score (0-100).
+ * Extends binary PASS/SUSPECT/FAIL with a continuous metric.
+ *
+ * @param {Object} seriesResult - Output from validateSeries()
+ * @param {Object} anomalyResult - Output from detectAnomalies()
+ * @param {Object} [feedResult] - Output from reconcileFeeds()
+ * @returns {{ data_quality_score: number, components: Object, insufficient_evidence_flag: boolean }}
+ */
+export function computeDataQualityScore(seriesResult, anomalyResult, feedResult = null) {
+  const components = {};
+
+  // Completeness: proportion of PASS bars
+  const total = seriesResult?.stats?.total || 1;
+  const pass = seriesResult?.stats?.pass || 0;
+  components.completeness = Math.round((pass / total) * 100);
+
+  // Consistency: inverse of suspect percentage
+  const suspectPct = seriesResult?.stats?.suspect_pct || 0;
+  components.consistency = Math.round(Math.max(0, 100 - suspectPct * 2));
+
+  // Anomaly risk: normalize anomaly score to 0-100
+  const anomalyScore = anomalyResult?.anomaly_score ?? 0.5;
+  components.anomaly_risk = Math.round(Math.max(0, Math.min(100, (anomalyScore + 1) * 50)));
+
+  // Feed agreement
+  if (feedResult) {
+    const deviation = feedResult.deviation_pct ?? 0;
+    components.feed_agreement = Math.round(Math.max(0, 100 - deviation * 100));
+  } else {
+    components.feed_agreement = 80; // neutral if no secondary feed
+  }
+
+  // Freshness: penalize if series state is FAIL
+  components.freshness = seriesResult?.state === 'FAIL' ? 0 :
+    seriesResult?.state === 'SUSPECT' ? 60 : 100;
+
+  // Weighted aggregation
+  const weights = { completeness: 0.30, consistency: 0.20, anomaly_risk: 0.20, feed_agreement: 0.15, freshness: 0.15 };
+  let score = 0;
+  for (const [key, weight] of Object.entries(weights)) {
+    score += (components[key] || 0) * weight;
+  }
+  score = Math.round(Math.max(0, Math.min(100, score)));
+
+  return {
+    data_quality_score: score,
+    components,
+    insufficient_evidence_flag: score < 70,
+  };
+}

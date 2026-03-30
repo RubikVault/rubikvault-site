@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.rubikvault.quantlab.q1panel-stagea.daily</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/bash</string>
+    <string>/Users/michaelpuchowezki/Dev/rubikvault-site/scripts/quantlab/run_q1_panel_stage_a_daily_local.sh</string>
+  </array>
+
+  <key>WorkingDirectory</key>
+  <string>/Users/michaelpuchowezki/Dev/rubikvault-site</string>
+
+  <!-- Default daily time: 07:45 local. Adjust as needed. -->
+  <key>StartCalendarInterval</key>
+  <dict>
+    <key>Hour</key>
+    <integer>7</integer>
+    <key>Minute</key>
+    <integer>45</integer>
+  </dict>
+
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>Q1_DAILY_FEATURE_STORE_VERSION</key>
+    <string>v4_q1panel_fullchunk_daily</string>
+    <key>Q1_DAILY_PANEL_OUTPUT_TAG</key>
+    <string>panel60_fullchunk_daily</string>
+    <key>Q1_DAILY_PANEL_MAX_ASSETS</key>
+    <string>0</string>
+    <key>Q1_DAILY_TOP_LIQUID_N</key>
+    <string>20000</string>
+    <key>Q1_DAILY_RUN_STAGEB_PREP</key>
+    <string>1</string>
+    <key>Q1_DAILY_RUN_STAGEB_Q1</key>
+    <string>1</string>
+  </dict>
+
+  <key>RunAtLoad</key>
+  <false/>
+
+  <key>StandardOutPath</key>
+  <string>/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/logs/launchd_q1_panel_stagea.out.log</string>
+  <key>StandardErrorPath</key>
+  <string>/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/logs/launchd_q1_panel_stagea.err.log</string>
+</dict>
+</plist>

@@ -373,8 +373,13 @@ async function main() {
     const tickers = universeLoad.rows;
     const marketphaseSymbols = await loadMarketphaseSymbolSet();
     const marketphaseDeep = await loadMarketphaseDeepFeatureMap();
-    assertDeepSummaryFreshness(marketphaseDeep);
-    const marketphaseDeepFeatures = marketphaseDeep.byTicker;
+    let deepSummaryStatus = 'ok';
+    try {
+        assertDeepSummaryFreshness(marketphaseDeep);
+    } catch (error) {
+        deepSummaryStatus = error instanceof Error ? error.message : 'SCIENTIFIC_V7_DEEP_SUMMARY_UNAVAILABLE';
+    }
+    const marketphaseDeepFeatures = deepSummaryStatus === 'ok' ? marketphaseDeep.byTicker : new Map();
     console.log(`Processing ${tickers.length} symbols (source: ${universeLoad.source || 'unknown'})...`);
 
     const analyses = {};
@@ -642,6 +647,7 @@ async function main() {
             universe_source: universeLoad.source || 'unknown',
             dependency_marketphase_deep_generated_at: marketphaseDeep.generated_at,
             dependency_marketphase_deep_file_mtime: marketphaseDeep.file_mtime,
+            dependency_marketphase_deep_status: deepSummaryStatus,
             symbols_processed: processed,
             symbols_failed: tickers.length - processed,
             duration_ms: Date.now() - startTime

@@ -242,3 +242,40 @@ export function tagTrainingWeights(samples, currentRegime, config = {}) {
     return { ...s, regime_weight: weight };
   });
 }
+
+/**
+ * V6.0: Compute regime stability from recent regime history.
+ *
+ * regime_stability = min(1.0, regime_duration_days / 20.0)
+ * transition_state = "unstable" if confidence < 0.6 && duration < 5
+ *
+ * @param {Array} recentRegimes - Array of regime tag strings for last N days
+ * @param {Object} [config] - { stability_lookback: 20 }
+ * @returns {{ regime_stability: number, transition_state: string, regime_duration_days: number }}
+ */
+export function computeRegimeStability(recentRegimes, config = {}) {
+  const lookback = config.stability_lookback || 20;
+  const recent = recentRegimes.slice(-lookback);
+
+  if (recent.length === 0) {
+    return { regime_stability: 0, transition_state: 'unstable', regime_duration_days: 0 };
+  }
+
+  const currentRegime = recent[recent.length - 1];
+  let durationDays = 0;
+  for (let i = recent.length - 1; i >= 0; i--) {
+    if (recent[i] === currentRegime) durationDays++;
+    else break;
+  }
+
+  const regimeStability = Math.min(1.0, durationDays / 20.0);
+  const sameCount = recent.filter(r => r === currentRegime).length;
+  const regimeConfidence = sameCount / recent.length;
+  const transitionState = (regimeConfidence < 0.6 && durationDays < 5) ? 'unstable' : 'stable';
+
+  return {
+    regime_stability: Number(regimeStability.toFixed(4)),
+    transition_state: transitionState,
+    regime_duration_days: durationDays,
+  };
+}

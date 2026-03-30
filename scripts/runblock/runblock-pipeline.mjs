@@ -11,8 +11,10 @@
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 
-import { validateSeries, reconcileFeeds, detectAnomalies } from './layers/01-data-integrity.mjs';
-import { evaluateFastRegime, evaluateWeeklyRegime, detectRegimeBreak } from './layers/02-regime-detection.mjs';
+import { validateSeries, reconcileFeeds, detectAnomalies, computeDataQualityScore } from './layers/01-data-integrity.mjs';
+import { evaluateFastRegime, evaluateWeeklyRegime, detectRegimeBreak, computeRegimeStability } from './layers/02-regime-detection.mjs';
+import { computeStressScore as _computeStressScore } from './layers/02c-stress-monitor.mjs';
+import { computeSystemConfidence as _computeSysConf, detectSystemState as _detectSysState } from './services/system-confidence.mjs';
 import {
   createDecisionLog,
   createAuditIncident,
@@ -32,6 +34,18 @@ import { computeGlobalState, enforceGlobalState } from './services/global-state.
 import { createSnapshot, persistSnapshot } from './services/snapshot-freeze.mjs';
 import { assertNoLeakage, assertPurgeEmbargo } from './services/leakage-guard.mjs';
 import { classifyBucket, computeNetReturn } from './services/liquidity-bucket.mjs';
+
+// V6 Layer imports
+import { computeEventStreakDays } from './layers/06-event-oracle.mjs';
+import { computeFreshnessMultiplier, computeStabilityScore, computeRawEvidenceScore, applyMicroUncertainty, guardCsDoublePenalty } from './layers/07-evidence-scoring.mjs';
+import { computeIntraClusterRedundancy, detectClusterConflicts, computeClusterAgreementScore, neutralizeCrossClusterConflicts } from './layers/08-cluster-agreement.mjs';
+import { computeDataConfidenceAgg, computeMarketPredictability, computeRawConfidence, computeCrossHorizonConsistency, computeEnsembleBias, computeSummaryState } from './layers/09-confidence-ensemble.mjs';
+import { computeRiskExecution } from './layers/10-risk-execution.mjs';
+import { buildTickerOutput } from './layers/11-output-report.mjs';
+import { evaluateEmergencyConditions, applyEmergencyOverride } from './services/emergency-override.mjs';
+import { applyGlobalCaps } from './services/system-confidence.mjs';
+import { buildExplainabilityOutput, EXPLAINABILITY_LEVEL } from './services/explainability.mjs';
+import { validateCalibrationMode } from '../learning/calibration-holdout.mjs';
 
 import YAML from 'yaml';
 
@@ -175,7 +189,7 @@ export async function executePipeline({
 
   const result = {
     ticker,
-    pipeline_version: 'runblock.v3',
+    pipeline_version: 'runblock.v3+v6',
     layers: {},
     global_state: null,
     output: null,
@@ -241,12 +255,18 @@ export async function executePipeline({
       })
     : { pass: true, violations: [] };
 
+  // V6: Quantitative data quality score
+  const dataQuality = computeDataQualityScore(dataIntegrity, anomalyCheck, feedState.state !== 'PASS' ? feedState : null);
+
   result.layers.data_integrity = {
     series: dataIntegrity,
     anomaly_detection: anomalyCheck,
     feed_reconciliation: feedState,
     leakage_guard: leakageCheck,
     walk_forward_guard: walkForwardCheck,
+    data_quality_score: dataQuality.data_quality_score,
+    data_quality_components: dataQuality.components,
+    insufficient_evidence_flag: dataQuality.insufficient_evidence_flag,
     effective_state: feedState.state === 'FAIL'
       ? 'FAIL'
       : dataIntegrity.state === 'FAIL'
@@ -304,12 +324,28 @@ export async function executePipeline({
   const effectiveRegimeConfidence = weeklyRegime.regime_confidence ?? fastRegime.confidence ?? 0;
   const regimeBreak = detectRegimeBreak(effectiveRegimeTag, recentRegimes, regimeConfig);
 
+  // V6: Regime stability + stress monitor
+  const regimeStability = computeRegimeStability(recentRegimes.map(r => r.regime || r));
+  const stressResult = _computeStressScore(marketData, fastRegime);
+  const systemConfidence = _computeSysConf({
+    calibrationHealth: 0.7,
+    regimeStability: regimeStability.regime_stability,
+    recentHitRate: 0.55,
+    stressScore: stressResult.stress_score,
+    monotonicityHealth: 1.0,
+  });
+  const systemState = _detectSysState({ systemConfidence });
+
   result.layers.regime_detection = {
     fast_regime: fastRegime,
     weekly_regime: weeklyRegime,
     regime_break: regimeBreak,
     effective_regime_tag: effectiveRegimeTag,
     effective_regime_confidence: effectiveRegimeConfidence,
+    regime_stability: regimeStability,
+    stress: stressResult,
+    system_confidence: systemConfidence,
+    system_state: systemState.system_state,
   };
 
   // ═══ SNAPSHOT FREEZE ═══
@@ -493,6 +529,147 @@ export async function executePipeline({
     elliottV2Enabled: elliottDirectionalEnabled,
   });
   result.output = result.layers.feature_output;
+
+  // ═══ V6 LAYERS 06–11 (additive, does not break V1 flow) ═══
+  if (!result.halted) {
+    try {
+      const v6Context = {
+        events: [],
+        evidenceRecords: [],
+        clusterScores: [],
+      };
+
+      // LAYER 06: Event Oracle — streak computation
+      const eventStreakDays = computeEventStreakDays(v6Context.events, asofTimestamp.slice(0, 10));
+      result.layers.event_oracle = { event_streak_days: eventStreakDays };
+
+      // LAYER 07: Evidence Scoring — freshness + stability + raw score
+      const freshness = computeFreshnessMultiplier(eventStreakDays, 'mid', 'trend');
+      const stability = computeStabilityScore([]);
+      result.layers.evidence_scoring = {
+        freshness_multiplier: freshness,
+        stability: stability,
+      };
+
+      // LAYER 08: Cluster Agreement
+      const redundancyAdjusted = computeIntraClusterRedundancy(v6Context.evidenceRecords);
+      const clusterConflicts = detectClusterConflicts(v6Context.evidenceRecords);
+      const neutralized = neutralizeCrossClusterConflicts(v6Context.clusterScores);
+      const clusterAgreement = computeClusterAgreementScore(neutralized.neutralized_scores);
+      result.layers.cluster_agreement = {
+        redundancy_adjusted: redundancyAdjusted,
+        conflicts: clusterConflicts,
+        neutralization: neutralized,
+        agreement: clusterAgreement,
+      };
+
+      // LAYER 09: Confidence & Ensemble
+      const dataConfAgg = computeDataConfidenceAgg(v6Context.evidenceRecords);
+      const marketPred = computeMarketPredictability(
+        { regime: effectiveRegimeTag, regime_confidence: effectiveRegimeConfidence },
+        stressResult
+      );
+      const rawConfidence = computeRawConfidence(dataConfAgg, marketPred, clusterAgreement.cluster_agreement_score, stability.stability_score);
+      const crossConsistency = computeCrossHorizonConsistency({});
+      const ensembleBias = computeEnsembleBias(0, 0, 0, 0, 0, 0);
+      const summaryState = computeSummaryState(ensembleBias, crossConsistency.cross_horizon_consistency_score);
+      result.layers.confidence_ensemble = {
+        data_confidence_agg: dataConfAgg,
+        market_predictability: marketPred,
+        raw_confidence: rawConfidence,
+        cross_horizon_consistency: crossConsistency,
+        ensemble_bias: ensembleBias,
+        summary_state: summaryState,
+      };
+
+      // LAYER 10: Risk & Execution
+      const riskResult = computeRiskExecution({
+        returns: [],
+        ensembleBias,
+        confidence: rawConfidence,
+        crashState: stressResult.crash_state,
+        transitionState: regimeStability.transition_state,
+      });
+      result.layers.risk_execution = riskResult;
+
+      // Apply global caps from system confidence
+      const globalCap = applyGlobalCaps(systemState.system_state, systemConfidence, 'MODERATE');
+      result.layers.system_caps = globalCap;
+
+      // Emergency override evaluation
+      const emergencyResult = evaluateEmergencyConditions({
+        systemState: systemState.system_state,
+        stressScore: stressResult.stress_score,
+        crashState: stressResult.crash_state,
+        hitRate7d: 0.55,
+        monotonicityBroken: false,
+      });
+      result.layers.emergency = emergencyResult;
+
+      // F5: Calibration mode validation with fallback
+      const calibrationValidation = validateCalibrationMode('calibrated', true, false);
+      const effectiveCalibrationMode = calibrationValidation.effective_mode;
+
+      // F5: Apply bootstrap confidence penalty
+      const adjustedConfidence = effectiveCalibrationMode === 'bootstrap'
+        ? rawConfidence * 0.85
+        : rawConfidence;
+      result.layers.confidence_ensemble.adjusted_confidence = adjustedConfidence;
+      result.layers.confidence_ensemble.calibration_mode = effectiveCalibrationMode;
+
+      // LAYER 11: Output — ticker V6 document
+      result.layers.v6_output = buildTickerOutput({
+        ticker,
+        date: asofTimestamp.slice(0, 10),
+        ensembleView: {
+          ensemble_bias: ensembleBias,
+          cross_horizon_consistency_score: crossConsistency.cross_horizon_consistency_score,
+          summary_state: summaryState,
+        },
+        riskExecution: riskResult,
+        governance: {
+          oracle_version: '6.0.0',
+          strategy_version: '6.0.0',
+          calibration_mode: effectiveCalibrationMode,
+          calibration_reason: calibrationValidation.reason,
+        },
+      });
+
+      // F1: Store decision bucket and apply emergency override
+      result.layers.v6_output.decision = {
+        bucket: globalCap.capped_bucket,
+        hold_state: 'hold_normal',
+        confidence: adjustedConfidence,
+      };
+
+      if (emergencyResult.emergency_active) {
+        const overridden = applyEmergencyOverride(
+          { v6: result.layers.v6_output.decision },
+          emergencyResult
+        );
+        result.layers.v6_output.decision = overridden.v6;
+      }
+
+      // F2: Explainability SUMMARY in v6_output
+      result.layers.v6_output.explainability = buildExplainabilityOutput(
+        EXPLAINABILITY_LEVEL.SUMMARY,
+        {
+          v6Result: result.layers.v6_output.decision,
+          evidenceRecords: v6Context.evidenceRecords,
+          riskResult,
+          stressResult,
+          confidenceResult: {
+            raw_confidence: adjustedConfidence,
+            data_confidence_agg: dataConfAgg,
+            market_predictability: marketPred,
+          },
+        }
+      );
+    } catch (v6Error) {
+      // V6 layers are additive — failure does not halt the V1 pipeline
+      result.layers.v6_error = { message: v6Error.message, stack: v6Error.stack?.split('\n').slice(0, 3) };
+    }
+  }
 
   // ═══ ENFORCE GLOBAL STATE ═══
   const enforcement = enforceGlobalState(result.global_state, fallbackConfig);

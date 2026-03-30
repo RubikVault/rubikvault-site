@@ -28,6 +28,7 @@ import {
 } from './_shared/stock-insights-v4.js';
 import { assembleDecisionInputs, loadRequestCoreInputs } from './_shared/decision-input-assembly.js';
 import { fetchEodhdFundamentals } from './_shared/fundamentals-eodhd.mjs';
+import { fetchFmpFundamentals } from './_shared/fundamentals-fmp.mjs';
 
 const MODULE_NAME = 'stock';
 const TICKER_MAX_LENGTH = 12;
@@ -568,7 +569,12 @@ export async function onRequestGet(context) {
   const { request } = context;
   const env = context?.env || {};
   const url = new URL(request.url);
-  const tickerParam = url.searchParams.get('ticker') || '';
+  const tickerParam = (
+    url.searchParams.get('ticker')
+    || url.searchParams.get('t')
+    || url.searchParams.get('symbol')
+    || ''
+  );
   const normalizedTicker = normalizeTicker(tickerParam);
   // v4 evaluation is always enabled — no longer gated by query parameter
 
@@ -1615,16 +1621,41 @@ export async function onRequestGet(context) {
     payload.v6 = payload.evaluation_v4.decision?.v6 || null;
   }
 
-  // Fundamentals (best-effort, non-blocking)
-  try {
-    const fundResult = await fetchEodhdFundamentals(effectiveTicker, env);
-    if (fundResult.ok && fundResult.data) {
-      payload.data.fundamentals = fundResult.data;
-    } else {
-      payload.data.fundamentals = null;
+  // Fundamentals — 3-Layer: KV Cache → Live API (EODHD→FMP) → Static JSON
+  {
+    const _kvKey = 'fund:' + effectiveTicker;
+    let _fundData = null;
+
+    // Layer 1: KV Cache (TTL 24h)
+    try { _fundData = env.RV_KV ? await env.RV_KV.get(_kvKey, 'json') : null; } catch {}
+
+    // Layer 2: Live API (EODHD primary → FMP fallback)
+    if (!_fundData) {
+      try {
+        const r = await fetchEodhdFundamentals(effectiveTicker, env);
+        if (r.ok && r.data) _fundData = r.data;
+      } catch {}
+      if (!_fundData) {
+        try {
+          const r = await fetchFmpFundamentals(effectiveTicker, env);
+          if (r.ok && r.data) _fundData = r.data;
+        } catch {}
+      }
+      if (_fundData && env.RV_KV) {
+        try { await env.RV_KV.put(_kvKey, JSON.stringify(_fundData), { expirationTtl: 86400 }); } catch {}
+      }
     }
-  } catch {
-    payload.data.fundamentals = null;
+
+    // Layer 3: Static JSON Fallback
+    if (!_fundData) {
+      try {
+        const _sUrl = new URL('/data/fundamentals/' + encodeURIComponent(effectiveTicker.toUpperCase()) + '.json', request.url);
+        const _sRes = await fetch(_sUrl.toString());
+        if (_sRes.ok) _fundData = await _sRes.json();
+      } catch {}
+    }
+
+    payload.data.fundamentals = _fundData || null;
   }
 
   payload.metadata.digest = await computeDigest(payload);

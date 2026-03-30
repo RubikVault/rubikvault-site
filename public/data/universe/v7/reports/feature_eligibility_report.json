@@ -1,29 +1,29 @@
 {
   "schema": "rv_v7_feature_eligibility_report_v1",
-  "generated_at": "2026-03-12T01:02:38.372Z",
-  "run_id": "v7_20260312010049_b92d3f",
+  "generated_at": "2026-03-29T00:32:46.132Z",
+  "run_id": "v7_20260329003112_bc454a",
   "counts_by_layer": {
     "L0_LEGACY_CORE": 2453,
-    "L1_FULL": 45718,
-    "L2_PARTIAL": 52773,
-    "L3_MINIMAL": 27053,
-    "L4_DEAD": 65941
+    "L1_FULL": 41456,
+    "L2_PARTIAL": 54397,
+    "L3_MINIMAL": 28981,
+    "L4_DEAD": 67569
   },
   "counts_by_feature": {
-    "analyzer": 100944,
-    "forecast": 48171,
-    "marketphase": 127997,
-    "scientific": 100944
+    "analyzer": 98306,
+    "forecast": 43909,
+    "marketphase": 127287,
+    "scientific": 98306
   },
   "breakdown_by_type_norm": {
-    "FUND": 94047,
-    "ETF": 20312,
-    "STOCK": 74841,
-    "INDEX": 65,
-    "OTHER": 1482,
-    "CRYPTO": 2087,
-    "FOREX": 989,
-    "BOND": 115
+    "FUND": 95230,
+    "ETF": 20456,
+    "STOCK": 74474,
+    "INDEX": 66,
+    "OTHER": 1469,
+    "CRYPTO": 2051,
+    "FOREX": 990,
+    "BOND": 120
   },
   "assumptions": {
     "analyzer": "layer >= L2_PARTIAL or legacy core",

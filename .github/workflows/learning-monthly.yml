@@ -1,0 +1,73 @@
+name: Learning Report Monthly
+
+on:
+  schedule:
+    - cron: '15 2 1 * *'
+  workflow_dispatch:
+    inputs:
+      date:
+        description: 'Override end date (YYYY-MM-DD)'
+        required: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: learning-report-monthly
+  cancel-in-progress: false
+
+jobs:
+  learning-monthly:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run monthly learning cycle
+        run: |
+          DATE_ARG=""
+          if [ -n "${{ inputs.date }}" ]; then
+            DATE_ARG="--date=${{ inputs.date }}"
+          fi
+          node scripts/learning/run-monthly-learning-cycle.mjs $DATE_ARG
+
+      - name: Commit monthly learning report
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add mirrors/learning/reports/monthly/ public/data/reports/learning-monthly-latest.json
+          if git diff --cached --quiet; then
+            echo "No monthly learning data changes to commit"
+            exit 0
+          fi
+          git commit -m "chore(learning): monthly learning report $(date +%Y-%m-%d)"
+          target_branch="${GITHUB_REF_NAME:-main}"
+          for i in 1 2 3; do
+            git fetch origin "$target_branch"
+            if ! git rebase "origin/$target_branch"; then
+              if [ -d .git/rebase-merge ] || [ -d .git/rebase-apply ]; then
+                git rebase --abort
+              fi
+              echo "GREEN-SKIP: rebase conflict on ${target_branch}; publish deferred." >&2
+              echo "GREEN-SKIP: rebase conflict on ${target_branch}; publish deferred." >> "$GITHUB_STEP_SUMMARY"
+              exit 0
+            fi
+            if git push origin "HEAD:${target_branch}"; then
+              exit 0
+            fi
+            echo "push failed (attempt $i); retrying in 5s" >&2
+            sleep 5
+          done
+          echo "GREEN-SKIP: push failed after retries (likely concurrent writer); publish deferred." >&2
+          echo "GREEN-SKIP: push failed after retries (likely concurrent writer); publish deferred." >> "$GITHUB_STEP_SUMMARY"
+          exit 0

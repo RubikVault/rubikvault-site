@@ -1,11 +1,27 @@
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { dirname, resolve } from 'node:path';
 import { createHash } from 'node:crypto';
 import { chromium } from 'playwright';
 
-const ticker = (process.argv[2] || '').trim().toUpperCase();
+function parseArgs(argv) {
+  const out = { ticker: '', outPath: '' };
+  for (let i = 0; i < argv.length; i += 1) {
+    const arg = String(argv[i] || '').trim();
+    if (!arg) continue;
+    if (arg === '--out') {
+      out.outPath = String(argv[i + 1] || '').trim();
+      i += 1;
+      continue;
+    }
+    if (!out.ticker) out.ticker = arg.toUpperCase();
+  }
+  return out;
+}
+
+const args = parseArgs(process.argv.slice(2));
+const ticker = args.ticker;
 if (!ticker) {
-  console.error('Usage: node scripts/ui-path/prove_ui_path.mjs <TICKER>');
+  console.error('Usage: node scripts/ui-path/prove_ui_path.mjs <TICKER> [--out <PATH>]');
   process.exit(1);
 }
 
@@ -240,12 +256,13 @@ const trace = {
   }
 };
 
-const outDir = resolve(process.cwd(), 'public/debug/ui-path');
-const outPath = resolve(outDir, `${ticker}.ui-path.trace.json`);
+const outPath = args.outPath
+  ? resolve(process.cwd(), args.outPath)
+  : resolve(process.cwd(), 'public/debug/ui-path', `${ticker}.ui-path.trace.json`);
 
 try {
-  await import('node:fs').then(fs => fs.mkdirSync(outDir, { recursive: true }));
-  await import('node:fs').then(fs => fs.writeFileSync(outPath, JSON.stringify(trace, null, 2) + '\n'));
+  mkdirSync(dirname(outPath), { recursive: true });
+  writeFileSync(outPath, JSON.stringify(trace, null, 2) + '\n');
 } catch (err) {
   console.error('Failed to write trace file:', err);
   process.exit(1);

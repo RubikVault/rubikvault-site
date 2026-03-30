@@ -1,8 +1,9 @@
 {
   "schema_version": "rv.features-v4.local-main-5ticker-report.v1",
-  "generated_at": "2026-03-08T11:15:26.511Z",
+  "generated_at": "2026-03-29T16:47:00.352Z",
   "local_base": "http://127.0.0.1:8788",
   "main_base": "https://rubikvault.com",
+  "fallback_main_base": "https://56a89a60.rubikvault-site.pages.dev",
   "tickers": [
     "A",
     "AAPL",
@@ -21,16 +22,17 @@
       "local": {
         "stock_ok": true,
         "v4_ok": true,
-        "close": 115.07,
-        "as_of": "2026-03-06",
+        "close": 110.24,
+        "as_of": "2026-03-27",
         "has_stats": true,
         "v4_contract_ok": true
       },
       "main": {
         "stock_ok": true,
-        "close": 115.07,
-        "as_of": "2026-03-06",
-        "has_stats": true
+        "close": 110.24,
+        "as_of": "2026-03-27",
+        "has_stats": true,
+        "resolved_url": "https://rubikvault.com/api/stock?ticker=A"
       },
       "checks": {
         "baseline_presence_parity": true,
@@ -42,16 +44,17 @@
       "local": {
         "stock_ok": true,
         "v4_ok": true,
-        "close": 257.46,
-        "as_of": "2026-03-06",
+        "close": 248.8,
+        "as_of": "2026-03-27",
         "has_stats": true,
         "v4_contract_ok": true
       },
       "main": {
         "stock_ok": true,
-        "close": 257.46,
-        "as_of": "2026-03-06",
-        "has_stats": true
+        "close": 248.8,
+        "as_of": "2026-03-27",
+        "has_stats": true,
+        "resolved_url": "https://rubikvault.com/api/stock?ticker=AAPL"
       },
       "checks": {
         "baseline_presence_parity": true,
@@ -63,16 +66,17 @@
       "local": {
         "stock_ok": true,
         "v4_ok": true,
-        "close": 230.11,
-        "as_of": "2026-03-06",
+        "close": 209.4,
+        "as_of": "2026-03-27",
         "has_stats": true,
         "v4_contract_ok": true
       },
       "main": {
         "stock_ok": true,
-        "close": 230.11,
-        "as_of": "2026-03-06",
-        "has_stats": true
+        "close": 209.4,
+        "as_of": "2026-03-27",
+        "has_stats": true,
+        "resolved_url": "https://rubikvault.com/api/stock?ticker=ABBV"
       },
       "checks": {
         "baseline_presence_parity": true,
@@ -84,16 +88,17 @@
       "local": {
         "stock_ok": true,
         "v4_ok": true,
-        "close": 51.18,
-        "as_of": "2026-03-06",
+        "close": 52.22,
+        "as_of": "2026-03-27",
         "has_stats": true,
         "v4_contract_ok": true
       },
       "main": {
         "stock_ok": true,
-        "close": 51.18,
-        "as_of": "2026-03-06",
-        "has_stats": true
+        "close": 52.22,
+        "as_of": "2026-03-27",
+        "has_stats": true,
+        "resolved_url": "https://rubikvault.com/api/stock?ticker=AAMI"
       },
       "checks": {
         "baseline_presence_parity": true,
@@ -105,16 +110,17 @@
       "local": {
         "stock_ok": true,
         "v4_ok": true,
-        "close": 95.58,
-        "as_of": "2026-03-06",
+        "close": 98.21,
+        "as_of": "2026-03-27",
         "has_stats": true,
         "v4_contract_ok": true
       },
       "main": {
         "stock_ok": true,
-        "close": 95.58,
-        "as_of": "2026-03-06",
-        "has_stats": true
+        "close": 98.21,
+        "as_of": "2026-03-27",
+        "has_stats": true,
+        "resolved_url": "https://rubikvault.com/api/stock?ticker=AAOI"
       },
       "checks": {
         "baseline_presence_parity": true,

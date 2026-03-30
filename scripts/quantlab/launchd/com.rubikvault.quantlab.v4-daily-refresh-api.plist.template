@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.rubikvault.quantlab.v4-daily-refresh-api</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/bash</string>
+    <string>/Users/michaelpuchowezki/Dev/rubikvault-site/scripts/quantlab/run_quantlab_v4_refresh_api.sh</string>
+  </array>
+
+  <key>WorkingDirectory</key>
+  <string>/Users/michaelpuchowezki/Dev/rubikvault-site</string>
+
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PATH</key>
+    <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+    <key>QUANTLAB_V4_REPORT_API_HOST</key>
+    <string>127.0.0.1</string>
+    <key>QUANTLAB_V4_REPORT_API_PORT</key>
+    <string>8791</string>
+  </dict>
+
+  <key>RunAtLoad</key>
+  <true/>
+
+  <key>KeepAlive</key>
+  <true/>
+
+  <key>StandardOutPath</key>
+  <string>/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/logs/launchd_quantlab_v4_refresh_api.out.log</string>
+  <key>StandardErrorPath</key>
+  <string>/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/logs/launchd_quantlab_v4_refresh_api.err.log</string>
+</dict>
+</plist>

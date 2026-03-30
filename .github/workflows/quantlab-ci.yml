@@ -1,0 +1,42 @@
+name: QuantLab CI
+
+on:
+  push:
+    paths:
+      - 'quantlab/**'
+      - '.github/workflows/quantlab-ci.yml'
+  pull_request:
+    paths:
+      - 'quantlab/**'
+      - '.github/workflows/quantlab-ci.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  quantlab-ci:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: quantlab
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v3
+
+      - name: Sync deps
+        run: uv sync --extra dev
+
+      - name: Lint
+        run: uv run ruff check src tests
+
+      - name: Tests
+        run: uv run pytest -q
+
+      - name: Dry run
+        run: uv run python -m quantlab dry-run

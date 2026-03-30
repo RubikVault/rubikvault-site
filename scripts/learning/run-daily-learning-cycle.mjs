@@ -223,10 +223,23 @@ function evaluateSafetySwitch(metrics, policyConfig) {
     if (!minimumNStatus.ready_for_safety || (precision10 == null && ece == null)) {
         return { level: 'BOOTSTRAP', actions: ['log_only'], trigger: 'minimum_n_not_met', minimum_n_status: minimumNStatus };
     }
-    if (precision10 != null && precision10 < Number(defaults?.red?.precision_at_10_lt ?? 0.5)) {
-        return { level: 'RED', actions: ['freeze_promotions', 'buy_eligible_false'], trigger: 'precision_red', minimum_n_status: minimumNStatus };
+
+    // V6 Regime-Aware Thresholds
+    // Wenn das System in einer schwierigen Phase ist (Chop, Declining Accuracy), senken wir die Schwellen.
+    let redThreshold = Number(defaults?.red?.precision_at_10_lt ?? 0.5);
+    let orangeThreshold = Number(defaults?.orange?.precision_at_10_lt ?? 0.54);
+
+    if (metrics?.trend_accuracy === 'declining' || metrics?.trend_brier === 'declining') {
+        redThreshold -= 0.10; // e.g. 0.40 im Choppy/Bärenmarkt
+        orangeThreshold -= 0.10; // e.g. 0.44
     }
-    if (precision10 != null && precision10 < Number(defaults?.orange?.precision_at_10_lt ?? 0.54)) {
+
+    // V6: Statt "buy_eligible_false" (was alles lahmlegt), geben wir "reduce_confidence" als Signal aus,
+    // was in der Pipeline durch Score-Penalties abgefangen wird, aber die besten überleben lässt.
+    if (precision10 != null && precision10 < redThreshold) {
+        return { level: 'RED', actions: ['freeze_promotions', 'reduce_confidence'], trigger: 'precision_red', minimum_n_status: minimumNStatus };
+    }
+    if (precision10 != null && precision10 < orangeThreshold) {
         return { level: 'ORANGE', actions: ['freeze_promotions', 'champion_freeze'], trigger: 'precision_orange', minimum_n_status: minimumNStatus };
     }
     if ((ece != null && ece > Number(defaults?.yellow?.ece_gt ?? 0.08)) || coverageDropPct > Number(defaults?.yellow?.coverage_drop_pct ?? 20)) {
@@ -865,7 +878,62 @@ function extractElliottPredictions(date, eodPrices, candidateTickers = []) {
     };
 }
 
-// ─── 4. STOCK ANALYZER: Extract Best-Setup Predictions ─────────────────────
+// ─── 4. QUANTLAB: Extract Setup Boni Predictions ────────────────────────────
+function extractQuantLabPredictions(date, eodPrices) {
+    const quantlabPath = path.join(ROOT, 'public/data/quantlab/stock-insights/stocks');
+    if (!fs.existsSync(quantlabPath)) return { predictions: [], source_meta: null };
+    
+    const files = fs.readdirSync(quantlabPath).filter(f => f.endsWith('.json'));
+    let allPreds = [];
+    let asof = null;
+
+    for (const file of files) {
+        const payload = readJson(path.join(quantlabPath, file));
+        if (!payload || !payload.byTicker) continue;
+        
+        if (!asof) asof = normalizeDate(payload.asOfDate || payload.generatedAt || payload.generated_at);
+        
+        for (const [tickerKey, row] of Object.entries(payload.byTicker)) {
+            const ticker = String(row?.ticker || tickerKey).toUpperCase();
+            const price = eodPrices[ticker]?.close ?? null;
+            
+            const state = row.state || {};
+            const globalRank = state.ranking?.globalTop10Rank;
+            
+            // We only take the top 500 strongest QuantLab signals as implicit "bullish" predictions
+            if (state.consensusLabel === 'STRONG_BUY' || state.consensusLabel === 'BUY' || (globalRank && globalRank <= 500)) {
+                const confidence = state.consensusLabel === 'STRONG_BUY' ? 0.75 : (state.consensusLabel === 'BUY' ? 0.60 : 0.55);
+                allPreds.push({
+                    feature: 'quantlab',
+                    ticker,
+                    date,
+                    horizon: 'medium', // Default horizon for QuantLab trend following
+                    direction: 'bullish',
+                    probability: confidence,
+                    confidence,
+                    price_at_prediction: price,
+                    source: 'quantlab_agent_ensemble'
+                });
+            }
+        }
+    }
+
+    allPreds.sort((a,b) => b.probability - a.probability);
+    const qualityPreds = allPreds.slice(0, 1000); // Max 1000 best
+    
+    console.log(`[learning] QuantLab: ${allPreds.length} total → ${qualityPreds.length} quality predictions`);
+    return {
+        predictions: qualityPreds,
+        source_meta: {
+            source: 'quantlab_agent_ensemble',
+            asof: asof || null,
+            fresh: Boolean(asof && asof === date),
+            stale_days: daysBetween(asof, date)
+        }
+    };
+}
+
+// ─── 5. STOCK ANALYZER: Extract Best-Setup Predictions ─────────────────────
 function extractStockRankings(date, eodPrices, policy = null) {
     const snapshotDoc = readJson(BEST_SETUPS_SNAPSHOT);
     const snapshotAsof = normalizeDate(
@@ -1177,7 +1245,7 @@ function computeFeatureMetrics(feature, date, lookbackDays = 30) {
 }
 
 // ─── Report Builder ─────────────────────────────────────────────────────────
-function buildReport(date, forecastMetrics, scientificMetrics, elliottMetrics, stockMetrics, stockStability, predCounts, analyzerControl = {}) {
+function buildReport(date, forecastMetrics, scientificMetrics, elliottMetrics, quantlabMetrics, stockMetrics, stockStability, predCounts, analyzerControl = {}) {
     // Build history from past reports (last 30 days)
     const history = [];
     for (let i = 29; i >= 0; i--) {
@@ -1195,6 +1263,7 @@ function buildReport(date, forecastMetrics, scientificMetrics, elliottMetrics, s
         scientific_accuracy_7d: scientificMetrics.accuracy_7d,
         scientific_hit_rate_7d: scientificMetrics.hit_rate_7d,
         elliott_accuracy_7d: elliottMetrics.accuracy_7d,
+        quantlab_accuracy_7d: quantlabMetrics.accuracy_7d,
         stock_stability: stockStability.stability,
     };
     history.push(todayMetrics);
@@ -1212,6 +1281,7 @@ function buildReport(date, forecastMetrics, scientificMetrics, elliottMetrics, s
         forecast: { this_week: weekAvg(thisWeekMetrics, 'forecast_accuracy_7d'), last_week: weekAvg(lastWeekMetrics, 'forecast_accuracy_7d') },
         scientific: { this_week: weekAvg(thisWeekMetrics, 'scientific_hit_rate_7d'), last_week: weekAvg(lastWeekMetrics, 'scientific_hit_rate_7d') },
         elliott: { this_week: weekAvg(thisWeekMetrics, 'elliott_accuracy_7d'), last_week: weekAvg(lastWeekMetrics, 'elliott_accuracy_7d') },
+        quantlab: { this_week: weekAvg(thisWeekMetrics, 'quantlab_accuracy_7d'), last_week: weekAvg(lastWeekMetrics, 'quantlab_accuracy_7d') }
     };
 
     // Detect start date (first report ever)
@@ -1232,9 +1302,9 @@ function buildReport(date, forecastMetrics, scientificMetrics, elliottMetrics, s
         start_date: startDate,
         days_active: daysActive,
         summary: {
-            features_tracked: 4,
-            total_predictions_today: (predCounts.forecast || 0) + (predCounts.scientific || 0) + (predCounts.elliott || 0) + (predCounts.stock || 0),
-            overall_status: determineOverallStatus(forecastMetrics, scientificMetrics, elliottMetrics, stockMetrics)
+            features_tracked: 5,
+            total_predictions_today: (predCounts.forecast || 0) + (predCounts.scientific || 0) + (predCounts.elliott || 0) + (predCounts.quantlab || 0) + (predCounts.stock || 0),
+            overall_status: determineOverallStatus(forecastMetrics, scientificMetrics, elliottMetrics, stockMetrics, quantlabMetrics)
         },
         features: {
             forecast: {
@@ -1257,6 +1327,13 @@ function buildReport(date, forecastMetrics, scientificMetrics, elliottMetrics, s
                 ...elliottMetrics,
                 predictions_today: predCounts.elliott || 0,
                 source_meta: predCounts.elliott_source_meta || null,
+            },
+            quantlab: {
+                name: 'QuantLab Agents Ensemble',
+                type: 'factor_rank_prediction',
+                ...quantlabMetrics,
+                predictions_today: predCounts.quantlab || 0,
+                source_meta: predCounts.quantlab_source_meta || null,
             },
             stock_analyzer: {
                 name: 'Stock Analyzer',
@@ -1287,8 +1364,8 @@ function buildReport(date, forecastMetrics, scientificMetrics, elliottMetrics, s
     };
 }
 
-function determineOverallStatus(f, s, e, stock = null) {
-    const trends = [f.trend_accuracy, s.trend_accuracy, e.trend_accuracy, stock?.trend_accuracy].filter(t => t && t !== 'no_data');
+function determineOverallStatus(f, s, e, stock = null, q = null) {
+    const trends = [f.trend_accuracy, s.trend_accuracy, e.trend_accuracy, stock?.trend_accuracy, q?.trend_accuracy].filter(t => t && t !== 'no_data');
     if (!trends.length) return 'BOOTSTRAP — Noch keine Outcome-Daten';
     const improving = trends.filter(t => t === 'improving').length;
     const declining = trends.filter(t => t === 'declining').length;
@@ -1441,6 +1518,10 @@ async function main() {
     );
     const elliottResult = extractElliottPredictions(date, eodPrices, elliottCandidates);
     const elliottPreds = elliottResult.predictions || [];
+
+    const quantlabResult = extractQuantLabPredictions(date, eodPrices);
+    const quantlabPreds = quantlabResult.predictions || [];
+
     const stockResult = extractStockRankings(date, eodPrices, bestSetupsPolicy);
     const stockPreds = stockResult.rankings || [];
 
@@ -1448,6 +1529,7 @@ async function main() {
     if (forecastPreds.length) writeNdjson(predPath(date, 'forecast'), forecastPreds);
     if (scientificPreds.length) writeNdjson(predPath(date, 'scientific'), scientificPreds);
     if (elliottPreds.length) writeNdjson(predPath(date, 'elliott'), elliottPreds);
+    if (quantlabPreds.length) writeNdjson(predPath(date, 'quantlab'), quantlabPreds);
     if (stockPreds.length) writeNdjson(predPath(date, 'stock_analyzer'), stockPreds);
 
     console.log(`[learning] Predictions logged: forecast=${forecastPreds.length} scientific=${scientificPreds.length} elliott=${elliottPreds.length} stock=${stockPreds.length}`);
@@ -1462,15 +1544,17 @@ async function main() {
     const forecastOutcomes = resolveOutcomes(date, 'forecast', eodPrices);
     const scientificOutcomes = resolveOutcomes(date, 'scientific', eodPrices);
     const elliottOutcomes = resolveOutcomes(date, 'elliott', eodPrices);
+    const quantlabOutcomes = resolveOutcomes(date, 'quantlab', eodPrices);
     const stockOutcomes = resolveOutcomes(date, 'stock_analyzer', eodPrices);
 
-    console.log(`[learning] Outcomes resolved: forecast=${forecastOutcomes.length} scientific=${scientificOutcomes.length} elliott=${elliottOutcomes.length} stock=${stockOutcomes.length}`);
+    console.log(`[learning] Outcomes resolved: forecast=${forecastOutcomes.length} scientific=${scientificOutcomes.length} elliott=${elliottOutcomes.length} quantlab=${quantlabOutcomes.length} stock=${stockOutcomes.length}`);
 
     // 6. Compute metrics (rolling 30d window)
     console.log('[learning] Computing metrics...');
     const forecastMetrics = computeFeatureMetrics('forecast', date);
     const scientificMetrics = computeFeatureMetrics('scientific', date);
     const elliottMetrics = computeFeatureMetrics('elliott', date);
+    const quantlabMetrics = computeFeatureMetrics('quantlab', date);
     const stockMetrics = computeFeatureMetrics('stock_analyzer', date);
     const stockStability = computeRankingStability(date);
     const forwardReturns = computeForwardReturns(date, eodPrices);
@@ -1491,13 +1575,15 @@ async function main() {
     };
 
     // 7. Build and save report
-    const report = buildReport(date, forecastMetrics, scientificMetrics, elliottMetrics, stockMetrics, stockStability, {
+    const report = buildReport(date, forecastMetrics, scientificMetrics, elliottMetrics, quantlabMetrics, stockMetrics, stockStability, {
         forecast: forecastPreds.length,
         forecast_source_meta: forecastResult.source_meta,
         scientific: scientificPreds.length,
         scientific_source_meta: scientificResult.source_meta,
         elliott: elliottPreds.length,
         elliott_source_meta: elliottResult.source_meta,
+        quantlab: quantlabPreds.length,
+        quantlab_source_meta: quantlabResult.source_meta,
         stock: stockPreds.length,
         stock_source_meta: stockResult.source_meta
     }, analyzerControl);

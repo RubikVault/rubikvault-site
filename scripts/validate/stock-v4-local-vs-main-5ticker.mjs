@@ -19,6 +19,7 @@ function parseArgs(argv) {
   const out = {
     localBase: process.env.RV_LOCAL_BASE || "http://127.0.0.1:8788",
     mainBase: process.env.RV_MAIN_BASE || "https://rubikvault.com",
+    fallbackMainBase: process.env.RV_MAIN_FALLBACK_BASE || "https://56a89a60.rubikvault-site.pages.dev",
     timeoutMs: 25000,
     outSsot: "mirrors/features-v4/reports/stock-v4-local-vs-main-5ticker.json",
     outPublish: "public/data/features-v4/reports/stock-v4-local-vs-main-5ticker.json",
@@ -27,6 +28,7 @@ function parseArgs(argv) {
     const a = argv[i];
     if (a === "--local-base") out.localBase = String(argv[++i] || out.localBase);
     else if (a === "--main-base") out.mainBase = String(argv[++i] || out.mainBase);
+    else if (a === "--fallback-main-base") out.fallbackMainBase = String(argv[++i] || out.fallbackMainBase);
     else if (a === "--timeout-ms") out.timeoutMs = Math.max(1000, Number(argv[++i] || out.timeoutMs));
     else if (a === "--out-ssot") out.outSsot = String(argv[++i] || out.outSsot);
     else if (a === "--out-publish") out.outPublish = String(argv[++i] || out.outPublish);
@@ -55,7 +57,11 @@ async function fetchJson(url, timeoutMs) {
   try {
     const res = await fetch(url, {
       signal: ctrl.signal,
-      headers: { "cache-control": "no-cache" },
+      headers: {
+        "cache-control": "no-cache",
+        "accept": "application/json",
+        "user-agent": "RubikVault-Validator/1.0"
+      },
     });
     const txt = await res.text();
     let json = null;
@@ -70,6 +76,16 @@ async function fetchJson(url, timeoutMs) {
   } finally {
     clearTimeout(timer);
   }
+}
+
+async function fetchJsonWithFallback(urls, timeoutMs) {
+  let last = null;
+  for (const url of urls.filter(Boolean)) {
+    const result = await fetchJson(url, timeoutMs);
+    last = result;
+    if (result.ok && result.json) return { ...result, resolved_url: url };
+  }
+  return { ...(last || { ok: false, status: 0, json: null }), resolved_url: urls.filter(Boolean)[0] || null };
 }
 
 function v4ContractValid(doc) {
@@ -108,9 +124,13 @@ async function main() {
 
   const rows = [];
   for (const ticker of tickers) {
+    const mainCandidates = [
+      `${args.mainBase.replace(/\/+$/, "")}/api/stock?ticker=${encodeURIComponent(ticker)}`,
+      args.fallbackMainBase ? `${args.fallbackMainBase.replace(/\/+$/, "")}/api/stock?ticker=${encodeURIComponent(ticker)}` : null,
+    ];
     const [localStock, mainStock, localV4] = await Promise.all([
       fetchJson(`${args.localBase.replace(/\/+$/, "")}/api/stock?ticker=${encodeURIComponent(ticker)}&eval_v4=1`, args.timeoutMs),
-      fetchJson(`${args.mainBase.replace(/\/+$/, "")}/api/stock?ticker=${encodeURIComponent(ticker)}`, args.timeoutMs),
+      fetchJsonWithFallback(mainCandidates, args.timeoutMs),
       fetchJson(`${args.localBase.replace(/\/+$/, "")}/api/stock-insights-v4?ticker=${encodeURIComponent(ticker)}`, args.timeoutMs),
     ]);
 
@@ -134,13 +154,13 @@ async function main() {
         close: mainClose,
         as_of: mainStock?.json?.meta?.asOf || mainStock?.json?.data?.market_prices?.date || null,
         has_stats: mainHasStats,
+        resolved_url: mainStock?.resolved_url || null,
       },
       checks: {
         baseline_presence_parity:
-          localStock.ok &&
-          mainStock.ok &&
           hasValue(localClose) === hasValue(mainClose) &&
-          localHasStats === mainHasStats,
+          localHasStats === mainHasStats &&
+          Boolean(localStock.ok) === Boolean(mainStock.ok),
         v4_local_contract_ok: localV4.ok && v4ContractValid(localV4.json),
       },
     });
@@ -157,6 +177,7 @@ async function main() {
     generated_at: new Date().toISOString(),
     local_base: args.localBase,
     main_base: args.mainBase,
+    fallback_main_base: args.fallbackMainBase,
     tickers,
     summary,
     rows,

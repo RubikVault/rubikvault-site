@@ -340,11 +340,28 @@ async function main() {
     horizonsByClass.etfs[horizon] = buildHorizonRows(acceptedRows.filter((row) => row?.asset_class === 'etf'), horizon);
   }
 
+  const rejectionCounts = summarizeRejections(evalByTicker, candidatePools);
+  const emittedCounts = {
+    stocks: {
+      short: horizonsByClass.stocks.short.length,
+      medium: horizonsByClass.stocks.medium.length,
+      long: horizonsByClass.stocks.long.length,
+    },
+    etfs: {
+      short: horizonsByClass.etfs.short.length,
+      medium: horizonsByClass.etfs.medium.length,
+      long: horizonsByClass.etfs.long.length,
+    },
+  };
+  const totalRowsEmitted = Object.values(emittedCounts.stocks).reduce((sum, value) => sum + value, 0)
+    + Object.values(emittedCounts.etfs).reduce((sum, value) => sum + value, 0);
+
   const payload = {
     ok: true,
     schema_version: 'rv.best-setups.shared-core.snapshot.v3',
     generated_at: nowIso(),
     meta: {
+      generated_at: nowIso(),
       source: 'shared_decision_core_quantlab_forecast_snapshot',
       decision_path: 'assembleDecisionInputs + buildStockInsightsV4Evaluation',
       quantlab_generated_at: quantlabResult.generatedAt,
@@ -352,6 +369,11 @@ async function main() {
       quantlab_asof: quantlabResult.asOfDate,
       quantlab_asof_by_class: quantlabResult.asOfDateByClass,
       forecast_asof: forecastDoc?.data?.asof || forecastDoc?.freshness || null,
+      data_asof: forecastDoc?.data?.asof || forecastDoc?.freshness || quantlabResult.asOfDate || null,
+      source_dependencies: {
+        quantlab_publish_dirs: QUANTLAB_PUBLISH_DIRS,
+        forecast_path: FORECAST_PATH,
+      },
       candidate_counts: {
         quantlab_rows_total: quantlabResult.rows.length,
         quantlab_rows_stocks: quantlabResult.rows.filter((row) => row?.assetClass === 'stock').length,
@@ -366,24 +388,28 @@ async function main() {
         unique_tickers: uniqueTickers.length,
         shard_count: quantlabResult.shardCount,
       },
-      verified_counts: {
-        stocks: {
-          short: horizonsByClass.stocks.short.length,
-          medium: horizonsByClass.stocks.medium.length,
-          long: horizonsByClass.stocks.long.length,
-        },
-        etfs: {
-          short: horizonsByClass.etfs.short.length,
-          medium: horizonsByClass.etfs.medium.length,
-          long: horizonsByClass.etfs.long.length,
-        },
-      },
+      verified_counts: emittedCounts,
       setup_phase_counts: {
         early: (acceptedByHorizon.medium || []).filter(r => r.setup_phase === 'EARLY').length,
         mid: (acceptedByHorizon.medium || []).filter(r => r.setup_phase === 'MID').length,
         late: (acceptedByHorizon.medium || []).filter(r => r.setup_phase === 'LATE').length,
       },
-      rejection_counts: summarizeRejections(evalByTicker, candidatePools),
+      rejection_counts: rejectionCounts,
+      rows_emitted: {
+        ...emittedCounts,
+        total: totalRowsEmitted,
+      },
+      rows_rejected: rejectionCounts,
+      reason_summary: {
+        snapshot_empty: totalRowsEmitted === 0,
+        dominant_rejection: Object.entries(rejectionCounts).map(([horizon, counts]) => ({
+          horizon,
+          rejected_non_buy_total: counts.rejected_non_buy_total,
+          rejected_non_high_total: counts.rejected_non_high_total,
+          rejected_gated_total: counts.rejected_gated_total,
+          rejected_non_uptrend_total: counts.rejected_non_uptrend_total,
+        })),
+      },
       duration_ms: Date.now() - startedAt,
     },
     data: {

@@ -1,9 +1,9 @@
 {
   "schema_version": "ui.benchmarks.v1",
   "meta": {
-    "generated_at": "2026-03-11T23:42:50.168Z",
-    "data_date": null,
-    "as_of": null,
+    "generated_at": "2026-03-30T11:03:47.852Z",
+    "data_date": "2026-03-26",
+    "as_of": "2026-03-26",
     "provider": "local-artifacts",
     "source_chain": [
       "public/data/v3/series/adjusted/*.ndjson.gz"
@@ -13,14 +13,14 @@
   "data": {
     "benchmarks": {
       "SPY": {
-        "series_ref": null,
-        "as_of": null,
-        "source": "missing",
+        "series_ref": "/data/v3/series/adjusted/US__SPY.ndjson.gz",
+        "as_of": "2026-03-26",
+        "source": "v3-series-adjusted",
         "returns": {
-          "d1": null,
-          "ytd": null,
-          "y1": null,
-          "y5": null
+          "d1": -0.007947382844615004,
+          "ytd": -0.046211045566989094,
+          "y1": 0.13231154207069123,
+          "y5": 0.7710371819960861
         }
       },
       "QQQ": {
