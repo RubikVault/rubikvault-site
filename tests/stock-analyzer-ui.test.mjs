@@ -313,7 +313,7 @@ test('UI regression: verdict-aware explanation header is present', () => {
 test('UI regression: market context degraded fallback is present', () => {
   assert.match(stockHtmlSource, /Benchmark comparison temporarily unavailable/);
   assert.match(stockHtmlSource, /Degraded/);
-  assert.match(stockHtmlSource, /Using cached benchmark data/);
+  assert.match(stockHtmlSource, /Benchmark cache active/);
 });
 
 test('UI regression: signal quality helper text is wired from risk presentation', () => {
@@ -321,12 +321,17 @@ test('UI regression: signal quality helper text is wired from risk presentation'
 });
 
 test('UI regression: WAIT path renders non-applicable checklist state', () => {
-  assert.match(stockHtmlSource, /No active trade setup — pre-trade checklist not applicable\./);
+  assert.match(stockHtmlSource, /No active trade setup — checklist hidden until confirmation appears\./);
   assert.match(stockHtmlSource, /checklistApplicable/);
 });
 
-test('UI regression: model evidence empty-state is explicit', () => {
-  assert.match(stockHtmlSource, /Additional model evidence modules currently unavailable for this analysis\./);
+test('UI regression: model evidence empty-state is hidden', () => {
+  assert.doesNotMatch(stockHtmlSource, /Additional model evidence modules currently unavailable for this analysis\./);
+});
+
+test('UI regression: executive decision panel stays free of audit placeholders', () => {
+  assert.doesNotMatch(stockHtmlSource, /rv-decision-rationale/);
+  assert.doesNotMatch(stockHtmlSource, /rv-governance-info/);
 });
 
 // ─── E2) 52W Range Labels ────────────────────────────────────────────────────
