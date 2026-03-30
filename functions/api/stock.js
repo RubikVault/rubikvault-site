@@ -1621,32 +1621,23 @@ export async function onRequestGet(context) {
     payload.v6 = payload.evaluation_v4.decision?.v6 || null;
   }
 
-  // Fundamentals — 3-Layer: KV Cache → Live API (EODHD→FMP) → Static JSON
+  // Fundamentals — 2-Layer: Live API (EODHD→FMP) → Static JSON
   {
-    const _kvKey = 'fund:' + effectiveTicker;
     let _fundData = null;
 
-    // Layer 1: KV Cache (TTL 24h)
-    try { _fundData = env.RV_KV ? await env.RV_KV.get(_kvKey, 'json') : null; } catch {}
-
-    // Layer 2: Live API (EODHD primary → FMP fallback)
+    // Layer 1: Live API (EODHD primary → FMP fallback)
+    try {
+      const r = await fetchEodhdFundamentals(effectiveTicker, env);
+      if (r.ok && r.data) _fundData = r.data;
+    } catch {}
     if (!_fundData) {
       try {
-        const r = await fetchEodhdFundamentals(effectiveTicker, env);
+        const r = await fetchFmpFundamentals(effectiveTicker, env);
         if (r.ok && r.data) _fundData = r.data;
       } catch {}
-      if (!_fundData) {
-        try {
-          const r = await fetchFmpFundamentals(effectiveTicker, env);
-          if (r.ok && r.data) _fundData = r.data;
-        } catch {}
-      }
-      if (_fundData && env.RV_KV) {
-        try { await env.RV_KV.put(_kvKey, JSON.stringify(_fundData), { expirationTtl: 86400 }); } catch {}
-      }
     }
 
-    // Layer 3: Static JSON Fallback
+    // Layer 2: Static JSON Fallback
     if (!_fundData) {
       try {
         const _sUrl = new URL('/data/fundamentals/' + encodeURIComponent(effectiveTicker.toUpperCase()) + '.json', request.url);
