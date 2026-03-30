@@ -203,12 +203,9 @@ export async function loadRequestCoreInputs(ticker, { request, assetFetcher = nu
   const bars = await getStaticBars(ticker, origin) || [];
   const indicatorOut = computeIndicators(Array.isArray(bars) ? bars : []);
   const stats = mapIndicatorsToStats(indicatorOut?.indicators || []);
-  const [searchExactDoc, universeSymbols] = await Promise.all([
-    loadSearchExact(request, assetFetcher),
-    loadUniverseSymbols(fetchJson),
-  ]);
-  const searchExact = searchExactDoc?.by_symbol?.[ticker] || null;
-  const universe = buildUniversePayload({ ticker, searchExact, universeSymbols });
+  // Skip loading large gzip files (search_exact_by_symbol.json.gz, stocks.max.symbols.json)
+  // to prevent Worker memory limit exceeded on Cloudflare Pages.
+  const universe = buildUniversePayload({ ticker, searchExact: null, universeSymbols: null });
   const as_of = Array.isArray(bars) && bars.length ? bars[bars.length - 1]?.date || null : null;
   return { bars, stats, universe, as_of };
 }
