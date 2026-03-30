@@ -125,3 +125,8 @@ test_keys.cjs
 eodhd-maximizer.mjs
 scripts/test/batch_stock_audit.mjs
 scripts/ci/test_eodhd.mjs
+
+# Large data files — never commit (>100MB, served from CI/CDN)
+public/data/features-v4/stock-insights/index.json
+public/data/snapshots/stock-analysis.json
+public/data/hist-probs/*.json
