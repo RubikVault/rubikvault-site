@@ -23,13 +23,6 @@ import {
   selectCanonicalMarketStats,
 } from './stock-helpers.js';
 
-let v7SearchExactCache = null;
-let v7SearchExactCachedAt = 0;
-const V7_SEARCH_EXACT_TTL_MS = 5 * 60 * 1000;
-let v3UniverseCache = null;
-let v3UniverseCachedAt = 0;
-const V3_UNIVERSE_TTL_MS = 5 * 60 * 1000;
-
 function findRecord(snapshot, symbol) {
   if (!snapshot || !snapshot.data) return null;
   const payload = snapshot.data;
@@ -76,97 +69,6 @@ function hasUsableMarketStats(record) {
   const required = ['rsi14', 'sma20', 'sma50', 'sma200', 'atr14'];
   const available = required.filter((key) => Number.isFinite(Number(stats[key]))).length;
   return available >= 3;
-}
-
-async function fetchJsonMaybeGzip(url) {
-  try {
-    const response = await fetch(url.toString());
-    if (!response.ok) return null;
-    if (typeof DecompressionStream === 'function' && response.body) {
-      const clone = response.clone();
-      try {
-        const decompressed = response.body.pipeThrough(new DecompressionStream('gzip'));
-        const text = await new Response(decompressed).text();
-        return JSON.parse(text);
-      } catch {
-        return await clone.json();
-      }
-    }
-    return await response.json();
-  } catch {
-    return null;
-  }
-}
-
-async function fetchV7SearchExactEntry(request, symbol) {
-  const now = Date.now();
-  if (!v7SearchExactCache || (now - v7SearchExactCachedAt) > V7_SEARCH_EXACT_TTL_MS) {
-    const baseUrl = new URL(request.url);
-    const payload = await fetchJsonMaybeGzip(new URL('/data/universe/v7/search/search_exact_by_symbol.json.gz', baseUrl));
-    if (payload && typeof payload === 'object') {
-      v7SearchExactCache = payload;
-      v7SearchExactCachedAt = now;
-    }
-  }
-  const bySymbol = v7SearchExactCache?.by_symbol;
-  if (!bySymbol || typeof bySymbol !== 'object') return null;
-  const row = bySymbol[String(symbol || '').toUpperCase()];
-  if (!row || typeof row !== 'object') return null;
-  const canonical = typeof row.canonical_id === 'string' ? row.canonical_id : null;
-  const canonicalExchange = canonical && canonical.includes(':') ? canonical.split(':')[0] : null;
-  return {
-    canonical_id: canonical,
-    symbol: typeof row.symbol === 'string' && row.symbol.trim() ? row.symbol.trim().toUpperCase() : normalizeTicker(symbol),
-    name: typeof row.name === 'string' && row.name.trim() ? row.name.trim() : null,
-    exchange: typeof row.exchange === 'string' && row.exchange.trim() ? row.exchange : (canonicalExchange || null),
-    country: typeof row.country === 'string' && row.country.trim() ? row.country : null,
-  };
-}
-
-async function fetchV3UniverseMeta(request, symbol) {
-  const now = Date.now();
-  if (!v3UniverseCache || (now - v3UniverseCachedAt) > V3_UNIVERSE_TTL_MS) {
-    const baseUrl = new URL(request.url);
-    const [universePayload, mappingPayload] = await Promise.all([
-      fetchJsonMaybeGzip(new URL('/data/v3/universe/universe.json', baseUrl)),
-      fetchJsonMaybeGzip(new URL('/data/v3/universe/symbol-mapping.json', baseUrl)),
-    ]);
-    v3UniverseCache = {
-      universe: universePayload,
-      mapping: mappingPayload,
-    };
-    v3UniverseCachedAt = now;
-  }
-
-  const normalized = normalizeTicker(symbol);
-  if (!normalized) return null;
-
-  const universeSymbols = Array.isArray(v3UniverseCache?.universe?.symbols) ? v3UniverseCache.universe.symbols : [];
-  const universeHit = universeSymbols.find((row) => normalizeTicker(row?.ticker) === normalized) || null;
-
-  const mappings = v3UniverseCache?.mapping?.mappings && typeof v3UniverseCache.mapping.mappings === 'object'
-    ? v3UniverseCache.mapping.mappings
-    : null;
-  let mappingHit = null;
-  if (mappings) {
-    for (const [canonicalId, row] of Object.entries(mappings)) {
-      if (normalizeTicker(row?.ticker) === normalized) {
-        mappingHit = { canonicalId, row };
-        break;
-      }
-    }
-  }
-
-  if (!universeHit && !mappingHit) return null;
-
-  return {
-    canonical_id: universeHit?.canonical_id || mappingHit?.canonicalId || null,
-    symbol: normalized,
-    name: typeof universeHit?.name === 'string' && universeHit.name.trim() ? universeHit.name.trim() : null,
-    exchange: typeof mappingHit?.row?.exchange === 'string' && mappingHit.row.exchange.trim() ? mappingHit.row.exchange.trim() : null,
-    country: typeof universeHit?.country === 'string' && universeHit.country.trim() ? universeHit.country.trim() : null,
-    provider_ids: mappingHit?.row?.provider_ids || null,
-  };
 }
 
 function buildEodhdSymbol(symbol, exchange) {
@@ -303,27 +205,11 @@ async function resolveTickerContext(ticker, request) {
     }
   } catch { /* ignore */ }
 
-  let v7ExactMeta = null;
-  if (resolvedTicker) {
-    try {
-      v7ExactMeta = await fetchV7SearchExactEntry(request, resolvedTicker);
-    } catch { /* ignore */ }
-  }
-  if (!v7ExactMeta && resolvedTicker) {
-    try {
-      v7ExactMeta = await fetchV3UniverseMeta(request, resolvedTicker);
-    } catch { /* ignore */ }
-  }
-  if (!name) name = v7ExactMeta?.name || null;
-  if (!exchange) exchange = v7ExactMeta?.exchange || null;
-  if (!country) country = v7ExactMeta?.country || null;
-  if (!canonicalId) canonicalId = v7ExactMeta?.canonical_id || null;
-
   return {
     ok: true,
     ticker: resolvedTicker,
     name, exchange, country, canonicalId,
-    resolution: { ticker: resolvedTicker, canonical_id: canonicalId, exchange, provider_ids: v7ExactMeta?.provider_ids || null },
+    resolution: { ticker: resolvedTicker, canonical_id: canonicalId, exchange, provider_ids: null },
   };
 }
 
@@ -505,9 +391,8 @@ export async function fetchStockSummary(ticker, env, request) {
       status,
       generated_at: nowUtcIso(),
       data_date: dataDate,
-      price_date: canonicalMarketPrices?.date || null,
-      indicator_date: canonicalMarketStats?.as_of || null,
-      missing_core_metrics: missingCoreMetrics,
+      price_date: selectedMarketPrices?.date || null,
+      indicator_date: selectedMarketStats?.as_of || null,
       provider,
       quality_flags: qualityFlags.length ? qualityFlags : undefined,
       version: 'v2',
@@ -580,6 +465,8 @@ export async function fetchStockHistorical(ticker, env, request) {
     const result = processTickerSeries(effectiveTicker, bars);
     if (result) breakoutV2 = result;
   } catch { /* optional */ }
+  const indicatorIssues = [];
+  const normalizedIndicators = indicatorArray;
   const historicalQualityFlags = [...new Set([...(qualityFlags.length ? qualityFlags : []), ...indicatorIssues])];
 
   return {
