@@ -2,7 +2,7 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
-import { loadLocalBars, resolveLocalAssetMeta } from '../lib/best-setups-local-loader.mjs';
+import zlib from 'node:zlib';
 import { computeIndicators } from '../../functions/api/_shared/eod-indicators.mjs';
 import { classifyAllStates } from '../../functions/api/_shared/stock-states-v1.js';
 import { makeDecision } from '../../functions/api/_shared/stock-decisions-v1.js';
@@ -44,6 +44,18 @@ function readJson(filePath) {
 function readNdjson(filePath) {
   try {
     return fs.readFileSync(filePath, 'utf8').split('\n').filter(Boolean).map((line) => JSON.parse(line));
+  } catch {
+    return [];
+  }
+}
+
+function readGzipNdjson(filePath) {
+  try {
+    return zlib.gunzipSync(fs.readFileSync(filePath))
+      .toString('utf8')
+      .split('\n')
+      .filter(Boolean)
+      .map((line) => JSON.parse(line));
   } catch {
     return [];
   }

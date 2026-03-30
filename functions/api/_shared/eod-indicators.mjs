@@ -170,7 +170,7 @@ export function computeIndicators(bars) {
   const lows = lookback252.map((b) => Number.isFinite(b.low) ? b.low : b.close).filter((v) => Number.isFinite(v));
   const high52w = highs.length ? Math.max(...highs) : null;
   const low52w = lows.length ? Math.min(...lows) : null;
-  const range52wPct =
+  const range52wWidthPct =
     Number.isFinite(high52w) && Number.isFinite(low52w) && high52w !== 0 ? (high52w - low52w) / high52w : null;
   const close = closes.length ? closes[closes.length - 1] : null;
   const position52w = (high52w > low52w && Number.isFinite(close))
@@ -441,7 +441,8 @@ export function computeIndicators(bars) {
     // 52-Week Range
     { id: 'high_52w', value: high52w },
     { id: 'low_52w', value: low52w },
-    { id: 'range_52w_pct', value: range52wPct },
+    { id: 'range_52w_pct', value: position52w },
+    { id: 'range_52w_width_pct', value: range52wWidthPct },
     { id: 'position_in_52w_range', value: position52w },
     // Volume
     { id: 'avg_volume_20d', value: avgVol20 },

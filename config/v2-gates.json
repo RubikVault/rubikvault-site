@@ -10,5 +10,5 @@
     "v2_historical": { "enabled": true },
     "v2_governance": { "enabled": true }
   },
-  "notes": "Set global_enabled to true and individual endpoints to true to activate V2. KV key 'rv:v2:gates' overrides this file at runtime."
+  "notes": "Static config is production-authoritative. Env flags can force on/off. KV can opt-in additional endpoints when static config is closed."
 }

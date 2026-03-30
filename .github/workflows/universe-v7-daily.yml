@@ -74,8 +74,16 @@ jobs:
           git add public/data/universe/v7/
           git add public/data/forecast/
           git add public/data/snapshots/best-setups-v4.json
-          git add public/data/reports/best-setups-etf-diagnostic-latest.json
-          git add mirrors/learning/reports/best-setups-etf-diagnostic-latest.json
+          for optional_path in \
+            public/data/reports/best-setups-etf-diagnostic-latest.json \
+            mirrors/learning/reports/best-setups-etf-diagnostic-latest.json
+          do
+            if [ -f "$optional_path" ]; then
+              git add "$optional_path"
+            else
+              echo "Optional artifact missing, skipping add: $optional_path"
+            fi
+          done
           if git diff --cached --quiet; then
             echo "No v7 changes to commit"
             exit 0

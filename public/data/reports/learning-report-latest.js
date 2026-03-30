@@ -921,7 +921,7 @@ window.__RV_LEARNING_REPORT__ = {
         "forecast",
         "scientific"
       ],
-      "source_count": 2,
+      "source_count": 3,
       "consensus_strength": 1,
       "avg_confidence": 0.7813,
       "conviction_score": 0.5208
@@ -1017,7 +1017,7 @@ window.__RV_LEARNING_REPORT__ = {
         "forecast",
         "scientific"
       ],
-      "source_count": 2,
+      "source_count": 3,
       "consensus_strength": 1,
       "avg_confidence": 0.7813,
       "conviction_score": 0.5208
@@ -1053,7 +1053,7 @@ window.__RV_LEARNING_REPORT__ = {
         "forecast",
         "scientific"
       ],
-      "source_count": 2,
+      "source_count": 3,
       "consensus_strength": 1,
       "avg_confidence": 0.7813,
       "conviction_score": 0.5208
@@ -1065,7 +1065,7 @@ window.__RV_LEARNING_REPORT__ = {
         "forecast",
         "scientific"
       ],
-      "source_count": 2,
+      "source_count": 3,
       "consensus_strength": 1,
       "avg_confidence": 0.7813,
       "conviction_score": 0.5208
@@ -1077,7 +1077,7 @@ window.__RV_LEARNING_REPORT__ = {
         "forecast",
         "scientific"
       ],
-      "source_count": 2,
+      "source_count": 3,
       "consensus_strength": 1,
       "avg_confidence": 0.7813,
       "conviction_score": 0.5208

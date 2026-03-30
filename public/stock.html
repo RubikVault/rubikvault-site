@@ -48,7 +48,7 @@
       </a>
     </nav>
     <div class="rv-header-tools" aria-live="polite">
-      <div class="rv-data-updated" style="font-size: 12px; color: var(--rv-text-muted);">Snapshot: <span id="rv-data-updated-date">...</span> · Latest Data: <span id="rv-data-asof">...</span></div>
+      <div class="rv-data-updated" style="font-size: 12px; color: var(--rv-text-muted);">Snapshot: <span id="rv-data-updated-date">...</span> · Price as-of: <span id="rv-data-asof">...</span></div>
       <div class="rv-market-clock">
         <span class="rv-clock-time" id="rv-ny-time">NY: --:--:--</span>
         <span class="rv-clock-status">
@@ -112,7 +112,7 @@
     computeTooltipFrame,
   } = await import('/js/stock-page-view-model.js');
   let payload;
-  let _rvDataSource = 'v1';
+  let _rvDataSource = 'v2';
   try {
     if (isV4View) {
       const { fetchWithFallback } = await import('/js/rv-v2-client.js');
@@ -271,7 +271,7 @@
   // Render Top Headline KPIs
   document.getElementById('sc-headline-kpis').innerHTML = [
     ['Trend', trendLabel, trendColor, 'Based on price vs SMA20/50/200 alignment'],
-    ['Risk', riskLabel, riskColor, 'ATR volatility percentile rank (0\u2013100)'],
+    ['Risk', riskView.displayLabel, riskColor, 'Final risk classification after override rules and volatility context'],
     ['52W', r52label || '—', 'var(--text)', 'Position in 52-week range: (close\u2013low)/(high\u2013low)'],
     ['RSI', rsiZone + (_guard.corrections.labels?.rsiSuffix || ''), rsiColor, 'Relative Strength Index (14d). <30 oversold, >70 overbought']
   ].map(x => '<div title="'+x[3]+'" style="padding:.4rem .6rem; border-radius:6px; background:rgba(255,255,255,0.02); border:1px solid var(--border); text-align:center; cursor:help"><div style="font-size:.6rem; color:var(--text-muted); text-transform:uppercase">'+x[0]+'</div><div style="font-weight:700; color:'+x[2]+'; font-size:.85rem">'+x[1]+'</div></div>').join('');
@@ -636,11 +636,29 @@
     const sSpy = spyVal >= 0 ? 'var(--green)' : 'var(--red)';
     const sQqq = qqqVal >= 0 ? 'var(--green)' : 'var(--red)';
 
-    let note = "Mixed relative strength.";
-    if (spyVal > 0 && qqqVal < 0) note = "Outperforming SPY, Underperforming QQQ (Relative Tech Weakness)";
-    else if (spyVal < 0 && qqqVal > 0) note = "Underperforming SPY, Outperforming QQQ (Relative Tech Strength)";
-    else if (spyVal > 0 && qqqVal > 0) note = "Broad Outperformance vs Benchmarks";
-    else if (spyVal < 0 && qqqVal < 0) note = "Broad Underperformance vs Benchmarks";
+    let note = `${tf} mixed relative strength vs benchmarks.`;
+    if (spyVal > 0 && qqqVal < 0) note = `${tf} outperformance vs SPY, underperformance vs QQQ.`;
+    else if (spyVal < 0 && qqqVal > 0) note = `${tf} underperformance vs SPY, outperformance vs QQQ.`;
+    else if (spyVal > 0 && qqqVal > 0) note = `${tf} outperformance vs benchmarks.`;
+    else if (spyVal < 0 && qqqVal < 0) note = `${tf} underperformance vs benchmarks.`;
+
+    if (_mktCtx.degraded) {
+      return `
+      <div style="padding:.45rem .6rem; border-radius:8px; background:rgba(255,255,255,0.01); border:1px dashed rgba(255,255,255,0.06);">
+        <div style="display:flex; justify-content:space-between; align-items:center; gap:.5rem; margin-bottom:.25rem;">
+          <div style="display:flex;flex-direction:column;gap:2px;">
+            <div style="font-size: .62rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700;">Market Context</div>
+            <div style="font-size:.56rem;color:var(--yellow)">${_esc(_mktCtx.errorReason || 'Using cached benchmark data.')}</div>
+          </div>
+          <div style="display:flex; gap:2px;">${['1D', '1W', '1M', '1Y'].map(getBtn).join('')}</div>
+        </div>
+        <div style="display:flex;gap:.4rem;flex-wrap:wrap">
+          <span style="font-size:.62rem;padding:3px 6px;border-radius:999px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.05);color:${sSpy}">${tf} vs SPY ${spyStr}</span>
+          <span style="font-size:.62rem;padding:3px 6px;border-radius:999px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.05);color:${sQqq}">${tf} vs QQQ ${qqqStr}</span>
+        </div>
+        <div style="font-size:0.58rem; color:var(--text-dim); margin-top:.3rem; font-style:italic;">${note}</div>
+      </div>`;
+    }
 
     return `
       <div style="padding:.6rem; border-radius:8px; background:rgba(255,255,255,0.01); border:1px solid rgba(255,255,255,0.03);">
@@ -917,10 +935,17 @@
   var allLvl=displayLevels.map(l=>l.price).concat([close]);var mnL=Math.min(...allLvl)*0.99,mxL=Math.max(...allLvl)*1.01,rngL=mxL-mnL||1;
 
   // Collision adjuster for key levels labels
-  displayLevels.forEach(l => { l.yExact = ((1 - ((l.price - mnL) / rngL)) * 90 + 5); l.yText = l.yExact; });
+  displayLevels.forEach(l => {
+    l.yExact = ((1 - ((l.price - mnL) / rngL)) * 90 + 5);
+    l.yText = Math.max(6, Math.min(92, l.yExact));
+  });
   displayLevels.sort((a,b) => a.yText - b.yText);
   let lastY = -Infinity;
-  displayLevels.forEach(l => { if (l.yText < lastY + 3.4) { l.yText = lastY + 3.4; } lastY = l.yText; });
+  displayLevels.forEach(l => {
+    if (l.yText < lastY + 5.1) l.yText = lastY + 5.1;
+    l.yText = Math.min(94, l.yText);
+    lastY = l.yText;
+  });
 
   // Dynamic Structure / Weakness / Rebound
   const bullPoints = bullR.length ? bullR.map(r => '<li>'+_esc(r)+'</li>').join('') : '<li>No constructive signals detected</li>';
@@ -1156,7 +1181,7 @@
         <!-- Risk Gauge -->
         <div style="display:flex;gap:1rem;align-items:center;background:rgba(255,255,255,0.01);padding:.75rem;border-radius:8px;border:1px solid rgba(255,255,255,0.03);margin-bottom:1rem">
           <div style="width:28px;height:70px;border:2px solid var(--border);border-radius:6px;position:relative;overflow:hidden;flex-shrink:0">
-            <div style="position:absolute;bottom:0;width:100%;height:${riskLabel==='High'||riskLabel==='Elevated'?90:riskLabel==='Medium'?55:30}%;background:${riskColor}"></div>
+            <div style="position:absolute;bottom:0;width:100%;height:${riskView.finalState==='High'||riskView.finalState==='Elevated'?90:riskView.finalState==='Medium'?55:30}%;background:${riskColor}"></div>
           </div>
           <div style="flex:1">
             <div style="font-size:.65rem;color:var(--text-muted)">FINAL RISK</div>
@@ -1280,8 +1305,7 @@
         </div>`;
         })()}
 
-        <!-- Breakout Indicator (Mini) -->
-        <div style="margin-top:0.6rem; padding:.5rem; border-radius:8px; background:rgba(255,255,255,0.01); border:1px solid rgba(255,255,255,0.03);">
+        ${modelEvidenceView.showSection && modelEvidenceView.showBreakoutMini ? `<div style="margin-top:0.6rem; padding:.5rem; border-radius:8px; background:rgba(255,255,255,0.01); border:1px solid rgba(255,255,255,0.03);">
             <div style="font-size: .62rem; color: var(--text-dim); text-transform: uppercase; font-weight: 700; margin-bottom: .25rem;">Breakout Indicator</div>
             ${data.breakout_v2 && data.breakout_v2.state ? `
             <div style="display:flex; justify-content:space-between; align-items:center;">
@@ -1297,7 +1321,7 @@
               NONE — no breakout setup detected
             </div>
             `}
-        </div>
+        </div>` : ''}
 
       </div>
     </div>
@@ -1787,7 +1811,7 @@
   if (el) { el.textContent = new Date().toLocaleString('en-US', { timeZone:'America/New_York', month:'short', day:'numeric', hour:'2-digit', minute:'2-digit', hour12:false }) + ' ET'; }
   const elAsOf = document.getElementById("rv-data-asof");
   if (elAsOf && window._rvCanonicalMetrics?.asOf) { elAsOf.textContent = window._rvCanonicalMetrics.asOf + ' (EOD)'; }
-  else if (elAsOf) { elAsOf.textContent = '\u2014'; }
+  else if (elAsOf) { elAsOf.textContent = 'unavailable'; }
 })();
 
 // Search bar navigation

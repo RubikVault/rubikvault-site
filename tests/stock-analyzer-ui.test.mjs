@@ -459,6 +459,99 @@ test('Live stock.html defines runtime variables used in template rendering', asy
   assert.ok(content.includes('window._rvCanonicalMetrics ='), '_rvCanonicalMetrics is not exposed in stock.html');
 });
 
+test('Live stock.html includes explicit operational banner tiers', async () => {
+  const fs = await import('node:fs');
+  const content = fs.readFileSync(new URL('../public/stock.html', import.meta.url), 'utf-8');
+  assert.ok(content.includes('Operational with minor warnings'), 'Minor-warning banner text is missing');
+});
+
+test('Live stock.html removes risk inconsistency warning copy', async () => {
+  const fs = await import('node:fs');
+  const content = fs.readFileSync(new URL('../public/stock.html', import.meta.url), 'utf-8');
+  assert.ok(!content.includes('possible data inconsistency'), 'Old risk inconsistency warning copy is still present');
+});
+
+test('Live stock.html clarifies historical timestamps explicitly', async () => {
+  const fs = await import('node:fs');
+  const content = fs.readFileSync(new URL('../public/stock.html', import.meta.url), 'utf-8');
+  assert.ok(content.includes('As-of:'), 'Historical regime as-of label is missing');
+  assert.ok(content.includes('classifyHistoricalFreshness'), 'Historical freshness classifier wiring is missing');
+  assert.ok(content.includes('freshness.warningText'), 'Historical stale-warning wiring is missing');
+});
+
+test('Live stock.html sharpens trend vs rebound wording', async () => {
+  const fs = await import('node:fs');
+  const content = fs.readFileSync(new URL('../public/stock.html', import.meta.url), 'utf-8');
+  assert.ok(content.includes('CONSTRUCTIVE FACTORS'), 'Constructive factors heading is missing');
+  assert.ok(content.includes('REBOUND CONDITIONS'), 'Rebound conditions heading is missing');
+});
+
+test('Live stock.html uses compact breakout none wording', async () => {
+  const fs = await import('node:fs');
+  const content = fs.readFileSync(new URL('../public/stock.html', import.meta.url), 'utf-8');
+  assert.ok(content.includes('NONE — no breakout setup detected'), 'Compact breakout none wording is missing');
+});
+
+test('Live stock.html improves what-changed wording', async () => {
+  const fs = await import('node:fs');
+  const content = fs.readFileSync(new URL('../public/stock.html', import.meta.url), 'utf-8');
+  assert.ok(content.includes('Daily Change'), 'What-changed daily change entry is missing');
+  assert.ok(content.includes('SMA 20'), 'What-changed SMA20 entry is missing');
+});
+
+test('Live stock.html makes market context wording timeframe-aware', async () => {
+  const fs = await import('node:fs');
+  const content = fs.readFileSync(new URL('../public/stock.html', import.meta.url), 'utf-8');
+  assert.ok(content.includes('outperformance vs benchmarks'), 'Timeframe-aware benchmark wording is missing');
+  assert.ok(!content.includes('Broad Outperformance vs Benchmarks'), 'Old broad benchmark wording is still present');
+});
+
+test('Live stock.html qualifies historical confidence strength', async () => {
+  const fs = await import('node:fs');
+  const content = fs.readFileSync(new URL('../public/stock.html', import.meta.url), 'utf-8');
+  assert.ok(content.includes('Historical Performance'), 'Historical module header is missing');
+});
+
+test('Live stock.html exposes compact decision meta summary', async () => {
+  const fs = await import('node:fs');
+  const content = fs.readFileSync(new URL('../public/stock.html', import.meta.url), 'utf-8');
+  assert.ok(content.includes('Flags'), 'Flags meta card is missing');
+  assert.ok(content.includes('As-of'), 'As-of meta card is missing');
+  assert.ok(content.includes('Decision Basis'), 'Decision basis meta card is missing');
+});
+
+test('Live stock.html renders causal risk explanation from final risk state', async () => {
+  const fs = await import('node:fs');
+  const content = fs.readFileSync(new URL('../public/stock.html', import.meta.url), 'utf-8');
+  assert.ok(content.includes('riskView.driverText'), 'Risk driver wiring is missing');
+  assert.ok(content.includes('riskView.contextText'), 'Risk context wiring is missing');
+  assert.ok(content.includes('Risk override active'), 'Risk override integrity copy is missing');
+  assert.ok(content.includes('displayLabel'), 'Final risk display label is missing');
+});
+
+test('Live stock.html hardens trade plan and checklist empty states', async () => {
+  const fs = await import('node:fs');
+  const content = fs.readFileSync(new URL('../public/stock.html', import.meta.url), 'utf-8');
+  assert.ok(content.includes('tradePlan.invalidReason'), 'Trade plan missing-input state wiring is missing');
+  assert.ok(content.includes('No active trade setup — pre-trade checklist not applicable.'), 'Checklist inactive state is missing');
+  assert.ok(content.includes('Why No Trade?'), 'Why No Trade heading is missing');
+});
+
+test('Live stock.html enriches catalysts and signal hierarchy copy', async () => {
+  const fs = await import('node:fs');
+  const content = fs.readFileSync(new URL('../public/stock.html', import.meta.url), 'utf-8');
+  assert.ok(content.includes('Catalyst feed currently unavailable.'), 'Catalyst unavailable copy is missing');
+  assert.ok(content.includes('catalystView.secondaryText'), 'Catalyst secondary context wiring is missing');
+  assert.ok(content.includes('REBOUND CONDITIONS'), 'Signal hierarchy rebound section is missing');
+});
+
+test('Live stock.html differentiates volume omission reason and model evidence visibility', async () => {
+  const fs = await import('node:fs');
+  const content = fs.readFileSync(new URL('../public/stock.html', import.meta.url), 'utf-8');
+  assert.ok(content.includes('modelEvidenceView.showSection'), 'Model evidence visibility guard is missing');
+  assert.ok(content.includes('Price as-of:'), 'Header price as-of label is missing');
+});
+
 // ─── K) Initial HTML State Tests ────────────────────────────────────────────
 
 test('Initial HTML has no pre-filled "Unsupported" badge', async () => {

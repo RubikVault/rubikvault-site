@@ -19,6 +19,8 @@ import {
   computeStatusFromDataDate,
   buildMarketPricesFromBar,
   buildMarketStatsFromIndicators,
+  selectCanonicalMarketPrices,
+  selectCanonicalMarketStats,
 } from './stock-helpers.js';
 
 let v7SearchExactCache = null;
@@ -503,6 +505,9 @@ export async function fetchStockSummary(ticker, env, request) {
       status,
       generated_at: nowUtcIso(),
       data_date: dataDate,
+      price_date: canonicalMarketPrices?.date || null,
+      indicator_date: canonicalMarketStats?.as_of || null,
+      missing_core_metrics: missingCoreMetrics,
       provider,
       quality_flags: qualityFlags.length ? qualityFlags : undefined,
       version: 'v2',
@@ -575,13 +580,15 @@ export async function fetchStockHistorical(ticker, env, request) {
     const result = processTickerSeries(effectiveTicker, bars);
     if (result) breakoutV2 = result;
   } catch { /* optional */ }
+  const historicalQualityFlags = [...new Set([...(qualityFlags.length ? qualityFlags : []), ...indicatorIssues])];
 
   return {
     ok: true,
     data: {
       ticker: effectiveTicker,
       bars,
-      indicators,
+      indicators: normalizedIndicators,
+      indicator_issues: indicatorIssues,
       breakout_v2: breakoutV2,
     },
     meta: {
@@ -589,7 +596,7 @@ export async function fetchStockHistorical(ticker, env, request) {
       generated_at: nowUtcIso(),
       data_date: dataDate,
       provider,
-      quality_flags: qualityFlags.length ? qualityFlags : undefined,
+      quality_flags: historicalQualityFlags.length ? historicalQualityFlags : undefined,
       version: 'v2',
     },
     error: null,

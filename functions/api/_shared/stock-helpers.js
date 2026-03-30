@@ -96,19 +96,89 @@ export function buildMarketPricesFromBar(bar, symbol, providerHint) {
   return {
     symbol,
     date: bar?.date || null,
+    open: Number.isFinite(bar?.open) ? Number(bar.open) : null,
+    high: Number.isFinite(bar?.high) ? Number(bar.high) : null,
+    low: Number.isFinite(bar?.low) ? Number(bar.low) : null,
     close: Number.isFinite(bar?.close) ? Number(bar.close) : null,
+    adj_close: Number.isFinite(bar?.adjClose) ? Number(bar.adjClose) : (Number.isFinite(bar?.close) ? Number(bar.close) : null),
     volume: Number.isFinite(bar?.volume) ? Number(bar.volume) : null,
     currency: 'USD',
     source_provider: providerHint || null,
   };
 }
 
+export function getIndicatorEntries(indicators) {
+  if (Array.isArray(indicators)) return indicators;
+  if (Array.isArray(indicators?.indicators)) return indicators.indicators;
+  return [];
+}
+
 export function buildMarketStatsFromIndicators(indicators, symbol, asOf) {
-  if (!Array.isArray(indicators) || indicators.length === 0) return null;
+  const entries = getIndicatorEntries(indicators);
+  if (!entries.length) return null;
   const stats = {};
-  for (const item of indicators) {
+  for (const item of entries) {
     if (!item || typeof item.id !== 'string') continue;
     stats[item.id] = item.value;
   }
   return { symbol, as_of: asOf || null, stats, coverage: null, warnings: [] };
+}
+
+function dayToMillis(value) {
+  const normalized = parseIsoDay(value);
+  if (!normalized) return null;
+  return Date.UTC(Number(normalized.slice(0, 4)), Number(normalized.slice(5, 7)) - 1, Number(normalized.slice(8, 10)));
+}
+
+function isStatsRecordComplete(record) {
+  const stats = record?.stats;
+  if (!stats || typeof stats !== 'object') return false;
+  const required = ['rsi14', 'atr14', 'volatility_20d', 'volatility_percentile', 'bb_upper', 'bb_lower', 'high_52w', 'low_52w', 'range_52w_pct'];
+  return required.every((key) => Number.isFinite(stats[key]));
+}
+
+function mergeObjectsPreferPrimary(primary, secondary) {
+  if (!primary && !secondary) return null;
+  if (!primary) return secondary || null;
+  if (!secondary) return primary || null;
+  const merged = { ...secondary };
+  for (const [key, value] of Object.entries(primary)) {
+    if (value !== null && value !== undefined) merged[key] = value;
+  }
+  return merged;
+}
+
+export function selectCanonicalMarketPrices(snapshotRecord, liveRecord) {
+  if (!snapshotRecord) return liveRecord || null;
+  if (!liveRecord) return snapshotRecord || null;
+
+  const snapshotTs = dayToMillis(snapshotRecord.date);
+  const liveTs = dayToMillis(liveRecord.date);
+  if (liveTs != null && (snapshotTs == null || liveTs > snapshotTs)) {
+    return mergeObjectsPreferPrimary(liveRecord, snapshotRecord);
+  }
+  if (snapshotTs != null && liveTs != null && snapshotTs > liveTs) {
+    return mergeObjectsPreferPrimary(snapshotRecord, liveRecord);
+  }
+  return mergeObjectsPreferPrimary(liveRecord, snapshotRecord);
+}
+
+export function selectCanonicalMarketStats(snapshotRecord, liveRecord) {
+  if (!snapshotRecord) return liveRecord || null;
+  if (!liveRecord) return snapshotRecord || null;
+
+  const snapshotTs = dayToMillis(snapshotRecord.as_of);
+  const liveTs = dayToMillis(liveRecord.as_of);
+  const snapshotComplete = isStatsRecordComplete(snapshotRecord);
+  const liveComplete = isStatsRecordComplete(liveRecord);
+
+  if (liveComplete && !snapshotComplete) return mergeObjectsPreferPrimary(liveRecord, snapshotRecord);
+  if (snapshotComplete && !liveComplete) return mergeObjectsPreferPrimary(snapshotRecord, liveRecord);
+  if (liveTs != null && (snapshotTs == null || liveTs > snapshotTs)) {
+    return mergeObjectsPreferPrimary(liveRecord, snapshotRecord);
+  }
+  if (snapshotTs != null && liveTs != null && snapshotTs > liveTs) {
+    return mergeObjectsPreferPrimary(snapshotRecord, liveRecord);
+  }
+  return mergeObjectsPreferPrimary(liveRecord, snapshotRecord);
 }
