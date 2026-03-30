@@ -1,7 +1,7 @@
 {
   "schema_version": "rv.features-v4.stock-insights.parity-report.v1",
-  "generated_at": "2026-03-08T11:15:14.872Z",
-  "started_at": "2026-03-08T11:14:26.957Z",
+  "generated_at": "2026-03-27T14:13:43.435Z",
+  "started_at": "2026-03-27T14:13:11.342Z",
   "base_url": "http://127.0.0.1:8788",
   "args": {
     "baseUrl": "http://127.0.0.1:8788",
@@ -16,1035 +16,205 @@
     "outPublish": "public/data/features-v4/reports/stock-insights-v4-parity-report.json"
   },
   "summary": {
-    "total": 60,
-    "endpoints_ok": 60,
-    "v4_contract_ok": 60,
-    "core_presence_parity_ok": 60,
-    "core_value_parity_ok": 60,
-    "fallback_confidence_cap_ok": 60,
-    "no_issue": 60,
-    "activation_ready": true
+    "total": 10,
+    "endpoints_ok": 0,
+    "v4_contract_ok": 0,
+    "core_presence_parity_ok": 0,
+    "core_value_parity_ok": 0,
+    "fallback_confidence_cap_ok": 0,
+    "no_issue": 0,
+    "activation_ready": false
   },
   "rows": [
     {
       "ticker": "AAPL",
-      "endpoint_ok": true,
-      "status": "ok",
+      "endpoint_ok": false,
+      "status": "error",
       "http": {
-        "v1": 200,
-        "v2": 200,
-        "v4": 200
+        "v1": 0,
+        "v2": 0,
+        "v4": 0
       },
       "checks": {
-        "v4_contract_ok": true,
-        "core_presence_parity": true,
-        "core_value_parity": true,
-        "fallback_confidence_cap_ok": true
+        "v4_contract_ok": false,
+        "core_presence_parity": false,
+        "core_value_parity": false,
+        "fallback_confidence_cap_ok": false
       },
-      "issues": []
+      "issues": [
+        "ENDPOINT_ERROR"
+      ]
     },
     {
       "ticker": "MSFT",
-      "endpoint_ok": true,
-      "status": "ok",
+      "endpoint_ok": false,
+      "status": "error",
       "http": {
-        "v1": 200,
-        "v2": 200,
-        "v4": 200
+        "v1": 0,
+        "v2": 0,
+        "v4": 0
       },
       "checks": {
-        "v4_contract_ok": true,
-        "core_presence_parity": true,
-        "core_value_parity": true,
-        "fallback_confidence_cap_ok": true
+        "v4_contract_ok": false,
+        "core_presence_parity": false,
+        "core_value_parity": false,
+        "fallback_confidence_cap_ok": false
       },
-      "issues": []
+      "issues": [
+        "ENDPOINT_ERROR"
+      ]
     },
     {
       "ticker": "NVDA",
-      "endpoint_ok": true,
-      "status": "ok",
+      "endpoint_ok": false,
+      "status": "error",
       "http": {
-        "v1": 200,
-        "v2": 200,
-        "v4": 200
+        "v1": 0,
+        "v2": 0,
+        "v4": 0
       },
       "checks": {
-        "v4_contract_ok": true,
-        "core_presence_parity": true,
-        "core_value_parity": true,
-        "fallback_confidence_cap_ok": true
+        "v4_contract_ok": false,
+        "core_presence_parity": false,
+        "core_value_parity": false,
+        "fallback_confidence_cap_ok": false
       },
-      "issues": []
+      "issues": [
+        "ENDPOINT_ERROR"
+      ]
     },
     {
       "ticker": "AMZN",
-      "endpoint_ok": true,
-      "status": "ok",
+      "endpoint_ok": false,
+      "status": "error",
       "http": {
-        "v1": 200,
-        "v2": 200,
-        "v4": 200
+        "v1": 0,
+        "v2": 0,
+        "v4": 0
       },
       "checks": {
-        "v4_contract_ok": true,
-        "core_presence_parity": true,
-        "core_value_parity": true,
-        "fallback_confidence_cap_ok": true
+        "v4_contract_ok": false,
+        "core_presence_parity": false,
+        "core_value_parity": false,
+        "fallback_confidence_cap_ok": false
       },
-      "issues": []
+      "issues": [
+        "ENDPOINT_ERROR"
+      ]
     },
     {
       "ticker": "GOOGL",
-      "endpoint_ok": true,
-      "status": "ok",
+      "endpoint_ok": false,
+      "status": "error",
       "http": {
-        "v1": 200,
-        "v2": 200,
-        "v4": 200
+        "v1": 0,
+        "v2": 0,
+        "v4": 0
       },
       "checks": {
-        "v4_contract_ok": true,
-        "core_presence_parity": true,
-        "core_value_parity": true,
-        "fallback_confidence_cap_ok": true
+        "v4_contract_ok": false,
+        "core_presence_parity": false,
+        "core_value_parity": false,
+        "fallback_confidence_cap_ok": false
       },
-      "issues": []
+      "issues": [
+        "ENDPOINT_ERROR"
+      ]
     },
     {
       "ticker": "META",
-      "endpoint_ok": true,
-      "status": "ok",
+      "endpoint_ok": false,
+      "status": "error",
       "http": {
-        "v1": 200,
-        "v2": 200,
-        "v4": 200
+        "v1": 0,
+        "v2": 0,
+        "v4": 0
       },
       "checks": {
-        "v4_contract_ok": true,
-        "core_presence_parity": true,
-        "core_value_parity": true,
-        "fallback_confidence_cap_ok": true
+        "v4_contract_ok": false,
+        "core_presence_parity": false,
+        "core_value_parity": false,
+        "fallback_confidence_cap_ok": false
       },
-      "issues": []
+      "issues": [
+        "ENDPOINT_ERROR"
+      ]
     },
     {
       "ticker": "TSLA",
-      "endpoint_ok": true,
-      "status": "ok",
+      "endpoint_ok": false,
+      "status": "error",
       "http": {
-        "v1": 200,
-        "v2": 200,
-        "v4": 200
+        "v1": 0,
+        "v2": 0,
+        "v4": 0
       },
       "checks": {
-        "v4_contract_ok": true,
-        "core_presence_parity": true,
-        "core_value_parity": true,
-        "fallback_confidence_cap_ok": true
+        "v4_contract_ok": false,
+        "core_presence_parity": false,
+        "core_value_parity": false,
+        "fallback_confidence_cap_ok": false
       },
-      "issues": []
+      "issues": [
+        "ENDPOINT_ERROR"
+      ]
     },
     {
       "ticker": "ROKU",
-      "endpoint_ok": true,
-      "status": "ok",
+      "endpoint_ok": false,
+      "status": "error",
       "http": {
-        "v1": 200,
-        "v2": 200,
-        "v4": 200
+        "v1": 0,
+        "v2": 0,
+        "v4": 0
       },
       "checks": {
-        "v4_contract_ok": true,
-        "core_presence_parity": true,
-        "core_value_parity": true,
-        "fallback_confidence_cap_ok": true
+        "v4_contract_ok": false,
+        "core_presence_parity": false,
+        "core_value_parity": false,
+        "fallback_confidence_cap_ok": false
       },
-      "issues": []
+      "issues": [
+        "ENDPOINT_ERROR"
+      ]
     },
     {
       "ticker": "IWM",
-      "endpoint_ok": true,
-      "status": "ok",
+      "endpoint_ok": false,
+      "status": "error",
       "http": {
-        "v1": 200,
-        "v2": 200,
-        "v4": 200
+        "v1": 0,
+        "v2": 0,
+        "v4": 0
       },
       "checks": {
-        "v4_contract_ok": true,
-        "core_presence_parity": true,
-        "core_value_parity": true,
-        "fallback_confidence_cap_ok": true
+        "v4_contract_ok": false,
+        "core_presence_parity": false,
+        "core_value_parity": false,
+        "fallback_confidence_cap_ok": false
       },
-      "issues": []
+      "issues": [
+        "ENDPOINT_ERROR"
+      ]
     },
     {
       "ticker": "SPY",
-      "endpoint_ok": true,
-      "status": "ok",
+      "endpoint_ok": false,
+      "status": "error",
       "http": {
-        "v1": 200,
-        "v2": 200,
-        "v4": 200
+        "v1": 0,
+        "v2": 0,
+        "v4": 0
       },
       "checks": {
-        "v4_contract_ok": true,
-        "core_presence_parity": true,
-        "core_value_parity": true,
-        "fallback_confidence_cap_ok": true
-      },
-      "issues": []
-    },
-    {
-      "ticker": "000001",
-      "endpoint_ok": true,
-      "status": "ok",
-      "http": {
-        "v1": 200,
-        "v2": 200,
-        "v4": 200
-      },
-      "checks": {
-        "v4_contract_ok": true,
-        "core_presence_parity": true,
-        "core_value_parity": true,
-        "fallback_confidence_cap_ok": true
-      },
-      "issues": []
-    },
-    {
-      "ticker": "000002",
-      "endpoint_ok": true,
-      "status": "ok",
-      "http": {
-        "v1": 200,
-        "v2": 200,
-        "v4": 200
-      },
-      "checks": {
-        "v4_contract_ok": true,
-        "core_presence_parity": true,
-        "core_value_parity": true,
-        "fallback_confidence_cap_ok": true
-      },
-      "issues": []
-    },
-    {
-      "ticker": "000004",
-      "endpoint_ok": true,
-      "status": "ok",
-      "http": {
-        "v1": 200,
-        "v2": 200,
-        "v4": 200
-      },
-      "checks": {
-        "v4_contract_ok": true,
-        "core_presence_parity": true,
-        "core_value_parity": true,
-        "fallback_confidence_cap_ok": true
-      },
-      "issues": []
-    },
-    {
-      "ticker": "000006",
-      "endpoint_ok": true,
-      "status": "ok",
-      "http": {
-        "v1": 200,
-        "v2": 200,
-        "v4": 200
-      },
-      "checks": {
-        "v4_contract_ok": true,
-        "core_presence_parity": true,
-        "core_value_parity": true,
-        "fallback_confidence_cap_ok": true
-      },
-      "issues": []
-    },
-    {
-      "ticker": "000007",
-      "endpoint_ok": true,
-      "status": "ok",
-      "http": {
-        "v1": 200,
-        "v2": 200,
-        "v4": 200
-      },
-      "checks": {
-        "v4_contract_ok": true,
-        "core_presence_parity": true,
-        "core_value_parity": true,
-        "fallback_confidence_cap_ok": true
-      },
-      "issues": []
-    },
-    {
-      "ticker": "000008",
-      "endpoint_ok": true,
-      "status": "ok",
-      "http": {
-        "v1": 200,
-        "v2": 200,
-        "v4": 200
-      },
-      "checks": {
-        "v4_contract_ok": true,
-        "core_presence_parity": true,
-        "core_value_parity": true,
-        "fallback_confidence_cap_ok": true
-      },
-      "issues": []
-    },
-    {
-      "ticker": "000009",
-      "endpoint_ok": true,
-      "status": "ok",
-      "http": {
-        "v1": 200,
-        "v2": 200,
-        "v4": 200
-      },
-      "checks": {
-        "v4_contract_ok": true,
-        "core_presence_parity": true,
-        "core_value_parity": true,
-        "fallback_confidence_cap_ok": true
-      },
-      "issues": []
-    },
-    {
-      "ticker": "000010",
-      "endpoint_ok": true,
-      "status": "ok",
-      "http": {
-        "v1": 200,
-        "v2": 200,
-        "v4": 200
-      },
-      "checks": {
-        "v4_contract_ok": true,
-        "core_presence_parity": true,
-        "core_value_parity": true,
-        "fallback_confidence_cap_ok": true
-      },
-      "issues": []
-    },
-    {
-      "ticker": "000011",
-      "endpoint_ok": true,
-      "status": "ok",
-      "http": {
-        "v1": 200,
-        "v2": 200,
-        "v4": 200
-      },
-      "checks": {
-        "v4_contract_ok": true,
-        "core_presence_parity": true,
-        "core_value_parity": true,
-        "fallback_confidence_cap_ok": true
-      },
-      "issues": []
-    },
-    {
-      "ticker": "000012",
-      "endpoint_ok": true,
-      "status": "ok",
-      "http": {
-        "v1": 200,
-        "v2": 200,
-        "v4": 200
-      },
-      "checks": {
-        "v4_contract_ok": true,
-        "core_presence_parity": true,
-        "core_value_parity": true,
-        "fallback_confidence_cap_ok": true
-      },
-      "issues": []
-    },
-    {
-      "ticker": "000014",
-      "endpoint_ok": true,
-      "status": "ok",
-      "http": {
-        "v1": 200,
-        "v2": 200,
-        "v4": 200
-      },
-      "checks": {
-        "v4_contract_ok": true,
-        "core_presence_parity": true,
-        "core_value_parity": true,
-        "fallback_confidence_cap_ok": true
-      },
-      "issues": []
-    },
-    {
-      "ticker": "000016",
-      "endpoint_ok": true,
-      "status": "ok",
-      "http": {
-        "v1": 200,
-        "v2": 200,
-        "v4": 200
-      },
-      "checks": {
-        "v4_contract_ok": true,
-        "core_presence_parity": true,
-        "core_value_parity": true,
-        "fallback_confidence_cap_ok": true
-      },
-      "issues": []
-    },
-    {
-      "ticker": "000017",
-      "endpoint_ok": true,
-      "status": "ok",
-      "http": {
-        "v1": 200,
-        "v2": 200,
-        "v4": 200
-      },
-      "checks": {
-        "v4_contract_ok": true,
-        "core_presence_parity": true,
-        "core_value_parity": true,
-        "fallback_confidence_cap_ok": true
-      },
-      "issues": []
-    },
-    {
-      "ticker": "000019",
-      "endpoint_ok": true,
-      "status": "ok",
-      "http": {
-        "v1": 200,
-        "v2": 200,
-        "v4": 200
-      },
-      "checks": {
-        "v4_contract_ok": true,
-        "core_presence_parity": true,
-        "core_value_parity": true,
-        "fallback_confidence_cap_ok": true
-      },
-      "issues": []
-    },
-    {
-      "ticker": "000020",
-      "endpoint_ok": true,
-      "status": "ok",
-      "http": {
-        "v1": 200,
-        "v2": 200,
-        "v4": 200
-      },
-      "checks": {
-        "v4_contract_ok": true,
-        "core_presence_parity": true,
-        "core_value_parity": true,
-        "fallback_confidence_cap_ok": true
-      },
-      "issues": []
-    },
-    {
-      "ticker": "000021",
-      "endpoint_ok": true,
-      "status": "ok",
-      "http": {
-        "v1": 200,
-        "v2": 200,
-        "v4": 200
-      },
-      "checks": {
-        "v4_contract_ok": true,
-        "core_presence_parity": true,
-        "core_value_parity": true,
-        "fallback_confidence_cap_ok": true
-      },
-      "issues": []
-    },
-    {
-      "ticker": "000025",
-      "endpoint_ok": true,
-      "status": "ok",
-      "http": {
-        "v1": 200,
-        "v2": 200,
-        "v4": 200
-      },
-      "checks": {
-        "v4_contract_ok": true,
-        "core_presence_parity": true,
-        "core_value_parity": true,
-        "fallback_confidence_cap_ok": true
-      },
-      "issues": []
-    },
-    {
-      "ticker": "000026",
-      "endpoint_ok": true,
-      "status": "ok",
-      "http": {
-        "v1": 200,
-        "v2": 200,
-        "v4": 200
-      },
-      "checks": {
-        "v4_contract_ok": true,
-        "core_presence_parity": true,
-        "core_value_parity": true,
-        "fallback_confidence_cap_ok": true
-      },
-      "issues": []
-    },
-    {
-      "ticker": "000027",
-      "endpoint_ok": true,
-      "status": "ok",
-      "http": {
-        "v1": 200,
-        "v2": 200,
-        "v4": 200
-      },
-      "checks": {
-        "v4_contract_ok": true,
-        "core_presence_parity": true,
-        "core_value_parity": true,
-        "fallback_confidence_cap_ok": true
-      },
-      "issues": []
-    },
-    {
-      "ticker": "000028",
-      "endpoint_ok": true,
-      "status": "ok",
-      "http": {
-        "v1": 200,
-        "v2": 200,
-        "v4": 200
-      },
-      "checks": {
-        "v4_contract_ok": true,
-        "core_presence_parity": true,
-        "core_value_parity": true,
-        "fallback_confidence_cap_ok": true
-      },
-      "issues": []
-    },
-    {
-      "ticker": "000029",
-      "endpoint_ok": true,
-      "status": "ok",
-      "http": {
-        "v1": 200,
-        "v2": 200,
-        "v4": 200
-      },
-      "checks": {
-        "v4_contract_ok": true,
-        "core_presence_parity": true,
-        "core_value_parity": true,
-        "fallback_confidence_cap_ok": true
-      },
-      "issues": []
-    },
-    {
-      "ticker": "000030",
-      "endpoint_ok": true,
-      "status": "ok",
-      "http": {
-        "v1": 200,
-        "v2": 200,
-        "v4": 200
-      },
-      "checks": {
-        "v4_contract_ok": true,
-        "core_presence_parity": true,
-        "core_value_parity": true,
-        "fallback_confidence_cap_ok": true
-      },
-      "issues": []
-    },
-    {
-      "ticker": "000031",
-      "endpoint_ok": true,
-      "status": "ok",
-      "http": {
-        "v1": 200,
-        "v2": 200,
-        "v4": 200
-      },
-      "checks": {
-        "v4_contract_ok": true,
-        "core_presence_parity": true,
-        "core_value_parity": true,
-        "fallback_confidence_cap_ok": true
-      },
-      "issues": []
-    },
-    {
-      "ticker": "000032",
-      "endpoint_ok": true,
-      "status": "ok",
-      "http": {
-        "v1": 200,
-        "v2": 200,
-        "v4": 200
-      },
-      "checks": {
-        "v4_contract_ok": true,
-        "core_presence_parity": true,
-        "core_value_parity": true,
-        "fallback_confidence_cap_ok": true
-      },
-      "issues": []
-    },
-    {
-      "ticker": "000034",
-      "endpoint_ok": true,
-      "status": "ok",
-      "http": {
-        "v1": 200,
-        "v2": 200,
-        "v4": 200
-      },
-      "checks": {
-        "v4_contract_ok": true,
-        "core_presence_parity": true,
-        "core_value_parity": true,
-        "fallback_confidence_cap_ok": true
-      },
-      "issues": []
-    },
-    {
-      "ticker": "000035",
-      "endpoint_ok": true,
-      "status": "ok",
-      "http": {
-        "v1": 200,
-        "v2": 200,
-        "v4": 200
-      },
-      "checks": {
-        "v4_contract_ok": true,
-        "core_presence_parity": true,
-        "core_value_parity": true,
-        "fallback_confidence_cap_ok": true
-      },
-      "issues": []
-    },
-    {
-      "ticker": "000036",
-      "endpoint_ok": true,
-      "status": "ok",
-      "http": {
-        "v1": 200,
-        "v2": 200,
-        "v4": 200
-      },
-      "checks": {
-        "v4_contract_ok": true,
-        "core_presence_parity": true,
-        "core_value_parity": true,
-        "fallback_confidence_cap_ok": true
-      },
-      "issues": []
-    },
-    {
-      "ticker": "000037",
-      "endpoint_ok": true,
-      "status": "ok",
-      "http": {
-        "v1": 200,
-        "v2": 200,
-        "v4": 200
-      },
-      "checks": {
-        "v4_contract_ok": true,
-        "core_presence_parity": true,
-        "core_value_parity": true,
-        "fallback_confidence_cap_ok": true
-      },
-      "issues": []
-    },
-    {
-      "ticker": "000039",
-      "endpoint_ok": true,
-      "status": "ok",
-      "http": {
-        "v1": 200,
-        "v2": 200,
-        "v4": 200
-      },
-      "checks": {
-        "v4_contract_ok": true,
-        "core_presence_parity": true,
-        "core_value_parity": true,
-        "fallback_confidence_cap_ok": true
-      },
-      "issues": []
-    },
-    {
-      "ticker": "000040",
-      "endpoint_ok": true,
-      "status": "ok",
-      "http": {
-        "v1": 200,
-        "v2": 200,
-        "v4": 200
-      },
-      "checks": {
-        "v4_contract_ok": true,
-        "core_presence_parity": true,
-        "core_value_parity": true,
-        "fallback_confidence_cap_ok": true
-      },
-      "issues": []
-    },
-    {
-      "ticker": "000042",
-      "endpoint_ok": true,
-      "status": "ok",
-      "http": {
-        "v1": 200,
-        "v2": 200,
-        "v4": 200
-      },
-      "checks": {
-        "v4_contract_ok": true,
-        "core_presence_parity": true,
-        "core_value_parity": true,
-        "fallback_confidence_cap_ok": true
-      },
-      "issues": []
-    },
-    {
-      "ticker": "000045",
-      "endpoint_ok": true,
-      "status": "ok",
-      "http": {
-        "v1": 200,
-        "v2": 200,
-        "v4": 200
-      },
-      "checks": {
-        "v4_contract_ok": true,
-        "core_presence_parity": true,
-        "core_value_parity": true,
-        "fallback_confidence_cap_ok": true
-      },
-      "issues": []
-    },
-    {
-      "ticker": "000048",
-      "endpoint_ok": true,
-      "status": "ok",
-      "http": {
-        "v1": 200,
-        "v2": 200,
-        "v4": 200
-      },
-      "checks": {
-        "v4_contract_ok": true,
-        "core_presence_parity": true,
-        "core_value_parity": true,
-        "fallback_confidence_cap_ok": true
-      },
-      "issues": []
-    },
-    {
-      "ticker": "000049",
-      "endpoint_ok": true,
-      "status": "ok",
-      "http": {
-        "v1": 200,
-        "v2": 200,
-        "v4": 200
-      },
-      "checks": {
-        "v4_contract_ok": true,
-        "core_presence_parity": true,
-        "core_value_parity": true,
-        "fallback_confidence_cap_ok": true
-      },
-      "issues": []
-    },
-    {
-      "ticker": "000050",
-      "endpoint_ok": true,
-      "status": "ok",
-      "http": {
-        "v1": 200,
-        "v2": 200,
-        "v4": 200
-      },
-      "checks": {
-        "v4_contract_ok": true,
-        "core_presence_parity": true,
-        "core_value_parity": true,
-        "fallback_confidence_cap_ok": true
-      },
-      "issues": []
-    },
-    {
-      "ticker": "000055",
-      "endpoint_ok": true,
-      "status": "ok",
-      "http": {
-        "v1": 200,
-        "v2": 200,
-        "v4": 200
-      },
-      "checks": {
-        "v4_contract_ok": true,
-        "core_presence_parity": true,
-        "core_value_parity": true,
-        "fallback_confidence_cap_ok": true
-      },
-      "issues": []
-    },
-    {
-      "ticker": "000056",
-      "endpoint_ok": true,
-      "status": "ok",
-      "http": {
-        "v1": 200,
-        "v2": 200,
-        "v4": 200
-      },
-      "checks": {
-        "v4_contract_ok": true,
-        "core_presence_parity": true,
-        "core_value_parity": true,
-        "fallback_confidence_cap_ok": true
-      },
-      "issues": []
-    },
-    {
-      "ticker": "000058",
-      "endpoint_ok": true,
-      "status": "ok",
-      "http": {
-        "v1": 200,
-        "v2": 200,
-        "v4": 200
-      },
-      "checks": {
-        "v4_contract_ok": true,
-        "core_presence_parity": true,
-        "core_value_parity": true,
-        "fallback_confidence_cap_ok": true
-      },
-      "issues": []
-    },
-    {
-      "ticker": "000059",
-      "endpoint_ok": true,
-      "status": "ok",
-      "http": {
-        "v1": 200,
-        "v2": 200,
-        "v4": 200
-      },
-      "checks": {
-        "v4_contract_ok": true,
-        "core_presence_parity": true,
-        "core_value_parity": true,
-        "fallback_confidence_cap_ok": true
-      },
-      "issues": []
-    },
-    {
-      "ticker": "000060",
-      "endpoint_ok": true,
-      "status": "ok",
-      "http": {
-        "v1": 200,
-        "v2": 200,
-        "v4": 200
-      },
-      "checks": {
-        "v4_contract_ok": true,
-        "core_presence_parity": true,
-        "core_value_parity": true,
-        "fallback_confidence_cap_ok": true
-      },
-      "issues": []
-    },
-    {
-      "ticker": "000061",
-      "endpoint_ok": true,
-      "status": "ok",
-      "http": {
-        "v1": 200,
-        "v2": 200,
-        "v4": 200
-      },
-      "checks": {
-        "v4_contract_ok": true,
-        "core_presence_parity": true,
-        "core_value_parity": true,
-        "fallback_confidence_cap_ok": true
-      },
-      "issues": []
-    },
-    {
-      "ticker": "000062",
-      "endpoint_ok": true,
-      "status": "ok",
-      "http": {
-        "v1": 200,
-        "v2": 200,
-        "v4": 200
-      },
-      "checks": {
-        "v4_contract_ok": true,
-        "core_presence_parity": true,
-        "core_value_parity": true,
-        "fallback_confidence_cap_ok": true
-      },
-      "issues": []
-    },
-    {
-      "ticker": "000063",
-      "endpoint_ok": true,
-      "status": "ok",
-      "http": {
-        "v1": 200,
-        "v2": 200,
-        "v4": 200
-      },
-      "checks": {
-        "v4_contract_ok": true,
-        "core_presence_parity": true,
-        "core_value_parity": true,
-        "fallback_confidence_cap_ok": true
-      },
-      "issues": []
-    },
-    {
-      "ticker": "000065",
-      "endpoint_ok": true,
-      "status": "ok",
-      "http": {
-        "v1": 200,
-        "v2": 200,
-        "v4": 200
-      },
-      "checks": {
-        "v4_contract_ok": true,
-        "core_presence_parity": true,
-        "core_value_parity": true,
-        "fallback_confidence_cap_ok": true
-      },
-      "issues": []
-    },
-    {
-      "ticker": "000066",
-      "endpoint_ok": true,
-      "status": "ok",
-      "http": {
-        "v1": 200,
-        "v2": 200,
-        "v4": 200
-      },
-      "checks": {
-        "v4_contract_ok": true,
-        "core_presence_parity": true,
-        "core_value_parity": true,
-        "fallback_confidence_cap_ok": true
-      },
-      "issues": []
-    },
-    {
-      "ticker": "000068",
-      "endpoint_ok": true,
-      "status": "ok",
-      "http": {
-        "v1": 200,
-        "v2": 200,
-        "v4": 200
-      },
-      "checks": {
-        "v4_contract_ok": true,
-        "core_presence_parity": true,
-        "core_value_parity": true,
-        "fallback_confidence_cap_ok": true
-      },
-      "issues": []
-    },
-    {
-      "ticker": "000069",
-      "endpoint_ok": true,
-      "status": "ok",
-      "http": {
-        "v1": 200,
-        "v2": 200,
-        "v4": 200
-      },
-      "checks": {
-        "v4_contract_ok": true,
-        "core_presence_parity": true,
-        "core_value_parity": true,
-        "fallback_confidence_cap_ok": true
-      },
-      "issues": []
-    },
-    {
-      "ticker": "000070",
-      "endpoint_ok": true,
-      "status": "ok",
-      "http": {
-        "v1": 200,
-        "v2": 200,
-        "v4": 200
-      },
-      "checks": {
-        "v4_contract_ok": true,
-        "core_presence_parity": true,
-        "core_value_parity": true,
-        "fallback_confidence_cap_ok": true
-      },
-      "issues": []
-    },
-    {
-      "ticker": "000078",
-      "endpoint_ok": true,
-      "status": "ok",
-      "http": {
-        "v1": 200,
-        "v2": 200,
-        "v4": 200
-      },
-      "checks": {
-        "v4_contract_ok": true,
-        "core_presence_parity": true,
-        "core_value_parity": true,
-        "fallback_confidence_cap_ok": true
-      },
-      "issues": []
-    },
-    {
-      "ticker": "000080",
-      "endpoint_ok": true,
-      "status": "ok",
-      "http": {
-        "v1": 200,
-        "v2": 200,
-        "v4": 200
-      },
-      "checks": {
-        "v4_contract_ok": true,
-        "core_presence_parity": true,
-        "core_value_parity": true,
-        "fallback_confidence_cap_ok": true
-      },
-      "issues": []
+        "v4_contract_ok": false,
+        "core_presence_parity": false,
+        "core_value_parity": false,
+        "fallback_confidence_cap_ok": false
+      },
+      "issues": [
+        "ENDPOINT_ERROR"
+      ]
     }
   ]
 }
