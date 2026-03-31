@@ -1,89 +1,40 @@
 {
   "type": "marketphase.missing",
-  "asOf": "2026-03-30T08:53:34.252Z",
+  "asOf": "2026-03-31T07:53:20.102Z",
   "universe": "all",
   "expected": 2453,
-  "generated": 2445,
-  "coverage": 0.996739,
+  "generated": 2446,
+  "coverage": 0.997146,
   "minCoverage": 0.9,
   "missing": [
     {
       "ticker": "AKE",
-      "reason": "PROVIDER_HTTP_ERROR",
-      "details": {
-        "provider": null,
-        "error": {
-          "code": "HTTP_ERROR",
-          "message": "HTTP 402",
-          "details": {
-            "primary": {
-              "code": "HTTP_ERROR",
-              "message": "HTTP 402",
-              "details": {
-                "status": 402
-              }
-            },
-            "secondary": null
-          }
-        }
-      }
+      "reason": "NO_EOD_BARS"
     },
     {
       "ticker": "ALH",
-      "reason": "PROVIDER_HTTP_ERROR",
+      "reason": "NOT_SUPPORTED_SHORT_HISTORY",
+      "status": "not_supported",
       "details": {
-        "provider": null,
-        "error": {
-          "code": "HTTP_ERROR",
-          "message": "HTTP 402",
-          "details": {
-            "primary": {
-              "code": "HTTP_ERROR",
-              "message": "HTTP 402",
-              "details": {
-                "status": 402
-              }
-            },
-            "secondary": null
-          }
-        }
+        "bars": 118,
+        "minBars": 120,
+        "minSupportedBars": 60
       }
     },
     {
       "ticker": "ATGE",
-      "reason": "PROVIDER_HTTP_ERROR",
+      "reason": "PROVIDER_INVALID_TICKER",
       "details": {
         "provider": null,
         "error": {
-          "code": "HTTP_ERROR",
-          "message": "HTTP 402",
+          "code": "INVALID_TICKER",
+          "message": "HTTP 404",
           "details": {
             "primary": {
-              "code": "HTTP_ERROR",
-              "message": "HTTP 402",
+              "code": "INVALID_TICKER",
+              "message": "HTTP 404",
               "details": {
-                "status": 402
-              }
-            },
-            "secondary": null
-          }
-        }
-      }
-    },
-    {
-      "ticker": "CBK",
-      "reason": "PROVIDER_HTTP_ERROR",
-      "details": {
-        "provider": null,
-        "error": {
-          "code": "HTTP_ERROR",
-          "message": "HTTP 402",
-          "details": {
-            "primary": {
-              "code": "HTTP_ERROR",
-              "message": "HTTP 402",
-              "details": {
-                "status": 402
+                "status": 404
               }
             },
             "secondary": null
@@ -93,86 +44,36 @@
     },
     {
       "ticker": "MPLT",
-      "reason": "PROVIDER_HTTP_ERROR",
+      "reason": "NOT_SUPPORTED_SHORT_HISTORY",
+      "status": "not_supported",
       "details": {
-        "provider": null,
-        "error": {
-          "code": "HTTP_ERROR",
-          "message": "HTTP 402",
-          "details": {
-            "primary": {
-              "code": "HTTP_ERROR",
-              "message": "HTTP 402",
-              "details": {
-                "status": 402
-              }
-            },
-            "secondary": null
-          }
-        }
+        "bars": 106,
+        "minBars": 120,
+        "minSupportedBars": 60
       }
     },
     {
       "ticker": "NAVN",
-      "reason": "PROVIDER_HTTP_ERROR",
+      "reason": "NOT_SUPPORTED_SHORT_HISTORY",
+      "status": "not_supported",
       "details": {
-        "provider": null,
-        "error": {
-          "code": "HTTP_ERROR",
-          "message": "HTTP 402",
-          "details": {
-            "primary": {
-              "code": "HTTP_ERROR",
-              "message": "HTTP 402",
-              "details": {
-                "status": 402
-              }
-            },
-            "secondary": null
-          }
-        }
+        "bars": 103,
+        "minBars": 120,
+        "minSupportedBars": 60
       }
     },
     {
       "ticker": "P5N994",
-      "reason": "PROVIDER_HTTP_ERROR",
-      "details": {
-        "provider": null,
-        "error": {
-          "code": "HTTP_ERROR",
-          "message": "HTTP 402",
-          "details": {
-            "primary": {
-              "code": "HTTP_ERROR",
-              "message": "HTTP 402",
-              "details": {
-                "status": 402
-              }
-            },
-            "secondary": null
-          }
-        }
-      }
+      "reason": "NO_EOD_BARS"
     },
     {
       "ticker": "PXED",
-      "reason": "PROVIDER_HTTP_ERROR",
+      "reason": "NOT_SUPPORTED_SHORT_HISTORY",
+      "status": "not_supported",
       "details": {
-        "provider": null,
-        "error": {
-          "code": "HTTP_ERROR",
-          "message": "HTTP 402",
-          "details": {
-            "primary": {
-              "code": "HTTP_ERROR",
-              "message": "HTTP 402",
-              "details": {
-                "status": 402
-              }
-            },
-            "secondary": null
-          }
-        }
+        "bars": 118,
+        "minBars": 120,
+        "minSupportedBars": 60
       }
     }
   ]

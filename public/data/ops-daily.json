@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0",
-  "asOf": "2026-03-30T22:57:45.355Z",
+  "asOf": "2026-03-31T07:53:20.962Z",
   "baseline": {
     "expectedUniverse": 2453,
     "pipeline": {
@@ -13,33 +13,33 @@
       "missing": [
         {
           "ticker": "AKE",
-          "reason": "PROVIDER_HTTP_ERROR"
+          "reason": "NO_EOD_BARS"
         },
         {
           "ticker": "ALH",
-          "reason": "PROVIDER_HTTP_ERROR"
+          "reason": "NOT_SUPPORTED_SHORT_HISTORY"
         },
         {
           "ticker": "MPLT",
-          "reason": "PROVIDER_HTTP_ERROR"
+          "reason": "NOT_SUPPORTED_SHORT_HISTORY"
         },
         {
           "ticker": "NAVN",
-          "reason": "PROVIDER_HTTP_ERROR"
+          "reason": "NOT_SUPPORTED_SHORT_HISTORY"
         },
         {
           "ticker": "P5N994",
-          "reason": "PROVIDER_HTTP_ERROR"
+          "reason": "NO_EOD_BARS"
         },
         {
           "ticker": "PXED",
-          "reason": "PROVIDER_HTTP_ERROR"
+          "reason": "NOT_SUPPORTED_SHORT_HISTORY"
         }
       ]
     },
     "freshness": {
       "latestSnapshotDate": "2026-02-07",
-      "expectedTradingDay": "2026-03-30",
+      "expectedTradingDay": "2026-03-31",
       "staleCount": 0,
       "staleList": []
     },
@@ -156,7 +156,7 @@
     "cloudflare": {
       "requestsToday": null,
       "requestsLast24h": null,
-      "notes": "CF analytics not configured"
+      "notes": "ok"
     },
     "safety": {
       "kvWritesToday": 0,
