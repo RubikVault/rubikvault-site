@@ -1305,7 +1305,7 @@
         </div>`;
         })()}
 
-        ${modelEvidenceView.showSection && modelEvidenceView.showBreakoutMini ? `<div style="margin-top:0.6rem; padding:.5rem; border-radius:8px; background:rgba(255,255,255,0.01); border:1px solid rgba(255,255,255,0.03);">
+        ${(_guard.panelGates.modelConsensus?.show !== false) && data.breakout_v2 ? `<div style="margin-top:0.6rem; padding:.5rem; border-radius:8px; background:rgba(255,255,255,0.01); border:1px solid rgba(255,255,255,0.03);">
             <div style="font-size: .62rem; color: var(--text-dim); text-transform: uppercase; font-weight: 700; margin-bottom: .25rem;">Breakout Indicator</div>
             ${data.breakout_v2 && data.breakout_v2.state ? `
             <div style="display:flex; justify-content:space-between; align-items:center;">
