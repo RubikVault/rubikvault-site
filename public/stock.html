@@ -232,7 +232,7 @@
   const emaCross=s.ema12!=null&&s.ema26!=null?(s.ema12>s.ema26?'Positive':'Negative'):null;
   const bbPctB=(s.bb_upper!=null&&s.bb_lower!=null&&close!=null)?(close-s.bb_lower)/(s.bb_upper-s.bb_lower):null;
   const fmt=v=>v==null?'—':'$'+Number(v).toFixed(2);
-  const fmtP=v=>v==null?'—':(v>=0?'+':'')+((v)*100).toFixed(2)+'%';
+  const fmtP=v=>{if(v==null)return'—';const p=Object.is(v*100,-0)?0:v*100;return(p>=0?'+':'')+p.toFixed(2)+'%';};
   const humanizeDecisionBasis = (value) => {
     const raw = String(value || '').trim();
     if (!raw) return effectiveText;
@@ -256,7 +256,7 @@
   const _freshDot = _freshnessAgeH == null ? '' : _freshnessAgeH < 48
     ? ' <span title="Data is current (fetched within 48h)" style="color:var(--green);font-size:.75rem;vertical-align:middle;cursor:help">●</span>'
     : ' <span title="Data may be stale (older than 48h)" style="color:var(--yellow);font-size:.75rem;vertical-align:middle;cursor:help">●</span>';
-  document.getElementById('sc-price').innerHTML = (close!=null?'$'+close.toFixed(2)+' <span style="color:'+((change.pct||0)>=0?'var(--green)':'var(--red)')+'">'+((change.pct||0)>=0?'+':'')+((change.pct||0)*100).toFixed(2)+'%</span> <span style="font-size:.7rem;color:var(--text-muted);margin-left:.4rem">'+(pageAsOf||'')+'</span>':'—') + _freshDot;
+  document.getElementById('sc-price').innerHTML = (close!=null?'$'+close.toFixed(2)+' <span style="color:'+((change.pct||0)>=0?'var(--green)':'var(--red)')+'">'+((change.pct||0)>=0?'+':'')+(Object.is((change.pct||0)*100,-0)?0:(change.pct||0)*100).toFixed(2)+'%</span> <span style="font-size:.7rem;color:var(--text-muted);margin-left:.4rem">'+(pageAsOf||'date pending')+'</span>':'—') + _freshDot;
 
   // Fix D: Sector Badge
   const _sectorPart = fundamentalsView?.sectorLine ? fundamentalsView.sectorLine.split('·')[0].trim() : null;
@@ -271,7 +271,7 @@
   // Render Top Headline KPIs
   document.getElementById('sc-headline-kpis').innerHTML = [
     ['Trend', trendLabel, trendColor, 'Based on price vs SMA20/50/200 alignment'],
-    ['Risk', riskView.displayLabel, riskColor, 'Final risk classification after override rules and volatility context'],
+    ['Risk', riskView.finalState || '—', riskColor, 'Final risk classification after override rules and volatility context'],
     ['52W', r52label || '—', 'var(--text)', 'Position in 52-week range: (close\u2013low)/(high\u2013low)'],
     ['RSI', rsiZone + (_guard.corrections.labels?.rsiSuffix || ''), rsiColor, 'Relative Strength Index (14d). <30 oversold, >70 overbought']
   ].map(x => '<div title="'+x[3]+'" style="padding:.4rem .6rem; border-radius:6px; background:rgba(255,255,255,0.02); border:1px solid var(--border); text-align:center; cursor:help"><div style="font-size:.6rem; color:var(--text-muted); text-transform:uppercase">'+x[0]+'</div><div style="font-weight:700; color:'+x[2]+'; font-size:.85rem">'+x[1]+'</div></div>').join('');
@@ -1267,15 +1267,15 @@
           const ev4=payload.evaluation_v4;
           const mg=_guard.panelGates.modelConsensus;
           const models=[{k:'quantlab',l:'QuantLab'},{k:'elliott',l:'Elliott'},{k:'forecast',l:'Forecast'},{k:'scientific',l:'Scientific'}];
-          const dirMap=d=>d==='bullish'||d==='BUY'?{c:'var(--green)',l:'BUY'}:d==='bearish'||d==='SELL'||d==='AVOID'?{c:'var(--red)',l:String(d).toUpperCase()}:{c:'var(--yellow)',l:d?String(d).toUpperCase():'N/A'};
+          const dirMap=d=>d==='bullish'||d==='BUY'?{c:'var(--green)',l:'BUY'}:d==='bearish'||d==='SELL'||d==='AVOID'?{c:'var(--red)',l:String(d).toUpperCase()}:{c:'var(--yellow)',l:d?String(d).toUpperCase():'No data'};
           if(!ev4){
             // Degraded fallback — show panel with primary signal only
             const primV=_decision.verdict||'';
-            const primDir=primV?dirMap(primV):{c:'var(--text-muted)',l:'N/A'};
+            const primDir=primV?dirMap(primV):{c:'var(--text-muted)',l:'No data'};
             const degradedCards=models.map((m,i)=>{
               const isFirst=i===0;
               const lbl=isFirst&&primV?'Primary':m.l;
-              const dir=isFirst&&primV?primDir:{c:'var(--text-muted)',l:'N/A'};
+              const dir=isFirst&&primV?primDir:{c:'var(--text-muted)',l:'No data'};
               const op=isFirst&&primV?'':'opacity:0.4;';
               return `<div style="text-align:center;padding:.3rem;border-radius:6px;background:rgba(255,255,255,0.02);border:1px solid var(--border);${op}"><div style="font-size:.5rem;color:var(--text-muted);text-transform:uppercase">${lbl}</div><div style="font-size:.7rem;font-weight:800;color:${dir.c};margin-top:1px">${dir.l}</div></div>`;
             }).join('');
@@ -1318,7 +1318,7 @@
             </div>
             ` : `
             <div style="font-size: 0.65rem; color: var(--text-muted); font-style: italic; margin-top: 2px;">
-              NONE — no breakout setup detected
+              No active breakout setup
             </div>
             `}
         </div>` : ''}
@@ -1475,11 +1475,11 @@
   } else {
        if (document.getElementById('brk-score')) document.getElementById('brk-score').innerText = '0';
        if (document.getElementById('brk-state')) {
-           document.getElementById('brk-state').innerText = 'NONE';
+           document.getElementById('brk-state').innerText = 'None';
            document.getElementById('brk-state').style.color = 'var(--text-muted)';
        }
        if (document.getElementById('brk-subtext')) {
-           document.getElementById('brk-subtext').innerText = 'NONE \u2014 no valid compression detected, no trigger confirmation';
+           document.getElementById('brk-subtext').innerText = 'No active setup \u2014 awaiting compression + trigger confirmation';
        }
   }
 

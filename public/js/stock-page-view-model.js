@@ -42,7 +42,7 @@ function formatMarketCap(value) {
 
 function formatMoney(value, digits = 2) {
   const n = toNumber(value);
-  return n == null ? null : `$${n.toFixed(digits)}`;
+  return (n == null || n === 0) ? null : `$${n.toFixed(digits)}`;
 }
 
 function formatRatio(value, digits = 1) {
@@ -52,7 +52,9 @@ function formatRatio(value, digits = 1) {
 
 function formatPercent(value, digits = 1) {
   const n = toNumber(value);
-  return n == null ? null : `${n.toFixed(digits)}%`;
+  if (n == null) return null;
+  const safe = n === 0 || Object.is(n, -0) ? 0 : n;
+  return `${safe.toFixed(digits)}%`;
 }
 
 export function businessDaysBetween(startValue, endValue = new Date()) {
