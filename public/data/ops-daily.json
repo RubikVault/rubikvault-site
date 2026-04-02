@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0",
-  "asOf": "2026-04-01T22:58:20.002Z",
+  "asOf": "2026-04-02T07:44:00.593Z",
   "baseline": {
     "expectedUniverse": 2453,
     "pipeline": {
@@ -15,10 +15,6 @@
           "reason": "NO_EOD_BARS"
         },
         {
-          "ticker": "ALH",
-          "reason": "NOT_SUPPORTED_SHORT_HISTORY"
-        },
-        {
           "ticker": "MPLT",
           "reason": "NOT_SUPPORTED_SHORT_HISTORY"
         },
@@ -29,16 +25,12 @@
         {
           "ticker": "P5N994",
           "reason": "NO_EOD_BARS"
-        },
-        {
-          "ticker": "PXED",
-          "reason": "NOT_SUPPORTED_SHORT_HISTORY"
         }
       ]
     },
     "freshness": {
       "latestSnapshotDate": "2026-02-07",
-      "expectedTradingDay": "2026-04-01",
+      "expectedTradingDay": "2026-04-02",
       "staleCount": 0,
       "staleList": []
     },
@@ -155,7 +147,7 @@
     "cloudflare": {
       "requestsToday": null,
       "requestsLast24h": null,
-      "notes": "CF analytics not configured"
+      "notes": "ok"
     },
     "safety": {
       "kvWritesToday": 0,
