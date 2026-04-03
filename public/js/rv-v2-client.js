@@ -3,7 +3,9 @@
  * Provides dual-path fetching: V2 endpoints with V1 fallback.
  */
 
-const V2_TIMEOUT_MS = 8000;
+import { buildCanonicalMarketContext } from './stock-ssot.js';
+
+const V2_TIMEOUT_MS = 15000;
 
 async function fetchJsonWithTimeout(url) {
   const controller = new AbortController();
@@ -44,6 +46,12 @@ export async function fetchV2Governance(ticker) {
   return { ok: true, data: payload.data, meta: payload.meta, source: 'v2_governance' };
 }
 
+export async function fetchV2HistoricalProfile(ticker) {
+  const payload = await fetchJsonWithTimeout(`/api/v2/stocks/${encodeURIComponent(ticker)}/historical-profile`);
+  if (!payload.ok) throw new Error(payload.error?.message || 'V2 historical-profile response not ok');
+  return { ok: true, data: payload.data, meta: payload.meta, source: 'v2_historical_profile' };
+}
+
 export async function fetchFundamentals(ticker) {
   const payload = await fetchJsonWithTimeout(`/api/fundamentals?ticker=${encodeURIComponent(ticker)}`);
   return { ok: true, data: payload?.data || null, meta: payload?.meta || payload?.metadata || null, source: 'fundamentals' };
@@ -55,15 +63,16 @@ export async function fetchV1Stock(ticker) {
 }
 
 export async function fetchV2StockPage(ticker) {
-  const [summary, historical, governance, fundamentals] = await Promise.all([
+  const [summary, historical, governance, fundamentals, historicalProfile] = await Promise.all([
     fetchV2Summary(ticker),
-    fetchV2Historical(ticker),
+    fetchV2Historical(ticker).catch(() => ({ ok: false, data: null, meta: null, source: 'v2_historical' })),
     fetchV2Governance(ticker),
     fetchFundamentals(ticker).catch(() => ({ ok: false, data: null, meta: null, source: 'fundamentals' })),
+    fetchV2HistoricalProfile(ticker).catch(() => ({ ok: false, data: null, meta: null, source: 'v2_historical_profile' })),
   ]);
   const latestHistoricalDate = historical?.data?.bars?.length
     ? historical.data.bars[historical.data.bars.length - 1]?.date
-    : null;
+    : summary?.data?.latest_bar?.date || null;
   const summaryDate = summary?.data?.market_prices?.date || summary?.meta?.data_date || null;
   const needsLegacyEnrichment = Boolean(
     !summary?.data?.name ||
@@ -77,8 +86,7 @@ export async function fetchV2StockPage(ticker) {
 
   const fullContractOk = Boolean(
     summary?.data?.ticker &&
-    Array.isArray(historical?.data?.bars) &&
-    historical.data.bars.length > 1 &&
+    (Array.isArray(historical?.data?.bars) || summary?.data?.latest_bar) &&
     governance?.data
   );
 
@@ -90,7 +98,16 @@ export async function fetchV2StockPage(ticker) {
     ok: true,
     data: {
       summary: summary.data,
-      historical: historical.data,
+      historical: historical?.data || { ticker: summary.data.ticker, bars: summary?.data?.latest_bar ? [summary.data.latest_bar] : [], indicators: [], breakout_v2: null },
+      historical_profile: historicalProfile?.data || {
+        ticker: summary.data.ticker,
+        profile: null,
+        regime: null,
+        availability: {
+          status: 'pending',
+          reason: 'Historical profile is still loading or has not been generated for this asset yet.',
+        },
+      },
       governance: governance.data,
       fundamentals: fundamentals?.data || null,
       legacy: legacy?.data || null,
@@ -100,6 +117,7 @@ export async function fetchV2StockPage(ticker) {
       historical: historical.meta || null,
       governance: governance.meta || null,
       fundamentals: fundamentals?.meta || null,
+      historical_profile: historicalProfile?.meta || null,
       legacy: legacy?.data?.metadata || null,
     },
   };
@@ -133,6 +151,24 @@ function toIsoDate(value) {
   if (typeof value !== 'string' || value.length < 10) return null;
   const iso = value.slice(0, 10);
   return /^\d{4}-\d{2}-\d{2}$/.test(iso) ? iso : null;
+}
+
+function isMeaningfulIdentityName(name, ticker) {
+  const label = typeof name === 'string' ? name.trim() : '';
+  const symbol = String(ticker || '').trim().toUpperCase();
+  return Boolean(label) && label.toUpperCase() !== symbol;
+}
+
+function pickIdentityName({ ticker, summaryName, fundamentalsName, universeName, legacyName }) {
+  const candidates = [summaryName, fundamentalsName, universeName, legacyName];
+  for (const candidate of candidates) {
+    if (isMeaningfulIdentityName(candidate, ticker)) return String(candidate).trim();
+  }
+  return ticker || null;
+}
+
+function hasMeaningfulIdentity({ ticker, summaryName, fundamentalsName, universeName, legacyName }) {
+  return [summaryName, fundamentalsName, universeName, legacyName].some((candidate) => isMeaningfulIdentityName(candidate, ticker));
 }
 
 function dateLagDays(olderValue, newerValue) {
@@ -181,7 +217,13 @@ export function evaluateV2PromotionGate(v2, legacyPayload = null) {
   if (summaryProvider === 'stock-analysis-seed') reasons.push('summary_price_seed');
   if (latestHistoricalDate && summaryPriceDate && summaryPriceDate < latestHistoricalDate) reasons.push('summary_price_stale_vs_historical');
   if (!hasMeaningfulMarketStats(summary?.market_stats)) reasons.push('summary_market_stats_incomplete');
-  if (!(summary?.name || governance?.universe?.name || fundamentals?.companyName || legacyPayload?.data?.name)) reasons.push('identity_incomplete');
+  if (!hasMeaningfulIdentity({
+    ticker: summary?.ticker,
+    summaryName: summary?.name,
+    fundamentalsName: fundamentals?.companyName,
+    universeName: governance?.universe?.name,
+    legacyName: legacyPayload?.data?.name,
+  })) reasons.push('identity_incomplete');
   if (learningStatus === 'BOOTSTRAP') reasons.push('learning_bootstrap');
   if (minimumNNotMet) reasons.push('minimum_n_not_met');
 
@@ -213,7 +255,13 @@ export function evaluateV2PromotionGate(v2, legacyPayload = null) {
     moduleFreshness,
     coverage: {
       fundamentals_fields: countMeaningfulFundamentals(fundamentals),
-      has_identity: Boolean(summary?.name || governance?.universe?.name || fundamentals?.companyName || legacyPayload?.data?.name),
+      has_identity: hasMeaningfulIdentity({
+        ticker: summary?.ticker,
+        summaryName: summary?.name,
+        fundamentalsName: fundamentals?.companyName,
+        universeName: governance?.universe?.name,
+        legacyName: legacyPayload?.data?.name,
+      }),
       is_etf: isEtf,
     },
   };
@@ -235,36 +283,82 @@ function pickLatestMarketPrices(summaryPrices, latestBar, legacyPayload) {
   return candidates[0] || summaryPrices || {};
 }
 
-export function transformV2ToStockShape(v2Data, v2Meta, historicalData = null, governanceData = null, fundamentalsData = null, metaBundle = null, legacyPayload = null) {
+export function transformV2ToStockShape(v2Data, v2Meta, historicalData = null, governanceData = null, fundamentalsData = null, metaBundle = null, legacyPayload = null, historicalProfileData = null) {
   const bars = historicalData?.bars || (v2Data.latest_bar ? [v2Data.latest_bar] : []);
-  const marketStats = hasMeaningfulMarketStats(v2Data.market_stats) ? v2Data.market_stats : (legacyPayload?.data?.market_stats || v2Data.market_stats || {});
   const latestBar = historicalData?.bars?.length ? historicalData.bars[historicalData.bars.length - 1] : v2Data.latest_bar;
-  const marketPrices = pickLatestMarketPrices(v2Data.market_prices || {}, latestBar, legacyPayload);
+  const canonicalMarket = buildCanonicalMarketContext({
+    ticker: v2Data.ticker,
+    summaryPrices: v2Data.market_prices || null,
+    summaryStats: hasMeaningfulMarketStats(v2Data.market_stats) ? v2Data.market_stats : null,
+    historicalBars: bars,
+    historicalIndicators: historicalData?.indicators || null,
+    legacyPrices: legacyPayload?.data?.market_prices || null,
+    legacyStats: legacyPayload?.data?.market_stats || null,
+  });
+  const marketPrices = canonicalMarket.marketPrices || pickLatestMarketPrices(v2Data.market_prices || {}, latestBar, legacyPayload);
+  const marketStats = canonicalMarket.marketStats || (hasMeaningfulMarketStats(v2Data.market_stats) ? v2Data.market_stats : (legacyPayload?.data?.market_stats || v2Data.market_stats || {}));
   const mergedFundamentals = isMeaningfulFundamentals(fundamentalsData) ? fundamentalsData : (legacyPayload?.data?.fundamentals || fundamentalsData || null);
   const pageAsOf = marketPrices?.date || latestBar?.date || v2Meta?.data_date || null;
   const moduleFreshness = {
     ...(v2Data?.module_freshness || {}),
     price_as_of: marketPrices?.date || null,
     historical_as_of: latestBar?.date || null,
+    market_stats_as_of: marketStats?.as_of || latestBar?.date || null,
     scientific_as_of: governanceData?.evaluation_v4?.input_states?.scientific?.as_of || null,
     forecast_as_of: governanceData?.evaluation_v4?.input_states?.forecast?.as_of || null,
     quantlab_as_of: governanceData?.evaluation_v4?.input_states?.quantlab?.as_of || null,
     fundamentals_as_of: mergedFundamentals?.updatedAt || metaBundle?.fundamentals?.asOf || null,
+    historical_profile_as_of: historicalProfileData?.profile?.latest_date || historicalProfileData?.regime?.date || null,
+  };
+  const displayName = pickIdentityName({
+    ticker: v2Data.ticker,
+    summaryName: v2Data.name,
+    fundamentalsName: mergedFundamentals?.companyName,
+    universeName: governanceData?.universe?.name,
+    legacyName: legacyPayload?.data?.name,
+  });
+  const historicalProfile = historicalProfileData || {
+    ticker: v2Data.ticker,
+    profile: null,
+    regime: null,
+    availability: {
+      status: 'pending',
+      reason: 'Historical profile is still loading or has not been generated for this asset yet.',
+    },
   };
   return {
     data: {
       ticker: v2Data.ticker,
-      name: v2Data.name || mergedFundamentals?.companyName || governanceData?.universe?.name || legacyPayload?.data?.name || v2Data.ticker || null,
+      name: displayName,
       bars,
       market_prices: marketPrices,
       market_stats: marketStats,
       change: v2Data.change || {},
       breakout_v2: historicalData?.breakout_v2 || null,
       fundamentals: mergedFundamentals,
+      historical_profile: historicalProfile,
+      ssot: {
+        market_context: {
+          issues: canonicalMarket.consistency?.issues || [],
+          use_historical_basis: Boolean(canonicalMarket.usedHistoricalBasis),
+          key_levels_ready: canonicalMarket.consistency?.keyLevelsReady !== false,
+          prices_source: canonicalMarket.sources?.prices || null,
+          stats_source: canonicalMarket.sources?.stats || null,
+          price_date: marketPrices?.date || null,
+          stats_date: marketStats?.as_of || null,
+          latest_bar_date: latestBar?.date || null,
+        },
+        historical_profile: {
+          status: historicalProfile?.availability?.status || 'pending',
+          reason: historicalProfile?.availability?.reason || null,
+          profile_as_of: historicalProfile?.profile?.latest_date || null,
+          regime_as_of: historicalProfile?.regime?.date || null,
+        },
+      },
       source_provenance: {
         market_stats_source: hasMeaningfulMarketStats(v2Data.market_stats) ? 'v2_summary' : (legacyPayload?.data?.market_stats ? 'legacy_inline' : 'none'),
         fundamentals_source: isMeaningfulFundamentals(fundamentalsData) ? 'fundamentals_endpoint' : (legacyPayload?.data?.fundamentals ? 'legacy_inline' : 'none'),
-        identity_source: v2Data.name ? 'v2_summary' : mergedFundamentals?.companyName ? 'fundamentals' : governanceData?.universe?.name ? 'governance_universe' : (legacyPayload?.data?.name ? 'legacy_inline' : 'none'),
+        identity_source: isMeaningfulIdentityName(v2Data.name, v2Data.ticker) ? 'v2_summary' : isMeaningfulIdentityName(mergedFundamentals?.companyName, v2Data.ticker) ? 'fundamentals' : isMeaningfulIdentityName(governanceData?.universe?.name, v2Data.ticker) ? 'governance_universe' : (isMeaningfulIdentityName(legacyPayload?.data?.name, v2Data.ticker) ? 'legacy_inline' : 'none'),
       },
       module_freshness: moduleFreshness,
     },
@@ -302,49 +396,20 @@ export function transformV2ToStockShape(v2Data, v2Meta, historicalData = null, g
  * @returns {Promise<{payload:object, source:string}>}
  */
 export async function fetchWithFallback(ticker) {
-  // Track fallback events
   window._rvFallbackLog = window._rvFallbackLog || [];
 
-  try {
-    const v2 = await fetchV2StockPage(ticker);
-    const gate = evaluateV2PromotionGate(v2, v2.data.legacy);
-    if (!gate.promote) {
-      window._rvFallbackLog.push({
-        ts: new Date().toISOString(),
-        ticker,
-        from: 'v2',
-        to: 'v1',
-        error: `promotion_gate:${gate.reasons.join(',') || 'blocked'}`,
-      });
-      const res = await fetch('/api/stock?ticker=' + encodeURIComponent(ticker));
-      const payload = await res.json();
-      return { payload, source: 'v1_fallback' };
-    }
-    return {
-      payload: transformV2ToStockShape(
-        v2.data.summary,
-        v2.meta.summary,
-        v2.data.historical,
-        v2.data.governance,
-        v2.data.fundamentals,
-        v2.meta,
-        v2.data.legacy
-      ),
-      source: 'v2',
-    };
-  } catch (err) {
-    console.warn('[RV-V2] Fallback to V1:', err.message);
-    window._rvFallbackLog.push({
-      ts: new Date().toISOString(),
-      ticker,
-      from: 'v2',
-      to: 'v1',
-      error: err.message,
-    });
-  }
-
-  // V1 fallback
-  const res = await fetch('/api/stock?ticker=' + encodeURIComponent(ticker));
-  const payload = await res.json();
-  return { payload, source: 'v1_fallback' };
+  const v2 = await fetchV2StockPage(ticker);
+  return {
+    payload: transformV2ToStockShape(
+      v2.data.summary,
+      v2.meta.summary,
+      v2.data.historical,
+      v2.data.governance,
+      v2.data.fundamentals,
+      v2.meta,
+      v2.data.legacy,
+      v2.data.historical_profile,
+    ),
+    source: 'v2',
+  };
 }

@@ -24,8 +24,8 @@ import {
 } from './stock-helpers.js';
 
 function findRecord(snapshot, symbol) {
-  if (!snapshot || !snapshot.data) return null;
-  const payload = snapshot.data;
+  if (!snapshot) return null;
+  const payload = snapshot.data ?? snapshot.symbols ?? snapshot;
   const lookup = (key) => {
     if (Array.isArray(payload)) return payload.find((e) => (e?.symbol || e?.ticker) === key) || null;
     if (typeof payload === 'object') return payload[key] || null;
@@ -48,6 +48,31 @@ function parseIsoDateSafe(value) {
   const iso = value.slice(0, 10);
   return /^\d{4}-\d{2}-\d{2}$/.test(iso) ? iso : null;
 }
+
+function isMeaningfulIdentityName(name, ticker) {
+  const label = typeof name === 'string' ? name.trim() : '';
+  const symbol = normalizeTickerStrict(ticker) || normalizeTicker(ticker) || String(ticker || '').trim().toUpperCase();
+  return Boolean(label) && label.toUpperCase() !== symbol;
+}
+
+function preferredIdentityName({ ticker, resolverName, fundamentalsName, universeName, fallbackName }) {
+  const candidates = [resolverName, fundamentalsName, universeName, fallbackName];
+  for (const candidate of candidates) {
+    if (isMeaningfulIdentityName(candidate, ticker)) return String(candidate).trim();
+  }
+  return ticker;
+}
+
+function firstMeaningfulIdentityName(ticker, ...candidates) {
+  for (const candidate of candidates) {
+    if (isMeaningfulIdentityName(candidate, ticker)) return String(candidate).trim();
+  }
+  return null;
+}
+
+let v7SearchExactCache = null;
+let v7SearchExactCachedAt = 0;
+const V7_SEARCH_EXACT_TTL_MS = 60 * 60 * 1000;
 
 function isSeedSourceProvider(value) {
   return String(value || '').toLowerCase() === 'stock-analysis-seed';
@@ -127,6 +152,58 @@ async function loadStaticBarsFallback(symbol, request) {
   }
 }
 
+async function fetchAssetJsonFromPaths(paths, request, env) {
+  const baseUrl = new URL(request.url);
+  const assetFetcher = env?.ASSETS || null;
+  for (const path of paths) {
+    try {
+      const url = new URL(path, baseUrl);
+      const res = assetFetcher && path.startsWith('/data/')
+        ? await assetFetcher.fetch(url.toString())
+        : await fetch(url.toString());
+      if (res.ok) return await res.json();
+    } catch { /* continue */ }
+  }
+  return null;
+}
+
+function buildHistoricalProfileCandidates(symbol) {
+  const normalized = normalizeTicker(symbol);
+  if (!normalized) return [];
+  const candidates = new Set([normalized]);
+  if (normalized.includes('.')) {
+    const [base, suffix] = normalized.split('.', 2);
+    if (base) candidates.add(base);
+    if (suffix) candidates.add(`${suffix}:${base}`);
+  }
+  if (normalized.includes(':')) {
+    const [prefix, base] = normalized.split(':', 2);
+    if (base) candidates.add(base);
+    if (prefix && base) candidates.add(`${base}.${prefix}`);
+  }
+  return [...candidates];
+}
+
+function summarizeHistoricalProfileAvailability(profile) {
+  if (!profile) {
+    return {
+      status: 'not_generated',
+      reason: 'Historical profile has not been generated for this asset yet.',
+    };
+  }
+  const eventKeys = Object.keys(profile?.events || {});
+  if (eventKeys.length === 0) {
+    return {
+      status: 'insufficient_history',
+      reason: 'Historical profile exists, but there are not yet enough qualifying observations for display.',
+    };
+  }
+  return {
+    status: 'ready',
+    reason: 'Historical profile ready.',
+  };
+}
+
 export function choosePreferredMarketPrices(snapshotRecord, barRecord) {
   const snapshotOk = hasUsableMarketPrices(snapshotRecord);
   const barOk = hasUsableMarketPrices(barRecord);
@@ -160,12 +237,19 @@ export function choosePreferredMarketStats(snapshotRecord, derivedRecord) {
 }
 
 async function fetchSnapshotJson(moduleName, request, env) {
-  const templates = [
-    '/data/snapshots/{module}/latest.json',
-    '/public/data/snapshots/{module}/latest.json',
-    '/data/snapshots/{module}.json',
-    '/data/{module}.json',
-  ];
+  const templates = moduleName === 'universe'
+    ? [
+      '/data/snapshots/universe/latest.json',
+      '/public/data/snapshots/universe/latest.json',
+      '/data/v3/universe/universe.json',
+      '/data/universe/all.json',
+    ]
+    : [
+      '/data/snapshots/{module}/latest.json',
+      '/public/data/snapshots/{module}/latest.json',
+      '/data/snapshots/{module}.json',
+      '/data/{module}.json',
+    ];
   const baseUrl = new URL(request.url);
   const assetFetcher = env?.ASSETS || null;
   for (const tpl of templates) {
@@ -211,6 +295,61 @@ async function resolveTickerContext(ticker, request) {
     name, exchange, country, canonicalId,
     resolution: { ticker: resolvedTicker, canonical_id: canonicalId, exchange, provider_ids: null },
   };
+}
+
+async function fetchJsonMaybeGzip(url, assetFetcher = null) {
+  try {
+    const response = assetFetcher && url.pathname.startsWith('/data/')
+      ? await assetFetcher.fetch(url.toString())
+      : await fetch(url.toString());
+    if (!response.ok) return null;
+    const contentType = String(response.headers.get('content-type') || '').toLowerCase();
+    const contentEncoding = String(response.headers.get('content-encoding') || '').toLowerCase();
+    const isGzip =
+      contentEncoding.includes('gzip')
+      || url.pathname.endsWith('.gz')
+      || contentType.includes('application/gzip')
+      || contentType.includes('application/x-gzip');
+
+    if (!isGzip) return await response.json();
+    if (typeof DecompressionStream === 'function' && response.body) {
+      const clone = response.clone();
+      try {
+        const decompressed = response.body.pipeThrough(new DecompressionStream('gzip'));
+        const text = await new Response(decompressed).text();
+        return JSON.parse(text);
+      } catch {
+        return await clone.json();
+      }
+    }
+    return await response.json();
+  } catch {
+    return null;
+  }
+}
+
+async function fetchStaticFallbackIdentityName(ticker, request, env) {
+  if (!ticker || !request?.url) return null;
+  const now = Date.now();
+  if (!v7SearchExactCache || (now - v7SearchExactCachedAt) > V7_SEARCH_EXACT_TTL_MS) {
+    const origin = new URL(request.url).origin;
+    const assetFetcher = env?.ASSETS || null;
+    const payload = await fetchJsonMaybeGzip(new URL('/data/universe/v7/search/search_exact_by_symbol.json.gz', origin), assetFetcher);
+    if (payload && typeof payload === 'object') {
+      v7SearchExactCache = payload;
+      v7SearchExactCachedAt = now;
+    }
+  }
+
+  const bySymbol = v7SearchExactCache?.by_symbol;
+  if (!bySymbol || typeof bySymbol !== 'object') return null;
+  const row = bySymbol[String(ticker || '').toUpperCase()];
+  return firstMeaningfulIdentityName(
+    ticker,
+    row?.name,
+    row?.display_name,
+    row?.long_name,
+  );
 }
 
 /**
@@ -299,6 +438,7 @@ export async function fetchStockSummary(ticker, env, request) {
     }
     const inputs = await assembleDecisionInputs(effectiveTicker, {
       fetchJson: fetchJsonForAssembly,
+      coreInputs: { bars, stats: marketStats.stats, as_of: dataDate },
       loadCoreInputs: (t) => loadRequestCoreInputs(t, { request, assetFetcher, fetchJson: fetchJsonForAssembly }),
     });
     const evaluation = buildStockInsightsV4Evaluation({
@@ -363,6 +503,10 @@ export async function fetchStockSummary(ticker, env, request) {
     }
   } catch { /* optional */ }
 
+  if (!firstMeaningfulIdentityName(effectiveTicker, ctx.name, fundamentals?.companyName, universe?.name)) {
+    fallbackName = await fetchStaticFallbackIdentityName(effectiveTicker, request, env);
+  }
+
   const selectedMarketPrices = choosePreferredMarketPrices(snapshotMarketPrices, marketPrices) || marketPrices;
   const selectedMarketStats = choosePreferredMarketStats(snapshotMarketStats, marketStats) || marketStats;
 
@@ -370,7 +514,13 @@ export async function fetchStockSummary(ticker, env, request) {
     ok: true,
     data: {
       ticker: effectiveTicker,
-      name: ctx.name || universe?.name || fallbackName || effectiveTicker,
+      name: preferredIdentityName({
+        ticker: effectiveTicker,
+        resolverName: ctx.name,
+        fundamentalsName: fundamentals?.companyName,
+        universeName: universe?.name,
+        fallbackName,
+      }),
       resolution: ctx.resolution,
       latest_bar: latestBar,
       change,
@@ -573,5 +723,59 @@ export async function fetchStockGovernance(ticker, env, request) {
     error: status === 'error'
       ? { code: 'NO_DATA', message: 'No governance data available', retryable: true }
       : null,
+  };
+}
+
+export async function fetchStockHistoricalProfile(ticker, env, request) {
+  const ctx = await resolveTickerContext(ticker, request);
+  if (!ctx.ok) return { ok: false, data: null, meta: { status: 'error', provider: 'v2-historical-profile', version: 'v2' }, error: ctx.error };
+
+  const ttl = getEndpointTTL('v2_historical');
+  const effectiveTicker = ctx.ticker;
+  const now = new Date();
+  const candidates = buildHistoricalProfileCandidates(effectiveTicker);
+  let profile = null;
+  let resolvedSymbol = null;
+
+  for (const candidate of candidates) {
+    const doc = await fetchAssetJsonFromPaths([
+      `/data/hist-probs/${encodeURIComponent(candidate)}.json`,
+      `/public/data/hist-probs/${encodeURIComponent(candidate)}.json`,
+    ], request, env);
+    if (doc) {
+      profile = doc;
+      resolvedSymbol = candidate;
+      break;
+    }
+  }
+
+  const regime = await fetchAssetJsonFromPaths([
+    '/data/hist-probs/regime-daily.json',
+    '/public/data/hist-probs/regime-daily.json',
+  ], request, env);
+
+  const availability = summarizeHistoricalProfileAvailability(profile);
+  const dataDate = profile?.latest_date || regime?.date || todayUtcDate();
+  const metaStatus = availability.status === 'ready'
+    ? computeStatusFromDataDate(dataDate, now, ttl.max_stale_days, ttl.pending_window_minutes)
+    : 'pending';
+
+  return {
+    ok: true,
+    data: {
+      ticker: effectiveTicker,
+      profile,
+      regime,
+      availability,
+      resolved_symbol: resolvedSymbol,
+    },
+    meta: {
+      status: metaStatus,
+      generated_at: nowUtcIso(),
+      data_date: dataDate,
+      provider: 'v2-historical-profile',
+      version: 'v2',
+    },
+    error: null,
   };
 }

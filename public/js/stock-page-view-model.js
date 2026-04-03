@@ -42,12 +42,12 @@ function formatMarketCap(value) {
 
 function formatMoney(value, digits = 2) {
   const n = toNumber(value);
-  return (n == null || n === 0) ? null : `$${n.toFixed(digits)}`;
+  return (n == null) ? null : `$${n.toFixed(digits)}`;
 }
 
 function formatRatio(value, digits = 1) {
   const n = toNumber(value);
-  return (n == null || n === 0) ? null : n.toFixed(digits);
+  return (n == null) ? null : n.toFixed(digits);
 }
 
 function formatPercent(value, digits = 1) {
@@ -217,6 +217,17 @@ export function buildRiskPresentation({ decision = {}, states = {}, stats = {} }
   if (verdict === 'WAIT' || verdict === 'AVOID') {
     displaySentence += ' This measures structural conditions, not trade readiness.';
   }
+  const percentileText = Number.isFinite(volPct) ? `Volatility percentile: ${volPct.toFixed(0)}th` : 'Volatility percentile unavailable';
+  const contextText = Number.isFinite(volPct)
+    ? (volPct >= 95
+        ? 'Current volatility is extremely elevated relative to recent history.'
+        : volPct >= 75
+          ? 'Current volatility remains elevated relative to recent history.'
+          : 'Current volatility is not elevated relative to recent history.')
+    : `Current risk context is driven by ${regimeLabel.toLowerCase()}.`;
+  const overrideDisplayReason = overrideApplied
+    ? (overrideReason ? `Risk override active: ${overrideReason.replace(/\.$/, '')}.` : 'Risk override active: structural context moderated the raw volatility signal.')
+    : 'Risk override active: no.';
 
   return {
     scoreRaw: rawScore,
@@ -224,31 +235,46 @@ export function buildRiskPresentation({ decision = {}, states = {}, stats = {} }
     scoreDirection: 'higher_is_safer',
     scoreColor: qualityColor(rawScore, finalState),
     finalState,
+    displayLabel: finalState,
     finalColor,
     overrideApplied,
     overrideReason,
     regimeLabel,
     rawSignalBand: Number.isFinite(volPct) ? `${volPct.toFixed(0)}th percentile volatility` : regimeLabel,
     displaySentence,
-    scoreHelperText: 'Higher = better setup quality. Final verdict can still be WAIT when confirmation or risk is insufficient.',
-    rawSignalText: Number.isFinite(volPct) ? `Raw signal: relative volatility at the ${volPct.toFixed(0)}th percentile.` : `Raw signal: ${regimeLabel}.`,
-    overrideDisplayReason: overrideApplied
-      ? (overrideReason ? `Override reason: ${overrideReason.replace(/\.$/, '')}.` : 'Override reason: structural context moderated the raw signal.')
-      : 'Override reason: no override applied.',
+    scoreHelperText: 'Higher = better structural quality, not lower final risk.',
+    rawSignalText: percentileText,
+    driverText: percentileText,
+    contextText,
+    overrideDisplayReason,
     volPercentile: volPct,
   };
 }
 
 export function inferAssetClass({ ticker, name, universe, fundamentals } = {}) {
   const hay = `${ticker || ''} ${name || ''} ${universe?.name || ''} ${universe?.asset_class || ''} ${universe?.security_type || ''} ${universe?.industry || ''}`.toLowerCase();
-  if (/\betf\b|\bexchange traded fund\b|\bindex fund\b|\btrust\b|\bucits\b/.test(hay)) return 'ETF';
-  if (!fundamentals && /\bspy\b|\bqqq\b|\bivv\b|\bvti\b|\bhyg\b|\baggg\b|\bxlf\b|\biwm\b/.test((ticker || '').toLowerCase())) return 'ETF';
+  
+  if (/\bindex\b|\bcomposite\b|\baverages\b/.test(hay) || ticker?.startsWith('^') || ticker?.includes(':')) {
+    return 'Index';
+  }
+  
+  if (/\betf\b|\bexchange traded fund\b|\bindex fund\b|\btrust\b|\bucits\b/.test(hay)) {
+    return 'ETF';
+  }
+  
+  if (!fundamentals && /\bspy\b|\bqqq\b|\bivv\b|\bvti\b|\bhyg\b|\baggg\b|\bxlf\b|\biwm\b/.test((ticker || '').toLowerCase())) {
+    return 'ETF';
+  }
+  
   return 'Stock';
 }
 
 export function buildCatalystPresentation({ ticker, name, fundamentals, universe } = {}) {
   const assetClass = inferAssetClass({ ticker, name, universe, fundamentals });
-  const nextEarningsDate = fundamentals?.nextEarningsDate || null;
+  const nextEarningsDate = fundamentals?.nextEarningsDate
+    || fundamentals?.earningsDate
+    || universe?.nextEarningsDate
+    || null;
   const asOf = normalizeAsOf(fundamentals?.updatedAt);
   if (Array.isArray(fundamentals?.confirmedCatalysts) && fundamentals.confirmedCatalysts.length > 0) {
     return {
@@ -279,8 +305,8 @@ export function buildCatalystPresentation({ ticker, name, fundamentals, universe
       variant: 'inline',
       assetClass,
       title: 'Catalysts',
-      primaryText: `No verified fund-specific catalyst data${asOf ? ` as of ${asOf}` : ''}.`,
-      secondaryText: 'ETF catalyst coverage is informational only until a confirmed event feed is available.',
+      primaryText: `Catalysts: No confirmed catalyst currently scheduled${asOf ? ` as of ${asOf}` : ''}.`,
+      secondaryText: null,
     };
   }
   return {
@@ -289,8 +315,8 @@ export function buildCatalystPresentation({ ticker, name, fundamentals, universe
     variant: 'inline',
     assetClass,
     title: 'Catalysts',
-    primaryText: `No verified catalyst data available${asOf ? ` as of ${asOf}` : ''}.`,
-    secondaryText: 'Upcoming earnings or event feed did not return a confirmed item.',
+    primaryText: `Catalysts: Earnings schedule unavailable in current feed${asOf ? ` as of ${asOf}` : ''}.`,
+    secondaryText: null,
   };
 }
 
@@ -304,34 +330,50 @@ export function buildFundamentalsPresentation({ ticker, name, fundamentals, univ
     { label: 'Div Yield', value: formatPercent(fundamentals?.dividendYield, 1) },
   ];
   const availableCount = metrics.filter((metric) => metric.value != null).length;
+  const availableLabels = metrics.filter((metric) => metric.value != null).map((metric) => metric.label);
+  const unavailableLabels = metrics.filter((metric) => metric.value == null).map((metric) => metric.label);
   const sectorLine = [fundamentals?.sector, fundamentals?.industry].filter(Boolean).join(' · ') || null;
 
   if (!fundamentals || availableCount === 0) {
     return {
       status: 'unavailable',
-      renderMode: asOf ? 'inline' : 'hidden',
+      renderMode: 'hidden',
       assetClass,
       title: 'Fundamentals',
       asOf,
       metrics: [],
+      availableLabels,
+      unavailableLabels,
       sectorLine,
-      primaryText: `Fundamentals temporarily unavailable${asOf ? ` as of ${asOf}` : ''}.`,
-      secondaryText: assetClass === 'ETF'
-        ? 'ETF fundamentals coverage is currently limited.'
-        : 'The fundamentals feed returned no verified valuation fields.',
+      primaryText: `Fundamentals unavailable${asOf ? ` as of ${asOf}` : ''}.`,
+      secondaryText: assetClass === 'ETF' || assetClass === 'Index'
+        ? 'No confirmed fund fundamentals.'
+        : 'No verified fundamentals fields available.',
+      dimOpacity: 0.6,
     };
   }
 
+  let degraded = false;
+  if (assetClass === 'Stock') {
+    degraded = availableCount < 3;
+  } else {
+    degraded = false;
+  }
   return {
-    status: availableCount >= 3 ? 'ready' : 'degraded',
-    renderMode: availableCount >= 3 ? 'card' : 'compact',
+    status: degraded ? 'degraded' : 'ready',
+    renderMode: degraded ? 'compact' : 'card',
     assetClass,
-    title: 'Fundamentals',
+    title: degraded ? 'Fundamentals (limited data)' : 'Fundamentals',
     asOf,
     metrics,
+    availableLabels,
+    unavailableLabels,
     sectorLine,
     primaryText: null,
-    secondaryText: availableCount >= 3 ? null : `Only ${availableCount}/4 primary fundamentals fields are currently available.`,
+    secondaryText: degraded
+      ? `Available: ${availableLabels.join(', ') || 'None'} · Unavailable: ${unavailableLabels.join(', ') || 'None'}`
+      : null,
+    dimOpacity: degraded ? 0.72 : 1,
   };
 }
 
@@ -361,6 +403,301 @@ export function buildModuleFreshnessPresentation(payload = {}, now = new Date())
   });
 }
 
+export function buildTrustPresentation({
+  decisionAsOf,
+  priceAsOf,
+  moduleFreshness = [],
+  fundamentalsStatus = 'ready',
+  modelEvidenceLimited = false,
+} = {}) {
+  const historical = moduleFreshness.find((item) => item.label === 'Historical');
+  const historicalState = historical?.state === 'fresh'
+    ? 'current'
+    : historical?.state === 'delayed'
+      ? `delayed by ${Math.max(1, historical?.ageDays ?? 1)} trading days`
+      : historical?.state === 'stale'
+        ? `delayed by ${Math.max(1, historical?.ageDays ?? 4)} trading days`
+        : 'unavailable';
+  const isPartial = modelEvidenceLimited
+    || fundamentalsStatus === 'degraded'
+    || fundamentalsStatus === 'unavailable'
+    || moduleFreshness.some((item) => item.state === 'stale' || item.state === 'delayed');
+  const coverageLabel = isPartial ? 'partial' : 'full';
+  const canonicalDate = normalizeAsOf(priceAsOf || decisionAsOf);
+  const summaryText = `Analysis & Price as-of: ${canonicalDate || 'latest available'} · Historical context: ${historicalState} · Coverage: ${coverageLabel}`;
+  return {
+    decisionDate: normalizeAsOf(decisionAsOf || priceAsOf),
+    priceDate: normalizeAsOf(priceAsOf || decisionAsOf),
+    historicalState,
+    coverageLabel,
+    summaryText,
+  };
+}
+
+function sanitizeReason(reason) {
+  const raw = String(reason || '').trim();
+  if (!raw) return null;
+  if (/EXTREME_VOLATILITY/i.test(raw)) return 'volatility remains too high';
+  if (/LOW[_ ]CONF/i.test(raw)) return 'signal confidence is still weak';
+  if (/INSUFFICIENT_DATA|MINIMUM[_ ]N|BOOTSTRAP/i.test(raw)) return 'coverage is still limited';
+  if (/^[A-Z][A-Z0-9_]+$/.test(raw)) return raw.toLowerCase().replace(/_/g, ' ');
+  return raw.replace(/\.$/, '');
+}
+
+export function buildWaitStatePresentation({ decision = {}, states = {}, explanation = {}, stats = {}, close = null } = {}) {
+  const why = [];
+  if (states?.trend === 'RANGE' || states?.trend === 'UNKNOWN') why.push('trend remains sideways');
+  if (states?.volatility === 'HIGH' || states?.volatility === 'EXTREME' || toNumber(stats?.volatility_percentile) >= 85) {
+    why.push('volatility remains too high');
+  }
+  if (states?.volume === 'WEAK' || states?.volume === 'DRY' || states?.liquidity === 'LOW') why.push('participation is not strong enough');
+  if ((states?.momentum === 'NEUTRAL' || states?.momentum === 'BEARISH') && why.length < 3) why.push('momentum lacks confirmation');
+  for (const gate of decision?.trigger_gates || []) {
+    const clean = sanitizeReason(gate);
+    if (clean && !why.includes(clean) && why.length < 4) why.push(clean);
+  }
+  for (const bullet of explanation?.bullets || []) {
+    const clean = sanitizeReason(bullet);
+    if (clean && !why.includes(clean) && why.length < 4) why.push(clean);
+  }
+  const sma20 = toNumber(stats?.sma20);
+  const triggerPrice = Number.isFinite(sma20) ? sma20 : close;
+  const nextActions = [
+    Number.isFinite(triggerPrice) ? `Recheck if price reclaims SMA20 near $${triggerPrice.toFixed(1)}` : 'Recheck when short-term structure improves',
+    'Watch for volatility normalization',
+    'Stay on alert for a cleaner breakout trigger',
+  ];
+  return {
+    headline: 'No clean setup right now',
+    subheadline: 'Stand aside until structure improves',
+    whyBullets: why.slice(0, 4),
+    nextActions,
+    signalBalanceText: 'Signal balance: no strong bullish or bearish trigger',
+    reboundTitle: why.includes('volatility remains too high') ? 'Recovery watch' : 'Rebound conditions not yet met',
+    setupQualityText: Number.isFinite(toNumber(decision?.scores?.composite))
+      ? `Setup quality: Moderate (${toNumber(decision?.scores?.composite).toFixed(0)}/100)`
+      : 'Setup quality: Moderate',
+    setupQualityNote: 'Entry pattern may be improving, but risk conditions still block action.',
+  };
+}
+
+export function buildExecutiveDecisionPresentation({ decision = {}, states = {}, explanation = {}, stats = {}, close = null, effectiveVerdict = null } = {}) {
+  const waitView = buildWaitStatePresentation({ decision, states, explanation, stats, close });
+  const verdict = String(effectiveVerdict || decision?.verdict || 'WAIT').toUpperCase();
+  const blocker = waitView.whyBullets[0] || 'risk conditions still block action';
+  const trendNeedsWork = states?.trend === 'RANGE' || states?.trend === 'UNKNOWN';
+  const volatilityNeedsWork = states?.volatility === 'HIGH' || states?.volatility === 'EXTREME' || toNumber(stats?.volatility_percentile) >= 85;
+  const participationNeedsWork = states?.volume === 'WEAK' || states?.volume === 'DRY' || states?.liquidity === 'LOW';
+  const whatMustChange = [];
+  if (trendNeedsWork) whatMustChange.push('price structure must resolve out of the current range');
+  if (volatilityNeedsWork) whatMustChange.push('volatility must normalize before setup quality can clear');
+  if (participationNeedsWork) whatMustChange.push('participation must strengthen on the next move');
+  if (!whatMustChange.length) whatMustChange.push('a cleaner trigger must confirm before action');
+  return {
+    verdict,
+    summaryLine: verdict === 'WAIT' ? 'Sit on hands. No clean setup yet.' : 'Setup is actionable.',
+    headline: waitView.headline,
+    subheadline: waitView.subheadline,
+    whyNotNow: waitView.whyBullets.slice(0, 3),
+    blocker,
+    whatMustChange: whatMustChange.slice(0, 3),
+    primaryNextAction: waitView.nextActions[0] || 'Recheck when structure improves',
+    secondaryWatch: waitView.nextActions[1] || 'Watch for volatility normalization',
+    upgradeTrigger: waitView.nextActions[2] || 'Wait for cleaner breakout confirmation',
+    setupQualityText: waitView.setupQualityText,
+    setupQualityNote: 'Setup quality measures pattern quality only — current risk conditions still block action.',
+    signalBalanceText: waitView.signalBalanceText,
+    reboundTitle: waitView.reboundTitle,
+    readinessSummary: null,
+  };
+}
+
+export function buildHorizonPresentation(horizons = []) {
+  const normalized = Array.isArray(horizons) ? horizons : [];
+  const verdicts = normalized.map((item) => String(item?.v?.l || item?.label || '').toUpperCase()).filter(Boolean);
+  const allEqual = verdicts.length > 0 && verdicts.every((value) => value === verdicts[0]);
+  return {
+    showCards: !allEqual,
+    compactText: allEqual ? `Across all horizons: ${verdicts[0]}` : null,
+    items: normalized,
+  };
+}
+
+export function buildActiveModelConsensusPresentation({ evaluation = null, decision = {}, missingModels = [], modelStates = {} } = {}) {
+  const models = [
+    { key: 'quantlab', label: 'QuantLab' },
+    { key: 'elliott', label: 'Elliott' },
+    { key: 'forecast', label: 'Forecast' },
+    { key: 'scientific', label: 'Scientific' },
+  ];
+  const activeModels = models.filter((model) => !missingModels.includes(model.key) && modelStates[model.key]);
+  const coverageCount = activeModels.length;
+  const isolatedSignal = coverageCount === 1
+    ? `${activeModels[0].label} remains isolated`
+    : activeModels.some((model) => model.key === 'elliott') && coverageCount < 3
+      ? 'Elliott signal remains isolated'
+      : coverageCount < 4
+        ? 'Coverage incomplete'
+        : 'Broad model confirmation available';
+  const finalInterpretation = coverageCount >= 3
+    ? 'Model consensus: Actionable alignment is available'
+    : `Model consensus: Not actionable · Coverage incomplete (${coverageCount}/4 models) · ${isolatedSignal}`;
+  return {
+    title: coverageCount < 4 ? 'Active Model Consensus' : 'Model Consensus',
+    compactTitle: coverageCount < 4 ? 'Active Model Consensus' : 'Model Consensus',
+    coverageCount,
+    activeModels,
+    isolatedSignal,
+    actionableText: coverageCount >= 3 ? 'Actionable alignment available' : 'Not actionable',
+    availabilityText: coverageCount >= 3 ? 'Broad model confirmation available' : `Coverage incomplete (${coverageCount}/4 models)`,
+    finalInterpretation,
+    primaryVerdict: decision?.verdict || null,
+  };
+}
+
+export function buildModelConsensusPresentation({ evaluation = null, decision = {}, missingModels = [] } = {}) {
+  const fallbackStates = evaluation
+    ? {
+        quantlab: true,
+        elliott: true,
+        forecast: !missingModels.includes('forecast'),
+        scientific: !missingModels.includes('scientific'),
+      }
+    : {};
+  const view = buildActiveModelConsensusPresentation({
+    evaluation,
+    decision,
+    missingModels,
+    modelStates: fallbackStates,
+  });
+  return {
+    ...view,
+    title: view.coverageCount < 4 ? `${view.coverageCount}-model view` : '4-model consensus',
+    compactTitle: view.coverageCount < 4 ? `${view.coverageCount}-model view` : '4-model consensus',
+    actionableText: view.coverageCount >= 3 ? 'Model alignment available' : 'Consensus not actionable',
+    availabilityText: view.coverageCount >= 3 ? 'Broad model confirmation available' : `Only ${view.coverageCount} of 4 models available`,
+  };
+}
+
+export function buildHistoricalModulePresentation(freshness = {}) {
+  const subtitle = freshness.status === 'fresh'
+    ? 'Historical signal profile'
+    : 'Historical signal profile · background context only';
+  const confidenceLabel = freshness.status === 'fresh'
+    ? 'Historical confidence'
+    : 'Historical confidence (historical only)';
+  const regimeLabel = freshness.status === 'fresh'
+    ? 'Historical regime snapshot'
+    : 'Historical regime snapshot · delayed background context only';
+  return {
+    subtitle,
+    confidenceLabel,
+    regimeLabel,
+    opacity: freshness.opacity ?? 0.6,
+    collapsedByDefault: freshness.status !== 'fresh',
+  };
+}
+
+export function buildBreakoutDensityPresentation({ breakout = {}, verdict = 'WAIT' } = {}) {
+  const state = String(breakout?.state || 'NONE').toUpperCase();
+  const score = toNumber(breakout?.scores?.total) ?? 0;
+  const compact = state === 'NONE'
+    || state === 'EXEC VETO'
+    || (state === 'SETUP' && score < 60)
+    || (state !== 'CONFIRMED' && breakout?.trigger_confirmed === false);
+  return {
+    mode: compact ? 'compact' : 'full',
+    title: compact ? 'Breakout' : 'Breakout setup',
+    headline: compact
+      ? (state === 'NONE' ? 'Breakout: No active setup' : 'Breakout: Early setup only — not actionable yet')
+      : state,
+    detail: compact
+      ? (state === 'NONE' ? 'Awaiting compression + trigger confirmation' : (verdict === 'WAIT' ? 'Executive verdict still vetoes the setup.' : 'Trigger confirmation still pending.'))
+      : (breakout?.explanation || 'Breakout state active'),
+    score,
+    state,
+  };
+}
+
+export function buildInterpretiveChangePresentation({ timeframe = '1D', close = null, stats = {}, change = {}, trendLabel = 'Mixed', maStack = 'Mixed', riskLabel = 'Medium', rsiZone = 'Neutral', bbLabel = 'Range midbound', macdLabel = 'Neutral', rangeLabel = 'Mid range' } = {}) {
+  const templates = {
+    '1D': {
+      summary: `Momentum ${toNumber(change?.pct) > 0 ? 'improved slightly' : 'softened'}, but structure ${close > (stats?.sma20 || 0) ? 'is trying to recover' : 'remains weak'} and no directional confirmation is present.`,
+      items: [
+        `RSI is ${stats?.rsi14 != null ? stats.rsi14.toFixed(1) : '—'} and remains ${String(rsiZone).toLowerCase()}`,
+        `price moved ${formatPercent((change?.pct || 0) * 100, 2) || '—'} today`,
+        `structure ${close > (stats?.sma20 || 0) ? 'sits back above' : 'remains below'} SMA20`,
+      ],
+    },
+    '3D': {
+      summary: `Trend structure is still ${String(maStack).toLowerCase()}, so recent stabilization has not yet cleared the broader blocker.`,
+      items: [
+        `price ${close > (stats?.sma50 || 0) ? 'reclaimed' : 'still trails'} SMA50`,
+        `trend structure remains ${String(maStack).toLowerCase()}`,
+        `final risk stays ${String(riskLabel).toLowerCase()}`,
+      ],
+    },
+    '1W': {
+      summary: `The setup remains structurally mixed, with no decisive directional alignment across momentum and moving averages.`,
+      items: [
+        `moving-average structure is ${String(maStack).toLowerCase()}`,
+        `Bollinger position is ${String(bbLabel).toLowerCase()}`,
+        `MACD tone is ${String(macdLabel).toLowerCase()}`,
+      ],
+    },
+    '2W': {
+      summary: `Longer swing context is still unresolved, so volatility and range position matter more than raw momentum.`,
+      items: [
+        `52-week position remains ${String(rangeLabel || 'Mid range').toLowerCase()}`,
+        `ATR is ${formatMoney(stats?.atr14, 2) || '—'}`,
+        `volatility percentile is ${stats?.volatility_percentile != null ? `${Number(stats.volatility_percentile).toFixed(0)}th` : '—'}`,
+      ],
+    },
+    '1M': {
+      summary: `The broader trend still decides the tape here, and the longer-term structure has not fully realigned.`,
+      items: [
+        `price remains ${close > (stats?.sma200 || 0) ? 'above' : 'below'} SMA200`,
+        `trend remains ${String(trendLabel).toLowerCase()}`,
+        `moving-average structure stays ${String(maStack).toLowerCase()}`,
+      ],
+    },
+  };
+  return templates[timeframe] || templates['1D'];
+}
+
+export function buildBackgroundModulePresentation({ title, freshnessStatus = 'stale', dimOpacity = 0.6, collapsedByDefault = true } = {}) {
+  return {
+    title,
+    tone: 'background',
+    opacity: freshnessStatus === 'fresh' ? 0.82 : dimOpacity,
+    collapsedByDefault,
+    contextLabel: freshnessStatus === 'fresh' ? 'Historical only' : 'Historical only · background context',
+  };
+}
+
+export function buildMobileNavigationPresentation({ viewportWidth = 1280 } = {}) {
+  const mobile = viewportWidth < 700;
+  return {
+    enabled: mobile,
+    defaultTab: 'overview',
+    tabs: [
+      { key: 'overview', label: 'Overview' },
+      { key: 'technicals', label: 'Technicals' },
+      { key: 'evidence', label: 'Evidence' },
+    ],
+  };
+}
+
+export function buildPageHierarchyPresentation() {
+  return {
+    sections: [
+      { key: 'decision', label: 'Decision Layer', tone: 'primary' },
+      { key: 'evidence', label: 'Evidence Layer', tone: 'evidence' },
+      { key: 'background', label: 'Background Layer', tone: 'background' },
+    ],
+  };
+}
+
 export function validateLevelConsistency(levels, close) {
   const canonicalClose = toNumber(close);
   if (!Array.isArray(levels) || !Number.isFinite(canonicalClose)) {
@@ -376,6 +713,7 @@ export function validateLevelConsistency(levels, close) {
   };
   checkEnvelope('5D High', '5D Low');
   checkEnvelope('20D High', '20D Low');
+  checkEnvelope('52W High', '52W Low');
   return {
     valid: issues.length === 0,
     degraded: issues.length > 0,
@@ -449,7 +787,11 @@ export function buildPageIdentity(payload = {}, requestedTicker = '') {
   const bars = data?.bars || [];
   const lastBar = bars.length ? bars[bars.length - 1] : {};
   const ticker = meta?.request?.normalized_ticker || data?.ticker || requestedTicker || '';
-  const name = data?.name || data?.fundamentals?.companyName || universe?.name || ticker;
+  const candidates = [data?.name, data?.fundamentals?.companyName, universe?.name];
+  const name = candidates.find((candidate) => {
+    const label = typeof candidate === 'string' ? candidate.trim() : '';
+    return label && label.toUpperCase() !== String(ticker || '').trim().toUpperCase();
+  }) || ticker;
   const priceDate = prices?.date || null;
   const barDate = lastBar?.date || null;
   const useBar = Boolean(barDate && (!priceDate || barDate >= priceDate));

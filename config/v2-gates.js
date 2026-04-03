@@ -6,5 +6,6 @@ export const STATIC_V2_GATES = {
     v2_summary: { enabled: true },
     v2_historical: { enabled: true },
     v2_governance: { enabled: true },
+    v2_historical_profile: { enabled: true },
   },
 };

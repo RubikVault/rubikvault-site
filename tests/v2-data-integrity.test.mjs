@@ -41,6 +41,9 @@ const historicalIndicatorPayload = {
     { id: 'high_52w', value: 203.5 },
     { id: 'low_52w', value: 118.0 },
     { id: 'range_52w_pct', value: 0.42 },
+    { id: 'sma20', value: 131.2 },
+    { id: 'sma50', value: 136.4 },
+    { id: 'sma200', value: 157.0 },
   ],
   issues: [],
 };
@@ -132,6 +135,12 @@ test('transformV2ToStockShape produces canonical fresh price and carries fundame
         name: 'Qualcomm Incorporated',
         market_prices: { symbol: 'QCOM', date: staleDay, close: 143.09 },
       },
+    },
+    {
+      ticker: 'QCOM',
+      profile: { ticker: 'QCOM', latest_date: yesterday, events: { test_event: { h20d: { n: 100 } } } },
+      regime: { date: today },
+      availability: { status: 'ready', reason: 'Historical profile ready.' },
     }
   );
 
@@ -142,4 +151,6 @@ test('transformV2ToStockShape produces canonical fresh price and carries fundame
   assert.equal(payload.data.fundamentals.nextEarningsDate, '2026-04-29');
   assert.equal(payload.evaluation_v4.input_states.scientific.status, 'ok');
   assert.equal(payload.data.name, 'Qualcomm Incorporated');
+  assert.equal(payload.data.ssot.market_context.key_levels_ready, true);
+  assert.equal(payload.data.historical_profile.availability.status, 'ready');
 });

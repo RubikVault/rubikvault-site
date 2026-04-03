@@ -21,6 +21,7 @@ export function guardPayload(payload, ticker) {
   const fund = data.fundamentals || null;
   const ev4 = payload?.evaluation_v4 || null;
   const brk = data.breakout_v2 || null;
+  const priceStack = guardPriceStack(payload);
 
   // Run all guards
   const r52w = guard52WRange(s, close);
@@ -46,6 +47,11 @@ export function guardPayload(payload, ticker) {
   const tp = guardTradePlan(close, s.atr14, decision);
   const fundGuard = guardFundamentals(fund);
   const consensusGuard = guardModelConsensus(decision, ev4);
+  corrections.priceStack = {
+    valid: priceStack.valid,
+    issues: priceStack.issues || [],
+    source: priceStack.source || null,
+  };
   corrections.fundamentals = {
     availablePrimaryFields: fundGuard.availablePrimaryFields || 0,
   };
@@ -61,14 +67,56 @@ export function guardPayload(payload, ticker) {
     fundamentals: guardPanelGate('fundamentals', { fund, fundValid: fundGuard.valid, fundCoverage: fundGuard.availablePrimaryFields }),
     historical: guardPanelGate('historical', { hasData: true }), // re-evaluated at render time
     breakout: guardPanelGate('breakout', { brk }),
+    keyLevels: guardPanelGate('keyLevels', { priceStackValid: priceStack.valid, issues: priceStack.issues }),
     modelConsensus: guardPanelGate('modelConsensus', { ev4, consensusValid: consensusGuard.valid, consensusDegraded: consensusGuard.degraded }),
   };
 
+  if (priceStack.warning) warnings.push(priceStack.warning);
   if (tp.warning) warnings.push(tp.warning);
   if (fundGuard.warning) warnings.push(fundGuard.warning);
   if (consensusGuard.warning) warnings.push(consensusGuard.warning);
 
   return { warnings, panelGates, corrections };
+}
+
+export function guardPriceStack(payload) {
+  const marketContext = payload?.data?.ssot?.market_context || null;
+  if (marketContext) {
+    const issues = Array.isArray(marketContext.issues) ? marketContext.issues : [];
+    const valid = marketContext.key_levels_ready !== false;
+    return {
+      valid,
+      issues,
+      source: marketContext.prices_source || null,
+      warning: !valid && issues.length ? `Price stack mismatch: ${issues.join('; ')}` : null,
+    };
+  }
+
+  const prices = payload?.data?.market_prices || {};
+  const lastBar = Array.isArray(payload?.data?.bars) && payload.data.bars.length
+    ? payload.data.bars[payload.data.bars.length - 1]
+    : payload?.data?.latest_bar || null;
+  const stats = payload?.data?.market_stats?.stats || {};
+  const close = Number(prices?.close);
+  const barClose = Number(lastBar?.close ?? lastBar?.adjClose);
+  const high52w = Number(stats?.high_52w);
+  const low52w = Number(stats?.low_52w);
+  const issues = [];
+
+  if (Number.isFinite(close) && Number.isFinite(barClose) && close > 0 && barClose > 0) {
+    const ratio = Math.max(close, barClose) / Math.min(close, barClose);
+    if (ratio >= 5) issues.push('price_bar_scale_mismatch');
+  }
+  if (Number.isFinite(close) && Number.isFinite(high52w) && Number.isFinite(low52w) && high52w > low52w && low52w > 0) {
+    if (close > high52w * 5 || close < low52w * 0.2) issues.push('price_outside_52w_envelope');
+  }
+
+  return {
+    valid: issues.length === 0,
+    issues,
+    source: null,
+    warning: issues.length ? `Price stack mismatch: ${issues.join('; ')}` : null,
+  };
 }
 
 // ─── Individual Guards ───────────────────────────────────────────────────────
@@ -291,9 +339,18 @@ export function guardModelConsensus(decision, ev4) {
   ].filter(Boolean);
 
   if (available === 0) return { valid: false, warning: 'Model consensus: no model data available', available, missingModels, degraded: true };
-  if (available < 3) return { valid: true, warning: `Model consensus: only ${available}/4 models available`, degraded: true, available, missingModels };
+  
+  // More permissive: 2 out of 4 is acceptable for a "ready" state, though still "degraded" if < 4 for internal tracking
+  // But we only set degraded = true for the UI banner if it's really low (< 2)
+  const isUiDegraded = available < 2;
 
-  return { valid: true, warning: null, available, missingModels, degraded: available < 4 };
+  return { 
+    valid: true, 
+    warning: available < 4 ? `Model consensus: ${available}/4 models available` : null, 
+    available, 
+    missingModels, 
+    degraded: isUiDegraded 
+  };
 }
 
 export function guardPanelGate(panel, ctx) {
@@ -317,6 +374,10 @@ export function guardPanelGate(panel, ctx) {
     }
     case 'breakout': {
       if (!ctx.brk || !ctx.brk.state) return { show: false, reason: 'No breakout data' };
+      return { show: true };
+    }
+    case 'keyLevels': {
+      if (!ctx.priceStackValid) return { show: false, reason: (ctx.issues || []).join('; ') || 'Price stack mismatch' };
       return { show: true };
     }
     case 'modelConsensus': {

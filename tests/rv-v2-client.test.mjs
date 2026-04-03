@@ -78,6 +78,62 @@ describe('transformV2ToStockShape', () => {
     assert.equal(payload.metadata.as_of, '2026-03-26');
   });
 
+  it('uses one canonical market basis when summary price scale diverges from bars', () => {
+    const payload = transformV2ToStockShape(
+      {
+        ticker: 'TEST',
+        name: 'Test Asset',
+        market_prices: { close: 13411, date: '2026-03-31', source_provider: 'snapshot' },
+        market_stats: { as_of: '2026-03-31', stats: { high_52w: 10.8, low_52w: 9.8, atr14: 0.01, sma20: 10.2, sma50: 10.1, sma200: 10.0 } },
+      },
+      { data_date: '2026-03-31', provider: 'v2-summary' },
+      {
+        bars: [{ date: '2026-03-30', close: 10.1 }, { date: '2026-03-31', close: 10.3 }],
+        indicators: [{ id: 'high_52w', value: 10.8 }, { id: 'low_52w', value: 9.8 }, { id: 'atr14', value: 0.01 }, { id: 'rsi14', value: 51 }, { id: 'volatility_20d', value: 0.01 }, { id: 'volatility_percentile', value: 14 }, { id: 'bb_upper', value: 10.6 }, { id: 'bb_lower', value: 9.9 }, { id: 'range_52w_pct', value: 0.65 } ],
+      },
+      { universe: { name: 'Test Asset' } },
+      null,
+      {},
+      null,
+      { ticker: 'TEST', profile: null, regime: null, availability: { status: 'pending', reason: 'pending' } },
+    );
+
+    assert.equal(payload.data.market_prices.close, 10.3);
+    assert.equal(payload.data.ssot.market_context.use_historical_basis, true);
+    assert.equal(payload.data.ssot.market_context.key_levels_ready, true);
+  });
+
+  it('passes historical-profile payload through the transformed stock shape', () => {
+    const payload = transformV2ToStockShape(
+      {
+        ticker: 'QCOM',
+        name: 'Qualcomm Incorporated',
+        market_prices: { close: 155.12, date: '2026-03-26' },
+        market_stats: { stats: { atr14: 4.1 } },
+      },
+      { data_date: '2026-03-26', provider: 'v2-summary' },
+      {
+        bars: [{ date: '2026-03-25', close: 154 }, { date: '2026-03-26', close: 155.12 }],
+      },
+      {
+        universe: { name: 'Qualcomm Incorporated' },
+      },
+      null,
+      {},
+      null,
+      {
+        ticker: 'QCOM',
+        profile: { ticker: 'QCOM', latest_date: '2026-03-20', events: { foo: { h20d: { n: 100 } } } },
+        regime: { date: '2026-04-01' },
+        availability: { status: 'ready', reason: 'Historical profile ready.' },
+      },
+    );
+
+    assert.equal(payload.data.historical_profile.availability.status, 'ready');
+    assert.equal(payload.data.ssot.historical_profile.status, 'ready');
+    assert.equal(payload.data.ssot.historical_profile.profile_as_of, '2026-03-20');
+  });
+
   it('uses the planned identity fallback order for page name resolution', () => {
     const payload = transformV2ToStockShape(
       {
@@ -106,6 +162,31 @@ describe('transformV2ToStockShape', () => {
 
     assert.equal(payload.data.name, 'Fundamentals Name');
   });
+
+  it('ignores summary placeholder names that only repeat the ticker', () => {
+    const payload = transformV2ToStockShape(
+      {
+        ticker: 'SPY',
+        name: 'SPY',
+        market_prices: { close: 510.12, date: '2026-03-26' },
+      },
+      { data_date: '2026-03-26', provider: 'v2-summary' },
+      {
+        bars: [{ date: '2026-03-25', close: 509.0 }, { date: '2026-03-26', close: 510.12 }],
+      },
+      {
+        universe: { name: 'SPY' },
+      },
+      {
+        companyName: 'State Street SPDR S&P 500 ETF Trust',
+      },
+      {},
+      null
+    );
+
+    assert.equal(payload.data.name, 'State Street SPDR S&P 500 ETF Trust');
+    assert.equal(payload.data.source_provenance.identity_source, 'fundamentals');
+  });
 });
 
 describe('fetchV2StockPage', () => {
@@ -127,17 +208,6 @@ describe('fetchV2StockPage', () => {
           meta: { data_date: '2026-03-26', provider: 'v2-summary' },
         });
       }
-      if (href.includes('/historical')) {
-        return okJson({
-          ok: true,
-          data: {
-            ticker: 'QCOM',
-            bars: [{ date: '2026-03-25', close: 154 }, { date: '2026-03-26', close: 155.12 }],
-            breakout_v2: { state: 'NONE' },
-          },
-          meta: { data_date: '2026-03-26', provider: 'v2-historical' },
-        });
-      }
       if (href.includes('/governance')) {
         return okJson({
           ok: true,
@@ -147,6 +217,29 @@ describe('fetchV2StockPage', () => {
             evaluation_v4: { ok: true },
           },
           meta: { data_date: '2026-03-26', provider: 'v2-governance' },
+        });
+      }
+      if (href.includes('/historical-profile')) {
+        return okJson({
+          ok: true,
+          data: {
+            ticker: 'QCOM',
+            profile: { ticker: 'QCOM', latest_date: '2026-03-20', events: {} },
+            regime: { date: '2026-04-01' },
+            availability: { status: 'ready', reason: 'Historical profile ready.' },
+          },
+          meta: { data_date: '2026-04-01', provider: 'v2-historical-profile' },
+        });
+      }
+      if (href.includes('/historical')) {
+        return okJson({
+          ok: true,
+          data: {
+            ticker: 'QCOM',
+            bars: [{ date: '2026-03-25', close: 154 }, { date: '2026-03-26', close: 155.12 }],
+            breakout_v2: { state: 'NONE' },
+          },
+          meta: { data_date: '2026-03-26', provider: 'v2-historical' },
         });
       }
       if (href.includes('/api/fundamentals')) {
@@ -172,5 +265,6 @@ describe('fetchV2StockPage', () => {
     assert.equal(result.data.summary.ticker, 'QCOM');
     assert.equal(result.data.historical.bars.length, 2);
     assert.equal(result.data.governance.universe.name, 'Qualcomm Incorporated');
+    assert.equal(result.data.historical_profile.availability.status, 'ready');
   });
 });
