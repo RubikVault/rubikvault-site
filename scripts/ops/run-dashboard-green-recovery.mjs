@@ -180,7 +180,7 @@ const steps = [
     id: 'forecast_daily',
     label: 'Forecast Daily',
     pattern: 'scripts/forecast/run_daily.mjs',
-    command: 'NODE_OPTIONS=--max-old-space-size=4096 node scripts/forecast/run_daily.mjs',
+    command: 'NODE_OPTIONS=--max-old-space-size=6144 node scripts/forecast/run_daily.mjs',
     logFile: path.join(LOG_DIR, 'step-04-forecast.log'),
     stallMinutes: 60,
     dependsOn: ['q1_delta_ingest'],
