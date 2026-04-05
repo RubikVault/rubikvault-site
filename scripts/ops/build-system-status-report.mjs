@@ -980,7 +980,11 @@ function main() {
 
   const ssotViolations = detectSsotViolations();
 
-  const localSeverity = rootCauses.reduce((acc, cause) => severityRank(cause.severity) > severityRank(acc) ? cause.severity : acc, 'ok');
+  const ssotGateSeverity = ssotViolations.length > 0 ? 'warning' : 'ok';
+  const localSeverity = [
+    rootCauses.reduce((acc, cause) => severityRank(cause.severity) > severityRank(acc) ? cause.severity : acc, 'ok'),
+    ssotGateSeverity,
+  ].reduce((a, b) => severityRank(a) > severityRank(b) ? a : b);
 
   const remoteHealth = fetchRemoteWorkflowHealth();
   const remoteWorkflowSeverities = Object.entries(remoteHealth.runs).map(([, run]) => {
@@ -1018,6 +1022,7 @@ function main() {
       data_layer_severity: [steps.market_data_refresh, steps.q1_delta_ingest, steps.quantlab_daily_report, steps.hist_probs]
         .reduce((acc, step) => severityRank(step.severity) > severityRank(acc) ? step.severity : acc, 'ok'),
       primary_blocker: (rootCauses.slice().sort((a, b) => severityRank(b.severity) - severityRank(a.severity))[0])?.title || null,
+      ssot_violations_count: ssotViolations.length,
     },
     remote_workflows: Object.fromEntries(
       Object.entries(remoteHealth.runs).map(([wf, run]) => [wf, {

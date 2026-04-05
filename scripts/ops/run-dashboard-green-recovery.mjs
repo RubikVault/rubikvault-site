@@ -248,7 +248,9 @@ const steps = [
     dependsOn: ['hist_probs', 'snapshot', 'etf_diagnostic'],
     isComplete: () => {
       const doc = readJson(AUDIT_REPORT);
-      return fileUpdatedSince(AUDIT_REPORT, campaignStartMs) && doc?.summary?.full_universe === true;
+      return fileUpdatedSince(AUDIT_REPORT, campaignStartMs)
+        && doc?.summary?.full_universe === true
+        && (doc?.summary?.failure_family_count ?? Infinity) === 0;
     },
   },
   {
