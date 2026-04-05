@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0",
-  "asOf": "2026-04-04T07:55:48.312Z",
+  "asOf": "2026-04-05T08:01:29.658Z",
   "baseline": {
     "expectedUniverse": 2453,
     "pipeline": {
@@ -12,19 +12,19 @@
       "missing": [
         {
           "ticker": "AKE",
-          "reason": "PROVIDER_HTTP_ERROR"
+          "reason": "NO_EOD_BARS"
         },
         {
           "ticker": "MPLT",
-          "reason": "PROVIDER_HTTP_ERROR"
+          "reason": "NOT_SUPPORTED_SHORT_HISTORY"
         },
         {
           "ticker": "NAVN",
-          "reason": "PROVIDER_HTTP_ERROR"
+          "reason": "NOT_SUPPORTED_SHORT_HISTORY"
         },
         {
           "ticker": "P5N994",
-          "reason": "PROVIDER_HTTP_ERROR"
+          "reason": "NO_EOD_BARS"
         }
       ]
     },
