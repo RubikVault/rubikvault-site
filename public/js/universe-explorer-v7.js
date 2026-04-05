@@ -1,5 +1,5 @@
 (function () {
-  const CLASS_ORDER = ['ALL', 'STOCK', 'ETF', 'FUND', 'CRYPTO', 'FOREX', 'BOND', 'INDEX', 'OTHER'];
+  const CLASS_ORDER = ['ALL', 'STOCK', 'ETF', 'BOND'];
   const SORT_FIELDS = [
     { key: 'symbol', label: 'Symbol' },
     { key: 'name', label: 'Name' },
@@ -38,11 +38,7 @@
     const aliases = new Map([
       ['STOCKS', 'STOCK'],
       ['ETFS', 'ETF'],
-      ['FUNDS', 'FUND'],
       ['BONDS', 'BOND'],
-      ['INDICES', 'INDEX'],
-      ['CRYPTOS', 'CRYPTO'],
-      ['FX', 'FOREX']
     ]);
     const resolved = aliases.get(raw) || raw;
     return CLASS_ORDER.includes(resolved) ? resolved : 'ALL';
@@ -498,7 +494,7 @@
   function UniverseExplorerVariantC(context) {
     const statusOptions = getStatusOptions(context.summary);
     const exchangeOptions = getExchangeOptions(context.summary).slice(0, 10);
-    const classTabs = ['ALL', 'STOCK', 'FUND', 'ETF', 'CRYPTO', 'OTHER'];
+    const classTabs = ['ALL', 'STOCK', 'ETF', 'BOND'];
 
     return `
       <section data-testid="ue-variant-C">

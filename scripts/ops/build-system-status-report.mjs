@@ -1017,7 +1017,7 @@ function main() {
       automation_severity: automation.severity,
       data_layer_severity: [steps.market_data_refresh, steps.q1_delta_ingest, steps.quantlab_daily_report, steps.hist_probs]
         .reduce((acc, step) => severityRank(step.severity) > severityRank(acc) ? step.severity : acc, 'ok'),
-      primary_blocker: rootCauses[0]?.title || null,
+      primary_blocker: (rootCauses.slice().sort((a, b) => severityRank(b.severity) - severityRank(a.severity))[0])?.title || null,
     },
     remote_workflows: Object.fromEntries(
       Object.entries(remoteHealth.runs).map(([wf, run]) => [wf, {

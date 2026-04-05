@@ -6,6 +6,7 @@
 import { computeIndicators } from './eod-indicators.mjs';
 import { getStaticBars } from './history-store.mjs';
 import { makeContractState, REASON_CODES } from './stock-insights-v4.js';
+import { buildAssetSegmentationProfile } from './asset-segmentation.mjs';
 
 function pickAsOf(...values) {
   for (const value of values) {
@@ -122,6 +123,12 @@ function buildInputFingerprints({ ticker, bars, stats, universe, scientificState
       source: quantlabState?.source || null,
       asset_class: quantlabState?.value?.assetClass || null,
     },
+    segmentation: {
+      market_cap_bucket: stats?.market_cap_bucket || null,
+      liquidity_bucket: stats?.liquidity_bucket || null,
+      learning_lane: stats?.learning_lane || null,
+      blue_chip_core: stats?.blue_chip_core === true,
+    },
   };
 }
 
@@ -203,11 +210,25 @@ export async function loadRequestCoreInputs(ticker, { request, assetFetcher = nu
   const bars = await getStaticBars(ticker, origin) || [];
   const indicatorOut = computeIndicators(Array.isArray(bars) ? bars : []);
   const stats = mapIndicatorsToStats(indicatorOut?.indicators || []);
+  const fundamentals = await fetchJson(`/data/fundamentals/${encodeURIComponent(String(ticker || '').toUpperCase())}.json`);
   // Skip loading large gzip files (search_exact_by_symbol.json.gz, stocks.max.symbols.json)
   // to prevent Worker memory limit exceeded on Cloudflare Pages.
   const universe = buildUniversePayload({ ticker, searchExact: null, universeSymbols: null });
+  const segmentationProfile = buildAssetSegmentationProfile({
+    ticker,
+    assetClass: 'stock',
+    marketCapUsd: fundamentals?.marketCap,
+    liquidityScore: stats?.liquidity_score,
+    liquidityState: null,
+    exchange: universe?.exchange,
+  });
+  stats.market_cap = fundamentals?.marketCap ?? null;
+  stats.market_cap_bucket = segmentationProfile.market_cap_bucket;
+  stats.liquidity_bucket = segmentationProfile.liquidity_bucket;
+  stats.learning_lane = segmentationProfile.learning_lane;
+  stats.blue_chip_core = segmentationProfile.blue_chip_core === true;
   const as_of = Array.isArray(bars) && bars.length ? bars[bars.length - 1]?.date || null : null;
-  return { bars, stats, universe, as_of };
+  return { bars, stats, universe, fundamentals, segmentationProfile, as_of };
 }
 
 async function loadQuantlabState(ticker, { fetchJson }) {
@@ -383,6 +404,19 @@ export async function assembleDecisionInputs(ticker, {
   const universe = resolvedCoreInputs?.universe && typeof resolvedCoreInputs.universe === 'object'
     ? resolvedCoreInputs.universe
     : buildUniversePayload({ ticker, searchExact: null, universeSymbols: null });
+  const fundamentals = resolvedCoreInputs?.fundamentals && typeof resolvedCoreInputs.fundamentals === 'object'
+    ? resolvedCoreInputs.fundamentals
+    : null;
+  const segmentationProfile = resolvedCoreInputs?.segmentationProfile && typeof resolvedCoreInputs.segmentationProfile === 'object'
+    ? resolvedCoreInputs.segmentationProfile
+    : buildAssetSegmentationProfile({
+      ticker,
+      assetClass: quantlabState?.value?.assetClass || 'stock',
+      marketCapUsd: fundamentals?.marketCap,
+      liquidityScore: stats?.liquidity_score,
+      liquidityState: null,
+      exchange: universe?.exchange,
+    });
   const as_of = pickAsOf(
     resolvedCoreInputs?.as_of,
     bars[bars.length - 1]?.date,
@@ -397,6 +431,8 @@ export async function assembleDecisionInputs(ticker, {
     bars,
     stats,
     universe,
+    fundamentals,
+    segmentationProfile,
     scientificState: modelStates.scientificState,
     forecastState: modelStates.forecastState,
     elliottState: modelStates.elliottState,
@@ -409,6 +445,8 @@ export async function assembleDecisionInputs(ticker, {
     bars,
     stats,
     universe,
+    fundamentals,
+    segmentationProfile,
     scientificState: modelStates.scientificState,
     forecastState: modelStates.forecastState,
     elliottState: modelStates.elliottState,

@@ -1,3 +1,8 @@
+import {
+  getUniverseAssetClassOptions,
+  normalizeUniverseAssetClassFilter,
+} from './js/universe-ssot.js';
+
 function normText(v) {
   return String(v || '').trim();
 }
@@ -139,19 +144,7 @@ function suggestionDedupeKey(item) {
 }
 
 function normalizeAssetClass(v) {
-  const raw = String(v || '').trim().toUpperCase();
-  if (!raw || raw === 'ALL') return 'all';
-  const aliases = new Map([
-    ['STOCKS', 'stock'],
-    ['EQUITIES', 'stock'],
-    ['ETFS', 'etf'],
-    ['FUNDS', 'fund'],
-    ['BONDS', 'bond'],
-    ['INDICES', 'index'],
-    ['FX', 'forex'],
-    ['CRYPTOS', 'crypto']
-  ]);
-  return aliases.get(raw) || raw.toLowerCase();
+  return normalizeUniverseAssetClassFilter(v);
 }
 
 export async function attachSearchUI(rootElement, options = {}) {
@@ -165,16 +158,7 @@ export async function attachSearchUI(rootElement, options = {}) {
   const enableAssetClassFilter = options.enableAssetClassFilter !== false;
   const assetClassOptions = Array.isArray(options.assetClassOptions) && options.assetClassOptions.length
     ? options.assetClassOptions
-    : [
-      { value: 'all', label: 'All' },
-      { value: 'stock', label: 'Stocks' },
-      { value: 'etf', label: 'ETFs' },
-      { value: 'fund', label: 'Funds' },
-      { value: 'crypto', label: 'Crypto' },
-      { value: 'forex', label: 'Forex' },
-      { value: 'bond', label: 'Bonds' },
-      { value: 'index', label: 'Indices' }
-    ];
+    : getUniverseAssetClassOptions();
   let activeAssetClass = normalizeAssetClass(options.assetClass || 'all');
 
   const pageDebug = (() => {

@@ -5,6 +5,7 @@ import path from 'node:path';
 import { REPO_ROOT, nowIso, toFinite } from './lib/common.mjs';
 import { loadV7Config, resolvePathMaybe } from './lib/config.mjs';
 import { readJsonGz, writeJsonGz } from './lib/gzip-json.mjs';
+import { isAllowedWebUniverseRecord } from '../../public/js/universe-ssot.js';
 
 function normalizeTypeNorm(v) {
   const t = String(v || 'OTHER').toUpperCase();
@@ -66,6 +67,7 @@ async function run() {
 
   const rankedRows = snapshot.records
     .filter((row) => row && typeof row === 'object')
+    .filter((row) => isAllowedWebUniverseRecord(row))
     .map((row) => {
       const layer = row?.computed?.layer || null;
       return {
@@ -155,4 +157,3 @@ run().catch((err) => {
   process.stderr.write(`${JSON.stringify({ status: 'FAIL', reason: String(err?.message || err) })}\n`);
   process.exit(1);
 });
-

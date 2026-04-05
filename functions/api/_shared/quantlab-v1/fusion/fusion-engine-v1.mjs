@@ -10,6 +10,9 @@ import { resolveWeights } from './segment-weight-resolver.mjs';
  * @param {Object} config
  * @param {string} config.horizon
  * @param {string} config.asset_class
+ * @param {string} [config.liquidity_bucket]
+ * @param {string} [config.market_cap_bucket]
+ * @param {string} [config.learning_lane]
  * @param {string} config.regime_bucket
  * @returns {{ fused_score: number, fused_confidence: number, source_contributions: Object, fallback_level: string, weights_version: string }}
  */
@@ -28,6 +31,9 @@ export function fuseContracts(contracts, config) {
   const { weights, fallback_level, version, regime_transition_active } = resolveWeights({
     horizon: config.horizon,
     asset_class: config.asset_class,
+    liquidity_bucket: config.liquidity_bucket || 'all',
+    market_cap_bucket: config.market_cap_bucket || 'all',
+    learning_lane: config.learning_lane || 'all',
     regime_bucket: config.regime_bucket,
     sources,
     regimeContext: config.regimeContext,

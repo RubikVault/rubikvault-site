@@ -214,8 +214,13 @@ def parse_args(argv: Iterable[str]) -> argparse.Namespace:
 
 def load_allowlist(path: Path, max_assets: int) -> list[str]:
     payload = json.loads(path.read_text())
+    if isinstance(payload, dict):
+        if isinstance(payload.get("canonical_ids"), list):
+            payload = payload.get("canonical_ids")
+        elif isinstance(payload.get("ids"), list):
+            payload = payload.get("ids")
     if not isinstance(payload, list):
-        raise RuntimeError(f"allowlist_not_json_list:{path}")
+        raise RuntimeError(f"allowlist_not_json_list_or_canonical_ids:{path}")
     ids = [str(v).strip() for v in payload if str(v).strip()]
     if max_assets > 0:
         ids = ids[: max_assets]

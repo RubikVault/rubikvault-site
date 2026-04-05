@@ -185,11 +185,7 @@
               <option value="all">All Assets</option>
               <option value="stock">Stocks</option>
               <option value="etf">ETFs</option>
-              <option value="fund">Funds</option>
-              <option value="crypto">Crypto</option>
-              <option value="forex">Forex</option>
               <option value="bond">Bonds</option>
-              <option value="index">Indices</option>
             </select>
           </div>
           <div id="coverage-summary-text"
@@ -2191,7 +2187,7 @@
         const { response: summaryRes, payload: summary } = await fetchJson(V7_UNIVERSE_SUMMARY_URL);
         const total = Number(summary?.totals?.all?.count || 0);
         if (summaryRes?.ok && total > 0) {
-          const text = `Universe: ${total.toLocaleString('en-US')} v7 stocks`;
+          const text = `Universe: ${total.toLocaleString('en-US')} v7 assets`;
           coverageSummaryEl.textContent = text;
           try { localStorage.setItem('rv_coverage_cache', JSON.stringify({ text, ts: Date.now() })); } catch (_) { }
           return;
@@ -2218,7 +2214,7 @@
 
     function normalizeAssetClass(value) {
       const normalized = String(value || 'all').trim().toLowerCase();
-      const allowed = new Set(['all', 'stock', 'etf', 'fund', 'crypto', 'forex', 'bond', 'index']);
+      const allowed = new Set(['all', 'stock', 'etf', 'bond']);
       return allowed.has(normalized) ? normalized : 'all';
     }
 

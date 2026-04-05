@@ -114,9 +114,12 @@ async function main() {
   }
   const ssotHistory200Cap = new Set();
   const ssotHistory200NoPack = new Set();
+  const ssotByType = {};
   for (const [sym, row] of ssotSymbolRows.entries()) {
     const barsCount = Number(row?.bars_count || 0);
     const hasPack = Boolean(String(row?.pointers?.history_pack || '').trim());
+    const typeNorm = String(row?.type_norm || 'OTHER').toUpperCase();
+    ssotByType[typeNorm] = (ssotByType[typeNorm] || 0) + 1;
     if (Number.isFinite(barsCount) && barsCount >= 200) {
       ssotHistory200Cap.add(sym);
     } else if (!hasPack) {
@@ -199,7 +202,11 @@ async function main() {
       marketphase_deep_canonical_summary: 'public/data/universe/v7/read_models/marketphase_deep_canonical_summary.json'
     },
     counts: {
+      ssot_assets_max: ssotSet.size,
       ssot_stocks_max: ssotSet.size,
+      ssot_stocks_only_max: Number(ssotByType.STOCK || 0),
+      ssot_etfs_max: Number(ssotByType.ETF || 0),
+      ssot_context_bonds_max: Number(ssotByType.BOND || 0),
       ssot_stocks_history_200_cap: ssotHistory200Cap.size,
       ssot_stocks_lt200_or_no_pack_gap: ssotSet.size - ssotHistory200Cap.size,
       ssot_stocks_lt200_no_pack: ssotHistory200NoPack.size,
@@ -234,6 +241,11 @@ async function main() {
       forecast_effective_canonical: forecastEffectiveCanonical.size,
       marketphase_effective_canonical: marketphaseEffectiveCanonical.size,
       elliott_effective_canonical: elliottEffectiveCanonical.size
+    },
+    classes: {
+      allowed_web_universe: ['STOCK', 'ETF', 'BOND'],
+      removed_from_web_universe: ['FUND', 'CRYPTO', 'FOREX', 'INDEX', 'OTHER'],
+      by_type_norm: ssotByType
     },
     parity: {
       effective_equal_scientific_forecast_elliott:

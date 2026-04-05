@@ -2,6 +2,8 @@
 // Shared final interpretation for the stock analyzer.
 // Emits a conservative overall verdict plus real short/medium/long horizon slices.
 
+import { buildAssetSegmentationProfile } from './asset-segmentation.mjs';
+
 export const VERDICT = Object.freeze({
   BUY: 'BUY',
   WAIT: 'WAIT',
@@ -263,6 +265,38 @@ function normalizeRuntimeControl(runtimeControl = null) {
   return { learningStatus, safetySwitch };
 }
 
+function resolveSegmentationProfile(inputProfile, stats = {}, states = {}, fundamentals = null) {
+  if (inputProfile && typeof inputProfile === 'object') return inputProfile;
+  return buildAssetSegmentationProfile({
+    assetClass: 'stock',
+    marketCapUsd: fundamentals?.marketCap ?? stats?.market_cap ?? null,
+    liquidityScore: stats?.liquidity_score ?? null,
+    liquidityState: states?.liquidity ?? null,
+  });
+}
+
+function applySegmentProtection(segmentationProfile, metaLabeler) {
+  if (!segmentationProfile || typeof segmentationProfile !== 'object') {
+    return {
+      buyEligible: metaLabeler.buyEligible,
+      abstainReason: metaLabeler.abstainReason || null,
+      protectionTriggered: false,
+    };
+  }
+  if (segmentationProfile.promotion_eligible !== false) {
+    return {
+      buyEligible: metaLabeler.buyEligible,
+      abstainReason: metaLabeler.abstainReason || null,
+      protectionTriggered: false,
+    };
+  }
+  return {
+    buyEligible: false,
+    abstainReason: segmentationProfile.protection_reasons?.[0] || metaLabeler.abstainReason || 'SEGMENT_PROTECTION_BLOCK',
+    protectionTriggered: true,
+  };
+}
+
 function applyRuntimeSafety({ buyEligible, abstainReason, runtimeControl }) {
   const normalized = normalizeRuntimeControl(runtimeControl);
   const actions = Array.isArray(normalized.safetySwitch?.actions) ? normalized.safetySwitch.actions : [];
@@ -464,7 +498,7 @@ function tacticalActionForVerdict(verdict) {
   return 'HOLD';
 }
 
-function buildDecisionSlice({ horizon, scores, gates, states, stats, scientific, forecast, elliott, quantlab, runtimeControl, breakoutState }) {
+function buildDecisionSlice({ horizon, scores, gates, states, stats, scientific, forecast, elliott, quantlab, runtimeControl, breakoutState, segmentationProfile, fundamentals }) {
   const setupType = deriveSetupType(states, breakoutState);
   const strategicBias = deriveStrategicBias(scores.trend);
   const regimeTag = deriveRegimeTag(stats, states);
@@ -531,8 +565,12 @@ function buildDecisionSlice({ horizon, scores, gates, states, stats, scientific,
     stats,
     states,
   });
-  const baseBuyEligible = metaLabeler.buyEligible;
-  const baseAbstainReason = baseBuyEligible ? null : (metaLabeler.abstainReason || gates[0] || (verdict === VERDICT.BUY ? null : 'NO_CLEAR_EDGE'));
+  const segmentGate = applySegmentProtection(
+    resolveSegmentationProfile(segmentationProfile, stats, states, fundamentals),
+    metaLabeler,
+  );
+  const baseBuyEligible = segmentGate.buyEligible;
+  const baseAbstainReason = baseBuyEligible ? null : (segmentGate.abstainReason || metaLabeler.abstainReason || gates[0] || (verdict === VERDICT.BUY ? null : 'NO_CLEAR_EDGE'));
   const runtimeGate = applyRuntimeSafety({
     buyEligible: baseBuyEligible,
     abstainReason: baseAbstainReason,
@@ -554,6 +592,7 @@ function buildDecisionSlice({ horizon, scores, gates, states, stats, scientific,
     buy_eligible: runtimeGate.buyEligible,
     learning_status: runtimeGate.learningStatus,
     safety_switch: runtimeGate.safetySwitch,
+    segmentation: resolveSegmentationProfile(segmentationProfile, stats, states, fundamentals),
     regime_tag: regimeTag,
     contributor_agreement: contributorAgreement,
     expected_edge: expectedEdge,
@@ -562,7 +601,7 @@ function buildDecisionSlice({ horizon, scores, gates, states, stats, scientific,
   };
 }
 
-function buildOverallDecision(horizonSlices, states, runtimeControl, scientific = null, breakoutState = null) {
+function buildOverallDecision(horizonSlices, states, runtimeControl, scientific = null, breakoutState = null, stats = {}, segmentationProfile = null, fundamentals = null) {
   const short = horizonSlices.short;
   const medium = horizonSlices.medium;
   const long = horizonSlices.long;
@@ -599,6 +638,12 @@ function buildOverallDecision(horizonSlices, states, runtimeControl, scientific 
       : medium?.confidence_bucket || CONFIDENCE.LOW;
   const buyEligible = verdict === VERDICT.BUY && confidence === CONFIDENCE.HIGH && allGates.length === 0;
   const regimeTag = medium?.regime_tag || long?.regime_tag || short?.regime_tag || null;
+  const resolvedSegmentation = resolveSegmentationProfile(
+    segmentationProfile || medium?.segmentation || short?.segmentation || long?.segmentation,
+    stats,
+    states,
+    fundamentals,
+  );
   const runtimeGate = applyRuntimeSafety({
     buyEligible: buyEligible && Boolean(medium?.buy_eligible || short?.buy_eligible || long?.buy_eligible),
     abstainReason: buyEligible ? null : (medium?.abstain_reason || short?.abstain_reason || long?.abstain_reason || allGates[0] || 'NO_CLEAR_EDGE'),
@@ -663,6 +708,7 @@ function buildOverallDecision(horizonSlices, states, runtimeControl, scientific 
     buy_eligible: runtimeGate.buyEligible,
     learning_status: runtimeGate.learningStatus,
     safety_switch: runtimeGate.safetySwitch,
+    segmentation: resolvedSegmentation,
     regime_tag: regimeTag,
     contributor_agreement: medium?.contributor_agreement ?? short?.contributor_agreement ?? long?.contributor_agreement ?? null,
     expected_edge: medium?.expected_edge ?? short?.expected_edge ?? long?.expected_edge ?? null,
@@ -684,6 +730,8 @@ export function makeDecision(input = {}, legacyStats = null, legacyClose = null)
   const elliott = normalized.elliott || null;
   const quantlab = normalized.quantlab || null;
   const runtimeControl = normalized.runtimeControl || null;
+  const fundamentals = normalized.fundamentals || null;
+  const segmentationProfile = resolveSegmentationProfile(normalized.segmentationProfile, stats, states, fundamentals);
   normalized.breakoutState = normalized.breakoutState || null;
   const gates = evaluateHardGates(states);
   const baseScores = computeBaseScores({ stats, close, states, scientific, quantlab, runtimeControl });
@@ -691,11 +739,11 @@ export function makeDecision(input = {}, legacyStats = null, legacyClose = null)
   const horizons = Object.fromEntries(
     Object.entries(HORIZON_POLICIES).map(([key, policy]) => {
       const scores = applyHorizonPolicy(baseScores, policy);
-      return [key, buildDecisionSlice({ horizon: key, scores, gates, states, stats, scientific, forecast, elliott, quantlab, runtimeControl, breakoutState: normalized.breakoutState })];
+      return [key, buildDecisionSlice({ horizon: key, scores, gates, states, stats, scientific, forecast, elliott, quantlab, runtimeControl, breakoutState: normalized.breakoutState, segmentationProfile, fundamentals })];
     }),
   );
 
-  const overall = buildOverallDecision(horizons, states, runtimeControl, scientific, normalized.breakoutState);
+  const overall = buildOverallDecision(horizons, states, runtimeControl, scientific, normalized.breakoutState, stats, segmentationProfile, fundamentals);
 
   return {
     ...overall,

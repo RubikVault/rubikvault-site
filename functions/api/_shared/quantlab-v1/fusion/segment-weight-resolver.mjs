@@ -2,7 +2,7 @@
  * QuantLab V1 — Segment Weight Resolver
  * Resolves weights with 5-tier fallback hierarchy + regime transition guard.
  */
-import { loadLatestWeights, getDefaultWeights } from '../weight-history.mjs';
+import { loadLatestWeights, getDefaultWeights, getSegmentNode } from '../weight-history.mjs';
 import { detectTransition, applyRegimeDamping } from '../regime-transition-guard.mjs';
 
 const MIN_SAMPLES_FOR_SEGMENT = 20;
@@ -12,34 +12,47 @@ const MIN_SAMPLES_FOR_SEGMENT = 20;
  * @param {Object} params
  * @param {string} params.horizon
  * @param {string} params.asset_class
+ * @param {string} [params.liquidity_bucket]
+ * @param {string} [params.market_cap_bucket]
+ * @param {string} [params.learning_lane]
  * @param {string} params.regime_bucket
  * @param {string[]} params.sources
  * @param {Object} [params.regimeContext] - { current, previous, history } for transition detection
  * @returns {{ weights, fallback_level, fallback_reason, sample_count, min_required_samples, version, regime_transition_active }}
  */
-export function resolveWeights({ horizon, asset_class, regime_bucket, sources, regimeContext }) {
+export function resolveWeights({
+  horizon,
+  asset_class,
+  liquidity_bucket = 'all',
+  market_cap_bucket = 'all',
+  learning_lane = 'all',
+  regime_bucket,
+  sources,
+  regimeContext,
+}) {
   const snapshot = loadLatestWeights();
   const w = snapshot.weights;
 
   let result;
 
-  // Try exact segment match
-  const exact = trySegment(w, horizon, asset_class, regime_bucket, sources);
-  if (exact) {
-    result = { weights: exact.weights, fallback_level: 'exact', fallback_reason: null, sample_count: exact.sample_count };
-  }
-
-  if (!result) {
-    const allAC = trySegment(w, horizon, 'all', regime_bucket, sources);
-    if (allAC) {
-      result = { weights: allAC.weights, fallback_level: 'all_asset_class', fallback_reason: `no segment for asset_class=${asset_class}`, sample_count: allAC.sample_count };
-    }
-  }
-
-  if (!result) {
-    const allRegime = trySegment(w, horizon, 'all', 'all', sources);
-    if (allRegime) {
-      result = { weights: allRegime.weights, fallback_level: 'all_regime', fallback_reason: `no segment for regime=${regime_bucket}`, sample_count: allRegime.sample_count };
+  const candidates = buildCandidateSegments({
+    horizon,
+    asset_class,
+    liquidity_bucket,
+    market_cap_bucket,
+    learning_lane,
+    regime_bucket,
+  });
+  for (const candidate of candidates) {
+    const hit = trySegment(w, candidate, sources);
+    if (hit) {
+      result = {
+        weights: hit.weights,
+        fallback_level: candidate.label,
+        fallback_reason: candidate.reason,
+        sample_count: hit.sample_count,
+      };
+      break;
     }
   }
 
@@ -80,8 +93,66 @@ export function resolveWeights({ horizon, asset_class, regime_bucket, sources, r
   };
 }
 
-function trySegment(w, horizon, ac, regime, sources) {
-  const segment = w?.[horizon]?.[ac]?.[regime];
+function buildCandidateSegments({
+  horizon,
+  asset_class,
+  liquidity_bucket,
+  market_cap_bucket,
+  learning_lane,
+  regime_bucket,
+}) {
+  const laneCandidates = [learning_lane];
+  if (learning_lane === 'blue_chip_core') laneCandidates.push('core');
+  laneCandidates.push('all');
+  const uniqueLaneCandidates = [...new Set(laneCandidates.filter(Boolean))];
+  const regimeCandidates = [...new Set([regime_bucket, 'all'].filter(Boolean))];
+  const marketCapCandidates = [...new Set([market_cap_bucket, 'all'].filter(Boolean))];
+  const liquidityCandidates = [...new Set([liquidity_bucket, 'all'].filter(Boolean))];
+  const assetCandidates = [...new Set([asset_class, 'all'].filter(Boolean))];
+  const horizonCandidates = [...new Set([horizon, 'all'].filter(Boolean))];
+  const candidates = [];
+  for (const h of horizonCandidates) {
+    for (const assetClassCandidate of assetCandidates) {
+      for (const liquidityCandidate of liquidityCandidates) {
+        for (const marketCapCandidate of marketCapCandidates) {
+          for (const learningLaneCandidate of uniqueLaneCandidates) {
+            for (const regimeCandidate of regimeCandidates) {
+              candidates.push({
+                segment: {
+                  horizon: h,
+                  asset_class: assetClassCandidate,
+                  liquidity_bucket: liquidityCandidate,
+                  market_cap_bucket: marketCapCandidate,
+                  learning_lane: learningLaneCandidate,
+                  regime_bucket: regimeCandidate,
+                },
+                label: [
+                  h === horizon ? 'exact_horizon' : 'all_horizon',
+                  assetClassCandidate === asset_class ? 'exact_asset' : 'all_asset',
+                  liquidityCandidate === liquidity_bucket ? 'exact_liquidity' : 'all_liquidity',
+                  marketCapCandidate === market_cap_bucket ? 'exact_market_cap' : 'all_market_cap',
+                  learningLaneCandidate === learning_lane ? 'exact_lane' : 'all_lane',
+                  regimeCandidate === regime_bucket ? 'exact_regime' : 'all_regime',
+                ].join('+'),
+                reason: null,
+              });
+            }
+          }
+        }
+      }
+    }
+  }
+  const seen = new Set();
+  return candidates.filter((candidate) => {
+    const key = JSON.stringify(candidate.segment);
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+function trySegment(w, candidate, sources) {
+  const segment = getSegmentNode(w, candidate.segment);
   if (!segment || typeof segment !== 'object') return null;
   if (!hasAllSources(segment, sources)) return null;
   const sampleCount = segment._sample_count ?? null;

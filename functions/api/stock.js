@@ -1596,6 +1596,8 @@ export async function onRequestGet(context) {
       bars: decisionInputs.bars,
       stats: decisionInputs.stats,
       universe: decisionInputs.universe,
+      fundamentals: decisionInputs.fundamentals,
+      segmentationProfile: decisionInputs.segmentationProfile,
       scientificState: decisionInputs.scientificState,
       forecastState: decisionInputs.forecastState,
       elliottState: decisionInputs.elliottState,

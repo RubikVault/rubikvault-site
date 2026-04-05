@@ -21,6 +21,7 @@ import {
 } from './lib/metrics.mjs';
 import { resolveSsotPath } from '../universe-v7/lib/ssot-paths.mjs';
 import { addTradingDays } from '../forecast/trading_date.mjs';
+import { buildAssetSegmentationProfile } from '../../functions/api/_shared/asset-segmentation.mjs';
 
 // ─── Paths ──────────────────────────────────────────────────────────────────
 const ROOT = process.cwd();
@@ -55,6 +56,17 @@ function ensureDir(p) { fs.mkdirSync(path.dirname(p), { recursive: true }); }
 function readJson(p) {
     try { return JSON.parse(fs.readFileSync(p, 'utf8')); }
     catch { return null; }
+}
+
+const FUNDAMENTALS_CACHE = new Map();
+
+function loadStaticFundamentals(ticker) {
+    const normalized = String(ticker || '').trim().toUpperCase();
+    if (!normalized) return null;
+    if (FUNDAMENTALS_CACHE.has(normalized)) return FUNDAMENTALS_CACHE.get(normalized);
+    const doc = readJson(path.join(ROOT, 'public/data/fundamentals', `${normalized}.json`)) || null;
+    FUNDAMENTALS_CACHE.set(normalized, doc);
+    return doc;
 }
 
 function readNdjson(p) {
@@ -354,6 +366,14 @@ function decorateAnalyzerRecord(base, date, policy, sourceMeta) {
     const ticker = String(base?.ticker || '').toUpperCase();
     const horizon = String(base?.horizon || 'na');
     const assetClass = String(base?.asset_class || 'stock').toLowerCase();
+    const fundamentals = loadStaticFundamentals(ticker);
+    const segmentation = buildAssetSegmentationProfile({
+        ticker,
+        assetClass,
+        marketCapUsd: fundamentals?.marketCap ?? base?.market_cap_usd ?? null,
+        liquidityScore: base?.analyzer_liquidity_score ?? base?.liquidity_score ?? null,
+        liquidityState: base?.liquidity_state ?? null,
+    });
     const costDefaults = estimateTradingCosts(assetClass);
     const featureHash = stableHash({
         ticker,
@@ -385,6 +405,12 @@ function decorateAnalyzerRecord(base, date, policy, sourceMeta) {
         buy_eligible: false,
         abstain_reason: null,
         gates: [],
+        liquidity_bucket: segmentation.liquidity_bucket,
+        market_cap_bucket: segmentation.market_cap_bucket,
+        learning_lane: segmentation.learning_lane,
+        blue_chip_core: segmentation.blue_chip_core,
+        primary_learning_eligible: segmentation.primary_learning_eligible,
+        promotion_eligible: segmentation.promotion_eligible,
         rank_score: base.quality_score ?? null,
         regime_tag: base?.regime_tag || classifyRegimeTag(base),
         estimated_costs_bps: costDefaults.estimated_costs_bps,
@@ -1219,6 +1245,30 @@ function computeFeatureMetrics(feature, date, lookbackDays = 30) {
         };
     }
 
+    const bySegment = {};
+    for (const segmentKey of [...new Set(allOutcomes.map((row) => {
+        const assetClass = String(row?.asset_class || 'stock').trim() || 'stock';
+        const liquidityBucket = String(row?.liquidity_bucket || 'unknown').trim() || 'unknown';
+        const marketCapBucket = String(row?.market_cap_bucket || 'unknown').trim() || 'unknown';
+        const learningLane = String(row?.learning_lane || 'core').trim() || 'core';
+        return `${assetClass}|${liquidityBucket}|${marketCapBucket}|${learningLane}`;
+    }).filter(Boolean))]) {
+        const [assetClass, liquidityBucket, marketCapBucket, learningLane] = segmentKey.split('|');
+        const segmentRows = allOutcomes.filter((row) => (
+            String(row?.asset_class || 'stock').trim() === assetClass
+            && String(row?.liquidity_bucket || 'unknown').trim() === liquidityBucket
+            && String(row?.market_cap_bucket || 'unknown').trim() === marketCapBucket
+            && String(row?.learning_lane || 'core').trim() === learningLane
+        ));
+        bySegment[segmentKey] = {
+            asset_class: assetClass,
+            liquidity_bucket: liquidityBucket,
+            market_cap_bucket: marketCapBucket,
+            learning_lane: learningLane,
+            ...metricBucket(segmentRows, date),
+        };
+    }
+
     return {
         predictions_total: allOutcomes.length,
         outcomes_resolved: allOutcomes.filter(o => o.y != null).length,
@@ -1238,6 +1288,7 @@ function computeFeatureMetrics(feature, date, lookbackDays = 30) {
         coverage_7d: round(last7d.length / 7, 2),
         by_horizon: byHorizon,
         by_asset_class: byAssetClass,
+        by_segment: bySegment,
         false_positive_classes: summarizeFalsePositives(allOutcomes),
         trend_accuracy: trend(acc7d, accPrior, false),
         trend_brier: trend(brier7d, brierPrior, true),

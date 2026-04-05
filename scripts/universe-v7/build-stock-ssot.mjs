@@ -5,6 +5,11 @@ import path from 'node:path';
 import zlib from 'node:zlib';
 import readline from 'node:readline';
 import { PUBLIC_SSOT_REL_DIR, MIRROR_SSOT_REL_DIR, publicSsotPath, mirrorSsotPath } from './lib/ssot-paths.mjs';
+import {
+  comparePreferredUniverseRows,
+  CONTEXT_BOND_CANONICAL_IDS,
+  isAllowedWebUniverseRecord,
+} from '../../public/js/universe-ssot.js';
 
 const REPO_ROOT = process.cwd();
 const REGISTRY_GZ = path.join(REPO_ROOT, 'public/data/universe/v7/registry/registry.ndjson.gz');
@@ -88,7 +93,7 @@ function eligibilityFromRow(input = {}) {
   };
 }
 
-async function readStockRows() {
+async function readWebUniverseRows() {
   const rows = [];
   const stream = fs.createReadStream(REGISTRY_GZ).pipe(zlib.createGunzip());
   const rl = readline.createInterface({ input: stream, crlfDelay: Infinity });
@@ -101,7 +106,14 @@ async function readStockRows() {
       continue;
     }
     const typeNorm = String(obj?.type_norm || '').toUpperCase();
-    if (typeNorm !== 'STOCK') continue;
+    const candidate = {
+      canonical_id: String(obj?.canonical_id || ''),
+      symbol: String(obj?.symbol || '').toUpperCase(),
+      type_norm: typeNorm,
+      exchange: obj?.exchange || null,
+      ticker: String(obj?.symbol || '').toUpperCase(),
+    };
+    if (!isAllowedWebUniverseRecord(candidate)) continue;
     const symbol = String(obj?.symbol || '').toUpperCase();
     const canonicalId = String(obj?.canonical_id || '');
     if (!symbol || !canonicalId) continue;
@@ -113,6 +125,7 @@ async function readStockRows() {
       canonical_id: canonicalId,
       symbol,
       name: obj?.name || null,
+      type_norm: typeNorm,
       exchange: obj?.exchange || null,
       mic: obj?.mic || null,
       country: obj?.country || null,
@@ -254,7 +267,7 @@ function intersection(sets) {
 }
 
 async function main() {
-  const rawRows = await readStockRows();
+  const rawRows = await readWebUniverseRows();
   const bestByCanonical = new Map();
   for (const row of rawRows) {
     const cid = String(row?.canonical_id || '');
@@ -272,7 +285,8 @@ async function main() {
     const symbol = String(row?.symbol || '').toUpperCase();
     if (!symbol) continue;
     const prev = bestBySymbol.get(symbol);
-    if (!prev || compareRowsForSymbolChoice(row, prev) > 0) {
+    const preferred = prev ? comparePreferredUniverseRows(row, prev) : 0;
+    if (!prev || preferred > 0 || (preferred === 0 && compareRowsForSymbolChoice(row, prev) > 0)) {
       bestBySymbol.set(symbol, row);
     }
   }
@@ -330,9 +344,12 @@ async function main() {
   );
 
   const exchangeCounts = {};
+  const classCounts = {};
   for (const row of rows) {
     const ex = String(row.exchange || 'UNKNOWN').toUpperCase();
     exchangeCounts[ex] = (exchangeCounts[ex] || 0) + 1;
+    const cls = String(row.type_norm || 'OTHER').toUpperCase();
+    classCounts[cls] = (classCounts[cls] || 0) + 1;
   }
 
   await fsp.mkdir(PUBLIC_OUT_DIR, { recursive: true });
@@ -342,11 +359,13 @@ async function main() {
     schema: 'rv_v7_stock_ssot_manifest_v1',
     generated_at: nowIso(),
     source: 'public/data/universe/v7/registry/registry.ndjson.gz',
+    analyzable_web_total: rows.length,
     stocks_total: rows.length,
     stocks_canonical_total: canonicalRows.length,
     registry_stock_rows_total: rawRows.length,
     symbols_total: symbols.length,
     by_exchange: exchangeCounts,
+    by_type_norm: classCounts,
     feature_eligible_counts: {
       analyzer: byFeature.analyzer.length,
       scientific: byFeature.scientific.length,
@@ -375,7 +394,8 @@ async function main() {
       ssot_for_new_features_canonical: 'public/data/universe/v7/ssot/stocks.max.canonical.ids.json',
       feature_symbols_map: 'public/data/universe/v7/ssot/stocks.by_feature.json',
       feature_canonical_map: 'public/data/universe/v7/ssot/stocks.canonical.by_feature.json',
-      shared_features_source: 'public/data/universe/v7/ssot/stocks.shared.features.json'
+      shared_features_source: 'public/data/universe/v7/ssot/stocks.shared.features.json',
+      context_bond_whitelist: CONTEXT_BOND_CANONICAL_IDS
     }
   };
 

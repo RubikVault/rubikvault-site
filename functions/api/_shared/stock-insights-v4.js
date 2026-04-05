@@ -508,6 +508,8 @@ export function buildStockInsightsV4Evaluation({
   bars = [],
   stats = {},
   universe = {},
+  fundamentals = null,
+  segmentationProfile = null,
   scientificState,
   forecastState,
   elliottState,
@@ -641,6 +643,12 @@ export function buildStockInsightsV4Evaluation({
       status: "ok",
       reason: REASON_CODES.OK,
     }),
+    asset_segmentation: makeContractState(segmentationProfile || null, {
+      as_of: asOf,
+      source: "stock-insights-v4.asset-segmentation",
+      status: segmentationProfile ? "ok" : "unavailable",
+      reason: segmentationProfile ? REASON_CODES.OK : REASON_CODES.NO_DATA,
+    }),
   };
 
   // Layer integration: STATE → DECISION → EXPLANATION
@@ -655,6 +663,8 @@ export function buildStockInsightsV4Evaluation({
     quantlab: quantlabState?.value || null,
     runtimeControl,
     breakoutState,
+    fundamentals,
+    segmentationProfile,
   }, {
     active_events: 0,
     contributing_clusters: 0,
@@ -687,6 +697,7 @@ export function buildStockInsightsV4Evaluation({
     forecast_meta: forecastMeta || null,
     input_fingerprints: inputFingerprints || null,
     runtime_control: runtimeControl || null,
+    segmentation: segmentationProfile || null,
     states: layerStates,
     decision: layerDecision,
     explanation: layerExplanation,

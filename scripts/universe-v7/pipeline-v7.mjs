@@ -19,6 +19,7 @@ import {
   pathExists,
   walkFiles
 } from './lib/common.mjs';
+import { comparePreferredUniverseRows, isAllowedWebUniverseRecord } from '../../public/js/universe-ssot.js';
 import { loadV7Config, resolvePathMaybe } from './lib/config.mjs';
 import { EXIT } from './lib/exit-codes.mjs';
 import { readJsonGz, readNdjsonGz, writeJsonGz, writeNdjsonGz } from './lib/gzip-json.mjs';
@@ -1568,7 +1569,7 @@ async function buildSearchAndReadModels({ registryRows, runDir, cfg }) {
   const bucketsDir = path.join(searchDir, 'buckets');
   await fs.mkdir(bucketsDir, { recursive: true });
 
-  const ranked = [...registryRows].sort((a, b) => {
+  const ranked = [...registryRows].filter((row) => isAllowedWebUniverseRecord(row)).sort((a, b) => {
     const as = rankScore(a);
     const bs = rankScore(b);
     if (as !== bs) return bs - as;
@@ -1660,7 +1661,8 @@ async function buildSearchAndReadModels({ registryRows, runDir, cfg }) {
       continue;
     }
     current.variants_count += 1;
-    if (compareGlobalBestSearchCandidate(candidate, current.best) > 0) current.best = candidate;
+    const preferred = comparePreferredUniverseRows(candidate, current.best);
+    if (preferred > 0 || (preferred === 0 && compareGlobalBestSearchCandidate(candidate, current.best) > 0)) current.best = candidate;
   }
 
   const bySymbolDoc = {};

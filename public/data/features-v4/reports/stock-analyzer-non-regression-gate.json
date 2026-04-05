@@ -1,72 +1,128 @@
 {
   "schema_version": "rv.stock-analyzer.non-regression-gate.v1",
-  "generated_at": "2026-03-30T17:54:06.503Z",
+  "generated_at": "2026-04-04T21:23:19.148Z",
   "local_base": "http://127.0.0.1:8788",
   "benchmark_base": "https://56a89a60.rubikvault-site.pages.dev",
   "ticker": "AAPL",
   "pass": false,
   "checks": {
-    "ui_logic_ok": false,
+    "ui_logic_ok": true,
     "v4_contract_ok": true,
-    "v2_summary_truth_ok": true,
-    "v2_promotion_gate_ok": true,
+    "v2_summary_truth_ok": false,
+    "v2_promotion_gate_ok": false,
     "dashboard_meta_ok": true,
-    "non_regression_unit_ok": true,
+    "non_regression_unit_ok": false,
     "ui_artifacts_ok": true,
     "dashboard_truth_ok": false
   },
   "dashboard": {
     "system_summary": {
-      "severity": "warning",
+      "severity": "critical",
       "healthy": false,
       "live_fetch_status": "ok",
       "automation_severity": "ok",
-      "data_layer_severity": "warning",
-      "primary_blocker": "Market-data refresh is aging"
+      "data_layer_severity": "critical",
+      "primary_blocker": "Historical probabilities are stale"
     },
     "meta_summary": {
-      "overall_status": "WARNING",
-      "status_severity": "warning",
+      "overall_status": "CRITICAL",
+      "status_severity": "critical",
       "status_detail": [
-        "Market-data refresh is aging"
+        "Historical probabilities are stale",
+        "Stock Analyzer universe audit has not yet covered the full stock+ETF universe",
+        "Snapshot is current but depends on degraded upstream inputs"
       ],
-      "learning_status": "STABIL ⚠️",
+      "learning_status": "VERBESSERUNG ✅",
       "live_status": "ok",
       "snapshot_age_hours": 0,
-      "data_truth_state": "Partially degraded truth: Market-data refresh is aging.",
+      "data_truth_state": "Critical truth degradation: Historical probabilities are stale.",
       "root_causes": [
         {
-          "id": "market_data_refresh_data_freshness",
-          "severity": "warning",
+          "id": "hist_probs_data_freshness",
+          "severity": "critical",
           "category": "data_freshness",
-          "title": "Market-data refresh is aging",
-          "why": "Latest v7 history refresh report was generated at 2026-03-29T16:00:00Z with observed market data only up to 2026-03-27.",
-          "impact": "No newer market history can flow into delta ingest, QuantLab raw bars, hist-probs, or the snapshot dependency chain.",
-          "fix": "Run the provider-backed history refresh first; if it does not advance, inspect provider auth/quota and refresh report outputs before touching downstream jobs.",
-          "owner": "Market Data",
-          "subsystem": "v7_history",
-          "file_ref": "scripts/quantlab/refresh_v7_history_from_eodhd.py",
-          "evidence_at": "2026-03-29T16:00:00Z",
+          "title": "Historical probabilities are stale",
+          "why": "Regime daily last market date is 2026-03-26. Historical profile coverage is 40819/71012 stock files; latest run asset classes=STOCK.",
+          "impact": "Regime and passive probability context lags the market and should not be treated as current.",
+          "fix": "Run the full historical-profile builder over the registry-backed stock+ETF universe, then verify run-summary coverage and regime date advance together.",
+          "owner": "Hist Probs",
+          "subsystem": "hist_probs",
+          "file_ref": "scripts/lib/hist-probs/run-hist-probs.mjs",
+          "evidence_at": "2026-04-04T14:31:32.434Z",
+          "source_key": "system_status"
+        },
+        {
+          "id": "stock_analyzer_universe_audit_ui_contract",
+          "severity": "critical",
+          "category": "ui_contract",
+          "title": "Stock Analyzer universe audit has not yet covered the full stock+ETF universe",
+          "why": "Latest audit processed 5/5 assets and found 3 failure families affecting 5 assets.",
+          "impact": "This is the only universe-wide proof that analyze-v4 renders all required UI contracts correctly across stocks and ETFs.",
+          "fix": "Run the full stock-analyzer universe audit over STOCK+ETF and then regenerate the dashboard status artifacts.",
+          "owner": "Stock Analyzer",
+          "subsystem": "ui_contract",
+          "file_ref": "scripts/ops/build-stock-analyzer-universe-audit.mjs",
+          "evidence_at": "2026-04-03T16:38:19.983Z",
+          "source_key": "system_status"
+        },
+        {
+          "id": "snapshot_decision_funnel",
+          "severity": "warning",
+          "category": "decision_funnel",
+          "title": "Snapshot is current but depends on degraded upstream inputs",
+          "why": "Snapshot data_asof=2026-03-30, quantlab_asof=2026-03-11, rows_emitted=60.",
+          "impact": "Snapshot rows currently render, but part of the dependency chain still lags.",
+          "fix": "Keep snapshot generation tied to explicit upstream freshness checks so QuantLab staleness cannot hide behind a fresh render timestamp.",
+          "owner": "Snapshot",
+          "subsystem": "breakout_v2",
+          "file_ref": "scripts/build-best-setups-v4.mjs",
+          "evidence_at": "2026-04-04T21:03:54.931Z",
           "source_key": "system_status"
         }
       ],
       "primary_actions": [
         {
-          "id": "market_data_refresh_data_freshness",
-          "severity": "warning",
+          "id": "hist_probs_data_freshness",
+          "severity": "critical",
           "category": "data_freshness",
-          "title": "Market-data refresh is aging",
-          "why": "Latest v7 history refresh report was generated at 2026-03-29T16:00:00Z with observed market data only up to 2026-03-27.",
-          "impact": "No newer market history can flow into delta ingest, QuantLab raw bars, hist-probs, or the snapshot dependency chain.",
-          "action": "Run the provider-backed history refresh first; if it does not advance, inspect provider auth/quota and refresh report outputs before touching downstream jobs.",
-          "owner": "Market Data",
-          "subsystem": "v7_history",
-          "file_ref": "scripts/quantlab/refresh_v7_history_from_eodhd.py"
+          "title": "Historical probabilities are stale",
+          "why": "Regime daily last market date is 2026-03-26. Historical profile coverage is 40819/71012 stock files; latest run asset classes=STOCK.",
+          "impact": "Regime and passive probability context lags the market and should not be treated as current.",
+          "action": "Run the full historical-profile builder over the registry-backed stock+ETF universe, then verify run-summary coverage and regime date advance together.",
+          "owner": "Hist Probs",
+          "subsystem": "hist_probs",
+          "file_ref": "scripts/lib/hist-probs/run-hist-probs.mjs"
+        },
+        {
+          "id": "stock_analyzer_universe_audit_ui_contract",
+          "severity": "critical",
+          "category": "ui_contract",
+          "title": "Stock Analyzer universe audit has not yet covered the full stock+ETF universe",
+          "why": "Latest audit processed 5/5 assets and found 3 failure families affecting 5 assets.",
+          "impact": "This is the only universe-wide proof that analyze-v4 renders all required UI contracts correctly across stocks and ETFs.",
+          "action": "Run the full stock-analyzer universe audit over STOCK+ETF and then regenerate the dashboard status artifacts.",
+          "owner": "Stock Analyzer",
+          "subsystem": "ui_contract",
+          "file_ref": "scripts/ops/build-stock-analyzer-universe-audit.mjs"
+        },
+        {
+          "id": "snapshot_decision_funnel",
+          "severity": "warning",
+          "category": "decision_funnel",
+          "title": "Snapshot is current but depends on degraded upstream inputs",
+          "why": "Snapshot data_asof=2026-03-30, quantlab_asof=2026-03-11, rows_emitted=60.",
+          "impact": "Snapshot rows currently render, but part of the dependency chain still lags.",
+          "action": "Keep snapshot generation tied to explicit upstream freshness checks so QuantLab staleness cannot hide behind a fresh render timestamp.",
+          "owner": "Snapshot",
+          "subsystem": "breakout_v2",
+          "file_ref": "scripts/build-best-setups-v4.mjs"
         }
       ],
-      "operating_modes": [],
-      "production_ready": true,
-      "cutover_ready": true,
+      "operating_modes": [
+        "CUTOVER_BLOCKED"
+      ],
+      "production_ready": false,
+      "cutover_ready": false,
       "v1_mode": "v1_primary_with_legacy_audit",
       "quantlab_readiness": 100,
       "quantlab_implementation": 100,
@@ -114,14 +170,10 @@
           ],
           "reason": "Q1 delta ingest can only advance after v7 history refresh touches newer packs.",
           "blocked_by": [],
-          "degraded_by": [
-            "market_data_refresh"
-          ],
+          "degraded_by": [],
           "step_label": "Q1 Delta Ingest",
           "blocked_by_labels": [],
-          "degraded_by_labels": [
-            "Market Data Refresh"
-          ]
+          "degraded_by_labels": []
         },
         {
           "id": "quantlab_daily_report",
@@ -194,16 +246,46 @@
           "degraded_by_labels": []
         },
         {
+          "id": "stock_analyzer_universe_audit",
+          "depends_on": [
+            "market_data_refresh",
+            "q1_delta_ingest",
+            "hist_probs",
+            "forecast_daily",
+            "scientific_summary",
+            "learning_daily",
+            "snapshot"
+          ],
+          "reason": "The universe-wide analyze-v4 audit is only trustworthy after all upstream data and snapshot layers are current.",
+          "blocked_by": [
+            "hist_probs"
+          ],
+          "degraded_by": [
+            "snapshot"
+          ],
+          "step_label": "Stock Analyzer Universe Audit",
+          "blocked_by_labels": [
+            "Historical Probabilities"
+          ],
+          "degraded_by_labels": [
+            "Best Setups Snapshot"
+          ]
+        },
+        {
           "id": "etf_diagnostic",
           "depends_on": [
             "snapshot"
           ],
           "reason": "ETF diagnostic explains the current snapshot funnel output.",
           "blocked_by": [],
-          "degraded_by": [],
+          "degraded_by": [
+            "snapshot"
+          ],
           "step_label": "ETF Diagnostic",
           "blocked_by_labels": [],
-          "degraded_by_labels": []
+          "degraded_by_labels": [
+            "Best Setups Snapshot"
+          ]
         },
         {
           "id": "v1_audit",
@@ -213,10 +295,14 @@
           ],
           "reason": "V1 audit requires current learning artifacts and snapshot outputs.",
           "blocked_by": [],
-          "degraded_by": [],
+          "degraded_by": [
+            "snapshot"
+          ],
           "step_label": "V1 Audit",
           "blocked_by_labels": [],
-          "degraded_by_labels": []
+          "degraded_by_labels": [
+            "Best Setups Snapshot"
+          ]
         },
         {
           "id": "cutover_readiness",
@@ -231,6 +317,2491 @@
           "degraded_by_labels": []
         }
       ],
+      "steps": {
+        "market_data_refresh": {
+          "id": "market_data_refresh",
+          "label": "Market Data Refresh",
+          "owner": "Market Data",
+          "subsystem": "v7_history",
+          "severity": "ok",
+          "summary": "Market-data refresh is current",
+          "why": "Latest v7 history refresh report was generated at 2026-04-03T19:39:10Z with observed market data only up to 2026-04-02.",
+          "next_fix": "Run the provider-backed history refresh first; if it does not advance, inspect provider auth/quota and refresh report outputs before touching downstream jobs.",
+          "file_ref": "scripts/quantlab/refresh_v7_history_from_eodhd.py",
+          "generated_at": "2026-04-03T19:39:10Z",
+          "last_success_at": "2026-04-03T19:39:10Z",
+          "generated_age_hours": 25.7,
+          "input_asof": "2026-03-01",
+          "output_asof": "2026-04-02",
+          "output_stale_days": 3,
+          "dependency_ids": [],
+          "blocked_by": [],
+          "status_detail": {
+            "assets_requested": 1,
+            "assets_fetched_with_data": 1,
+            "fetch_errors_total": 0,
+            "api_lock": null,
+            "impact": "No newer market history can flow into delta ingest, QuantLab raw bars, hist-probs, or the snapshot dependency chain."
+          },
+          "runbook": {
+            "doc_ref": "docs/ops/runbook.md",
+            "recovery_script": "scripts/ops/run-market-data-recovery.mjs",
+            "run_command": "python3 scripts/quantlab/refresh_v7_history_from_eodhd.py --allowlist-path public/data/universe/v7/ssot/stocks.max.canonical.ids.json --from-date <YYYY-MM-DD>",
+            "verify_commands": [
+              "jq '{generated_at,to_date,assets_requested,assets_fetched_with_data,fetch_errors_total}' mirrors/universe-v7/state/refresh_v7_history_from_eodhd.report.json",
+              "jq '{schema,exit_code,reason,updated_at}' public/data/universe/v7/reports/run_status.json"
+            ],
+            "outputs": [
+              "mirrors/universe-v7/state/refresh_v7_history_from_eodhd.report.json",
+              "public/data/universe/v7/reports/run_status.json"
+            ],
+            "ui_surfaces": [
+              "dashboard_v7 -> System Health / Operations",
+              "analyze-v4 trust bar freshness",
+              "frontpage data-updated banner"
+            ],
+            "failure_signals": [
+              "output_asof missing or older than the latest trading day",
+              "assets_fetched_with_data = 0 with output_asof null (pre-market run or quota exhaustion — re-run after market close)",
+              "API_LIMIT_REACHED.lock.json present"
+            ]
+          }
+        },
+        "q1_delta_ingest": {
+          "id": "q1_delta_ingest",
+          "label": "Q1 Delta Ingest",
+          "owner": "QuantLab",
+          "subsystem": "q1_delta",
+          "severity": "ok",
+          "summary": "Q1 delta ingest is current",
+          "why": "Latest successful Q1 delta ingest is anchored to ingest_date=2026-04-04 and was updated at 2026-04-04T20:53:47Z.",
+          "next_fix": "After the upstream history refresh advances, rerun the Q1 delta ingest and verify latest_success.json moves forward before rebuilding QuantLab reports.",
+          "file_ref": "scripts/quantlab/run_daily_delta_ingest_q1.py",
+          "generated_at": "2026-04-04T20:53:47Z",
+          "last_success_at": "2026-04-04T20:53:47Z",
+          "generated_age_hours": 0.4,
+          "input_asof": "2026-04-04",
+          "output_asof": "2026-04-04",
+          "output_stale_days": 1,
+          "dependency_ids": [
+            "market_data_refresh"
+          ],
+          "blocked_by": [],
+          "status_detail": {
+            "latest_success": {
+              "schema": "q1_daily_delta_ingest_latest_success_v1",
+              "updated_at": "2026-04-04T20:53:47Z",
+              "run_id": "q1delta_20260404T205345Z",
+              "job_name": "q1_daily_delta_prod_1775336025328706000_7997",
+              "ingest_date": "2026-04-04",
+              "manifest_path": "/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/jobs/q1_daily_delta_prod_1775336025328706000_7997/manifest.json",
+              "run_status_path": "/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/runs/run_id=q1delta_20260404T205345Z/q1_daily_delta_ingest_run_status.json",
+              "stats": {
+                "candidate_packs_total": 17390,
+                "selected_packs_total": 0,
+                "packs_done": 0,
+                "packs_failed": 0,
+                "bars_rows_scanned_in_selected_packs": 0,
+                "rows_filter_input_total": 0,
+                "bars_rows_emitted_delta": 0,
+                "assets_emitted_delta": 0,
+                "rows_skipped_old_or_known": 0,
+                "rows_skipped_duplicate_in_run": 0,
+                "rows_invalid": 0,
+                "rows_future_date": 0,
+                "rows_invalid_identity_or_date": 0,
+                "rows_invalid_ohlc": 0,
+                "rows_invalid_volume": 0
+              },
+              "reconciliation": {
+                "duplicate_keys_in_emitted_delta_detected": false,
+                "emitted_delta_keys_total": 0,
+                "rows_emitted_matches_keys": true,
+                "rows_filter_input_total": 0,
+                "rows_filter_accounted_total": 0,
+                "rows_filter_accounting_balanced": true,
+                "rows_emitted_delta": 0,
+                "assets_emitted_delta": 0,
+                "rows_skipped_old_or_known": 0,
+                "rows_skipped_duplicate_in_run": 0,
+                "rows_invalid": 0,
+                "rows_future_date": 0,
+                "rows_invalid_identity_or_date": 0,
+                "rows_invalid_ohlc": 0,
+                "rows_invalid_volume": 0,
+                "failed_packs_total": 0,
+                "selected_packs_total": 0,
+                "noop_no_changed_packs": true,
+                "failed_pack_ratio": 0,
+                "invalid_row_ratio": 0,
+                "stats_baseline": {
+                  "rows_filter_input_total": 0,
+                  "bars_rows_emitted_delta": 0,
+                  "rows_skipped_old_or_known": 0,
+                  "rows_skipped_duplicate_in_run": 0,
+                  "rows_invalid": 0,
+                  "rows_future_date": 0,
+                  "rows_invalid_identity_or_date": 0,
+                  "rows_invalid_ohlc": 0,
+                  "rows_invalid_volume": 0,
+                  "packs_failed": 0
+                },
+                "threshold_config": {
+                  "expect_nonzero_delta": true,
+                  "expect_min_emitted_rows": 1,
+                  "max_future_date_rows": 0,
+                  "max_invalid_rows": 0,
+                  "require_row_accounting_balanced": true,
+                  "max_failed_pack_ratio": 0.25,
+                  "max_invalid_row_ratio": 0
+                },
+                "threshold_failures": []
+              }
+            },
+            "impact": "QuantLab raw-bar freshness cannot advance until the delta ingest layer has incorporated newer market history."
+          },
+          "runbook": {
+            "doc_ref": "docs/ops/runbook.md",
+            "recovery_script": "scripts/ops/run-market-data-recovery.mjs",
+            "run_command": "python3 scripts/quantlab/run_daily_delta_ingest_q1.py --ingest-date <YYYY-MM-DD>",
+            "verify_commands": [
+              "jq '{updated_at,ingest_date,run_status}' /Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/ops/q1_daily_delta_ingest/latest_success.json"
+            ],
+            "outputs": [
+              "/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/ops/q1_daily_delta_ingest/latest_success.json"
+            ],
+            "ui_surfaces": [
+              "dashboard_v7 -> System Health / Operations",
+              "QuantLab raw freshness in analyze-v4"
+            ],
+            "failure_signals": [
+              "latest_success ingest_date does not advance",
+              "run_status reports non-zero exit_code"
+            ]
+          }
+        },
+        "quantlab_daily_report": {
+          "id": "quantlab_daily_report",
+          "label": "QuantLab Daily Report",
+          "owner": "QuantLab",
+          "subsystem": "quantlab",
+          "severity": "ok",
+          "summary": "QuantLab data plane is current",
+          "why": "QuantLab-Marktdaten sind aktuell bis 2026-04-03; der Modell-Cutoff 2026-03-11 ist im erwarteten 20T-Labelfenster.",
+          "next_fix": "Advance canonical raw part files first, then rebuild snapshot/feature-store/report so a fresh render timestamp cannot mask stale QuantLab data.",
+          "file_ref": "scripts/quantlab/build_quantlab_v4_daily_report.mjs",
+          "generated_at": "2026-04-04T21:16:02.206Z",
+          "last_success_at": "2026-04-04",
+          "generated_age_hours": 0.1,
+          "input_asof": "2026-03-11",
+          "output_asof": "2026-04-03",
+          "output_stale_days": 2,
+          "dependency_ids": [
+            "q1_delta_ingest"
+          ],
+          "blocked_by": [],
+          "status_detail": {
+            "raw_freshness": {
+              "provider": "EODHD",
+              "assetTypesRequired": [
+                "stock",
+                "etf"
+              ],
+              "latestCanonicalIngestByAssetType": {
+                "stock": "2026-03-11",
+                "etf": "2026-03-11"
+              },
+              "latestAnyIngestByAssetType": {
+                "stock": "2026-04-03",
+                "etf": "2026-04-03"
+              },
+              "latestBridgeIngestByAssetType": {
+                "stock": "2026-03-26",
+                "etf": "2026-03-26"
+              },
+              "latestCanonicalDataDateByAssetType": {
+                "stock": "2026-03-11",
+                "etf": "2026-03-11"
+              },
+              "latestAnyDataDateByAssetType": {
+                "stock": "2026-04-03",
+                "etf": "2026-04-03"
+              },
+              "latestBridgeDataDateByAssetType": {
+                "stock": "2026-03-26",
+                "etf": "2026-03-26"
+              },
+              "latestCanonicalIngestPartitionByAssetType": {
+                "stock": "2026-03-12",
+                "etf": "2026-03-12"
+              },
+              "latestAnyIngestPartitionByAssetType": {
+                "stock": "2026-04-04",
+                "etf": "2026-04-03"
+              },
+              "latestBridgeIngestPartitionByAssetType": {
+                "stock": "2026-03-26",
+                "etf": "2026-03-26"
+              },
+              "latestCanonicalRequiredIngestDate": "2026-03-11",
+              "latestAnyRequiredIngestDate": "2026-04-03",
+              "latestCanonicalRequiredDataDate": "2026-03-11",
+              "latestAnyRequiredDataDate": "2026-04-03",
+              "latestCanonicalAgeCalendarDays": 24,
+              "latestAnyAgeCalendarDays": 1,
+              "bridgeOnlyAdvanceCalendarDays": 23,
+              "requiredAssetTypesFresh": false,
+              "coverageByAssetType": {
+                "stock": {
+                  "canonical_part_dates": [
+                    "2026-02-25",
+                    "2026-03-12"
+                  ],
+                  "any_parquet_dates": [
+                    "2026-02-25",
+                    "2026-03-10",
+                    "2026-03-12",
+                    "2026-03-26",
+                    "2026-03-27",
+                    "2026-03-28",
+                    "2026-03-29",
+                    "2026-03-30",
+                    "2026-04-02",
+                    "2026-04-03",
+                    "2026-04-04"
+                  ],
+                  "bridge_only_dates": [
+                    "2026-03-26"
+                  ],
+                  "canonical_part_data_dates": [
+                    "2026-02-20",
+                    "2026-03-11"
+                  ],
+                  "any_parquet_data_dates": [
+                    "2026-02-20",
+                    "2026-03-10",
+                    "2026-03-11",
+                    "2026-03-26",
+                    "2026-03-27",
+                    "2026-03-27",
+                    "2026-03-27",
+                    "2026-03-27",
+                    "2026-04-02",
+                    "2026-04-03",
+                    "2026-04-03"
+                  ],
+                  "bridge_only_data_dates": [
+                    "2026-03-26"
+                  ]
+                },
+                "etf": {
+                  "canonical_part_dates": [
+                    "2026-02-25",
+                    "2026-03-12"
+                  ],
+                  "any_parquet_dates": [
+                    "2026-02-25",
+                    "2026-03-10",
+                    "2026-03-12",
+                    "2026-03-26",
+                    "2026-03-27",
+                    "2026-03-28",
+                    "2026-03-29",
+                    "2026-04-02",
+                    "2026-04-03"
+                  ],
+                  "bridge_only_dates": [
+                    "2026-03-26"
+                  ],
+                  "canonical_part_data_dates": [
+                    "2026-02-23",
+                    "2026-03-11"
+                  ],
+                  "any_parquet_data_dates": [
+                    "2026-02-23",
+                    "2026-03-10",
+                    "2026-03-11",
+                    "2026-03-26",
+                    "2026-03-27",
+                    "2026-03-27",
+                    "2026-03-27",
+                    "2026-04-02",
+                    "2026-04-03"
+                  ],
+                  "bridge_only_data_dates": [
+                    "2026-03-26"
+                  ]
+                }
+              },
+              "reasonCodes": [
+                "RAW_BARS_REQUIRED_TYPES_STALE:latest_required_ingest_date=2026-03-11:age_days=24",
+                "RAW_BARS_ONLY_BRIDGE_ADVANCED:latest_required_ingest_date=2026-03-11:latest_required_any_ingest_date=2026-04-03:lag_days=23"
+              ]
+            },
+            "feature_store_freshness": {
+              "version": "v4_q1panel_fullchunk_daily",
+              "snapshotId": "2026-04-04_bb773c80036e_q1step2bars_dailyauto",
+              "snapshotAsOfDate": "2026-04-04",
+              "snapshotAgeCalendarDays": 0,
+              "asOfDate": "2026-03-11",
+              "ageCalendarDays": 24,
+              "lagVsRawCanonicalCalendarDays": 0,
+              "lagVsRawAnyCalendarDays": 23,
+              "rowsTotal": 519424,
+              "asofDatesTotal": 32,
+              "manifestPath": "features/store/feature_store_version=v4_q1panel_fullchunk_daily/feature_panel_manifest.json"
+            },
+            "stock_publish_freshness": {
+              "asOfDate": "2026-03-11",
+              "ageCalendarDays": 24,
+              "lagVsFeatureStoreCalendarDays": 0,
+              "latestPath": "/data/quantlab/stock-insights/latest.json"
+            },
+            "market_data_asof": "2026-04-03",
+            "operational_freshness": {
+              "severity": "ok",
+              "label": "aktuell",
+              "message": "QuantLab-Marktdaten sind aktuell bis 2026-04-03; der Modell-Cutoff 2026-03-11 ist im erwarteten 20T-Labelfenster.",
+              "reasons": [
+                "MODEL_CUTOFF_EXPECTED:publish_asof=2026-03-11:raw_any=2026-04-03:lag_days=23",
+                "RAW_ONLY_BRIDGE_ADVANCED:raw_canonical=2026-03-11:raw_any=2026-04-03:lag_days=23"
+              ],
+              "healthy": true,
+              "reportFreshButDataStale": false
+            },
+            "overnight_stability": {
+              "jobs_total": 5,
+              "completed_jobs": 1,
+              "failed_jobs": 2,
+              "jobs_with_restarts": 3,
+              "restart_total": 6,
+              "tasks_total": 976,
+              "tasks_done": 311,
+              "tasks_failed": 8,
+              "tasks_pending": 656,
+              "task_success_rate": 0.9749,
+              "completion_rate": 0.2,
+              "stability_score_0_100": 51.37
+            },
+            "impact": "Breakout/snapshot consumers can look live while still reading stale QuantLab market input."
+          },
+          "runbook": {
+            "doc_ref": "docs/ops/runbook.md",
+            "recovery_script": "scripts/ops/run-market-data-recovery.mjs",
+            "run_command": "node scripts/quantlab/build_quantlab_v4_daily_report.mjs",
+            "verify_commands": [
+              "jq '.currentState.dataFreshness.summary,.generatedAt' public/data/quantlab/status/operational-status.json",
+              "jq '.currentState.dataFreshness.summary,.reportDate' mirrors/quantlab/reports/v4-daily/latest.json"
+            ],
+            "outputs": [
+              "public/data/quantlab/status/operational-status.json",
+              "mirrors/quantlab/reports/v4-daily/latest.json"
+            ],
+            "ui_surfaces": [
+              "analyze-v4 QuantLab / model evidence",
+              "frontpage best-setups candidate quality",
+              "dashboard_v7 QuantLab card"
+            ],
+            "failure_signals": [
+              "raw canonical or publish as-of lags current market",
+              "operational freshness severity != ok"
+            ]
+          }
+        },
+        "hist_probs": {
+          "id": "hist_probs",
+          "label": "Historical Probabilities",
+          "owner": "Hist Probs",
+          "subsystem": "hist_probs",
+          "severity": "critical",
+          "summary": "Historical probabilities are stale",
+          "why": "Regime daily last market date is 2026-03-26. Historical profile coverage is 40819/71012 stock files; latest run asset classes=STOCK.",
+          "next_fix": "Run the full historical-profile builder over the registry-backed stock+ETF universe, then verify run-summary coverage and regime date advance together.",
+          "file_ref": "scripts/lib/hist-probs/run-hist-probs.mjs",
+          "generated_at": "2026-04-04T14:31:32.434Z",
+          "last_success_at": "2026-04-04T14:31:32.434Z",
+          "generated_age_hours": 6.8,
+          "input_asof": "2026-04-03",
+          "output_asof": "2026-03-26",
+          "output_stale_days": 10,
+          "dependency_ids": [
+            "q1_delta_ingest"
+          ],
+          "blocked_by": [],
+          "status_detail": {
+            "market_regime": "bear",
+            "breadth_regime": "weak",
+            "run_summary": {
+              "ran_at": "2026-04-04T14:32:33.478Z",
+              "tickers_total": 10,
+              "tickers_processed": 10,
+              "tickers_skipped": 0,
+              "tickers_errors": 0,
+              "source_mode": "registry_asset_classes",
+              "symbols_path": null,
+              "registry_path": "/Users/michaelpuchowezki/Dev/rubikvault-site/public/data/universe/v7/registry/registry.ndjson.gz",
+              "asset_classes": [
+                "STOCK"
+              ],
+              "max_tickers": 10,
+              "elapsed_seconds": 57.1,
+              "regime_date": "2026-03-26",
+              "market_regime": "bear",
+              "volatility_regime": "normal_vol",
+              "breadth_regime": "weak"
+            },
+            "coverage": {
+              "profile_files": 40819,
+              "stock_universe_count": 71012,
+              "stock_coverage_ratio": 0.5748183405621585,
+              "default_runner_limited": true,
+              "asset_classes": [
+                "STOCK"
+              ]
+            },
+            "impact": "Regime and passive probability context lags the market and should not be treated as current."
+          },
+          "runbook": {
+            "doc_ref": "docs/ops/runbook.md",
+            "recovery_script": "scripts/ops/run-market-data-recovery.mjs",
+            "run_command": "node scripts/lib/hist-probs/run-hist-probs.mjs --registry-path public/data/universe/v7/registry/registry.ndjson.gz --asset-classes STOCK,ETF --max-tickers 0",
+            "verify_commands": [
+              "jq '{ran_at,tickers_total,tickers_processed,tickers_skipped,tickers_errors,regime_date,source_mode,asset_classes,max_tickers}' public/data/hist-probs/run-summary.json",
+              "jq '{date,market_regime,volatility_regime,breadth_regime}' public/data/hist-probs/regime-daily.json"
+            ],
+            "outputs": [
+              "public/data/hist-probs/run-summary.json",
+              "public/data/hist-probs/regime-daily.json",
+              "public/data/hist-probs/<TICKER>.json"
+            ],
+            "ui_surfaces": [
+              "analyze-v4 Historical Performance",
+              "analyze-v4 Historical signal profile",
+              "dashboard_v7 hist_probs card"
+            ],
+            "failure_signals": [
+              "regime_date stale",
+              "run-summary processed count below universe target",
+              "ETF tickers not included in asset_classes"
+            ]
+          }
+        },
+        "forecast_daily": {
+          "id": "forecast_daily",
+          "label": "Forecast Daily",
+          "owner": "Forecast",
+          "subsystem": "forecast",
+          "severity": "ok",
+          "summary": "Forecast daily batch is healthy",
+          "why": "Forecast latest artifact was generated at 2026-03-30T18:23:04.177Z with as-of 2026-03-30.",
+          "next_fix": "Use scripts/forecast/run_daily.mjs as the primary batch health check and treat engine-level files as implementation detail unless run_daily fails.",
+          "file_ref": "scripts/forecast/run_daily.mjs",
+          "generated_at": "2026-03-30T18:23:04.177Z",
+          "last_success_at": "2026-03-26T12:32:13Z",
+          "generated_age_hours": 122.9,
+          "input_asof": null,
+          "output_asof": "2026-03-30",
+          "output_stale_days": 6,
+          "dependency_ids": [],
+          "blocked_by": [],
+          "status_detail": {
+            "latest_execution": {
+              "mode": "day",
+              "job_dir": "/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/jobs/day_q1_safe_20260326_103000",
+              "refresh_status": "failed",
+              "refresh_finished_at": "2026-03-26T14:42:09Z",
+              "created_at": "2026-03-26T10:30:01Z",
+              "step_name": "forecast_run_daily",
+              "step_status": "completed",
+              "started_at": "2026-03-26T10:30:01Z",
+              "finished_at": "2026-03-26T12:32:13Z",
+              "returncode": 0,
+              "command": [
+                "node",
+                "scripts/forecast/run_daily.mjs"
+              ],
+              "error": null,
+              "outputs": {
+                "snapshot": {
+                  "path": "/Users/michaelpuchowezki/Dev/rubikvault-site/public/data/snapshots/best-setups-v4.json",
+                  "stocks": {
+                    "short": 10,
+                    "medium": 10,
+                    "long": 10
+                  },
+                  "etfs": {
+                    "short": 2,
+                    "medium": 3,
+                    "long": 2
+                  },
+                  "source": "shared_decision_core_quantlab_forecast_snapshot",
+                  "forecast_asof": "2026-03-26"
+                },
+                "learning": {
+                  "path": "/Users/michaelpuchowezki/Dev/rubikvault-site/public/data/reports/learning-report-latest.json",
+                  "learning_status": "BOOTSTRAP",
+                  "precision_10": 0.3949,
+                  "precision_50": 0.3903,
+                  "accuracy_all": 0.3168,
+                  "coverage_7d": 2.43,
+                  "predictions_today": 33,
+                  "safety_level": "BOOTSTRAP"
+                },
+                "etf_diagnostic": {
+                  "path": "/Users/michaelpuchowezki/Dev/rubikvault-site/public/data/reports/best-setups-etf-diagnostic-latest.json",
+                  "code": "NO_ETF_DROP_DETECTED",
+                  "severity": "info"
+                },
+                "forecast_calibration": {
+                  "path": "/Users/michaelpuchowezki/Dev/rubikvault-site/mirrors/forecast/champion/calibration_latest.json",
+                  "end_date": "2026-03-20",
+                  "horizons": {
+                    "1d": {
+                      "sample_count_train": 4109,
+                      "sample_count_eval": 0,
+                      "brier_eval_raw": null,
+                      "brier_eval_calibrated": null
+                    },
+                    "5d": {
+                      "sample_count_train": 0,
+                      "sample_count_eval": 0,
+                      "brier_eval_raw": null,
+                      "brier_eval_calibrated": null
+                    },
+                    "20d": {
+                      "sample_count_train": 0,
+                      "sample_count_eval": 0,
+                      "brier_eval_raw": null,
+                      "brier_eval_calibrated": null
+                    }
+                  }
+                },
+                "ssot_parity": {
+                  "path": "/Users/michaelpuchowezki/Dev/rubikvault-site/mirrors/learning/reports/best-setups-ssot-parity-latest.json",
+                  "summary": {
+                    "total": 3,
+                    "ok": 3,
+                    "failed": 0
+                  }
+                },
+                "stability_5d": {
+                  "path": "/Users/michaelpuchowezki/Dev/rubikvault-site/public/data/reports/learning-stability-5d-latest.json",
+                  "days_covered": null
+                }
+              }
+            },
+            "automation": {
+              "severity": "ok",
+              "summary": "Latest refresh hit forecast_backfill_outcomes, but current published artifacts already recovered and automation remains operational.",
+              "latest_refresh": {
+                "mode": "day",
+                "job_dir": "/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/jobs/day_q1_safe_20260326_103000",
+                "status": "failed",
+                "failed_step": "forecast_backfill_outcomes",
+                "finished_at": "2026-03-26T14:42:09Z",
+                "created_at": "2026-03-26T10:30:01Z"
+              },
+              "latest_forecast_run": {
+                "status": "completed",
+                "finished_at": "2026-03-26T12:32:13Z",
+                "returncode": 0
+              },
+              "latest_forecast_backfill": {
+                "status": "failed",
+                "finished_at": "2026-03-26T14:42:09Z",
+                "returncode": -6
+              },
+              "recovered_steps": [
+                "forecast_run_daily"
+              ],
+              "active_failures": []
+            },
+            "impact": "Forecast freshness drives learning and the snapshot stack, but current forecast artifacts are healthy."
+          },
+          "runbook": {
+            "doc_ref": "docs/ops/runbook.md",
+            "recovery_script": "scripts/ops/run-market-data-recovery.mjs",
+            "run_command": "node scripts/forecast/run_daily.mjs",
+            "verify_commands": [
+              "jq '{status,generated_at,data_asof:.data.asof}' public/data/forecast/latest.json"
+            ],
+            "outputs": [
+              "public/data/forecast/latest.json"
+            ],
+            "ui_surfaces": [
+              "analyze-v4 model consensus / decision inputs",
+              "frontpage best-setups candidate pools",
+              "dashboard_v7 forecast card"
+            ],
+            "failure_signals": [
+              "latest.json missing or status != ok",
+              "data.asof stale"
+            ]
+          }
+        },
+        "scientific_summary": {
+          "id": "scientific_summary",
+          "label": "Scientific Summary",
+          "owner": "Scientific",
+          "subsystem": "scientific",
+          "severity": "ok",
+          "summary": "Scientific source is current",
+          "why": "Scientific source_meta as-of is 2026-04-04.",
+          "next_fix": "Refresh the scientific summary and verify the upstream source emits a current timestamp before the daily learning batch runs.",
+          "file_ref": "scripts/build-scientific-summary.mjs",
+          "generated_at": "2026-04-04T21:04:37.669Z",
+          "last_success_at": "2026-03-26T15:47:00.982Z",
+          "generated_age_hours": 0.2,
+          "input_asof": null,
+          "output_asof": "2026-04-04",
+          "output_stale_days": 1,
+          "dependency_ids": [],
+          "blocked_by": [],
+          "status_detail": {
+            "learning_feature": {
+              "name": "Scientific Analyzer v9.1",
+              "type": "setup_trigger_breakout",
+              "predictions_total": 9992,
+              "outcomes_resolved": 9992,
+              "accuracy_all": 0.6398,
+              "brier_all": 0.2333,
+              "ece_all": 0.1901,
+              "hit_rate_all": 0.0034,
+              "accuracy_7d": 0.7125,
+              "brier_7d": 0.1963,
+              "ece_7d": 0.3953,
+              "hit_rate_7d": 0,
+              "precision_10": 0.025,
+              "precision_50": 0.04,
+              "precision_at_10": 0.025,
+              "precision_at_50": 0.04,
+              "coverage_per_day": 333.07,
+              "coverage_7d": 379.57,
+              "by_horizon": {
+                "5d": {
+                  "predictions_total": 9992,
+                  "outcomes_resolved": 9992,
+                  "accuracy_all": 0.6398,
+                  "brier_all": 0.2333,
+                  "ece_all": 0.1901,
+                  "hit_rate_all": 0.0034,
+                  "accuracy_7d": 0.7125,
+                  "brier_7d": 0.1963,
+                  "ece_7d": 0.3953,
+                  "hit_rate_7d": 0,
+                  "precision_10": 0.025,
+                  "precision_50": 0.04,
+                  "coverage_per_day": 333.07,
+                  "trend_accuracy": "improving",
+                  "trend_brier": "improving"
+                }
+              },
+              "by_asset_class": {
+                "stock": {
+                  "predictions_total": 9992,
+                  "outcomes_resolved": 9992,
+                  "accuracy_all": 0.6398,
+                  "brier_all": 0.2333,
+                  "ece_all": 0.1901,
+                  "hit_rate_all": 0.0034,
+                  "accuracy_7d": 0.7125,
+                  "brier_7d": 0.1963,
+                  "ece_7d": 0.3953,
+                  "hit_rate_7d": 0,
+                  "precision_10": 0.025,
+                  "precision_50": 0.04,
+                  "coverage_per_day": 333.07,
+                  "trend_accuracy": "improving",
+                  "trend_brier": "improving",
+                  "by_horizon": {
+                    "5d": {
+                      "predictions_total": 9992,
+                      "outcomes_resolved": 9992,
+                      "accuracy_all": 0.6398,
+                      "brier_all": 0.2333,
+                      "ece_all": 0.1901,
+                      "hit_rate_all": 0.0034,
+                      "accuracy_7d": 0.7125,
+                      "brier_7d": 0.1963,
+                      "ece_7d": 0.3953,
+                      "hit_rate_7d": 0,
+                      "precision_10": 0.025,
+                      "precision_50": 0.04,
+                      "coverage_per_day": 333.07,
+                      "trend_accuracy": "improving",
+                      "trend_brier": "improving"
+                    }
+                  }
+                }
+              },
+              "by_segment": {
+                "stock|unknown|unknown|core": {
+                  "asset_class": "stock",
+                  "liquidity_bucket": "unknown",
+                  "market_cap_bucket": "unknown",
+                  "learning_lane": "core",
+                  "predictions_total": 9992,
+                  "outcomes_resolved": 9992,
+                  "accuracy_all": 0.6398,
+                  "brier_all": 0.2333,
+                  "ece_all": 0.1901,
+                  "hit_rate_all": 0.0034,
+                  "accuracy_7d": 0.7125,
+                  "brier_7d": 0.1963,
+                  "ece_7d": 0.3953,
+                  "hit_rate_7d": 0,
+                  "precision_10": 0.025,
+                  "precision_50": 0.04,
+                  "coverage_per_day": 333.07,
+                  "trend_accuracy": "improving",
+                  "trend_brier": "improving"
+                }
+              },
+              "false_positive_classes": {},
+              "trend_accuracy": "improving",
+              "trend_brier": "improving",
+              "predictions_today": 2500,
+              "source_meta": {
+                "source": "scientific_snapshot",
+                "asof": "2026-04-04",
+                "fresh": true,
+                "stale_days": 0
+              }
+            },
+            "scientific_summary": {
+              "path": "/Users/michaelpuchowezki/Dev/rubikvault-site/public/data/supermodules/scientific-summary.json",
+              "exists": true,
+              "generated_at": "2026-03-26T15:47:00.982Z",
+              "age_hours": 221.5
+            },
+            "impact": "Scientific rows remain available, but they are not current enough to be treated as live input."
+          },
+          "runbook": {
+            "doc_ref": "docs/ops/runbook.md",
+            "recovery_script": "scripts/ops/run-market-data-recovery.mjs",
+            "run_command": "node scripts/build-scientific-summary.mjs",
+            "verify_commands": [
+              "jq '{generated_at,as_of:.source_meta.asof,signals:(.strong_signals|length)}' public/data/supermodules/scientific-summary.json"
+            ],
+            "outputs": [
+              "public/data/supermodules/scientific-summary.json"
+            ],
+            "ui_surfaces": [
+              "analyze-v4 model consensus / setup evidence",
+              "dashboard_v7 scientific card"
+            ],
+            "failure_signals": [
+              "source_meta.asof missing or stale",
+              "no signals and no source timestamp"
+            ]
+          }
+        },
+        "learning_daily": {
+          "id": "learning_daily",
+          "label": "Daily Learning Report",
+          "owner": "Learning",
+          "subsystem": "learning",
+          "severity": "ok",
+          "summary": "Learning report is available",
+          "why": "Learning report generated 2026-04-04T21:04:37.669Z with status VERBESSERUNG ✅.",
+          "next_fix": "Regenerate the daily learning report after forecast/scientific artifacts are current enough to support it.",
+          "file_ref": "scripts/learning/run-daily-learning-cycle.mjs",
+          "generated_at": "2026-04-04T21:04:37.669Z",
+          "last_success_at": "2026-04-04T21:04:37.669Z",
+          "generated_age_hours": 0.2,
+          "input_asof": "2026-03-30",
+          "output_asof": "2026-04-04",
+          "output_stale_days": 1,
+          "dependency_ids": [
+            "forecast_daily",
+            "scientific_summary"
+          ],
+          "blocked_by": [],
+          "status_detail": {
+            "learning_status": "VERBESSERUNG ✅",
+            "stock_analyzer": {
+              "name": "Stock Analyzer",
+              "type": "best_setups_horizon_buy_signals",
+              "predictions_total": 1404,
+              "outcomes_resolved": 1404,
+              "accuracy_all": 0.1852,
+              "brier_all": 0.3858,
+              "ece_all": 0.4698,
+              "hit_rate_all": 0.1852,
+              "accuracy_7d": 0.2857,
+              "brier_7d": 0.4265,
+              "ece_7d": 0.4807,
+              "hit_rate_7d": 0.2857,
+              "precision_10": 0.1979,
+              "precision_50": 0.2025,
+              "precision_at_10": 0.1979,
+              "precision_at_50": 0.2025,
+              "coverage_per_day": 46.8,
+              "coverage_7d": 2,
+              "by_horizon": {
+                "20d": {
+                  "predictions_total": 1234,
+                  "outcomes_resolved": 1234,
+                  "accuracy_all": 0.1807,
+                  "brier_all": 0.3962,
+                  "ece_all": 0.4836,
+                  "hit_rate_all": 0.1807,
+                  "accuracy_7d": 0.2857,
+                  "brier_7d": 0.4265,
+                  "ece_7d": 0.4807,
+                  "hit_rate_7d": 0.2857,
+                  "precision_10": 0.1444,
+                  "precision_50": 0.1455,
+                  "coverage_per_day": 41.13,
+                  "trend_accuracy": "improving",
+                  "trend_brier": "declining"
+                },
+                "1d": {
+                  "predictions_total": 13,
+                  "outcomes_resolved": 13,
+                  "accuracy_all": 0.3846,
+                  "brier_all": 0.3709,
+                  "ece_all": 0.3662,
+                  "hit_rate_all": 0.3846,
+                  "accuracy_7d": null,
+                  "brier_7d": null,
+                  "ece_7d": null,
+                  "hit_rate_7d": null,
+                  "precision_10": 0.5417,
+                  "precision_50": 0.5417,
+                  "coverage_per_day": 0.43,
+                  "trend_accuracy": "no_data",
+                  "trend_brier": "no_data"
+                },
+                "5d": {
+                  "predictions_total": 157,
+                  "outcomes_resolved": 157,
+                  "accuracy_all": 0.2038,
+                  "brier_all": 0.3047,
+                  "ece_all": 0.3897,
+                  "hit_rate_all": 0.2038,
+                  "accuracy_7d": null,
+                  "brier_7d": null,
+                  "ece_7d": null,
+                  "hit_rate_7d": null,
+                  "precision_10": 0,
+                  "precision_50": 0.1,
+                  "coverage_per_day": 5.23,
+                  "trend_accuracy": "no_data",
+                  "trend_brier": "no_data"
+                }
+              },
+              "by_asset_class": {
+                "stock": {
+                  "predictions_total": 1404,
+                  "outcomes_resolved": 1404,
+                  "accuracy_all": 0.1852,
+                  "brier_all": 0.3858,
+                  "ece_all": 0.4698,
+                  "hit_rate_all": 0.1852,
+                  "accuracy_7d": 0.2857,
+                  "brier_7d": 0.4265,
+                  "ece_7d": 0.4807,
+                  "hit_rate_7d": 0.2857,
+                  "precision_10": 0.1979,
+                  "precision_50": 0.2025,
+                  "coverage_per_day": 46.8,
+                  "trend_accuracy": "improving",
+                  "trend_brier": "declining",
+                  "by_horizon": {
+                    "20d": {
+                      "predictions_total": 1234,
+                      "outcomes_resolved": 1234,
+                      "accuracy_all": 0.1807,
+                      "brier_all": 0.3962,
+                      "ece_all": 0.4836,
+                      "hit_rate_all": 0.1807,
+                      "accuracy_7d": 0.2857,
+                      "brier_7d": 0.4265,
+                      "ece_7d": 0.4807,
+                      "hit_rate_7d": 0.2857,
+                      "precision_10": 0.1444,
+                      "precision_50": 0.1455,
+                      "coverage_per_day": 41.13,
+                      "trend_accuracy": "improving",
+                      "trend_brier": "declining"
+                    },
+                    "1d": {
+                      "predictions_total": 13,
+                      "outcomes_resolved": 13,
+                      "accuracy_all": 0.3846,
+                      "brier_all": 0.3709,
+                      "ece_all": 0.3662,
+                      "hit_rate_all": 0.3846,
+                      "accuracy_7d": null,
+                      "brier_7d": null,
+                      "ece_7d": null,
+                      "hit_rate_7d": null,
+                      "precision_10": 0.5417,
+                      "precision_50": 0.5417,
+                      "coverage_per_day": 0.43,
+                      "trend_accuracy": "no_data",
+                      "trend_brier": "no_data"
+                    },
+                    "5d": {
+                      "predictions_total": 157,
+                      "outcomes_resolved": 157,
+                      "accuracy_all": 0.2038,
+                      "brier_all": 0.3047,
+                      "ece_all": 0.3897,
+                      "hit_rate_all": 0.2038,
+                      "accuracy_7d": null,
+                      "brier_7d": null,
+                      "ece_7d": null,
+                      "hit_rate_7d": null,
+                      "precision_10": 0,
+                      "precision_50": 0.1,
+                      "coverage_per_day": 5.23,
+                      "trend_accuracy": "no_data",
+                      "trend_brier": "no_data"
+                    }
+                  }
+                }
+              },
+              "by_segment": {
+                "stock|unknown|unknown|core": {
+                  "asset_class": "stock",
+                  "liquidity_bucket": "unknown",
+                  "market_cap_bucket": "unknown",
+                  "learning_lane": "core",
+                  "predictions_total": 1404,
+                  "outcomes_resolved": 1404,
+                  "accuracy_all": 0.1852,
+                  "brier_all": 0.3858,
+                  "ece_all": 0.4698,
+                  "hit_rate_all": 0.1852,
+                  "accuracy_7d": 0.2857,
+                  "brier_7d": 0.4265,
+                  "ece_7d": 0.4807,
+                  "hit_rate_7d": 0.2857,
+                  "precision_10": 0.1979,
+                  "precision_50": 0.2025,
+                  "coverage_per_day": 46.8,
+                  "trend_accuracy": "improving",
+                  "trend_brier": "declining"
+                }
+              },
+              "false_positive_classes": {
+                "weak_consensus": 126
+              },
+              "trend_accuracy": "improving",
+              "trend_brier": "declining",
+              "outcome_dates": [
+                "2026-03-06",
+                "2026-03-09",
+                "2026-03-10",
+                "2026-03-11",
+                "2026-03-12",
+                "2026-03-13",
+                "2026-03-16",
+                "2026-03-17",
+                "2026-03-18",
+                "2026-03-19",
+                "2026-03-20",
+                "2026-03-21",
+                "2026-03-22",
+                "2026-03-23",
+                "2026-03-24",
+                "2026-03-25",
+                "2026-03-26",
+                "2026-03-27",
+                "2026-04-01",
+                "2026-04-02",
+                "2026-04-03",
+                "2026-04-04"
+              ],
+              "stability": 0.6,
+              "churn": 10,
+              "learning_status": "BOOTSTRAP",
+              "safety_switch": {
+                "level": "BOOTSTRAP",
+                "actions": [
+                  "log_only"
+                ],
+                "trigger": "minimum_n_not_met",
+                "minimum_n_status": {
+                  "global_per_horizon_threshold": 200,
+                  "asset_class_horizon_threshold": 100,
+                  "regime_horizon_threshold": 75,
+                  "satisfied_horizons": 1,
+                  "ready_for_safety": false,
+                  "by_horizon": {
+                    "1d": {
+                      "outcomes_resolved": 13,
+                      "satisfied": false
+                    },
+                    "5d": {
+                      "outcomes_resolved": 157,
+                      "satisfied": false
+                    },
+                    "20d": {
+                      "outcomes_resolved": 1234,
+                      "satisfied": true
+                    }
+                  }
+                }
+              },
+              "minimum_n_status": {
+                "global_per_horizon_threshold": 200,
+                "asset_class_horizon_threshold": 100,
+                "regime_horizon_threshold": 75,
+                "satisfied_horizons": 1,
+                "ready_for_safety": false,
+                "by_horizon": {
+                  "1d": {
+                    "outcomes_resolved": 13,
+                    "satisfied": false
+                  },
+                  "5d": {
+                    "outcomes_resolved": 157,
+                    "satisfied": false
+                  },
+                  "20d": {
+                    "outcomes_resolved": 1234,
+                    "satisfied": true
+                  }
+                }
+              },
+              "false_positive_classes_30d": {
+                "weak_consensus": 126
+              },
+              "predictions_today": 60,
+              "source_meta": {
+                "source": "shared_decision_core_quantlab_forecast_snapshot",
+                "asof": "2026-03-30",
+                "fresh": false,
+                "stale_days": 5,
+                "gate_rejection_breakdown": {
+                  "short": {
+                    "rejected_non_buy_total": 324,
+                    "rejected_non_high_total": 1,
+                    "rejected_gated_total": 0,
+                    "rejected_non_uptrend_total": 0,
+                    "missing_doc_total": 0,
+                    "by_asset_class": {
+                      "stock": {
+                        "rejected_non_buy_total": 311,
+                        "rejected_non_high_total": 0,
+                        "rejected_gated_total": 0,
+                        "rejected_non_uptrend_total": 0,
+                        "missing_doc_total": 0
+                      },
+                      "etf": {
+                        "rejected_non_buy_total": 13,
+                        "rejected_non_high_total": 1,
+                        "rejected_gated_total": 0,
+                        "rejected_non_uptrend_total": 0,
+                        "missing_doc_total": 0
+                      }
+                    }
+                  },
+                  "medium": {
+                    "rejected_non_buy_total": 323,
+                    "rejected_non_high_total": 5,
+                    "rejected_gated_total": 0,
+                    "rejected_non_uptrend_total": 0,
+                    "missing_doc_total": 0,
+                    "by_asset_class": {
+                      "stock": {
+                        "rejected_non_buy_total": 305,
+                        "rejected_non_high_total": 5,
+                        "rejected_gated_total": 0,
+                        "rejected_non_uptrend_total": 0,
+                        "missing_doc_total": 0
+                      },
+                      "etf": {
+                        "rejected_non_buy_total": 18,
+                        "rejected_non_high_total": 0,
+                        "rejected_gated_total": 0,
+                        "rejected_non_uptrend_total": 0,
+                        "missing_doc_total": 0
+                      }
+                    }
+                  },
+                  "long": {
+                    "rejected_non_buy_total": 313,
+                    "rejected_non_high_total": 1,
+                    "rejected_gated_total": 0,
+                    "rejected_non_uptrend_total": 6,
+                    "missing_doc_total": 0,
+                    "by_asset_class": {
+                      "stock": {
+                        "rejected_non_buy_total": 292,
+                        "rejected_non_high_total": 1,
+                        "rejected_gated_total": 0,
+                        "rejected_non_uptrend_total": 6,
+                        "missing_doc_total": 0
+                      },
+                      "etf": {
+                        "rejected_non_buy_total": 21,
+                        "rejected_non_high_total": 0,
+                        "rejected_gated_total": 0,
+                        "rejected_non_uptrend_total": 0,
+                        "missing_doc_total": 0
+                      }
+                    }
+                  }
+                },
+                "verified_counts": {
+                  "stocks": {
+                    "short": 10,
+                    "medium": 10,
+                    "long": 10
+                  },
+                  "etfs": {
+                    "short": 10,
+                    "medium": 10,
+                    "long": 10
+                  }
+                }
+              },
+              "gate_rejection_breakdown": {
+                "short": {
+                  "rejected_non_buy_total": 324,
+                  "rejected_non_high_total": 1,
+                  "rejected_gated_total": 0,
+                  "rejected_non_uptrend_total": 0,
+                  "missing_doc_total": 0,
+                  "by_asset_class": {
+                    "stock": {
+                      "rejected_non_buy_total": 311,
+                      "rejected_non_high_total": 0,
+                      "rejected_gated_total": 0,
+                      "rejected_non_uptrend_total": 0,
+                      "missing_doc_total": 0
+                    },
+                    "etf": {
+                      "rejected_non_buy_total": 13,
+                      "rejected_non_high_total": 1,
+                      "rejected_gated_total": 0,
+                      "rejected_non_uptrend_total": 0,
+                      "missing_doc_total": 0
+                    }
+                  }
+                },
+                "medium": {
+                  "rejected_non_buy_total": 323,
+                  "rejected_non_high_total": 5,
+                  "rejected_gated_total": 0,
+                  "rejected_non_uptrend_total": 0,
+                  "missing_doc_total": 0,
+                  "by_asset_class": {
+                    "stock": {
+                      "rejected_non_buy_total": 305,
+                      "rejected_non_high_total": 5,
+                      "rejected_gated_total": 0,
+                      "rejected_non_uptrend_total": 0,
+                      "missing_doc_total": 0
+                    },
+                    "etf": {
+                      "rejected_non_buy_total": 18,
+                      "rejected_non_high_total": 0,
+                      "rejected_gated_total": 0,
+                      "rejected_non_uptrend_total": 0,
+                      "missing_doc_total": 0
+                    }
+                  }
+                },
+                "long": {
+                  "rejected_non_buy_total": 313,
+                  "rejected_non_high_total": 1,
+                  "rejected_gated_total": 0,
+                  "rejected_non_uptrend_total": 6,
+                  "missing_doc_total": 0,
+                  "by_asset_class": {
+                    "stock": {
+                      "rejected_non_buy_total": 292,
+                      "rejected_non_high_total": 1,
+                      "rejected_gated_total": 0,
+                      "rejected_non_uptrend_total": 6,
+                      "missing_doc_total": 0
+                    },
+                    "etf": {
+                      "rejected_non_buy_total": 21,
+                      "rejected_non_high_total": 0,
+                      "rejected_gated_total": 0,
+                      "rejected_non_uptrend_total": 0,
+                      "missing_doc_total": 0
+                    }
+                  }
+                }
+              }
+            },
+            "impact": "The learning report drives readiness and audit interpretation across the dashboard."
+          },
+          "runbook": {
+            "doc_ref": "docs/ops/runbook.md",
+            "recovery_script": "scripts/ops/run-market-data-recovery.mjs",
+            "run_command": "node scripts/learning/run-daily-learning-cycle.mjs --date=<YYYY-MM-DD>",
+            "verify_commands": [
+              "jq '{date,overall_status:.summary.overall_status,learning_status:.summary.learning_status,safety_switch:.summary.safety_switch.level}' public/data/reports/learning-report-latest.json"
+            ],
+            "outputs": [
+              "public/data/reports/learning-report-latest.json",
+              "public/data/reports/learning-report-latest.js"
+            ],
+            "ui_surfaces": [
+              "dashboard_v7 overall learning status",
+              "frontpage / analyzer confidence calibration context"
+            ],
+            "failure_signals": [
+              "report missing",
+              "forecast/scientific source_meta lagging behind market"
+            ]
+          }
+        },
+        "snapshot": {
+          "id": "snapshot",
+          "label": "Best Setups Snapshot",
+          "owner": "Snapshot",
+          "subsystem": "breakout_v2",
+          "severity": "warning",
+          "summary": "Snapshot is current but depends on degraded upstream inputs",
+          "why": "Snapshot data_asof=2026-03-30, quantlab_asof=2026-03-11, rows_emitted=60.",
+          "next_fix": "Keep snapshot generation tied to explicit upstream freshness checks so QuantLab staleness cannot hide behind a fresh render timestamp.",
+          "file_ref": "scripts/build-best-setups-v4.mjs",
+          "generated_at": "2026-04-04T21:03:54.931Z",
+          "last_success_at": "2026-04-04T21:03:54.931Z",
+          "generated_age_hours": 0.3,
+          "input_asof": "2026-03-11",
+          "output_asof": "2026-03-30",
+          "output_stale_days": 6,
+          "dependency_ids": [
+            "forecast_daily",
+            "quantlab_daily_report"
+          ],
+          "blocked_by": [],
+          "status_detail": {
+            "snapshot_meta": {
+              "generated_at": "2026-04-04T21:03:54.931Z",
+              "source": "shared_decision_core_quantlab_forecast_snapshot",
+              "decision_path": "assembleDecisionInputs + buildStockInsightsV4Evaluation",
+              "quantlab_generated_at": "2026-04-04T20:56:43.264Z",
+              "quantlab_generated_at_by_class": {
+                "stocks": "2026-04-04T20:56:43.264Z",
+                "etfs": "2026-04-04T20:56:43.264Z"
+              },
+              "quantlab_asof": "2026-03-11",
+              "quantlab_asof_by_class": {
+                "stocks": "2026-03-11",
+                "etfs": "2026-03-11"
+              },
+              "forecast_asof": "2026-03-30",
+              "data_asof": "2026-03-30",
+              "source_dependencies": {
+                "quantlab_publish_dirs": {
+                  "stock": "public/data/quantlab/stock-insights/stocks",
+                  "etf": "public/data/quantlab/stock-insights/etfs"
+                },
+                "forecast_path": "public/data/forecast/latest.json"
+              },
+              "candidate_counts": {
+                "quantlab_rows_total": 12933,
+                "quantlab_rows_stocks": 11399,
+                "quantlab_rows_etfs": 1534,
+                "analyzable_tickers": 718,
+                "quantlab_ranked": 105,
+                "quantlab_ranked_stocks": 94,
+                "quantlab_ranked_etfs": 11,
+                "forecast_short": 239,
+                "forecast_medium": 239,
+                "forecast_long": 232,
+                "unique_tickers": 718,
+                "shard_count": {
+                  "stocks": 36,
+                  "etfs": 14
+                }
+              },
+              "verified_counts": {
+                "stocks": {
+                  "short": 10,
+                  "medium": 10,
+                  "long": 10
+                },
+                "etfs": {
+                  "short": 10,
+                  "medium": 10,
+                  "long": 10
+                }
+              },
+              "setup_phase_counts": {
+                "early": 17,
+                "mid": 37,
+                "late": 41
+              },
+              "rejection_counts": {
+                "short": {
+                  "rejected_non_buy_total": 324,
+                  "rejected_non_high_total": 1,
+                  "rejected_gated_total": 0,
+                  "rejected_non_uptrend_total": 0,
+                  "missing_doc_total": 0,
+                  "by_asset_class": {
+                    "stock": {
+                      "rejected_non_buy_total": 311,
+                      "rejected_non_high_total": 0,
+                      "rejected_gated_total": 0,
+                      "rejected_non_uptrend_total": 0,
+                      "missing_doc_total": 0
+                    },
+                    "etf": {
+                      "rejected_non_buy_total": 13,
+                      "rejected_non_high_total": 1,
+                      "rejected_gated_total": 0,
+                      "rejected_non_uptrend_total": 0,
+                      "missing_doc_total": 0
+                    }
+                  }
+                },
+                "medium": {
+                  "rejected_non_buy_total": 323,
+                  "rejected_non_high_total": 5,
+                  "rejected_gated_total": 0,
+                  "rejected_non_uptrend_total": 0,
+                  "missing_doc_total": 0,
+                  "by_asset_class": {
+                    "stock": {
+                      "rejected_non_buy_total": 305,
+                      "rejected_non_high_total": 5,
+                      "rejected_gated_total": 0,
+                      "rejected_non_uptrend_total": 0,
+                      "missing_doc_total": 0
+                    },
+                    "etf": {
+                      "rejected_non_buy_total": 18,
+                      "rejected_non_high_total": 0,
+                      "rejected_gated_total": 0,
+                      "rejected_non_uptrend_total": 0,
+                      "missing_doc_total": 0
+                    }
+                  }
+                },
+                "long": {
+                  "rejected_non_buy_total": 313,
+                  "rejected_non_high_total": 1,
+                  "rejected_gated_total": 0,
+                  "rejected_non_uptrend_total": 6,
+                  "missing_doc_total": 0,
+                  "by_asset_class": {
+                    "stock": {
+                      "rejected_non_buy_total": 292,
+                      "rejected_non_high_total": 1,
+                      "rejected_gated_total": 0,
+                      "rejected_non_uptrend_total": 6,
+                      "missing_doc_total": 0
+                    },
+                    "etf": {
+                      "rejected_non_buy_total": 21,
+                      "rejected_non_high_total": 0,
+                      "rejected_gated_total": 0,
+                      "rejected_non_uptrend_total": 0,
+                      "missing_doc_total": 0
+                    }
+                  }
+                }
+              },
+              "rows_emitted": {
+                "stocks": {
+                  "short": 10,
+                  "medium": 10,
+                  "long": 10
+                },
+                "etfs": {
+                  "short": 10,
+                  "medium": 10,
+                  "long": 10
+                },
+                "total": 60
+              },
+              "rows_rejected": {
+                "short": {
+                  "rejected_non_buy_total": 324,
+                  "rejected_non_high_total": 1,
+                  "rejected_gated_total": 0,
+                  "rejected_non_uptrend_total": 0,
+                  "missing_doc_total": 0,
+                  "by_asset_class": {
+                    "stock": {
+                      "rejected_non_buy_total": 311,
+                      "rejected_non_high_total": 0,
+                      "rejected_gated_total": 0,
+                      "rejected_non_uptrend_total": 0,
+                      "missing_doc_total": 0
+                    },
+                    "etf": {
+                      "rejected_non_buy_total": 13,
+                      "rejected_non_high_total": 1,
+                      "rejected_gated_total": 0,
+                      "rejected_non_uptrend_total": 0,
+                      "missing_doc_total": 0
+                    }
+                  }
+                },
+                "medium": {
+                  "rejected_non_buy_total": 323,
+                  "rejected_non_high_total": 5,
+                  "rejected_gated_total": 0,
+                  "rejected_non_uptrend_total": 0,
+                  "missing_doc_total": 0,
+                  "by_asset_class": {
+                    "stock": {
+                      "rejected_non_buy_total": 305,
+                      "rejected_non_high_total": 5,
+                      "rejected_gated_total": 0,
+                      "rejected_non_uptrend_total": 0,
+                      "missing_doc_total": 0
+                    },
+                    "etf": {
+                      "rejected_non_buy_total": 18,
+                      "rejected_non_high_total": 0,
+                      "rejected_gated_total": 0,
+                      "rejected_non_uptrend_total": 0,
+                      "missing_doc_total": 0
+                    }
+                  }
+                },
+                "long": {
+                  "rejected_non_buy_total": 313,
+                  "rejected_non_high_total": 1,
+                  "rejected_gated_total": 0,
+                  "rejected_non_uptrend_total": 6,
+                  "missing_doc_total": 0,
+                  "by_asset_class": {
+                    "stock": {
+                      "rejected_non_buy_total": 292,
+                      "rejected_non_high_total": 1,
+                      "rejected_gated_total": 0,
+                      "rejected_non_uptrend_total": 6,
+                      "missing_doc_total": 0
+                    },
+                    "etf": {
+                      "rejected_non_buy_total": 21,
+                      "rejected_non_high_total": 0,
+                      "rejected_gated_total": 0,
+                      "rejected_non_uptrend_total": 0,
+                      "missing_doc_total": 0
+                    }
+                  }
+                }
+              },
+              "reason_summary": {
+                "snapshot_empty": false,
+                "dominant_rejection": [
+                  {
+                    "horizon": "short",
+                    "rejected_non_buy_total": 324,
+                    "rejected_non_high_total": 1,
+                    "rejected_gated_total": 0,
+                    "rejected_non_uptrend_total": 0
+                  },
+                  {
+                    "horizon": "medium",
+                    "rejected_non_buy_total": 323,
+                    "rejected_non_high_total": 5,
+                    "rejected_gated_total": 0,
+                    "rejected_non_uptrend_total": 0
+                  },
+                  {
+                    "horizon": "long",
+                    "rejected_non_buy_total": 313,
+                    "rejected_non_high_total": 1,
+                    "rejected_gated_total": 0,
+                    "rejected_non_uptrend_total": 6
+                  }
+                ]
+              },
+              "duration_ms": 85066
+            },
+            "impact": "Snapshot rows currently render, but part of the dependency chain still lags."
+          },
+          "runbook": {
+            "doc_ref": "docs/ops/runbook.md",
+            "recovery_script": "scripts/ops/run-market-data-recovery.mjs",
+            "run_command": "node scripts/build-best-setups-v4.mjs",
+            "verify_commands": [
+              "jq '.meta | {generated_at,data_asof,quantlab_asof,rows_emitted,verified_counts,source}' public/data/snapshots/best-setups-v4.json",
+              "node scripts/learning/diagnose-best-setups-etf-drop.mjs"
+            ],
+            "outputs": [
+              "public/data/snapshots/best-setups-v4.json",
+              "public/data/reports/best-setups-etf-diagnostic-latest.json"
+            ],
+            "ui_surfaces": [
+              "frontpage Top BUY candidates",
+              "frontpage Stocks Breakouts Tracker",
+              "dashboard_v7 candidate funnel"
+            ],
+            "failure_signals": [
+              "rows_emitted.total = 0 when upstream is healthy",
+              "quantlab_asof lags data_asof"
+            ]
+          }
+        },
+        "stock_analyzer_universe_audit": {
+          "id": "stock_analyzer_universe_audit",
+          "label": "Stock Analyzer Universe Audit",
+          "owner": "Stock Analyzer",
+          "subsystem": "ui_contract",
+          "severity": "critical",
+          "summary": "Stock Analyzer universe audit has not yet covered the full stock+ETF universe",
+          "why": "Latest audit processed 5/5 assets and found 3 failure families affecting 5 assets.",
+          "next_fix": "Run the full stock-analyzer universe audit over STOCK+ETF and then regenerate the dashboard status artifacts.",
+          "file_ref": "scripts/ops/build-stock-analyzer-universe-audit.mjs",
+          "generated_at": "2026-04-03T16:38:19.983Z",
+          "last_success_at": "2026-04-03T16:38:19.983Z",
+          "generated_age_hours": 28.7,
+          "input_asof": null,
+          "output_asof": "2026-04-03T16:38:19.983Z",
+          "output_stale_days": 1,
+          "dependency_ids": [
+            "market_data_refresh",
+            "q1_delta_ingest",
+            "hist_probs",
+            "forecast_daily",
+            "scientific_summary",
+            "learning_daily",
+            "snapshot"
+          ],
+          "blocked_by": [],
+          "status_detail": {
+            "audit_summary": {
+              "severity": "critical",
+              "total_assets": 5,
+              "processed_assets": 5,
+              "healthy_assets": 0,
+              "affected_assets": 5,
+              "failure_family_count": 3,
+              "field_checks_total": 120,
+              "ui_contract_checks_per_asset": 24,
+              "full_universe": false
+            },
+            "ordered_recovery": [
+              {
+                "rank": 1,
+                "step_id": "fundamentals_refresh",
+                "label": "Fundamentals Refresh",
+                "affected_assets": 2,
+                "affected_families": [
+                  "fundamentals_unavailable"
+                ],
+                "run_command": "node scripts/build-fundamentals.mjs --force",
+                "verify_commands": [
+                  "jq '.meta.quality' public/data/v3/fundamentals/manifest.json",
+                  "ls public/data/fundamentals | head"
+                ],
+                "outputs": [
+                  "public/data/fundamentals/<TICKER>.json",
+                  "public/data/v3/fundamentals/manifest.json"
+                ],
+                "ui_surfaces": [
+                  "analyze-v4 Fundamentals",
+                  "analyze-v4 Catalysts"
+                ]
+              },
+              {
+                "rank": 2,
+                "step_id": "hist_probs",
+                "label": "Hist Probs",
+                "affected_assets": 1,
+                "affected_families": [
+                  "historical_profile_unavailable"
+                ],
+                "run_command": "node scripts/lib/hist-probs/run-hist-probs.mjs --registry-path public/data/universe/v7/registry/registry.ndjson.gz --asset-classes STOCK,ETF --max-tickers 0",
+                "verify_commands": [
+                  "jq '{ran_at,tickers_total,tickers_processed,tickers_skipped,tickers_errors,regime_date,source_mode,asset_classes,max_tickers}' public/data/hist-probs/run-summary.json",
+                  "jq '{date,market_regime,volatility_regime,breadth_regime}' public/data/hist-probs/regime-daily.json"
+                ],
+                "outputs": [
+                  "public/data/hist-probs/run-summary.json",
+                  "public/data/hist-probs/regime-daily.json",
+                  "public/data/hist-probs/<TICKER>.json"
+                ],
+                "ui_surfaces": [
+                  "analyze-v4 Historical Performance",
+                  "analyze-v4 Historical signal profile",
+                  "dashboard_v7 hist_probs card"
+                ]
+              },
+              {
+                "rank": 3,
+                "step_id": "forecast_daily",
+                "label": "Forecast Daily",
+                "affected_assets": 5,
+                "affected_families": [
+                  "model_consensus_degraded"
+                ],
+                "run_command": "node scripts/forecast/run_daily.mjs",
+                "verify_commands": [
+                  "jq '{status,generated_at,data_asof:.data.asof}' public/data/forecast/latest.json"
+                ],
+                "outputs": [
+                  "public/data/forecast/latest.json"
+                ],
+                "ui_surfaces": [
+                  "analyze-v4 model consensus / decision inputs",
+                  "frontpage best-setups candidate pools",
+                  "dashboard_v7 forecast card"
+                ]
+              },
+              {
+                "rank": 4,
+                "step_id": "scientific_summary",
+                "label": "Scientific Summary",
+                "affected_assets": 5,
+                "affected_families": [
+                  "model_consensus_degraded"
+                ],
+                "run_command": "node scripts/build-scientific-summary.mjs",
+                "verify_commands": [
+                  "jq '{generated_at,as_of:.source_meta.asof,signals:(.strong_signals|length)}' public/data/supermodules/scientific-summary.json"
+                ],
+                "outputs": [
+                  "public/data/supermodules/scientific-summary.json"
+                ],
+                "ui_surfaces": [
+                  "analyze-v4 model consensus / setup evidence",
+                  "dashboard_v7 scientific card"
+                ]
+              },
+              {
+                "rank": 5,
+                "step_id": "learning_daily",
+                "label": "Learning Daily",
+                "affected_assets": 5,
+                "affected_families": [
+                  "model_consensus_degraded"
+                ],
+                "run_command": "node scripts/learning/run-daily-learning-cycle.mjs --date=<YYYY-MM-DD>",
+                "verify_commands": [
+                  "jq '{date,overall_status:.summary.overall_status,learning_status:.summary.learning_status,safety_switch:.summary.safety_switch.level}' public/data/reports/learning-report-latest.json"
+                ],
+                "outputs": [
+                  "public/data/reports/learning-report-latest.json",
+                  "public/data/reports/learning-report-latest.js"
+                ],
+                "ui_surfaces": [
+                  "dashboard_v7 overall learning status",
+                  "frontpage / analyzer confidence calibration context"
+                ]
+              },
+              {
+                "rank": 6,
+                "step_id": "manual_contract_repair",
+                "label": "Manual Stock Analyzer Contract Repair",
+                "affected_assets": 2,
+                "affected_families": [
+                  "fundamentals_unavailable"
+                ],
+                "run_command": "No script can fix this automatically. Repair the UI/API contract, then rerun the universe audit.",
+                "verify_commands": [
+                  "node scripts/ops/build-stock-analyzer-universe-audit.mjs --base-url http://127.0.0.1:8788 --registry-path public/data/universe/v7/registry/registry.ndjson.gz --asset-classes STOCK,ETF --max-tickers 0",
+                  "node scripts/ops/build-system-status-report.mjs",
+                  "node scripts/generate_meta_dashboard_data.mjs"
+                ],
+                "outputs": [
+                  "public/data/reports/stock-analyzer-universe-audit-latest.json"
+                ],
+                "ui_surfaces": [
+                  "dashboard_v7 Stock Analyzer Universe Audit",
+                  "analyze-v4 all panels"
+                ]
+              }
+            ],
+            "failure_families": [
+              {
+                "family_id": "historical_profile_unavailable",
+                "severity": "critical",
+                "label": "Historical profile unavailable",
+                "description": "Historical Performance / Historical signal profile could not load for this asset.",
+                "affected_assets": 1,
+                "affected_ratio": 0.2,
+                "asset_classes": {
+                  "UNKNOWN": 1
+                },
+                "examples": [
+                  {
+                    "ticker": "IWM",
+                    "assetClass": "UNKNOWN",
+                    "detail": "Historical profile has not been generated for this asset yet."
+                  }
+                ],
+                "recovery_ids": [
+                  "hist_probs"
+                ]
+              },
+              {
+                "family_id": "model_consensus_degraded",
+                "severity": "warning",
+                "label": "Model consensus degraded",
+                "description": "At least one model-evidence lane is unavailable or incomplete.",
+                "affected_assets": 5,
+                "affected_ratio": 1,
+                "asset_classes": {
+                  "UNKNOWN": 5
+                },
+                "examples": [
+                  {
+                    "ticker": "AAPL",
+                    "assetClass": "UNKNOWN",
+                    "detail": "No model data"
+                  },
+                  {
+                    "ticker": "SPY",
+                    "assetClass": "UNKNOWN",
+                    "detail": "No model data"
+                  },
+                  {
+                    "ticker": "QQQ",
+                    "assetClass": "UNKNOWN",
+                    "detail": "No model data"
+                  },
+                  {
+                    "ticker": "TSLA",
+                    "assetClass": "UNKNOWN",
+                    "detail": "No model data"
+                  },
+                  {
+                    "ticker": "IWM",
+                    "assetClass": "UNKNOWN",
+                    "detail": "No model data"
+                  }
+                ],
+                "recovery_ids": [
+                  "forecast_daily",
+                  "scientific_summary",
+                  "learning_daily"
+                ]
+              },
+              {
+                "family_id": "fundamentals_unavailable",
+                "severity": "warning",
+                "label": "Fundamentals unavailable",
+                "description": "Fundamentals/catalysts contract is incomplete for this asset.",
+                "affected_assets": 2,
+                "affected_ratio": 0.4,
+                "asset_classes": {
+                  "UNKNOWN": 2
+                },
+                "examples": [
+                  {
+                    "ticker": "AAPL",
+                    "assetClass": "UNKNOWN",
+                    "detail": "No fundamentals data"
+                  },
+                  {
+                    "ticker": "TSLA",
+                    "assetClass": "UNKNOWN",
+                    "detail": "No verified fundamentals fields"
+                  }
+                ],
+                "recovery_ids": [
+                  "fundamentals_refresh",
+                  "manual_contract_repair"
+                ]
+              }
+            ],
+            "impact": "This is the only universe-wide proof that analyze-v4 renders all required UI contracts correctly across stocks and ETFs."
+          },
+          "runbook": {
+            "doc_ref": "docs/ops/runbook.md",
+            "recovery_script": "scripts/ops/run-market-data-recovery.mjs",
+            "run_command": "node scripts/ops/build-stock-analyzer-universe-audit.mjs --base-url http://127.0.0.1:8788 --registry-path public/data/universe/v7/registry/registry.ndjson.gz --asset-classes STOCK,ETF --max-tickers 0",
+            "verify_commands": [
+              "jq '.summary | {severity,total_assets,processed_assets,healthy_assets,affected_assets,failure_family_count,field_checks_total,full_universe}' public/data/reports/stock-analyzer-universe-audit-latest.json",
+              "jq '.ordered_recovery[] | {rank,step_id,affected_assets}' public/data/reports/stock-analyzer-universe-audit-latest.json"
+            ],
+            "outputs": [
+              "public/data/reports/stock-analyzer-universe-audit-latest.json"
+            ],
+            "ui_surfaces": [
+              "dashboard_v7 Stock Analyzer Universe Audit",
+              "analyze-v4 all panels"
+            ],
+            "failure_signals": [
+              "audit artifact missing",
+              "processed_assets below total_assets",
+              "failure_family_count > 0"
+            ]
+          }
+        },
+        "etf_diagnostic": {
+          "id": "etf_diagnostic",
+          "label": "ETF Diagnostic",
+          "owner": "Snapshot",
+          "subsystem": "etf_diagnostic",
+          "severity": "ok",
+          "summary": "ETF diagnostic is healthy",
+          "why": "No ETF-specific drop was detected in the inspected stages.",
+          "next_fix": "If ETF snapshot output drops to zero again, inspect diagnostic rejection breakdown before changing gates.",
+          "file_ref": "scripts/learning/diagnose-best-setups-etf-drop.mjs",
+          "generated_at": "2026-03-26T08:55:21.956Z",
+          "last_success_at": "2026-03-26T08:55:21.956Z",
+          "generated_age_hours": 228.4,
+          "input_asof": "2026-03-30",
+          "output_asof": "2026-03-30",
+          "output_stale_days": 6,
+          "dependency_ids": [
+            "snapshot"
+          ],
+          "blocked_by": [],
+          "status_detail": {
+            "diagnosis": {
+              "code": "NO_ETF_DROP_DETECTED",
+              "severity": "info",
+              "explanation": "No ETF-specific drop was detected in the inspected stages."
+            },
+            "stage_counts": {
+              "registry_etf_total": 20312,
+              "registry_stock_total": 74841,
+              "asset_opinions_total": 13965,
+              "asset_opinions_etf_total": 1529,
+              "asset_opinions_stock_total": 12436,
+              "publish_etf_total": 1529,
+              "publish_stock_total": 11422,
+              "snapshot_etf_total": 7,
+              "snapshot_stock_total": 30
+            },
+            "impact": "ETF diagnostic validates whether the current snapshot funnel is emitting final ETF rows."
+          },
+          "runbook": {
+            "doc_ref": "docs/ops/runbook.md",
+            "recovery_script": "scripts/ops/run-market-data-recovery.mjs",
+            "run_command": "node scripts/learning/diagnose-best-setups-etf-drop.mjs",
+            "verify_commands": [
+              "jq '{generated_at,diagnosis:.diagnosis.code,stage_counts}' public/data/reports/best-setups-etf-diagnostic-latest.json"
+            ],
+            "outputs": [
+              "public/data/reports/best-setups-etf-diagnostic-latest.json"
+            ],
+            "ui_surfaces": [
+              "dashboard_v7 ETF funnel diagnosis",
+              "frontpage ETF breakout/buy visibility"
+            ],
+            "failure_signals": [
+              "snapshot_etf_total = 0",
+              "diagnosis code indicates rejection funnel collapse"
+            ]
+          }
+        },
+        "v1_audit": {
+          "id": "v1_audit",
+          "label": "V1 Audit",
+          "owner": "V1",
+          "subsystem": "v1_audit",
+          "severity": "ok",
+          "summary": "V1 audit is populated",
+          "why": "signals_today=56647, matured_signals=31630, hit_rate=0.415.",
+          "next_fix": "Keep the audit path wired to current snapshot and learning artifacts so readiness decisions stay evidence-backed.",
+          "file_ref": "scripts/learning/quantlab-v1/daily-audit-report.mjs",
+          "generated_at": "2026-03-26T15:50:51.317Z",
+          "last_success_at": "2026-03-26T15:50:51.317Z",
+          "generated_age_hours": 221.5,
+          "input_asof": "2026-04-04",
+          "output_asof": "2026-03-26",
+          "output_stale_days": 10,
+          "dependency_ids": [
+            "learning_daily",
+            "snapshot"
+          ],
+          "blocked_by": [],
+          "status_detail": {
+            "audit_report": {
+              "report_type": "external",
+              "date": "2026-03-26",
+              "timestamp": "2026-03-26T15:50:51.317Z",
+              "mode": "v1_primary_with_legacy_audit",
+              "signals_today": 56647,
+              "verdict_distribution": {
+                "BUY": 0,
+                "WAIT": 56647,
+                "SELL": 0
+              },
+              "hit_rate_matured": 0.415,
+              "matured_signals": 31630,
+              "top_sources": [
+                "forecast",
+                "scientific",
+                "elliott"
+              ],
+              "avg_evidence_quality": 0.8,
+              "top_weight_changes": [
+                {
+                  "source": "forecast",
+                  "old": 0.18,
+                  "new": 0.2,
+                  "delta": 0.020000000000000018
+                },
+                {
+                  "source": "scientific",
+                  "old": 0.22,
+                  "new": 0.2,
+                  "delta": -0.01999999999999999
+                },
+                {
+                  "source": "quantlab",
+                  "old": 0.16,
+                  "new": 0.15,
+                  "delta": -0.010000000000000009
+                }
+              ],
+              "governance_warnings": null,
+              "fallback_usage": {
+                "exact": 56647
+              },
+              "regime_transition_active": false,
+              "friction_impact_avg": null
+            },
+            "impact": "V1 audit supports cutover decisions and evidence-quality reporting."
+          },
+          "runbook": {
+            "doc_ref": "docs/ops/runbook.md",
+            "recovery_script": "scripts/ops/run-market-data-recovery.mjs",
+            "run_command": "node scripts/learning/quantlab-v1/daily-audit-report.mjs",
+            "verify_commands": [
+              "jq '{date,timestamp,signals_today,matured_signals,hit_rate_matured}' public/data/reports/quantlab-v1-latest.json"
+            ],
+            "outputs": [
+              "public/data/reports/quantlab-v1-latest.json"
+            ],
+            "ui_surfaces": [
+              "dashboard_v7 V1 audit / cutover readiness"
+            ],
+            "failure_signals": [
+              "signals_today = 0 for extended periods",
+              "matured_signals = 0"
+            ]
+          }
+        },
+        "cutover_readiness": {
+          "id": "cutover_readiness",
+          "label": "Cutover Readiness",
+          "owner": "V1",
+          "subsystem": "cutover",
+          "severity": "ok",
+          "summary": "Cutover is recommended",
+          "why": "Current mode=v1_primary_with_legacy_audit, failed criteria=none.",
+          "next_fix": "Do not override governance. Improve readiness by reducing fallback usage and clearing upstream freshness blockers.",
+          "file_ref": "scripts/learning/quantlab-v1/cutover-readiness-report.mjs",
+          "generated_at": "2026-03-26T15:50:51.315Z",
+          "last_success_at": "2026-03-26T15:50:51.315Z",
+          "generated_age_hours": 221.5,
+          "input_asof": "2026-03-26",
+          "output_asof": "2026-03-26",
+          "output_stale_days": 10,
+          "dependency_ids": [
+            "v1_audit"
+          ],
+          "blocked_by": [],
+          "status_detail": {
+            "cutover_report": {
+              "report_type": "cutover_readiness",
+              "date": "2026-03-26",
+              "timestamp": "2026-03-26T15:50:51.315Z",
+              "current_mode": "v1_primary_with_legacy_audit",
+              "metrics": {
+                "shadow_days": 65,
+                "matured_outcomes": 31630,
+                "fallback_rate": 0,
+                "governance_violations": 0,
+                "fp_regression": -0.3,
+                "verdict_agreement_rate": 1
+              },
+              "readiness": {
+                "cutover_recommended": true,
+                "criteria_met": {
+                  "min_shadow_days": {
+                    "threshold": 14,
+                    "actual": 65
+                  },
+                  "min_matured_outcomes": {
+                    "threshold": 30,
+                    "actual": 31630
+                  },
+                  "max_fallback_rate": {
+                    "threshold": 0.4
+                  },
+                  "max_governance_violations": {
+                    "threshold": 5
+                  },
+                  "max_fp_regression": {
+                    "threshold": 0.05,
+                    "actual": -0.3
+                  },
+                  "min_verdict_agreement_rate": {
+                    "threshold": 0.7,
+                    "actual": 1
+                  }
+                },
+                "criteria_failed": {}
+              },
+              "summary": {
+                "total_decisions": 224841,
+                "total_outcomes": 31630,
+                "matured_outcomes": 31630,
+                "weight_snapshots": 3,
+                "v1_fp_rate": 0,
+                "legacy_fp_rate_baseline": 0.3
+              },
+              "dry_run": false
+            },
+            "impact": "Cutover should remain blocked until fallback-rate and readiness criteria are genuinely satisfied."
+          },
+          "runbook": {
+            "doc_ref": "docs/ops/runbook.md",
+            "recovery_script": "scripts/ops/run-market-data-recovery.mjs",
+            "run_command": "node scripts/learning/quantlab-v1/cutover-readiness-report.mjs",
+            "verify_commands": [
+              "ls -1 mirrors/learning/quantlab-v1/reports/cutover-readiness-*.json | tail -n 1"
+            ],
+            "outputs": [
+              "mirrors/learning/quantlab-v1/reports/cutover-readiness-<DATE>.json"
+            ],
+            "ui_surfaces": [
+              "dashboard_v7 Cutover Readiness"
+            ],
+            "failure_signals": [
+              "cutover_recommended = false",
+              "criteria_failed not empty"
+            ]
+          }
+        }
+      },
+      "stock_analyzer_universe_audit": {
+        "schema": "rv.stock_analyzer_universe_audit.v1",
+        "generated_at": "2026-04-03T16:38:19.983Z",
+        "started_at": "2026-04-03T16:38:00.631Z",
+        "completed_at": "2026-04-03T16:38:19.983Z",
+        "run": {
+          "base_url": "http://127.0.0.1:8788",
+          "registry_path": "public/data/universe/v7/registry/registry.ndjson.gz",
+          "asset_classes": [
+            "STOCK",
+            "ETF"
+          ],
+          "max_tickers": 0,
+          "concurrency": 3,
+          "timeout_ms": 20000,
+          "explicit_tickers": [
+            "AAPL",
+            "SPY",
+            "QQQ",
+            "TSLA",
+            "IWM"
+          ],
+          "processed_assets": 5,
+          "total_universe_assets": 5,
+          "source_mode": "explicit_tickers"
+        },
+        "summary": {
+          "severity": "critical",
+          "total_assets": 5,
+          "processed_assets": 5,
+          "healthy_assets": 0,
+          "affected_assets": 5,
+          "failure_family_count": 3,
+          "field_checks_total": 120,
+          "ui_contract_checks_per_asset": 24,
+          "full_universe": false
+        },
+        "failure_families": [
+          {
+            "family_id": "historical_profile_unavailable",
+            "severity": "critical",
+            "label": "Historical profile unavailable",
+            "description": "Historical Performance / Historical signal profile could not load for this asset.",
+            "affected_assets": 1,
+            "affected_ratio": 0.2,
+            "asset_classes": {
+              "UNKNOWN": 1
+            },
+            "examples": [
+              {
+                "ticker": "IWM",
+                "assetClass": "UNKNOWN",
+                "detail": "Historical profile has not been generated for this asset yet."
+              }
+            ],
+            "recovery_ids": [
+              "hist_probs"
+            ]
+          },
+          {
+            "family_id": "model_consensus_degraded",
+            "severity": "warning",
+            "label": "Model consensus degraded",
+            "description": "At least one model-evidence lane is unavailable or incomplete.",
+            "affected_assets": 5,
+            "affected_ratio": 1,
+            "asset_classes": {
+              "UNKNOWN": 5
+            },
+            "examples": [
+              {
+                "ticker": "AAPL",
+                "assetClass": "UNKNOWN",
+                "detail": "No model data"
+              },
+              {
+                "ticker": "SPY",
+                "assetClass": "UNKNOWN",
+                "detail": "No model data"
+              },
+              {
+                "ticker": "QQQ",
+                "assetClass": "UNKNOWN",
+                "detail": "No model data"
+              },
+              {
+                "ticker": "TSLA",
+                "assetClass": "UNKNOWN",
+                "detail": "No model data"
+              },
+              {
+                "ticker": "IWM",
+                "assetClass": "UNKNOWN",
+                "detail": "No model data"
+              }
+            ],
+            "recovery_ids": [
+              "forecast_daily",
+              "scientific_summary",
+              "learning_daily"
+            ]
+          },
+          {
+            "family_id": "fundamentals_unavailable",
+            "severity": "warning",
+            "label": "Fundamentals unavailable",
+            "description": "Fundamentals/catalysts contract is incomplete for this asset.",
+            "affected_assets": 2,
+            "affected_ratio": 0.4,
+            "asset_classes": {
+              "UNKNOWN": 2
+            },
+            "examples": [
+              {
+                "ticker": "AAPL",
+                "assetClass": "UNKNOWN",
+                "detail": "No fundamentals data"
+              },
+              {
+                "ticker": "TSLA",
+                "assetClass": "UNKNOWN",
+                "detail": "No verified fundamentals fields"
+              }
+            ],
+            "recovery_ids": [
+              "fundamentals_refresh",
+              "manual_contract_repair"
+            ]
+          }
+        ],
+        "ordered_recovery": [
+          {
+            "rank": 1,
+            "step_id": "fundamentals_refresh",
+            "label": "Fundamentals Refresh",
+            "affected_assets": 2,
+            "affected_families": [
+              "fundamentals_unavailable"
+            ],
+            "run_command": "node scripts/build-fundamentals.mjs --force",
+            "verify_commands": [
+              "jq '.meta.quality' public/data/v3/fundamentals/manifest.json",
+              "ls public/data/fundamentals | head"
+            ],
+            "outputs": [
+              "public/data/fundamentals/<TICKER>.json",
+              "public/data/v3/fundamentals/manifest.json"
+            ],
+            "ui_surfaces": [
+              "analyze-v4 Fundamentals",
+              "analyze-v4 Catalysts"
+            ]
+          },
+          {
+            "rank": 2,
+            "step_id": "hist_probs",
+            "label": "Hist Probs",
+            "affected_assets": 1,
+            "affected_families": [
+              "historical_profile_unavailable"
+            ],
+            "run_command": "node scripts/lib/hist-probs/run-hist-probs.mjs --registry-path public/data/universe/v7/registry/registry.ndjson.gz --asset-classes STOCK,ETF --max-tickers 0",
+            "verify_commands": [
+              "jq '{ran_at,tickers_total,tickers_processed,tickers_skipped,tickers_errors,regime_date,source_mode,asset_classes,max_tickers}' public/data/hist-probs/run-summary.json",
+              "jq '{date,market_regime,volatility_regime,breadth_regime}' public/data/hist-probs/regime-daily.json"
+            ],
+            "outputs": [
+              "public/data/hist-probs/run-summary.json",
+              "public/data/hist-probs/regime-daily.json",
+              "public/data/hist-probs/<TICKER>.json"
+            ],
+            "ui_surfaces": [
+              "analyze-v4 Historical Performance",
+              "analyze-v4 Historical signal profile",
+              "dashboard_v7 hist_probs card"
+            ]
+          },
+          {
+            "rank": 3,
+            "step_id": "forecast_daily",
+            "label": "Forecast Daily",
+            "affected_assets": 5,
+            "affected_families": [
+              "model_consensus_degraded"
+            ],
+            "run_command": "node scripts/forecast/run_daily.mjs",
+            "verify_commands": [
+              "jq '{status,generated_at,data_asof:.data.asof}' public/data/forecast/latest.json"
+            ],
+            "outputs": [
+              "public/data/forecast/latest.json"
+            ],
+            "ui_surfaces": [
+              "analyze-v4 model consensus / decision inputs",
+              "frontpage best-setups candidate pools",
+              "dashboard_v7 forecast card"
+            ]
+          },
+          {
+            "rank": 4,
+            "step_id": "scientific_summary",
+            "label": "Scientific Summary",
+            "affected_assets": 5,
+            "affected_families": [
+              "model_consensus_degraded"
+            ],
+            "run_command": "node scripts/build-scientific-summary.mjs",
+            "verify_commands": [
+              "jq '{generated_at,as_of:.source_meta.asof,signals:(.strong_signals|length)}' public/data/supermodules/scientific-summary.json"
+            ],
+            "outputs": [
+              "public/data/supermodules/scientific-summary.json"
+            ],
+            "ui_surfaces": [
+              "analyze-v4 model consensus / setup evidence",
+              "dashboard_v7 scientific card"
+            ]
+          },
+          {
+            "rank": 5,
+            "step_id": "learning_daily",
+            "label": "Learning Daily",
+            "affected_assets": 5,
+            "affected_families": [
+              "model_consensus_degraded"
+            ],
+            "run_command": "node scripts/learning/run-daily-learning-cycle.mjs --date=<YYYY-MM-DD>",
+            "verify_commands": [
+              "jq '{date,overall_status:.summary.overall_status,learning_status:.summary.learning_status,safety_switch:.summary.safety_switch.level}' public/data/reports/learning-report-latest.json"
+            ],
+            "outputs": [
+              "public/data/reports/learning-report-latest.json",
+              "public/data/reports/learning-report-latest.js"
+            ],
+            "ui_surfaces": [
+              "dashboard_v7 overall learning status",
+              "frontpage / analyzer confidence calibration context"
+            ]
+          },
+          {
+            "rank": 6,
+            "step_id": "manual_contract_repair",
+            "label": "Manual Stock Analyzer Contract Repair",
+            "affected_assets": 2,
+            "affected_families": [
+              "fundamentals_unavailable"
+            ],
+            "run_command": "No script can fix this automatically. Repair the UI/API contract, then rerun the universe audit.",
+            "verify_commands": [
+              "node scripts/ops/build-stock-analyzer-universe-audit.mjs --base-url http://127.0.0.1:8788 --registry-path public/data/universe/v7/registry/registry.ndjson.gz --asset-classes STOCK,ETF --max-tickers 0",
+              "node scripts/ops/build-system-status-report.mjs",
+              "node scripts/generate_meta_dashboard_data.mjs"
+            ],
+            "outputs": [
+              "public/data/reports/stock-analyzer-universe-audit-latest.json"
+            ],
+            "ui_surfaces": [
+              "dashboard_v7 Stock Analyzer Universe Audit",
+              "analyze-v4 all panels"
+            ]
+          }
+        ],
+        "samples": {
+          "failing_assets": [
+            {
+              "ticker": "IWM",
+              "assetClass": "UNKNOWN",
+              "detail": "Historical profile has not been generated for this asset yet."
+            },
+            {
+              "ticker": "AAPL",
+              "assetClass": "UNKNOWN",
+              "detail": "No model data"
+            },
+            {
+              "ticker": "SPY",
+              "assetClass": "UNKNOWN",
+              "detail": "No model data"
+            },
+            {
+              "ticker": "QQQ",
+              "assetClass": "UNKNOWN",
+              "detail": "No model data"
+            },
+            {
+              "ticker": "TSLA",
+              "assetClass": "UNKNOWN",
+              "detail": "No model data"
+            },
+            {
+              "ticker": "IWM",
+              "assetClass": "UNKNOWN",
+              "detail": "No model data"
+            },
+            {
+              "ticker": "AAPL",
+              "assetClass": "UNKNOWN",
+              "detail": "No fundamentals data"
+            },
+            {
+              "ticker": "TSLA",
+              "assetClass": "UNKNOWN",
+              "detail": "No verified fundamentals fields"
+            }
+          ]
+        }
+      },
+      "web_validation_chain": [
+        {
+          "id": "provider_to_history",
+          "label": "Provider -> canonical v7 history",
+          "surface": "dashboard_v7 + analyze-v4 freshness",
+          "check_command": "jq '.steps.market_data_refresh' public/data/reports/system-status-latest.json",
+          "fix_command": "python3 scripts/quantlab/refresh_v7_history_from_eodhd.py --allowlist-path public/data/universe/v7/ssot/stocks.max.canonical.ids.json --from-date <YYYY-MM-DD>",
+          "success_signal": "market_data_refresh severity=ok and output_asof on the latest trading day"
+        },
+        {
+          "id": "history_to_quantlab",
+          "label": "v7 history -> delta ingest -> QuantLab publish",
+          "surface": "analyze-v4 trust line + frontpage snapshot inputs",
+          "check_command": "jq '.steps.q1_delta_ingest,.steps.quantlab_daily_report' public/data/reports/system-status-latest.json",
+          "fix_command": "python3 scripts/quantlab/run_daily_delta_ingest_q1.py --ingest-date <YYYY-MM-DD> && node scripts/quantlab/build_quantlab_v4_daily_report.mjs",
+          "success_signal": "q1_delta_ingest and quantlab_daily_report both ok with current as-of dates"
+        },
+        {
+          "id": "model_sources",
+          "label": "Forecast + scientific + learning",
+          "surface": "model consensus / dashboard learning state",
+          "check_command": "jq '.steps.forecast_daily,.steps.scientific_summary,.steps.learning_daily' public/data/reports/system-status-latest.json",
+          "fix_command": "node scripts/forecast/run_daily.mjs && node scripts/build-scientific-summary.mjs && node scripts/learning/run-daily-learning-cycle.mjs --date=<YYYY-MM-DD>",
+          "success_signal": "forecast/scientific/learning all current and non-missing"
+        },
+        {
+          "id": "historical_modules",
+          "label": "Historical profile generation",
+          "surface": "analyze-v4 Historical Performance + Historical signal profile",
+          "check_command": "jq '.steps.hist_probs' public/data/reports/system-status-latest.json",
+          "fix_command": "node scripts/lib/hist-probs/run-hist-probs.mjs --registry-path public/data/universe/v7/registry/registry.ndjson.gz --asset-classes STOCK,ETF --max-tickers 0",
+          "success_signal": "hist_probs freshness ok and coverage target reached for requested asset classes"
+        },
+        {
+          "id": "snapshot_and_frontpage",
+          "label": "Snapshot + ETF diagnostic",
+          "surface": "frontpage buy lists + breakouts",
+          "check_command": "jq '.steps.snapshot,.steps.etf_diagnostic' public/data/reports/system-status-latest.json",
+          "fix_command": "node scripts/build-best-setups-v4.mjs && node scripts/learning/diagnose-best-setups-etf-drop.mjs",
+          "success_signal": "snapshot rows emitted and ETF diagnostic healthy"
+        },
+        {
+          "id": "api_contracts",
+          "label": "API contracts -> UI adapters",
+          "surface": "analyze-v4 data integrity",
+          "check_command": "node --test tests/dashboard_v7_meta.test.mjs tests/system-status-runbook.test.mjs tests/v2-data-integrity.test.mjs",
+          "fix_command": "node scripts/ci/verify-stock-ui-artifacts.mjs",
+          "success_signal": "contract tests green and stock UI artifacts valid"
+        },
+        {
+          "id": "dashboard_refresh",
+          "label": "Status artifact -> dashboard_v7",
+          "surface": "http://127.0.0.1:8788/dashboard_v7",
+          "check_command": "node scripts/ops/build-system-status-report.mjs && node scripts/generate_meta_dashboard_data.mjs",
+          "fix_command": "node scripts/ops/build-system-status-report.mjs && node scripts/generate_meta_dashboard_data.mjs",
+          "success_signal": "dashboard_v7 reflects the current status artifacts without stale cache or missing fields"
+        }
+      ],
+      "ssot_doc_ref": "docs/ops/runbook.md",
+      "recovery_script": "scripts/ops/run-market-data-recovery.mjs",
+      "tracked_step_ids": [
+        "market_data_refresh",
+        "q1_delta_ingest",
+        "quantlab_daily_report",
+        "hist_probs",
+        "forecast_daily",
+        "scientific_summary",
+        "learning_daily",
+        "snapshot",
+        "stock_analyzer_universe_audit",
+        "etf_diagnostic",
+        "v1_audit",
+        "cutover_readiness"
+      ],
+      "missing_step_ids": [],
+      "untracked_step_ids": [],
+      "ssot_violations": [
+        {
+          "id": "hist_probs_missing_etf_class",
+          "severity": "critical",
+          "title": "hist_probs ran without ETF asset class",
+          "ssot_doc": "scripts/ops/system-status-ssot.mjs (hist_probs.run_command)",
+          "why": "Last hist_probs run used asset_classes=[STOCK]. SSOT run_command requires STOCK,ETF. ETF tickers have no historical profiles in analyze-v4.",
+          "evidence": {
+            "asset_classes": [
+              "STOCK"
+            ],
+            "ran_at": "2026-04-04T14:32:33.478Z"
+          },
+          "fix_command": "node scripts/lib/hist-probs/run-hist-probs.mjs --registry-path public/data/universe/v7/registry/registry.ndjson.gz --asset-classes STOCK,ETF --max-tickers 0",
+          "success_signal": "run-summary.json asset_classes includes both STOCK and ETF",
+          "detected_at": "2026-04-04T21:19:32.701Z"
+        },
+        {
+          "id": "quantlab_canonical_lag",
+          "severity": "critical",
+          "title": "QuantLab canonical data lags bridge/any ingest by 23 days",
+          "ssot_doc": "docs/ops/runbook.md (Canonical Recovery Order step 2)",
+          "why": "latestCanonicalRequiredDataDate=2026-03-11 but latestAnyRequiredDataDate=2026-04-03 — gap of 23 calendar days. QuantLab models compute features on stale canonical partitions, not the bridge-only data.",
+          "evidence": {
+            "canonical_date": "2026-03-11",
+            "any_date": "2026-04-03",
+            "lag_days": 23
+          },
+          "fix_command": "python3 scripts/quantlab/run_daily_delta_ingest_q1.py --ingest-date <YYYY-MM-DD>",
+          "success_signal": "latestCanonicalRequiredDataDate within 5 calendar days of latestAnyRequiredDataDate",
+          "detected_at": "2026-04-04T21:19:32.701Z"
+        },
+        {
+          "id": "snapshot_quantlab_asof_lag",
+          "severity": "warning",
+          "title": "Snapshot quantlab_asof lags data_asof by 19 days",
+          "ssot_doc": "docs/ops/runbook.md (Step Contract: Best Setups Snapshot)",
+          "why": "snapshot.meta.quantlab_asof=2026-03-11 but snapshot.meta.data_asof=2026-03-30. Candidates on the frontpage are ranked using QuantLab evidence that is 19 days old relative to market data.",
+          "evidence": {
+            "quantlab_asof": "2026-03-11",
+            "data_asof": "2026-03-30",
+            "lag_days": 19
+          },
+          "fix_command": "node scripts/quantlab/build_quantlab_v4_daily_report.mjs && node scripts/build-best-setups-v4.mjs",
+          "success_signal": "snapshot.meta.quantlab_asof within 7 calendar days of snapshot.meta.data_asof",
+          "detected_at": "2026-04-04T21:19:32.701Z"
+        }
+      ],
       "regime": {
         "market": "bear",
         "volatility": "normal_vol",
@@ -239,17 +2810,17 @@
       }
     },
     "gate": {
-      "expectedSeverity": "warning",
+      "expectedSeverity": "critical",
       "pass": false
     }
   },
   "steps": {
     "ui_logic": {
-      "ok": false,
-      "status": 1,
+      "ok": true,
+      "status": 0,
       "signal": null,
-      "stdout": "════════════════════════════════════════════════════════════\nStock Analyzer UI Tests: 59 passed, 1 failed\n════════════════════════════════════════════════════════════\n  ✓ Badge: supported ticker with metadata\n  ✓ Badge: supported ticker with missing metadata\n  ✓ Badge: unsupported ticker (no name, no sector, not in universe)\n  ✓ Badge: not in universe but has profile\n  ✓ Freshness: FRESH envelope → LIVE\n  ✓ Freshness: Friday EOD data on Saturday is EOD_CURRENT\n  ✓ Freshness: Friday EOD data on Sunday is EOD_CURRENT\n  ✓ Freshness: stale when data is older than last trading day\n  ✓ Freshness: weekend handling - last trading day from Saturday\n  ✓ Freshness: weekend handling - last trading day from Sunday\n  ✓ Trigger: high < trigger → pending breakout\n  ✓ Trigger: high >= trigger and close < trigger → rejected\n  ✓ Trigger: close >= trigger → confirmed breakout\n  ✓ Trigger: close exactly at trigger → confirmed\n  ✓ Gate: raw validation UNKNOWN blocks BUY\n  ✓ Gate: raw validation VALID allows BUY\n  ✓ Gate: raw validation INVALID suppresses all\n  ✓ Gate: RSI >= 80 blocks BUY\n  ✓ Gate: RSI >= 80 does NOT affect WAIT\n  ✓ Gate: metric drift blocks BUY\n  ✓ Gate: metric drift does NOT affect AVOID\n  ✓ deriveRawGate: null input defaults to VALID (no blocking)\n  ✓ deriveRawGate: undefined input defaults to VALID\n  ✓ deriveRawGate: valid=true → VALID\n  ✓ deriveRawGate: valid=false → INVALID + suppressed\n  ✓ Regression: null rawValidation must not downgrade BUY to WAIT\n  ✓ Z-Score: normal day is plausible\n  ✓ Z-Score: strong trend day shows elevated Z\n  ✓ Z-Score: extreme gap-up shows very high Z\n  ✓ Breakout Energy: normal compression day\n  ✓ Breakout Energy: event/gap day shows positive energy\n  ✓ Breakout Energy: high compression yields setup forming\n  ✓ UI regression: verdict-aware explanation header is present\n  ✓ UI regression: market context degraded fallback is present\n  ✓ UI regression: signal quality helper text is wired from risk presentation\n  ✗ UI regression: WAIT path renders non-applicable checklist state\n  ✓ UI regression: model evidence empty-state is hidden\n  ✓ UI regression: executive decision panel stays free of audit placeholders\n  ✓ 52W Range: at 52W high\n  ✓ 52W Range: near 52W low\n  ✓ 52W Range: mid range\n  ✓ Drift severity: minor\n  ✓ Drift severity: material\n  ✓ Drift severity: critical\n  ✓ Drift severity: critical via ATR\n  ✓ No dead \"see below\" references in stock-features.js\n  ✓ Positive case: all gates clear + score >= 2 => BUY\n  ✓ Positive case: BUY not artificially blocked when rules met\n  ✓ Badge V2: bars exist but no profile => profile-unavailable (not unsupported)\n  ✓ Badge V2: no bars and no profile => ticker-not-found\n  ✓ Badge V2: bars + profile but not in universe => limited-coverage\n  ✓ Badge V2: normal in-universe ticker\n  ✓ Freshness: header and data health use same effective status\n  ✓ No \"Not Live\" in stock.html\n  ✓ No \"Macro context not yet available\" in stock-features.js\n  ✓ Live stock.html loads stock-features.js\n  ✓ Live stock.html defines runtime variables used in template rendering\n  ✓ Initial HTML has no pre-filled \"Unsupported\" badge\n  ✓ Initial HTML subtitle is not a ticker duplicate\n  ✓ Gate: INVALID suppresses regardless of other conditions",
-      "stderr": "FAIL: UI regression: WAIT path renders non-applicable checklist state\n    The input did not match the regular expression /No active trade setup — checklist hidden until confirmation appears\\./. Input:\n\n'<!DOCTYPE html>\\n' +\n  '<html lang=\"en\" data-theme=\"dark\"><head>\\n' +\n  '<meta charset=\"UTF-8\">\\n' +\n  '<title>Analysis · RubikVault</title>\\n' +\n  '<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">\\n' +\n  '<meta name=\"theme-color\" content=\"#3b82f6\" />\\n' +\n  '<link rel=\"icon\" type=\"image/svg+xml\" href=\"/images/branding/rubikvault_stacked_logo.svg\" />\\n' +\n  '<link rel=\"apple-touch-icon\" href=\"/images/branding/rubikvault_stacked_logo.svg\" />\\n' +\n  '<link rel=\"stylesheet\" href=\"/style.css\" />\\n' +\n  '<style>\\n' +\n  ':root{--bg:#020617;--card:rgba(15,23,42,0.92);--border:rgba(148,163,184,0.15);--text:#f1f5f9;--text-dim:#94a3b8;--text-muted:#64748b;--accent:#06b6d4;--accent-glow:rgba(6,182,212,0.12);--green:#10b981;--green-bg:rgba(16,185,129,0.08);--red:#f87171;--red-bg:rgba(248,113,113,0.08);--yellow:#fbbf24;--yellow-bg:rgba(251,191,36,0.08);--radius:16px;--radius-sm:10px}\\n' +\n  \"*{box-sizing:border-box}body{margin:0;font-family:'Inter',system-ui,-apple-system,sans-serif;background:var(--rv-bg, var(--bg));color:var(--text)}\\n\" +\n  '.dash-main{max-width:1400px;margin:0 auto;padding:1.5rem 1.5rem 3rem}\\n' +\n  '.section{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:1.25rem 1.5rem;overflow:hidden; height: 100%;}\\n' +\n  '.section h2{font-size:.85rem;font-weight:700;color:var(--text-dim);text-transform:uppercase;letter-spacing:.06em;margin:0 0 .75rem;display:flex;align-items:center;gap:.5rem}\\n' +\n  '.ma-table{width:100%;border-collapse:collapse;font-size:.78rem}\\n' +\n  '.ma-table td{padding:.3rem .4rem;border-bottom:1px solid rgba(255,255,255,0.03)}\\n' +\n  '.dash-grid{display:grid;grid-template-columns:repeat(3, 1fr);gap:1.25rem;align-items:stretch}\\n' +\n  '.kv{display:flex;justify-content:space-between;padding:.15rem 0;border-bottom:1px solid rgba(255,255,255,0.03);font-size:.75rem}\\n' +\n  '.kv-l{color:var(--text-dim)}.kv-v{font-weight:600}\\n' +\n  '.tf-btn,.cl-btn{padding:3px 8px;border-radius:4px;border:1px solid var(--border);background:rgba(255,255,255,0.03);color:var(--text-dim);font-size:.68rem;font-weight:600;cursor:pointer}\\n' +\n  '.tf-btn:hover,.tf-btn.active,.cl-btn:hover,.cl-btn.active{background:var(--accent-glow);color:var(--accent);border-color:rgba(6,182,212,0.3)}\\n' +\n  '@media(max-width:1100px){.dash-grid{grid-template-columns:1fr;}}\\n' +\n  '.hp-btn{padding:4px 14px;border-radius:6px;border:1px solid var(--border);background:rgba(255,255,255,0.03);color:var(--text-dim);font-size:.72rem;font-weight:700;cursor:pointer;transition:all .15s}\\n' +\n  '.hp-btn:hover,.hp-btn.active{background:rgba(6,182,212,0.12);color:var(--accent);border-color:rgba(6,182,212,0.35)}\\n' +\n  '</style></head>\\n' +\n  '<body>\\n' +\n  '\\n' +\n  '<!-- HEADER -->\\n' +\n  '<header class=\"rv-header\">\\n' +\n  '  <div class=\"rv-header-inner\">\\n' +\n  '    <a class=\"rv-brand\" href=\"/\" aria-label=\"RubikVault\">\\n' +\n  '      <img class=\"rv-brand-icon\" src=\"/images/branding/rubikvault_stacked_logo.svg\" alt=\"\" />\\n' +\n  '      <span class=\"rv-brand-text\">RubikVault</span>\\n' +\n  '    </a>\\n' +\n  '    <nav class=\"rv-nav\">\\n' +\n  '      <a class=\"rv-social-link\" href=\"https://www.youtube.com/@RubikVault\" target=\"_blank\" rel=\"noopener noreferrer\" aria-label=\"YouTube\">\\n' +\n  '        <svg viewBox=\"0 0 24 24\" aria-hidden=\"true\" focusable=\"false\"><path d=\"M21.58 7.19a2.5 2.5 0 0 0-1.76-1.77C18.25 5 12 5 12 5s-6.25 0-7.82.42A2.5 2.5 0 0 0 2.42 7.2 26.6 26.6 0 0 0 2 12s0 2.55.42 4.81a2.5 2.5 0 0 0 1.76 1.77C5.75 19 12 19 12 19s6.25 0 7.82-.42a2.5 2.5 0 0 0 1.76-1.77C22 14.55 22 12 22 12s0-2.55-.42-4.81ZM10 15.5v-7l6 3.5-6 3.5Z\"/></svg>\\n' +\n  '      </a>\\n' +\n  '      <a class=\"rv-social-link\" href=\"https://x.com/RubikVault\" target=\"_blank\" rel=\"noopener noreferrer\" aria-label=\"X\">\\n' +\n  '        <svg viewBox=\"0 0 24 24\" aria-hidden=\"true\" focusable=\"false\"><path d=\"M18.9 2H22l-6.79 7.76L23 22h-6.2l-4.86-6.02L6.66 22H3.5l7.26-8.3L3 2h6.35l4.4 5.52L18.9 2Zm-1.09 18h1.72L8.4 3.93H6.56L17.81 20Z\"/></svg>\\n' +\n  '      </a>\\n' +\n  '      <a class=\"rv-social-link\" href=\"https://www.instagram.com/rubikvault_official/\" target=\"_blank\" rel=\"noopener noreferrer\" aria-label=\"Instagram\">\\n' +\n  '        <svg viewBox=\"0 0 24 24\" aria-hidden=\"true\" focusable=\"false\"><path d=\"M7 2h10a5 5 0 0 1 5 5v10a5 5 0 0 1-5 5H7a5 5 0 0 1-5-5V7a5 5 0 0 1 5-5Zm10 2H7a3 3 0 0 0-3 3v10a3 3 0 0 0 3 3h10a3 3 0 0 0 3-3V7a3 3 0 0 0-3-3Zm-5 3.5a4.5 4.5 0 1 1 0 9 4.5 4.5 0 0 1 0-9Zm0 2a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5ZM17.8 6.2a1 1 0 1 1 0 2 1 1 0 0 1 0-2Z\"/></svg>\\n' +\n  '      </a>\\n' +\n  '      <a class=\"rv-social-link\" href=\"https://www.tiktok.com/@rubikvault\" target=\"_blank\" rel=\"noopener noreferrer\" aria-label=\"TikTok\">\\n' +\n  '        <svg viewBox=\"0 0 24 24\" aria-hidden=\"true\" focusable=\"false\"><path d=\"M16.7 5.2c.8 1.2 2.1 2 3.6 2.1v3.1c-1.7-.1-3.3-.7-4.6-1.7v7.4c0 3.4-2.8 6.2-6.2 6.2S3.3 19.5 3.3 16.1s2.8-6.2 6.2-6.2c.4 0 .8 0 1.2.1v3.3c-.4-.1-.8-.2-1.2-.2-1.7 0-3.1 1.4-3.1 3.1s1.4 3.1 3.1 3.1 3.1-1.4 3.1-3.1V2h3.1c0 1.2.3 2.3 1 3.2Z\"/></svg>\\n' +\n  '      </a>\\n' +\n  '    </nav>\\n' +\n  '    <div class=\"rv-header-tools\" aria-live=\"polite\">\\n' +\n  '      <div class=\"rv-data-updated\" style=\"font-size: 12px; color: var(--rv-text-muted);\">Snapshot: <span id=\"rv-data-updated-date\">...</span> · Latest Data: <span id=\"rv-data-asof\">...</span></div>\\n' +\n  '      <div class=\"rv-market-clock\">\\n' +\n  '        <span class=\"rv-clock-time\" id=\"rv-ny-time\">NY: --:--:--</span>\\n' +\n  '        <span class=\"rv-clock-status\">\\n' +\n  '          <span class=\"rv-led\" data-rv-led=\"closed\"></span>\\n' +\n  '          <span class=\"rv-market-label\" data-rv-market-label>Closed</span>\\n' +\n  '          <span class=\"rv-market-countdown\" id=\"rv-market-countdown\">opens in --:--:--</span>\\n' +\n  '        </span>\\n' +\n  '      </div>\\n' +\n  '    </div>\\n' +\n  '  </div>\\n' +\n  '</header>\\n' +\n  '\\n' +\n  '<!-- PAGE NAVIGATION -->\\n' +\n  '<nav class=\"rv-page-nav\">\\n' +\n  '  <div class=\"rv-page-nav-inner\">\\n' +\n  '    <a href=\"/analyze\" class=\"rv-page-nav-link active\" data-top-route=\"analyze\">ANALYZE</a>\\n' +\n  '    <a href=\"/market\" class=\"rv-page-nav-link\" data-top-route=\"market\">MARKET</a>\\n' +\n  '    <a href=\"/ideas\" class=\"rv-page-nav-link\" data-top-route=\"ideas\">IDEAS</a>\\n' +\n  '  </div>\\n' +\n  '</nav>\\n' +\n  '\\n' +\n  '<div class=\"dash-main\">\\n' +\n  '  <!-- Dashboard Sub-Header -->\\n' +\n  '  <div style=\"padding:1rem 0;border-bottom:1px solid var(--border);margin-bottom:1.5rem;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.75rem\">\\n' +\n  '    <div>\\n' +\n  '      <div style=\"font-size:1.1rem;font-weight:700;margin:0 0 .2rem;color:var(--text)\">Executive Dashboard</div>\\n' +\n  '      <div style=\"font-size:.8rem;color:var(--text-muted)\"><strong id=\"sc-ticker\" style=\"color:var(--text)\">...</strong> <span id=\"sc-symbol\" style=\"color:var(--text-muted)\"></span> · <span id=\"sc-price\">Loading...</span></div>\\n' +\n  '    </div>\\n' +\n  '    <!-- Search Bar -->\\n' +\n  '    <div style=\"display:flex;align-items:center;gap:.5rem\">\\n' +\n  '      <input id=\"dash-search\" type=\"text\" placeholder=\"Search ticker...\" style=\"padding:.4rem .75rem;border-radius:6px;border:1px solid var(--border);background:rgba(255,255,255,0.04);color:var(--text);font-size:.85rem;width:160px;outline:none\" />\\n' +\n  '      <button id=\"dash-search-btn\" style=\"padding:.4rem .75rem;border-radius:6px;border:1px solid var(--accent);background:var(--accent-glow);color:var(--accent);font-size:.8rem;font-weight:700;cursor:pointer\">Analyze</button>\\n' +\n  '    </div>\\n' +\n  '    <div id=\"sc-headline-kpis\" style=\"display:flex;gap:.5rem\"></div>\\n' +\n  '    <div id=\"sc-climate-bar\" style=\"display:flex;gap:.5rem;margin-top:.5rem;flex-wrap:wrap\"><span style=\"font-size:.6rem;color:var(--text-muted)\">Loading market climate…</span></div>\\n' +\n  '  </div>\\n' +\n  '  <!-- Content Grid -->\\n' +\n  '  <div id=\"sc-content\"></div>\\n' +\n  '</div>\\n' +\n  '\\n' +\n  '<script>\\n' +\n  '(async function(){\\n' +\n  `  const _esc = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\"/g,'&quot;');\\n` +\n  '  const isV4View = /\\\\/analyze(?:-v4)?(?:\\\\/|$)/i.test(window.location.pathname);\\n' +\n  '  if (isV4View) {\\n' +\n  '    window.__RV_FEATURES_V4 = true;\\n' +\n  '    window.__RV_FLAGS = { ...(window.__RV_FLAGS || {}), featuresV4: true };\\n' +\n  \"    document.documentElement.dataset.rvLocalV4 = '1';\\n\" +\n  '  }\\n' +\n  '  const pathMatch = window.location.pathname.match(/\\\\/analyze(?:-v4)?\\\\/([^/?]+)/i);\\n' +\n  \"  const ticker = (pathMatch ? decodeURIComponent(pathMatch[1]).toUpperCase() : new URLSearchParams(location.search).get('ticker')?.toUpperCase()) || 'AAPL';\\n\" +\n  '  const {\\n' +\n  '    buildPageIdentity,\\n' +\n  '    buildRiskPresentation,\\n' +\n  '    buildCatalystPresentation,\\n' +\n  '    buildFundamentalsPresentation,\\n' +\n  '    buildModuleFreshnessPresentation,\\n' +\n  '    classifyHistoricalFreshness,\\n' +\n  '    validateLevelConsistency,\\n' +\n  '    buildTradePlanModel,\\n' +\n  '    computeTooltipFrame,\\n' +\n  \"  } = await import('/js/stock-page-view-model.js');\\n\" +\n  '  let payload;\\n' +\n  \"  let _rvDataSource = 'v1';\\n\" +\n  '  try {\\n' +\n  '    if (isV4View) {\\n' +\n  \"      const { fetchWithFallback } = await import('/js/rv-v2-client.js');\\n\" +\n  '      const resolved = await fetchWithFallback(ticker);\\n' +\n  '      payload = resolved.payload;\\n' +\n  \"      _rvDataSource = resolved.source === 'v2' ? 'v2' : 'v1';\\n\" +\n  '    } else {\\n' +\n  '      // Legacy V1 fallback (if needed for non-analyzer routes)\\n' +\n  \"      const res = await fetch('/api/stock?ticker=' + encodeURIComponent(ticker));\\n\" +\n  '      if (!res.ok) throw new Error(`HTTP ${res.status}`);\\n' +\n  '      payload = await res.json();\\n' +\n  \"      _rvDataSource = 'v1';\\n\" +\n  '    }\\n' +\n  '  } catch(e) {\\n' +\n  \"    console.error('[RV] API fetch failed:', e);\\n\" +\n  `    document.getElementById('sc-content').innerHTML = '<div style=\"color:var(--red);text-align:center;padding:2rem\">Unable to load data. Please try again.</div>'; return;\\n` +\n  '  }\\n' +\n  '  window._rvDataSource = _rvDataSource;\\n' +\n  '\\n' +\n  '  // Data Guard: validate and annotate payload before rendering\\n' +\n  \"  const { guardPayload } = await import('/js/stock-data-guard.js');\\n\" +\n  '  const _guard = guardPayload(payload, ticker);\\n' +\n  \"  if (_guard.warnings.length) console.debug('[RV Guard]', _guard.warnings);\\n\" +\n  '\\n' +\n  '  const data = payload.data || {}, meta = payload.metadata || {}, s = data.market_stats?.stats || {}, prices = data.market_prices || {}, bars = data.bars || [], change = data.change || {};\\n' +\n  '  const lastBar = bars.length ? bars[bars.length-1] : {};\\n' +\n  '  const identity = buildPageIdentity(payload, ticker);\\n' +\n  '  const close = identity.pageClose;\\n' +\n  '  const atr = Number.isFinite(s.atr14) ? s.atr14 : null;\\n' +\n  '  const atrPct = close > 0 && atr != null ? (atr / close * 100) : null;\\n' +\n  '  const tkr = identity.ticker || ticker;\\n' +\n  '  const pageAsOf = identity.pageAsOf;\\n' +\n  '  const displayName = identity.name || tkr;\\n' +\n  '  const moduleFreshness = buildModuleFreshnessPresentation(payload);\\n' +\n  '  const fundamen'... 126357 more characters",
+      "stdout": "════════════════════════════════════════════════════════════\nStock Analyzer UI Tests: 85 passed, 0 failed\n════════════════════════════════════════════════════════════\n  ✓ Badge: supported ticker with metadata\n  ✓ Badge: supported ticker with missing metadata\n  ✓ Badge: unsupported ticker (no name, no sector, not in universe)\n  ✓ Badge: not in universe but has profile\n  ✓ Freshness: FRESH envelope → LIVE\n  ✓ Freshness: Friday EOD data on Saturday is EOD_CURRENT\n  ✓ Freshness: Friday EOD data on Sunday is EOD_CURRENT\n  ✓ Freshness: stale when data is older than last trading day\n  ✓ Freshness: weekend handling - last trading day from Saturday\n  ✓ Freshness: weekend handling - last trading day from Sunday\n  ✓ Trigger: high < trigger → pending breakout\n  ✓ Trigger: high >= trigger and close < trigger → rejected\n  ✓ Trigger: close >= trigger → confirmed breakout\n  ✓ Trigger: close exactly at trigger → confirmed\n  ✓ Gate: raw validation UNKNOWN blocks BUY\n  ✓ Gate: raw validation VALID allows BUY\n  ✓ Gate: raw validation INVALID suppresses all\n  ✓ Gate: RSI >= 80 blocks BUY\n  ✓ Gate: RSI >= 80 does NOT affect WAIT\n  ✓ Gate: metric drift blocks BUY\n  ✓ Gate: metric drift does NOT affect AVOID\n  ✓ deriveRawGate: null input defaults to VALID (no blocking)\n  ✓ deriveRawGate: undefined input defaults to VALID\n  ✓ deriveRawGate: valid=true → VALID\n  ✓ deriveRawGate: valid=false → INVALID + suppressed\n  ✓ Regression: null rawValidation must not downgrade BUY to WAIT\n  ✓ Z-Score: normal day is plausible\n  ✓ Z-Score: strong trend day shows elevated Z\n  ✓ Z-Score: extreme gap-up shows very high Z\n  ✓ Breakout Energy: normal compression day\n  ✓ Breakout Energy: event/gap day shows positive energy\n  ✓ Breakout Energy: high compression yields setup forming\n  ✓ UI regression: verdict-aware explanation header is present\n  ✓ UI regression: market context degraded fallback is present\n  ✓ UI regression: signal quality helper text is wired from risk presentation\n  ✓ UI regression: WAIT path renders non-applicable checklist state\n  ✓ UI regression: model evidence empty-state is hidden\n  ✓ UI regression: executive decision panel stays free of audit placeholders\n  ✓ 52W Range: at 52W high\n  ✓ 52W Range: near 52W low\n  ✓ 52W Range: mid range\n  ✓ Drift severity: minor\n  ✓ Drift severity: material\n  ✓ Drift severity: critical\n  ✓ Drift severity: critical via ATR\n  ✓ No dead \"see below\" references in stock-features.js\n  ✓ Positive case: all gates clear + score >= 2 => BUY\n  ✓ Positive case: BUY not artificially blocked when rules met\n  ✓ Badge V2: bars exist but no profile => profile-unavailable (not unsupported)\n  ✓ Badge V2: no bars and no profile => ticker-not-found\n  ✓ Badge V2: bars + profile but not in universe => limited-coverage\n  ✓ Badge V2: normal in-universe ticker\n  ✓ Freshness: header and data health use same effective status\n  ✓ No \"Not Live\" in stock.html\n  ✓ No \"Macro context not yet available\" in stock-features.js\n  ✓ Live stock.html loads stock-features.js\n  ✓ Live stock.html defines runtime variables used in template rendering\n  ✓ Live stock.html includes explicit operational banner tiers\n  ✓ Live stock.html removes risk inconsistency warning copy\n  ✓ Live stock.html clarifies historical timestamps explicitly\n  ✓ Live stock.html sharpens trend vs rebound wording\n  ✓ Live stock.html uses compact breakout none wording\n  ✓ Live stock.html improves what-changed wording\n  ✓ Live stock.html makes market context wording timeframe-aware\n  ✓ Live stock.html qualifies historical confidence strength\n  ✓ Live stock.html exposes compact decision meta summary\n  ✓ Live stock.html renders causal risk explanation from final risk state\n  ✓ Live stock.html hardens trade plan and checklist empty states\n  ✓ Live stock.html enriches catalysts and signal hierarchy copy\n  ✓ Live stock.html differentiates volume omission reason and model evidence visibility\n  ✓ Live stock.html removes help cursor from non-interactive badges\n  ✓ Live stock.html places model evidence above momentum dashboard\n  ✓ Live stock.html adds a single trust bar with consolidated timing\n  ✓ Live stock.html removes outdated dashboard copy\n  ✓ Live stock.html includes WAIT next-action guidance\n  ✓ Live stock.html includes mobile-safe targets and skeleton states\n  ✓ Live stock.html separates decision, evidence, and background layers\n  ✓ Live stock.html collapses identical horizons and hides inactive model slots\n  ✓ Live stock.html collapses historical signal profile behind open details\n  ✓ Live stock.html loads historical modules from V2 SSOT instead of direct static fetches\n  ✓ Live stock.html suppresses key levels when SSOT marks the price stack incoherent\n  ✓ Live stock.html upgrades analyzer search to universe-backed typeahead\n  ✓ Initial HTML has no pre-filled \"Unsupported\" badge\n  ✓ Initial HTML subtitle is not a ticker duplicate\n  ✓ Gate: INVALID suppresses regardless of other conditions",
+      "stderr": "",
       "command": "/opt/homebrew/Cellar/node/25.2.1/bin/node tests/stock-analyzer-ui.test.mjs"
     },
     "v4_contract": {
@@ -261,35 +2832,35 @@
       "command": "/opt/homebrew/Cellar/node/25.2.1/bin/node tests/stock-insights-v4.test.mjs"
     },
     "v2_summary_truth": {
-      "ok": true,
-      "status": 0,
+      "ok": false,
+      "status": 1,
       "signal": null,
-      "stdout": "data-interface summary selection tests passed",
-      "stderr": "",
+      "stdout": "",
+      "stderr": "node:internal/modules/cjs/loader:1423\n  throw err;\n  ^\n\nError: Cannot find module '/Users/michaelpuchowezki/Dev/rubikvault-site/tests/data-interface-summary-selection.test.mjs'\n    at Module._resolveFilename (node:internal/modules/cjs/loader:1420:15)\n    at defaultResolveImpl (node:internal/modules/cjs/loader:1058:19)\n    at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1063:22)\n    at Module._load (node:internal/modules/cjs/loader:1226:37)\n    at TracingChannel.traceSync (node:diagnostics_channel:328:14)\n    at wrapModuleLoad (node:internal/modules/cjs/loader:245:24)\n    at Module.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:154:5)\n    at node:internal/main/run_main_module:33:47 {\n  code: 'MODULE_NOT_FOUND',\n  requireStack: []\n}\n\nNode.js v25.2.1",
       "command": "/opt/homebrew/Cellar/node/25.2.1/bin/node tests/data-interface-summary-selection.test.mjs"
     },
     "v2_promotion_gate": {
-      "ok": true,
-      "status": 0,
+      "ok": false,
+      "status": 1,
       "signal": null,
-      "stdout": "rv-v2 promotion gate tests passed",
-      "stderr": "",
+      "stdout": "",
+      "stderr": "node:internal/modules/cjs/loader:1423\n  throw err;\n  ^\n\nError: Cannot find module '/Users/michaelpuchowezki/Dev/rubikvault-site/tests/rv-v2-promotion-gate.test.mjs'\n    at Module._resolveFilename (node:internal/modules/cjs/loader:1420:15)\n    at defaultResolveImpl (node:internal/modules/cjs/loader:1058:19)\n    at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1063:22)\n    at Module._load (node:internal/modules/cjs/loader:1226:37)\n    at TracingChannel.traceSync (node:diagnostics_channel:328:14)\n    at wrapModuleLoad (node:internal/modules/cjs/loader:245:24)\n    at Module.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:154:5)\n    at node:internal/main/run_main_module:33:47 {\n  code: 'MODULE_NOT_FOUND',\n  requireStack: []\n}\n\nNode.js v25.2.1",
       "command": "/opt/homebrew/Cellar/node/25.2.1/bin/node tests/rv-v2-promotion-gate.test.mjs"
     },
     "dashboard_meta": {
       "ok": true,
       "status": 0,
       "signal": null,
-      "stdout": "▶ dashboard v7 meta contract\n  ✔ publishes trust-layer system fields (0.3895ms)\n  ✔ publishes normalized per-model source contract (0.067333ms)\n  ✔ publishes full pipeline diagnostic breakdown (0.041583ms)\n  ✔ publishes recent failures and successful jobs arrays (0.040584ms)\n✔ dashboard v7 meta contract (1.093875ms)\n▶ dashboard v7 UI shell\n  ✔ renders trust and diagnosis sections (0.1145ms)\n  ✔ uses clarified trust and no-data labels (0.066041ms)\n  ✔ removes speculative diagnosis copy (0.168375ms)\n  ✔ contains runtime snapshot cache logic (0.059708ms)\n✔ dashboard v7 UI shell (0.501166ms)\nℹ tests 8\nℹ suites 2\nℹ pass 8\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 66.537625",
+      "stdout": "▶ dashboard_v7 meta contract\n  ✔ exports system steps and validation chain (0.377708ms)\n  ✔ exports operations runbook mirrors (0.048542ms)\n  ✔ dashboard renders the new recovery sections (0.077875ms)\n✔ dashboard_v7 meta contract (1.009959ms)\nℹ tests 3\nℹ suites 1\nℹ pass 3\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 65.338792",
       "stderr": "",
       "command": "/opt/homebrew/Cellar/node/25.2.1/bin/node --test tests/dashboard_v7_meta.test.mjs"
     },
     "non_regression_unit": {
-      "ok": true,
-      "status": 0,
+      "ok": false,
+      "status": 1,
       "signal": null,
-      "stdout": "stock-analyzer non-regression gate tests passed",
-      "stderr": "",
+      "stdout": "",
+      "stderr": "node:internal/modules/cjs/loader:1423\n  throw err;\n  ^\n\nError: Cannot find module '/Users/michaelpuchowezki/Dev/rubikvault-site/tests/stock-analyzer-non-regression-gate.test.mjs'\n    at Module._resolveFilename (node:internal/modules/cjs/loader:1420:15)\n    at defaultResolveImpl (node:internal/modules/cjs/loader:1058:19)\n    at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1063:22)\n    at Module._load (node:internal/modules/cjs/loader:1226:37)\n    at TracingChannel.traceSync (node:diagnostics_channel:328:14)\n    at wrapModuleLoad (node:internal/modules/cjs/loader:245:24)\n    at Module.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:154:5)\n    at node:internal/main/run_main_module:33:47 {\n  code: 'MODULE_NOT_FOUND',\n  requireStack: []\n}\n\nNode.js v25.2.1",
       "command": "/opt/homebrew/Cellar/node/25.2.1/bin/node tests/stock-analyzer-non-regression-gate.test.mjs"
     },
     "ui_artifacts": {

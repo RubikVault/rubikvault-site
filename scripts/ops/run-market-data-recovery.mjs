@@ -15,7 +15,7 @@ const STEPS = [
   },
   {
     id: 'market_data_refresh',
-    command: ['python3', 'scripts/quantlab/refresh_v7_history_from_eodhd.py', '--allowlist-path', 'public/data/universe/v7/perfect_universe_v1_flat.json', '--from-date', new Date(Date.now() - (28 * 86400000)).toISOString().slice(0, 10)],
+    command: ['python3', 'scripts/quantlab/refresh_v7_history_from_eodhd.py', '--allowlist-path', 'public/data/universe/v7/ssot/stocks.max.canonical.ids.json', '--from-date', new Date(Date.now() - (28 * 86400000)).toISOString().slice(0, 10)],
     gate: () => false,
     note: 'Run manually with valid provider env/token when upstream market data must be advanced.',
   },

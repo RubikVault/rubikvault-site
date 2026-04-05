@@ -317,6 +317,29 @@
                 <div id="sourcesContent"><span style="color:var(--text-muted);font-size:.82rem">Loading...</span></div>
             </div>
         </div>
+        <div class="section-box" style="margin-bottom:1.5rem;border:1px solid rgba(239,68,68,0.3)">
+            <div class="section-title"><i class="fas fa-triangle-exclamation"></i> SSOT Violations</div>
+            <div class="soft-note" style="margin-bottom:.75rem">Detects broken invariants — cases where the system is not honoring its own single-source-of-truth rules. Each violation shows why it broke and the exact command to fix it.</div>
+            <div id="ssotViolationsContent"><span style="color:var(--text-muted);font-size:.82rem">Checking violations...</span></div>
+        </div>
+        <div class="section-box" style="margin-bottom:1.5rem">
+            <div class="section-title"><i class="fas fa-list-check"></i> SSOT Recovery Runbook</div>
+            <div id="recoveryRunbookContent"><span style="color:var(--text-muted);font-size:.82rem">No runbook data</span></div>
+        </div>
+        <div class="sections-grid">
+            <div class="section-box">
+                <div class="section-title"><i class="fas fa-shield-heart"></i> Stock Analyzer Universe Audit</div>
+                <div id="stockAnalyzerAuditContent"><span style="color:var(--text-muted);font-size:.82rem">No universe audit data</span></div>
+            </div>
+            <div class="section-box">
+                <div class="section-title"><i class="fas fa-list-ol"></i> Ordered Recovery Plan</div>
+                <div id="stockAnalyzerRecoveryContent"><span style="color:var(--text-muted);font-size:.82rem">No ordered recovery data</span></div>
+            </div>
+        </div>
+        <div class="section-box">
+            <div class="section-title"><i class="fas fa-route"></i> Web Validation Chain</div>
+            <div id="validationChainContent"><span style="color:var(--text-muted);font-size:.82rem">No validation chain data</span></div>
+        </div>
     </div>
 </div>
 
@@ -1115,6 +1138,137 @@ async function loadDashboard() {
                 shtml += `<div class="funnel-step"><span>${name.replace(/_/g,' ')}</span><span style="color:${ageColor};font-weight:600">${info.exists?'\u2705':'\\u274C'} ${ageText}</span></div><div class="soft-note" style="margin-top:0;margin-bottom:.35rem">${detail}</div>`;
             }
             document.getElementById('sourcesContent').innerHTML = shtml;
+        }
+
+        // SSOT Violations
+        const ssotViolations = data.system?.ssot_violations || [];
+        const ssotViolationsEl = document.getElementById('ssotViolationsContent');
+        if (ssotViolationsEl) {
+            if (ssotViolations.length === 0) {
+                ssotViolationsEl.innerHTML = '<div class="action-item sev-ok"><div class="action-head"><div class="action-title">No SSOT violations detected</div><div class="action-meta" style="color:var(--green)">CLEAN</div></div><div class="action-text">All invariants are being honored. Run <code>node scripts/ops/build-system-status-report.mjs</code> to re-check.</div></div>';
+            } else {
+                ssotViolationsEl.innerHTML = ssotViolations.map((v) => {
+                    const sev = v.severity === 'critical' ? 'sev-critical' : v.severity === 'warning' ? 'sev-warning' : 'sev-ok';
+                    return `<div class="action-item ${sev}">
+                        <div class="action-head">
+                            <div class="action-title">${escapeHtml(v.title)}</div>
+                            <div class="action-meta">${escapeHtml((v.severity || 'unknown').toUpperCase())}</div>
+                        </div>
+                        <div class="action-text"><strong>SSOT rule:</strong> ${escapeHtml(v.ssot_doc || 'n/a')}</div>
+                        <div class="action-text"><strong>Why violated:</strong> ${escapeHtml(v.why || 'n/a')}</div>
+                        <div class="action-text"><strong>Evidence:</strong> <span style="font-family:monospace">${escapeHtml(JSON.stringify(v.evidence || {}))}</span></div>
+                        <div class="action-text"><strong>Fix command:</strong> <span style="font-family:monospace">${escapeHtml(v.fix_command || 'n/a')}</span></div>
+                        <div class="action-text"><strong>Success signal:</strong> ${escapeHtml(v.success_signal || 'n/a')}</div>
+                        <div class="soft-note">Detected at: ${escapeHtml(v.detected_at || 'unknown')}</div>
+                    </div>`;
+                }).join('');
+            }
+        }
+
+        const stepRunbook = data.system?.steps || ops?.step_runbook || {};
+        const trackedSteps = (data.system?.tracked_step_ids || []).map(id => stepRunbook[id]).filter(Boolean);
+        if (trackedSteps.length) {
+            document.getElementById('recoveryRunbookContent').innerHTML = trackedSteps.map((step) => {
+                const sev = step.severity === 'critical' ? 'sev-critical' : step.severity === 'warning' ? 'sev-warning' : 'sev-ok';
+                const verifyCommands = Array.isArray(step.runbook?.verify_commands) && step.runbook.verify_commands.length
+                    ? step.runbook.verify_commands.map(cmd => `<div class="soft-note" style="font-family:monospace">${escapeHtml(cmd)}</div>`).join('')
+                    : '<div class="soft-note">No verification command recorded.</div>';
+                const outputs = Array.isArray(step.runbook?.outputs) && step.runbook.outputs.length
+                    ? `<div class="pill-row">${step.runbook.outputs.map(out => `<span class="tiny-pill">${escapeHtml(out)}</span>`).join('')}</div>`
+                    : '';
+                const surfaces = Array.isArray(step.runbook?.ui_surfaces) && step.runbook.ui_surfaces.length
+                    ? `<div class="soft-note"><strong>UI impact:</strong> ${escapeHtml(step.runbook.ui_surfaces.join(' · '))}</div>`
+                    : '';
+                return `<div class="action-item ${sev}">
+                    <div class="action-head">
+                        <div class="action-title">${escapeHtml(step.label || step.id)}</div>
+                        <div class="action-meta">${escapeHtml((step.severity || 'unknown').toUpperCase())}</div>
+                    </div>
+                    <div class="action-text"><strong>Status:</strong> ${escapeHtml(step.summary || 'No summary')}</div>
+                    <div class="action-text"><strong>Why:</strong> ${escapeHtml(step.why || 'No reason recorded')}</div>
+                    <div class="action-text"><strong>Run:</strong> <span style="font-family:monospace">${escapeHtml(step.runbook?.run_command || step.next_fix || 'No run command recorded')}</span></div>
+                    <div class="action-text"><strong>Verify:</strong></div>
+                    ${verifyCommands}
+                    ${surfaces}
+                    ${outputs}
+                </div>`;
+            }).join('');
+        }
+
+        const stockAnalyzerAudit = data.system?.stock_analyzer_universe_audit || ops?.stock_analyzer_universe_audit || null;
+        const stockAnalyzerAuditEl = document.getElementById('stockAnalyzerAuditContent');
+        const stockAnalyzerRecoveryEl = document.getElementById('stockAnalyzerRecoveryContent');
+        if (stockAnalyzerAuditEl) {
+            if (!stockAnalyzerAudit) {
+                stockAnalyzerAuditEl.innerHTML = `<div class="action-item sev-warning">
+                    <div class="action-head">
+                        <div class="action-title">Universe audit missing</div>
+                        <div class="action-meta">run required</div>
+                    </div>
+                    <div class="action-text"><strong>Run:</strong> <span style="font-family:monospace">node scripts/ops/build-stock-analyzer-universe-audit.mjs --base-url http://127.0.0.1:8788 --registry-path public/data/universe/v7/registry/registry.ndjson.gz --asset-classes STOCK,ETF --max-tickers 0</span></div>
+                    <div class="action-text"><strong>Then:</strong> rebuild system status + dashboard meta artifacts.</div>
+                </div>`;
+            } else {
+                const summary = stockAnalyzerAudit.summary || {};
+                const families = stockAnalyzerAudit.failure_families || [];
+                const sevClass = summary.severity === 'critical' ? 'sev-critical' : summary.severity === 'warning' ? 'sev-warning' : 'sev-ok';
+                stockAnalyzerAuditEl.innerHTML = `
+                    <div class="action-item ${sevClass}">
+                        <div class="action-head">
+                            <div class="action-title">${escapeHtml((summary.full_universe ? 'Full-universe audit' : 'Partial-universe audit'))}</div>
+                            <div class="action-meta">${escapeHtml((summary.severity || 'unknown').toUpperCase())}</div>
+                        </div>
+                        <div class="action-text"><strong>Coverage:</strong> ${escapeHtml(String(summary.processed_assets || 0))} / ${escapeHtml(String(summary.total_assets || 0))} assets · full universe: ${summary.full_universe ? 'yes' : 'no'}</div>
+                        <div class="action-text"><strong>Field checks:</strong> ${escapeHtml(String(summary.field_checks_total || 0))} contract checks · ${escapeHtml(String(summary.ui_contract_checks_per_asset || 0))} checks per asset</div>
+                        <div class="action-text"><strong>Affected assets:</strong> ${escapeHtml(String(summary.affected_assets || 0))} · failure families: ${escapeHtml(String(summary.failure_family_count || 0))}</div>
+                        <div class="action-text"><strong>Generated:</strong> ${escapeHtml(fmtShortDate(stockAnalyzerAudit.generated_at))}</div>
+                    </div>
+                    ${families.length ? families.slice(0, 8).map((family) => `
+                        <div class="action-item ${family.severity === 'critical' ? 'sev-critical' : 'sev-warning'}">
+                            <div class="action-head">
+                                <div class="action-title">${escapeHtml(family.label || family.family_id)}</div>
+                                <div class="action-meta">${escapeHtml(String(family.affected_assets || 0))} assets</div>
+                            </div>
+                            <div class="action-text">${escapeHtml(family.description || 'No description')}</div>
+                            <div class="soft-note">Examples: ${escapeHtml((family.examples || []).map((row) => row.ticker).join(', ') || 'none')}</div>
+                        </div>
+                    `).join('') : '<div class="rec-item rec-ok">No field-level failures detected in the latest audit.</div>'}
+                `;
+            }
+        }
+
+        if (stockAnalyzerRecoveryEl) {
+            const orderedRecovery = stockAnalyzerAudit?.ordered_recovery || [];
+            if (!orderedRecovery.length) {
+                stockAnalyzerRecoveryEl.innerHTML = '<div class="rec-item rec-ok">No recovery actions queued.</div>';
+            } else {
+                stockAnalyzerRecoveryEl.innerHTML = orderedRecovery.map((item) => `
+                    <div class="action-item ${item.rank === 1 ? 'sev-critical' : 'sev-warning'}">
+                        <div class="action-head">
+                            <div class="action-title">#${escapeHtml(String(item.rank || 0))} ${escapeHtml(item.label || item.step_id)}</div>
+                            <div class="action-meta">${escapeHtml(String(item.affected_assets || 0))} assets</div>
+                        </div>
+                        <div class="action-text"><strong>Run:</strong> <span style="font-family:monospace">${escapeHtml(item.run_command || 'No run command')}</span></div>
+                        <div class="action-text"><strong>Why first:</strong> ${escapeHtml((item.affected_families || []).join(', ') || 'No linked families')}</div>
+                        ${(item.verify_commands || []).map((cmd) => `<div class="soft-note" style="font-family:monospace">${escapeHtml(cmd)}</div>`).join('')}
+                    </div>
+                `).join('');
+            }
+        }
+
+        const validationChain = data.system?.web_validation_chain || ops?.web_validation_chain || [];
+        if (validationChain.length) {
+            document.getElementById('validationChainContent').innerHTML = validationChain.map((stage) => `
+                <div class="action-item sev-warning">
+                    <div class="action-head">
+                        <div class="action-title">${escapeHtml(stage.label || stage.id)}</div>
+                        <div class="action-meta">${escapeHtml(stage.surface || 'web')}</div>
+                    </div>
+                    <div class="action-text"><strong>Check:</strong> <span style="font-family:monospace">${escapeHtml(stage.check_command || 'n/a')}</span></div>
+                    <div class="action-text"><strong>Fix:</strong> <span style="font-family:monospace">${escapeHtml(stage.fix_command || 'n/a')}</span></div>
+                    <div class="action-text"><strong>Success:</strong> ${escapeHtml(stage.success_signal || 'n/a')}</div>
+                </div>
+            `).join('');
         }
 
     } catch (err) {

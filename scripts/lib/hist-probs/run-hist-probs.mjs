@@ -10,12 +10,14 @@
  *   node scripts/lib/hist-probs/run-hist-probs.mjs
  *   node scripts/lib/hist-probs/run-hist-probs.mjs --tickers AAPL,MSFT,NVDA
  *   node scripts/lib/hist-probs/run-hist-probs.mjs --ticker AAPL
+ *   node scripts/lib/hist-probs/run-hist-probs.mjs --registry-path public/data/universe/v7/registry/registry.ndjson.gz --asset-classes STOCK,ETF --max-tickers 0
  *
  * NON-DISRUPTIVE: runs after existing daily QuantLab cycle, never modifies it.
  */
 
 import path from 'node:path';
 import fs from 'node:fs/promises';
+import zlib from 'node:zlib';
 import { REPO_ROOT } from '../best-setups-local-loader.mjs';
 import { computeRegime } from './compute-regime.mjs';
 import { computeOutcomes } from './compute-outcomes.mjs';
@@ -24,20 +26,52 @@ const HIST_PROBS_DIR = path.join(REPO_ROOT, 'public/data/hist-probs');
 
 // Default universe: reads from existing stock symbols file
 const STOCK_SYMBOLS_PATH = path.join(REPO_ROOT, 'public/data/universe/v7/ssot/stocks.max.symbols.json');
+const REGISTRY_PATH = path.join(REPO_ROOT, 'public/data/universe/v7/registry/registry.ndjson.gz');
 const MAX_TICKERS_PER_RUN = 500; // safety limit to avoid infinite runs
 
-async function loadDefaultTickers() {
+function normalizeTicker(value) {
+  return String(value || '').trim().toUpperCase();
+}
+
+function limitTickers(list, maxTickers) {
+  if (!(maxTickers > 0)) return list;
+  return list.slice(0, maxTickers);
+}
+
+async function loadTickersFromSymbolsPath(symbolsPath, maxTickers) {
   try {
-    const doc = JSON.parse(await fs.readFile(STOCK_SYMBOLS_PATH, 'utf8'));
-    const symbols = Array.isArray(doc?.symbols) ? doc.symbols : [];
-    return symbols
-      .map(s => String(s || '').trim().toUpperCase())
-      .filter(Boolean)
-      .slice(0, MAX_TICKERS_PER_RUN);
+    const doc = JSON.parse(await fs.readFile(symbolsPath, 'utf8'));
+    const symbols = Array.isArray(doc)
+      ? doc
+      : Array.isArray(doc?.symbols)
+        ? doc.symbols
+        : [];
+    return limitTickers(symbols.map(normalizeTicker).filter(Boolean), maxTickers);
   } catch {
     console.warn('[run-hist-probs] Could not load default symbols, using built-in sample');
     return ['AAPL', 'MSFT', 'NVDA', 'AMZN', 'GOOGL', 'META', 'TSLA', 'SPY', 'QQQ', 'IWM'];
   }
+}
+
+async function loadTickersFromRegistry(registryPath, assetClasses, maxTickers) {
+  const gz = await fs.readFile(registryPath);
+  const text = zlib.gunzipSync(gz).toString('utf8');
+  const allowed = new Set((assetClasses || []).map((value) => String(value || '').trim().toUpperCase()).filter(Boolean));
+  const tickers = new Set();
+  for (const line of text.split(/\r?\n/)) {
+    const raw = line.trim();
+    if (!raw) continue;
+    try {
+      const row = JSON.parse(raw);
+      const typeNorm = String(row?.type_norm || '').trim().toUpperCase();
+      if (allowed.size && !allowed.has(typeNorm)) continue;
+      const ticker = normalizeTicker(row?.symbol);
+      if (ticker) tickers.add(ticker);
+    } catch {
+      continue;
+    }
+  }
+  return limitTickers([...tickers], maxTickers);
 }
 
 function parseArgs() {
@@ -46,14 +80,26 @@ function parseArgs() {
     || (args.includes('--ticker') ? args[args.indexOf('--ticker') + 1] : null);
   const tickersArg = args.find(a => a.startsWith('--tickers='))?.split('=')[1]
     || (args.includes('--tickers') ? args[args.indexOf('--tickers') + 1] : null);
+  const symbolsPathArg = args.find(a => a.startsWith('--symbols-path='))?.split('=')[1]
+    || (args.includes('--symbols-path') ? args[args.indexOf('--symbols-path') + 1] : null);
+  const registryPathArg = args.find(a => a.startsWith('--registry-path='))?.split('=')[1]
+    || (args.includes('--registry-path') ? args[args.indexOf('--registry-path') + 1] : null);
+  const assetClassesArg = args.find(a => a.startsWith('--asset-classes='))?.split('=')[1]
+    || (args.includes('--asset-classes') ? args[args.indexOf('--asset-classes') + 1] : null);
+  const maxTickersArg = args.find(a => a.startsWith('--max-tickers='))?.split('=')[1]
+    || (args.includes('--max-tickers') ? args[args.indexOf('--max-tickers') + 1] : null);
   return {
-    singleTicker: tickerArg ? tickerArg.toUpperCase() : null,
-    tickers: tickersArg ? tickersArg.split(',').map(t => t.trim().toUpperCase()).filter(Boolean) : null,
+    singleTicker: tickerArg ? normalizeTicker(tickerArg) : null,
+    tickers: tickersArg ? tickersArg.split(',').map(normalizeTicker).filter(Boolean) : null,
+    symbolsPath: symbolsPathArg ? path.resolve(REPO_ROOT, symbolsPathArg) : STOCK_SYMBOLS_PATH,
+    registryPath: registryPathArg ? path.resolve(REPO_ROOT, registryPathArg) : REGISTRY_PATH,
+    assetClasses: assetClassesArg ? assetClassesArg.split(',').map(v => String(v || '').trim().toUpperCase()).filter(Boolean) : null,
+    maxTickers: Number.isFinite(Number(maxTickersArg)) ? Number(maxTickersArg) : MAX_TICKERS_PER_RUN,
   };
 }
 
 async function run() {
-  const { singleTicker, tickers } = parseArgs();
+  const { singleTicker, tickers, symbolsPath, registryPath, assetClasses, maxTickers } = parseArgs();
   await fs.mkdir(HIST_PROBS_DIR, { recursive: true });
 
   // Step 1: Regime
@@ -69,9 +115,12 @@ async function run() {
     tickerList = [singleTicker];
   } else if (tickers?.length) {
     tickerList = tickers;
+  } else if (assetClasses?.length) {
+    console.log('\n[run-hist-probs] ─── Loading registry-backed universe...');
+    tickerList = await loadTickersFromRegistry(registryPath, assetClasses, maxTickers);
   } else {
     console.log('\n[run-hist-probs] ─── Loading symbol universe...');
-    tickerList = await loadDefaultTickers();
+    tickerList = await loadTickersFromSymbolsPath(symbolsPath, maxTickers);
   }
 
   console.log(`\n[run-hist-probs] ─── Phase 3: Computing outcomes for ${tickerList.length} tickers...`);
@@ -109,6 +158,11 @@ async function run() {
     tickers_processed: done,
     tickers_skipped: skipped,
     tickers_errors: errors,
+    source_mode: singleTicker ? 'single_ticker' : tickers?.length ? 'explicit_tickers' : assetClasses?.length ? 'registry_asset_classes' : 'symbols_path',
+    symbols_path: assetClasses?.length ? null : symbolsPath,
+    registry_path: assetClasses?.length ? registryPath : null,
+    asset_classes: assetClasses?.length ? assetClasses : ['STOCK'],
+    max_tickers: maxTickers,
     elapsed_seconds: parseFloat(elapsed),
     regime_date: regime?.date ?? null,
     market_regime: regime?.market_regime ?? null,

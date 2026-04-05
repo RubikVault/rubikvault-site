@@ -18,6 +18,7 @@ import { buildAuditChain } from './snapshot-integrity.mjs';
 import { appendDecision } from './decision-ledger.mjs';
 import { getActiveMode, isV1Active } from './cutover-policy.mjs';
 import { loadLatestWeights } from './weight-history.mjs';
+import { buildAssetSegmentationProfile } from '../asset-segmentation.mjs';
 
 const PIPELINE_VERSION = 'quantlab-v1.0';
 const POLICY_VERSION = '1.0.0';
@@ -37,6 +38,7 @@ const POLICY_VERSION = '1.0.0';
  * @param {Object} [params.histProbsData]
  * @param {Object} [params.regimeData]
  * @param {Object} [params.priceData] - { close, atr, volatility_bucket, liquidity_bucket }
+ * @param {Object} [params.fundamentalsData] - { marketCap }
  * @param {Object} [params.regimeContext] - { current, previous, history } for transition detection
  * @param {Object} [params.legacyDecision] - Legacy decision for comparison in shadow mode
  * @param {boolean} [params.dryRun=false]
@@ -45,7 +47,7 @@ const POLICY_VERSION = '1.0.0';
 export async function runV1Fusion({
   symbol, asof, horizon, asset_class,
   forecastState, scientificState, elliottState, breakoutData,
-  quantlabState, histProbsData, regimeData, priceData,
+  quantlabState, histProbsData, regimeData, priceData, fundamentalsData,
   regimeContext, legacyDecision, dryRun = false,
 }) {
   const decisionId = randomUUID();
@@ -85,11 +87,22 @@ export async function runV1Fusion({
   // 2. Determine regime bucket
   const regimeProbs = contracts.find(c => c.regime_probs)?.regime_probs || null;
   const regimeBucket = determineRegimeBucket(regimeProbs);
+  const segmentation = buildAssetSegmentationProfile({
+    ticker: symbol,
+    assetClass: asset_class,
+    marketCapUsd: fundamentalsData?.marketCap ?? null,
+    liquidityScore: null,
+    liquidityState: null,
+    advUsd: priceData?.adv_usd ?? null,
+  });
 
   // 3. Fuse contracts
   const fusionResult = fuseContracts(contracts, {
     horizon,
     asset_class,
+    liquidity_bucket: segmentation.liquidity_bucket,
+    market_cap_bucket: segmentation.market_cap_bucket,
+    learning_lane: segmentation.learning_lane,
     regime_bucket: regimeBucket,
     regimeContext,
   });
@@ -143,6 +156,11 @@ export async function runV1Fusion({
     fallback_reason: null,
     regime_probs: regimeProbs,
     regime_bucket: regimeBucket,
+    segmentation,
+    liquidity_bucket: segmentation.liquidity_bucket,
+    market_cap_bucket: segmentation.market_cap_bucket,
+    learning_lane: segmentation.learning_lane,
+    blue_chip_core: segmentation.blue_chip_core,
     regime_transition_active: fusionResult.regime_transition_active || false,
     volatility_bucket: priceData?.volatility_bucket || 'medium',
     trade_signal: tradeSignal,

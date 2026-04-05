@@ -1,4 +1,11 @@
 import { serveStaticJson } from "./_shared/static-only.js";
+import {
+  comparePreferredUniverseRows,
+  isAllowedWebUniverseRecord,
+  normalizeUniverseAssetClassFilter,
+  normalizeUniverseTypeNorm,
+  parseUniverseAssetClassFilter,
+} from "../../public/js/universe-ssot.js";
 
 let CACHE_EXACT_INDEX = null;
 let CACHE_EXACT_TIME = 0;
@@ -88,21 +95,10 @@ export async function onRequestGet(context) {
   }
 
   function normalizeAssetClass(raw) {
-    const v = String(raw || "").trim().toUpperCase();
-    if (!v || v === "ALL") return null;
-    const aliases = new Map([
-      ["STOCKS", "STOCK"],
-      ["EQUITIES", "STOCK"],
-      ["CRYPTOS", "CRYPTO"],
-      ["FX", "FOREX"],
-      ["BONDS", "BOND"],
-      ["INDICES", "INDEX"],
-      ["FUNDS", "FUND"],
-      ["ETFS", "ETF"]
-    ]);
-    const resolved = aliases.get(v) || v;
-    const allowed = new Set(["STOCK", "ETF", "FUND", "BOND", "INDEX", "FOREX", "CRYPTO", "OTHER"]);
-    return allowed.has(resolved) ? resolved : null;
+    const parsed = parseUniverseAssetClassFilter(raw);
+    if (parsed.removed) return "__REMOVED__";
+    if (!parsed.value || parsed.value === "all") return null;
+    return parsed.value.toUpperCase();
   }
 
   function normalizeBool(raw) {
@@ -127,32 +123,19 @@ export async function onRequestGet(context) {
   const cursor = Number(url.searchParams.get("cursor"));
   const offset = Number.isFinite(cursor) && cursor >= 0 ? Math.floor(cursor) : 0;
 
-  const activeAssetClass = String(url.searchParams.get("asset_class") || "all").toLowerCase();
+  const activeAssetClassMeta = parseUniverseAssetClassFilter(url.searchParams.get("asset_class") || "all");
+  const activeAssetClass = activeAssetClassMeta.removed ? "__REMOVED__" : activeAssetClassMeta.value;
   function normalizedType(itemRow) {
-    const t = String(itemRow?.type_norm || itemRow?.type || "").trim().toLowerCase();
-    if (!t) return "other";
-    if (["common stock", "preferred stock", "stock", "equity", "equities"].includes(t)) return "stock";
-    if (["etf", "fund", "funds", "etfs"].includes(t)) return "etf";
-    if (["crypto", "cryptos"].includes(t)) return "crypto";
-    if (["forex", "fx"].includes(t)) return "forex";
-    if (["bond", "bonds"].includes(t)) return "bond";
-    if (["index", "indices", "indicies"].includes(t)) return "index";
-    if (["commodity", "commodities"].includes(t)) return "commodity";
-    return "other";
+    return String(normalizeUniverseTypeNorm(itemRow?.type_norm || itemRow?.type)).toLowerCase();
   }
   function includeByAssetClass(itemRow) {
+    if (activeAssetClass === "__REMOVED__") return false;
+    if (!isAllowedWebUniverseRecord(itemRow)) return false;
     if (activeAssetClass === "all" || !activeAssetClass) return true;
     const t = normalizedType(itemRow);
     if (["stock", "stocks"].includes(activeAssetClass)) return t === "stock";
-    if (["etf", "etfs", "fund", "funds"].includes(activeAssetClass)) return t === "etf";
-    if (activeAssetClass === "crypto") return t === "crypto";
-    if (["forex", "fx"].includes(activeAssetClass)) return t === "forex";
+    if (["etf", "etfs"].includes(activeAssetClass)) return t === "etf";
     if (["bond", "bonds"].includes(activeAssetClass)) return t === "bond";
-    if (["index", "indices", "indicies"].includes(activeAssetClass)) return t === "index";
-    if (["commodity", "commodities"].includes(activeAssetClass)) return t === "commodity";
-    if (["other", "others"].includes(activeAssetClass)) {
-      return !["stock", "etf", "crypto", "forex", "bond", "index", "commodity"].includes(t);
-    }
     return true;
   }
 
@@ -258,10 +241,12 @@ export async function onRequestGet(context) {
             const name = String(it?.name || "").toLowerCase();
             return (sym && sym.startsWith(q)) || (name && name.startsWith(q));
           })
-          .sort((a, b) => {
-            const aSym = String(a?.symbol || "").toUpperCase();
-            const bSym = String(b?.symbol || "").toUpperCase();
-            const aExact = aSym === qSymbol ? 0 : 1;
+      .sort((a, b) => {
+        const preferred = comparePreferredUniverseRows(b, a);
+        if (preferred !== 0) return preferred;
+        const aSym = String(a?.symbol || "").toUpperCase();
+        const bSym = String(b?.symbol || "").toUpperCase();
+        const aExact = aSym === qSymbol ? 0 : 1;
             const bExact = bSym === qSymbol ? 0 : 1;
             if (aExact !== bExact) return aExact - bExact;
             const aUs = String(a?.exchange || "").toUpperCase() === "US" ? 0 : 1;
@@ -406,6 +391,8 @@ export async function onRequestGet(context) {
         return (sym && (sym.startsWith(q) || sym.includes(q))) || (name && name.includes(q));
       })
       .sort((a, b) => {
+        const preferred = comparePreferredUniverseRows(b, a);
+        if (preferred !== 0) return preferred;
         const aSym = String(a?.symbol || a?.ticker || "").toUpperCase();
         const bSym = String(b?.symbol || b?.ticker || "").toUpperCase();
         const aName = String(a?.name || "").toLowerCase();

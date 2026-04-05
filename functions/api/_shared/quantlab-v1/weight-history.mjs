@@ -25,6 +25,22 @@ const DEFAULT_WEIGHTS = Object.freeze({
   hist_probs: 0.15,
 });
 
+export function isFlatWeights(weights) {
+  return Boolean(weights && typeof weights === 'object' && typeof Object.values(weights)[0] === 'number');
+}
+
+export function getSegmentNode(weights, {
+  horizon = 'all',
+  asset_class = 'all',
+  liquidity_bucket = 'all',
+  market_cap_bucket = 'all',
+  learning_lane = 'all',
+  regime_bucket = 'all',
+} = {}) {
+  if (!weights || typeof weights !== 'object' || isFlatWeights(weights)) return null;
+  return weights?.[horizon]?.[asset_class]?.[liquidity_bucket]?.[market_cap_bucket]?.[learning_lane]?.[regime_bucket] || null;
+}
+
 /**
  * Save a weight snapshot.
  * @param {Object} weights - Source-keyed weight map (can be nested by segment)
@@ -37,11 +53,16 @@ const DEFAULT_WEIGHTS = Object.freeze({
 export function saveWeightSnapshot(weights, metadata = {}) {
   ensureDir();
   const version = metadata.version || `w-${Date.now()}`;
+  const extraMetadata = { ...metadata };
+  delete extraMetadata.version;
+  delete extraMetadata.fallback_level;
+  delete extraMetadata.trigger;
   const snapshot = {
     version,
     timestamp: new Date().toISOString(),
     fallback_level: metadata.fallback_level || 'none',
     trigger: metadata.trigger || 'manual',
+    ...extraMetadata,
     weights,
     hash: hashSnapshot(weights),
   };

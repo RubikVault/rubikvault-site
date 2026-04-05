@@ -15,6 +15,9 @@
 - `docs/ops/runbook.md`
 - `docs/ops/architecture.md`
 - `docs/ops/decisions.md`
+- `docs/ops/nas-runbook.md`
+- `docs/ops/nas-benchmark-plan.md`
+- `docs/ops/nas-migration-journal.md`
 
 ## Non-Negotiables (Engineering Rules)
 - Before any change: run Reality Snapshot.
@@ -23,6 +26,19 @@
 - Mirror Fallback required; Preview can be READONLY; do not fail hard if upstream missing.
 - Debugging must be deterministic and evidence-based; no hallucinated fixes.
 - Middleware is Content-Type gated only; never parse or wrap non-JSON responses.
+- NAS rule: no deletes, no Photos/QuickConnect/SMB disruption, and no heavy pipeline migration without explicit validation.
+- NAS migration rule: Mac stays primary until a NAS stage has 3 matching shadow runs, stable metrics, and a documented rollback.
+- NAS benchmark rule: the Mac-built input manifest must be verified on the NAS before any shadow job starts, and overlapping benchmark runs are forbidden.
+- NAS dataset rule: `CONFIG` and `SAMSUNG` are bootstrap-only sources; overnight benchmarks must not depend on those drives remaining mounted on the Mac.
+- Current NAS benchmark verdict:
+  - `stage1`, `stage2`, `stage3`, `stage4:scientific_summary` are benchmarked NAS offload candidates
+  - `stage4:etf_diagnostic` is benchmarked `mac_only`
+- `stage4:daily_audit_report` and `stage4:cutover_readiness_report` are seeded but still `insufficient_data`
+- Benchmark SSOT outputs live in `tmp/nas-benchmarks/` and must be checked before proposing any NAS production migration.
+- Pipeline SSOT outputs for NAS decision-making are:
+  - `tmp/nas-benchmarks/pipeline-census-latest.json`
+  - `tmp/nas-benchmarks/nas-main-device-feasibility-latest.json`
+  - `tmp/nas-benchmarks/pipeline-proof-matrix-latest.md`
 
 ## Standard Workflow
 1) Reality Snapshot first.

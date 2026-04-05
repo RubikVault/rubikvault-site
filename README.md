@@ -11,6 +11,32 @@
 
 ---
 
+## 🔧 Operational Status
+
+- **Ops Runbook (central):** [`docs/ops/runbook.md`](docs/ops/runbook.md)
+- **NAS Runbook:** [`docs/ops/nas-runbook.md`](docs/ops/nas-runbook.md)
+- **NAS Benchmark Plan:** [`docs/ops/nas-benchmark-plan.md`](docs/ops/nas-benchmark-plan.md)
+- **NAS Migration Journal:** [`docs/ops/nas-migration-journal.md`](docs/ops/nas-migration-journal.md)
+- **NAS Capacity Matrix:** `tmp/nas-benchmarks/nas-capacity-decision-matrix.md`
+- **NAS Overnight Summary:** `tmp/nas-benchmarks/nas-overnight-summary-latest.md`
+- **NAS Morning Report:** `tmp/nas-benchmarks/nas-morning-report-latest.md`
+- **NAS Pipeline Census:** `tmp/nas-benchmarks/pipeline-census-latest.md`
+- **NAS Main-Device Feasibility:** `tmp/nas-benchmarks/nas-main-device-feasibility-latest.md`
+- **NAS Proof Matrix:** `tmp/nas-benchmarks/pipeline-proof-matrix-latest.md`
+- **Live Dashboard:** `http://127.0.0.1:8788/dashboard_v7`
+- **SSOT:** `public/data/reports/system-status-latest.json` (producer: `node scripts/ops/build-system-status-report.mjs`)
+- **Universe UI Audit:** `public/data/reports/stock-analyzer-universe-audit-latest.json` (producer: `node scripts/ops/build-stock-analyzer-universe-audit.mjs ...`)
+
+Current NAS benchmark verdict:
+- `stage1`, `stage2`, `stage3`, `stage4:scientific_summary`: benchmarked NAS offload candidates
+- `stage4:etf_diagnostic`: benchmarked `mac_only`
+- `stage4:daily_audit_report`, `stage4:cutover_readiness_report`: benchmark-seeded, still `insufficient_data`
+
+> Note: `RUNBOOK.md` at the repo root is a CI/CD workflow audit guide. For pipeline recovery, use `docs/ops/runbook.md`.
+> Green-keeping order lives only in `docs/ops/runbook.md`: do not invent an alternative step order outside that file.
+
+---
+
 ## 🌟 **Features**
 
 ### **Core Architecture**

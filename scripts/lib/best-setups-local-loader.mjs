@@ -8,6 +8,8 @@ import { assembleDecisionInputs } from '../../functions/api/_shared/decision-inp
 
 export const REPO_ROOT = process.cwd();
 const LOCAL_BAR_STALE_DAYS = Math.max(1, Number(process.env.LOCAL_BAR_STALE_DAYS || 3));
+const ALLOW_REMOTE_BAR_FETCH = !['0', 'false', 'no'].includes(String(process.env.ALLOW_REMOTE_BAR_FETCH || '').trim().toLowerCase())
+  && !['1', 'true', 'yes'].includes(String(process.env.BEST_SETUPS_DISABLE_NETWORK || '').trim().toLowerCase());
 const SEARCH_EXACT_PATH = 'public/data/universe/v7/search/search_exact_by_symbol.json.gz';
 const STOCK_SYMBOLS_PATH = 'public/data/universe/v7/ssot/stocks.max.symbols.json';
 const REGISTRY_PATH = 'public/data/universe/v7/registry/registry.ndjson.gz';
@@ -329,7 +331,7 @@ export async function loadLocalBars(ticker) {
   const seriesRows = await readNdjsonGzAbs(adjustedSeriesPath(cleanTicker));
   let seriesBars = normalizeRows(seriesRows);
   const latestSeriesDate = seriesBars[seriesBars.length - 1]?.date || null;
-  if ((!seriesBars.length || (daysFromToday(latestSeriesDate) ?? Infinity) > LOCAL_BAR_STALE_DAYS) && looksLikeUsTicker(cleanTicker)) {
+  if (ALLOW_REMOTE_BAR_FETCH && (!seriesBars.length || (daysFromToday(latestSeriesDate) ?? Infinity) > LOCAL_BAR_STALE_DAYS) && looksLikeUsTicker(cleanTicker)) {
     const refreshedBars = await fetchStooqAdjustedSeries(cleanTicker);
     if (refreshedBars.length) seriesBars = refreshedBars;
   }

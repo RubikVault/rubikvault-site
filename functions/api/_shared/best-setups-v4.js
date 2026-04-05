@@ -1,3 +1,5 @@
+import { buildAssetSegmentationProfile } from './asset-segmentation.mjs';
+
 const US_TICKER_REGEX = /^[A-Z]{1,5}(?:-[A-Z])?$/;
 const SUPPORTED_ASSET_CLASSES = new Set(['stock', 'etf']);
 
@@ -227,6 +229,15 @@ export function buildVerifiedFrontpageRow(stockDoc, candidate) {
   const states = stockDoc?.states || {};
   const stats = stockDoc?.data?.market_stats?.stats || {};
   const gates = Array.isArray(decisionSlice?.trigger_gates) ? decisionSlice.trigger_gates : [];
+  const assetClass = normalizeAssetClass(candidate?.asset_class || 'stock', 'stock');
+  const segmentationProfile = buildAssetSegmentationProfile({
+    ticker,
+    assetClass,
+    marketCapUsd: stockDoc?.data?.fundamentals?.marketCap ?? null,
+    liquidityScore: stats?.liquidity_score,
+    liquidityState: states?.liquidity,
+    exchange: stockDoc?.data?.universe?.exchange || null,
+  });
   
   // Entfernung der Hard-Gates für V6 Top-K Relaxation. Wir geben alle Validen Zeilen strukturiert zurück.
   // Sortierung erfolgt in horizonScore() / buildHorizonRows() basierend auf fundamentaler Stärke.
@@ -248,7 +259,7 @@ export function buildVerifiedFrontpageRow(stockDoc, candidate) {
 
   return {
     ticker,
-    asset_class: normalizeAssetClass(candidate?.asset_class || 'stock', 'stock'),
+    asset_class: assetClass,
     name: stockDoc?.data?.name || candidate?.name || null,
     price: close,
     probability: effectiveProbability,
@@ -292,6 +303,11 @@ export function buildVerifiedFrontpageRow(stockDoc, candidate) {
     learning_status: decisionSlice?.learning_status || decision?.learning_status || null,
     buy_eligible: decisionSlice?.buy_eligible !== false,
     regime_tag: decisionSlice?.regime_tag || decision?.regime_tag || null,
+    market_cap_bucket: segmentationProfile.market_cap_bucket,
+    liquidity_bucket: segmentationProfile.liquidity_bucket,
+    learning_lane: segmentationProfile.learning_lane,
+    blue_chip_core: segmentationProfile.blue_chip_core === true,
+    promotion_eligible: segmentationProfile.promotion_eligible !== false,
     expected_edge: toNumber(decisionSlice?.expected_edge),
     contributor_agreement: toNumber(decisionSlice?.contributor_agreement),
     meta_labeler_rule_version: decisionSlice?.meta_labeler_rule_version || decision?.meta_labeler_rule_version || null,
