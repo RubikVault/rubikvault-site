@@ -1,9 +1,9 @@
 name: QuantLab Daily
 
 on:
-  schedule:
-    - cron: '30 6 * * *'
   workflow_dispatch: {}
+  # schedule disabled — quantlab/ runs externally in QuantLabHot/rubikvault-quantlab/
+  # Re-enable when quantlab/ directory is committed to this repo
 
 permissions:
   contents: write
@@ -15,9 +15,7 @@ concurrency:
 jobs:
   quantlab-daily:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: quantlab
+    # defaults.run.working-directory removed — quantlab/ not in repo
     steps:
       - uses: actions/checkout@v4
 

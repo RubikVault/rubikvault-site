@@ -7,6 +7,7 @@ import { computeIndicators } from '../../functions/api/_shared/eod-indicators.mj
 import { classifyAllStates } from '../../functions/api/_shared/stock-states-v1.js';
 import { makeDecision } from '../../functions/api/_shared/stock-decisions-v1.js';
 import { buildForecastCandidatePools, buildQuantLabCandidates } from '../../functions/api/_shared/best-setups-v4.js';
+import { resolveLocalAssetMeta } from '../lib/best-setups-local-loader.mjs';
 
 const ROOT = process.cwd();
 const PRED_ROOT = path.join(ROOT, 'mirrors/learning/predictions/stock_analyzer');

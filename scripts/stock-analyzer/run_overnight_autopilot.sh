@@ -290,6 +290,7 @@ FULL_CYCLE_STEPS=(
   quantlab_self_heal
   quantlab_publish
   quantlab_report
+  hist_probs
   v3_daily
   features_v2
   features_v4
@@ -309,6 +310,7 @@ MAINTENANCE_STEPS=(
   quantlab_self_heal
   quantlab_publish
   quantlab_report
+  hist_probs
   features_v2
   features_v4
   best_setups_v4
@@ -354,6 +356,9 @@ build_command_array() {
       ;;
     quantlab_report)
       CMD_ARGS=(env PYTHONUNBUFFERED=1 "$NPM_BIN" run quantlab:report:v4)
+      ;;
+    hist_probs)
+      CMD_ARGS=(env NODE_OPTIONS=--max-old-space-size=4096 "$NODE_BIN" "$REPO_ROOT/run-hist-probs-turbo.mjs")
       ;;
     v3_daily)
       CMD_ARGS=(env PYTHONUNBUFFERED=1 "$NPM_BIN" run build:v3:daily)
@@ -401,6 +406,7 @@ step_timeout() {
     quantlab_self_heal) echo 21600 ;;
     quantlab_publish) echo 10800 ;;
     quantlab_report) echo 7200 ;;
+    hist_probs) echo 14400 ;;
     v3_daily) echo 21600 ;;
     features_v2) echo 21600 ;;
     features_v4) echo 21600 ;;

@@ -2,9 +2,20 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
+import { execFileSync } from 'node:child_process';
+import {
+  SSOT_VIOLATION_CONTRACTS,
+  STOCK_ANALYZER_WEB_VALIDATION_CHAIN,
+  SYSTEM_STATUS_DOC_REF,
+  SYSTEM_STATUS_RECOVERY_SCRIPT,
+  SYSTEM_STATUS_STEP_CONTRACTS,
+} from './system-status-ssot.mjs';
 
 const REPO_ROOT = path.resolve(new URL('.', import.meta.url).pathname, '../..');
-const QUANT_ROOT = '/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab';
+const QUANT_ROOT = process.env.QUANT_ROOT || '/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab';
+const HIST_PROBS_PROFILE_INDEX = process.env.HIST_PROBS_PROFILE_INDEX
+  ? path.resolve(process.env.HIST_PROBS_PROFILE_INDEX)
+  : null;
 
 const PATHS = {
   autopilot: path.join(REPO_ROOT, 'public/data/reports/v5-autopilot-status.json'),
@@ -14,9 +25,12 @@ const PATHS = {
   quantlabDaily: path.join(REPO_ROOT, 'mirrors/quantlab/reports/v4-daily/latest.json'),
   quantlabOperational: path.join(REPO_ROOT, 'public/data/quantlab/status/operational-status.json'),
   histProbs: path.join(REPO_ROOT, 'public/data/hist-probs/regime-daily.json'),
+  histProbsSummary: path.join(REPO_ROOT, 'public/data/hist-probs/run-summary.json'),
+  stockAnalyzerAudit: path.join(REPO_ROOT, 'public/data/reports/stock-analyzer-universe-audit-latest.json'),
   snapshot: path.join(REPO_ROOT, 'public/data/snapshots/best-setups-v4.json'),
   etfDiagnostic: path.join(REPO_ROOT, 'public/data/reports/best-setups-etf-diagnostic-latest.json'),
   v1Audit: path.join(REPO_ROOT, 'public/data/reports/quantlab-v1-latest.json'),
+  stockUniverseSymbols: path.join(REPO_ROOT, 'public/data/universe/v7/ssot/stocks.max.symbols.json'),
   refreshReport: path.join(REPO_ROOT, 'mirrors/universe-v7/state/refresh_v7_history_from_eodhd.report.json'),
   apiLimitLock: path.join(REPO_ROOT, 'mirrors/universe-v7/state/API_LIMIT_REACHED.lock.json'),
   deltaLatestSuccess: path.join(QUANT_ROOT, 'ops/q1_daily_delta_ingest/latest_success.json'),
@@ -54,14 +68,48 @@ function ageHours(value) {
   return Math.max(0, Math.round(((Date.now() - ts) / 3600000) * 10) / 10);
 }
 
-function daysSince(value) {
+function daysSince(value, relativeTo) {
   const ts = value ? new Date(value).getTime() : NaN;
   if (!Number.isFinite(ts)) return null;
-  return Math.max(0, Math.round((Date.now() - ts) / 86400000));
+  const ref = relativeTo ? new Date(relativeTo).getTime() : Date.now();
+  if (!Number.isFinite(ref)) return null;
+  return Math.max(0, Math.round((ref - ts) / 86400000));
 }
 
 function severityRank(value) {
   return { ok: 0, info: 0, warning: 1, critical: 2 }[value] ?? 0;
+}
+
+function fetchRemoteWorkflowHealth(repoSlug = 'RubikVault/rubikvault-site') {
+  const CRITICAL_WORKFLOWS = [
+    'monitor-prod.yml',
+    'learning-daily.yml',
+    'fundamentals-daily.yml',
+    'universe-v7-daily.yml',
+    'ops-daily.yml',
+  ];
+  try {
+    const runs = {};
+    for (const wf of CRITICAL_WORKFLOWS) {
+      try {
+        const out = execFileSync('gh', [
+          'run', 'list',
+          `--workflow=${wf}`,
+          '--repo', repoSlug,
+          '--limit=1',
+          '--json=status,conclusion,headSha,createdAt,displayTitle',
+        ], { timeout: 5000, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });
+        const parsed = JSON.parse(out);
+        runs[wf] = parsed[0] || null;
+      } catch {
+        runs[wf] = null;
+      }
+    }
+    const anyFetched = Object.values(runs).some(r => r !== null);
+    return { runs, proof_mode: anyFetched ? 'live_github_api' : 'remote_unavailable' };
+  } catch {
+    return { runs: {}, proof_mode: 'remote_unavailable' };
+  }
 }
 
 function normalizeSeverity(status) {
@@ -76,6 +124,33 @@ function dedupe(items, keyFn) {
     seen.add(key);
     return true;
   });
+}
+
+function listJsonFiles(dirPath, { exclude = [] } = {}) {
+  try {
+    return fs.readdirSync(dirPath)
+      .filter((name) => name.endsWith('.json') && !exclude.includes(name));
+  } catch {
+    return [];
+  }
+}
+
+function readHistProbsProfileCount(indexPath) {
+  if (!indexPath) return null;
+  const doc = readJson(indexPath);
+  if (!doc) return null;
+  if (Number.isFinite(Number(doc.profile_file_count))) return Number(doc.profile_file_count);
+  if (Array.isArray(doc.files)) return doc.files.length;
+  return null;
+}
+
+function readUniverseCount(filePath) {
+  const doc = readJson(filePath);
+  if (!doc) return null;
+  if (Number.isFinite(Number(doc.count))) return Number(doc.count);
+  if (Array.isArray(doc.symbols)) return doc.symbols.length;
+  if (Array.isArray(doc.canonical_ids)) return doc.canonical_ids.length;
+  return null;
 }
 
 function sourceMeta(filePath, extra = {}) {
@@ -165,6 +240,7 @@ function buildStep({
   blocked_by = [],
   status_detail = {},
 }) {
+  const contract = SYSTEM_STATUS_STEP_CONTRACTS[id] || {};
   return {
     id,
     label,
@@ -184,6 +260,15 @@ function buildStep({
     dependency_ids,
     blocked_by,
     status_detail,
+    runbook: {
+      doc_ref: SYSTEM_STATUS_DOC_REF,
+      recovery_script: SYSTEM_STATUS_RECOVERY_SCRIPT,
+      run_command: contract.run_command || null,
+      verify_commands: contract.verify_commands || [],
+      outputs: contract.outputs || [],
+      ui_surfaces: contract.ui_surfaces || [],
+      failure_signals: contract.failure_signals || [],
+    },
   };
 }
 
@@ -213,6 +298,7 @@ function buildDependencyEdges(stepsById) {
     { id: 'forecast_daily', depends_on: [], reason: 'Forecast batch is independent from QuantLab raw-bar freshness.' },
     { id: 'learning_daily', depends_on: ['forecast_daily', 'scientific_summary'], reason: 'Learning report aggregates forecast/scientific/elliott source artifacts.' },
     { id: 'snapshot', depends_on: ['forecast_daily', 'quantlab_daily_report'], reason: 'Breakout/snapshot combines forecast freshness with QuantLab publish layers.' },
+    { id: 'stock_analyzer_universe_audit', depends_on: ['market_data_refresh', 'q1_delta_ingest', 'hist_probs', 'forecast_daily', 'scientific_summary', 'learning_daily', 'snapshot'], reason: 'The universe-wide analyze-v4 audit is only trustworthy after all upstream data and snapshot layers are current.' },
     { id: 'etf_diagnostic', depends_on: ['snapshot'], reason: 'ETF diagnostic explains the current snapshot funnel output.' },
     { id: 'v1_audit', depends_on: ['learning_daily', 'snapshot'], reason: 'V1 audit requires current learning artifacts and snapshot outputs.' },
     { id: 'cutover_readiness', depends_on: ['v1_audit'], reason: 'Cutover readiness is evaluated after the V1 audit is available.' },
@@ -286,6 +372,8 @@ function main() {
   const quantlabDaily = readJson(PATHS.quantlabDaily);
   const quantlabOperational = readJson(PATHS.quantlabOperational);
   const histProbs = readJson(PATHS.histProbs);
+  const histProbsSummary = readJson(PATHS.histProbsSummary);
+  const stockAnalyzerAudit = readJson(PATHS.stockAnalyzerAudit);
   const snapshot = readJson(PATHS.snapshot);
   const etfDiagnostic = readJson(PATHS.etfDiagnostic);
   const v1Audit = readJson(PATHS.v1Audit);
@@ -304,6 +392,9 @@ function main() {
   const refreshGeneratedAt = refreshReport?.generated_at || statMtimeIso(PATHS.refreshReport);
   const refreshStaleDays = daysSince(refreshSampleLastDate || refreshGeneratedAt);
   const refreshSeverity = refreshStaleDays == null ? 'warning' : refreshStaleDays > 7 ? 'critical' : refreshStaleDays > 3 ? 'warning' : 'ok';
+  // Downgrade to warning when the API ran but returned zero data (pre-market timing or quota issue)
+  const noDataFetched = refreshReport != null && (refreshReport?.assets_fetched_with_data === 0) && !refreshSampleLastDate;
+  const refreshSeverityFinal = noDataFetched && refreshSeverity === 'ok' ? 'warning' : refreshSeverity;
 
   const steps = {};
 
@@ -312,14 +403,18 @@ function main() {
     label: 'Market Data Refresh',
     owner: 'Market Data',
     subsystem: 'v7_history',
-    severity: refreshSeverity,
-    summary: refreshSeverity === 'critical' ? 'Market-data refresh is stale' : refreshSeverity === 'warning' ? 'Market-data refresh is aging' : 'Market-data refresh is current',
-    why: apiLimitLock && refreshSeverity !== 'ok'
+    severity: refreshSeverityFinal,
+    summary: refreshSeverityFinal === 'critical' ? 'Market-data refresh is stale' : refreshSeverityFinal === 'warning' ? (noDataFetched ? 'Market-data refresh ran but fetched no data (pre-market or quota issue)' : 'Market-data refresh is aging') : 'Market-data refresh is current',
+    why: apiLimitLock && refreshSeverityFinal !== 'ok'
       ? `Latest v7 history refresh report is ${refreshStaleDays}d old and the provider lock file still records ${apiLimitLock.reason}.`
-      : refreshReport
-        ? `Latest v7 history refresh report was generated at ${refreshGeneratedAt || 'unknown'} with observed market data only up to ${refreshSampleLastDate || 'unknown'}.`
-        : 'No v7 history refresh report was found.',
-    next_fix: 'Run the provider-backed history refresh first; if it does not advance, inspect provider auth/quota and refresh report outputs before touching downstream jobs.',
+      : noDataFetched
+        ? `Refresh report generated at ${refreshGeneratedAt || 'unknown'} but assets_fetched_with_data=0 — API returned no data. Likely a pre-market run or provider quota issue. Re-run after market close or inspect provider auth.`
+        : refreshReport
+          ? `Latest v7 history refresh report was generated at ${refreshGeneratedAt || 'unknown'} with observed market data only up to ${refreshSampleLastDate || 'unknown'}.`
+          : 'No v7 history refresh report was found.',
+    next_fix: noDataFetched
+      ? 'API ran but returned no data. Re-run after market close with: python3 scripts/quantlab/refresh_v7_history_from_eodhd.py --allowlist-path public/data/universe/v7/ssot/stocks.max.canonical.ids.json --from-date <YYYY-MM-DD>'
+      : 'Run the provider-backed history refresh first; if it does not advance, inspect provider auth/quota and refresh report outputs before touching downstream jobs.',
     file_ref: 'scripts/quantlab/refresh_v7_history_from_eodhd.py',
     generated_at: refreshGeneratedAt,
     last_success_at: refreshGeneratedAt,
@@ -336,17 +431,29 @@ function main() {
 
   const deltaUpdatedAt = deltaLatestSuccess?.updated_at || statMtimeIso(PATHS.deltaLatestSuccess);
   const deltaStaleDays = daysSince(deltaLatestSuccess?.ingest_date || deltaUpdatedAt);
-  const deltaSeverity = deltaStaleDays == null ? 'warning' : deltaStaleDays > 7 ? 'critical' : deltaStaleDays > 3 ? 'warning' : 'ok';
+  const deltaStaleSeverity = deltaStaleDays == null ? 'warning' : deltaStaleDays > 7 ? 'critical' : deltaStaleDays > 3 ? 'warning' : 'ok';
+  const deltaIsNoop = deltaLatestSuccess?.noop_no_changed_packs === true
+    || (deltaLatestSuccess?.selected_packs_total === 0 && deltaStaleDays != null && deltaStaleDays <= 3);
+  const refreshAsof = refreshReport?.to_date || null;
+  const deltaUpstreamAdvanced = refreshAsof && deltaLatestSuccess?.ingest_date && refreshAsof > deltaLatestSuccess.ingest_date;
+  const deltaNoop = deltaIsNoop && deltaUpstreamAdvanced;
+  const deltaSeverity = deltaNoop ? (deltaStaleSeverity === 'ok' ? 'warning' : deltaStaleSeverity) : deltaStaleSeverity;
   steps.q1_delta_ingest = buildStep({
     id: 'q1_delta_ingest',
     label: 'Q1 Delta Ingest',
     owner: 'QuantLab',
     subsystem: 'q1_delta',
     severity: deltaSeverity,
-    summary: deltaSeverity === 'critical' ? 'Q1 delta ingest is stale' : deltaSeverity === 'warning' ? 'Q1 delta ingest has not advanced recently' : 'Q1 delta ingest is current',
-    why: deltaLatestSuccess
-      ? `Latest successful Q1 delta ingest is anchored to ingest_date=${deltaLatestSuccess.ingest_date} and was updated at ${deltaUpdatedAt || 'unknown'}.`
-      : 'No successful Q1 delta ingest artifact was found.',
+    summary: deltaNoop
+      ? 'Q1 delta ingest ran as noop but upstream has advanced'
+      : deltaSeverity === 'critical' ? 'Q1 delta ingest is stale'
+      : deltaSeverity === 'warning' ? 'Q1 delta ingest has not advanced recently'
+      : 'Q1 delta ingest is current',
+    why: deltaNoop
+      ? `Q1 delta ingest ran as noop (selected_packs_total=${deltaLatestSuccess?.selected_packs_total ?? 0}, noop_no_changed_packs=${deltaLatestSuccess?.noop_no_changed_packs}) but market_data_refresh has advanced to ${refreshAsof} — ingest must re-run.`
+      : deltaLatestSuccess
+        ? `Latest successful Q1 delta ingest is anchored to ingest_date=${deltaLatestSuccess.ingest_date} and was updated at ${deltaUpdatedAt || 'unknown'}.`
+        : 'No successful Q1 delta ingest artifact was found.',
     next_fix: 'After the upstream history refresh advances, rerun the Q1 delta ingest and verify latest_success.json moves forward before rebuilding QuantLab reports.',
     file_ref: 'scripts/quantlab/run_daily_delta_ingest_q1.py',
     generated_at: deltaUpdatedAt,
@@ -357,7 +464,13 @@ function main() {
     blocked_by: severityRank(steps.market_data_refresh?.severity) >= severityRank('critical') ? ['market_data_refresh'] : [],
     status_detail: {
       latest_success: deltaLatestSuccess || null,
-      impact: 'QuantLab raw-bar freshness cannot advance until the delta ingest layer has incorporated newer market history.',
+      noop_detected: deltaNoop,
+      selected_packs_total: deltaLatestSuccess?.selected_packs_total ?? null,
+      noop_no_changed_packs: deltaLatestSuccess?.noop_no_changed_packs ?? null,
+      upstream_refresh_asof: refreshAsof,
+      impact: deltaNoop
+        ? 'q1_delta_ingest ran silently as no-op. Downstream QuantLab, hist_probs, and snapshot continue reading stale partitions.'
+        : 'QuantLab raw-bar freshness cannot advance until the delta ingest layer has incorporated newer market history.',
     },
   });
 
@@ -382,10 +495,12 @@ function main() {
     : (quantPublishAsof || quantMarketAsof);
   const quantStaleDays = quantPublish.ageCalendarDays
     ?? quantFeature.ageCalendarDays
+    ?? quantRaw.latestAnyAgeCalendarDays
+    ?? quantRaw.latest_required_any_age_calendar_days
     ?? quantRaw.latestCanonicalAgeCalendarDays
     ?? quantRaw.latest_required_age_calendar_days
     ?? daysSince(quantOutputAsof);
-  const quantSeverity = ['ok', 'warning', 'critical'].includes(quantFreshness?.summary?.severity)
+  const quantStaleSeverity = ['ok', 'warning', 'critical'].includes(quantFreshness?.summary?.severity)
     ? quantFreshness.summary.severity
     : quantStaleDays == null
       ? 'warning'
@@ -394,6 +509,19 @@ function main() {
         : quantStaleDays > 3
           ? 'warning'
           : 'ok';
+  const quantCanonicalDate = quantRaw.latestCanonicalRequiredDataDate || quantRaw.latest_required_data_date || null;
+  const quantAnyDate = quantRaw.latestAnyRequiredDataDate || quantRaw.latest_any_data_date || null;
+  const quantCanonicalLag = (quantCanonicalDate && quantAnyDate) ? daysSince(quantCanonicalDate, quantAnyDate) : null;
+  // Canonical always lags any_data by ~20-25 days due to the forward-looking ML label window.
+  // Escalate only when canonical falls BEYOND the expected structural window.
+  const CANONICAL_LABEL_WINDOW = 21;
+  const canonicalShortfall = quantCanonicalLag != null ? Math.max(0, quantCanonicalLag - CANONICAL_LABEL_WINDOW) : null;
+  const quantCanonicalLagSeverity = canonicalShortfall == null ? 'ok'
+    : canonicalShortfall > 14 ? 'critical'
+    : canonicalShortfall > 7 ? 'warning'
+    : 'ok';
+  const quantSeverity = severityRank(quantCanonicalLagSeverity) > severityRank(quantStaleSeverity)
+    ? quantCanonicalLagSeverity : quantStaleSeverity;
   steps.quantlab_daily_report = buildStep({
     id: 'quantlab_daily_report',
     label: 'QuantLab Daily Report',
@@ -420,15 +548,35 @@ function main() {
       feature_store_freshness: quantFeature,
       stock_publish_freshness: quantPublish,
       market_data_asof: quantMarketAsof,
+      canonical_lag_days: quantCanonicalLag,
+      canonical_lag_severity: quantCanonicalLagSeverity,
       operational_freshness: quantFreshness?.summary || null,
       overnight_stability: quantlabDaily?.currentState?.overnightStability || null,
-      impact: 'Breakout/snapshot consumers can look live while still reading stale QuantLab market input.',
+      impact: canonicalShortfall != null && canonicalShortfall > 0
+        ? `QuantLab canonical data is ${canonicalShortfall}d behind expected window (lag=${quantCanonicalLag}d vs ${CANONICAL_LABEL_WINDOW}d expected). Models may run on partially stale features.`
+        : quantCanonicalLag != null
+          ? `QuantLab canonical data is within expected label window (lag=${quantCanonicalLag}d ≤ ${CANONICAL_LABEL_WINDOW}d).`
+          : 'QuantLab canonical freshness could not be determined.',
     },
   });
 
   const histOutputAsof = histProbs?.date || null;
   const histStaleDays = daysSince(histOutputAsof);
-  const histSeverity = histStaleDays == null ? 'warning' : histStaleDays > 7 ? 'critical' : histStaleDays > 3 ? 'warning' : 'ok';
+  const histProfileCount = readHistProbsProfileCount(HIST_PROBS_PROFILE_INDEX)
+    ?? listJsonFiles(path.dirname(PATHS.histProbs), { exclude: ['regime-daily.json', 'run-summary.json'] }).length;
+  const stockUniverseCount = readUniverseCount(PATHS.stockUniverseSymbols);
+  const histCoverageRatio = stockUniverseCount && stockUniverseCount > 0 ? histProfileCount / stockUniverseCount : null;
+  const histCoverageSeverity = histCoverageRatio == null
+    ? 'warning'
+    : histCoverageRatio < 0.25
+      ? 'critical'
+      : histCoverageRatio < 0.95
+        ? 'warning'
+        : 'ok';
+  const histFreshnessSeverity = histStaleDays == null ? 'warning' : histStaleDays > 7 ? 'critical' : histStaleDays > 3 ? 'warning' : 'ok';
+  const histSeverity = severityRank(histCoverageSeverity) > severityRank(histFreshnessSeverity)
+    ? histCoverageSeverity
+    : histFreshnessSeverity;
   steps.hist_probs = buildStep({
     id: 'hist_probs',
     label: 'Historical Probabilities',
@@ -436,8 +584,10 @@ function main() {
     subsystem: 'hist_probs',
     severity: histSeverity,
     summary: histSeverity === 'critical' ? 'Historical probabilities are stale' : histSeverity === 'warning' ? 'Historical probabilities are aging' : 'Historical probabilities are current',
-    why: histOutputAsof ? `Regime daily last market date is ${histOutputAsof}.` : 'No regime-daily market date is available.',
-    next_fix: 'Advance raw bars first, then rerun hist-probs so the regime date moves forward with the market.',
+    why: histOutputAsof
+      ? `Regime daily last market date is ${histOutputAsof}. Historical profile coverage is ${histProfileCount}/${stockUniverseCount || 'unknown'} stock files${histProbsSummary?.asset_classes ? `; latest run asset classes=${(histProbsSummary.asset_classes || []).join(',')}` : ''}.`
+      : `No regime-daily market date is available. Historical profile coverage is ${histProfileCount}/${stockUniverseCount || 'unknown'} stock files.`,
+    next_fix: 'Run the full historical-profile builder over the registry-backed stock+ETF universe, then verify run-summary coverage and regime date advance together.',
     file_ref: 'scripts/lib/hist-probs/run-hist-probs.mjs',
     generated_at: histProbs?.computed_at || statMtimeIso(PATHS.histProbs),
     last_success_at: histProbs?.computed_at || statMtimeIso(PATHS.histProbs),
@@ -448,17 +598,26 @@ function main() {
     status_detail: {
       market_regime: histProbs?.market_regime || null,
       breadth_regime: histProbs?.breadth_regime || null,
+      run_summary: histProbsSummary || null,
+      coverage: {
+        profile_files: histProfileCount,
+        stock_universe_count: stockUniverseCount,
+        stock_coverage_ratio: histCoverageRatio,
+        default_runner_limited: Number(histProbsSummary?.max_tickers || 0) > 0 || (histProbsSummary?.tickers_total || 0) <= 500,
+        asset_classes: histProbsSummary?.asset_classes || ['STOCK'],
+      },
       impact: 'Regime and passive probability context lags the market and should not be treated as current.',
     },
   });
 
   const forecastExec = latestStepExecution(autopilot, 'forecast_run_daily');
+  const forecastSeverity = forecastLatest?.status === 'ok' ? 'ok' : 'critical';
   steps.forecast_daily = buildStep({
     id: 'forecast_daily',
     label: 'Forecast Daily',
     owner: 'Forecast',
     subsystem: 'forecast',
-    severity: forecastLatest?.status === 'ok' ? 'ok' : 'critical',
+    severity: forecastSeverity,
     summary: forecastLatest?.status === 'ok' ? 'Forecast daily batch is healthy' : 'Forecast daily batch is failing',
     why: forecastLatest?.status === 'ok'
       ? `Forecast latest artifact was generated at ${forecastLatest.generated_at || 'unknown'} with as-of ${forecastLatest?.data?.asof || 'unknown'}.`
@@ -533,14 +692,22 @@ function main() {
 
   const snapshotMeta = snapshot?.meta || {};
   const snapshotOutputAsof = snapshotMeta.data_asof || snapshotMeta.forecast_asof || null;
-  const snapshotSeverity = daysSince(snapshotOutputAsof) > 3 ? 'warning' : 'ok';
+  const snapshotStaleDays = daysSince(snapshotOutputAsof);
+  const snapshotStaleSeverity = snapshotStaleDays == null ? 'warning' : snapshotStaleDays > 3 ? 'warning' : 'ok';
+  const snapshotUpstreamSeverity = [quantSeverity, forecastSeverity].reduce(
+    (worst, s) => severityRank(s) > severityRank(worst) ? s : worst, 'ok'
+  );
+  const snapshotSeverity = severityRank(snapshotUpstreamSeverity) > severityRank(snapshotStaleSeverity)
+    ? snapshotUpstreamSeverity : snapshotStaleSeverity;
   steps.snapshot = buildStep({
     id: 'snapshot',
     label: 'Best Setups Snapshot',
     owner: 'Snapshot',
     subsystem: 'breakout_v2',
     severity: snapshotSeverity,
-    summary: snapshotSeverity === 'warning' ? 'Snapshot is current but depends on degraded upstream inputs' : 'Snapshot output is current',
+    summary: snapshotUpstreamSeverity !== 'ok'
+      ? `Snapshot inherits upstream severity=${snapshotUpstreamSeverity} from QuantLab/Forecast inputs`
+      : snapshotSeverity === 'warning' ? 'Snapshot is current but depends on degraded upstream inputs' : 'Snapshot output is current',
     why: `Snapshot data_asof=${snapshotOutputAsof || 'unknown'}, quantlab_asof=${snapshotMeta.quantlab_asof || 'unknown'}, rows_emitted=${snapshotMeta.rows_emitted?.total ?? 0}.`,
     next_fix: 'Keep snapshot generation tied to explicit upstream freshness checks so QuantLab staleness cannot hide behind a fresh render timestamp.',
     file_ref: 'scripts/build-best-setups-v4.mjs',
@@ -552,7 +719,53 @@ function main() {
     blocked_by: [],
     status_detail: {
       snapshot_meta: snapshotMeta,
-      impact: 'Snapshot rows currently render, but part of the dependency chain still lags.',
+      upstream_quantlab_severity: quantSeverity,
+      upstream_forecast_severity: forecastSeverity,
+      upstream_severity_inherited: snapshotUpstreamSeverity,
+      impact: snapshotUpstreamSeverity !== 'ok'
+        ? `Snapshot was computed on inputs with severity=${snapshotUpstreamSeverity}. Consumers are reading derived stale data.`
+        : 'Snapshot rows currently render, but part of the dependency chain still lags.',
+    },
+  });
+
+  const stockAuditSummary = stockAnalyzerAudit?.summary || null;
+  const stockAuditSeverity = stockAnalyzerAudit
+    ? (stockAuditSummary?.severity || ((stockAuditSummary?.full_universe && (stockAuditSummary?.failure_family_count || 0) === 0) ? 'ok' : 'warning'))
+    : 'warning';
+  const stockAuditProcessed = Number(stockAnalyzerAudit?.run?.processed_assets || stockAuditSummary?.processed_assets || 0);
+  const stockAuditTotal = Number(stockAnalyzerAudit?.run?.total_universe_assets || stockAuditSummary?.total_assets || 0);
+  const stockAuditFullUniverse = Boolean(stockAuditSummary?.full_universe);
+  steps.stock_analyzer_universe_audit = buildStep({
+    id: 'stock_analyzer_universe_audit',
+    label: 'Stock Analyzer Universe Audit',
+    owner: 'Stock Analyzer',
+    subsystem: 'ui_contract',
+    severity: stockAuditSeverity,
+    summary: !stockAnalyzerAudit
+      ? 'Stock Analyzer universe audit artifact is missing'
+      : !stockAuditFullUniverse
+        ? 'Stock Analyzer universe audit has not yet covered the full stock+ETF universe'
+        : stockAuditSeverity === 'ok'
+          ? 'Stock Analyzer universe audit is green'
+          : 'Stock Analyzer universe audit found field-level failures',
+    why: !stockAnalyzerAudit
+      ? 'No stock-analyzer-universe-audit artifact was found, so dashboard_v7 cannot prove all analyze-v4 fields are valid across the universe.'
+      : `Latest audit processed ${stockAuditProcessed}/${stockAuditTotal || 'unknown'} assets and found ${stockAuditSummary?.failure_family_count || 0} failure families affecting ${stockAuditSummary?.affected_assets || 0} assets.`,
+    next_fix: !stockAnalyzerAudit || !stockAuditFullUniverse
+      ? 'Run the full stock-analyzer universe audit over STOCK+ETF and then regenerate the dashboard status artifacts.'
+      : (stockAnalyzerAudit?.ordered_recovery?.[0]?.run_command || 'Inspect the leading failure family in the audit artifact and execute the listed recovery steps in order.'),
+    file_ref: 'scripts/ops/build-stock-analyzer-universe-audit.mjs',
+    generated_at: stockAnalyzerAudit?.generated_at || statMtimeIso(PATHS.stockAnalyzerAudit),
+    last_success_at: stockAnalyzerAudit?.generated_at || statMtimeIso(PATHS.stockAnalyzerAudit),
+    input_asof: null,
+    output_asof: stockAnalyzerAudit?.generated_at || null,
+    dependency_ids: ['market_data_refresh', 'q1_delta_ingest', 'hist_probs', 'forecast_daily', 'scientific_summary', 'learning_daily', 'snapshot'],
+    blocked_by: [],
+    status_detail: {
+      audit_summary: stockAuditSummary,
+      ordered_recovery: stockAnalyzerAudit?.ordered_recovery || [],
+      failure_families: stockAnalyzerAudit?.failure_families || [],
+      impact: 'This is the only universe-wide proof that analyze-v4 renders all required UI contracts correctly across stocks and ETFs.',
     },
   });
 
@@ -654,6 +867,9 @@ function main() {
   if (severityRank(steps.snapshot.severity) >= severityRank('warning')) {
     rootCauses.push(buildRootCauseFromStep(steps.snapshot, 'decision_funnel'));
   }
+  if (severityRank(steps.stock_analyzer_universe_audit.severity) >= severityRank('warning')) {
+    rootCauses.push(buildRootCauseFromStep(steps.stock_analyzer_universe_audit, 'ui_contract'));
+  }
   if (severityRank(automation.severity) >= severityRank('warning')) {
     rootCauses.push({
       id: 'automation_refresh_chain_degraded',
@@ -670,7 +886,114 @@ function main() {
     });
   }
 
-  const severity = rootCauses.reduce((acc, cause) => severityRank(cause.severity) > severityRank(acc) ? cause.severity : acc, 'ok');
+  // Detect SSOT violations — each is a broken invariant that a "dumb LLM" must see explicitly.
+  function detectSsotViolations() {
+    const violations = [];
+    const now = new Date().toISOString();
+
+    // 1. hist_probs missing ETF class
+    const runAssetClasses = histProbsSummary?.asset_classes || [];
+    if (histProbsSummary && !runAssetClasses.includes('ETF')) {
+      violations.push({
+        id: 'hist_probs_missing_etf_class',
+        severity: 'critical',
+        title: 'hist_probs ran without ETF asset class',
+        ssot_doc: 'scripts/ops/system-status-ssot.mjs (hist_probs.run_command)',
+        why: `Last hist_probs run used asset_classes=[${runAssetClasses.join(',')}]. SSOT run_command requires STOCK,ETF. ETF tickers have no historical profiles in analyze-v4.`,
+        evidence: { asset_classes: runAssetClasses, ran_at: histProbsSummary.ran_at },
+        fix_command: SYSTEM_STATUS_STEP_CONTRACTS.hist_probs.run_command,
+        success_signal: 'run-summary.json asset_classes includes both STOCK and ETF',
+        detected_at: now,
+      });
+    }
+
+    // 2. hist_probs limited runner (explicit tickers instead of registry)
+    if (histProbsSummary && histProbsSummary.source_mode === 'explicit_tickers') {
+      violations.push({
+        id: 'hist_probs_limited_runner',
+        severity: 'warning',
+        title: 'hist_probs ran with explicit ticker list instead of full registry',
+        ssot_doc: 'scripts/ops/system-status-ssot.mjs (hist_probs.run_command)',
+        why: `Last run used source_mode=explicit_tickers (${histProbsSummary.tickers_total} tickers). SSOT requires registry-backed run with --max-tickers 0 to cover all stocks and ETFs.`,
+        evidence: { source_mode: histProbsSummary.source_mode, tickers_total: histProbsSummary.tickers_total, ran_at: histProbsSummary.ran_at },
+        fix_command: SYSTEM_STATUS_STEP_CONTRACTS.hist_probs.run_command,
+        success_signal: 'run-summary.json source_mode=registry and tickers_total matches full universe',
+        detected_at: now,
+      });
+    }
+
+    // 3. QuantLab canonical vs any-parquet lag
+    const canonicalDate = quantlabOperational?.rawBars?.latestCanonicalRequiredDataDate
+      || quantlabDaily?.currentState?.dataFreshness?.latestCanonicalRequiredDataDate;
+    const anyDate = quantlabOperational?.rawBars?.latestAnyRequiredDataDate
+      || quantlabDaily?.currentState?.dataFreshness?.latestAnyRequiredDataDate;
+    const canonicalLagDays = canonicalDate && anyDate ? daysSince(canonicalDate, anyDate) : null;
+    if (canonicalLagDays != null && canonicalLagDays > 5) {
+      violations.push({
+        id: 'quantlab_canonical_lag',
+        severity: canonicalLagDays > 14 ? 'critical' : 'warning',
+        title: `QuantLab canonical data lags bridge/any ingest by ${canonicalLagDays} days`,
+        ssot_doc: 'docs/ops/runbook.md (Canonical Recovery Order step 2)',
+        why: `latestCanonicalRequiredDataDate=${canonicalDate} but latestAnyRequiredDataDate=${anyDate} — gap of ${canonicalLagDays} calendar days. QuantLab models compute features on stale canonical partitions, not the bridge-only data.`,
+        evidence: { canonical_date: canonicalDate, any_date: anyDate, lag_days: canonicalLagDays },
+        fix_command: SYSTEM_STATUS_STEP_CONTRACTS.q1_delta_ingest.run_command,
+        success_signal: 'latestCanonicalRequiredDataDate within 5 calendar days of latestAnyRequiredDataDate',
+        detected_at: now,
+      });
+    }
+
+    // 4. Snapshot quantlab_asof lags data_asof
+    const snapshotQuantlabAsof = snapshot?.meta?.quantlab_asof;
+    const snapshotDataAsof = snapshot?.meta?.data_asof;
+    const snapshotLagDays = snapshotQuantlabAsof && snapshotDataAsof ? daysSince(snapshotQuantlabAsof, snapshotDataAsof) : null;
+    if (snapshotLagDays != null && snapshotLagDays > 7) {
+      violations.push({
+        id: 'snapshot_quantlab_asof_lag',
+        severity: snapshotLagDays > 20 ? 'critical' : 'warning',
+        title: `Snapshot quantlab_asof lags data_asof by ${snapshotLagDays} days`,
+        ssot_doc: 'docs/ops/runbook.md (Step Contract: Best Setups Snapshot)',
+        why: `snapshot.meta.quantlab_asof=${snapshotQuantlabAsof} but snapshot.meta.data_asof=${snapshotDataAsof}. Candidates on the frontpage are ranked using QuantLab evidence that is ${snapshotLagDays} days old relative to market data.`,
+        evidence: { quantlab_asof: snapshotQuantlabAsof, data_asof: snapshotDataAsof, lag_days: snapshotLagDays },
+        fix_command: `${SYSTEM_STATUS_STEP_CONTRACTS.quantlab_daily_report.run_command} && ${SYSTEM_STATUS_STEP_CONTRACTS.snapshot.run_command}`,
+        success_signal: 'snapshot.meta.quantlab_asof within 7 calendar days of snapshot.meta.data_asof',
+        detected_at: now,
+      });
+    }
+
+    // 5. Market refresh zero data
+    if (noDataFetched) {
+      violations.push({
+        id: 'market_refresh_no_data',
+        severity: 'warning',
+        title: 'Market data refresh ran but returned zero data points',
+        ssot_doc: 'docs/ops/runbook.md (Step Contract: Market Data Refresh)',
+        why: `Refresh report at ${refreshGeneratedAt} recorded assets_requested=${refreshReport?.assets_requested ?? 0} but assets_fetched_with_data=0. No data flows into delta ingest or any downstream step until a successful re-run.`,
+        evidence: { assets_requested: refreshReport?.assets_requested ?? 0, assets_fetched_with_data: 0, generated_at: refreshGeneratedAt },
+        fix_command: SYSTEM_STATUS_STEP_CONTRACTS.market_data_refresh.run_command,
+        success_signal: 'assets_fetched_with_data > 0 and output_asof is a valid market date',
+        detected_at: now,
+      });
+    }
+
+    return violations;
+  }
+
+  const ssotViolations = detectSsotViolations();
+
+  const localSeverity = rootCauses.reduce((acc, cause) => severityRank(cause.severity) > severityRank(acc) ? cause.severity : acc, 'ok');
+
+  const remoteHealth = fetchRemoteWorkflowHealth();
+  const remoteWorkflowSeverities = Object.entries(remoteHealth.runs).map(([, run]) => {
+    if (!run) return 'warning';
+    if (run.conclusion !== 'success') return 'critical';
+    const ageDays = daysSince(run.createdAt);
+    return ageDays != null && ageDays > 2 ? 'warning' : 'ok';
+  });
+  const remoteSeverity = remoteHealth.proof_mode === 'remote_unavailable'
+    ? 'warning'
+    : remoteWorkflowSeverities.reduce((worst, s) => severityRank(s) > severityRank(worst) ? s : worst, 'ok');
+  const severity = severityRank(remoteSeverity) > severityRank(localSeverity) ? remoteSeverity : localSeverity;
+
   const primaryActions = dedupe(rootCauses, (cause) => cause.title).map((cause) => ({
     id: cause.id,
     severity: cause.severity,
@@ -687,12 +1010,23 @@ function main() {
     summary: {
       severity,
       healthy: severity === 'ok',
+      local_severity: localSeverity,
+      remote_severity: remoteSeverity,
+      proof_mode: remoteHealth.proof_mode,
       live_fetch_status: 'ok',
       automation_severity: automation.severity,
       data_layer_severity: [steps.market_data_refresh, steps.q1_delta_ingest, steps.quantlab_daily_report, steps.hist_probs]
         .reduce((acc, step) => severityRank(step.severity) > severityRank(acc) ? step.severity : acc, 'ok'),
       primary_blocker: rootCauses[0]?.title || null,
     },
+    remote_workflows: Object.fromEntries(
+      Object.entries(remoteHealth.runs).map(([wf, run]) => [wf, {
+        conclusion: run?.conclusion ?? null,
+        created_at: run?.createdAt ?? null,
+        sha: run?.headSha ?? null,
+        age_days: run ? daysSince(run.createdAt) : null,
+      }])
+    ),
     provider: {
       env_present: Boolean(process.env.EODHD_API_KEY || process.env.EODHD_API_TOKEN),
       api_limit_lock: apiLimitLock || null,
@@ -708,6 +1042,17 @@ function main() {
     dependencies,
     root_causes: rootCauses,
     primary_actions: primaryActions,
+    stock_analyzer_universe_audit: stockAnalyzerAudit || null,
+    ssot: {
+      doc_ref: SYSTEM_STATUS_DOC_REF,
+      recovery_script: SYSTEM_STATUS_RECOVERY_SCRIPT,
+      tracked_step_ids: Object.keys(SYSTEM_STATUS_STEP_CONTRACTS),
+      untracked_step_ids: Object.keys(steps).filter((id) => !SYSTEM_STATUS_STEP_CONTRACTS[id]),
+      missing_step_ids: Object.keys(SYSTEM_STATUS_STEP_CONTRACTS).filter((id) => !steps[id]),
+      web_validation_chain: STOCK_ANALYZER_WEB_VALIDATION_CHAIN,
+      violation_contracts: SSOT_VIOLATION_CONTRACTS.map((c) => c.id),
+    },
+    ssot_violations: ssotViolations,
   };
 
   fs.mkdirSync(path.dirname(PATHS.output), { recursive: true });

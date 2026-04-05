@@ -443,7 +443,22 @@ function buildPrimaryActions(rootCauses) {
   }));
 }
 
-function summarizeSystemStatus(rootCauses, learningStatus) {
+function summarizeSystemStatus(rootCauses, learningStatus, systemStatusReport) {
+  // Single truth: mirror system-status-latest.json verdict directly
+  const canon = systemStatusReport?.summary;
+  if (canon?.severity) {
+    const label = canon.severity === 'critical' ? 'CRITICAL' : canon.severity === 'warning' ? 'WARNING' : 'OK';
+    return {
+      severity: canon.severity,
+      label,
+      detail: rootCauses.slice(0, 4).map((cause) => cause.title),
+      learning_status: learningStatus || 'UNKNOWN',
+      local_severity: canon.local_severity ?? canon.severity,
+      remote_severity: canon.remote_severity ?? 'unknown',
+      proof_mode: canon.proof_mode ?? 'unknown',
+    };
+  }
+  // Fallback: compute locally when system-status-latest.json is unavailable
   const severity = rootCauses.reduce((acc, cause) => maxSeverity(acc, cause.severity), 'ok');
   const label = severity === 'critical' ? 'CRITICAL' : severity === 'warning' ? 'WARNING' : 'OK';
   return {
@@ -451,6 +466,7 @@ function summarizeSystemStatus(rootCauses, learningStatus) {
     label,
     detail: rootCauses.slice(0, 4).map((cause) => cause.title),
     learning_status: learningStatus || 'UNKNOWN',
+    proof_mode: 'fallback_local_compute',
   };
 }
 
@@ -830,6 +846,9 @@ async function main() {
     system_status: systemStatusReport || null,
     dependency_chain: systemStatusReport?.dependencies || [],
     automation_summary: systemStatusReport?.automation || null,
+    step_runbook: systemStatusReport?.steps || {},
+    web_validation_chain: systemStatusReport?.ssot?.web_validation_chain || [],
+    stock_analyzer_universe_audit: systemStatusReport?.stock_analyzer_universe_audit || null,
   };
 
   // 10. Deep diagnosis data (from learning report)
@@ -865,7 +884,8 @@ async function main() {
   const primaryActions = buildPrimaryActions(rootCauses);
   const systemStatus = summarizeSystemStatus(
     rootCauses,
-    learning?.summary?.overall_status || 'UNKNOWN'
+    learning?.summary?.overall_status || 'UNKNOWN',
+    systemStatusReport
   );
   const operatingModes = buildOperatingModes({
     learning: learning || {},
@@ -893,6 +913,15 @@ async function main() {
     quantlab_implementation: quantlab?.progress?.implementation?.pct ?? null,
     automation_health: systemStatusReport?.automation || null,
     dependency_health: systemStatusReport?.dependencies || [],
+    steps: systemStatusReport?.steps || {},
+    stock_analyzer_universe_audit: systemStatusReport?.stock_analyzer_universe_audit || null,
+    web_validation_chain: systemStatusReport?.ssot?.web_validation_chain || [],
+    ssot_doc_ref: systemStatusReport?.ssot?.doc_ref || null,
+    recovery_script: systemStatusReport?.ssot?.recovery_script || null,
+    tracked_step_ids: systemStatusReport?.ssot?.tracked_step_ids || [],
+    missing_step_ids: systemStatusReport?.ssot?.missing_step_ids || [],
+    untracked_step_ids: systemStatusReport?.ssot?.untracked_step_ids || [],
+    ssot_violations: systemStatusReport?.ssot_violations || [],
     regime: regimeDaily ? {
       market: regimeDaily.market_regime,
       volatility: regimeDaily.volatility_regime,

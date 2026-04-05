@@ -273,9 +273,26 @@ async function fetchWaterfall(ticker) {
 
 // ── Main ──────────────────────────────────────────────────────────────────────
 
+const CANONICAL_SYMBOLS_PATH = path.join(ROOT, 'public', 'data', 'universe', 'v7', 'ssot', 'stocks.max.symbols.json');
+
 async function getTickers() {
   if (FLAG_TICKER) return FLAG_TICKER;
 
+  // Primary: canonical universe list — robust against hist_probs turbo creating 40k+ files
+  try {
+    const raw = await fs.readFile(CANONICAL_SYMBOLS_PATH, 'utf8');
+    const doc = JSON.parse(raw);
+    const symbols = Array.isArray(doc) ? doc : (Array.isArray(doc?.symbols) ? doc.symbols : []);
+    const tickers = symbols.map(s => String(s || '').trim().toUpperCase()).filter(Boolean);
+    if (tickers.length > 0) {
+      console.log(`  [fundamentals] Using canonical universe: ${tickers.length} tickers from stocks.max.symbols.json`);
+      return FLAG_LIMIT ? tickers.slice(0, FLAG_LIMIT) : tickers;
+    }
+  } catch {
+    console.warn('  [fundamentals] Could not load canonical symbols, falling back to hist-probs dir');
+  }
+
+  // Fallback: hist-probs directory (legacy)
   const files = await fs.readdir(HP_DIR).catch(() => []);
   const tickers = files
     .filter(f => f.endsWith('.json') && !f.startsWith('regime'))

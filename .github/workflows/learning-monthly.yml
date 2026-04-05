@@ -45,7 +45,7 @@ jobs:
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add mirrors/learning/reports/monthly/ public/data/reports/learning-monthly-latest.json
+          git add public/data/reports/learning-monthly-latest.json
           if git diff --cached --quiet; then
             echo "No monthly learning data changes to commit"
             exit 0
