@@ -154,9 +154,14 @@ export function appendToLedger(repoRoot, ledgerType, records, partitionDate) {
 
     const ledgerPath = getLedgerPath(repoRoot, ledgerType, partitionDate);
     ensureDir(ledgerPath);
-    const serialized = records.map((record) => JSON.stringify(record)).join('\n') + '\n';
-    const compressed = zlib.gzipSync(Buffer.from(serialized, 'utf8'));
-    fs.appendFileSync(ledgerPath, compressed);
+    // Chunk to avoid RangeError: Invalid string length on large batches
+    const CHUNK = 50_000;
+    for (let i = 0; i < records.length; i += CHUNK) {
+        const slice = records.slice(i, i + CHUNK);
+        const serialized = slice.map((record) => JSON.stringify(record)).join('\n') + '\n';
+        const compressed = zlib.gzipSync(Buffer.from(serialized, 'utf8'));
+        fs.appendFileSync(ledgerPath, compressed);
+    }
     console.log(`[Ledger] Appended ${records.length} records to ${ledgerPath}`);
 }
 
