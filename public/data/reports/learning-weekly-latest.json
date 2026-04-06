@@ -1,0 +1,54 @@
+{
+  "schema_version": "rv.learning.weekly.v1",
+  "generated_at": "2026-04-06T03:49:37.006Z",
+  "week_end": "2026-04-06",
+  "days_covered": 0,
+  "safety_status": {
+    "level": "BOOTSTRAP",
+    "reason": "no_mature_analyzer_metrics_yet"
+  },
+  "promotion_readiness": {
+    "minimum_n_satisfied": false,
+    "eligible_for_promotion": false,
+    "freeze_reason": "BOOTSTRAP",
+    "rollback_candidate": false
+  },
+  "summary": {
+    "status": null,
+    "features_tracked": null,
+    "analyzer_predictions_avg": null,
+    "analyzer_precision_10_avg": null,
+    "analyzer_brier_7d_avg": null
+  },
+  "analyzer": {
+    "avg_predictions_today": null,
+    "avg_precision_10": null,
+    "avg_precision_50": null,
+    "avg_brier_7d": null,
+    "avg_ece_7d": null,
+    "avg_stock_stability": null,
+    "latest_learning_status": null,
+    "latest_gate_rejection_breakdown": null,
+    "latest_false_positive_classes_30d": {},
+    "gate_rejection_breakdown_7d_sum": {},
+    "latest_by_horizon": {},
+    "latest_by_asset_class": {},
+    "latest_source_meta": null
+  },
+  "forecast": {
+    "avg_accuracy_7d": null,
+    "avg_brier_7d": null
+  },
+  "scientific": {
+    "avg_accuracy_7d": null,
+    "avg_hit_rate_7d": null
+  },
+  "elliott": {
+    "avg_accuracy_7d": null
+  },
+  "notes": {
+    "drift_basis": "daily_learning_reports",
+    "champion_vs_challenger": "forecast-specific champion/challenger remains managed by forecast weekly pipeline; this report summarizes learning-layer impact.",
+    "error_taxonomy": "gate rejection deltas and 30d stock-analyzer false-positive classes included."
+  }
+}
