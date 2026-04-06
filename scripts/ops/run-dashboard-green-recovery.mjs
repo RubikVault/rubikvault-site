@@ -270,7 +270,13 @@ const steps = [
         path.join(ROOT, 'public', 'data', 'reports', 'learning-report-latest.json'),
         campaignStartMs
       );
-      return snapshotFresh && learningFresh;
+      // Must have run AFTER a clean universe audit this campaign
+      const auditFresh = fileUpdatedSince(AUDIT_REPORT, campaignStartMs);
+      const auditDoc = readJson(AUDIT_REPORT);
+      const auditClean = auditDoc?.summary?.full_universe === true
+        && (auditDoc?.summary?.failure_family_count ?? Infinity) === 0;
+      const systemAfterAudit = (statMtimeMs(SYSTEM_STATUS) || 0) >= (statMtimeMs(AUDIT_REPORT) || 0);
+      return snapshotFresh && learningFresh && auditFresh && auditClean && systemAfterAudit;
     },
   },
   {
