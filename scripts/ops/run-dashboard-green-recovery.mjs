@@ -200,9 +200,9 @@ const steps = [
     id: 'hist_probs',
     label: 'Hist Probs Full (Turbo)',
     pattern: 'run-hist-probs-turbo.mjs',
-    command: 'NODE_OPTIONS=--max-old-space-size=4096 node run-hist-probs-turbo.mjs',
+    command: 'NODE_OPTIONS=--max-old-space-size=6144 node run-hist-probs-turbo.mjs',
     logFile: path.join(LOG_DIR, 'step-06-hist-probs.log'),
-    stallMinutes: 60,
+    stallMinutes: 360,
     dependsOn: ['q1_delta_ingest'],
     isComplete: () => {
       const doc = readJson(HIST_PROBS_SUMMARY);
