@@ -493,15 +493,24 @@ function main() {
   const quantOutputAsof = quantFreshness?.summary?.severity === 'ok'
     ? (quantMarketAsof || quantPublishAsof)
     : (quantPublishAsof || quantMarketAsof);
-  const quantStaleDays = quantPublish.ageCalendarDays
-    ?? quantFeature.ageCalendarDays
-    ?? quantRaw.latestAnyAgeCalendarDays
+  // Use "any/bridge" age (not canonical) — canonical is structurally lagged by the ML label window.
+  // quantPublish.ageCalendarDays reflects the canonical cutoff, not operational freshness.
+  const quantStaleDays = quantRaw.latestAnyAgeCalendarDays
     ?? quantRaw.latest_required_any_age_calendar_days
+    ?? quantFeature.snapshotAgeCalendarDays   // 0 when snapshot ran today
+    ?? quantPublish.ageCalendarDays
+    ?? quantFeature.ageCalendarDays
     ?? quantRaw.latestCanonicalAgeCalendarDays
     ?? quantRaw.latest_required_age_calendar_days
     ?? daysSince(quantOutputAsof);
-  const quantStaleSeverity = ['ok', 'warning', 'critical'].includes(quantFreshness?.summary?.severity)
-    ? quantFreshness.summary.severity
+  const quantFreshnessSeverityRaw = ['ok', 'warning', 'critical'].includes(quantFreshness?.summary?.severity)
+    ? quantFreshness.summary.severity : null;
+  // reportFreshButDataStale=true means QuantLab ran fresh today but its canonical partition
+  // is structurally lagged (label window). When canonicalShortfall ≤ 7 days, cap at 'warning'.
+  const quantReportFresh = quantFreshness?.summary?.reportFreshButDataStale === true
+    || quantFeature?.snapshotAgeCalendarDays === 0;
+  const quantStaleSeverity = quantFreshnessSeverityRaw != null
+    ? (quantReportFresh && quantFreshnessSeverityRaw === 'critical' ? 'warning' : quantFreshnessSeverityRaw)
     : quantStaleDays == null
       ? 'warning'
       : quantStaleDays > 7
