@@ -1,25 +1,25 @@
 {
   "type": "pipeline.truth",
-  "asOf": "2026-04-07T08:19:43.198Z",
+  "asOf": "2026-04-08T07:55:53.245Z",
   "universe": "nasdaq100",
   "expected": 2453,
   "count": 2449,
   "missing": [
     {
       "ticker": "AKE",
-      "reason": "PROVIDER_HTTP_ERROR"
+      "reason": "NO_EOD_BARS"
     },
     {
       "ticker": "MPLT",
-      "reason": "PROVIDER_HTTP_ERROR"
+      "reason": "NOT_SUPPORTED_SHORT_HISTORY"
     },
     {
       "ticker": "NAVN",
-      "reason": "PROVIDER_HTTP_ERROR"
+      "reason": "NOT_SUPPORTED_SHORT_HISTORY"
     },
     {
       "ticker": "P5N994",
-      "reason": "PROVIDER_HTTP_ERROR"
+      "reason": "NO_EOD_BARS"
     }
   ]
 }
