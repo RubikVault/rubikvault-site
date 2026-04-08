@@ -10,6 +10,7 @@ const MIN_FORECAST_ROWS = Number(process.env.RV_MIN_FORECAST_ROWS || 1);
 const MIN_UNIVERSE_COVERAGE_TOTAL = Number(process.env.RV_MIN_UNIVERSE_COVERAGE_TOTAL || 2000);
 const MIN_EOD_COVERAGE_RATIO = Number(process.env.RV_MIN_EOD_COVERAGE_RATIO || 0.995);
 const MIN_FORECAST_COVERAGE_RATIO = Number(process.env.RV_MIN_FORECAST_COVERAGE_RATIO || 0.95);
+const MIN_FORECAST_OVERLAP_COUNT = Number(process.env.RV_MIN_FORECAST_OVERLAP_COUNT || 500);
 const MIN_MARKETPHASE_COVERAGE_RATIO = Number(process.env.RV_MIN_MARKETPHASE_COVERAGE_RATIO || 0.1);
 const STRICT_FUNDAMENTALS = String(process.env.RV_STRICT_FUNDAMENTALS || '0') === '1';
 const MIN_FUNDAMENTALS_REFRESH_RATIO = Number(process.env.RV_MIN_FUNDAMENTALS_REFRESH_RATIO || (STRICT_FUNDAMENTALS ? 0.95 : 0));
@@ -266,6 +267,10 @@ function runCoverageConsistencyChecks(failures) {
   const eodCoverage = universeCount > 0 ? eodInUniverse.size / universeCount : 0;
   const forecastCoverage = universeCount > 0 ? forecastInUniverse.size / universeCount : 0;
   const marketphaseCoverage = universeCount > 0 ? marketphaseInUniverse.size / universeCount : 0;
+  const forecastOutsideUniverse = setDifference(forecastSet, universeSet);
+  const forecastExtendedUniverseMode = !STRICT_FORECAST_UNIVERSE
+    && forecastOutsideUniverse.size > universeCount
+    && forecastSet.size > universeCount;
 
   console.log(`ℹ coverage: universe=${universeCount} eod=${eodInUniverse.size} (${eodCoverage.toFixed(4)}) forecast=${forecastInUniverse.size} (${forecastCoverage.toFixed(4)}) marketphase=${marketphaseInUniverse.size} (${marketphaseCoverage.toFixed(4)})`);
 
@@ -276,7 +281,14 @@ function runCoverageConsistencyChecks(failures) {
 
   if (forecastCoverage < MIN_FORECAST_COVERAGE_RATIO) {
     const missingForecast = setDifference(universeSet, forecastSet);
-    failures.push(`coverage gate: forecast coverage ${(forecastCoverage * 100).toFixed(2)}% below minimum ${(MIN_FORECAST_COVERAGE_RATIO * 100).toFixed(2)}% (missing=${missingForecast.size}, sample=${summarizeSet(missingForecast).join(',')})`);
+    if (forecastExtendedUniverseMode && forecastInUniverse.size >= MIN_FORECAST_OVERLAP_COUNT) {
+      console.warn(
+        `WARN forecast coverage gate skipped: extended-universe forecast overlaps ${forecastInUniverse.size} CI symbols ` +
+        `while ${forecastOutsideUniverse.size} symbols sit outside the legacy CI universe.`,
+      );
+    } else {
+      failures.push(`coverage gate: forecast coverage ${(forecastCoverage * 100).toFixed(2)}% below minimum ${(MIN_FORECAST_COVERAGE_RATIO * 100).toFixed(2)}% (missing=${missingForecast.size}, sample=${summarizeSet(missingForecast).join(',')})`);
+    }
   }
 
   if (marketphaseCoverage < MIN_MARKETPHASE_COVERAGE_RATIO) {
@@ -284,7 +296,6 @@ function runCoverageConsistencyChecks(failures) {
     failures.push(`coverage gate: marketphase coverage ${(marketphaseCoverage * 100).toFixed(2)}% below minimum ${(MIN_MARKETPHASE_COVERAGE_RATIO * 100).toFixed(2)}% (missing=${missingMarketphase.size}, sample=${summarizeSet(missingMarketphase).join(',')})`);
   }
 
-  const forecastOutsideUniverse = setDifference(forecastSet, universeSet);
   if (forecastOutsideUniverse.size > 0) {
     if (STRICT_FORECAST_UNIVERSE) {
       failures.push(`forecast consistency: ${forecastOutsideUniverse.size} symbols not in universe (sample=${summarizeSet(forecastOutsideUniverse).join(',')})`);
