@@ -36,6 +36,8 @@ const RELEASE_STATE_PATH = path.join(REPO_ROOT, 'public/data/ops/release-state-l
 const DEPLOY_PROOF_PATH  = path.join(REPO_ROOT, 'public/data/ops/deploy-proof-latest.json');
 const BUNDLE_META_PATH   = path.join(REPO_ROOT, 'dist/pages-prod/data/ops/build-bundle-meta.json');
 const BUILD_META_PATH    = path.join(REPO_ROOT, 'public/data/ops/build-meta.json');
+const PUBLIC_DIR         = path.join(REPO_ROOT, 'public');
+const DIST_DIR           = path.join(REPO_ROOT, 'dist/pages-prod');
 
 // ─── Config ────────────────────────────────────────────────────────────────────
 // Smoke test URLs (production endpoints)
@@ -73,6 +75,16 @@ function writeJsonAtomic(p, obj) {
   const tmp = `${p}.${process.pid}.${Date.now()}.tmp`;
   fs.writeFileSync(tmp, JSON.stringify(obj, null, 2) + '\n', 'utf8');
   fs.renameSync(tmp, p);
+}
+
+function syncPublicFileIntoBundle(publicPath) {
+  const rel = path.relative(PUBLIC_DIR, publicPath);
+  if (!rel || rel.startsWith('..')) {
+    throw new Error(`Cannot sync non-public file into bundle: ${publicPath}`);
+  }
+  const distPath = path.join(DIST_DIR, rel);
+  fs.mkdirSync(path.dirname(distPath), { recursive: true });
+  fs.copyFileSync(publicPath, distPath);
 }
 
 function utcNow() { return new Date().toISOString(); }
@@ -158,6 +170,51 @@ function checkBuildMeta() {
   return meta;
 }
 
+function updateReleaseState(phase, lastUpdated, previousState, lastSuccessPhaseOverride = undefined) {
+  if (!fs.existsSync(RELEASE_STATE_PATH)) return null;
+  const state = previousState || readJson(RELEASE_STATE_PATH) || {};
+  const nextState = {
+    ...state,
+    phase,
+    last_success_phase: lastSuccessPhaseOverride === undefined
+      ? state.last_success_phase
+      : lastSuccessPhaseOverride,
+    last_updated: lastUpdated,
+  };
+  writeJsonAtomic(RELEASE_STATE_PATH, nextState);
+  return nextState;
+}
+
+function writeDeployProof({
+  deployedCommit,
+  deploymentId = null,
+  deploymentUrl = PROD_BASE,
+  smokes = {},
+  smokesOk = null,
+  requestedAt,
+  verifiedAt = null,
+  bundleMeta = null,
+  releaseStatePhase = null,
+  targetDate = null,
+}) {
+  const proof = {
+    schema: 'rv_deploy_proof_v1',
+    deployed_commit: deployedCommit,
+    deployment_id: deploymentId,
+    deployment_url: deploymentUrl,
+    smokes,
+    smokes_ok: smokesOk,
+    requested_at: requestedAt,
+    verified_at: verifiedAt,
+    bundle_file_count: bundleMeta?.bundle_file_count ?? null,
+    bundle_size_mb: bundleMeta?.bundle_size_mb ?? null,
+    release_state_phase: releaseStatePhase,
+    target_date: targetDate,
+  };
+  writeJsonAtomic(DEPLOY_PROOF_PATH, proof);
+  return proof;
+}
+
 // ─── Deploy ────────────────────────────────────────────────────────────────────
 
 function buildDeployBundle() {
@@ -219,16 +276,37 @@ log('═══ Release Gate Check ═══');
 log(`Dry run: ${isDryRun} | Force: ${isForce} | Skip smokes: ${skipSmokes}`);
 
 const requestedAt = utcNow();
+const currentGitSha = getCurrentGitSha();
 
 // 1. Gate checks
 const releaseState = checkReleaseState();
 checkBuildMeta();
+
+// 1b. Seed request-state artifacts before bundle build so the deployed bundle
+// always carries a current request/proof snapshot instead of stale placeholders.
+const requestedState = updateReleaseState('DEPLOY_REQUESTED', requestedAt, releaseState);
+writeDeployProof({
+  deployedCommit: currentGitSha,
+  requestedAt,
+  bundleMeta: null,
+  releaseStatePhase: requestedState?.phase ?? 'DEPLOY_REQUESTED',
+  targetDate: releaseState?.target_date ?? null,
+});
 
 // 2. Build deploy bundle
 buildDeployBundle();
 
 const bundleMeta = readJson(BUNDLE_META_PATH);
 log(`Bundle: ${bundleMeta?.bundle_file_count ?? '?'} files, ${bundleMeta?.bundle_size_mb ?? '?'} MB`);
+writeDeployProof({
+  deployedCommit: currentGitSha,
+  requestedAt,
+  bundleMeta,
+  releaseStatePhase: requestedState?.phase ?? 'DEPLOY_REQUESTED',
+  targetDate: releaseState?.target_date ?? null,
+});
+syncPublicFileIntoBundle(RELEASE_STATE_PATH);
+syncPublicFileIntoBundle(DEPLOY_PROOF_PATH);
 
 if (isDryRun) {
   log('Dry run: stopping before deploy.');
@@ -253,39 +331,41 @@ if (!skipSmokes) {
 
 // 5. Write deploy proof
 const verifiedAt = utcNow();
-const proof = {
-  schema: 'rv_deploy_proof_v1',
-  deployed_commit: getCurrentGitSha(),
-  deployment_id: deployResult.deployment_id,
-  deployment_url: deployResult.deployment_url,
+writeDeployProof({
+  deployedCommit: currentGitSha,
+  deploymentId: deployResult.deployment_id,
+  deploymentUrl: deployResult.deployment_url || PROD_BASE,
   smokes: smokeResults.smokes,
-  smokes_ok: smokeResults.smokes_ok,
-  requested_at: requestedAt,
-  verified_at: smokeResults.smokes_ok ? verifiedAt : null,
-  bundle_file_count: bundleMeta?.bundle_file_count ?? null,
-  bundle_size_mb: bundleMeta?.bundle_size_mb ?? null,
-  release_state_phase: releaseState?.phase ?? null,
-  target_date: releaseState?.target_date ?? null,
-};
-
-writeJsonAtomic(DEPLOY_PROOF_PATH, proof);
+  smokesOk: smokeResults.smokes_ok,
+  requestedAt,
+  verifiedAt: smokeResults.smokes_ok ? verifiedAt : null,
+  bundleMeta,
+  releaseStatePhase: smokeResults.smokes_ok ? 'DEPLOY_VERIFIED' : 'DEPLOY_REQUESTED',
+  targetDate: releaseState?.target_date ?? null,
+});
 log(`Deploy proof written: ${DEPLOY_PROOF_PATH}`);
 
 // 6. Update release state to DEPLOY_VERIFIED
 if (fs.existsSync(RELEASE_STATE_PATH)) {
-  const state = readJson(RELEASE_STATE_PATH) || {};
-  writeJsonAtomic(RELEASE_STATE_PATH, {
-    ...state,
-    phase: smokeResults.smokes_ok ? 'DEPLOY_VERIFIED' : 'DEPLOY_REQUESTED',
-    last_success_phase: smokeResults.smokes_ok ? 'DEPLOY_VERIFIED' : state.last_success_phase,
-    last_updated: verifiedAt,
-  });
+  updateReleaseState(
+    smokeResults.smokes_ok ? 'DEPLOY_VERIFIED' : 'DEPLOY_REQUESTED',
+    verifiedAt,
+    null,
+    smokeResults.smokes_ok ? 'DEPLOY_VERIFIED' : undefined,
+  );
   log(`Release state updated to ${smokeResults.smokes_ok ? 'DEPLOY_VERIFIED' : 'DEPLOY_REQUESTED'}`);
 }
 
+// 7. Publish final proof/state artifacts so production serves the same machine
+// evidence that was just written locally.
+syncPublicFileIntoBundle(RELEASE_STATE_PATH);
+syncPublicFileIntoBundle(DEPLOY_PROOF_PATH);
+log('Publishing final release artifacts...');
+runWranglerDeploy();
+
 log('');
 log('═══ Release Gate Summary ═══');
-log(`Deployment URL: ${deployResult.deployment_url ?? '(unknown)'}`);
+log(`Deployment URL: ${deployResult.deployment_url ?? PROD_BASE}`);
 log(`Smokes OK:      ${smokeResults.smokes_ok}`);
 log(`Proof written:  ${DEPLOY_PROOF_PATH}`);
 log('Done.');

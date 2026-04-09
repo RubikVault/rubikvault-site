@@ -1,15 +1,19 @@
 {
   "schema": "rv_deploy_proof_v1",
-  "deployed_commit": null,
+  "deployed_commit": "f26b4b297b3badf94181f3d1d0766acc0002ce66",
   "deployment_id": null,
-  "deployment_url": null,
-  "smokes": {},
-  "smokes_ok": null,
-  "requested_at": null,
-  "verified_at": null,
+  "deployment_url": "https://rubikvault.com",
+  "smokes": {
+    "dashboard_v7": 200,
+    "api_diag": 200,
+    "api_stock_sample": 200,
+    "ops_pulse": 200
+  },
+  "smokes_ok": true,
+  "requested_at": "2026-04-09T13:37:12.805Z",
+  "verified_at": "2026-04-09T13:37:53.997Z",
   "bundle_file_count": 2512,
   "bundle_size_mb": 264,
-  "release_state_phase": null,
-  "target_date": null,
-  "_note": "Seeded placeholder — populated by release-gate-check.mjs after first supervised deploy"
+  "release_state_phase": "DEPLOY_VERIFIED",
+  "target_date": "2026-04-09"
 }
