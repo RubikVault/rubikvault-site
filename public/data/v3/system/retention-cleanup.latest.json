@@ -1,14 +1,18 @@
 {
   "meta": {
     "schema": "rv.retention.cleanup.v1",
-    "generated_at": "2026-03-22T04:05:06.436Z"
+    "generated_at": "2026-04-09T09:35:42.770Z"
   },
   "policy": {
     "strategy": "A",
     "mirrors_retention_days": 180,
+    "forecast_outcomes_retention_days": 180,
+    "forecast_forecasts_retention_days": 90,
     "ops_ledger_retention_days": 365
   },
   "removed": {
+    "forecast_outcomes": 0,
+    "forecast_forecasts": 0,
     "mirrors": 0,
     "drift_reports": 0,
     "ops_history": {

@@ -14,6 +14,7 @@
  *   node scripts/build-fundamentals.mjs
  *   node scripts/build-fundamentals.mjs --limit 50
  *   node scripts/build-fundamentals.mjs --ticker AAPL,MSFT
+ *   node scripts/build-fundamentals.mjs --published-subset
  *   node scripts/build-fundamentals.mjs --force   (ignore 23h incremental skip)
  *   node scripts/build-fundamentals.mjs --dry-run
  */
@@ -26,6 +27,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
 const OUT_DIR = path.join(ROOT, 'public', 'data', 'fundamentals');
 const HP_DIR = path.join(ROOT, 'public', 'data', 'hist-probs');
+const US_EU_SCOPE_ROWS_PATH = path.join(ROOT, 'mirrors', 'universe-v7', 'ssot', 'stocks_etfs.us_eu.rows.json');
 
 // Auto-load .dev.vars (Cloudflare Wrangler convention — same as dev-local.sh)
 {
@@ -42,6 +44,7 @@ const HP_DIR = path.join(ROOT, 'public', 'data', 'hist-probs');
 const args = process.argv.slice(2);
 const FLAG_FORCE = args.includes('--force');
 const FLAG_DRY = args.includes('--dry-run');
+const FLAG_PUBLISHED_SUBSET = args.includes('--published-subset');
 const FLAG_LIMIT = (() => { const i = args.indexOf('--limit'); return i !== -1 ? parseInt(args[i + 1], 10) : null; })();
 const FLAG_TICKER = (() => { const i = args.indexOf('--ticker'); return i !== -1 ? args[i + 1].split(',').map(t => t.trim().toUpperCase()) : null; })();
 
@@ -73,6 +76,11 @@ async function fetchJson(url, timeoutMs = 8000) {
   } finally {
     clearTimeout(t);
   }
+}
+
+function normalizeDateId(value) {
+  const normalized = String(value || '').slice(0, 10).trim();
+  return normalized || null;
 }
 
 // ── Provider: EODHD ──────────────────────────────────────────────────────────
@@ -259,12 +267,7 @@ async function fetchWaterfall(ticker) {
       if (hasData(data)) return { data, provider: name };
     } catch (e) {
       if (String(e?.message).includes('RATE_LIMITED')) {
-        process.stdout.write(`  ⏸ ${ticker} (${name} rate limited — pausing 60s)\n`);
-        await new Promise(r => setTimeout(r, 60000));
-        try {
-          const data = await fn(ticker);
-          if (hasData(data)) return { data, provider: name };
-        } catch {}
+        process.stdout.write(`  ⏭ ${ticker} (${name} rate limited — trying next provider)\n`);
       }
     }
   }
@@ -275,8 +278,45 @@ async function fetchWaterfall(ticker) {
 
 const CANONICAL_SYMBOLS_PATH = path.join(ROOT, 'public', 'data', 'universe', 'v7', 'ssot', 'stocks.max.symbols.json');
 
+async function loadUsEuStockRows() {
+  try {
+    const raw = await fs.readFile(US_EU_SCOPE_ROWS_PATH, 'utf8');
+    const doc = JSON.parse(raw);
+    const rows = Array.isArray(doc?.items) ? doc.items : [];
+    return rows.filter((row) => String(row?.type_norm || '').toUpperCase() === 'STOCK');
+  } catch {
+    return [];
+  }
+}
+
+async function loadPublishedSubsetTickers() {
+  const files = await fs.readdir(OUT_DIR).catch(() => []);
+  const tickers = files
+    .filter((name) => name.endsWith('.json') && name !== '_index.json')
+    .map((name) => name.replace(/\.json$/i, '').trim().toUpperCase())
+    .filter(Boolean)
+    .sort();
+  return FLAG_LIMIT ? tickers.slice(0, FLAG_LIMIT) : tickers;
+}
+
 async function getTickers() {
   if (FLAG_TICKER) return FLAG_TICKER;
+  if (FLAG_PUBLISHED_SUBSET) {
+    const published = await loadPublishedSubsetTickers();
+    if (published.length > 0) {
+      console.log(`  [fundamentals] Using published subset: ${published.length} tickers from public/data/fundamentals`);
+      return published;
+    }
+  }
+
+  const usEuRows = await loadUsEuStockRows();
+  if (usEuRows.length > 0) {
+    const tickers = usEuRows
+      .map((row) => String(row?.symbol || '').trim().toUpperCase())
+      .filter(Boolean);
+    console.log(`  [fundamentals] Using US+EU stock scope: ${tickers.length} tickers from stocks_etfs.us_eu.rows.json`);
+    return FLAG_LIMIT ? tickers.slice(0, FLAG_LIMIT) : tickers;
+  }
 
   // Primary: canonical universe list — robust against hist_probs turbo creating 40k+ files
   try {
@@ -301,9 +341,26 @@ async function getTickers() {
   return FLAG_LIMIT ? tickers.slice(0, FLAG_LIMIT) : tickers;
 }
 
-async function isStale(filePath) {
+async function buildExpectedDateMap() {
+  const map = new Map();
+  const rows = await loadUsEuStockRows();
+  for (const row of rows) {
+    const ticker = String(row?.symbol || '').trim().toUpperCase();
+    if (!ticker) continue;
+    const expectedDate = normalizeDateId(row?.last_trade_date);
+    if (!map.has(ticker) || (expectedDate && expectedDate > map.get(ticker))) {
+      map.set(ticker, expectedDate || null);
+    }
+  }
+  return map;
+}
+
+async function isStale(filePath, expectedDate = null) {
   if (FLAG_FORCE) return true;
   try {
+    const doc = JSON.parse(await fs.readFile(filePath, 'utf8'));
+    const updatedAt = normalizeDateId(doc?.updatedAt || doc?.asOf || doc?.date);
+    if (expectedDate && updatedAt && updatedAt >= expectedDate) return false;
     const stat = await fs.stat(filePath);
     const ageH = (Date.now() - stat.mtimeMs) / 3600000;
     return ageH >= 23;
@@ -312,10 +369,11 @@ async function isStale(filePath) {
   }
 }
 
-async function processBatch(batch, stats) {
+async function processBatch(batch, stats, expectedDateByTicker) {
   await Promise.all(batch.map(async (ticker) => {
     const outFile = path.join(OUT_DIR, `${ticker}.json`);
-    if (!(await isStale(outFile))) {
+    const expectedDate = expectedDateByTicker.get(ticker) || null;
+    if (!(await isStale(outFile, expectedDate))) {
       stats.skipped++;
       return;
     }
@@ -344,6 +402,7 @@ async function main() {
   await fs.mkdir(OUT_DIR, { recursive: true });
 
   const tickers = await getTickers();
+  const expectedDateByTicker = await buildExpectedDateMap();
   console.log(`  Tickers: ${tickers.length} | Providers: EODHD→FMP→Finnhub→AV`);
   console.log(`  Keys: EODHD=${env.EODHD_API_KEY ? 'YES' : 'NO'} FMP=${env.FMP_API_KEY ? 'YES' : 'NO'} Finnhub=${env.FINNHUB_API_KEY ? 'YES' : 'NO'} AV=${env.ALPHAVANTAGE_API_KEY ? 'YES' : 'NO'}`);
 
@@ -353,7 +412,7 @@ async function main() {
 
   for (let i = 0; i < tickers.length; i += BATCH) {
     const batch = tickers.slice(i, i + BATCH);
-    await processBatch(batch, stats);
+    await processBatch(batch, stats, expectedDateByTicker);
     if (i + BATCH < tickers.length) await new Promise(r => setTimeout(r, DELAY));
   }
 
@@ -364,6 +423,8 @@ async function main() {
     success: stats.success,
     failed: stats.failed,
     skipped: stats.skipped,
+    published_existing: (await loadPublishedSubsetTickers()).length,
+    scope: FLAG_PUBLISHED_SUBSET ? 'published_subset' : 'us_eu_stock_only',
     by_provider: stats.by_provider,
   };
 

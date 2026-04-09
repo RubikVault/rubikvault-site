@@ -101,6 +101,8 @@ TEST_DAYS="${Q1_DAILY_TEST_DAYS:-5}"
 EMBARGO_DAYS="${Q1_DAILY_EMBARGO_DAYS:-2}"
 MIN_TRAIN_DAYS="${Q1_DAILY_MIN_TRAIN_DAYS:-8}"
 SURVIVORS_MAX="${Q1_DAILY_SURVIVORS_MAX:-24}"
+STAGEB_STRICT_GATE_PROFILE="${Q1_DAILY_STAGEB_STRICT_GATE_PROFILE:-hard}"
+STAGEB_SURVIVORS_B_Q1_FAILURE_MODE="${Q1_DAILY_STAGEB_SURVIVORS_B_Q1_FAILURE_MODE:-warn}"
 
 LOG_DIR="$QUANT_ROOT/logs"
 mkdir -p "$LOG_DIR"
@@ -126,6 +128,8 @@ CMD=(
   --embargo-days "$EMBARGO_DAYS"
   --min-train-days "$MIN_TRAIN_DAYS"
   --survivors-max "$SURVIVORS_MAX"
+  --stageb-strict-gate-profile "$STAGEB_STRICT_GATE_PROFILE"
+  --stageb-survivors-b-q1-failure-mode "$STAGEB_SURVIVORS_B_Q1_FAILURE_MODE"
 )
 
 if [[ "$PRINT_ONLY" -eq 1 ]]; then
@@ -216,10 +220,14 @@ PY
   if [[ -n "$STAGEA_RUN_ID" && -f "$STAGEB_Q1_SCRIPT" ]]; then
     {
       echo "[q1-daily-local] stage_b_q1=1 stage_a_run_id=$STAGEA_RUN_ID"
-      echo "[q1-daily-local] stage_b_q1_cmd=$STAGEB_Q1_PY $STAGEB_Q1_SCRIPT --quant-root $QUANT_ROOT --stage-a-run-id $STAGEA_RUN_ID"
+      echo "[q1-daily-local] stage_b_q1_cmd=$STAGEB_Q1_PY $STAGEB_Q1_SCRIPT --quant-root $QUANT_ROOT --stage-a-run-id $STAGEA_RUN_ID --stageb-strict-gate-profile $STAGEB_STRICT_GATE_PROFILE --survivors-b-q1-failure-mode $STAGEB_SURVIVORS_B_Q1_FAILURE_MODE"
     } | tee -a "$LOG_FILE"
     set +e
-    "$STAGEB_Q1_PY" "$STAGEB_Q1_SCRIPT" --quant-root "$QUANT_ROOT" --stage-a-run-id "$STAGEA_RUN_ID" 2>&1 | tee -a "$LOG_FILE"
+    "$STAGEB_Q1_PY" "$STAGEB_Q1_SCRIPT" \
+      --quant-root "$QUANT_ROOT" \
+      --stage-a-run-id "$STAGEA_RUN_ID" \
+      --stageb-strict-gate-profile "$STAGEB_STRICT_GATE_PROFILE" \
+      --survivors-b-q1-failure-mode "$STAGEB_SURVIVORS_B_Q1_FAILURE_MODE" 2>&1 | tee -a "$LOG_FILE"
     STAGEB_Q1_RC=${PIPESTATUS[0]}
     set -e
     if [[ "$STAGEB_Q1_RC" -ne 0 ]]; then

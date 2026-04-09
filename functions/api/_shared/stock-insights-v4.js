@@ -15,6 +15,7 @@ const REASON_CODES = Object.freeze({
   MISSING_FORECAST_ENTRY: "MISSING_FORECAST_ENTRY",
   MISSING_SCIENTIFIC_ENTRY: "MISSING_SCIENTIFIC_ENTRY",
   MISSING_ELLIOTT_ENTRY: "MISSING_ELLIOTT_ENTRY",
+  ELLIOTT_REMOVED: "ELLIOTT_REMOVED",
   MISSING_QUANTLAB_ENTRY: "MISSING_QUANTLAB_ENTRY",
   LOW_EVIDENCE: "LOW_EVIDENCE",
   DRIFT_YELLOW: "DRIFT_YELLOW",
@@ -512,7 +513,6 @@ export function buildStockInsightsV4Evaluation({
   segmentationProfile = null,
   scientificState,
   forecastState,
-  elliottState,
   quantlabState = null,
   forecastMeta = null,
   inputFingerprints = null,
@@ -520,7 +520,7 @@ export function buildStockInsightsV4Evaluation({
   breakoutState = null,
 }) {
   const safeBars = Array.isArray(bars) ? bars : [];
-  const asOf = safeBars[safeBars.length - 1]?.date || scientificState?.as_of || forecastState?.as_of || elliottState?.as_of || null;
+  const asOf = safeBars[safeBars.length - 1]?.date || scientificState?.as_of || forecastState?.as_of || null;
   const close = adjustClose(safeBars[safeBars.length - 1]);
   const rawValidation = validateRawOHLCV(safeBars);
   const outcomes = buildOutcomeLabels(safeBars);
@@ -545,14 +545,13 @@ export function buildStockInsightsV4Evaluation({
     confluence,
     fallback,
     scientificEligibility,
-    featureStates: { scientific: scientificState, forecast: forecastState, elliott: elliottState, quantlab: quantlabState },
+    featureStates: { scientific: scientificState, forecast: forecastState, quantlab: quantlabState },
     outcomes,
   });
 
   const v4Contract = {
     scientific: scientificState,
     forecast: forecastState,
-    elliott: elliottState,
     quantlab: quantlabState || makeContractState(null, {
       as_of: asOf,
       source: "quantlab.stock-insights",
@@ -659,7 +658,6 @@ export function buildStockInsightsV4Evaluation({
     close,
     scientific: scientificState?.value || null,
     forecast: forecastState?.value || null,
-    elliott: elliottState?.value || null,
     quantlab: quantlabState?.value || null,
     runtimeControl,
     breakoutState,
@@ -692,7 +690,6 @@ export function buildStockInsightsV4Evaluation({
     v4_contract: v4Contract,
     scientific: scientificState?.value || null,
     forecast: forecastState?.value || null,
-    elliott: elliottState?.value || null,
     quantlab: quantlabState?.value || null,
     forecast_meta: forecastMeta || null,
     input_fingerprints: inputFingerprints || null,

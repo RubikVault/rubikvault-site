@@ -1,0 +1,65 @@
+{
+  "schema": "rv.stock_analyzer_control.v1",
+  "generated_at": "2026-04-09T09:11:18.644Z",
+  "report_date": "2026-04-09",
+  "learning_status": "BOOTSTRAP",
+  "safety_switch": {
+    "level": "BOOTSTRAP",
+    "actions": [
+      "log_only"
+    ],
+    "trigger": "minimum_n_not_met",
+    "minimum_n_status": {
+      "global_per_horizon_threshold": 200,
+      "asset_class_horizon_threshold": 100,
+      "regime_horizon_threshold": 75,
+      "satisfied_horizons": 1,
+      "ready_for_safety": false,
+      "by_horizon": {
+        "1d": {
+          "outcomes_resolved": 21,
+          "satisfied": false
+        },
+        "5d": {
+          "outcomes_resolved": 50,
+          "satisfied": false
+        },
+        "20d": {
+          "outcomes_resolved": 777,
+          "satisfied": true
+        }
+      }
+    }
+  },
+  "minimum_n_status": {
+    "global_per_horizon_threshold": 200,
+    "asset_class_horizon_threshold": 100,
+    "regime_horizon_threshold": 75,
+    "satisfied_horizons": 1,
+    "ready_for_safety": false,
+    "by_horizon": {
+      "1d": {
+        "outcomes_resolved": 21,
+        "satisfied": false
+      },
+      "5d": {
+        "outcomes_resolved": 50,
+        "satisfied": false
+      },
+      "20d": {
+        "outcomes_resolved": 777,
+        "satisfied": true
+      }
+    }
+  },
+  "false_positive_classes_30d": {
+    "weak_consensus": 99
+  },
+  "policy": {
+    "schema_version": "best_setups_policy_v1",
+    "system_version": "1.0.0",
+    "learning_status_default": "BOOTSTRAP",
+    "cost_model_version": "v1.0_replay_us_equities",
+    "meta_labeler_rule_version": "v1_bootstrap_rules"
+  }
+}

@@ -11,6 +11,7 @@
 - Minimal diffs; keep patches small and safe.
 
 ## Read First
+- `docs/ops/lessons-learned.md` ← **ZUERST LESEN** — gebündelte Erkenntnisse aus echten Fehlern, von allen KIs und Entwicklern. Verhindert, dass Fehler wiederholt werden.
 - `docs/ops/contract.md`
 - `docs/ops/runbook.md`
 - `docs/ops/architecture.md`
@@ -42,10 +43,12 @@
 
 ## Standard Workflow
 1) Reality Snapshot first.
-2) Make the smallest possible change (no re-architecture).
-3) Run Standard Validation Commands and report outputs.
-4) Do not claim fixed until validations pass.
-5) Keep commits scoped and separate per concern.
+2) Read `docs/ops/lessons-learned.md` — prüfe ob der anstehende Bereich bereits eine Lektion hat.
+3) Make the smallest possible change (no re-architecture).
+4) Run Standard Validation Commands and report outputs.
+5) Do not claim fixed until validations pass.
+6) Keep commits scoped and separate per concern.
+7) Nach jedem Incident oder nicht-offensichtlichem Fix: Lektion in `docs/ops/lessons-learned.md` eintragen.
 
 ## Standard Validation Commands
 ```bash

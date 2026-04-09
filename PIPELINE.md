@@ -6,7 +6,7 @@
 
 ## Architecture in One Sentence
 
-EODHD API → market data refresh → QuantLab delta ingest → hist_probs + forecast + snapshot → learning → audit → system_status → dashboard.
+EODHD API → market data refresh → QuantLab delta ingest → hist_probs + forecast + scientific + snapshot → universe audit → system_status → dashboard, with learning/audits in a separate governance lane.
 
 ---
 
@@ -38,11 +38,15 @@ EODHD API → market data refresh → QuantLab delta ingest → hist_probs + for
 [6] scientific_summary          npm run build:scientific-analysis
 [7] snapshot                    scripts/build-best-setups-v4.mjs      (after 3+5)
 [8] fundamentals                scripts/build-fundamentals.mjs        (parallel)
-[9] learning_daily              scripts/learning/run-daily-learning-cycle.mjs (after 7+6+8)
-[10] etf_diagnostic             scripts/ops/build-best-setups-etf-diagnostic.mjs (after 7)
-[11] stock_analyzer_universe_audit scripts/ops/build-stock-analyzer-universe-audit.mjs (after 4+7+10)
-[12] system_status              scripts/ops/build-system-status-report.mjs (after 11)
-[13] dashboard_meta             scripts/generate_meta_dashboard_data.mjs (after 12)
+[9] stock_analyzer_universe_audit scripts/ops/build-stock-analyzer-universe-audit.mjs (after 4+7)
+[10] system_status              scripts/ops/build-system-status-report.mjs (after 9)
+[11] dashboard_meta             scripts/generate_meta_dashboard_data.mjs (after 10)
+
+Governance lane (non-blocking for daily green):
+[G1] learning_daily            scripts/learning/run-daily-learning-cycle.mjs
+[G2] etf_diagnostic            scripts/ops/build-best-setups-etf-diagnostic.mjs
+[G3] v1_audit                  scripts/learning/quantlab-v1/daily-audit-report.mjs
+[G4] cutover_readiness         scripts/learning/quantlab-v1/cutover-readiness-report.mjs
 ```
 
 ---
@@ -98,8 +102,6 @@ All logs in: `logs/dashboard_v7/`
 | `step-04-forecast.log` | forecast_daily output (incl. crash stack traces) |
 | `step-06-hist-probs.log` | hist_probs turbo output |
 | `step-07-snapshot.log` | snapshot (best-setups-v4) output |
-| `step-08-learning.log` | learning_daily output |
-| `step-09-etf-diagnostic.log` | etf_diagnostic output |
 | `step-10-universe-audit.log` | stock_analyzer_universe_audit output |
 | `step-11-system-status.log` | build-system-status-report output |
 | `step-12-dashboard-meta.log` | generate_meta_dashboard_data output |
@@ -144,6 +146,7 @@ jq '.remote_workflows' public/data/reports/system-status-latest.json
 | hist_probs regime | `public/data/hist-probs/regime-daily.json` | run-hist-probs-turbo.mjs |
 | Forecast | `public/data/forecast/latest.json` | scripts/forecast/run_daily.mjs |
 | Snapshot | `public/data/snapshots/best-setups-v4.json` | scripts/build-best-setups-v4.mjs |
+| Runtime control | `public/data/runtime/stock-analyzer-control.json` | build-stock-analyzer-control.mjs / run-daily-learning-cycle.mjs |
 | Learning report | `public/data/reports/learning-report-latest.json` | run-daily-learning-cycle.mjs |
 | ETF diagnostic | `public/data/reports/best-setups-etf-diagnostic-latest.json` | build-best-setups-etf-diagnostic.mjs |
 | Universe audit | `public/data/reports/stock-analyzer-universe-audit-latest.json` | build-stock-analyzer-universe-audit.mjs |
@@ -161,7 +164,7 @@ jq '.remote_workflows' public/data/reports/system-status-latest.json
 | forecast_daily | `--max-old-space-size=6144` | 6GB — was OOM-crashing at default |
 | snapshot (best-setups-v4) | `--max-old-space-size=8192` | Large join |
 | fundamentals | default | Runs sequentially, low mem |
-| learning_daily | `--max-old-space-size=4096` | Moderate |
+| learning_daily | `--max-old-space-size=4096` | Governance lane, not a daily green blocker |
 
 **If forecast crashes with OOM:**
 ```bash

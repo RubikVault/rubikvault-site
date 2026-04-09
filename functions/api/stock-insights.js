@@ -42,10 +42,10 @@ export async function onRequestGet(context) {
   }
 
   const now = Date.now();
-  const result = { ticker, scientific: null, forecast: null, forecast_meta: null, elliott: null };
+  const result = { ticker, scientific: null, forecast: null, forecast_meta: null };
 
-  // Run all three fetches in parallel — each is independent
-  const [sciResult, fcResult, ewResult] = await Promise.allSettled([
+  // Run both fetches in parallel — each is independent
+  const [sciResult, fcResult] = await Promise.allSettled([
     // Scientific — large dict keyed by ticker (cached for 10 min)
     (async () => {
       if (!_sciCache || now - _sciTime > TTL) {
@@ -61,9 +61,7 @@ export async function onRequestGet(context) {
         _fcTime = now;
       }
       return _fcCache;
-    })(),
-    // Elliott — per-ticker file (small, ~2KB, no caching needed)
-    fetchJson(`/data/marketphase/${ticker}.json`),
+    })()
   ]);
 
   // Extract scientific
@@ -89,19 +87,6 @@ export async function onRequestGet(context) {
           freshness: fcData?.freshness || null,
         };
       }
-    }
-  } catch { /* ignore */ }
-
-  // Extract Elliott from per-ticker marketphase file
-  try {
-    const mpDoc = ewResult.status === "fulfilled" ? ewResult.value : null;
-    if (mpDoc?.ok && mpDoc?.data?.elliott) {
-      result.elliott = mpDoc.data.elliott;
-      result.elliott._meta = {
-        symbol: ticker,
-        generatedAt: mpDoc?.meta?.generatedAt || null,
-        version: mpDoc?.meta?.version || null,
-      };
     }
   } catch { /* ignore */ }
 

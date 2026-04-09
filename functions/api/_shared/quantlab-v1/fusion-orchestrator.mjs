@@ -6,7 +6,6 @@
 import { randomUUID } from 'node:crypto';
 import { adaptForecast } from './adapters/forecast-adapter.mjs';
 import { adaptScientific } from './adapters/scientific-adapter.mjs';
-import { adaptElliott } from './adapters/elliott-adapter.mjs';
 import { adaptBreakoutV2 } from './adapters/breakout-v2-adapter.mjs';
 import { adaptQuantLab } from './adapters/quantlab-adapter.mjs';
 import { adaptHistProbs } from './adapters/hist-probs-adapter.mjs';
@@ -32,7 +31,6 @@ const POLICY_VERSION = '1.0.0';
  * @param {string} params.asset_class - 'stock' | 'etf'
  * @param {Object} [params.forecastState]
  * @param {Object} [params.scientificState]
- * @param {Object} [params.elliottState]
  * @param {Object} [params.breakoutData]
  * @param {Object} [params.quantlabState]
  * @param {Object} [params.histProbsData]
@@ -46,7 +44,7 @@ const POLICY_VERSION = '1.0.0';
  */
 export async function runV1Fusion({
   symbol, asof, horizon, asset_class,
-  forecastState, scientificState, elliottState, breakoutData,
+  forecastState, scientificState, breakoutData,
   quantlabState, histProbsData, regimeData, priceData, fundamentalsData,
   regimeContext, legacyDecision, dryRun = false,
 }) {
@@ -61,10 +59,6 @@ export async function runV1Fusion({
   }
   if (scientificState) {
     const c = adaptScientific(scientificState, adapterContext);
-    if (c) contracts.push(c);
-  }
-  if (elliottState) {
-    const c = adaptElliott(elliottState, adapterContext);
     if (c) contracts.push(c);
   }
   if (breakoutData) {

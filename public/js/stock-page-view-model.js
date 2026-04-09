@@ -526,7 +526,6 @@ export function buildHorizonPresentation(horizons = []) {
 export function buildActiveModelConsensusPresentation({ evaluation = null, decision = {}, missingModels = [], modelStates = {} } = {}) {
   const models = [
     { key: 'quantlab', label: 'QuantLab' },
-    { key: 'elliott', label: 'Elliott' },
     { key: 'forecast', label: 'Forecast' },
     { key: 'scientific', label: 'Scientific' },
   ];
@@ -534,14 +533,12 @@ export function buildActiveModelConsensusPresentation({ evaluation = null, decis
   const coverageCount = activeModels.length;
   const isolatedSignal = coverageCount === 1
     ? `${activeModels[0].label} remains isolated`
-    : activeModels.some((model) => model.key === 'elliott') && coverageCount < 3
-      ? 'Elliott signal remains isolated'
-      : coverageCount < 4
+    : coverageCount < 3
         ? 'Coverage incomplete'
         : 'Broad model confirmation available';
   const finalInterpretation = coverageCount >= 3
     ? 'Model consensus: Actionable alignment is available'
-    : `Model consensus: Not actionable · Coverage incomplete (${coverageCount}/4 models) · ${isolatedSignal}`;
+    : `Model consensus: Not actionable · Coverage incomplete (${coverageCount}/3 models) · ${isolatedSignal}`;
   return {
     title: coverageCount < 4 ? 'Active Model Consensus' : 'Model Consensus',
     compactTitle: coverageCount < 4 ? 'Active Model Consensus' : 'Model Consensus',
@@ -559,7 +556,6 @@ export function buildModelConsensusPresentation({ evaluation = null, decision = 
   const fallbackStates = evaluation
     ? {
         quantlab: true,
-        elliott: true,
         forecast: !missingModels.includes('forecast'),
         scientific: !missingModels.includes('scientific'),
       }
@@ -572,10 +568,10 @@ export function buildModelConsensusPresentation({ evaluation = null, decision = 
   });
   return {
     ...view,
-    title: view.coverageCount < 4 ? `${view.coverageCount}-model view` : '4-model consensus',
-    compactTitle: view.coverageCount < 4 ? `${view.coverageCount}-model view` : '4-model consensus',
+    title: view.coverageCount < 3 ? `${view.coverageCount}-model view` : '3-model consensus',
+    compactTitle: view.coverageCount < 3 ? `${view.coverageCount}-model view` : '3-model consensus',
     actionableText: view.coverageCount >= 3 ? 'Model alignment available' : 'Consensus not actionable',
-    availabilityText: view.coverageCount >= 3 ? 'Broad model confirmation available' : `Only ${view.coverageCount} of 4 models available`,
+    availabilityText: view.coverageCount >= 3 ? 'Broad model confirmation available' : `Only ${view.coverageCount} of 3 models available`,
   };
 }
 

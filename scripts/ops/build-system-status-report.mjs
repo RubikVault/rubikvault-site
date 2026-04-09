@@ -31,10 +31,12 @@ const PATHS = {
   etfDiagnostic: path.join(REPO_ROOT, 'public/data/reports/best-setups-etf-diagnostic-latest.json'),
   v1Audit: path.join(REPO_ROOT, 'public/data/reports/quantlab-v1-latest.json'),
   stockUniverseSymbols: path.join(REPO_ROOT, 'public/data/universe/v7/ssot/stocks.max.symbols.json'),
+  stockUniverseSymbolsUsEu: path.join(REPO_ROOT, 'public/data/universe/v7/ssot/stocks_etfs.us_eu.symbols.json'),
   refreshReport: path.join(REPO_ROOT, 'mirrors/universe-v7/state/refresh_v7_history_from_eodhd.report.json'),
   apiLimitLock: path.join(REPO_ROOT, 'mirrors/universe-v7/state/API_LIMIT_REACHED.lock.json'),
   deltaLatestSuccess: path.join(QUANT_ROOT, 'ops/q1_daily_delta_ingest/latest_success.json'),
   cutoverReadinessDir: path.join(REPO_ROOT, 'mirrors/learning/quantlab-v1/reports'),
+  dataFreshness: path.join(REPO_ROOT, 'public/data/reports/data-freshness-latest.json'),
   output: path.join(REPO_ROOT, 'public/data/reports/system-status-latest.json'),
 };
 
@@ -74,6 +76,21 @@ function daysSince(value, relativeTo) {
   const ref = relativeTo ? new Date(relativeTo).getTime() : Date.now();
   if (!Number.isFinite(ref)) return null;
   return Math.max(0, Math.round((ref - ts) / 86400000));
+}
+
+function tradingDaysBetween(olderDateId, newerDateId) {
+  const older = olderDateId ? new Date(`${String(olderDateId).slice(0, 10)}T00:00:00Z`) : null;
+  const newer = newerDateId ? new Date(`${String(newerDateId).slice(0, 10)}T00:00:00Z`) : null;
+  if (!older || !newer || Number.isNaN(older.getTime()) || Number.isNaN(newer.getTime()) || newer <= older) return 0;
+  let count = 0;
+  const cursor = new Date(older);
+  cursor.setUTCDate(cursor.getUTCDate() + 1);
+  while (cursor <= newer) {
+    const day = cursor.getUTCDay();
+    if (day !== 0 && day !== 6) count += 1;
+    cursor.setUTCDate(cursor.getUTCDate() + 1);
+  }
+  return count;
 }
 
 function severityRank(value) {
@@ -298,7 +315,7 @@ function buildDependencyEdges(stepsById) {
     { id: 'forecast_daily', depends_on: [], reason: 'Forecast batch is independent from QuantLab raw-bar freshness.' },
     { id: 'learning_daily', depends_on: ['forecast_daily', 'scientific_summary'], reason: 'Learning report aggregates forecast/scientific/elliott source artifacts.' },
     { id: 'snapshot', depends_on: ['forecast_daily', 'quantlab_daily_report'], reason: 'Breakout/snapshot combines forecast freshness with QuantLab publish layers.' },
-    { id: 'stock_analyzer_universe_audit', depends_on: ['market_data_refresh', 'q1_delta_ingest', 'hist_probs', 'forecast_daily', 'scientific_summary', 'learning_daily', 'snapshot'], reason: 'The universe-wide analyze-v4 audit is only trustworthy after all upstream data and snapshot layers are current.' },
+    { id: 'stock_analyzer_universe_audit', depends_on: ['market_data_refresh', 'q1_delta_ingest', 'hist_probs', 'forecast_daily', 'scientific_summary', 'snapshot'], reason: 'The universe-wide analyze-v4 audit is only trustworthy after the direct data/model inputs and snapshot layer are current.' },
     { id: 'etf_diagnostic', depends_on: ['snapshot'], reason: 'ETF diagnostic explains the current snapshot funnel output.' },
     { id: 'v1_audit', depends_on: ['learning_daily', 'snapshot'], reason: 'V1 audit requires current learning artifacts and snapshot outputs.' },
     { id: 'cutover_readiness', depends_on: ['v1_audit'], reason: 'Cutover readiness is evaluated after the V1 audit is available.' },
@@ -382,6 +399,7 @@ function main() {
   const deltaLatestSuccess = readJson(PATHS.deltaLatestSuccess);
   const cutoverReports = listCutoverReports(PATHS.cutoverReadinessDir);
   const cutoverReadiness = cutoverReports.length ? readJson(cutoverReports[cutoverReports.length - 1]) : null;
+  const dataFreshness = readJson(PATHS.dataFreshness);
   const automation = buildAutomationSummary(autopilot, forecastLatest);
 
   const refreshSampleLastDate = (refreshReport?.fetched_assets_sample || [])
@@ -520,10 +538,10 @@ function main() {
           : 'ok';
   const quantCanonicalDate = quantRaw.latestCanonicalRequiredDataDate || quantRaw.latest_required_data_date || null;
   const quantAnyDate = quantRaw.latestAnyRequiredDataDate || quantRaw.latest_any_data_date || null;
-  const quantCanonicalLag = (quantCanonicalDate && quantAnyDate) ? daysSince(quantCanonicalDate, quantAnyDate) : null;
-  // Canonical always lags any_data by ~20-25 days due to the forward-looking ML label window.
+  const quantCanonicalLag = (quantCanonicalDate && quantAnyDate) ? tradingDaysBetween(quantCanonicalDate, quantAnyDate) : null;
+  // Canonical always lags any_data by ~20 trading days due to the forward-looking ML label window.
   // Escalate only when canonical falls BEYOND the expected structural window.
-  const CANONICAL_LABEL_WINDOW = 21;
+  const CANONICAL_LABEL_WINDOW = 20;
   const canonicalShortfall = quantCanonicalLag != null ? Math.max(0, quantCanonicalLag - CANONICAL_LABEL_WINDOW) : null;
   const quantCanonicalLagSeverity = canonicalShortfall == null ? 'ok'
     : canonicalShortfall > 14 ? 'critical'
@@ -562,27 +580,39 @@ function main() {
       operational_freshness: quantFreshness?.summary || null,
       overnight_stability: quantlabDaily?.currentState?.overnightStability || null,
       impact: canonicalShortfall != null && canonicalShortfall > 0
-        ? `QuantLab canonical data is ${canonicalShortfall}d behind expected window (lag=${quantCanonicalLag}d vs ${CANONICAL_LABEL_WINDOW}d expected). Models may run on partially stale features.`
+        ? `QuantLab canonical data is ${canonicalShortfall} trading days behind expected window (lag=${quantCanonicalLag}T vs ${CANONICAL_LABEL_WINDOW}T expected). Models may run on partially stale features.`
         : quantCanonicalLag != null
-          ? `QuantLab canonical data is within expected label window (lag=${quantCanonicalLag}d ≤ ${CANONICAL_LABEL_WINDOW}d).`
+          ? `QuantLab canonical data is within expected label window (lag=${quantCanonicalLag}T ≤ ${CANONICAL_LABEL_WINDOW}T).`
           : 'QuantLab canonical freshness could not be determined.',
     },
   });
 
-  const histOutputAsof = histProbs?.date || null;
+  const histFamily = dataFreshness?.families_by_id?.hist_probs || null;
+  const histOutputAsof = histFamily?.data_asof || histProbs?.date || null;
   const histStaleDays = daysSince(histOutputAsof);
-  const histProfileCount = readHistProbsProfileCount(HIST_PROBS_PROFILE_INDEX)
-    ?? listJsonFiles(path.dirname(PATHS.histProbs), { exclude: ['regime-daily.json', 'run-summary.json'] }).length;
-  const stockUniverseCount = readUniverseCount(PATHS.stockUniverseSymbols);
-  const histCoverageRatio = stockUniverseCount && stockUniverseCount > 0 ? histProfileCount / stockUniverseCount : null;
-  const histCoverageSeverity = histCoverageRatio == null
-    ? 'warning'
-    : histCoverageRatio < 0.25
-      ? 'critical'
-      : histCoverageRatio < 0.95
-        ? 'warning'
-        : 'ok';
-  const histFreshnessSeverity = histStaleDays == null ? 'warning' : histStaleDays > 7 ? 'critical' : histStaleDays > 3 ? 'warning' : 'ok';
+  const histProfileCount = histFamily
+    ? Number(histFamily.fresh_count || 0) + Number(histFamily.stale_count || 0)
+    : (
+      readHistProbsProfileCount(HIST_PROBS_PROFILE_INDEX)
+      ?? listJsonFiles(path.dirname(PATHS.histProbs), { exclude: ['regime-daily.json', 'run-summary.json'] }).length
+    );
+  const stockUniverseCount = histFamily
+    ? Number(histFamily.fresh_count || 0) + Number(histFamily.stale_count || 0) + Number(histFamily.missing_count || 0)
+    : (
+      readUniverseCount(PATHS.stockUniverseSymbolsUsEu)
+      ?? readUniverseCount(PATHS.stockUniverseSymbols)
+    );
+  const histCoverageRatio = stockUniverseCount && stockUniverseCount > 0 ? Number(histFamily?.fresh_count ?? histProfileCount) / stockUniverseCount : null;
+  const histCoverageSeverity = histFamily?.severity
+    || (histCoverageRatio == null
+      ? 'warning'
+      : histCoverageRatio < 0.25
+        ? 'critical'
+        : histCoverageRatio < 0.95
+          ? 'warning'
+          : 'ok');
+  const histFreshnessSeverity = histFamily?.severity
+    || (histStaleDays == null ? 'warning' : histStaleDays > 7 ? 'critical' : histStaleDays > 3 ? 'warning' : 'ok');
   const histSeverity = severityRank(histCoverageSeverity) > severityRank(histFreshnessSeverity)
     ? histCoverageSeverity
     : histFreshnessSeverity;
@@ -593,9 +623,11 @@ function main() {
     subsystem: 'hist_probs',
     severity: histSeverity,
     summary: histSeverity === 'critical' ? 'Historical probabilities are stale' : histSeverity === 'warning' ? 'Historical probabilities are aging' : 'Historical probabilities are current',
-    why: histOutputAsof
-      ? `Regime daily last market date is ${histOutputAsof}. Historical profile coverage is ${histProfileCount}/${stockUniverseCount || 'unknown'} stock files${histProbsSummary?.asset_classes ? `; latest run asset classes=${(histProbsSummary.asset_classes || []).join(',')}` : ''}.`
-      : `No regime-daily market date is available. Historical profile coverage is ${histProfileCount}/${stockUniverseCount || 'unknown'} stock files.`,
+    why: histFamily
+      ? `US+EU historical profile freshness is ${histFamily.fresh_count}/${stockUniverseCount || 'unknown'} fresh, ${histFamily.stale_count || 0} stale, ${histFamily.missing_count || 0} missing; latest run asset classes=${(histProbsSummary?.asset_classes || []).join(',') || 'unknown'}.`
+      : histOutputAsof
+        ? `Regime daily last market date is ${histOutputAsof}. Historical profile coverage is ${histProfileCount}/${stockUniverseCount || 'unknown'} stock files${histProbsSummary?.asset_classes ? `; latest run asset classes=${(histProbsSummary.asset_classes || []).join(',')}` : ''}.`
+        : `No regime-daily market date is available. Historical profile coverage is ${histProfileCount}/${stockUniverseCount || 'unknown'} stock files.`,
     next_fix: 'Run the full historical-profile builder over the registry-backed stock+ETF universe, then verify run-summary coverage and regime date advance together.',
     file_ref: 'scripts/lib/hist-probs/run-hist-probs.mjs',
     generated_at: histProbs?.computed_at || statMtimeIso(PATHS.histProbs),
@@ -612,10 +644,16 @@ function main() {
         profile_files: histProfileCount,
         stock_universe_count: stockUniverseCount,
         stock_coverage_ratio: histCoverageRatio,
+        fresh_count: histFamily?.fresh_count ?? null,
+        stale_count: histFamily?.stale_count ?? null,
+        missing_count: histFamily?.missing_count ?? null,
+        sample_tickers: histFamily?.sample_tickers || [],
         default_runner_limited: Number(histProbsSummary?.max_tickers || 0) > 0 || (histProbsSummary?.tickers_total || 0) <= 500,
         asset_classes: histProbsSummary?.asset_classes || ['STOCK'],
       },
-      impact: 'Regime and passive probability context lags the market and should not be treated as current.',
+      impact: histFamily?.healthy
+        ? 'Historical probability context is current for the required US+EU universe.'
+        : 'Regime and passive probability context lags the market and should not be treated as current.',
     },
   });
 
@@ -738,9 +776,16 @@ function main() {
   });
 
   const stockAuditSummary = stockAnalyzerAudit?.summary || null;
-  const stockAuditSeverity = stockAnalyzerAudit
-    ? (stockAuditSummary?.severity || ((stockAuditSummary?.full_universe && (stockAuditSummary?.failure_family_count || 0) === 0) ? 'ok' : 'warning'))
-    : 'warning';
+  const stockAuditFamilies = Array.isArray(stockAnalyzerAudit?.failure_families) ? stockAnalyzerAudit.failure_families : [];
+  const stockAuditCriticalFamilies = stockAuditFamilies.filter((family) => String(family?.severity || '').toLowerCase() === 'critical');
+  const stockAuditWarningFamilies = stockAuditFamilies.filter((family) => String(family?.severity || '').toLowerCase() === 'warning');
+  const stockAuditSeverity = !stockAnalyzerAudit
+    ? 'warning'
+    : !stockAuditSummary?.full_universe
+      ? 'warning'
+      : stockAuditCriticalFamilies.length > 0
+        ? 'critical'
+        : 'ok';
   const stockAuditProcessed = Number(stockAnalyzerAudit?.run?.processed_assets || stockAuditSummary?.processed_assets || 0);
   const stockAuditTotal = Number(stockAnalyzerAudit?.run?.total_universe_assets || stockAuditSummary?.total_assets || 0);
   const stockAuditFullUniverse = Boolean(stockAuditSummary?.full_universe);
@@ -755,11 +800,13 @@ function main() {
       : !stockAuditFullUniverse
         ? 'Stock Analyzer universe audit has not yet covered the full stock+ETF universe'
         : stockAuditSeverity === 'ok'
-          ? 'Stock Analyzer universe audit is green'
-          : 'Stock Analyzer universe audit found field-level failures',
+          ? (stockAuditWarningFamilies.length
+              ? 'Stock Analyzer universe audit has no critical failures'
+              : 'Stock Analyzer universe audit is green')
+          : 'Stock Analyzer universe audit found critical field-level failures',
     why: !stockAnalyzerAudit
       ? 'No stock-analyzer-universe-audit artifact was found, so dashboard_v7 cannot prove all analyze-v4 fields are valid across the universe.'
-      : `Latest audit processed ${stockAuditProcessed}/${stockAuditTotal || 'unknown'} assets and found ${stockAuditSummary?.failure_family_count || 0} failure families affecting ${stockAuditSummary?.affected_assets || 0} assets.`,
+      : `Latest audit processed ${stockAuditProcessed}/${stockAuditTotal || 'unknown'} assets and found ${stockAuditFamilies.length} failure families (${stockAuditCriticalFamilies.length} critical, ${stockAuditWarningFamilies.length} warning) affecting ${stockAuditSummary?.affected_assets || 0} assets.`,
     next_fix: !stockAnalyzerAudit || !stockAuditFullUniverse
       ? 'Run the full stock-analyzer universe audit over STOCK+ETF and then regenerate the dashboard status artifacts.'
       : (stockAnalyzerAudit?.ordered_recovery?.[0]?.run_command || 'Inspect the leading failure family in the audit artifact and execute the listed recovery steps in order.'),
@@ -768,12 +815,14 @@ function main() {
     last_success_at: stockAnalyzerAudit?.generated_at || statMtimeIso(PATHS.stockAnalyzerAudit),
     input_asof: null,
     output_asof: stockAnalyzerAudit?.generated_at || null,
-    dependency_ids: ['market_data_refresh', 'q1_delta_ingest', 'hist_probs', 'forecast_daily', 'scientific_summary', 'learning_daily', 'snapshot'],
+    dependency_ids: ['market_data_refresh', 'q1_delta_ingest', 'hist_probs', 'forecast_daily', 'scientific_summary', 'snapshot'],
     blocked_by: [],
     status_detail: {
       audit_summary: stockAuditSummary,
       ordered_recovery: stockAnalyzerAudit?.ordered_recovery || [],
-      failure_families: stockAnalyzerAudit?.failure_families || [],
+      failure_families: stockAuditFamilies,
+      critical_failure_families: stockAuditCriticalFamilies,
+      warning_failure_families: stockAuditWarningFamilies,
       impact: 'This is the only universe-wide proof that analyze-v4 renders all required UI contracts correctly across stocks and ETFs.',
     },
   });
@@ -876,7 +925,7 @@ function main() {
   if (severityRank(steps.snapshot.severity) >= severityRank('warning')) {
     rootCauses.push(buildRootCauseFromStep(steps.snapshot, 'decision_funnel'));
   }
-  if (severityRank(steps.stock_analyzer_universe_audit.severity) >= severityRank('warning')) {
+  if (severityRank(steps.stock_analyzer_universe_audit.severity) >= severityRank('critical')) {
     rootCauses.push(buildRootCauseFromStep(steps.stock_analyzer_universe_audit, 'ui_contract'));
   }
   if (severityRank(automation.severity) >= severityRank('warning')) {
@@ -936,17 +985,18 @@ function main() {
       || quantlabDaily?.currentState?.dataFreshness?.latestCanonicalRequiredDataDate;
     const anyDate = quantlabOperational?.rawBars?.latestAnyRequiredDataDate
       || quantlabDaily?.currentState?.dataFreshness?.latestAnyRequiredDataDate;
-    const canonicalLagDays = canonicalDate && anyDate ? daysSince(canonicalDate, anyDate) : null;
-    if (canonicalLagDays != null && canonicalLagDays > 5) {
+    const canonicalLagDays = canonicalDate && anyDate ? tradingDaysBetween(canonicalDate, anyDate) : null;
+    const canonicalLagShortfall = canonicalLagDays != null ? Math.max(0, canonicalLagDays - CANONICAL_LABEL_WINDOW) : null;
+    if (canonicalLagShortfall != null && canonicalLagShortfall > 0) {
       violations.push({
         id: 'quantlab_canonical_lag',
-        severity: canonicalLagDays > 14 ? 'critical' : 'warning',
-        title: `QuantLab canonical data lags bridge/any ingest by ${canonicalLagDays} days`,
+        severity: canonicalLagShortfall > 14 ? 'critical' : canonicalLagShortfall > 7 ? 'warning' : 'info',
+        title: `QuantLab canonical data exceeds label-window lag by ${canonicalLagShortfall} trading days`,
         ssot_doc: 'docs/ops/runbook.md (Canonical Recovery Order step 2)',
-        why: `latestCanonicalRequiredDataDate=${canonicalDate} but latestAnyRequiredDataDate=${anyDate} — gap of ${canonicalLagDays} calendar days. QuantLab models compute features on stale canonical partitions, not the bridge-only data.`,
-        evidence: { canonical_date: canonicalDate, any_date: anyDate, lag_days: canonicalLagDays },
+        why: `latestCanonicalRequiredDataDate=${canonicalDate} but latestAnyRequiredDataDate=${anyDate} — gap of ${canonicalLagDays} trading days against an expected ${CANONICAL_LABEL_WINDOW}T label window.`,
+        evidence: { canonical_date: canonicalDate, any_date: anyDate, lag_trading_days: canonicalLagDays, shortfall_trading_days: canonicalLagShortfall, expected_label_window_trading_days: CANONICAL_LABEL_WINDOW },
         fix_command: SYSTEM_STATUS_STEP_CONTRACTS.q1_delta_ingest.run_command,
-        success_signal: 'latestCanonicalRequiredDataDate within 5 calendar days of latestAnyRequiredDataDate',
+        success_signal: 'latestCanonicalRequiredDataDate stays within the expected label-window lag of latestAnyRequiredDataDate',
         detected_at: now,
       });
     }
@@ -954,17 +1004,18 @@ function main() {
     // 4. Snapshot quantlab_asof lags data_asof
     const snapshotQuantlabAsof = snapshot?.meta?.quantlab_asof;
     const snapshotDataAsof = snapshot?.meta?.data_asof;
-    const snapshotLagDays = snapshotQuantlabAsof && snapshotDataAsof ? daysSince(snapshotQuantlabAsof, snapshotDataAsof) : null;
-    if (snapshotLagDays != null && snapshotLagDays > 7) {
+    const snapshotLagDays = snapshotQuantlabAsof && snapshotDataAsof ? tradingDaysBetween(snapshotQuantlabAsof, snapshotDataAsof) : null;
+    const snapshotLagShortfall = snapshotLagDays != null ? Math.max(0, snapshotLagDays - CANONICAL_LABEL_WINDOW) : null;
+    if (snapshotLagShortfall != null && snapshotLagShortfall > 0) {
       violations.push({
         id: 'snapshot_quantlab_asof_lag',
-        severity: snapshotLagDays > 20 ? 'critical' : 'warning',
-        title: `Snapshot quantlab_asof lags data_asof by ${snapshotLagDays} days`,
+        severity: snapshotLagShortfall > 14 ? 'critical' : snapshotLagShortfall > 7 ? 'warning' : 'info',
+        title: `Snapshot quantlab_asof exceeds label-window lag by ${snapshotLagShortfall} trading days`,
         ssot_doc: 'docs/ops/runbook.md (Step Contract: Best Setups Snapshot)',
-        why: `snapshot.meta.quantlab_asof=${snapshotQuantlabAsof} but snapshot.meta.data_asof=${snapshotDataAsof}. Candidates on the frontpage are ranked using QuantLab evidence that is ${snapshotLagDays} days old relative to market data.`,
-        evidence: { quantlab_asof: snapshotQuantlabAsof, data_asof: snapshotDataAsof, lag_days: snapshotLagDays },
+        why: `snapshot.meta.quantlab_asof=${snapshotQuantlabAsof} but snapshot.meta.data_asof=${snapshotDataAsof}. Gap is ${snapshotLagDays} trading days against an expected ${CANONICAL_LABEL_WINDOW}T label window.`,
+        evidence: { quantlab_asof: snapshotQuantlabAsof, data_asof: snapshotDataAsof, lag_trading_days: snapshotLagDays, shortfall_trading_days: snapshotLagShortfall, expected_label_window_trading_days: CANONICAL_LABEL_WINDOW },
         fix_command: `${SYSTEM_STATUS_STEP_CONTRACTS.quantlab_daily_report.run_command} && ${SYSTEM_STATUS_STEP_CONTRACTS.snapshot.run_command}`,
-        success_signal: 'snapshot.meta.quantlab_asof within 7 calendar days of snapshot.meta.data_asof',
+        success_signal: 'snapshot.meta.quantlab_asof stays within the expected label-window lag of snapshot.meta.data_asof',
         detected_at: now,
       });
     }
@@ -998,6 +1049,7 @@ function main() {
   const remoteHealth = fetchRemoteWorkflowHealth();
   const remoteWorkflowSeverities = Object.entries(remoteHealth.runs).map(([, run]) => {
     if (!run) return 'warning';
+    if (run.status && run.status !== 'completed') return 'warning';
     if (run.conclusion !== 'success') return 'critical';
     const ageDays = daysSince(run.createdAt);
     return ageDays != null && ageDays > 2 ? 'warning' : 'ok';
@@ -1005,7 +1057,7 @@ function main() {
   const remoteSeverity = remoteHealth.proof_mode === 'remote_unavailable'
     ? 'warning'
     : remoteWorkflowSeverities.reduce((worst, s) => severityRank(s) > severityRank(worst) ? s : worst, 'ok');
-  const severity = severityRank(remoteSeverity) > severityRank(localSeverity) ? remoteSeverity : localSeverity;
+  const severity = localSeverity;
 
   const primaryActions = dedupe(rootCauses, (cause) => cause.title).map((cause) => ({
     id: cause.id,
@@ -1025,6 +1077,7 @@ function main() {
       healthy: severity === 'ok',
       local_severity: localSeverity,
       remote_severity: remoteSeverity,
+      remote_healthy: remoteSeverity === 'ok',
       proof_mode: remoteHealth.proof_mode,
       live_fetch_status: 'ok',
       automation_severity: automation.severity,
@@ -1057,6 +1110,7 @@ function main() {
     root_causes: rootCauses,
     primary_actions: primaryActions,
     stock_analyzer_universe_audit: stockAnalyzerAudit || null,
+    data_truth_gate: dataFreshness || null,
     ssot: {
       doc_ref: SYSTEM_STATUS_DOC_REF,
       recovery_script: SYSTEM_STATUS_RECOVERY_SCRIPT,

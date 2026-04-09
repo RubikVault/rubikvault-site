@@ -327,9 +327,9 @@ node scripts/generate_meta_dashboard_data.mjs
 | `market_data_refresh` warning/critical | `python3 scripts/quantlab/refresh_v7_history_from_eodhd.py --allowlist-path public/data/universe/v7/ssot/stocks.max.canonical.ids.json --from-date <YYYY-MM-DD>` |
 | `q1_delta_ingest` warning/critical | `python3 scripts/quantlab/run_daily_delta_ingest_q1.py --ingest-date <YYYY-MM-DD>` |
 | `fundamentals_unavailable` in universe audit | `node scripts/build-fundamentals.mjs --force` |
-| `hist_probs` critical or `historical_profile_unavailable` | `node scripts/lib/hist-probs/run-hist-probs.mjs --registry-path public/data/universe/v7/registry/registry.ndjson.gz --asset-classes STOCK,ETF --max-tickers 0` |
-| `model_consensus_degraded` | `node scripts/forecast/run_daily.mjs && node scripts/build-scientific-summary.mjs && node scripts/learning/run-daily-learning-cycle.mjs --date=<YYYY-MM-DD>` |
-| frontpage candidates stale or empty | `node scripts/build-best-setups-v4.mjs && node scripts/learning/diagnose-best-setups-etf-drop.mjs` |
+| `hist_probs` critical or `historical_profile_unavailable` | `NODE_OPTIONS=--max-old-space-size=6144 node run-hist-probs-turbo.mjs` |
+| `model_consensus_degraded` | `node scripts/forecast/run_daily.mjs && node scripts/build-scientific-summary.mjs` |
+| frontpage candidates stale or empty | `node scripts/build-best-setups-v4.mjs` |
 | dashboard stale after all runs | `node scripts/ops/build-system-status-report.mjs && node scripts/generate_meta_dashboard_data.mjs` |
 | Stock Analyzer UI claim must be proven for all assets | `node scripts/ops/build-stock-analyzer-universe-audit.mjs --base-url http://127.0.0.1:8788 --registry-path public/data/universe/v7/registry/registry.ndjson.gz --asset-classes STOCK,ETF --max-tickers 0` |
 
@@ -347,8 +347,9 @@ node scripts/generate_meta_dashboard_data.mjs
 | Fundamentals Refresh | `public/data/fundamentals/<TICKER>.json`, `public/data/v3/fundamentals/manifest.json` | fundamentals/catalysts coverage in `analyze-v4` | `node scripts/build-fundamentals.mjs --force` | `jq '.meta.quality' public/data/v3/fundamentals/manifest.json` |
 | Forecast Daily | `public/data/forecast/latest.json` | direction/forecast freshness | `node scripts/forecast/run_daily.mjs` | `jq '.steps.forecast_daily' public/data/reports/system-status-latest.json` |
 | Scientific Summary | `public/data/supermodules/scientific-summary.json` | scientific model freshness | `node scripts/build-scientific-summary.mjs` | `jq '.steps.scientific_summary' public/data/reports/system-status-latest.json` |
-| Historical Probabilities | `public/data/hist-probs/regime-daily.json`, `run-summary.json`, `<TICKER>.json` | historical modules in `analyze-v4` | `node scripts/lib/hist-probs/run-hist-probs.mjs --registry-path public/data/universe/v7/registry/registry.ndjson.gz --asset-classes STOCK,ETF --max-tickers 0` | `jq '.steps.hist_probs' public/data/reports/system-status-latest.json` |
-| Daily Learning | `public/data/reports/learning-report-latest.json` | learning status / safety / readiness | `node scripts/learning/run-daily-learning-cycle.mjs --date=<YYYY-MM-DD>` | `jq '.steps.learning_daily' public/data/reports/system-status-latest.json` |
+| Historical Probabilities | `public/data/hist-probs/regime-daily.json`, `run-summary.json`, `<TICKER>.json` | historical modules in `analyze-v4` | `NODE_OPTIONS=--max-old-space-size=6144 node run-hist-probs-turbo.mjs` | `jq '.steps.hist_probs' public/data/reports/system-status-latest.json` |
+| Runtime Control | `public/data/runtime/stock-analyzer-control.json` | analyzer learning/safety state for live decisions | `node scripts/ops/build-stock-analyzer-control.mjs` | `cat public/data/runtime/stock-analyzer-control.json | jq '{learning_status,safety_switch,minimum_n_status}'` |
+| Daily Learning | `public/data/reports/learning-report-latest.json` | governance / readiness / audit context | `node scripts/learning/run-daily-learning-cycle.mjs --date=<YYYY-MM-DD>` | `jq '.steps.learning_daily' public/data/reports/system-status-latest.json` |
 | Best Setups Snapshot | `public/data/snapshots/best-setups-v4.json` | frontpage buy lists and breakouts | `node scripts/build-best-setups-v4.mjs` | `jq '.steps.snapshot' public/data/reports/system-status-latest.json` |
 | ETF Diagnostic | `public/data/reports/best-setups-etf-diagnostic-latest.json` | ETF funnel health | `node scripts/learning/diagnose-best-setups-etf-drop.mjs` | `jq '.steps.etf_diagnostic' public/data/reports/system-status-latest.json` |
 | Stock Analyzer Universe Audit | `public/data/reports/stock-analyzer-universe-audit-latest.json` | proof that analyze-v4 fields/panels are valid across stocks+ETFs | `node scripts/ops/build-stock-analyzer-universe-audit.mjs --base-url http://127.0.0.1:8788 --registry-path public/data/universe/v7/registry/registry.ndjson.gz --asset-classes STOCK,ETF --max-tickers 0` | `jq '.steps.stock_analyzer_universe_audit' public/data/reports/system-status-latest.json` |
@@ -389,28 +390,32 @@ Use these checks from web/API to UI:
    - check: `jq '.steps.q1_delta_ingest,.steps.quantlab_daily_report' public/data/reports/system-status-latest.json`
    - success: both current, no critical severity
 
-3. Forecast + scientific + learning
-   - check: `jq '.steps.forecast_daily,.steps.scientific_summary,.steps.learning_daily' public/data/reports/system-status-latest.json`
-   - success: all current, no missing artifacts
+3. Forecast + scientific
+   - check: `jq '.steps.forecast_daily,.steps.scientific_summary' public/data/reports/system-status-latest.json`
+   - success: both current, no missing artifacts
 
 4. Historical profile generation
    - check: `jq '.steps.hist_probs' public/data/reports/system-status-latest.json`
    - success: fresh regime date and adequate coverage; `run-summary.json` includes STOCK and ETF
 
-5. Snapshot + ETF diagnostic
-   - check: `jq '.steps.snapshot,.steps.etf_diagnostic' public/data/reports/system-status-latest.json`
-   - success: non-zero rows and healthy ETF funnel
+5. Snapshot build
+   - check: `jq '.steps.snapshot' public/data/reports/system-status-latest.json`
+   - success: non-zero rows and current snapshot inputs
 
-6. Stock Analyzer universe audit
+6. Learning governance
+   - check: `jq '.steps.learning_daily' public/data/reports/system-status-latest.json`
+   - success: governance report is available when readiness/safety needs refresh
+
+7. Stock Analyzer universe audit
    - check: `jq '.steps.stock_analyzer_universe_audit,.stock_analyzer_universe_audit.summary' public/data/reports/system-status-latest.json`
    - success: full-universe audit, zero failure families, ordered recovery empty
 
-7. API contract -> UI adapter
+8. API contract -> UI adapter
    - check: `node --test tests/dashboard_v7_meta.test.mjs tests/system-status-runbook.test.mjs tests/v2-data-integrity.test.mjs`
    - check: `node scripts/ci/verify-stock-ui-artifacts.mjs`
    - success: all tests green
 
-8. Dashboard refresh
+9. Dashboard refresh
    - check: `node scripts/ops/build-system-status-report.mjs && node scripts/generate_meta_dashboard_data.mjs`
    - success: `dashboard_v7` matches the latest artifact timestamps
 

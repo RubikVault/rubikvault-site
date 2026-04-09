@@ -664,18 +664,45 @@ function buildBrowseMaps(repoRoot, scoredAssetSet) {
 }
 
 function locateLatestFeatureSlice(quantRoot) {
-  const root = path.join(quantRoot, 'features/store/feature_store_version=v4_q1panel_fullchunk_daily');
-  if (!fs.existsSync(root)) return null;
-  const dates = fs.readdirSync(root)
-    .filter((name) => name.startsWith('asof_date='))
-    .sort();
-  const latest = dates[dates.length - 1];
-  if (!latest) return null;
-  return {
-    root,
-    asofDate: latest.replace('asof_date=', ''),
-    parquetPath: path.join(root, latest, 'asset_class=*', '*.parquet'),
-  };
+  const candidates = [
+    {
+      version: 'v4_q1panel_overnight',
+      root: path.join(quantRoot, 'features/store/feature_store_version=v4_q1panel_overnight'),
+      priority: 0,
+    },
+    {
+      version: 'v4_q1panel_fullchunk_daily',
+      root: path.join(quantRoot, 'features/store/feature_store_version=v4_q1panel_fullchunk_daily'),
+      priority: 1,
+    },
+  ];
+  const slices = [];
+  for (const candidate of candidates) {
+    if (!fs.existsSync(candidate.root)) continue;
+    const dates = fs.readdirSync(candidate.root)
+      .filter((name) => name.startsWith('asof_date='))
+      .sort();
+    const latest = dates[dates.length - 1];
+    if (!latest) continue;
+    const latestDir = path.join(candidate.root, latest);
+    const mtime = (() => {
+      try { return fs.statSync(latestDir).mtimeMs; } catch { return 0; }
+    })();
+    slices.push({
+      root: candidate.root,
+      featureStoreVersion: candidate.version,
+      asofDate: latest.replace('asof_date=', ''),
+      parquetPath: path.join(candidate.root, latest, 'asset_class=*', '*.parquet'),
+      priority: candidate.priority,
+      mtime,
+    });
+  }
+  slices.sort((a, b) => (
+    String(b.asofDate).localeCompare(String(a.asofDate))
+    || a.priority - b.priority
+    || b.mtime - a.mtime
+  ));
+  return slices[0] || null;
 }
 
 function loadScoredRows(featureSlice) {

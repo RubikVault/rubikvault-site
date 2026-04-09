@@ -1,0 +1,154 @@
+{
+  "schema_version": "v1",
+  "description": "SSOT defining which datasets must remain local on Mac for US+EU best-result quality. No dataset in required_local_datasets may be evicted for space reasons. Eviction triggers STORAGE_BLOCKED, never silent degrade.",
+  "active_scope": ["US", "EU"],
+  "cold_shadow_scope": ["ASIA"],
+  "production_feature_store_versions": ["v4_q1panel_overnight"],
+  "required_local_datasets": [
+    {
+      "dataset_type": "q1step2bars_snapshot",
+      "path_pattern": "data/snapshots/snapshot_id=*_q1step2bars_*",
+      "scope": ["US", "EU"],
+      "freshness_rule": "must_have_run_within_2_trading_days",
+      "must_be_local": true,
+      "min_generations_local": 2,
+      "lock_sources": ["stage_a", "stage_b", "feature_store_build"],
+      "archive_eligible_after_rank": 2,
+      "notes": "Each snapshot ~6.7 GB. Keep latest 2 for rollback safety. Everything older is archive-eligible."
+    },
+    {
+      "dataset_type": "q1step1_snapshot",
+      "path_pattern": "data/snapshots/snapshot_id=*_q1step1_*",
+      "scope": ["US", "EU"],
+      "freshness_rule": "must_have_run_within_2_trading_days",
+      "must_be_local": true,
+      "min_generations_local": 1,
+      "lock_sources": ["q1step2bars_build"],
+      "archive_eligible_after_rank": 2,
+      "notes": "Small (~18 MB each). Keep latest 1 protected, 2nd as safety. Older archive-eligible."
+    },
+    {
+      "dataset_type": "feature_store_active_version",
+      "path_pattern": "features/store/feature_store_version=v4_q1panel_overnight",
+      "scope": ["US", "EU"],
+      "freshness_rule": "current_production_version",
+      "must_be_local": true,
+      "min_generations_local": 1,
+      "lock_sources": ["stage_a", "stage_b"],
+      "archive_eligible_condition": "never_while_active_production_version",
+      "notes": "Active production feature store. Never archivable while it is the production version."
+    },
+    {
+      "dataset_type": "feature_store_active_partition",
+      "path_pattern": "features/store/feature_store_version=v4_q1panel_overnight/asof_date=*",
+      "scope": ["US", "EU"],
+      "freshness_rule": "active_window_partitions_required",
+      "must_be_local": true,
+      "min_generations_local": "all_active_window",
+      "lock_sources": ["stage_a", "stage_b"],
+      "archive_eligible_condition": "asof_date older than 60 trading days from latest_stageb_run_date",
+      "notes": "Active as-of window partitions must never be evicted. Partitions outside the 60-day active window are archive-eligible."
+    },
+    {
+      "dataset_type": "raw_history",
+      "path_pattern": "data/raw",
+      "scope": ["US", "EU"],
+      "freshness_rule": "must_be_current_ingest",
+      "must_be_local": true,
+      "min_generations_local": 1,
+      "lock_sources": ["q1_delta_ingest", "feature_store_build"],
+      "archive_eligible_condition": "never_while_US_EU_active",
+      "notes": "~6.7 GB. Actively ingested. Cannot be archived while US/EU pipelines are active."
+    },
+    {
+      "dataset_type": "universe_history",
+      "path_pattern": "storage/universe-v7-history",
+      "scope": ["US", "EU"],
+      "freshness_rule": "must_be_current",
+      "must_be_local": true,
+      "min_generations_local": 1,
+      "lock_sources": ["stage_a", "stage_b", "hist_probs"],
+      "archive_eligible_condition": "never_while_US_EU_active",
+      "notes": "~9.5 GB. Required for all pipeline stages. Never archivable while US/EU active."
+    },
+    {
+      "dataset_type": "hist_probs",
+      "path_pattern": "public/data/hist-probs",
+      "scope": ["US", "EU"],
+      "freshness_rule": "must_have_current_day_within_1_trading_day",
+      "must_be_local": true,
+      "min_generations_local": 1,
+      "lock_sources": ["registry", "final_gates"],
+      "archive_eligible_condition": "never_current_generation",
+      "notes": "Published artifact. Loss breaks frontend probability display. Never archive current generation."
+    },
+    {
+      "dataset_type": "registry_report",
+      "path_pattern": "registry/registry_report_*.json",
+      "scope": ["US", "EU"],
+      "freshness_rule": "must_have_within_2_trading_days",
+      "must_be_local": true,
+      "min_generations_local": 3,
+      "lock_sources": ["portfolio", "final_gates"],
+      "archive_eligible_after_rank": 3,
+      "notes": "Small JSON. Keep latest 3. Older archive-eligible."
+    }
+  ],
+  "protected_generations": {
+    "q1step2bars_snapshot": 2,
+    "q1step1_snapshot": 1,
+    "feature_store_active_version": 1,
+    "feature_store_active_partition": "all_active_window",
+    "hist_probs": 1,
+    "registry_report": 3
+  },
+  "archive_eligible_classes": [
+    {
+      "class": "q1step2bars_snapshot",
+      "condition": "generation_rank_by_date_desc > 2",
+      "expected_size_per_item_gb": 6.7,
+      "archive_priority": 1,
+      "notes": "Highest priority: 26 archivable snapshots × 6.7 GB ≈ 174 GB recoverable"
+    },
+    {
+      "class": "feature_store_old_version",
+      "condition": "version not in production_feature_store_versions",
+      "expected_size_per_item_gb": 1.0,
+      "archive_priority": 2,
+      "archive_candidates": ["v2020_2026", "v4_q1inc", "v4_q1min", "v4_q1panel", "v4_q1panel_fullchunk_daily", "v4_q1panel_overnight_top2500fresh", "v4_q1panel_overnight_top3500fresh", "v4_q1panel_overnight_top3500fresh_olduv"],
+      "notes": "Old feature store versions no longer used in production."
+    },
+    {
+      "class": "feature_store_old_partition",
+      "condition": "asof_date older than 60 trading days from latest_stageb_run_date",
+      "expected_size_per_item_gb": 0.5,
+      "archive_priority": 3,
+      "notes": "Overnight feature store partitions outside the active 60-trading-day window."
+    },
+    {
+      "class": "q1step1_snapshot",
+      "condition": "generation_rank_by_date_desc > 2",
+      "expected_size_per_item_gb": 0.018,
+      "archive_priority": 4,
+      "notes": "Small but numerous. Archive after rank 2."
+    },
+    {
+      "class": "stage_b_old_runs",
+      "condition": "run older than 90 calendar days AND total run count > 400",
+      "expected_size_per_item_gb": 0.05,
+      "archive_priority": 5,
+      "notes": "Old Stage-B run directories in runs/."
+    },
+    {
+      "class": "logs_scratch",
+      "condition": "older than 30 calendar days",
+      "expected_size_per_item_gb": 0.1,
+      "archive_priority": 6,
+      "notes": "Log files, tmp, scratch artifacts."
+    }
+  ],
+  "rollback_requirements": {
+    "max_rollback_window_trading_days": 5,
+    "required_local_for_rollback": ["q1step2bars_snapshot", "q1step1_snapshot", "feature_store_active_partition"]
+  }
+}

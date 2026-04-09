@@ -85,6 +85,7 @@ venv/
 .claude/
 .playwright-cli/
 .vscode/
+.idea/
 .cursor/
 .cursorrules
 _local_trash/
@@ -123,8 +124,12 @@ test-search.js
 test_eodhd_endpoints.mjs
 test_keys.cjs
 eodhd-maximizer.mjs
+new.sh
 scripts/test/batch_stock_audit.mjs
 scripts/ci/test_eodhd.mjs
+
+# Noise: local config overlays
+config/*.env
 
 # Large data files — never commit (>100MB, served from CI/CDN)
 public/data/features-v4/stock-insights/index.json

@@ -345,12 +345,11 @@
 
 <script>
 const STALE_ICONS = { fresh:'', acceptable:'', stale:' \u26A0', critical:' \u26A0\u26A0', unknown:' ?' };
-const MODEL_ICONS = { forecast:'fa-bolt', scientific:'fa-flask', elliott:'fa-wave-square', quantlab:'fa-brain', breakout_v2:'fa-arrow-trend-up', hist_probs:'fa-chart-bar' };
-const SOURCE_COLORS = { forecast:'#3b82f6', scientific:'#10b981', elliott:'#8b5cf6', quantlab:'#f59e0b', breakout_v2:'#ef4444', hist_probs:'#06b6d4' };
+const MODEL_ICONS = { forecast:'fa-bolt', scientific:'fa-flask', quantlab:'fa-brain', breakout_v2:'fa-arrow-trend-up', hist_probs:'fa-chart-bar' };
+const SOURCE_COLORS = { forecast:'#3b82f6', scientific:'#10b981', quantlab:'#f59e0b', breakout_v2:'#ef4444', hist_probs:'#06b6d4' };
 const FEATURE_META = {
     forecast: { icon:'<i class="fas fa-bolt" style="color:#3b82f6"></i>', color:'#3b82f6', label:'Direction Forecast', metricKey:'forecast_accuracy_7d' },
     scientific: { icon:'<i class="fas fa-flask" style="color:#10b981"></i>', color:'#10b981', label:'Setup/Trigger', metricKey:'scientific_hit_rate_7d' },
-    elliott: { icon:'<i class="fas fa-wave-square" style="color:#8b5cf6"></i>', color:'#8b5cf6', label:'Wave Analysis', metricKey:'elliott_accuracy_7d' },
     quantlab: { icon:'<i class="fas fa-brain" style="color:#f59e0b"></i>', color:'#f59e0b', label:'Expert Swarm', metricKey:'quantlab_accuracy_7d' },
     breakout_v2: { icon:'<i class="fas fa-arrow-trend-up" style="color:#ef4444"></i>', color:'#ef4444', label:'Breakout Detection', metricKey:null },
     hist_probs: { icon:'<i class="fas fa-chart-bar" style="color:#06b6d4"></i>', color:'#06b6d4', label:'Event Probabilities', metricKey:null },
@@ -360,7 +359,6 @@ const FEATURE_META = {
 const FIX_HINTS = {
     forecast: { stale:'Run: node scripts/forecast/run_daily.mjs, then regenerate the learning report.', low_accuracy:'Check forecast calibration. Consider adjusting forecast_calibration_feedback threshold in scripts/forecast/forecast_engine.mjs' },
     scientific: { stale:'Run: node scripts/build-scientific-summary.mjs, then regenerate the learning report.', low_accuracy:'Increase signal threshold (currently 60) in build-scientific-summary.mjs' },
-    elliott: { stale:'Regenerate: node scripts/marketphase/run-marketphase.mjs', low_accuracy:'Check quality filter: elliott_quality_filter_top500. Reduce prediction volume via confidence filter.' },
     quantlab: { stale:'Repair the raw-bar ingest chain: refresh v7 history, run delta ingest, then rebuild the QuantLab daily report.', low_accuracy:'Review expert consensus thresholds in stock-decisions-v1.js' },
     breakout_v2: { stale:'Rebuild the snapshot: node scripts/build-best-setups-v4.mjs, then rerun the ETF diagnostic.' },
     hist_probs: { stale:'Advance the raw bars first, then rerun: node scripts/lib/hist-probs/run-hist-probs.mjs' },
@@ -671,11 +669,6 @@ function deepDiagnosis(key, feat, history) {
         else if (hr != null && hr < 0.40) sections.push({ title:'\uD83D\uDFE1 Hit Rate 30-40%', severity:'warning', text:`Hit Rate: ${pct(hr)}. Borderline. Validate whether the current sample is representative before changing rules.`, fixes:[{ what:'Compare recent signal cohorts', how:'Check whether low-hit cohorts share a timestamp, universe, or gating pattern.', file:'scripts/build-scientific-summary.mjs' }] });
         else if (hr != null && hr >= 0.40) sections.push({ title:'\uD83D\uDFE2 Hit Rate above 40%', severity:'ok', text:`Hit Rate: ${pct(hr)}. Effective filtering.`, fixes:[] });
     }
-    if (key === 'elliott') {
-        if (acc != null && acc < 0.50) sections.push({ title:'\uD83D\uDD34 Elliott Accuracy below 50%', severity:'critical', text:`Accuracy: ${pct(acc)}. The current Elliott output is not trustworthy enough for promotion.`, fixes:[{ what:'Inspect Elliott source freshness', how:'Confirm the market phase source advanced and the latest prediction batch matches the reported data_asof.', file:'scripts/marketphase/run-marketphase.mjs' },{ what:'Audit recent Elliott outputs', how:'Review confidence, invalidation, and batch size fields in the latest output before narrowing the stream.', file:'scripts/learning/run-daily-learning-cycle.mjs' }] });
-        else if (acc != null && acc < 0.55) sections.push({ title:'\uD83D\uDFE1 Elliott Accuracy 50-55%', severity:'warning', text:`Accuracy: ${pct(acc)}. Minimal edge. Confirm whether the latest batch quality is stable before widening usage.`, fixes:[{ what:'Review recent prediction cohorts', how:'Compare the most recent high-confidence and low-confidence Elliott outputs against realized outcomes.', file:'scripts/learning/run-daily-learning-cycle.mjs' }] });
-        if (preds > 10000) sections.push({ title:'\u26A0\uFE0F Too many predictions', severity:'warning', text:`${preds.toLocaleString()} predictions may dilute the signal set.`, fixes:[{ what:'Inspect emitted prediction volume', how:'Check whether the latest batch includes overly broad or duplicated Elliott rows before tightening filters.', file:'scripts/learning/run-daily-learning-cycle.mjs' }] });
-    }
     if (weekTrend != null && weekTrend < -0.02) sections.push({ title:`\uD83D\uDCC9 Weekly decline: ${(weekTrend*100).toFixed(1)}%`, severity:'warning', text:`Main metric dropped ${(Math.abs(weekTrend)*100).toFixed(1)} pp this week.`, fixes:[{ what:'Inspect recent change window', how:'Compare the latest week of inputs, freshness, and pipeline state against the previous healthy week.', file:'' }] });
     if (monthTrend != null && monthTrend < -0.03) sections.push({ title:`\uD83D\uDCC9 Monthly decline: ${(monthTrend*100).toFixed(1)}%`, severity:'critical', text:'Sustained decline over 30 days. Treat this as a reliability warning until source health and pipeline state are verified.', fixes:[{ what:'Review month-over-month degradation', how:'Trace the decline against source freshness, pipeline errors, and sample size before redesigning the feature.', file:'' }] });
     return sections;
@@ -821,7 +814,7 @@ async function loadDashboard() {
         // ═══════════════════════════════════════════
 
         // Accuracy Chart
-        const history = (data.history||[]).filter(h => h.forecast_accuracy_7d || h.scientific_accuracy_7d || h.elliott_accuracy_7d);
+        const history = (data.history||[]).filter(h => h.forecast_accuracy_7d || h.scientific_hit_rate_7d || h.scientific_accuracy_7d);
         if (history.length > 0) {
             const labels = history.map(h => h.date.slice(5));
             if (_accuracyChart) _accuracyChart.destroy();
@@ -831,8 +824,7 @@ async function loadDashboard() {
                     labels,
                     datasets:[
                         { label:'Forecast', data:history.map(h=>h.forecast_accuracy_7d), borderColor:'#3b82f6', backgroundColor:'rgba(59,130,246,0.1)', borderWidth:2, tension:.3, spanGaps:true },
-                        { label:'Scientific', data:history.map(h=>h.scientific_accuracy_7d), borderColor:'#10b981', backgroundColor:'rgba(16,185,129,0.1)', borderWidth:2, tension:.3, spanGaps:true },
-                        { label:'Elliott', data:history.map(h=>h.elliott_accuracy_7d), borderColor:'#8b5cf6', backgroundColor:'rgba(139,92,246,0.1)', borderWidth:2, tension:.3, spanGaps:true },
+                        { label:'Scientific', data:history.map(h=>h.scientific_accuracy_7d ?? h.scientific_hit_rate_7d), borderColor:'#10b981', backgroundColor:'rgba(16,185,129,0.1)', borderWidth:2, tension:.3, spanGaps:true },
                     ]
                 },
                 options:{
@@ -853,7 +845,6 @@ async function loadDashboard() {
             const rows = [
                 { name:'\uD83D\uDCC8 Forecast', ...wc.forecast },
                 { name:'\uD83D\uDD2C Scientific', ...wc.scientific },
-                { name:'\uD83C\uDF0A Elliott', ...wc.elliott },
             ].map(row => {
                 const tw = row.this_week, lw = row.last_week;
                 const delta = (tw != null && lw != null) ? tw - lw : null;
@@ -867,7 +858,7 @@ async function loadDashboard() {
         // Deep Diagnosis
         const dd = data.deep_diagnosis;
         if (dd) {
-            const featureOrder = ['forecast', 'scientific', 'elliott'];
+            const featureOrder = ['forecast', 'scientific'];
             let diagHtml = '';
             for (const key of featureOrder) {
                 const feat = dd[key];

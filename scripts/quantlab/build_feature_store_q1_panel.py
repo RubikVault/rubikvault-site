@@ -246,16 +246,23 @@ def _build_bars_pack_file_index(
     bars_files_total = 0
     selected_files_total = 0
     duplicate_keys = 0
-    for fp in bars_root.rglob("part_*.parquet"):
+    # Scan both part_* (original packed format) and delta_* (daily-auto incremental format)
+    all_bar_files = sorted(
+        list(bars_root.rglob("part_*.parquet")) + list(bars_root.rglob("delta_*.parquet"))
+    )
+    for fp in all_bar_files:
         bars_files_total += 1
         sp = str(fp)
         if not any(tok in sp for tok in allowed_class_tokens):
             continue
         selected_files_total += 1
         name = fp.name
-        if not name.startswith("part_") or not name.endswith(".parquet"):
+        if name.startswith("part_"):
+            pack_key = name[len("part_") : -len(".parquet")]
+        elif name.startswith("delta_"):
+            pack_key = name[len("delta_") : -len(".parquet")]
+        else:
             continue
-        pack_key = name[len("part_") : -len(".parquet")]
         if pack_key in pack_index:
             duplicate_keys += 1
         pack_index[pack_key] = sp
@@ -415,18 +422,23 @@ def _select_bars_files_from_registry_allowlist(
         bars_files_total = len(bars_pack_file_index)
     else:
         allowed_class_tokens = {f"asset_class={cls}" for cls in include_classes}
-        for fp in bars_root.rglob("part_*.parquet"):
+        all_bar_files = sorted(
+            list(bars_root.rglob("part_*.parquet")) + list(bars_root.rglob("delta_*.parquet"))
+        )
+        for fp in all_bar_files:
             bars_files_total += 1
             sp = str(fp)
             if not any(tok in sp for tok in allowed_class_tokens):
                 continue
             name = fp.name
-            if not name.startswith("part_") or not name.endswith(".parquet"):
+            if name.startswith("part_"):
+                pack_key = name[len("part_") : -len(".parquet")]
+            elif name.startswith("delta_"):
+                pack_key = name[len("delta_") : -len(".parquet")]
+            else:
                 continue
-            pack_key = name[len("part_") : -len(".parquet")]
             if pack_key in selected_pack_keys:
                 selected_files.append(sp)
-        selected_files.sort()
     if not selected_files:
         return None, {
             "mode": "full_scan_no_files_matched_pack_keys",
@@ -457,7 +469,10 @@ def _list_bars_files_for_classes(bars_root: Path, include_classes: list[str]) ->
     allowed_class_tokens = {f"asset_class={cls}" for cls in include_classes}
     selected_files: list[str] = []
     bars_files_total = 0
-    for fp in bars_root.rglob("part_*.parquet"):
+    all_bar_files = sorted(
+        list(bars_root.rglob("part_*.parquet")) + list(bars_root.rglob("delta_*.parquet"))
+    )
+    for fp in all_bar_files:
         bars_files_total += 1
         sp = str(fp)
         if not any(tok in sp for tok in allowed_class_tokens):

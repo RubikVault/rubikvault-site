@@ -3,7 +3,7 @@
  */
 import { randomUUID } from 'node:crypto';
 
-const VALID_SOURCES = new Set(['forecast', 'scientific', 'elliott', 'quantlab', 'breakout_v2', 'hist_probs']);
+const VALID_SOURCES = new Set(['forecast', 'scientific', 'quantlab', 'breakout_v2', 'hist_probs']);
 const VALID_HORIZONS = new Set(['short', 'medium', 'long']);
 const VALID_VOL_BUCKETS = new Set(['low', 'medium', 'high']);
 const CONTRACT_VERSION = '1.0.0';

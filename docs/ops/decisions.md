@@ -1,5 +1,8 @@
 # Decisions
 
+> Architektur-Entscheidungen gehören hierher.
+> Konkrete Fehler, Bugs und Incident-Lektionen gehören in [`lessons-learned.md`](lessons-learned.md).
+
 ## 2026-01-04: Envelope meta never null
 Context: Some endpoints returned `meta: null`, violating the Envelope Contract.
 Decision: Enforce non-null `meta` on all `/api/*` responses.

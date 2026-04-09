@@ -883,29 +883,39 @@ export async function onRequestGet(context) {
     if (!eodAttempted) {
       try {
         const { getStaticBars } = await import('./_shared/history-store.mjs');
-        staticBars = await getStaticBars(effectiveTicker, url.origin);
+        staticBars = await getStaticBars(effectiveTicker, url.origin, env?.ASSETS || null);
 
         if (staticBars && staticBars.length > 0) {
-          // Check freshness (Basic check: is last bar within maxStaleDays?)
           const lastBar = staticBars[staticBars.length - 1];
           let isFresh = false;
           if (lastBar && lastBar.date) {
             const age = computeAgeSeconds(parseIsoDateToMs(lastBar.date));
-            // If age is less than maxStaleDays, we consider it usable. 
-            // Ideally we want *latest* data, but "Provider calls MUST NOT scale".
-            // We accept static data if it exists.
             if (age < maxStaleDays * 86400) {
               isFresh = true;
             }
           }
 
-          if (isFresh || !canFetchProvider) {
-            eodBars = staticBars;
-            eodProvider = 'static_store';
-            // Note: servedFrom is computed later from snapshots; we track via eodProvider
-            eodStatus = isFresh ? 'fresh' : 'stale';
-            eodAttempted = true;
-            if (!isFresh) qualityFlags.add('STATIC_STALE');
+          eodBars = staticBars;
+          eodProvider = 'static_store';
+          eodStatus = isFresh ? 'fresh' : 'stale';
+          eodAttempted = true;
+          if (!isFresh) {
+            qualityFlags.add('STATIC_STALE');
+            if (swrPending) {
+              qualityFlags.add('PENDING_REFRESH');
+            } else if (canFetchProvider) {
+              swrMarked = await tryMarkSWR(env, swrKey, SWR_MARK_TTL_SECONDS);
+              if (swrMarked) {
+                const refreshPromise = refreshCacheInBackground();
+                if (typeof context?.waitUntil === 'function') {
+                  context.waitUntil(refreshPromise);
+                } else {
+                  refreshPromise.catch(() => { });
+                }
+              } else {
+                qualityFlags.add('LOCKED_REFRESH');
+              }
+            }
           }
         }
       } catch (err) {
@@ -913,8 +923,7 @@ export async function onRequestGet(context) {
       }
     }
 
-    if (!canFetchProvider && !eodAttempted) {
-      // No API keys available - try static EOD batch fallback
+    if (!eodAttempted) {
       const staticResult = await fetchStaticEodBar(effectiveTicker, request);
       if (staticResult && staticResult.bar) {
         eodBars = [staticResult.bar];
@@ -922,13 +931,34 @@ export async function onRequestGet(context) {
         eodStatus = computeStatusFromDataDate(staticResult.bar.date, now, maxStaleDays, pendingWindowMinutes);
         eodAttempted = true;
         qualityFlags.add('STATIC_FALLBACK');
-      } else {
+        if (canFetchProvider) {
+          if (swrPending) {
+            qualityFlags.add('PENDING_REFRESH');
+          } else {
+            swrMarked = await tryMarkSWR(env, swrKey, SWR_MARK_TTL_SECONDS);
+            if (swrMarked) {
+              const refreshPromise = refreshCacheInBackground();
+              if (typeof context?.waitUntil === 'function') {
+                context.waitUntil(refreshPromise);
+              } else {
+                refreshPromise.catch(() => { });
+              }
+            } else {
+              qualityFlags.add('LOCKED_REFRESH');
+            }
+          }
+        }
+      } else if (!canFetchProvider) {
         reasons = ['EOD_KEYS_MISSING', 'NO_STATIC_DATA'];
         qualityFlags.add('EOD_KEYS_MISSING');
         qualityFlags.add('NO_STATIC_DATA');
         eodStatus = 'stale';
         eodAttempted = true;
       }
+    }
+
+    if (eodAttempted) {
+      // Static layers already produced a usable response.
     } else {
       eodAttempted = true;
       if (swrPending) {
@@ -959,7 +989,7 @@ export async function onRequestGet(context) {
               if (!staticBars) {
                 try {
                   const { getStaticBars } = await import('./_shared/history-store.mjs');
-                  staticBars = await getStaticBars(effectiveTicker, url.origin);
+                  staticBars = await getStaticBars(effectiveTicker, url.origin, env?.ASSETS || null);
                 } catch (err) { /* ignore */ }
               }
 
@@ -1352,12 +1382,21 @@ export async function onRequestGet(context) {
 
   let errorPayload = null;
   const universeKnown = Boolean(universeEntry || universeFallback || v7ExactMeta);
-  if (eodAttempted && !eodError && eodBars.length === 0) {
-    eodError = {
-      code: 'EOD_EMPTY',
-      message: 'No EOD bars returned',
-      details: { ticker: effectiveTicker }
-    };
+  if (eodAttempted && eodBars.length === 0) {
+    const lateStaticResult = await fetchStaticEodBar(effectiveTicker, request);
+    if (lateStaticResult && lateStaticResult.bar) {
+      eodBars = [lateStaticResult.bar];
+      eodProvider = lateStaticResult.source;
+      eodStatus = computeStatusFromDataDate(lateStaticResult.bar.date, now, maxStaleDays, pendingWindowMinutes);
+      eodError = null;
+      qualityFlags.add('STATIC_FALLBACK');
+    } else if (!eodError) {
+      eodError = {
+        code: 'EOD_EMPTY',
+        message: 'No EOD bars returned',
+        details: { ticker: effectiveTicker }
+      };
+    }
   }
 
   const unknownTickerByProvider =
@@ -1600,7 +1639,6 @@ export async function onRequestGet(context) {
       segmentationProfile: decisionInputs.segmentationProfile,
       scientificState: decisionInputs.scientificState,
       forecastState: decisionInputs.forecastState,
-      elliottState: decisionInputs.elliottState,
       quantlabState: decisionInputs.quantlabState,
       forecastMeta: decisionInputs.forecastMeta,
       inputFingerprints: decisionInputs.input_fingerprints,

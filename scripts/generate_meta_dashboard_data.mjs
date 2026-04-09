@@ -16,6 +16,7 @@ const DIAGNOSTIC_PATH = path.join(REPO_ROOT, 'public/data/reports/best-setups-et
 const REGIME_DAILY_PATH = path.join(REPO_ROOT, 'public/data/hist-probs/regime-daily.json');
 const V5_AUTOPILOT_PATH = path.join(REPO_ROOT, 'public/data/reports/v5-autopilot-status.json');
 const SYSTEM_STATUS_PATH = path.join(REPO_ROOT, 'public/data/reports/system-status-latest.json');
+const DATA_FRESHNESS_PATH = path.join(REPO_ROOT, 'public/data/reports/data-freshness-latest.json');
 const BEST_SETUPS_PATH = path.join(REPO_ROOT, 'public/data/snapshots/best-setups-v4.json');
 const OUTPUT_PATH = path.join(REPO_ROOT, 'public/dashboard_v6_meta_data.json');
 
@@ -497,7 +498,7 @@ function sourceFileMeta(filePath, extra = {}) {
 }
 
 async function main() {
-  const [learning, quantlab, quantlabOperationalStatus, forecastLatest, legacyWeights, v1AuditReport, v1WeightsLatest, diagnostic, regimeDaily, autopilot, systemStatusReport, bestSetups] = await Promise.all([
+  const [learning, quantlab, quantlabOperationalStatus, forecastLatest, legacyWeights, v1AuditReport, v1WeightsLatest, diagnostic, regimeDaily, autopilot, systemStatusReport, dataFreshnessReport, bestSetups] = await Promise.all([
     readJsonSafely(LEARNING_REPORT_PATH),
     readJsonSafely(QUANTLAB_REPORT_PATH),
     readJsonSafely(QUANTLAB_OPERATIONAL_STATUS_PATH),
@@ -509,6 +510,7 @@ async function main() {
     readJsonSafely(REGIME_DAILY_PATH),
     readJsonSafely(V5_AUTOPILOT_PATH),
     readJsonSafely(SYSTEM_STATUS_PATH),
+    readJsonSafely(DATA_FRESHNESS_PATH),
     readJsonSafely(BEST_SETUPS_PATH),
   ]);
 
@@ -849,6 +851,7 @@ async function main() {
     step_runbook: systemStatusReport?.steps || {},
     web_validation_chain: systemStatusReport?.ssot?.web_validation_chain || [],
     stock_analyzer_universe_audit: systemStatusReport?.stock_analyzer_universe_audit || null,
+    data_truth_gate: dataFreshnessReport || systemStatusReport?.data_truth_gate || null,
   };
 
   // 10. Deep diagnosis data (from learning report)
@@ -915,6 +918,7 @@ async function main() {
     dependency_health: systemStatusReport?.dependencies || [],
     steps: systemStatusReport?.steps || {},
     stock_analyzer_universe_audit: systemStatusReport?.stock_analyzer_universe_audit || null,
+    data_truth_gate: dataFreshnessReport || systemStatusReport?.data_truth_gate || null,
     web_validation_chain: systemStatusReport?.ssot?.web_validation_chain || [],
     ssot_doc_ref: systemStatusReport?.ssot?.doc_ref || null,
     recovery_script: systemStatusReport?.ssot?.recovery_script || null,

@@ -184,8 +184,14 @@ export async function computeOutcomes(ticker) {
 
   // Write output
   const outPath = path.join(OUTPUT_BASE, `${ticker.toUpperCase()}.json`);
+  const tmpPath = path.join(OUTPUT_BASE, `.${ticker.toUpperCase()}.${process.pid}.${Date.now()}.tmp`);
   await fs.mkdir(OUTPUT_BASE, { recursive: true });
-  await fs.writeFile(outPath, JSON.stringify(result, null, 2), 'utf8');
+  try {
+    await fs.writeFile(tmpPath, JSON.stringify(result, null, 2), 'utf8');
+    await fs.rename(tmpPath, outPath);
+  } finally {
+    await fs.rm(tmpPath, { force: true }).catch(() => {});
+  }
   return result;
 }
 

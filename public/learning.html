@@ -608,7 +608,6 @@
     const FEATURE_META = {
       forecast: { icon: '📈', color: '#3b82f6', label: 'Price direction + probability', metricKey: 'forecast_accuracy_7d' },
       scientific: { icon: '🔬', color: '#8b5cf6', label: 'Setup/Trigger → Breakout', metricKey: 'scientific_hit_rate_7d' },
-      elliott: { icon: '🌊', color: '#06b6d4', label: 'Wave direction (bullish/bearish)', metricKey: 'elliott_accuracy_7d' },
       stock_analyzer: { icon: '📊', color: '#f59e0b', label: 'Ranking stability', metricKey: 'stock_stability' },
     };
 
@@ -872,53 +871,6 @@
         }
       }
 
-      // ──────────────── ELLIOTT ────────────────
-      if (key === 'elliott') {
-        if (acc != null && acc < 0.50) {
-          sections.push({
-            title: '🔴 Elliott-Accuracy unter 50% — Wave-Counts unzuverlässig',
-            severity: 'critical',
-            text: `Accuracy: ${pct(acc)}. Die Elliott-Wave-Richtungsvorhersagen sind schlechter als Zufall. Hauptproblem: Die automatische Wave-Zählung ist mehrdeutig — verschiedene Counts sind gleichzeitig valide.`,
-            fixes: [
-              { what: 'Confidence-Filter einbauen', how: 'Nur Predictions mit wave_confidence > 0.6 verwenden. Aktuell werden alle Wave-Counts als gleichwertig behandelt', file: 'scripts/learning/run-daily-learning-cycle.mjs → extractElliottPredictions()' },
-              { what: 'Alternative-Count-Logik', how: 'Wenn bullisher UND bearischer Count gleichzeitig valide sind → Signal als "neutral" markieren statt willkürlich einen zu wählen', file: 'functions/api/elliott-scanner.js' },
-              { what: 'Zeitrahmen-Gewichtung', how: 'Daily-Waves geben kurzfristige Signale, Monthly-Waves langfristige. Für 5d-Horizont nur Daily/Weekly Counts verwenden, Monthly ignorieren', file: 'scripts/learning/run-daily-learning-cycle.mjs → extractElliottPredictions()' },
-              { what: 'Invalidation-Levels nutzen', how: 'Jeder Wave-Count hat ein Invalidation-Level. Wenn Preis > Invalidation → Count sofort als "falsch" werten und alternative Zählung aktivieren', file: 'functions/api/elliott-scanner.js' },
-            ]
-          });
-        } else if (acc != null && acc < 0.55) {
-          sections.push({
-            title: '🟡 Elliott-Accuracy 50-55% — Minimale Edge',
-            severity: 'warning',
-            text: `Accuracy: ${pct(acc)}. Leicht über Zufall, aber nicht signifikant. Das Volume an Predictions (${(feat.predictions_today || 0).toLocaleString()}) dilutiert wahrscheinlich die Qualität.`,
-            fixes: [
-              { what: 'Top-Confidence-Filter', how: 'Statt alle 50k+ Wave-Counts zu werten: nur Top 200 mit höchster Confidence auswählen. Qualität > Quantität', file: 'scripts/learning/run-daily-learning-cycle.mjs → extractElliottPredictions()' },
-              { what: 'Wave-Completion-Score', how: 'Waves in fortgeschrittenem Stadium (Wave 3, Wave 5) haben klarere Richtung als Wave 1/2. Completion-Score als Gewicht nutzen', file: 'functions/api/elliott-scanner.js' },
-            ]
-          });
-        }
-        if (preds > 10000) {
-          sections.push({
-            title: '⚠️ Zu viele Predictions — Qualität leidet',
-            severity: 'warning',
-            text: `${preds.toLocaleString()} Predictions ist extrem viel. Die meisten sind wahrscheinlich Low-Confidence Wave-Counts. Das verwässert die Accuracy-Metrik.`,
-            fixes: [
-              { what: 'Prediction-Count reduzieren', how: 'Nur Ticker/Timeframe-Kombinationen mit wave_quality > 70 in das Ledger schreiben. Das reduziert auf ~500-2000 hochwertige Predictions', file: 'scripts/learning/run-daily-learning-cycle.mjs → extractElliottPredictions()' },
-            ]
-          });
-        }
-        if (!acc && preds > 0) {
-          sections.push({
-            title: '📡 Bootstrap-Phase — Warten auf 5d-Outcomes',
-            severity: 'info',
-            text: `${preds.toLocaleString()} Wave-Direction-Predictions geloggt. Accuracy erscheint nach 5 Trading-Tagen. Bei so vielen Predictions: sofort Top-Confidence-Filter einbauen.`,
-            fixes: [
-              { what: 'DRINGEND: Volume reduzieren', how: 'Vor dem nächsten Cycle: extractElliottPredictions() um Confidence-Filter erweitern, sonst werden 50k+ Outcomes berechnet was extrem langsam ist', file: 'scripts/learning/run-daily-learning-cycle.mjs → extractElliottPredictions()' },
-            ]
-          });
-        }
-      }
-
       // ──────────────── STOCK ANALYZER ────────────────
       if (key === 'stock_analyzer') {
         if (feat.stability != null && feat.stability < 0.70) {
@@ -1003,7 +955,7 @@
       const freshness = ageMin < 60 ? `vor ${ageMin} Min` : ageMin < 1440 ? `vor ${Math.round(ageMin / 60)} Std` : `vor ${Math.round(ageMin / 1440)} Tagen`;
 
       // Feature Cards
-      const featureOrder = ['forecast', 'scientific', 'elliott', 'stock_analyzer'];
+      const featureOrder = ['forecast', 'scientific', 'stock_analyzer'];
       const cardsHTML = featureOrder.map(key => {
         const feat = r.features[key];
         if (!feat) return '';
@@ -1045,23 +997,22 @@
 
       // Trend Chart
       const hasHistoryData = history.some(h =>
-        h.forecast_accuracy_7d != null || h.scientific_hit_rate_7d != null || h.elliott_accuracy_7d != null
+        h.forecast_accuracy_7d != null || h.scientific_hit_rate_7d != null
       );
-      const chartKeys = ['forecast_accuracy_7d', 'scientific_hit_rate_7d', 'elliott_accuracy_7d'];
-      const chartColors = ['#3b82f6', '#8b5cf6', '#06b6d4'];
+      const chartKeys = ['forecast_accuracy_7d', 'scientific_hit_rate_7d'];
+      const chartColors = ['#3b82f6', '#8b5cf6'];
       const chartSVG = hasHistoryData ? trendChartSVG(history, chartKeys, chartColors) : '';
 
       const chartSection = `<div class="chart-section">
     <h2>📉 Trend over time (30 days)</h2>
     ${chartSVG ? `<div class="chart-area">${chartSVG}</div>
-      <div class="chart-legend">
-        <div class="chart-legend-item"><div class="chart-legend-dot" style="background:#3b82f6"></div> Forecast Accuracy</div>
-        <div class="chart-legend-item"><div class="chart-legend-dot" style="background:#8b5cf6"></div> Scientific Hit Rate</div>
-        <div class="chart-legend-item"><div class="chart-legend-dot" style="background:#06b6d4"></div> Elliott Accuracy</div>
-      </div>` :
+        <div class="chart-legend">
+          <div class="chart-legend-item"><div class="chart-legend-dot" style="background:#3b82f6"></div> Forecast Accuracy</div>
+          <div class="chart-legend-item"><div class="chart-legend-dot" style="background:#8b5cf6"></div> Scientific Hit Rate</div>
+        </div>` :
           `<div class="chart-empty"><div class="chart-icon">📈</div>
         <div>Trend-Chart erscheint nach den ersten Outcome-Daten</div>
-        <div style="font-size:11px;margin-top:4px;color:var(--text-dim)">Forecast: after 1 day · Scientific/Elliott: after 5 days</div>
+        <div style="font-size:11px;margin-top:4px;color:var(--text-dim)">Forecast: after 1 day · Scientific: after 5 days</div>
       </div>`}
   </div>`;
 
@@ -1070,7 +1021,6 @@
       const compRows = [
         { name: '📈 Forecast', ...wc.forecast },
         { name: '🔬 Scientific', ...wc.scientific },
-        { name: '🌊 Elliott', ...wc.elliott },
       ].map(row => {
         const tw = row.this_week, lw = row.last_week;
         const delta = (tw != null && lw != null) ? tw - lw : null;
@@ -1098,7 +1048,6 @@
       <tr><th>Feature</th><th>Logged today</th><th>Source</th><th>Initial Outcomes</th></tr>
       <tr><td>📈 Forecast</td><td>${(r.features?.forecast?.predictions_today ?? 0).toLocaleString()}</td><td>${sourceMetaText(r.features?.forecast?.source_meta)}</td><td>after 1 trading day</td></tr>
       <tr><td>🔬 Scientific</td><td>${(r.features?.scientific?.predictions_today ?? 0).toLocaleString()}</td><td>${sourceMetaText(r.features?.scientific?.source_meta)}</td><td>after 5 trading days</td></tr>
-      <tr><td>🌊 Elliott</td><td>${(r.features?.elliott?.predictions_today ?? 0).toLocaleString()}</td><td>${sourceMetaText(r.features?.elliott?.source_meta)}</td><td>after 5 trading days</td></tr>
       <tr><td>📊 Stock Analyzer</td><td>${(r.features?.stock_analyzer?.rankings_today ?? 0).toLocaleString()}</td><td>${sourceMetaText(r.features?.stock_analyzer?.source_meta)}</td><td>from day 2 via stability</td></tr>
     </table>
   </div>` : '';

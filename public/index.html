@@ -477,7 +477,7 @@
           </div>
           <div style="font-size:0.78rem; color:#94a3b8; line-height:1.5;">Top-down view across <strong>20.000+
               ETFs</strong>. Identifying money flow into specific sectors (Tech, Utilities) and countries via breakout
-            models and marketphase shifts. Know where the broader market is heading before picking single stocks.</div>
+            models and trend rotation. Know where the broader market is heading before picking single stocks.</div>
         </div>
         <div id="sm-content-etfrow" class="sm-panel"></div>
       </div>
@@ -1674,11 +1674,6 @@
     // Global data stores
     let scientificAnalysisData = null;
     const scientificByTimeframe = { short: new Map(), medium: new Map(), long: new Map() };
-    const elliottWavesData = new Map();
-    const elliottSupportByTicker = new Map();
-    const marketphaseMissingByTicker = new Map();
-    let elliottIndexLoaded = false;
-    let marketphaseMissingLoaded = false;
     let scientificLoadPromise = null;
     let scientificWarmPromise = null;
 
@@ -1697,10 +1692,8 @@
             await loadTopSetupsDoc();
             await renderBestSetups();
           }
-          // Run heavy secondary indexes lazily so initial analyze rendering stays fast.
           setTimeout(() => {
-            loadElliottSupportIndex().then(updateBuySignalsStats).catch(() => { });
-            loadMarketphaseMissingIndex().catch(() => { });
+            updateBuySignalsStats();
           }, 250);
         } catch (e) {
           console.warn('Scientific analysis data not available:', e);
@@ -1743,75 +1736,6 @@
           scientificByTimeframe[tf].set(t, row);
         }
       });
-    }
-
-    async function loadElliottSupportIndex() {
-      if (elliottIndexLoaded) return;
-      elliottIndexLoaded = true;
-      try {
-        const res = await fetch('/data/marketphase/index.json', { cache: 'no-store' });
-        if (!res.ok) return;
-        const payload = await res.json();
-        const symbols = payload?.data?.symbols || [];
-        if (!Array.isArray(symbols) || !symbols.length) return;
-        const prefetchLimit = symbols.length > 1200 ? 20 : Math.min(symbols.length, 60);
-        if (prefetchLimit < symbols.length) {
-          console.info(`Elliott index prefetch capped at ${prefetchLimit}/${symbols.length}; remaining symbols load on-demand.`);
-        }
-        for (const item of symbols.slice(0, prefetchLimit)) {
-          const t = normalizeTicker(item?.symbol || '');
-          const path = item?.path;
-          if (!t || !path) continue;
-          const { payload: mpPayload } = await fetchJson(path);
-          if (!mpPayload || mpPayload.ok !== true) {
-            elliottSupportByTicker.set(t, null);
-            continue;
-          }
-          elliottWavesData.set(t, mpPayload);
-          const support = computeElliottSupport(mpPayload);
-          elliottSupportByTicker.set(t, support);
-        }
-      } catch (e) {
-        console.warn('Elliott Waves index not available:', e);
-      }
-    }
-
-    async function loadMarketphaseMissingIndex() {
-      if (marketphaseMissingLoaded) return;
-      marketphaseMissingLoaded = true;
-      try {
-        const res = await fetch('/data/marketphase/missing.json', { cache: 'no-store' });
-        if (!res.ok) return;
-        const payload = await res.json();
-        const rows = Array.isArray(payload?.missing) ? payload.missing : [];
-        for (const row of rows) {
-          const t = normalizeTicker(row?.ticker || '');
-          if (!t) continue;
-          marketphaseMissingByTicker.set(t, row);
-        }
-      } catch (e) {
-        console.warn('MarketPhase missing index not available:', e);
-      }
-    }
-
-    function classifyElliottAvailability(reason) {
-      const text = String(reason || '').toUpperCase();
-      if (!text) return 'missing';
-      if (text.includes('NOT_SUPPORTED') || text.includes('INSUFFICIENT_BARS')) return 'not_supported';
-      if (text.includes('KV_READ_FAILED') || text.includes('PROVIDER_')) return 'error';
-      if (text.includes('NO_EOD_BARS') || text.includes('NO_REFERENCES')) return 'missing';
-      return 'missing';
-    }
-
-    function computeElliottSupport(payload) {
-      const data = payload?.data || {};
-      const elliott = data?.elliott || {};
-      const features = data?.features || {};
-      const direction = elliott?.completedPattern?.direction || features?.SMATrend || null;
-      const confidence = Number(elliott?.developingPattern?.confidence ?? elliott?.completedPattern?.confidence0_100);
-      if (!direction) return null;
-      if (!Number.isFinite(confidence)) return direction === 'bullish';
-      return direction === 'bullish' && confidence >= 55;
     }
 
     function updateBuySignalsStats() {
@@ -2079,8 +2003,6 @@
       const labels = {
         analyzer: 'Analyzer',
         scientific: 'Scientific',
-        elliott: 'Elliott',
-        marketphase: 'Market',
         forecast: 'Forecast'
       };
       return Object.entries(labels)
@@ -3042,7 +2964,7 @@
           });
         };
         push('short', 'scientific');
-        push('medium', 'elliott');
+        push('medium', 'forecast');
         push('long', 'forecast');
       }
       out.short = takeTop(out.short, 10);
@@ -3373,9 +3295,9 @@
       }
       const discovered = Number(coverage.discovered_count);
       const ingestible = Number(coverage.active_ingestible_count);
-      const marketEligible = Number(coverage?.feature_eligible_count?.marketphase);
+      const marketEligible = Number(coverage?.feature_eligible_count?.analyzer);
       marketV7SummaryEl.textContent = `Discovered ${Number.isFinite(discovered) ? discovered.toLocaleString('en-US') : '—'} | Ingestible ${Number.isFinite(ingestible) ? ingestible.toLocaleString('en-US') : '—'}`;
-      marketV7FeatureEl.textContent = `Eligible Market (Marketphase Gate): ${Number.isFinite(marketEligible) ? marketEligible.toLocaleString('en-US') : '—'}`;
+      marketV7FeatureEl.textContent = `Eligible Analyzer: ${Number.isFinite(marketEligible) ? marketEligible.toLocaleString('en-US') : '—'}`;
 
       const byType = catalogManifest?.by_type_norm && typeof catalogManifest.by_type_norm === 'object'
         ? catalogManifest.by_type_norm

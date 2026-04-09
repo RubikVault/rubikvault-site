@@ -19,10 +19,9 @@ function ensureDir() {
 const DEFAULT_WEIGHTS = Object.freeze({
   forecast: 0.20,
   scientific: 0.20,
-  elliott: 0.15,
-  quantlab: 0.15,
-  breakout_v2: 0.15,
-  hist_probs: 0.15,
+  quantlab: 0.20,
+  breakout_v2: 0.20,
+  hist_probs: 0.20,
 });
 
 export function isFlatWeights(weights) {

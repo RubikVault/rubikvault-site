@@ -13,10 +13,14 @@ const REPORT_PATH = path.join(ROOT, 'public', 'data', 'reports', 'dashboard-gree
 const HEARTBEAT_LOG = path.join(LOG_DIR, 'recovery-heartbeat.log');
 const ACTION_LOG = path.join(LOG_DIR, 'recovery-actions.log');
 const SYSTEM_STATUS = path.join(ROOT, 'public', 'data', 'reports', 'system-status-latest.json');
+const REFRESH_REPORT = path.join(ROOT, 'mirrors', 'universe-v7', 'state', 'refresh_v7_history_from_eodhd.report.json');
 const HIST_PROBS_SUMMARY = path.join(ROOT, 'public', 'data', 'hist-probs', 'run-summary.json');
 const AUDIT_REPORT = path.join(ROOT, 'public', 'data', 'reports', 'stock-analyzer-universe-audit-latest.json');
+const DATA_FRESHNESS_REPORT = path.join(ROOT, 'public', 'data', 'reports', 'data-freshness-latest.json');
 const Q1_SUCCESS = '/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/ops/q1_daily_delta_ingest/latest_success.json';
+const QUANTLAB_OPERATIONAL_STATUS = path.join(ROOT, 'public', 'data', 'quantlab', 'status', 'operational-status.json');
 const DASHBOARD_META = path.join(ROOT, 'public', 'dashboard_v6_meta_data.json');
+const RUNTIME_HEALTH_URL = 'http://127.0.0.1:8788/api/diag';
 
 fs.mkdirSync(LOG_DIR, { recursive: true });
 fs.mkdirSync(STATE_DIR, { recursive: true });
@@ -117,6 +121,61 @@ function killPid(pid) {
   }
 }
 
+function sleepMs(ms) {
+  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
+}
+
+function runtimeHealthy() {
+  try {
+    execFileSync('/usr/bin/curl', ['-sf', '--max-time', '5', RUNTIME_HEALTH_URL], {
+      cwd: ROOT,
+      stdio: ['ignore', 'ignore', 'ignore'],
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function waitForRuntime(timeoutMs = 20000) {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    if (runtimeHealthy()) return true;
+    sleepMs(1000);
+  }
+  return runtimeHealthy();
+}
+
+function isoDateUtc(value) {
+  return new Date(value).toISOString().slice(0, 10);
+}
+
+function startOfUtcDay(date = new Date()) {
+  return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
+}
+
+function shiftUtcDays(date, deltaDays) {
+  const next = new Date(date.getTime());
+  next.setUTCDate(next.getUTCDate() + deltaDays);
+  return next;
+}
+
+function isWeekendUtc(date) {
+  return date.getUTCDay() === 0 || date.getUTCDay() === 6;
+}
+
+function latestUsMarketSessionIso(now = new Date()) {
+  let session = startOfUtcDay(now);
+  const afterClose = now.getUTCHours() > 20 || (now.getUTCHours() === 20 && now.getUTCMinutes() >= 15);
+  if (!afterClose) session = shiftUtcDays(session, -1);
+  while (isWeekendUtc(session)) session = shiftUtcDays(session, -1);
+  return isoDateUtc(session);
+}
+
+function shiftIsoDate(isoDate, deltaDays) {
+  return isoDateUtc(shiftUtcDays(new Date(`${isoDate}T00:00:00Z`), deltaDays));
+}
+
 function readState() {
   const current = readJson(STATE_PATH);
   if (current) return current;
@@ -138,20 +197,60 @@ const anyRequiredDate =
   quantStatus?.status_detail?.raw_freshness?.latestAnyRequiredDataDate ||
   q1Success?.ingest_date ||
   new Date().toISOString().slice(0, 10);
-const learningDate = anyRequiredDate;
+const marketSessionDate = latestUsMarketSessionIso();
+const targetMarketDate = String(anyRequiredDate || '') > marketSessionDate
+  ? String(anyRequiredDate)
+  : marketSessionDate;
+const marketRefreshFromDate = shiftIsoDate(targetMarketDate, -14);
+const learningDate = targetMarketDate;
 
 const steps = [
+  {
+    id: 'market_data_refresh',
+    label: 'Market Data Refresh',
+    pattern: 'scripts/quantlab/refresh_v7_history_from_eodhd.py',
+    command: `node scripts/universe-v7/build-us-eu-scope.mjs && python3 scripts/quantlab/refresh_v7_history_from_eodhd.py --allowlist-path public/data/universe/v7/ssot/stocks_etfs.us_eu.canonical.ids.json --from-date ${marketRefreshFromDate} --to-date ${targetMarketDate} --concurrency 12 --progress-every 500`,
+    logFile: path.join(LOG_DIR, 'step-00-market-refresh.log'),
+    stallMinutes: 180,
+    dependsOn: [],
+    isComplete: () => {
+      const report = readJson(REFRESH_REPORT);
+      const generatedAt = report?.generated_at ? Date.parse(report.generated_at) : NaN;
+      const fetchedWithData = Number(report?.assets_fetched_with_data || 0);
+      const reportOk = Number.isFinite(generatedAt)
+        && generatedAt >= campaignStartMs
+        && fetchedWithData > 0
+        && String(report?.to_date || '') === targetMarketDate;
+      if (!reportOk) return false;
+      const systemDoc = readJson(SYSTEM_STATUS);
+      const systemGeneratedAt = systemDoc?.generated_at ? Date.parse(systemDoc.generated_at) : NaN;
+      if (Number.isFinite(systemGeneratedAt) && systemGeneratedAt >= generatedAt) {
+        return String(systemDoc?.steps?.market_data_refresh?.severity || '') === 'ok';
+      }
+      return true;
+    },
+  },
   {
     id: 'q1_delta_ingest',
     label: 'Q1 Delta Ingest',
     pattern: 'scripts/quantlab/run_daily_delta_ingest_q1.py',
-    command: `python3 scripts/quantlab/run_daily_delta_ingest_q1.py --ingest-date ${anyRequiredDate}`,
+    command: `python3 scripts/quantlab/run_daily_delta_ingest_q1.py --ingest-date ${targetMarketDate} --full-scan-packs`,
     logFile: path.join(LOG_DIR, 'step-01-q1-delta.log'),
-    dependsOn: [],
+    dependsOn: ['market_data_refresh'],
     isComplete: () => {
       const doc = readJson(Q1_SUCCESS);
       const updated = doc?.updated_at ? Date.parse(doc.updated_at) : NaN;
-      return Number.isFinite(updated) && updated >= campaignStartMs;
+      const ingestDate = String(doc?.ingest_date || '');
+      const runLooksFresh = Number.isFinite(updated)
+        && updated >= campaignStartMs
+        && ingestDate === targetMarketDate;
+      if (!runLooksFresh) return false;
+      const systemDoc = readJson(SYSTEM_STATUS);
+      const systemGeneratedAt = systemDoc?.generated_at ? Date.parse(systemDoc.generated_at) : NaN;
+      if (Number.isFinite(systemGeneratedAt) && systemGeneratedAt >= updated) {
+        return String(systemDoc?.steps?.q1_delta_ingest?.severity || '') === 'ok';
+      }
+      return true;
     },
   },
   {
@@ -160,11 +259,21 @@ const steps = [
     pattern: 'scripts/quantlab/build_quantlab_v4_daily_report.mjs',
     command: 'node scripts/quantlab/build_quantlab_v4_daily_report.mjs',
     logFile: path.join(LOG_DIR, 'step-02-quantlab-daily.log'),
-    dependsOn: ['q1_delta_ingest'],
+    dependsOn: ['market_data_refresh', 'q1_delta_ingest'],
     isComplete: () => {
-      const fresh = readJson(SYSTEM_STATUS)?.steps?.quantlab_daily_report?.generated_at;
-      const ts = fresh ? Date.parse(fresh) : NaN;
-      return Number.isFinite(ts) && ts >= campaignStartMs;
+      const operational = readJson(QUANTLAB_OPERATIONAL_STATUS);
+      const generatedAt = operational?.generatedAt ? Date.parse(operational.generatedAt) : NaN;
+      const severity = String(operational?.summary?.severity || '');
+      const reportLooksFresh = Number.isFinite(generatedAt)
+        && generatedAt >= campaignStartMs
+        && severity === 'ok';
+      if (!reportLooksFresh) return false;
+      const systemDoc = readJson(SYSTEM_STATUS);
+      const systemGeneratedAt = systemDoc?.generated_at ? Date.parse(systemDoc.generated_at) : NaN;
+      if (Number.isFinite(systemGeneratedAt) && systemGeneratedAt >= generatedAt) {
+        return String(systemDoc?.steps?.quantlab_daily_report?.severity || '') === 'ok';
+      }
+      return true;
     },
   },
   {
@@ -189,8 +298,8 @@ const steps = [
   {
     id: 'fundamentals',
     label: 'Fundamentals Refresh',
-    pattern: 'scripts/build-fundamentals.mjs --force',
-    command: 'node scripts/build-fundamentals.mjs --force',
+    pattern: 'scripts/build-fundamentals.mjs --published-subset --force',
+    command: 'node scripts/build-fundamentals.mjs --published-subset --force',
     logFile: path.join(LOG_DIR, 'step-05-fundamentals.log'),
     stallMinutes: 60,
     dependsOn: ['q1_delta_ingest'],
@@ -209,7 +318,28 @@ const steps = [
       const ranAt = doc?.ran_at ? Date.parse(doc.ran_at) : NaN;
       const classes = Array.isArray(doc?.asset_classes) ? doc.asset_classes.slice().sort().join(',') : '';
       const fullUniverse = Number(doc?.max_tickers) === 0 || doc?.source_mode === 'registry_asset_classes';
-      return Number.isFinite(ranAt) && ranAt >= campaignStartMs && classes === 'ETF,STOCK' && fullUniverse;
+      const total = Number(doc?.tickers_total);
+      const covered = Number(doc?.tickers_covered);
+      const remaining = Number(doc?.tickers_remaining);
+      const errors = Number(doc?.tickers_errors);
+      const runLooksComplete = Number.isFinite(ranAt)
+        && ranAt >= campaignStartMs
+        && classes === 'ETF,STOCK'
+        && fullUniverse
+        && Number.isFinite(total)
+        && Number.isFinite(covered)
+        && Number.isFinite(remaining)
+        && Number.isFinite(errors)
+        && covered === total
+        && remaining === 0
+        && errors === 0;
+      if (!runLooksComplete) return false;
+      const systemDoc = readJson(SYSTEM_STATUS);
+      const systemGeneratedAt = systemDoc?.generated_at ? Date.parse(systemDoc.generated_at) : NaN;
+      if (Number.isFinite(systemGeneratedAt) && systemGeneratedAt >= ranAt) {
+        return String(systemDoc?.steps?.hist_probs?.severity || '') === 'ok';
+      }
+      return true;
     },
   },
   {
@@ -222,35 +352,35 @@ const steps = [
     isComplete: () => fileUpdatedSince(path.join(ROOT, 'public', 'data', 'snapshots', 'best-setups-v4.json'), campaignStartMs),
   },
   {
-    id: 'learning_daily',
-    label: 'Learning Daily',
-    pattern: 'scripts/learning/run-daily-learning-cycle.mjs',
-    command: `NODE_OPTIONS=--max-old-space-size=4096 node scripts/learning/run-daily-learning-cycle.mjs --date=${learningDate}`,
-    logFile: path.join(LOG_DIR, 'step-08-learning.log'),
-    dependsOn: ['snapshot', 'scientific_summary', 'fundamentals'],
-    isComplete: () => fileUpdatedSince(path.join(ROOT, 'public', 'data', 'reports', 'learning-report-latest.json'), campaignStartMs),
-  },
-  {
-    id: 'etf_diagnostic',
-    label: 'ETF Diagnostic',
-    pattern: 'scripts/learning/diagnose-best-setups-etf-drop.mjs',
-    command: 'node scripts/learning/diagnose-best-setups-etf-drop.mjs',
-    logFile: path.join(LOG_DIR, 'step-09-etf-diagnostic.log'),
-    dependsOn: ['snapshot'],
-    isComplete: () => fileUpdatedSince(path.join(ROOT, 'public', 'data', 'reports', 'best-setups-etf-diagnostic-latest.json'), campaignStartMs),
+    id: 'us_eu_truth_gate',
+    label: 'US+EU Truth Gate',
+    pattern: 'scripts/ops/build-data-freshness-report.mjs',
+    command: 'node scripts/universe-v7/build-us-eu-scope.mjs && node scripts/ops/build-us-eu-history-pack-manifest.mjs && node scripts/ops/build-data-freshness-report.mjs',
+    logFile: path.join(LOG_DIR, 'step-08-truth-gate.log'),
+    dependsOn: ['quantlab_daily_report', 'fundamentals', 'hist_probs', 'forecast_daily', 'scientific_summary', 'snapshot'],
+    isComplete: () => {
+      const doc = readJson(DATA_FRESHNESS_REPORT);
+      return fileUpdatedSince(DATA_FRESHNESS_REPORT, campaignStartMs)
+        && Boolean(doc?.scope?.symbol_count)
+        && Array.isArray(doc?.families)
+        && doc?.summary?.family_total === doc?.families?.length;
+    },
   },
   {
     id: 'stock_analyzer_universe_audit',
     label: 'Universe Audit',
     pattern: 'scripts/ops/build-stock-analyzer-universe-audit.mjs',
-    command: 'node scripts/ops/build-stock-analyzer-universe-audit.mjs --base-url http://127.0.0.1:8788 --registry-path public/data/universe/v7/registry/registry.ndjson.gz --asset-classes STOCK,ETF --max-tickers 0',
+    command: 'node scripts/universe-v7/build-us-eu-scope.mjs && node scripts/ops/build-us-eu-history-pack-manifest.mjs && node scripts/ops/build-stock-analyzer-universe-audit.mjs --base-url http://127.0.0.1:8788 --registry-path public/data/universe/v7/registry/registry.ndjson.gz --allowlist-path public/data/universe/v7/ssot/stocks_etfs.us_eu.canonical.ids.json --asset-classes STOCK,ETF --max-tickers 0 --concurrency 12 --timeout-ms 30000',
     logFile: path.join(LOG_DIR, 'step-10-universe-audit.log'),
-    dependsOn: ['hist_probs', 'snapshot', 'etf_diagnostic'],
+    dependsOn: ['hist_probs', 'snapshot'],
     isComplete: () => {
       const doc = readJson(AUDIT_REPORT);
+      const criticalFamilies = Array.isArray(doc?.failure_families)
+        ? doc.failure_families.filter((family) => String(family?.severity || '').toLowerCase() === 'critical')
+        : [];
       return fileUpdatedSince(AUDIT_REPORT, campaignStartMs)
         && doc?.summary?.full_universe === true
-        && (doc?.summary?.failure_family_count ?? Infinity) === 0;
+        && criticalFamilies.length === 0;
     },
   },
   {
@@ -259,24 +389,29 @@ const steps = [
     pattern: 'scripts/ops/build-system-status-report.mjs',
     command: 'node scripts/ops/build-system-status-report.mjs',
     logFile: path.join(LOG_DIR, 'step-11-system-status.log'),
-    dependsOn: ['stock_analyzer_universe_audit'],
+    dependsOn: ['us_eu_truth_gate', 'stock_analyzer_universe_audit'],
     isComplete: () => {
       if (!fileUpdatedSince(SYSTEM_STATUS, campaignStartMs)) return false;
+      const systemDoc = readJson(SYSTEM_STATUS);
       const snapshotFresh = fileUpdatedSince(
         path.join(ROOT, 'public', 'data', 'snapshots', 'best-setups-v4.json'),
         campaignStartMs
       );
-      const learningFresh = fileUpdatedSince(
-        path.join(ROOT, 'public', 'data', 'reports', 'learning-report-latest.json'),
-        campaignStartMs
-      );
-      // Must have run AFTER a clean universe audit this campaign
+      const truthGateFresh = fileUpdatedSince(DATA_FRESHNESS_REPORT, campaignStartMs);
       const auditFresh = fileUpdatedSince(AUDIT_REPORT, campaignStartMs);
       const auditDoc = readJson(AUDIT_REPORT);
-      const auditClean = auditDoc?.summary?.full_universe === true
-        && (auditDoc?.summary?.failure_family_count ?? Infinity) === 0;
-      const systemAfterAudit = (statMtimeMs(SYSTEM_STATUS) || 0) >= (statMtimeMs(AUDIT_REPORT) || 0);
-      return snapshotFresh && learningFresh && auditFresh && auditClean && systemAfterAudit;
+      const auditCriticalFamilies = Array.isArray(auditDoc?.failure_families)
+        ? auditDoc.failure_families.filter((family) => String(family?.severity || '').toLowerCase() === 'critical')
+        : [];
+      const auditClean = auditDoc?.summary?.full_universe === true && auditCriticalFamilies.length === 0;
+      const latestPrereq = Math.max(statMtimeMs(AUDIT_REPORT) || 0, statMtimeMs(DATA_FRESHNESS_REPORT) || 0);
+      const systemAfterPrereqs = (statMtimeMs(SYSTEM_STATUS) || 0) >= latestPrereq;
+      return snapshotFresh
+        && truthGateFresh
+        && auditFresh
+        && auditClean
+        && systemAfterPrereqs
+        && systemDoc?.summary?.severity === 'ok';
     },
   },
   {
@@ -288,18 +423,30 @@ const steps = [
     dependsOn: ['system_status'],
     isComplete: () => {
       if (!fileUpdatedSince(DASHBOARD_META, campaignStartMs)) return false;
+      const systemDoc = readJson(SYSTEM_STATUS);
       const systemStatusMtime = statMtimeMs(SYSTEM_STATUS);
       const dashboardMtime = statMtimeMs(DASHBOARD_META);
-      return systemStatusMtime != null && dashboardMtime != null && dashboardMtime >= systemStatusMtime;
+      return systemStatusMtime != null
+        && dashboardMtime != null
+        && dashboardMtime >= systemStatusMtime
+        && systemDoc?.summary?.severity === 'ok';
     },
   },
 ];
 
 function ensureRuntime() {
   const existing = parsePs('wrangler pages dev public --port 8788');
-  if (existing.length > 0) return existing[0].pid;
+  if (existing.length > 0 && runtimeHealthy()) return existing[0].pid;
+  if (existing.length > 0 && !runtimeHealthy()) {
+    for (const proc of existing) {
+      killPid(proc.pid);
+      appendLog(ACTION_LOG, `[${new Date().toISOString()}] killed stale runtime pid=${proc.pid}`);
+    }
+    sleepMs(1000);
+  }
   const pid = startDetached('npm run dev:pages:persist:std', path.join(LOG_DIR, 'runtime-wrangler.log'));
   appendLog(ACTION_LOG, `[${new Date().toISOString()}] started runtime wrangler pid=${pid}`);
+  waitForRuntime();
   return pid;
 }
 

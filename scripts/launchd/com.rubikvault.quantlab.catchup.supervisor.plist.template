@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.rubikvault.quantlab.catchup.supervisor</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>/opt/homebrew/bin/node</string>
+    <string>/Users/michaelpuchowezki/Dev/rubikvault-site/scripts/ops/run-quantlab-catchup-supervisor.mjs</string>
+  </array>
+
+  <key>WorkingDirectory</key>
+  <string>/Users/michaelpuchowezki/Dev/rubikvault-site</string>
+
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PATH</key>
+    <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
+    <key>NODE_OPTIONS</key>
+    <string>--max-old-space-size=512</string>
+    <key>QUANT_ROOT</key>
+    <string>/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab</string>
+  </dict>
+
+  <key>RunAtLoad</key>
+  <true/>
+
+  <key>StartInterval</key>
+  <integer>300</integer>
+
+  <key>KeepAlive</key>
+  <dict>
+    <key>SuccessfulExit</key>
+    <false/>
+  </dict>
+
+  <key>ThrottleInterval</key>
+  <integer>60</integer>
+
+  <key>StandardOutPath</key>
+  <string>/Users/michaelpuchowezki/Dev/rubikvault-site/logs/quantlab-catchup-supervisor.log</string>
+  <key>StandardErrorPath</key>
+  <string>/Users/michaelpuchowezki/Dev/rubikvault-site/logs/quantlab-catchup-supervisor.err</string>
+</dict>
+</plist>

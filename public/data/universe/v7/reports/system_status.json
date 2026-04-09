@@ -1,14 +1,19 @@
 {
   "schema": "rv_v7_system_status_v1",
-  "generated_at": "2026-04-06T07:17:58.109Z",
-  "run_id": "unknown",
-  "budget_health": null,
+  "generated_at": "2026-04-08T08:00:55.318Z",
+  "run_id": "v7_20260408075813_319e48",
+  "budget_health": {
+    "status": "PASS",
+    "avg7_calls": 13551.14,
+    "slope7_pct": 4911,
+    "kills": []
+  },
   "drift_state": "PASS",
   "golden_baseline_delta": null,
   "active_universe_counts": {
-    "discovered": 0,
-    "ingestible": 0,
-    "eligible": 0
+    "discovered": 194856,
+    "ingestible": 192897,
+    "eligible": 92522
   },
   "top_feature_by_rolling_sharpe": null,
   "promotion_state": "DISABLED",

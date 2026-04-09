@@ -138,8 +138,8 @@
 <script>
 const STALE_COLORS = { fresh:'var(--green)', acceptable:'var(--text-muted)', stale:'var(--yellow)', critical:'var(--red)', unknown:'var(--text-muted)' };
 const STALE_ICONS = { fresh:'', acceptable:'', stale:' \u26A0', critical:' \u26A0\u26A0', unknown:' ?' };
-const MODEL_ICONS = { forecast:'fa-bolt', scientific:'fa-flask', elliott:'fa-wave-square', quantlab:'fa-brain', breakout_v2:'fa-arrow-trend-up', hist_probs:'fa-chart-bar' };
-const SOURCE_COLORS = { forecast:'#3b82f6', scientific:'#10b981', elliott:'#8b5cf6', quantlab:'#f59e0b', breakout_v2:'#ef4444', hist_probs:'#06b6d4' };
+const MODEL_ICONS = { forecast:'fa-bolt', scientific:'fa-flask', quantlab:'fa-brain', breakout_v2:'fa-arrow-trend-up', hist_probs:'fa-chart-bar' };
+const SOURCE_COLORS = { forecast:'#3b82f6', scientific:'#10b981', quantlab:'#f59e0b', breakout_v2:'#ef4444', hist_probs:'#06b6d4' };
 let _accuracyChart = null;
 let _weightHistoryChart = null;
 
@@ -297,7 +297,7 @@ async function loadDashboard() {
         }
 
         // Accuracy Chart
-        const history = (data.history||[]).filter(h => h.forecast_accuracy_7d || h.scientific_accuracy_7d || h.elliott_accuracy_7d);
+        const history = (data.history||[]).filter(h => h.forecast_accuracy_7d || h.scientific_accuracy_7d);
         if (history.length > 0) {
             const labels = history.map(h => h.date.slice(5));
             if (_accuracyChart) _accuracyChart.destroy();
@@ -309,7 +309,6 @@ async function loadDashboard() {
                     datasets: [
                         { label:'Forecast', data:history.map(h=>h.forecast_accuracy_7d), borderColor:'#3b82f6', backgroundColor:'rgba(59,130,246,0.1)', borderWidth:2, tension:.3, spanGaps:true },
                         { label:'Scientific', data:history.map(h=>h.scientific_accuracy_7d), borderColor:'#10b981', backgroundColor:'rgba(16,185,129,0.1)', borderWidth:2, tension:.3, spanGaps:true },
-                        { label:'Elliott', data:history.map(h=>h.elliott_accuracy_7d), borderColor:'#8b5cf6', backgroundColor:'rgba(139,92,246,0.1)', borderWidth:2, tension:.3, spanGaps:true },
                     ]
                 },
                 options: {

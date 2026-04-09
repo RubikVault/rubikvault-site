@@ -33,7 +33,7 @@ const REQUIRED_FILES = [
 const PROVIDER_KEYS = ["schema_version", "policy", "providers"];
 const BUDGET_KEYS = ["schema_version", "currency", "hard_cap", "reserve", "stop_before_calls", "allocations", "max_planned_calls"];
 const ERROR_KEYS = ["schema_version", "taxonomy", "circuit_rules", "actions"];
-const RETENTION_KEYS = ["schema_version", "active_strategy", "strategy_a", "strategy_b", "hot_window_days", "mirrors_retention_days", "ops_ledger_retention_days", "cleanup_cadence", "safeguards"];
+const RETENTION_KEYS = ["schema_version", "active_strategy", "strategy_a", "strategy_b", "hot_window_days", "mirrors_retention_days", "forecast_outcomes_retention_days", "forecast_forecasts_retention_days", "ops_ledger_retention_days", "cleanup_cadence", "safeguards"];
 
 function assert(condition, message, failures) {
   if (!condition) failures.push(message);
@@ -104,6 +104,8 @@ async function main() {
   if (retention) {
     assert(["A", "B"].includes(retention.active_strategy), "retention.active_strategy must be A or B", failures);
     assert(retention.safeguards?.never_remove_last_good === true, "retention.safeguards.never_remove_last_good must be true", failures);
+    assert(!retention.forecast_outcomes_retention_days || Number.isFinite(retention.forecast_outcomes_retention_days), "retention.forecast_outcomes_retention_days must be numeric when present", failures);
+    assert(!retention.forecast_forecasts_retention_days || Number.isFinite(retention.forecast_forecasts_retention_days), "retention.forecast_forecasts_retention_days must be numeric when present", failures);
   }
 
   if (universe && mapping) {

@@ -142,10 +142,10 @@ function buildProviderSymbolMap(symbol, exchange, providerIds = null) {
   };
 }
 
-async function loadStaticBarsFallback(symbol, request) {
+async function loadStaticBarsFallback(symbol, request, env) {
   try {
     const { getStaticBars } = await import('./history-store.mjs');
-    const bars = await getStaticBars(symbol, new URL(request.url).origin);
+    const bars = await getStaticBars(symbol, new URL(request.url).origin, env?.ASSETS || null);
     return Array.isArray(bars) && bars.length ? bars : [];
   } catch {
     return [];
@@ -371,35 +371,42 @@ export async function fetchStockSummary(ticker, env, request) {
   let provider = 'eodhd';
   let sourceChain = buildSourceChainMetadata(null);
 
-  try {
-    const chainResult = await fetchBarsWithProviderChain(effectiveTicker, env, {
-      outputsize: '300',
-      allowFailover: true,
-      providerSymbols: providerSymbolMap,
-    });
-    sourceChain = buildSourceChainMetadata(chainResult.chain);
-    if (chainResult.ok) {
-      bars = Array.isArray(chainResult.bars) ? chainResult.bars : [];
-      provider = chainResult.provider || sourceChain?.selected || 'eodhd';
-      const quality = evaluateQuality({ bars }, env);
-      if (quality.reject) {
-        return {
-          ok: false, data: null,
-          meta: { status: 'error', provider, data_date: todayUtcDate(), version: 'v2' },
-          error: { code: 'QUALITY_REJECT', message: quality.reject.message, retryable: false },
-        };
-      }
-      if (Array.isArray(quality.flags)) qualityFlags.push(...quality.flags);
-    }
-  } catch { /* fall through */ }
+  const staticBars = await loadStaticBarsFallback(effectiveTicker, request, env);
+  if (staticBars.length) {
+    bars = staticBars;
+    provider = 'static_store';
+    qualityFlags.push('STATIC_FALLBACK_HISTORY');
+  }
 
   if (!bars.length) {
-    const staticBars = await loadStaticBarsFallback(effectiveTicker, request);
-    if (staticBars.length) {
-      bars = staticBars;
-      provider = 'static_store';
-      qualityFlags.push('STATIC_FALLBACK_HISTORY');
-    }
+    try {
+      const chainResult = await fetchBarsWithProviderChain(effectiveTicker, env, {
+        outputsize: '300',
+        allowFailover: true,
+        providerSymbols: providerSymbolMap,
+      });
+      sourceChain = buildSourceChainMetadata(chainResult.chain);
+      if (chainResult.ok) {
+        bars = Array.isArray(chainResult.bars) ? chainResult.bars : [];
+        provider = chainResult.provider || sourceChain?.selected || 'eodhd';
+        const quality = evaluateQuality({ bars }, env);
+        if (quality.reject) {
+          return {
+            ok: false, data: null,
+            meta: { status: 'error', provider, data_date: todayUtcDate(), version: 'v2' },
+            error: { code: 'QUALITY_REJECT', message: quality.reject.message, retryable: false },
+          };
+        }
+        if (Array.isArray(quality.flags)) qualityFlags.push(...quality.flags);
+      }
+    } catch { /* fall through */ }
+  } else {
+    sourceChain = buildSourceChainMetadata({
+      primary: 'static_store',
+      secondary: 'static_store',
+      selected: 'static_store',
+      fallbackUsed: true,
+    });
   }
 
   if (!bars.length) {
@@ -408,6 +415,18 @@ export async function fetchStockSummary(ticker, env, request) {
       meta: { status: 'error', provider, data_date: todayUtcDate(), version: 'v2' },
       error: { code: 'NO_DATA', message: 'No bar data available', retryable: true },
     };
+  }
+
+  if (provider !== 'static_store') {
+    const quality = evaluateQuality({ bars }, env);
+    if (quality.reject) {
+      return {
+        ok: false, data: null,
+        meta: { status: 'error', provider, data_date: todayUtcDate(), version: 'v2' },
+        error: { code: 'QUALITY_REJECT', message: quality.reject.message, retryable: false },
+      };
+    }
+    if (Array.isArray(quality.flags)) qualityFlags.push(...quality.flags);
   }
 
   const latestBar = pickLatestBar(bars);
@@ -423,6 +442,7 @@ export async function fetchStockSummary(ticker, env, request) {
   let states = null;
   let decision = null;
   let explanation = null;
+  let assembledFundamentals = null;
   try {
     const { assembleDecisionInputs, loadRequestCoreInputs } = await import('./decision-input-assembly.js');
     const { buildStockInsightsV4Evaluation } = await import('./stock-insights-v4.js');
@@ -441,6 +461,7 @@ export async function fetchStockSummary(ticker, env, request) {
       coreInputs: { bars, stats: marketStats.stats, as_of: dataDate },
       loadCoreInputs: (t) => loadRequestCoreInputs(t, { request, assetFetcher, fetchJson: fetchJsonForAssembly }),
     });
+    assembledFundamentals = inputs.fundamentals || null;
     const evaluation = buildStockInsightsV4Evaluation({
       ticker: effectiveTicker,
       bars: inputs.bars,
@@ -450,7 +471,6 @@ export async function fetchStockSummary(ticker, env, request) {
       segmentationProfile: inputs.segmentationProfile,
       scientificState: inputs.scientificState,
       forecastState: inputs.forecastState,
-      elliottState: inputs.elliottState,
       quantlabState: inputs.quantlabState,
       forecastMeta: inputs.forecastMeta,
       inputFingerprints: inputs.input_fingerprints,
@@ -490,20 +510,10 @@ export async function fetchStockSummary(ticker, env, request) {
   } catch { /* snapshots optional */ }
 
   // Fetch fundamentals as enrichment (with timeout to prevent Worker crash)
-  let fundamentals = null;
-  try {
-    const origin = new URL(request.url).origin;
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 1500);
-    const fRes = await fetch(new URL(`/api/fundamentals?ticker=${effectiveTicker}`, origin).toString(), {
-      signal: controller.signal
-    });
-    clearTimeout(timeout);
-    if (fRes.ok) {
-      const fPayload = await fRes.json();
-      if (fPayload.data) fundamentals = fPayload.data;
-    }
-  } catch { /* optional */ }
+  const fundamentals = assembledFundamentals || await fetchAssetJsonFromPaths([
+    `/data/fundamentals/${encodeURIComponent(String(effectiveTicker || '').toUpperCase())}.json`,
+    `/public/data/fundamentals/${encodeURIComponent(String(effectiveTicker || '').toUpperCase())}.json`,
+  ], request, env);
 
   if (!firstMeaningfulIdentityName(effectiveTicker, ctx.name, fundamentals?.companyName, universe?.name)) {
     fallbackName = await fetchStaticFallbackIdentityName(effectiveTicker, request, env);
@@ -568,34 +578,40 @@ export async function fetchStockHistorical(ticker, env, request) {
 
   let bars = [];
   let provider = 'eodhd';
-  try {
-    const chainResult = await fetchBarsWithProviderChain(effectiveTicker, env, {
-      outputsize: '300',
-      allowFailover: true,
-      providerSymbols: providerSymbolMap,
-    });
-    if (chainResult.ok) {
-      bars = Array.isArray(chainResult.bars) ? chainResult.bars : [];
-      provider = chainResult.provider || 'eodhd';
-      const quality = evaluateQuality({ bars }, env);
-      if (quality.reject) {
-        return {
-          ok: false, data: null,
-          meta: { status: 'error', provider, data_date: todayUtcDate(), version: 'v2' },
-          error: { code: 'QUALITY_REJECT', message: quality.reject.message, retryable: false },
-        };
-      }
-      if (Array.isArray(quality.flags)) qualityFlags.push(...quality.flags);
-    }
-  } catch { /* fall through */ }
-
+  const staticBars = await loadStaticBarsFallback(effectiveTicker, request, env);
+  if (staticBars.length) {
+    bars = staticBars;
+    provider = 'static_store';
+    qualityFlags.push('STATIC_FALLBACK_HISTORY');
+  }
   if (!bars.length) {
-    const staticBars = await loadStaticBarsFallback(effectiveTicker, request);
-    if (staticBars.length) {
-      bars = staticBars;
-      provider = 'static_store';
-      qualityFlags.push('STATIC_FALLBACK_HISTORY');
+    try {
+      const chainResult = await fetchBarsWithProviderChain(effectiveTicker, env, {
+        outputsize: '300',
+        allowFailover: true,
+        providerSymbols: providerSymbolMap,
+      });
+      if (chainResult.ok) {
+        bars = Array.isArray(chainResult.bars) ? chainResult.bars : [];
+        provider = chainResult.provider || 'eodhd';
+        const quality = evaluateQuality({ bars }, env);
+        if (quality.reject) {
+          return {
+            ok: false, data: null,
+            meta: { status: 'error', provider, data_date: todayUtcDate(), version: 'v2' },
+            error: { code: 'QUALITY_REJECT', message: quality.reject.message, retryable: false },
+          };
+        }
+        if (Array.isArray(quality.flags)) qualityFlags.push(...quality.flags);
+      }
+    } catch { /* fall through */ }
+  } else {
+    const quality = evaluateQuality({ bars }, env);
+    if (quality.reject) {
+      qualityFlags.push('STATIC_FALLBACK_QUALITY_DEGRADED');
+      qualityFlags.push(quality.reject.code || 'QUALITY_REJECT');
     }
+    if (Array.isArray(quality.flags)) qualityFlags.push(...quality.flags);
   }
 
   if (!bars.length) {
@@ -698,7 +714,6 @@ export async function fetchStockGovernance(ticker, env, request) {
       segmentationProfile: inputs.segmentationProfile,
       scientificState: inputs.scientificState,
       forecastState: inputs.forecastState,
-      elliottState: inputs.elliottState,
       quantlabState: inputs.quantlabState,
       forecastMeta: inputs.forecastMeta,
       inputFingerprints: inputs.input_fingerprints,

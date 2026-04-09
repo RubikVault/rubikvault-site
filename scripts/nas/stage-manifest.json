@@ -1,0 +1,256 @@
+{
+  "schema_version": "nas.migration.stages.v1",
+  "owner": "RubikVault",
+  "policy": {
+    "evidence_ssot": {
+      "primary": "native_matrix",
+      "secondary": "shadow_legacy",
+      "production_status": "runtime/STATUS.json"
+    },
+    "primary_runtime": "macbook",
+    "secondary_runtime": "nas_shadow",
+    "delete_policy": "forbidden",
+    "promotion_rule": "Three successful shadow runs plus matching outputs plus stable NAS metrics",
+    "rollback_rule": "Disable NAS shadow/promoted runner, keep or restore Mac as primary, ignore NAS outputs without deleting them",
+    "input_manifest_rule": "Mac builds input manifest first, NAS verifies it as step zero before the run can continue",
+    "lock_rule": "A global benchmark lock must prevent overlapping runs on Mac and NAS shadow paths",
+    "toolchain_validation_rule": "Every before/after validation snapshot must record node, npm, python, and uv versions on the NAS",
+    "system_snapshot_rule": "NAS snapshots must use the fixed rv-nas-snapshot format so benchmark history stays comparable",
+    "window_rules": {
+      "days_3_min_successful_runs": 5,
+      "days_7_min_successful_runs": 10,
+      "days_14_min_successful_runs": 20
+    },
+    "job_type_thresholds": {
+      "io_bound": {
+        "green_max_factor": 4,
+        "yellow_max_factor": 8
+      },
+      "mixed": {
+        "green_max_factor": 6,
+        "yellow_max_factor": 10
+      },
+      "cpu_bound": {
+        "green_max_factor": 8,
+        "yellow_max_factor": 15
+      }
+    },
+    "swap_thresholds_mb": {
+      "green_max": 250,
+      "yellow_max": 500,
+      "red_gt": 500
+    }
+  },
+  "stages": [
+    {
+      "id": "stage0",
+      "label": "Offload and Baseline Validation",
+      "status": "implemented",
+      "jobs": [
+        "scripts/nas/offload-safe-artifacts.sh",
+        "scripts/nas/validate-priorities.sh",
+        "scripts/nas/capture-checkpoint.sh"
+      ],
+      "write_scope": "new NAS directories, logs, and checkpoints only",
+      "rollback": "Stop using NAS helpers; Mac remains untouched"
+    },
+    {
+      "id": "stage1",
+      "label": "Light Ops Summary Shadow",
+      "status": "promotion_ready_not_promoted",
+      "job_type": "mixed",
+      "successful_shadow_runs": 51,
+      "failed_shadow_runs": 0,
+      "successful_shadow_runs_required": 3,
+      "avg_factor_nas_vs_mac": 2.52,
+      "benchmark_classification": "nas_candidate_for_future_offload",
+      "note": "51/51 successful. Factor 2.52x avg. Swap stable. Ready for future promotion decision.",
+      "latest_successful_shadow_run": {
+        "stamp": "20260406T080728Z",
+        "local_run_dir": "tmp/nas-shadow-runs/stage1/20260406T080728Z"
+      },
+      "jobs": [
+        "scripts/ops/build-safety-snapshot.mjs",
+        "scripts/ops/build-mission-control-summary.mjs",
+        "scripts/ops/build-ops-pulse.mjs"
+      ],
+      "shadow_runner": "scripts/nas/run-stage1-shadow.sh",
+      "input_manifest": "scripts/nas/inputs/stage-1.paths",
+      "shadow_outputs": [
+        "public/data/ops/safety.latest.json",
+        "public/data/ops/summary.latest.json",
+        "public/data/ops/pulse.json"
+      ],
+      "rollback": "Stop the stage1 shadow run; keep local Mac outputs as source of truth"
+    },
+    {
+      "id": "stage2",
+      "label": "Meta Dashboard Shadow",
+      "status": "promotion_ready_not_promoted",
+      "job_type": "mixed",
+      "successful_shadow_runs": 49,
+      "failed_shadow_runs": 0,
+      "successful_shadow_runs_required": 3,
+      "avg_factor_nas_vs_mac": 3.3,
+      "benchmark_classification": "nas_candidate_for_future_offload",
+      "note": "49/49 successful. Factor 3.3x avg. Swap stable (-1 MB avg delta). Ready for future promotion decision.",
+      "jobs": [
+        "scripts/generate_meta_dashboard_data.mjs"
+      ],
+      "shadow_runner": "scripts/nas/run-stage2-shadow.sh",
+      "input_manifest": "scripts/nas/inputs/stage-2.paths",
+      "latest_successful_shadow_run": {
+        "stamp": "20260405T165620Z",
+        "local_run_dir": "tmp/nas-shadow-runs/stage2/20260405T165620Z"
+      },
+      "shadow_outputs": [
+        "public/dashboard_v6_meta_data.json"
+      ],
+      "rollback": "Disable NAS shadow run; Mac keeps generating dashboard meta locally"
+    },
+    {
+      "id": "stage3",
+      "label": "System Status Shadow After Path Decoupling",
+      "status": "benchmark_active",
+      "job_type": "mixed",
+      "successful_shadow_runs": 44,
+      "failed_shadow_runs": 6,
+      "total_shadow_runs": 50,
+      "successful_shadow_runs_required": 3,
+      "avg_factor_nas_vs_mac": 3.54,
+      "benchmark_classification": "nas_candidate_for_future_offload",
+      "note": "44/50 successful. 6 prior failures were due to remote_workflows GitHub API field comparison — fixed 2026-04-06 by adding remote_workflows to VOLATILE_KEYS in compare-json.mjs. Factor 3.54x avg. Swap stable (-3 MB avg delta).",
+      "jobs": [
+        "scripts/ops/build-system-status-report.mjs"
+      ],
+      "shadow_runner": "scripts/nas/run-stage3-shadow.sh",
+      "input_manifest": "scripts/nas/inputs/stage-3.paths",
+      "latest_successful_shadow_run": {
+        "stamp": "20260405T155420Z",
+        "local_run_dir": "tmp/nas-shadow-runs/stage3/20260405T155420Z"
+      },
+      "shadow_outputs": [
+        "public/data/reports/system-status-latest.json"
+      ],
+      "rollback": "Unset NAS use and continue Mac-only system-status generation"
+    },
+    {
+      "id": "stage4",
+      "label": "Selected Medium Batch Jobs",
+      "status": "phase_c_shadow_benchmarking",
+      "benchmark_runner": "scripts/nas/run-stage4-shadow.sh",
+      "candidate_manifest": "scripts/nas/stage4-candidates.json",
+      "shadow_candidates": [
+        {
+          "id": "scientific_summary",
+          "job_type": "mixed",
+          "status": "benchmark_ready_candidate",
+          "successful_shadow_runs": 41,
+          "failed_shadow_runs": 1,
+          "total_shadow_runs": 42,
+          "successful_shadow_runs_required": 3,
+          "avg_factor_nas_vs_mac": 4.09,
+          "avg_nas_duration_sec": 3.35,
+          "avg_local_reference_duration_sec": 1.25,
+          "avg_local_reference_max_rss_mb": 775.76,
+          "avg_swap_delta_mb": 2.9,
+          "latest_successful_shadow_run": {
+            "stamp": "20260405T155542Z",
+            "local_run_dir": "tmp/nas-shadow-runs/stage4-scientific_summary/20260405T155542Z"
+          },
+          "benchmark_classification": "nas_candidate_for_future_offload",
+          "note": "41/42 successful. Factor 4.09x avg (green threshold for mixed: <=6x). Swap delta +2.9 MB avg (green). High RAM usage (~776 MB on Mac) but NAS handles it."
+        },
+        {
+          "id": "best_setups_v4",
+          "job_type": "cpu_bound",
+          "status": "benchmark_failed_ram_constraint",
+          "successful_shadow_runs": 0,
+          "failed_shadow_runs": 6,
+          "total_shadow_runs": 6,
+          "successful_shadow_runs_required": 3,
+          "avg_factor_nas_vs_mac": null,
+          "avg_local_reference_max_rss_mb": 1438.58,
+          "avg_swap_delta_mb": 24.8,
+          "latest_run": {
+            "stamp": "20260405T155658Z",
+            "local_run_dir": "tmp/nas-shadow-runs/stage4-best_setups_v4/20260405T155658Z"
+          },
+          "benchmark_classification": "mac_only",
+          "note": "0/6 successful. Requires 1438 MB RAM on Mac — NAS has only ~550 MB available. All 6 runs failed. Permanently Mac-only. Remove from overnight campaign."
+        },
+        {
+          "id": "etf_diagnostic",
+          "job_type": "mixed",
+          "status": "benchmarked_mac_only",
+          "successful_shadow_runs": 3,
+          "failed_shadow_runs": 0,
+          "total_shadow_runs": 3,
+          "successful_shadow_runs_required": 3,
+          "avg_factor_nas_vs_mac": 23.5,
+          "avg_swap_delta_mb": 51.2,
+          "latest_successful_shadow_run": {
+            "stamp": "20260404T191003Z",
+            "local_run_dir": "tmp/nas-shadow-runs/stage4-etf_diagnostic/20260404T191003Z"
+          },
+          "benchmark_classification": "mac_only",
+          "note": "3/3 successful outputs but factor 23.5x (red threshold: >10x for mixed). Swap delta +51 MB. Mac-only."
+        },
+        {
+          "id": "daily_audit_report",
+          "job_type": "mixed",
+          "status": "benchmarked_mac_only",
+          "successful_shadow_runs": 10,
+          "failed_shadow_runs": 0,
+          "total_shadow_runs": 10,
+          "successful_shadow_runs_required": 3,
+          "avg_factor_nas_vs_mac": 22.35,
+          "avg_swap_delta_mb": 38.6,
+          "latest_successful_shadow_run": {
+            "stamp": "20260405T093330Z",
+            "local_run_dir": "tmp/nas-shadow-runs/stage4-daily_audit_report/20260405T093330Z"
+          },
+          "benchmark_classification": "mac_only",
+          "note": "10/10 successful outputs but factor 22.35x (red). Swap delta +38.6 MB. Mac-only."
+        },
+        {
+          "id": "cutover_readiness_report",
+          "job_type": "mixed",
+          "status": "benchmarked_mac_only",
+          "successful_shadow_runs": 10,
+          "failed_shadow_runs": 0,
+          "total_shadow_runs": 10,
+          "successful_shadow_runs_required": 3,
+          "avg_factor_nas_vs_mac": 22.12,
+          "avg_swap_delta_mb": 16.6,
+          "latest_successful_shadow_run": {
+            "stamp": "20260405T093434Z",
+            "local_run_dir": "tmp/nas-shadow-runs/stage4-cutover_readiness_report/20260405T093434Z"
+          },
+          "benchmark_classification": "mac_only",
+          "note": "10/10 successful outputs but factor 22.12x (red). Swap delta +16.6 MB. Mac-only."
+        }
+      ],
+      "jobs": [
+        "node scripts/build-scientific-summary.mjs",
+        "node scripts/learning/diagnose-best-setups-etf-drop.mjs",
+        "node scripts/learning/quantlab-v1/daily-audit-report.mjs",
+        "node scripts/learning/quantlab-v1/cutover-readiness-report.mjs"
+      ],
+      "write_scope": "one job at a time, shadow first, no shared product output paths",
+      "rollback": "Per-job rollback to Mac primary"
+    },
+    {
+      "id": "stage5",
+      "label": "Heavy Data and Training Jobs",
+      "status": "blocked_on_capacity",
+      "jobs": [
+        "node scripts/lib/hist-probs/run-hist-probs.mjs --registry-path public/data/universe/v7/registry/registry.ndjson.gz --asset-classes STOCK,ETF --max-tickers 0",
+        "node scripts/forecast/run_daily.mjs",
+        "node scripts/learning/run-daily-learning-cycle.mjs"
+      ],
+      "write_scope": "Mac-only until RAM headroom and service stability are proven",
+      "rollback": "Immediate return to Mac-only"
+    }
+  ]
+}

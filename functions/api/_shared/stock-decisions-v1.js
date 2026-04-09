@@ -122,15 +122,6 @@ function resolveScientificDirection(scientific) {
   return '';
 }
 
-function resolveElliottDirection(elliott) {
-  return String(
-    elliott?.completedPattern?.direction
-      || elliott?.developingPattern?.direction
-      || elliott?.direction
-      || '',
-  ).trim().toLowerCase();
-}
-
 function resolveQuantlabDirection(quantlab) {
   const buyExperts = fin(quantlab?.consensus?.buyExperts);
   const avoidExperts = fin(quantlab?.consensus?.avoidExperts);
@@ -140,11 +131,10 @@ function resolveQuantlabDirection(quantlab) {
   return '';
 }
 
-function computeContributorAgreement({ scientific = null, forecast = null, elliott = null, quantlab = null, preferredHorizon = '5d' } = {}) {
+function computeContributorAgreement({ scientific = null, forecast = null, quantlab = null, preferredHorizon = '5d' } = {}) {
   const votes = [
     resolveScientificDirection(scientific),
     resolveForecastDirection(forecast, preferredHorizon),
-    resolveElliottDirection(elliott),
     resolveQuantlabDirection(quantlab),
   ].filter(Boolean);
   if (!votes.length) return null;
@@ -498,7 +488,7 @@ function tacticalActionForVerdict(verdict) {
   return 'HOLD';
 }
 
-function buildDecisionSlice({ horizon, scores, gates, states, stats, scientific, forecast, elliott, quantlab, runtimeControl, breakoutState, segmentationProfile, fundamentals }) {
+function buildDecisionSlice({ horizon, scores, gates, states, stats, scientific, forecast, quantlab, runtimeControl, breakoutState, segmentationProfile, fundamentals }) {
   const setupType = deriveSetupType(states, breakoutState);
   const strategicBias = deriveStrategicBias(scores.trend);
   const regimeTag = deriveRegimeTag(stats, states);
@@ -548,7 +538,6 @@ function buildDecisionSlice({ horizon, scores, gates, states, stats, scientific,
   const contributorAgreement = computeContributorAgreement({
     scientific,
     forecast,
-    elliott,
     quantlab,
     preferredHorizon: horizon === HORIZON_KEYS.short ? '1d' : horizon === HORIZON_KEYS.long ? '20d' : '5d',
   });
@@ -727,7 +716,6 @@ export function makeDecision(input = {}, legacyStats = null, legacyClose = null)
   const close = normalized.close ?? null;
   const scientific = normalized.scientific || null;
   const forecast = normalized.forecast || null;
-  const elliott = normalized.elliott || null;
   const quantlab = normalized.quantlab || null;
   const runtimeControl = normalized.runtimeControl || null;
   const fundamentals = normalized.fundamentals || null;
@@ -739,7 +727,7 @@ export function makeDecision(input = {}, legacyStats = null, legacyClose = null)
   const horizons = Object.fromEntries(
     Object.entries(HORIZON_POLICIES).map(([key, policy]) => {
       const scores = applyHorizonPolicy(baseScores, policy);
-      return [key, buildDecisionSlice({ horizon: key, scores, gates, states, stats, scientific, forecast, elliott, quantlab, runtimeControl, breakoutState: normalized.breakoutState, segmentationProfile, fundamentals })];
+      return [key, buildDecisionSlice({ horizon: key, scores, gates, states, stats, scientific, forecast, quantlab, runtimeControl, breakoutState: normalized.breakoutState, segmentationProfile, fundamentals })];
     }),
   );
 

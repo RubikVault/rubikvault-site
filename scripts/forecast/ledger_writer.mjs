@@ -55,12 +55,25 @@ export function readLedger(ledgerPath) {
     }
 
     const compressed = fs.readFileSync(ledgerPath);
-    const content = zlib.gunzipSync(compressed).toString('utf8');
+    const content = zlib.gunzipSync(compressed);
+    const records = [];
+    let start = 0;
 
-    return content
-        .split('\n')
-        .filter(line => line.trim())
-        .map(line => JSON.parse(line));
+    for (let index = 0; index < content.length; index += 1) {
+        if (content[index] !== 0x0A) continue;
+        if (index > start) {
+            const line = content.subarray(start, index).toString('utf8').trim();
+            if (line) records.push(JSON.parse(line));
+        }
+        start = index + 1;
+    }
+
+    if (start < content.length) {
+        const line = content.subarray(start).toString('utf8').trim();
+        if (line) records.push(JSON.parse(line));
+    }
+
+    return records;
 }
 
 /**

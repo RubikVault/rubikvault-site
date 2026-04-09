@@ -2,10 +2,10 @@
 /**
  * RubikVault — Daily Learning Cycle
  *
- * Unified learning system for all 4 features:
+ * Unified learning system for the active features:
  *  1. Forecast     — Champion/Challenger probabilities
  *  2. Scientific    — Setup/Trigger predictions
- *  3. Elliott Waves — Wave direction forecasts
+ *  3. QuantLab      — Factor/rank predictions
  *  4. Stock Analyzer — Ranking stability tracking
  *
  * Run: node scripts/learning/run-daily-learning-cycle.mjs [--date=YYYY-MM-DD]
@@ -32,6 +32,7 @@ const REPORT_DIR = path.join(LEARNING, 'reports');
 const CALIB_DIR = path.join(LEARNING, 'calibration');
 const PUBLIC_REPORT = path.join(ROOT, 'public/data/reports/learning-report-latest.json');
 const PUBLIC_REPORT_JS = path.join(ROOT, 'public/data/reports/learning-report-latest.js');
+const PUBLIC_RUNTIME_CONTROL = path.join(ROOT, 'public/data/runtime/stock-analyzer-control.json');
 const BEST_SETUPS_POLICY = path.join(ROOT, 'policies/best-setups.v1.json');
 const BEST_SETUPS_SNAPSHOT = path.join(ROOT, 'public/data/snapshots/best-setups-v4.json');
 const ETF_DIAGNOSTIC_LATEST = path.join(ROOT, 'public/data/reports/best-setups-etf-diagnostic-latest.json');
@@ -46,7 +47,6 @@ const SCIENTIFIC_SUMMARY = path.join(ROOT, 'public/data/supermodules/scientific-
 const SCIENTIFIC_SNAPSHOT = path.join(ROOT, 'public/data/snapshots/stock-analysis.json');
 const EOD_BATCH = path.join(ROOT, 'public/data/eod/batches/eod.latest.000.json');
 const EOD_US_NDJSON = path.join(ROOT, 'public/data/v3/eod/US/latest.ndjson.gz');
-const ELLIOTT_DIR = path.join(ROOT, 'public/data/marketphase');
 const SSOT_MANIFEST = resolveSsotPath(ROOT, 'manifest.json');
 const V7_STOCK_ROWS = resolveSsotPath(ROOT, 'stocks.max.rows.json');
 
@@ -765,141 +765,14 @@ function extractScientificPredictions(date, eodPrices) {
     };
 }
 
-// ─── 3. ELLIOTT: Extract Wave Predictions ───────────────────────────────────
-// IMPROVEMENT: Quality > Quantity — only top 500 by confidence, minimum confidence ≥ 0.30
 function extractElliottPredictions(date, eodPrices, candidateTickers = []) {
-    function toDirection(raw) {
-        const dir = String(raw || '').toLowerCase();
-        if (dir.includes('bull')) return 'bullish';
-        if (dir.includes('bear')) return 'bearish';
-        return 'neutral';
-    }
-
-    function toConfidence(entry = {}) {
-        const c1 = Number(entry?.developingPattern?.confidence);
-        if (Number.isFinite(c1)) return c1 / 100;
-        const c2 = Number(entry?.uncertainty?.confidenceDecay?.adjusted);
-        if (Number.isFinite(c2)) return c2 / 100;
-        const c3 = Number(entry?.completedPattern?.confidence0_100);
-        if (Number.isFinite(c3)) return c3 / 100;
-        return 0;
-    }
-
-    const tickerSet = new Set(candidateTickers.map((t) => String(t || '').toUpperCase()).filter(Boolean));
-    const perTickerPreds = [];
-    let latestAsOf = null;
-    if (tickerSet.size) {
-        for (const ticker of tickerSet) {
-            const doc = readJson(path.join(ELLIOTT_DIR, `${ticker}.json`));
-            const elliott = doc?.data?.elliott;
-            if (!elliott) continue;
-            const direction = toDirection(elliott?.completedPattern?.direction || doc?.data?.features?.SMATrend);
-            const confidence = toConfidence(elliott);
-            const wavePosition = elliott?.developingPattern?.possibleWave || 'unknown';
-            const asof = normalizeDate(doc?.meta?.generatedAt || doc?.meta?.fetchedAt);
-            if (asof && (!latestAsOf || asof > latestAsOf)) latestAsOf = asof;
-            if (direction === 'neutral') continue;
-            perTickerPreds.push({
-                feature: 'elliott',
-                ticker,
-                date,
-                horizon: '5d',
-                wave_position: wavePosition,
-                direction,
-                confidence,
-                probability: direction === 'bullish' ? 0.5 + confidence / 2 : 0.5 - confidence / 2,
-                price_at_prediction: eodPrices[ticker]?.close ?? null,
-                source: 'marketphase_per_symbol'
-            });
-        }
-    }
-
-    if (perTickerPreds.length) {
-        const qualityPreds = perTickerPreds
-            .filter((p) => p.confidence >= 0.30)
-            .sort((a, b) => b.confidence - a.confidence)
-            .slice(0, 1500);
-        console.log(`[learning] Elliott: ${qualityPreds.length} quality predictions from per-symbol files`);
-        return {
-            predictions: qualityPreds,
-            source_meta: {
-                source: 'marketphase_per_symbol',
-                asof: latestAsOf || null,
-                fresh: Boolean(latestAsOf && latestAsOf === date),
-                stale_days: daysBetween(latestAsOf, date)
-            }
-        };
-    }
-
-    const deepPath = path.join(ROOT, 'public/data/universe/v7/read_models/marketphase_deep_summary.json');
-    const doc = readJson(deepPath);
-    const items = doc?.items || [];
-
-    let allPreds = [];
-
-    if (!items.length) {
-        // Fallback: use EOD heuristic
-        allPreds = Object.entries(eodPrices).map(([ticker, bar]) => {
-            const range = bar.high - bar.low;
-            const posInRange = range > 0 ? (bar.close - bar.low) / range : 0.5;
-            const dayChange = bar.open > 0 ? (bar.close - bar.open) / bar.open : 0;
-            const direction = dayChange >= 0 ? 'bullish' : 'bearish';
-            let wavePosition, confidence;
-            if (posInRange > 0.8) { wavePosition = direction === 'bullish' ? 'in-correction' : 'pre-wave-3'; confidence = 0.40; }
-            else if (posInRange < 0.2) { wavePosition = direction === 'bearish' ? 'in-correction' : 'pre-wave-3'; confidence = 0.40; }
-            else if (posInRange > 0.5) { wavePosition = 'pre-wave-5'; confidence = 0.30; }
-            else { wavePosition = 'wave-1-start'; confidence = 0.20; }
-
-            return {
-                feature: 'elliott',
-                ticker,
-                date,
-                horizon: '5d',
-                wave_position: wavePosition,
-                direction,
-                confidence,
-                probability: direction === 'bullish' ? 0.5 + confidence / 2 : 0.5 - confidence / 2,
-                price_at_prediction: bar.close,
-                source: 'eod_heuristic'
-            };
-        });
-    } else {
-        allPreds = items.map(item => {
-            const ticker = String(item.symbol || item.ticker || '').toUpperCase();
-            const price = eodPrices[ticker]?.close ?? null;
-            const direction = item.direction || 'neutral';
-            const confidence = (item.confidence ?? 0) / 100;
-
-            return {
-                feature: 'elliott',
-                ticker,
-                date,
-                horizon: '5d',
-                wave_position: item.wavePosition || 'unknown',
-                direction,
-                confidence,
-                probability: direction === 'bullish' ? 0.5 + confidence / 2 :
-                    direction === 'bearish' ? 0.5 - confidence / 2 : 0.5,
-                price_at_prediction: price,
-                source: 'marketphase_deep'
-            };
-        }).filter(r => r.ticker);
-    }
-
-    // QUALITY FILTER: Minimum confidence ≥ 0.30, then take top 500 by confidence
-    const qualityPreds = allPreds
-        .filter(p => p.confidence >= 0.30 && p.direction !== 'neutral')
-        .sort((a, b) => b.confidence - a.confidence)
-        .slice(0, 500);
-
-    console.log(`[learning] Elliott: ${allPreds.length} total → ${qualityPreds.length} quality predictions (conf ≥ 0.30, top 500)`);
     return {
-        predictions: qualityPreds,
+        predictions: [],
         source_meta: {
-            source: items.length ? 'marketphase_deep' : 'eod_heuristic',
-            asof: normalizeDate(doc?.as_of || doc?.generated_at) || null,
-            fresh: Boolean(normalizeDate(doc?.as_of || doc?.generated_at) === date),
-            stale_days: daysBetween(normalizeDate(doc?.as_of || doc?.generated_at), date)
+            source: 'elliott_removed',
+            asof: null,
+            fresh: true,
+            stale_days: null
         }
     };
 }
@@ -1296,7 +1169,7 @@ function computeFeatureMetrics(feature, date, lookbackDays = 30) {
 }
 
 // ─── Report Builder ─────────────────────────────────────────────────────────
-function buildReport(date, forecastMetrics, scientificMetrics, elliottMetrics, quantlabMetrics, stockMetrics, stockStability, predCounts, analyzerControl = {}) {
+function buildReport(date, forecastMetrics, scientificMetrics, quantlabMetrics, stockMetrics, stockStability, predCounts, analyzerControl = {}) {
     // Build history from past reports (last 30 days)
     const history = [];
     for (let i = 29; i >= 0; i--) {
@@ -1313,7 +1186,6 @@ function buildReport(date, forecastMetrics, scientificMetrics, elliottMetrics, q
         forecast_brier_7d: forecastMetrics.brier_7d,
         scientific_accuracy_7d: scientificMetrics.accuracy_7d,
         scientific_hit_rate_7d: scientificMetrics.hit_rate_7d,
-        elliott_accuracy_7d: elliottMetrics.accuracy_7d,
         quantlab_accuracy_7d: quantlabMetrics.accuracy_7d,
         stock_stability: stockStability.stability,
     };
@@ -1331,7 +1203,6 @@ function buildReport(date, forecastMetrics, scientificMetrics, elliottMetrics, q
     const weeklyComparison = {
         forecast: { this_week: weekAvg(thisWeekMetrics, 'forecast_accuracy_7d'), last_week: weekAvg(lastWeekMetrics, 'forecast_accuracy_7d') },
         scientific: { this_week: weekAvg(thisWeekMetrics, 'scientific_hit_rate_7d'), last_week: weekAvg(lastWeekMetrics, 'scientific_hit_rate_7d') },
-        elliott: { this_week: weekAvg(thisWeekMetrics, 'elliott_accuracy_7d'), last_week: weekAvg(lastWeekMetrics, 'elliott_accuracy_7d') },
         quantlab: { this_week: weekAvg(thisWeekMetrics, 'quantlab_accuracy_7d'), last_week: weekAvg(lastWeekMetrics, 'quantlab_accuracy_7d') }
     };
 
@@ -1353,9 +1224,9 @@ function buildReport(date, forecastMetrics, scientificMetrics, elliottMetrics, q
         start_date: startDate,
         days_active: daysActive,
         summary: {
-            features_tracked: 5,
-            total_predictions_today: (predCounts.forecast || 0) + (predCounts.scientific || 0) + (predCounts.elliott || 0) + (predCounts.quantlab || 0) + (predCounts.stock || 0),
-            overall_status: determineOverallStatus(forecastMetrics, scientificMetrics, elliottMetrics, stockMetrics, quantlabMetrics)
+            features_tracked: 4,
+            total_predictions_today: (predCounts.forecast || 0) + (predCounts.scientific || 0) + (predCounts.quantlab || 0) + (predCounts.stock || 0),
+            overall_status: determineOverallStatus(forecastMetrics, scientificMetrics, stockMetrics, quantlabMetrics)
         },
         features: {
             forecast: {
@@ -1371,13 +1242,6 @@ function buildReport(date, forecastMetrics, scientificMetrics, elliottMetrics, q
                 ...scientificMetrics,
                 predictions_today: predCounts.scientific || 0,
                 source_meta: predCounts.scientific_source_meta || null,
-            },
-            elliott: {
-                name: 'Elliott Waves DFMSIF v1.0',
-                type: 'wave_direction_forecast',
-                ...elliottMetrics,
-                predictions_today: predCounts.elliott || 0,
-                source_meta: predCounts.elliott_source_meta || null,
             },
             quantlab: {
                 name: 'QuantLab Agents Ensemble',
@@ -1407,7 +1271,6 @@ function buildReport(date, forecastMetrics, scientificMetrics, elliottMetrics, q
             forecast_brier_7d: forecastMetrics.brier_7d,
             scientific_accuracy_7d: scientificMetrics.accuracy_7d,
             scientific_hit_rate_7d: scientificMetrics.hit_rate_7d,
-            elliott_accuracy_7d: elliottMetrics.accuracy_7d,
             stock_analyzer_precision_10: stockMetrics.precision_10,
             stock_analyzer_brier_7d: stockMetrics.brier_7d,
             stock_stability: stockStability.stability,
@@ -1415,8 +1278,8 @@ function buildReport(date, forecastMetrics, scientificMetrics, elliottMetrics, q
     };
 }
 
-function determineOverallStatus(f, s, e, stock = null, q = null) {
-    const trends = [f.trend_accuracy, s.trend_accuracy, e.trend_accuracy, stock?.trend_accuracy, q?.trend_accuracy].filter(t => t && t !== 'no_data');
+function determineOverallStatus(f, s, stock = null, q = null) {
+    const trends = [f.trend_accuracy, s.trend_accuracy, stock?.trend_accuracy, q?.trend_accuracy].filter(t => t && t !== 'no_data');
     if (!trends.length) return 'BOOTSTRAP — Noch keine Outcome-Daten';
     const improving = trends.filter(t => t === 'improving').length;
     const declining = trends.filter(t => t === 'declining').length;
@@ -1459,7 +1322,7 @@ function printReport(report) {
 
 // ─── Cross-Feature Conviction Score ─────────────────────────────────────────
 // IMPROVEMENT: Combines signals from all features for consensus scoring
-function computeConvictionScores(forecastPreds, scientificPreds, elliottPreds, stockPreds) {
+function computeConvictionScores(forecastPreds, scientificPreds, stockPreds) {
     const tickerSignals = {}; // ticker -> { perFeature: { feature: { direction, confidence } } }
 
     function addSignal(ticker, feature, direction, confidence) {
@@ -1476,7 +1339,6 @@ function computeConvictionScores(forecastPreds, scientificPreds, elliottPreds, s
 
     for (const p of forecastPreds) addSignal(p.ticker, 'forecast', p.direction, p.probability);
     for (const p of scientificPreds) addSignal(p.ticker, 'scientific', p.direction, p.probability);
-    for (const p of elliottPreds) addSignal(p.ticker, 'elliott', p.direction, p.confidence);
     // Stock analyzer doesn't have directional signal, skip
 
     const convictions = [];
@@ -1547,7 +1409,7 @@ async function main() {
     const date = resolveRunDate(dateArg ? dateArg.split('=')[1] : null);
 
     console.log(`[learning] Starting daily learning cycle for ${date}...`);
-    console.log('[learning] Improvements active: Calibration feedback, Signal ≥60, Elliott top-500, EMA smoothing, Cross-feature conviction');
+    console.log('[learning] Improvements active: Calibration feedback, Signal ≥60, EMA smoothing, Cross-feature conviction');
     const bestSetupsPolicy = loadBestSetupsPolicy();
     const analyzerPolicy = loadAnalyzerPolicy();
 
@@ -1561,13 +1423,7 @@ async function main() {
     const forecastPreds = forecastResult.predictions || [];
     const scientificResult = extractScientificPredictions(date, eodPrices);
     const scientificPreds = scientificResult.predictions || [];
-    const elliottCandidates = Array.from(
-        new Set([
-            ...forecastPreds.map((p) => p?.ticker),
-            ...scientificPreds.map((p) => p?.ticker)
-        ].map((t) => String(t || '').toUpperCase()).filter(Boolean))
-    );
-    const elliottResult = extractElliottPredictions(date, eodPrices, elliottCandidates);
+    const elliottResult = extractElliottPredictions(date, eodPrices, []);
     const elliottPreds = elliottResult.predictions || [];
 
     const quantlabResult = extractQuantLabPredictions(date, eodPrices);
@@ -1579,32 +1435,29 @@ async function main() {
     // 3. Save predictions to ledger
     if (forecastPreds.length) writeNdjson(predPath(date, 'forecast'), forecastPreds);
     if (scientificPreds.length) writeNdjson(predPath(date, 'scientific'), scientificPreds);
-    if (elliottPreds.length) writeNdjson(predPath(date, 'elliott'), elliottPreds);
     if (quantlabPreds.length) writeNdjson(predPath(date, 'quantlab'), quantlabPreds);
     if (stockPreds.length) writeNdjson(predPath(date, 'stock_analyzer'), stockPreds);
 
-    console.log(`[learning] Predictions logged: forecast=${forecastPreds.length} scientific=${scientificPreds.length} elliott=${elliottPreds.length} stock=${stockPreds.length}`);
+    console.log(`[learning] Predictions logged: forecast=${forecastPreds.length} scientific=${scientificPreds.length} quantlab=${quantlabPreds.length} stock=${stockPreds.length}`);
 
     // 4. Cross-feature conviction scoring
     console.log('[learning] Computing cross-feature conviction scores...');
-    const convictionScores = computeConvictionScores(forecastPreds, scientificPreds, elliottPreds, stockPreds);
+    const convictionScores = computeConvictionScores(forecastPreds, scientificPreds, stockPreds);
     console.log(`[learning] Top conviction tickers: ${convictionScores.slice(0, 5).map(c => `${c.ticker}(${c.conviction_score})`).join(', ')}`);
 
     // 5. Resolve outcomes for past predictions
     console.log('[learning] Resolving outcomes...');
     const forecastOutcomes = resolveOutcomes(date, 'forecast', eodPrices);
     const scientificOutcomes = resolveOutcomes(date, 'scientific', eodPrices);
-    const elliottOutcomes = resolveOutcomes(date, 'elliott', eodPrices);
     const quantlabOutcomes = resolveOutcomes(date, 'quantlab', eodPrices);
     const stockOutcomes = resolveOutcomes(date, 'stock_analyzer', eodPrices);
 
-    console.log(`[learning] Outcomes resolved: forecast=${forecastOutcomes.length} scientific=${scientificOutcomes.length} elliott=${elliottOutcomes.length} quantlab=${quantlabOutcomes.length} stock=${stockOutcomes.length}`);
+    console.log(`[learning] Outcomes resolved: forecast=${forecastOutcomes.length} scientific=${scientificOutcomes.length} quantlab=${quantlabOutcomes.length} stock=${stockOutcomes.length}`);
 
     // 6. Compute metrics (rolling 30d window)
     console.log('[learning] Computing metrics...');
     const forecastMetrics = computeFeatureMetrics('forecast', date);
     const scientificMetrics = computeFeatureMetrics('scientific', date);
-    const elliottMetrics = computeFeatureMetrics('elliott', date);
     const quantlabMetrics = computeFeatureMetrics('quantlab', date);
     const stockMetrics = computeFeatureMetrics('stock_analyzer', date);
     const stockStability = computeRankingStability(date);
@@ -1626,13 +1479,11 @@ async function main() {
     };
 
     // 7. Build and save report
-    const report = buildReport(date, forecastMetrics, scientificMetrics, elliottMetrics, quantlabMetrics, stockMetrics, stockStability, {
+    const report = buildReport(date, forecastMetrics, scientificMetrics, quantlabMetrics, stockMetrics, stockStability, {
         forecast: forecastPreds.length,
         forecast_source_meta: forecastResult.source_meta,
         scientific: scientificPreds.length,
         scientific_source_meta: scientificResult.source_meta,
-        elliott: elliottPreds.length,
-        elliott_source_meta: elliottResult.source_meta,
         quantlab: quantlabPreds.length,
         quantlab_source_meta: quantlabResult.source_meta,
         stock: stockPreds.length,
@@ -1647,7 +1498,6 @@ async function main() {
         'forecast_adaptive_confidence',
         'scientific_signal_threshold_60',
         'scientific_setup_decay_10d',
-        'elliott_quality_filter_top500',
         'stock_ema_smoothing_alpha03',
         'cross_feature_conviction',
         'scientific_atr_breakout_threshold',
@@ -1661,11 +1511,28 @@ async function main() {
         cost_model_version: bestSetupsPolicy.cost_model_version || null,
         meta_labeler_rule_version: bestSetupsPolicy.meta_labeler_rule_version || null,
     } : null;
+    const runtimeControl = {
+        schema: 'rv.stock_analyzer_control.v1',
+        generated_at: new Date().toISOString(),
+        report_date: date,
+        learning_status: analyzerControl.learning_status || 'BOOTSTRAP',
+        safety_switch: analyzerControl.safety_switch || null,
+        minimum_n_status: analyzerControl.minimum_n_status || null,
+        false_positive_classes_30d: analyzerControl.false_positive_classes_30d || {},
+        policy: bestSetupsPolicy ? {
+            schema_version: bestSetupsPolicy.schema_version || null,
+            system_version: bestSetupsPolicy.system?.version || null,
+            learning_status_default: bestSetupsPolicy.learning_status?.default || null,
+            cost_model_version: bestSetupsPolicy.cost_model_version || null,
+            meta_labeler_rule_version: bestSetupsPolicy.meta_labeler_rule_version || null,
+        } : null,
+    };
 
     writeJson(reportPath(date), report);
     writeJson(path.join(REPORT_DIR, 'latest.json'), report);
     writeJson(PUBLIC_REPORT, report);
     writePublicReportScript(PUBLIC_REPORT_JS, report);
+    writeJson(PUBLIC_RUNTIME_CONTROL, runtimeControl);
 
     // 8. Print human-readable report
     printReport(report);

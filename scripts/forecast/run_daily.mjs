@@ -27,6 +27,16 @@ import { resolveTradingDate, getHorizonOutcomeDate } from './trading_date.mjs';
 
 const HORIZONS = ['1d', '5d', '20d'];
 const HORIZON_DAYS = { '1d': 1, '5d': 5, '20d': 20 };
+const SKIP_MATURED_EVAL = process.env.FORECAST_SKIP_MATURED_EVAL === '1';
+
+async function loadExistingLedgerIds(repoRoot, ledgerType, startDate, endDate, idField) {
+    const ids = new Set();
+    for await (const row of iterateLedgerRangeAsync(repoRoot, ledgerType, startDate, endDate)) {
+        const id = String(row?.[idField] || '').trim();
+        if (id) ids.add(id);
+    }
+    return ids;
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Pipeline Steps
@@ -171,6 +181,14 @@ async function evaluateMaturedForecasts({
     const today = new Date(tradingDate);
     const startDate = new Date(today);
     startDate.setMonth(startDate.getMonth() - maxMonths);
+    const existingOutcomeForecastIds = await loadExistingLedgerIds(
+        repoRoot,
+        'outcomes',
+        startDate.toISOString().slice(0, 10),
+        tradingDate,
+        'forecast_id'
+    );
+    const seenForecastIds = new Set();
 
     for await (const forecast of iterateLedgerRangeAsync(
         repoRoot,
@@ -178,6 +196,9 @@ async function evaluateMaturedForecasts({
         startDate.toISOString().slice(0, 10),
         tradingDate
     )) {
+        const forecastId = String(forecast?.forecast_id || '').trim();
+        if (!forecastId || seenForecastIds.has(forecastId) || existingOutcomeForecastIds.has(forecastId)) continue;
+        seenForecastIds.add(forecastId);
         if (forecast?.provenance !== 'live') continue;
         const horizonDays = HORIZON_DAYS[forecast.horizon] ?? 1;
         const outcomeDate = getHorizonOutcomeDate(forecast.trading_date, horizonDays);
@@ -316,27 +337,41 @@ export async function runDailyPipeline(options = {}) {
 
     // 7. Write forecast records
     console.log('[Step 7] Writing forecast records to ledger...');
-    writeForecastRecords(repoRoot, forecasts);
+    const currentMonthStart = `${tradingDate.slice(0, 7)}-01`;
+    const existingForecastIds = await loadExistingLedgerIds(
+        repoRoot,
+        'forecasts',
+        currentMonthStart,
+        tradingDate,
+        'forecast_id'
+    );
+    const newForecasts = forecasts.filter((forecast) => !existingForecastIds.has(String(forecast?.forecast_id || '').trim()));
+    writeForecastRecords(repoRoot, newForecasts);
 
     // 8. Evaluate matured forecasts
     console.log('[Step 8] Evaluating matured forecasts...');
     let outcomes = [];
     let evaluationWarning = null;
-    try {
-        outcomes = await evaluateMaturedForecasts({
-            tradingDate,
-            repoRoot,
-            priceHistory,
-            policy
-        });
-        console.log(`  Evaluated ${outcomes.length} outcomes`);
-    } catch (err) {
-        if (err?.code === 'ERR_STRING_TOO_LONG') {
-            evaluationWarning = `maturity_eval_skipped:${err.code}`;
-            outcomes = [];
-            console.warn(`  ⚠ Skipping maturity evaluation (${err.code}). Continuing with fresh forecasts.`);
-        } else {
-            throw err;
+    if (SKIP_MATURED_EVAL) {
+        evaluationWarning = 'maturity_eval_skipped:FORECAST_SKIP_MATURED_EVAL';
+        console.warn('  ⚠ Skipping maturity evaluation (FORECAST_SKIP_MATURED_EVAL=1). Continuing with fresh forecasts.');
+    } else {
+        try {
+            outcomes = await evaluateMaturedForecasts({
+                tradingDate,
+                repoRoot,
+                priceHistory,
+                policy
+            });
+            console.log(`  Evaluated ${outcomes.length} outcomes`);
+        } catch (err) {
+            if (err?.code === 'ERR_STRING_TOO_LONG') {
+                evaluationWarning = `maturity_eval_skipped:${err.code}`;
+                outcomes = [];
+                console.warn(`  ⚠ Skipping maturity evaluation (${err.code}). Continuing with fresh forecasts.`);
+            } else {
+                throw err;
+            }
         }
     }
 

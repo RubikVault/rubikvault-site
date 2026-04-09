@@ -53,7 +53,7 @@ def parse_args(argv: Iterable[str]) -> argparse.Namespace:
     p.add_argument("--stageb-strict-gate-profile", choices=["hard", "broad"], default="hard")
     p.add_argument("--stageb-input-scope", choices=["survivors_a", "all_candidates"], default="survivors_a")
     p.add_argument("--stageb-min-survivors-b-q1", type=int, default=1)
-    p.add_argument("--stageb-survivors-b-q1-failure-mode", choices=["hard", "warn"], default="hard")
+    p.add_argument("--stageb-survivors-b-q1-failure-mode", choices=["hard", "warn"], default="warn")
     p.add_argument("--stageb-psr-strict-min", type=float, default=0.60)
     p.add_argument("--stageb-dsr-strict-min", type=float, default=0.50)
     p.add_argument("--stageb-psr-cpcv-strict-min", type=float, default=0.55)

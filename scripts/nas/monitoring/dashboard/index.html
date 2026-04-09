@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>NAS Health Monitor</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <div class="shell">
+    <header class="hero">
+      <div>
+        <p class="eyebrow">Synology DS720+</p>
+        <h1>NAS Health Monitor</h1>
+        <p class="subline">Leichtgewichtiges Monitoring mit Tageslage, Trend und Repo-Korrelation.</p>
+      </div>
+      <div class="stamp">
+        <span>Letztes Update</span>
+        <strong id="generated-at">Keine Daten</strong>
+      </div>
+    </header>
+
+    <main class="grid">
+      <section class="card status-card">
+        <div class="section-head">
+          <p class="eyebrow">Heute</p>
+          <h2>Gesamtstatus</h2>
+        </div>
+        <div class="status-line">
+          <span id="status-pill" class="status-pill is-unknown">UNBEKANNT</span>
+          <p id="summary-text">Noch keine Snapshot-Daten vorhanden.</p>
+        </div>
+        <div id="today-metrics" class="today-metrics"></div>
+      </section>
+
+      <section class="card">
+        <div class="section-head">
+          <p class="eyebrow">Repo / Jobs</p>
+          <h2>Zu diesen Zeiten prüfen</h2>
+        </div>
+        <ul id="hot-windows" class="list"></ul>
+      </section>
+
+      <section class="card">
+        <div class="section-head">
+          <p class="eyebrow">Reports</p>
+          <h2>Neu + Historie</h2>
+        </div>
+        <ul id="reports-list" class="list"></ul>
+      </section>
+
+      <section class="card chart-card">
+        <div class="section-head">
+          <p class="eyebrow">7 / 30 Tage</p>
+          <h2>CPU Load</h2>
+        </div>
+        <canvas id="cpu-chart"></canvas>
+      </section>
+
+      <section class="card chart-card">
+        <div class="section-head">
+          <p class="eyebrow">7 / 30 Tage</p>
+          <h2>RAM %</h2>
+        </div>
+        <canvas id="ram-chart"></canvas>
+      </section>
+
+      <section class="card chart-card">
+        <div class="section-head">
+          <p class="eyebrow">7 / 30 Tage</p>
+          <h2>Disk Temperaturen</h2>
+        </div>
+        <canvas id="disk-chart"></canvas>
+      </section>
+
+      <section class="card chart-card">
+        <div class="section-head">
+          <p class="eyebrow">7 / 30 Tage</p>
+          <h2>Volume %</h2>
+        </div>
+        <canvas id="volume-chart"></canvas>
+      </section>
+
+      <section class="card events-card">
+        <div class="section-head">
+          <p class="eyebrow">Events</p>
+          <h2>Letzte Meldungen</h2>
+        </div>
+        <ul id="events-list" class="list"></ul>
+      </section>
+    </main>
+  </div>
+
+  <script src="./vendor/chart.umd.js"></script>
+  <script src="./data.js"></script>
+  <script src="./app.js"></script>
+</body>
+</html>

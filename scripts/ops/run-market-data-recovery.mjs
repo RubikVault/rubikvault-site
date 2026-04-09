@@ -6,6 +6,16 @@ import { spawnSync } from 'node:child_process';
 
 const REPO_ROOT = path.resolve(new URL('.', import.meta.url).pathname, '../..');
 const OUTPUT_PATH = path.join(REPO_ROOT, 'public/data/reports/system-recovery-latest.json');
+const now = new Date();
+const startOfUtcDay = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+const afterUsClose = now.getUTCHours() > 20 || (now.getUTCHours() === 20 && now.getUTCMinutes() >= 15);
+if (!afterUsClose) startOfUtcDay.setUTCDate(startOfUtcDay.getUTCDate() - 1);
+while (startOfUtcDay.getUTCDay() === 0 || startOfUtcDay.getUTCDay() === 6) {
+  startOfUtcDay.setUTCDate(startOfUtcDay.getUTCDate() - 1);
+}
+const targetMarketDate = startOfUtcDay.toISOString().slice(0, 10);
+const refreshFromDate = new Date(startOfUtcDay.getTime());
+refreshFromDate.setUTCDate(refreshFromDate.getUTCDate() - 14);
 
 const STEPS = [
   {
@@ -14,24 +24,42 @@ const STEPS = [
     gate: (results) => true,
   },
   {
+    id: 'us_eu_scope',
+    command: ['node', 'scripts/universe-v7/build-us-eu-scope.mjs'],
+    gate: (results) => true,
+  },
+  {
     id: 'market_data_refresh',
-    command: ['python3', 'scripts/quantlab/refresh_v7_history_from_eodhd.py', '--allowlist-path', 'public/data/universe/v7/ssot/stocks.max.canonical.ids.json', '--from-date', new Date(Date.now() - (28 * 86400000)).toISOString().slice(0, 10)],
+    command: [
+      'python3',
+      'scripts/quantlab/refresh_v7_history_from_eodhd.py',
+      '--allowlist-path',
+      'public/data/universe/v7/ssot/stocks_etfs.us_eu.canonical.ids.json',
+      '--from-date',
+      refreshFromDate.toISOString().slice(0, 10),
+      '--to-date',
+      targetMarketDate,
+      '--concurrency',
+      '12',
+      '--progress-every',
+      '500',
+    ],
     gate: () => false,
     note: 'Run manually with valid provider env/token when upstream market data must be advanced.',
   },
   {
     id: 'q1_delta_ingest',
-    command: ['python3', 'scripts/quantlab/run_daily_delta_ingest_q1.py', '--ingest-date', new Date().toISOString().slice(0, 10)],
+    command: ['python3', 'scripts/quantlab/run_daily_delta_ingest_q1.py', '--ingest-date', targetMarketDate, '--full-scan-packs'],
     gate: (results) => results.market_data_refresh?.status === 'completed',
   },
   {
     id: 'quantlab_daily_report',
     command: ['node', 'scripts/quantlab/build_quantlab_v4_daily_report.mjs'],
-    gate: (results) => ['completed', 'skipped'].includes(results.q1_delta_ingest?.status || ''),
+    gate: (results) => ['completed', 'skipped'].includes(results.market_data_refresh?.status || '') && ['completed', 'skipped'].includes(results.q1_delta_ingest?.status || ''),
   },
   {
     id: 'hist_probs',
-    command: ['node', 'scripts/lib/hist-probs/run-hist-probs.mjs', '--tickers', 'SPY,QQQ,IWM,AAPL,MSFT,NVDA,AMZN,GOOGL,META,TSLA'],
+    command: ['node', 'run-hist-probs-turbo.mjs'],
     gate: (results) => ['completed', 'skipped'].includes(results.q1_delta_ingest?.status || ''),
   },
   {
@@ -40,29 +68,14 @@ const STEPS = [
     gate: (results) => results.quantlab_daily_report?.status === 'completed' && results.hist_probs?.status === 'completed',
   },
   {
-    id: 'etf_diagnostic',
-    command: ['node', 'scripts/learning/diagnose-best-setups-etf-drop.mjs'],
+    id: 'stock_analyzer_universe_audit',
+    command: ['node', 'scripts/ops/build-stock-analyzer-universe-audit.mjs', '--base-url', 'http://127.0.0.1:8788', '--registry-path', 'public/data/universe/v7/registry/registry.ndjson.gz', '--asset-classes', 'STOCK,ETF', '--max-tickers', '0'],
     gate: (results) => results.snapshot?.status === 'completed',
-  },
-  {
-    id: 'learning_daily',
-    command: ['node', 'scripts/learning/run-daily-learning-cycle.mjs', `--date=${new Date().toISOString().slice(0, 10)}`],
-    gate: (results) => results.snapshot?.status === 'completed',
-  },
-  {
-    id: 'v1_audit',
-    command: ['node', 'scripts/learning/quantlab-v1/daily-audit-report.mjs'],
-    gate: (results) => results.learning_daily?.status === 'completed',
-  },
-  {
-    id: 'cutover_readiness',
-    command: ['node', 'scripts/learning/quantlab-v1/cutover-readiness-report.mjs'],
-    gate: (results) => results.v1_audit?.status === 'completed',
   },
   {
     id: 'system_status_postflight',
     command: ['node', 'scripts/ops/build-system-status-report.mjs'],
-    gate: () => true,
+    gate: (results) => results.stock_analyzer_universe_audit?.status === 'completed',
   },
   {
     id: 'dashboard_meta',

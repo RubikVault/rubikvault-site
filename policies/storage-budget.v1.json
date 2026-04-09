@@ -1,0 +1,88 @@
+{
+  "schema_version": "v1",
+  "description": "Storage thresholds and tiering rules for Mac-First 500-GB architecture. Speicherknappheit darf NIEMALS zu schlechteren Wahrscheinlichkeiten führen. NAS ist SSH-Remote (neonas), kein lokales Mount.",
+  "runtime_mode": "mac_only_hot_nas_cold",
+  "active_regions": ["US", "EU"],
+  "cold_shadow_regions": ["ASIA"],
+  "thresholds_gb": {
+    "target_free": 120,
+    "warn_free": 100,
+    "block_heavy_jobs": 80,
+    "emergency": 60,
+    "notes": "Derived from: hotset ~45 GB + feature store ~66 GB + raw ~6.7 GB + universe history ~9.5 GB + runs/logs ~15 GB = ~160 GB active. Target: 500 GB - 160 GB active - 120 GB buffer."
+  },
+  "current_known_sizes_gb": {
+    "snapshots_total": 181,
+    "snapshots_archivable_estimate": 174,
+    "feature_store_total": 66,
+    "feature_store_old_versions_estimate": 3,
+    "raw_data": 6.7,
+    "universe_history": 9.5,
+    "runs_total_estimate": 17,
+    "notes_date": "2026-04-08"
+  },
+  "tiering": {
+    "hot_local": {
+      "description": "All data required for active US+EU best-result pipeline runs",
+      "contents": [
+        "q1step2bars snapshots (latest 2 per active date set — used by Stage A/B)",
+        "q1step1 snapshots (latest 1-2 — rebuild source)",
+        "Feature store v4_q1panel_overnight ALL active partitions",
+        "Raw history US+EU (actively ingested)",
+        "Universe v7 history US+EU",
+        "Current hist-probs",
+        "Current registry reports (latest 3)",
+        "Active Stage-B runs"
+      ],
+      "eviction_policy": "never — loss = prediction quality degradation"
+    },
+    "cold_nas": {
+      "description": "Archive on NAS via SSH. Mac never reads from NAS during active compute. Only archive what is 100% proven unused.",
+      "contents": [
+        "q1step2bars snapshots rank > 2 (older than 2nd-latest date — NOT used by training pipeline)",
+        "q1step1 snapshots rank > 2",
+        "Old feature store versions (ONLY after confirmed not referenced by any active script)",
+        "Feature store partitions outside active window (ONLY if confirmed safe)",
+        "Old Stage-B runs > 90 days (ONLY if confirmed not needed for reporting)",
+        "Old logs and scratch artifacts"
+      ],
+      "eviction_policy": "copy_verify_catalog_then_delete_local — only archive what is 100% proven unused"
+    }
+  },
+  "nas_config": {
+    "ssh_host": "neonas",
+    "ssh_base": "/volume1/homes/neoboy/RepoOps/rubikvault-site",
+    "archive_subdir": "QuantLabColdArchive",
+    "nas_free_gb": 10000,
+    "notes": "10 TB free on NAS. NAS accessible via SSH alias 'neonas'. No local mount required — rsync -az -e ssh.",
+    "failure_mode": {
+      "archive_nas_unreachable": "leave_local_intact_exit_21",
+      "hydrate_nas_unreachable": "hard_block_exit_21",
+      "nas_full": "leave_local_intact_exit_20"
+    }
+  },
+  "archive_sequence": [
+    {"step": 1, "class": "q1step2bars_snapshot", "reason": "SAFE: rank > 2 snapshots are pure backups — training pipeline ALWAYS uses the latest by date/mtime. ~6.7 GB each, 24+ archivable ≈ 160 GB.", "safety": "proven_safe"},
+    {"step": 2, "class": "q1step1_snapshot", "reason": "SAFE: rank > 2 step1 snapshots are rebuild artifacts only needed for catastrophic recovery. Keep latest 2.", "safety": "proven_safe"},
+    {"step": 3, "class": "feature_store_old_version", "reason": "CONDITIONAL: only archive AFTER confirming no active script references the version. Check run_q1_*.py for version strings first.", "safety": "verify_before_archive"},
+    {"step": 4, "class": "feature_store_old_partition", "reason": "CONDITIONAL: only archive partitions older than the active training window. Verify partition is not in any running job's input set.", "safety": "verify_before_archive"},
+    {"step": 5, "class": "stage_b_old_runs", "reason": "CONDITIONAL: verify run is not referenced by any report or downstream chain.", "safety": "verify_before_archive"},
+    {"step": 6, "class": "logs_scratch", "reason": "CONDITIONAL: logs older than 30 days are generally safe.", "safety": "verify_before_archive"},
+    {"step": 7, "action": "block_heavy_jobs", "reason": "If still below block_heavy_jobs threshold after all proven-safe archival"}
+  ],
+  "preflight_gates": {
+    "heavy_jobs": ["stage_a", "stage_b", "feature_store_build", "snapshot_build", "registry", "training_catchup"],
+    "action_if_blocked": "exit_20_storage_blocked",
+    "bypass_allowed": false
+  },
+  "quality_contract": {
+    "degrade_mode_allowed": false,
+    "scope_reduction_allowed": false,
+    "fold_reduction_allowed": false,
+    "lookback_reduction_allowed": false,
+    "hist_probs_coverage_reduction_allowed": false,
+    "gate_weakening_allowed": false,
+    "violation_action": "hard_block_report_STORAGE_BLOCKED",
+    "archive_safety_rule": "ONLY archive data that is 100% proven unused by active training, prediction, reporting, or UI pipelines"
+  }
+}

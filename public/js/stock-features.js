@@ -1103,7 +1103,7 @@ function _useFeaturesV4() {
 function _v2ContractValid(payload) {
   const c = payload?.v2_contract;
   if (!c || typeof c !== 'object') return false;
-  const req = ['scientific', 'forecast', 'elliott'];
+  const req = ['scientific', 'forecast'];
   for (const k of req) {
     const row = c[k];
     if (!row || typeof row !== 'object') return false;
@@ -1120,7 +1120,6 @@ function _v4ContractValid(payload) {
   const required = [
     'scientific',
     'forecast',
-    'elliott',
     'raw_validation',
     'outcome_labels',
     'scientific_eligibility',
@@ -1414,8 +1413,8 @@ async function buildQuantLabInsight(ticker, context = {}) {
     <div style="font-size:.72rem;color:var(--text-dim)">Conf: ${_escHtml(((row.v3Consensus.confidence || 0) * 100).toFixed(0))}%${row.v3Consensus.regime ? ` · ${_escHtml(row.v3Consensus.regime)}` : ''}</div>
   </div>` : '';
 
-  // ── Load async model summaries (Scientific, Forecast, Elliott) ──
-  let scientificSummary = '', forecastSummary = '', elliottSummary = '';
+  // ── Load async model summaries (Scientific, Forecast) ──
+  let scientificSummary = '', forecastSummary = '';
   try {
     const insights = await _loadInsights(ticker);
     const sci = insights?.scientific;
@@ -1431,18 +1430,9 @@ async function buildQuantLabInsight(ticker, context = {}) {
       const fmt = (h) => h ? `${String(h.direction || '').charAt(0).toUpperCase() + String(h.direction || '').slice(1)} ${h.probability != null ? (h.probability * 100).toFixed(0) + '%' : ''}` : '';
       forecastSummary = `<tr><td style="font-weight:600">ML Forecast</td><td style="text-align:right">${fmt(h1d)}${h5d ? ` · 5d ${fmt(h5d)}` : ''}</td><td style="text-align:right;font-size:.72rem;color:var(--text-muted)">${insights?.forecast_meta?.champion_id || '—'}</td></tr>`;
     }
-    const ew = insights?.elliott;
-    if (ew) {
-      const dev = ew.developingPattern || {};
-      const comp = ew.completedPattern || {};
-      const wave = dev.possibleWave || 'N/A';
-      const dir = String(comp.direction || '').toLowerCase().includes('bull') ? 'Bullish' : String(comp.direction || '').toLowerCase().includes('bear') ? 'Bearish' : 'Neutral';
-      const conf = dev.confidence != null ? Math.round(dev.confidence) + '%' : '';
-      elliottSummary = `<tr><td style="font-weight:600">Elliott Wave</td><td style="text-align:right">${_escHtml(wave)} · ${_escHtml(dir)}</td><td style="text-align:right;font-size:.72rem;color:var(--text-muted)">${conf}</td></tr>`;
-    }
   } catch { /* model data optional */ }
 
-  const modelRows = [scientificSummary, forecastSummary, elliottSummary].filter(Boolean).join('');
+  const modelRows = [scientificSummary, forecastSummary].filter(Boolean).join('');
 
   return `<div class="section section-full"><h2>Predictions</h2>
     <div style="display:flex;gap:.75rem;flex-wrap:wrap;align-items:center;margin-bottom:.6rem">
@@ -1722,124 +1712,8 @@ ${barsHtml}
 // ELLIOTT WAVE INTEGRATION
 // ═══════════════════════════════════════════════════════════════════════════
 async function buildElliottInsight(ticker, context = {}) {
-  const insights = await _loadInsights(ticker);
-  const entry = insights?.elliott;
-  const elliottStateRow = _contractState(insights, 'elliott');
-  const elliottProxy = elliottStateRow?.status === 'proxy';
-  const elliottAsOf = elliottStateRow?.as_of || '';
-  const close = _toNumber(context?.close);
-  const quality = (typeof window !== 'undefined' && window._rvQualitySignals) || {};
-  const primaryBias = String(quality.overallAction || quality.decisionSummary || '').toUpperCase();
-
-  function levelPlausibility(levels = []) {
-    if (close == null || close <= 0 || !levels.length) return { ok: true, maxDist: 0 };
-    const dists = levels.map((v) => Math.abs((_toNumber(v) - close) / close)).filter((v) => Number.isFinite(v));
-    if (!dists.length) return { ok: true, maxDist: 0 };
-    const maxDist = Math.max(...dists);
-    return { ok: maxDist <= 0.35, maxDist };
-  }
-
-  if (!entry || elliottProxy) {
-    const proxy = (elliottProxy && entry) ? _bridgeElliottProxy(entry, context) : _proxyElliottSignal(context);
-    if (!proxy) return `<div class="section"><h2>\ud83c\udf0a Elliott Wave Analysis</h2><div class="placeholder-card">No Elliott Wave data available for ${ticker}.</div></div>`;
-    const trendCol = proxy.direction === 'bullish' ? 'var(--green)' : 'var(--red)';
-    const p = levelPlausibility([proxy.support, proxy.resistance]);
-    if (!p.ok) {
-      _setQualitySignals({ elliottState: 'suppressed', elliottConflict: true });
-      return `<div class="section"><h2>\ud83c\udf0a Elliott Wave Analysis</h2>
-        <div class="placeholder-card">Elliott output suppressed: price levels are desynchronized from the current price zone.</div>
-      </div>`;
-    }
-    _setQualitySignals({ elliottState: 'proxy', elliottConflict: false });
-    const proxyMsg = elliottProxy && entry
-      ? `Full Elliott model output is not ready for ${ticker} yet. Showing a bridge-derived wave estimate from the current deep summary.`
-      : `Full Elliott model output is not ready for ${ticker} yet. Showing a local wave estimate from current price structure.`;
-    return `<div class="section"><h2>\ud83c\udf0a Elliott Wave Analysis${elliottAsOf ? ` <span style="float:right;font-size:.7rem;font-weight:400;color:var(--text-dim)">As of ${elliottAsOf}</span>` : ''}</h2>
-      <div style="margin-bottom:.5rem;padding:.55rem .65rem;border-radius:8px;border:2px dashed rgba(251,191,36,.45);background:rgba(251,191,36,.06)">
-        <div style="font-size:.7rem;font-weight:700;color:#fbbf24;text-transform:uppercase;letter-spacing:.04em;margin-bottom:.3rem">\u26a0 Proxy Estimate</div>
-        ${proxyMsg}
-      </div>
-      <table class="ma-table" style="margin-bottom:.45rem">
-        <tbody>
-          <tr><td style="font-weight:600">Developing Wave</td><td style="text-align:right"><strong style="color:var(--accent)">${proxy.wave}</strong></td></tr>
-          <tr><td style="font-weight:600">Direction</td><td style="text-align:right"><strong style="color:${trendCol}">${proxy.direction.toUpperCase()}</strong></td></tr>
-          <tr><td style="font-weight:600">Confidence</td><td style="text-align:right"><strong>${proxy.confidence}%</strong></td></tr>
-          <tr><td style="font-weight:600">Fib Conformance</td><td style="text-align:right"><strong>${proxy.fibConformance}%</strong></td></tr>
-        </tbody>
-      </table>
-      <div style="font-size:.75rem;color:var(--text-dim)">Support: <strong style="color:var(--green)">$${proxy.support.toFixed(2)}</strong> · Resistance: <strong style="color:var(--red)">$${proxy.resistance.toFixed(2)}</strong></div>
-    </div>`;
-  }
-
-  const completed = entry.completedPattern || {};
-  const developing = entry.developingPattern || {};
-  const uncertainty = entry.uncertainty || {};
-  const fib = entry.fib || {};
-
-  // Wave position from developing pattern
-  const wave = developing.possibleWave || 'N/A';
-  const trendDir = String(completed.direction || 'N/A');
-  const trendCol = trendDir.toLowerCase().includes('bull') ? 'var(--green)' : trendDir.toLowerCase().includes('bear') ? 'var(--red)' : 'var(--yellow)';
-
-  // Confidence from developing first, fallback to completed adjusted confidence
-  const rawConf = developing.confidence != null ? developing.confidence : (uncertainty?.confidenceDecay?.adjusted != null ? uncertainty.confidenceDecay.adjusted : null);
-  const confPct = rawConf != null ? Math.round(rawConf) : null;
-  const confBar = confPct != null ? `<div style="margin-top:.3rem;height:6px;border-radius:3px;background:rgba(255,255,255,.05);overflow:hidden"><div style="width:${confPct}%;height:100%;background:${confPct > 60 ? 'var(--green)' : confPct > 30 ? 'var(--yellow)' : 'var(--red)'};border-radius:3px"></div></div>` : '';
-
-  // Fibonacci conformance score
-  const fibScore = fib.conformanceScore != null ? Math.round(fib.conformanceScore) : null;
-
-  // Fib support/resistance levels
-  const fibSupport = developing?.fibLevels?.support || [];
-  const fibResist = developing?.fibLevels?.resistance || [];
-  const plausible = levelPlausibility([...(Array.isArray(fibSupport) ? fibSupport : []), ...(Array.isArray(fibResist) ? fibResist : [])]);
-  const elliottBias = trendDir.toLowerCase().includes('bull') ? 'BUY' : trendDir.toLowerCase().includes('bear') ? 'AVOID' : 'WAIT';
-  const conflictsPrimary = Boolean(primaryBias && primaryBias !== 'SUPPRESSED' && elliottBias !== 'WAIT' && primaryBias !== elliottBias);
-  // Governance: if any gate active, Elliott bullish output must not contradict governance
-  const govGateActive = Boolean(quality.anyGateActive);
-  const govConflict = govGateActive && elliottBias === 'BUY';
-  const conflict = conflictsPrimary || !plausible.ok || govConflict;
-  _setQualitySignals({ elliottConflict: conflict, elliottState: plausible.ok ? (conflict ? 'conflict' : 'aligned') : 'suppressed', elliottGovConstrained: govGateActive });
-
-  if (!plausible.ok) {
-    return `<div class="section"><h2>\ud83c\udf0a Elliott Wave Analysis</h2>
-      <div style="padding:.55rem .65rem;border-radius:8px;background:var(--red-bg);border:1px solid rgba(248,113,113,.35);font-size:.78rem;color:#fecaca">
-        Elliott module suppressed: projected levels are > ${(plausible.maxDist * 100).toFixed(1)}% away from current price and are not in sync with the active market regime.
-      </div>
-    </div>`;
-  }
-
-  // Explanation based on wave position
-  const waveExplain = {
-    'Wave 1': 'Early trend emergence \u2014 low confidence, potential false starts.',
-    'Wave 2': 'Corrective pullback \u2014 tests conviction, often retraces 50-61.8%.',
-    'Wave 3': 'Strongest impulse wave \u2014 highest momentum, typically extends.',
-    'Wave 4': 'Consolidation / correction \u2014 complex, watch for reversal signals.',
-    'Wave 4 or ABC': 'Corrective structure in progress \u2014 either a 4th wave consolidation or a full ABC correction.',
-    'Wave 5': 'Final impulse \u2014 divergences common, exhaustion signals.',
-    'Wave A': 'First corrective leg \u2014 often mistaken for a dip-buy opportunity.',
-    'Wave B': 'Counter-trend rally \u2014 potential bull trap.',
-    'Wave C': 'Final corrective leg \u2014 often sharp and decisive.'
-  };
-  const explanation = waveExplain[wave] || 'Structural wave analysis based on Elliott price action patterns.';
-
-  // Completed pattern status
-  const completedHtml = completed.direction ? `<div style="margin-top:.4rem;font-size:.75rem;color:var(--text-dim)">Last completed pattern: <strong style="color:${trendCol}">${completed.direction}</strong>${completed.endedAt ? ` (ended ${completed.endedAt})` : ''}${completed.guidelineScore != null ? ` \u2014 guideline score: ${completed.guidelineScore}%` : ''}</div>` : '';
-
-  const ewAsOf = elliottAsOf;
-  return `<div class="section"><h2>\ud83c\udf0a Elliott Wave Analysis${ewAsOf ? ` <span style="float:right;font-size:.7rem;font-weight:400;color:var(--text-dim)">As of ${ewAsOf}</span>` : ''}</h2>
-${conflict
-      ? `<div style="margin-bottom:.5rem;padding:.45rem .6rem;border-radius:8px;background:var(--yellow-bg);border:1px solid rgba(251,191,36,.35);font-size:.76rem;color:#fde68a"><strong>Important:</strong> ${govConflict ? 'The main system is still cautious, so Elliott is shown only as a secondary view right now.' : `Elliott currently points ${elliottBias}, while the main system points ${primaryBias || 'WAIT'}. Treat this as an alternative scenario.`}</div>`
-      : `<div style="margin-bottom:.5rem;padding:.45rem .6rem;border-radius:8px;background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.35);font-size:.76rem;color:#bbf7d0"><strong>In line:</strong> ${primaryBias === 'SUPPRESSED' ? 'The main view is still blocked, so Elliott stays a secondary scenario.' : 'Elliott matches the current main decision direction.'}</div>`}
-<div style="display:flex;gap:.75rem;flex-wrap:wrap;margin-bottom:.5rem">
-  <div style="padding:.5rem .8rem;border-radius:8px;background:linear-gradient(135deg,rgba(99,102,241,.12),rgba(139,92,246,.08));border:1px solid rgba(99,102,241,.3);flex:1;min-width:120px"><div style="font-size:.72rem;color:var(--text-dim);text-transform:uppercase;letter-spacing:.04em">Developing Wave</div><div style="font-size:1.1rem;font-weight:800;color:var(--accent)">${wave}</div></div>
-  <div style="padding:.5rem .8rem;border-radius:8px;background:rgba(255,255,255,.03);border:1px solid var(--border);flex:1;min-width:120px"><div style="font-size:.72rem;color:var(--text-dim);text-transform:uppercase;letter-spacing:.04em">Trend</div><div style="font-size:1rem;font-weight:700;color:${trendCol}">${trendDir}</div></div>
-  ${confPct != null ? `<div style="padding:.5rem .8rem;border-radius:8px;background:rgba(255,255,255,.03);border:1px solid var(--border);flex:1;min-width:120px"><div style="font-size:.72rem;color:var(--text-dim);text-transform:uppercase;letter-spacing:.04em">Confidence</div><div style="font-size:1rem;font-weight:700">${confPct}%</div>${confBar}</div>` : ''}
-  ${fibScore != null ? `<div style="padding:.5rem .8rem;border-radius:8px;background:rgba(255,255,255,.03);border:1px solid var(--border);flex:1;min-width:120px"><div style="font-size:.72rem;color:var(--text-dim);text-transform:uppercase;letter-spacing:.04em">Fib Conformance</div><div style="font-size:1rem;font-weight:700">${fibScore}%</div></div>` : ''}
-</div>
-<div style="padding:.5rem .6rem;border-radius:6px;background:rgba(255,255,255,.02);border-left:3px solid var(--accent);font-size:.78rem;color:var(--text-dim)">\ud83d\udca1 ${explanation}</div>
-${(fibSupport.length || fibResist.length) ? `<div style="margin-top:.5rem;display:flex;gap:.75rem;flex-wrap:wrap">${fibSupport.length ? `<div style="font-size:.75rem;color:var(--text-dim)">Support: ${fibSupport.map(v => `<strong style="color:var(--green)">$${v.toFixed(2)}</strong>`).join(', ')}</div>` : ''}${fibResist.length ? `<div style="font-size:.75rem;color:var(--text-dim)">Resistance: ${fibResist.map(v => `<strong style="color:var(--red)">$${v.toFixed(2)}</strong>`).join(', ')}</div>` : ''}</div>` : ''}
-${completedHtml}</div>`;
+  _setQualitySignals({ elliottState: 'removed', elliottConflict: false, elliottGovConstrained: false });
+  return '';
 }
 
 function _v4StateValue(contract, key) {

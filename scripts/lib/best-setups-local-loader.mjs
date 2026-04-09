@@ -310,12 +310,15 @@ async function loadBarsFromHistoryPack(assetMeta) {
   for (const historyPack of packCandidates) {
     const candidates = [
       path.join(REPO_ROOT, HISTORY_BASE, historyPack),
+      path.join(REPO_ROOT, HISTORY_BASE, 'history', historyPack),
       path.join(REPO_ROOT, 'public/data/universe/v7', historyPack),
     ];
     for (const absPath of candidates) {
       const rows = await readNdjsonGzAbs(absPath);
       if (!rows.length) continue;
-      const hit = rows.find((row) => !canonicalId || normalizeCanonicalId(row?.canonical_id) === canonicalId) || rows[0] || null;
+      const hit = canonicalId
+        ? (rows.find((row) => normalizeCanonicalId(row?.canonical_id) === canonicalId) || null)
+        : (rows[0] || null);
       if (!hit) continue;
       const bars = normalizeRows(hit?.bars || []);
       if (bars.length) return bars;
@@ -338,29 +341,13 @@ export async function loadLocalBars(ticker) {
 
   const assetMeta = await resolveLocalAssetMeta(cleanTicker);
   const packBars = await loadBarsFromHistoryPack(assetMeta);
-
-  // --- SCOPED TEST FIX (NASDAQ 100) ---
-  const TEST_ALLOW_LIST = [
-    'AAPL','MSFT','NVDA','AMZN','GOOGL','GOOG','META','AVGO','TSLA','COST','CSCO','NFLX',
-    'PEP','ADBE','CMCSA','AMD','QCOM','TMUS','INTU','INTC','TXN','AMGN','AMAT','ISRG',
-    'SBUX','HON','BKNG','MDLZ','VRTX','ADI','ADP','REGN','GILD','LRCX','PANW','KLAC',
-    'PYPL','SNPS','MELI','CDNS','CSX','ORLY','ASML','MAR','MNST','CTAS','LULU','ADSK',
-    'AEP','PDD','PAYX','WDAY','KDP','NXPI','EXC','CRWD','MRVL','IDXX','BKR','XEL',
-    'ROST','MCHP','EA','ODFL','CTSH','KHC','ABNB','DDOG','CEG','DXCM','ILMN','PCAR',
-    'TEAM','MRNA','FAST','VRSK','DAT','ZM','FISV','WBD','ALGN','BIIB','ENPH','JD',
-    'SIRI','EBAY','LCID','LUCID'
-  ];
-  if (TEST_ALLOW_LIST.includes(cleanTicker)) {
+  if (seriesBars.length || packBars.length) {
     const barMap = new Map();
-    for (const b of packBars) { barMap.set(b.date, b); }
-    for (const b of seriesBars) { barMap.set(b.date, b); }
+    for (const b of packBars) barMap.set(b.date, b);
+    for (const b of seriesBars) barMap.set(b.date, b);
     const mergedBars = Array.from(barMap.values()).sort((a, b) => a.date.localeCompare(b.date));
     if (mergedBars.length) return mergedBars;
-  } else {
-    if (seriesBars.length) return seriesBars;
-    if (packBars.length) return packBars;
   }
-  // -------------------------
 
 
   const shard = cleanTicker.charAt(0) || '_';

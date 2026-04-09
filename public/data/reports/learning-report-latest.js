@@ -1,87 +1,87 @@
 window.__RV_LEARNING_REPORT__ = {
   "schema": "rubikvault_daily_learning_report_v2",
-  "date": "2026-04-04",
-  "generated_at": "2026-04-04T21:04:37.666Z",
+  "date": "2026-04-09",
+  "generated_at": "2026-04-09T09:11:18.644Z",
   "start_date": "2026-03-17",
-  "days_active": 19,
+  "days_active": 24,
   "summary": {
-    "features_tracked": 5,
-    "total_predictions_today": 55277,
+    "features_tracked": 4,
+    "total_predictions_today": 37219,
     "overall_status": "VERBESSERUNG ✅"
   },
   "features": {
     "forecast": {
       "name": "Forecast System v3.0",
       "type": "price_direction_probability",
-      "predictions_total": 22976,
-      "outcomes_resolved": 22976,
-      "accuracy_all": 0.8096,
-      "brier_all": 0.2078,
-      "ece_all": 0.3403,
-      "hit_rate_all": 0.8096,
-      "accuracy_7d": 0.9021,
-      "brier_7d": 0.1906,
-      "ece_7d": 0.4334,
-      "hit_rate_7d": 0.9021,
-      "precision_10": 0.8167,
-      "precision_50": 0.8317,
-      "precision_at_10": 0.8167,
-      "precision_at_50": 0.8317,
-      "coverage_per_day": 765.87,
-      "coverage_7d": 1895,
+      "predictions_total": 26750,
+      "outcomes_resolved": 26750,
+      "accuracy_all": 0.8233,
+      "brier_all": 0.2064,
+      "ece_all": 0.3547,
+      "hit_rate_all": 0.8233,
+      "accuracy_7d": 0.9376,
+      "brier_7d": 0.1922,
+      "ece_7d": 0.4358,
+      "hit_rate_7d": 0.9376,
+      "precision_10": 0.82,
+      "precision_50": 0.836,
+      "precision_at_10": 0.82,
+      "precision_at_50": 0.836,
+      "coverage_per_day": 891.67,
+      "coverage_7d": 1247,
       "by_horizon": {
         "1d": {
-          "predictions_total": 22976,
-          "outcomes_resolved": 22976,
-          "accuracy_all": 0.8096,
-          "brier_all": 0.2078,
-          "ece_all": 0.3403,
-          "hit_rate_all": 0.8096,
-          "accuracy_7d": 0.9021,
-          "brier_7d": 0.1906,
-          "ece_7d": 0.4334,
-          "hit_rate_7d": 0.9021,
-          "precision_10": 0.8167,
-          "precision_50": 0.8317,
-          "coverage_per_day": 765.87,
+          "predictions_total": 26750,
+          "outcomes_resolved": 26750,
+          "accuracy_all": 0.8233,
+          "brier_all": 0.2064,
+          "ece_all": 0.3547,
+          "hit_rate_all": 0.8233,
+          "accuracy_7d": 0.9376,
+          "brier_7d": 0.1922,
+          "ece_7d": 0.4358,
+          "hit_rate_7d": 0.9376,
+          "precision_10": 0.82,
+          "precision_50": 0.836,
+          "coverage_per_day": 891.67,
           "trend_accuracy": "improving",
-          "trend_brier": "improving"
+          "trend_brier": "stable"
         }
       },
       "by_asset_class": {
         "stock": {
-          "predictions_total": 22976,
-          "outcomes_resolved": 22976,
-          "accuracy_all": 0.8096,
-          "brier_all": 0.2078,
-          "ece_all": 0.3403,
-          "hit_rate_all": 0.8096,
-          "accuracy_7d": 0.9021,
-          "brier_7d": 0.1906,
-          "ece_7d": 0.4334,
-          "hit_rate_7d": 0.9021,
-          "precision_10": 0.8167,
-          "precision_50": 0.8317,
-          "coverage_per_day": 765.87,
+          "predictions_total": 26750,
+          "outcomes_resolved": 26750,
+          "accuracy_all": 0.8233,
+          "brier_all": 0.2064,
+          "ece_all": 0.3547,
+          "hit_rate_all": 0.8233,
+          "accuracy_7d": 0.9376,
+          "brier_7d": 0.1922,
+          "ece_7d": 0.4358,
+          "hit_rate_7d": 0.9376,
+          "precision_10": 0.82,
+          "precision_50": 0.836,
+          "coverage_per_day": 891.67,
           "trend_accuracy": "improving",
-          "trend_brier": "improving",
+          "trend_brier": "stable",
           "by_horizon": {
             "1d": {
-              "predictions_total": 22976,
-              "outcomes_resolved": 22976,
-              "accuracy_all": 0.8096,
-              "brier_all": 0.2078,
-              "ece_all": 0.3403,
-              "hit_rate_all": 0.8096,
-              "accuracy_7d": 0.9021,
-              "brier_7d": 0.1906,
-              "ece_7d": 0.4334,
-              "hit_rate_7d": 0.9021,
-              "precision_10": 0.8167,
-              "precision_50": 0.8317,
-              "coverage_per_day": 765.87,
+              "predictions_total": 26750,
+              "outcomes_resolved": 26750,
+              "accuracy_all": 0.8233,
+              "brier_all": 0.2064,
+              "ece_all": 0.3547,
+              "hit_rate_all": 0.8233,
+              "accuracy_7d": 0.9376,
+              "brier_7d": 0.1922,
+              "ece_7d": 0.4358,
+              "hit_rate_7d": 0.9376,
+              "precision_10": 0.82,
+              "precision_50": 0.836,
+              "coverage_per_day": 891.67,
               "trend_accuracy": "improving",
-              "trend_brier": "improving"
+              "trend_brier": "stable"
             }
           }
         }
@@ -92,105 +92,105 @@ window.__RV_LEARNING_REPORT__ = {
           "liquidity_bucket": "unknown",
           "market_cap_bucket": "unknown",
           "learning_lane": "core",
-          "predictions_total": 22976,
-          "outcomes_resolved": 22976,
-          "accuracy_all": 0.8096,
-          "brier_all": 0.2078,
-          "ece_all": 0.3403,
-          "hit_rate_all": 0.8096,
-          "accuracy_7d": 0.9021,
-          "brier_7d": 0.1906,
-          "ece_7d": 0.4334,
-          "hit_rate_7d": 0.9021,
-          "precision_10": 0.8167,
-          "precision_50": 0.8317,
-          "coverage_per_day": 765.87,
+          "predictions_total": 26750,
+          "outcomes_resolved": 26750,
+          "accuracy_all": 0.8233,
+          "brier_all": 0.2064,
+          "ece_all": 0.3547,
+          "hit_rate_all": 0.8233,
+          "accuracy_7d": 0.9376,
+          "brier_7d": 0.1922,
+          "ece_7d": 0.4358,
+          "hit_rate_7d": 0.9376,
+          "precision_10": 0.82,
+          "precision_50": 0.836,
+          "coverage_per_day": 891.67,
           "trend_accuracy": "improving",
-          "trend_brier": "improving"
+          "trend_brier": "stable"
         }
       },
       "false_positive_classes": {},
       "trend_accuracy": "improving",
-      "trend_brier": "improving",
-      "predictions_today": 51217,
+      "trend_brier": "stable",
+      "predictions_today": 34667,
       "source_meta": {
         "source": "forecast_latest_envelope",
-        "asof": "2026-03-30",
-        "fresh": false,
-        "stale_days": 5
+        "asof": "2026-04-09",
+        "fresh": true,
+        "stale_days": 0
       }
     },
     "scientific": {
       "name": "Scientific Analyzer v9.1",
       "type": "setup_trigger_breakout",
-      "predictions_total": 9992,
-      "outcomes_resolved": 9992,
-      "accuracy_all": 0.6398,
-      "brier_all": 0.2333,
-      "ece_all": 0.1901,
-      "hit_rate_all": 0.0034,
-      "accuracy_7d": 0.7125,
-      "brier_7d": 0.1963,
-      "ece_7d": 0.3953,
+      "predictions_total": 10466,
+      "outcomes_resolved": 10466,
+      "accuracy_all": 0.6108,
+      "brier_all": 0.248,
+      "ece_all": 0.2144,
+      "hit_rate_all": 0.0032,
+      "accuracy_7d": 0.6258,
+      "brier_7d": 0.2336,
+      "ece_7d": 0.431,
       "hit_rate_7d": 0,
-      "precision_10": 0.025,
-      "precision_50": 0.04,
-      "precision_at_10": 0.025,
-      "precision_at_50": 0.04,
-      "coverage_per_day": 333.07,
-      "coverage_7d": 379.57,
+      "precision_10": 0.0167,
+      "precision_50": 0.0267,
+      "precision_at_10": 0.0167,
+      "precision_at_50": 0.0267,
+      "coverage_per_day": 348.87,
+      "coverage_7d": 432.14,
       "by_horizon": {
         "5d": {
-          "predictions_total": 9992,
-          "outcomes_resolved": 9992,
-          "accuracy_all": 0.6398,
-          "brier_all": 0.2333,
-          "ece_all": 0.1901,
-          "hit_rate_all": 0.0034,
-          "accuracy_7d": 0.7125,
-          "brier_7d": 0.1963,
-          "ece_7d": 0.3953,
+          "predictions_total": 10466,
+          "outcomes_resolved": 10466,
+          "accuracy_all": 0.6108,
+          "brier_all": 0.248,
+          "ece_all": 0.2144,
+          "hit_rate_all": 0.0032,
+          "accuracy_7d": 0.6258,
+          "brier_7d": 0.2336,
+          "ece_7d": 0.431,
           "hit_rate_7d": 0,
-          "precision_10": 0.025,
-          "precision_50": 0.04,
-          "coverage_per_day": 333.07,
-          "trend_accuracy": "improving",
+          "precision_10": 0.0167,
+          "precision_50": 0.0267,
+          "coverage_per_day": 348.87,
+          "trend_accuracy": "stable",
           "trend_brier": "improving"
         }
       },
       "by_asset_class": {
         "stock": {
-          "predictions_total": 9992,
-          "outcomes_resolved": 9992,
-          "accuracy_all": 0.6398,
-          "brier_all": 0.2333,
-          "ece_all": 0.1901,
-          "hit_rate_all": 0.0034,
-          "accuracy_7d": 0.7125,
-          "brier_7d": 0.1963,
-          "ece_7d": 0.3953,
+          "predictions_total": 10466,
+          "outcomes_resolved": 10466,
+          "accuracy_all": 0.6108,
+          "brier_all": 0.248,
+          "ece_all": 0.2144,
+          "hit_rate_all": 0.0032,
+          "accuracy_7d": 0.6258,
+          "brier_7d": 0.2336,
+          "ece_7d": 0.431,
           "hit_rate_7d": 0,
-          "precision_10": 0.025,
-          "precision_50": 0.04,
-          "coverage_per_day": 333.07,
-          "trend_accuracy": "improving",
+          "precision_10": 0.0167,
+          "precision_50": 0.0267,
+          "coverage_per_day": 348.87,
+          "trend_accuracy": "stable",
           "trend_brier": "improving",
           "by_horizon": {
             "5d": {
-              "predictions_total": 9992,
-              "outcomes_resolved": 9992,
-              "accuracy_all": 0.6398,
-              "brier_all": 0.2333,
-              "ece_all": 0.1901,
-              "hit_rate_all": 0.0034,
-              "accuracy_7d": 0.7125,
-              "brier_7d": 0.1963,
-              "ece_7d": 0.3953,
+              "predictions_total": 10466,
+              "outcomes_resolved": 10466,
+              "accuracy_all": 0.6108,
+              "brier_all": 0.248,
+              "ece_all": 0.2144,
+              "hit_rate_all": 0.0032,
+              "accuracy_7d": 0.6258,
+              "brier_7d": 0.2336,
+              "ece_7d": 0.431,
               "hit_rate_7d": 0,
-              "precision_10": 0.025,
-              "precision_50": 0.04,
-              "coverage_per_day": 333.07,
-              "trend_accuracy": "improving",
+              "precision_10": 0.0167,
+              "precision_50": 0.0267,
+              "coverage_per_day": 348.87,
+              "trend_accuracy": "stable",
               "trend_brier": "improving"
             }
           }
@@ -202,142 +202,32 @@ window.__RV_LEARNING_REPORT__ = {
           "liquidity_bucket": "unknown",
           "market_cap_bucket": "unknown",
           "learning_lane": "core",
-          "predictions_total": 9992,
-          "outcomes_resolved": 9992,
-          "accuracy_all": 0.6398,
-          "brier_all": 0.2333,
-          "ece_all": 0.1901,
-          "hit_rate_all": 0.0034,
-          "accuracy_7d": 0.7125,
-          "brier_7d": 0.1963,
-          "ece_7d": 0.3953,
+          "predictions_total": 10466,
+          "outcomes_resolved": 10466,
+          "accuracy_all": 0.6108,
+          "brier_all": 0.248,
+          "ece_all": 0.2144,
+          "hit_rate_all": 0.0032,
+          "accuracy_7d": 0.6258,
+          "brier_7d": 0.2336,
+          "ece_7d": 0.431,
           "hit_rate_7d": 0,
-          "precision_10": 0.025,
-          "precision_50": 0.04,
-          "coverage_per_day": 333.07,
-          "trend_accuracy": "improving",
+          "precision_10": 0.0167,
+          "precision_50": 0.0267,
+          "coverage_per_day": 348.87,
+          "trend_accuracy": "stable",
           "trend_brier": "improving"
         }
       },
       "false_positive_classes": {},
-      "trend_accuracy": "improving",
+      "trend_accuracy": "stable",
       "trend_brier": "improving",
       "predictions_today": 2500,
       "source_meta": {
         "source": "scientific_snapshot",
-        "asof": "2026-04-04",
+        "asof": "2026-04-09",
         "fresh": true,
         "stale_days": 0
-      }
-    },
-    "elliott": {
-      "name": "Elliott Waves DFMSIF v1.0",
-      "type": "wave_direction_forecast",
-      "predictions_total": 7500,
-      "outcomes_resolved": 7500,
-      "accuracy_all": 0.4183,
-      "brier_all": 0.389,
-      "ece_all": 0.3817,
-      "hit_rate_all": 0.4183,
-      "accuracy_7d": 0.3467,
-      "brier_7d": 0.432,
-      "ece_7d": 0.592,
-      "hit_rate_7d": 0.3467,
-      "precision_10": 0.6,
-      "precision_50": 0.484,
-      "precision_at_10": 0.6,
-      "precision_at_50": 0.484,
-      "coverage_per_day": 250,
-      "coverage_7d": 214.29,
-      "by_horizon": {
-        "5d": {
-          "predictions_total": 7500,
-          "outcomes_resolved": 7500,
-          "accuracy_all": 0.4183,
-          "brier_all": 0.389,
-          "ece_all": 0.3817,
-          "hit_rate_all": 0.4183,
-          "accuracy_7d": 0.3467,
-          "brier_7d": 0.432,
-          "ece_7d": 0.592,
-          "hit_rate_7d": 0.3467,
-          "precision_10": 0.6,
-          "precision_50": 0.484,
-          "coverage_per_day": 250,
-          "trend_accuracy": "declining",
-          "trend_brier": "declining"
-        }
-      },
-      "by_asset_class": {
-        "stock": {
-          "predictions_total": 7500,
-          "outcomes_resolved": 7500,
-          "accuracy_all": 0.4183,
-          "brier_all": 0.389,
-          "ece_all": 0.3817,
-          "hit_rate_all": 0.4183,
-          "accuracy_7d": 0.3467,
-          "brier_7d": 0.432,
-          "ece_7d": 0.592,
-          "hit_rate_7d": 0.3467,
-          "precision_10": 0.6,
-          "precision_50": 0.484,
-          "coverage_per_day": 250,
-          "trend_accuracy": "declining",
-          "trend_brier": "declining",
-          "by_horizon": {
-            "5d": {
-              "predictions_total": 7500,
-              "outcomes_resolved": 7500,
-              "accuracy_all": 0.4183,
-              "brier_all": 0.389,
-              "ece_all": 0.3817,
-              "hit_rate_all": 0.4183,
-              "accuracy_7d": 0.3467,
-              "brier_7d": 0.432,
-              "ece_7d": 0.592,
-              "hit_rate_7d": 0.3467,
-              "precision_10": 0.6,
-              "precision_50": 0.484,
-              "coverage_per_day": 250,
-              "trend_accuracy": "declining",
-              "trend_brier": "declining"
-            }
-          }
-        }
-      },
-      "by_segment": {
-        "stock|unknown|unknown|core": {
-          "asset_class": "stock",
-          "liquidity_bucket": "unknown",
-          "market_cap_bucket": "unknown",
-          "learning_lane": "core",
-          "predictions_total": 7500,
-          "outcomes_resolved": 7500,
-          "accuracy_all": 0.4183,
-          "brier_all": 0.389,
-          "ece_all": 0.3817,
-          "hit_rate_all": 0.4183,
-          "accuracy_7d": 0.3467,
-          "brier_7d": 0.432,
-          "ece_7d": 0.592,
-          "hit_rate_7d": 0.3467,
-          "precision_10": 0.6,
-          "precision_50": 0.484,
-          "coverage_per_day": 250,
-          "trend_accuracy": "declining",
-          "trend_brier": "declining"
-        }
-      },
-      "false_positive_classes": {},
-      "trend_accuracy": "declining",
-      "trend_brier": "declining",
-      "predictions_today": 1500,
-      "source_meta": {
-        "source": "marketphase_per_symbol",
-        "asof": "2026-04-03",
-        "fresh": false,
-        "stale_days": 1
       }
     },
     "quantlab": {
@@ -363,149 +253,185 @@ window.__RV_LEARNING_REPORT__ = {
       "predictions_today": 0,
       "source_meta": {
         "source": "quantlab_agent_ensemble",
-        "asof": "2026-03-11",
+        "asof": "2026-04-06",
         "fresh": false,
-        "stale_days": 24
+        "stale_days": 3
       }
     },
     "stock_analyzer": {
       "name": "Stock Analyzer",
       "type": "best_setups_horizon_buy_signals",
-      "predictions_total": 1404,
-      "outcomes_resolved": 1404,
-      "accuracy_all": 0.1852,
-      "brier_all": 0.3858,
-      "ece_all": 0.4698,
-      "hit_rate_all": 0.1852,
-      "accuracy_7d": 0.2857,
-      "brier_7d": 0.4265,
-      "ece_7d": 0.4807,
-      "hit_rate_7d": 0.2857,
-      "precision_10": 0.1979,
-      "precision_50": 0.2025,
-      "precision_at_10": 0.1979,
-      "precision_at_50": 0.2025,
-      "coverage_per_day": 46.8,
-      "coverage_7d": 2,
+      "predictions_total": 848,
+      "outcomes_resolved": 848,
+      "accuracy_all": 0.1804,
+      "brier_all": 0.3965,
+      "ece_all": 0.4907,
+      "hit_rate_all": 0.1804,
+      "accuracy_7d": 0.321,
+      "brier_7d": 0.3679,
+      "ece_7d": 0.4016,
+      "hit_rate_7d": 0.321,
+      "precision_10": 0.3031,
+      "precision_50": 0.2941,
+      "precision_at_10": 0.3031,
+      "precision_at_50": 0.2941,
+      "coverage_per_day": 28.27,
+      "coverage_7d": 11.57,
       "by_horizon": {
-        "20d": {
-          "predictions_total": 1234,
-          "outcomes_resolved": 1234,
-          "accuracy_all": 0.1807,
-          "brier_all": 0.3962,
-          "ece_all": 0.4836,
-          "hit_rate_all": 0.1807,
-          "accuracy_7d": 0.2857,
-          "brier_7d": 0.4265,
-          "ece_7d": 0.4807,
-          "hit_rate_7d": 0.2857,
-          "precision_10": 0.1444,
-          "precision_50": 0.1455,
-          "coverage_per_day": 41.13,
-          "trend_accuracy": "improving",
-          "trend_brier": "declining"
-        },
         "1d": {
-          "predictions_total": 13,
-          "outcomes_resolved": 13,
-          "accuracy_all": 0.3846,
-          "brier_all": 0.3709,
-          "ece_all": 0.3662,
-          "hit_rate_all": 0.3846,
-          "accuracy_7d": null,
-          "brier_7d": null,
-          "ece_7d": null,
-          "hit_rate_7d": null,
-          "precision_10": 0.5417,
-          "precision_50": 0.5417,
-          "coverage_per_day": 0.43,
+          "predictions_total": 21,
+          "outcomes_resolved": 21,
+          "accuracy_all": 0.381,
+          "brier_all": 0.3008,
+          "ece_all": 0.39,
+          "hit_rate_all": 0.381,
+          "accuracy_7d": 1,
+          "brier_7d": 0,
+          "ece_7d": 0,
+          "hit_rate_7d": 1,
+          "precision_10": 0.7667,
+          "precision_50": 0.7292,
+          "coverage_per_day": 0.7,
           "trend_accuracy": "no_data",
           "trend_brier": "no_data"
         },
+        "20d": {
+          "predictions_total": 777,
+          "outcomes_resolved": 777,
+          "accuracy_all": 0.166,
+          "brier_all": 0.4059,
+          "ece_all": 0.5062,
+          "hit_rate_all": 0.166,
+          "accuracy_7d": 0.2763,
+          "brier_7d": 0.3921,
+          "ece_7d": 0.428,
+          "hit_rate_7d": 0.2763,
+          "precision_10": 0.221,
+          "precision_50": 0.2114,
+          "coverage_per_day": 25.9,
+          "trend_accuracy": "improving",
+          "trend_brier": "improving"
+        },
         "5d": {
-          "predictions_total": 157,
-          "outcomes_resolved": 157,
-          "accuracy_all": 0.2038,
-          "brier_all": 0.3047,
-          "ece_all": 0.3897,
-          "hit_rate_all": 0.2038,
+          "predictions_total": 50,
+          "outcomes_resolved": 50,
+          "accuracy_all": 0.32,
+          "brier_all": 0.2902,
+          "ece_all": 0.3558,
+          "hit_rate_all": 0.32,
           "accuracy_7d": null,
           "brier_7d": null,
           "ece_7d": null,
           "hit_rate_7d": null,
-          "precision_10": 0,
-          "precision_50": 0.1,
-          "coverage_per_day": 5.23,
+          "precision_10": 0.435,
+          "precision_50": 0.4469,
+          "coverage_per_day": 1.67,
           "trend_accuracy": "no_data",
           "trend_brier": "no_data"
         }
       },
       "by_asset_class": {
+        "etf": {
+          "predictions_total": 5,
+          "outcomes_resolved": 5,
+          "accuracy_all": 1,
+          "brier_all": 0,
+          "ece_all": 0,
+          "hit_rate_all": 1,
+          "accuracy_7d": 1,
+          "brier_7d": 0,
+          "ece_7d": 0,
+          "hit_rate_7d": 1,
+          "precision_10": 1,
+          "precision_50": 1,
+          "coverage_per_day": 0.17,
+          "trend_accuracy": "no_data",
+          "trend_brier": "no_data",
+          "by_horizon": {
+            "1d": {
+              "predictions_total": 5,
+              "outcomes_resolved": 5,
+              "accuracy_all": 1,
+              "brier_all": 0,
+              "ece_all": 0,
+              "hit_rate_all": 1,
+              "accuracy_7d": 1,
+              "brier_7d": 0,
+              "ece_7d": 0,
+              "hit_rate_7d": 1,
+              "precision_10": 1,
+              "precision_50": 1,
+              "coverage_per_day": 0.17,
+              "trend_accuracy": "no_data",
+              "trend_brier": "no_data"
+            }
+          }
+        },
         "stock": {
-          "predictions_total": 1404,
-          "outcomes_resolved": 1404,
-          "accuracy_all": 0.1852,
-          "brier_all": 0.3858,
-          "ece_all": 0.4698,
-          "hit_rate_all": 0.1852,
-          "accuracy_7d": 0.2857,
-          "brier_7d": 0.4265,
-          "ece_7d": 0.4807,
-          "hit_rate_7d": 0.2857,
-          "precision_10": 0.1979,
-          "precision_50": 0.2025,
-          "coverage_per_day": 46.8,
+          "predictions_total": 843,
+          "outcomes_resolved": 843,
+          "accuracy_all": 0.1756,
+          "brier_all": 0.3989,
+          "ece_all": 0.4936,
+          "hit_rate_all": 0.1756,
+          "accuracy_7d": 0.2763,
+          "brier_7d": 0.3921,
+          "ece_7d": 0.428,
+          "hit_rate_7d": 0.2763,
+          "precision_10": 0.2581,
+          "precision_50": 0.2486,
+          "coverage_per_day": 28.1,
           "trend_accuracy": "improving",
-          "trend_brier": "declining",
+          "trend_brier": "improving",
           "by_horizon": {
             "20d": {
-              "predictions_total": 1234,
-              "outcomes_resolved": 1234,
-              "accuracy_all": 0.1807,
-              "brier_all": 0.3962,
-              "ece_all": 0.4836,
-              "hit_rate_all": 0.1807,
-              "accuracy_7d": 0.2857,
-              "brier_7d": 0.4265,
-              "ece_7d": 0.4807,
-              "hit_rate_7d": 0.2857,
-              "precision_10": 0.1444,
-              "precision_50": 0.1455,
-              "coverage_per_day": 41.13,
+              "predictions_total": 777,
+              "outcomes_resolved": 777,
+              "accuracy_all": 0.166,
+              "brier_all": 0.4059,
+              "ece_all": 0.5062,
+              "hit_rate_all": 0.166,
+              "accuracy_7d": 0.2763,
+              "brier_7d": 0.3921,
+              "ece_7d": 0.428,
+              "hit_rate_7d": 0.2763,
+              "precision_10": 0.221,
+              "precision_50": 0.2114,
+              "coverage_per_day": 25.9,
               "trend_accuracy": "improving",
-              "trend_brier": "declining"
+              "trend_brier": "improving"
             },
-            "1d": {
-              "predictions_total": 13,
-              "outcomes_resolved": 13,
-              "accuracy_all": 0.3846,
-              "brier_all": 0.3709,
-              "ece_all": 0.3662,
-              "hit_rate_all": 0.3846,
+            "5d": {
+              "predictions_total": 50,
+              "outcomes_resolved": 50,
+              "accuracy_all": 0.32,
+              "brier_all": 0.2902,
+              "ece_all": 0.3558,
+              "hit_rate_all": 0.32,
               "accuracy_7d": null,
               "brier_7d": null,
               "ece_7d": null,
               "hit_rate_7d": null,
-              "precision_10": 0.5417,
-              "precision_50": 0.5417,
-              "coverage_per_day": 0.43,
+              "precision_10": 0.435,
+              "precision_50": 0.4469,
+              "coverage_per_day": 1.67,
               "trend_accuracy": "no_data",
               "trend_brier": "no_data"
             },
-            "5d": {
-              "predictions_total": 157,
-              "outcomes_resolved": 157,
-              "accuracy_all": 0.2038,
-              "brier_all": 0.3047,
-              "ece_all": 0.3897,
-              "hit_rate_all": 0.2038,
+            "1d": {
+              "predictions_total": 16,
+              "outcomes_resolved": 16,
+              "accuracy_all": 0.1875,
+              "brier_all": 0.3948,
+              "ece_all": 0.5119,
+              "hit_rate_all": 0.1875,
               "accuracy_7d": null,
               "brier_7d": null,
               "ece_7d": null,
               "hit_rate_7d": null,
-              "precision_10": 0,
-              "precision_50": 0.1,
-              "coverage_per_day": 5.23,
+              "precision_10": 0.3,
+              "precision_50": 0.1875,
+              "coverage_per_day": 0.53,
               "trend_accuracy": "no_data",
               "trend_brier": "no_data"
             }
@@ -513,37 +439,55 @@ window.__RV_LEARNING_REPORT__ = {
         }
       },
       "by_segment": {
+        "etf|low|fund|peripheral": {
+          "asset_class": "etf",
+          "liquidity_bucket": "low",
+          "market_cap_bucket": "fund",
+          "learning_lane": "peripheral",
+          "predictions_total": 5,
+          "outcomes_resolved": 5,
+          "accuracy_all": 1,
+          "brier_all": 0,
+          "ece_all": 0,
+          "hit_rate_all": 1,
+          "accuracy_7d": 1,
+          "brier_7d": 0,
+          "ece_7d": 0,
+          "hit_rate_7d": 1,
+          "precision_10": 1,
+          "precision_50": 1,
+          "coverage_per_day": 0.17,
+          "trend_accuracy": "no_data",
+          "trend_brier": "no_data"
+        },
         "stock|unknown|unknown|core": {
           "asset_class": "stock",
           "liquidity_bucket": "unknown",
           "market_cap_bucket": "unknown",
           "learning_lane": "core",
-          "predictions_total": 1404,
-          "outcomes_resolved": 1404,
-          "accuracy_all": 0.1852,
-          "brier_all": 0.3858,
-          "ece_all": 0.4698,
-          "hit_rate_all": 0.1852,
-          "accuracy_7d": 0.2857,
-          "brier_7d": 0.4265,
-          "ece_7d": 0.4807,
-          "hit_rate_7d": 0.2857,
-          "precision_10": 0.1979,
-          "precision_50": 0.2025,
-          "coverage_per_day": 46.8,
+          "predictions_total": 843,
+          "outcomes_resolved": 843,
+          "accuracy_all": 0.1756,
+          "brier_all": 0.3989,
+          "ece_all": 0.4936,
+          "hit_rate_all": 0.1756,
+          "accuracy_7d": 0.2763,
+          "brier_7d": 0.3921,
+          "ece_7d": 0.428,
+          "hit_rate_7d": 0.2763,
+          "precision_10": 0.2581,
+          "precision_50": 0.2486,
+          "coverage_per_day": 28.1,
           "trend_accuracy": "improving",
-          "trend_brier": "declining"
+          "trend_brier": "improving"
         }
       },
       "false_positive_classes": {
-        "weak_consensus": 126
+        "weak_consensus": 99
       },
       "trend_accuracy": "improving",
-      "trend_brier": "declining",
+      "trend_brier": "improving",
       "outcome_dates": [
-        "2026-03-06",
-        "2026-03-09",
-        "2026-03-10",
         "2026-03-11",
         "2026-03-12",
         "2026-03-13",
@@ -559,13 +503,19 @@ window.__RV_LEARNING_REPORT__ = {
         "2026-03-25",
         "2026-03-26",
         "2026-03-27",
+        "2026-03-31",
         "2026-04-01",
         "2026-04-02",
         "2026-04-03",
-        "2026-04-04"
+        "2026-04-04",
+        "2026-04-05",
+        "2026-04-06",
+        "2026-04-07",
+        "2026-04-08",
+        "2026-04-09"
       ],
-      "stability": 0.6,
-      "churn": 10,
+      "stability": 0.087,
+      "churn": 42,
       "learning_status": "BOOTSTRAP",
       "safety_switch": {
         "level": "BOOTSTRAP",
@@ -581,15 +531,15 @@ window.__RV_LEARNING_REPORT__ = {
           "ready_for_safety": false,
           "by_horizon": {
             "1d": {
-              "outcomes_resolved": 13,
+              "outcomes_resolved": 21,
               "satisfied": false
             },
             "5d": {
-              "outcomes_resolved": 157,
+              "outcomes_resolved": 50,
               "satisfied": false
             },
             "20d": {
-              "outcomes_resolved": 1234,
+              "outcomes_resolved": 777,
               "satisfied": true
             }
           }
@@ -603,46 +553,46 @@ window.__RV_LEARNING_REPORT__ = {
         "ready_for_safety": false,
         "by_horizon": {
           "1d": {
-            "outcomes_resolved": 13,
+            "outcomes_resolved": 21,
             "satisfied": false
           },
           "5d": {
-            "outcomes_resolved": 157,
+            "outcomes_resolved": 50,
             "satisfied": false
           },
           "20d": {
-            "outcomes_resolved": 1234,
+            "outcomes_resolved": 777,
             "satisfied": true
           }
         }
       },
       "false_positive_classes_30d": {
-        "weak_consensus": 126
+        "weak_consensus": 99
       },
-      "predictions_today": 60,
+      "predictions_today": 52,
       "source_meta": {
         "source": "shared_decision_core_quantlab_forecast_snapshot",
-        "asof": "2026-03-30",
-        "fresh": false,
-        "stale_days": 5,
+        "asof": "2026-04-09",
+        "fresh": true,
+        "stale_days": 0,
         "gate_rejection_breakdown": {
           "short": {
-            "rejected_non_buy_total": 324,
-            "rejected_non_high_total": 1,
+            "rejected_non_buy_total": 240,
+            "rejected_non_high_total": 0,
             "rejected_gated_total": 0,
             "rejected_non_uptrend_total": 0,
             "missing_doc_total": 0,
             "by_asset_class": {
               "stock": {
-                "rejected_non_buy_total": 311,
+                "rejected_non_buy_total": 235,
                 "rejected_non_high_total": 0,
                 "rejected_gated_total": 0,
                 "rejected_non_uptrend_total": 0,
                 "missing_doc_total": 0
               },
               "etf": {
-                "rejected_non_buy_total": 13,
-                "rejected_non_high_total": 1,
+                "rejected_non_buy_total": 5,
+                "rejected_non_high_total": 0,
                 "rejected_gated_total": 0,
                 "rejected_non_uptrend_total": 0,
                 "missing_doc_total": 0
@@ -650,21 +600,21 @@ window.__RV_LEARNING_REPORT__ = {
             }
           },
           "medium": {
-            "rejected_non_buy_total": 323,
-            "rejected_non_high_total": 5,
+            "rejected_non_buy_total": 237,
+            "rejected_non_high_total": 2,
             "rejected_gated_total": 0,
             "rejected_non_uptrend_total": 0,
             "missing_doc_total": 0,
             "by_asset_class": {
               "stock": {
-                "rejected_non_buy_total": 305,
-                "rejected_non_high_total": 5,
+                "rejected_non_buy_total": 228,
+                "rejected_non_high_total": 2,
                 "rejected_gated_total": 0,
                 "rejected_non_uptrend_total": 0,
                 "missing_doc_total": 0
               },
               "etf": {
-                "rejected_non_buy_total": 18,
+                "rejected_non_buy_total": 9,
                 "rejected_non_high_total": 0,
                 "rejected_gated_total": 0,
                 "rejected_non_uptrend_total": 0,
@@ -673,21 +623,21 @@ window.__RV_LEARNING_REPORT__ = {
             }
           },
           "long": {
-            "rejected_non_buy_total": 313,
-            "rejected_non_high_total": 1,
+            "rejected_non_buy_total": 234,
+            "rejected_non_high_total": 3,
             "rejected_gated_total": 0,
-            "rejected_non_uptrend_total": 6,
+            "rejected_non_uptrend_total": 1,
             "missing_doc_total": 0,
             "by_asset_class": {
               "stock": {
-                "rejected_non_buy_total": 292,
-                "rejected_non_high_total": 1,
+                "rejected_non_buy_total": 226,
+                "rejected_non_high_total": 3,
                 "rejected_gated_total": 0,
-                "rejected_non_uptrend_total": 6,
+                "rejected_non_uptrend_total": 1,
                 "missing_doc_total": 0
               },
               "etf": {
-                "rejected_non_buy_total": 21,
+                "rejected_non_buy_total": 8,
                 "rejected_non_high_total": 0,
                 "rejected_gated_total": 0,
                 "rejected_non_uptrend_total": 0,
@@ -703,30 +653,30 @@ window.__RV_LEARNING_REPORT__ = {
             "long": 10
           },
           "etfs": {
-            "short": 10,
-            "medium": 10,
-            "long": 10
+            "short": 5,
+            "medium": 9,
+            "long": 8
           }
         }
       },
       "gate_rejection_breakdown": {
         "short": {
-          "rejected_non_buy_total": 324,
-          "rejected_non_high_total": 1,
+          "rejected_non_buy_total": 240,
+          "rejected_non_high_total": 0,
           "rejected_gated_total": 0,
           "rejected_non_uptrend_total": 0,
           "missing_doc_total": 0,
           "by_asset_class": {
             "stock": {
-              "rejected_non_buy_total": 311,
+              "rejected_non_buy_total": 235,
               "rejected_non_high_total": 0,
               "rejected_gated_total": 0,
               "rejected_non_uptrend_total": 0,
               "missing_doc_total": 0
             },
             "etf": {
-              "rejected_non_buy_total": 13,
-              "rejected_non_high_total": 1,
+              "rejected_non_buy_total": 5,
+              "rejected_non_high_total": 0,
               "rejected_gated_total": 0,
               "rejected_non_uptrend_total": 0,
               "missing_doc_total": 0
@@ -734,21 +684,21 @@ window.__RV_LEARNING_REPORT__ = {
           }
         },
         "medium": {
-          "rejected_non_buy_total": 323,
-          "rejected_non_high_total": 5,
+          "rejected_non_buy_total": 237,
+          "rejected_non_high_total": 2,
           "rejected_gated_total": 0,
           "rejected_non_uptrend_total": 0,
           "missing_doc_total": 0,
           "by_asset_class": {
             "stock": {
-              "rejected_non_buy_total": 305,
-              "rejected_non_high_total": 5,
+              "rejected_non_buy_total": 228,
+              "rejected_non_high_total": 2,
               "rejected_gated_total": 0,
               "rejected_non_uptrend_total": 0,
               "missing_doc_total": 0
             },
             "etf": {
-              "rejected_non_buy_total": 18,
+              "rejected_non_buy_total": 9,
               "rejected_non_high_total": 0,
               "rejected_gated_total": 0,
               "rejected_non_uptrend_total": 0,
@@ -757,21 +707,21 @@ window.__RV_LEARNING_REPORT__ = {
           }
         },
         "long": {
-          "rejected_non_buy_total": 313,
-          "rejected_non_high_total": 1,
+          "rejected_non_buy_total": 234,
+          "rejected_non_high_total": 3,
           "rejected_gated_total": 0,
-          "rejected_non_uptrend_total": 6,
+          "rejected_non_uptrend_total": 1,
           "missing_doc_total": 0,
           "by_asset_class": {
             "stock": {
-              "rejected_non_buy_total": 292,
-              "rejected_non_high_total": 1,
+              "rejected_non_buy_total": 226,
+              "rejected_non_high_total": 3,
               "rejected_gated_total": 0,
-              "rejected_non_uptrend_total": 6,
+              "rejected_non_uptrend_total": 1,
               "missing_doc_total": 0
             },
             "etf": {
-              "rejected_non_buy_total": 21,
+              "rejected_non_buy_total": 8,
               "rejected_non_high_total": 0,
               "rejected_gated_total": 0,
               "rejected_non_uptrend_total": 0,
@@ -784,16 +734,12 @@ window.__RV_LEARNING_REPORT__ = {
   },
   "weekly_comparison": {
     "forecast": {
-      "this_week": 0.8753,
-      "last_week": 0.6137
+      "this_week": 0.9093,
+      "last_week": 0.7926
     },
     "scientific": {
-      "this_week": 0.0019,
-      "last_week": 0.0074
-    },
-    "elliott": {
-      "this_week": 0.3972,
-      "last_week": 0.4752
+      "this_week": 0.0004,
+      "last_week": 0.0039
     },
     "quantlab": {
       "this_week": null,
@@ -997,41 +943,80 @@ window.__RV_LEARNING_REPORT__ = {
       "elliott_accuracy_7d": 0.3467,
       "stock_analyzer_precision_10": 0.1979,
       "stock_analyzer_brier_7d": 0.4265,
-      "stock_stability": 1
+      "stock_stability": 0.6
     },
     {
-      "date": "2026-04-04",
-      "forecast_accuracy_7d": 0.9021,
-      "forecast_brier_7d": 0.1906,
-      "scientific_accuracy_7d": 0.7125,
+      "date": "2026-04-05",
+      "forecast_accuracy_7d": 0.8994,
+      "forecast_brier_7d": 0.1921,
+      "scientific_accuracy_7d": 0.6985,
       "scientific_hit_rate_7d": 0,
       "elliott_accuracy_7d": 0.3467,
+      "stock_analyzer_precision_10": 0.207,
+      "stock_analyzer_brier_7d": 0.4245,
+      "stock_stability": 0.9231
+    },
+    {
+      "date": "2026-04-07",
+      "forecast_accuracy_7d": 0.9276,
+      "forecast_brier_7d": 0.1884,
+      "scientific_accuracy_7d": 0.6851,
+      "scientific_hit_rate_7d": 0,
+      "elliott_accuracy_7d": 0.3467,
+      "stock_analyzer_precision_10": 0.2055,
+      "stock_analyzer_brier_7d": 0.4446,
+      "stock_stability": null
+    },
+    {
+      "date": "2026-04-08",
+      "forecast_accuracy_7d": 0.9418,
+      "forecast_brier_7d": 0.1893,
+      "scientific_accuracy_7d": 0.678,
+      "scientific_hit_rate_7d": 0,
+      "stock_analyzer_precision_10": 0.2401,
+      "stock_analyzer_brier_7d": 0.4205,
+      "stock_stability": 0.6538
+    },
+    {
+      "date": "2026-04-09",
+      "forecast_accuracy_7d": 0.9376,
+      "forecast_brier_7d": 0.1922,
+      "scientific_accuracy_7d": 0.6258,
+      "scientific_hit_rate_7d": 0,
+      "stock_analyzer_precision_10": 0.3031,
+      "stock_analyzer_brier_7d": 0.3679,
+      "stock_stability": 0.4333
+    },
+    {
+      "date": "2026-04-09",
+      "forecast_accuracy_7d": 0.9376,
+      "forecast_brier_7d": 0.1922,
+      "scientific_accuracy_7d": 0.6258,
+      "scientific_hit_rate_7d": 0,
       "quantlab_accuracy_7d": null,
-      "stock_stability": 0.6
+      "stock_stability": 0.087
     }
   ],
   "metrics": {
-    "forecast_accuracy_7d": 0.9021,
-    "forecast_brier_7d": 0.1906,
-    "scientific_accuracy_7d": 0.7125,
+    "forecast_accuracy_7d": 0.9376,
+    "forecast_brier_7d": 0.1922,
+    "scientific_accuracy_7d": 0.6258,
     "scientific_hit_rate_7d": 0,
-    "elliott_accuracy_7d": 0.3467,
-    "stock_analyzer_precision_10": 0.1979,
-    "stock_analyzer_brier_7d": 0.4265,
-    "stock_stability": 0.6
+    "stock_analyzer_precision_10": 0.3031,
+    "stock_analyzer_brier_7d": 0.3679,
+    "stock_stability": 0.087
   },
   "conviction_scores": [
     {
-      "ticker": "100790",
+      "ticker": "00W",
       "direction": "bullish",
       "sources": [
         "forecast",
-        "scientific",
-        "elliott"
+        "scientific"
       ],
-      "source_count": 3,
-      "consensus_strength": 0.6667,
-      "avg_confidence": 0.7811,
+      "source_count": 2,
+      "consensus_strength": 1,
+      "avg_confidence": 0.7813,
       "conviction_score": 0.5208
     },
     {
@@ -1047,7 +1032,7 @@ window.__RV_LEARNING_REPORT__ = {
       "conviction_score": 0.5208
     },
     {
-      "ticker": "AITX",
+      "ticker": "ARMN",
       "direction": "bullish",
       "sources": [
         "forecast",
@@ -1083,43 +1068,7 @@ window.__RV_LEARNING_REPORT__ = {
       "conviction_score": 0.5208
     },
     {
-      "ticker": "BFHJ",
-      "direction": "bullish",
-      "sources": [
-        "forecast",
-        "scientific"
-      ],
-      "source_count": 2,
-      "consensus_strength": 1,
-      "avg_confidence": 0.7813,
-      "conviction_score": 0.5208
-    },
-    {
-      "ticker": "CUBT",
-      "direction": "bullish",
-      "sources": [
-        "forecast",
-        "scientific"
-      ],
-      "source_count": 2,
-      "consensus_strength": 1,
-      "avg_confidence": 0.7813,
-      "conviction_score": 0.5208
-    },
-    {
-      "ticker": "E30",
-      "direction": "bullish",
-      "sources": [
-        "forecast",
-        "scientific"
-      ],
-      "source_count": 2,
-      "consensus_strength": 1,
-      "avg_confidence": 0.7813,
-      "conviction_score": 0.5208
-    },
-    {
-      "ticker": "EICCF",
+      "ticker": "EB8",
       "direction": "bullish",
       "sources": [
         "forecast",
@@ -1143,7 +1092,7 @@ window.__RV_LEARNING_REPORT__ = {
       "conviction_score": 0.5208
     },
     {
-      "ticker": "ELVG",
+      "ticker": "LLND",
       "direction": "bullish",
       "sources": [
         "forecast",
@@ -1153,6 +1102,282 @@ window.__RV_LEARNING_REPORT__ = {
       "consensus_strength": 1,
       "avg_confidence": 0.7813,
       "conviction_score": 0.5208
+    },
+    {
+      "ticker": "NINE",
+      "direction": "bullish",
+      "sources": [
+        "forecast",
+        "scientific"
+      ],
+      "source_count": 2,
+      "consensus_strength": 1,
+      "avg_confidence": 0.7813,
+      "conviction_score": 0.5208
+    },
+    {
+      "ticker": "TCLIF",
+      "direction": "bullish",
+      "sources": [
+        "forecast",
+        "scientific"
+      ],
+      "source_count": 2,
+      "consensus_strength": 1,
+      "avg_confidence": 0.7813,
+      "conviction_score": 0.5208
+    },
+    {
+      "ticker": "AMPE",
+      "direction": "bullish",
+      "sources": [
+        "forecast",
+        "scientific"
+      ],
+      "source_count": 2,
+      "consensus_strength": 1,
+      "avg_confidence": 0.7063,
+      "conviction_score": 0.4708
+    },
+    {
+      "ticker": "LCCN",
+      "direction": "bullish",
+      "sources": [
+        "forecast",
+        "scientific"
+      ],
+      "source_count": 2,
+      "consensus_strength": 1,
+      "avg_confidence": 0.6963,
+      "conviction_score": 0.4642
+    },
+    {
+      "ticker": "7N20",
+      "direction": "bullish",
+      "sources": [
+        "forecast",
+        "scientific"
+      ],
+      "source_count": 2,
+      "consensus_strength": 1,
+      "avg_confidence": 0.5913,
+      "conviction_score": 0.3942
+    },
+    {
+      "ticker": "VAL",
+      "direction": "bullish",
+      "sources": [
+        "forecast",
+        "scientific"
+      ],
+      "source_count": 2,
+      "consensus_strength": 0.5,
+      "avg_confidence": 0.7553,
+      "conviction_score": 0.2518
+    },
+    {
+      "ticker": "100590",
+      "direction": "bullish",
+      "sources": [
+        "forecast",
+        "scientific"
+      ],
+      "source_count": 2,
+      "consensus_strength": 0.5,
+      "avg_confidence": 0.7317,
+      "conviction_score": 0.2439
+    },
+    {
+      "ticker": "215790",
+      "direction": "bullish",
+      "sources": [
+        "forecast",
+        "scientific"
+      ],
+      "source_count": 2,
+      "consensus_strength": 0.5,
+      "avg_confidence": 0.7317,
+      "conviction_score": 0.2439
+    },
+    {
+      "ticker": "217320",
+      "direction": "bullish",
+      "sources": [
+        "forecast",
+        "scientific"
+      ],
+      "source_count": 2,
+      "consensus_strength": 0.5,
+      "avg_confidence": 0.7317,
+      "conviction_score": 0.2439
+    },
+    {
+      "ticker": "319400",
+      "direction": "bullish",
+      "sources": [
+        "forecast",
+        "scientific"
+      ],
+      "source_count": 2,
+      "consensus_strength": 0.5,
+      "avg_confidence": 0.7317,
+      "conviction_score": 0.2439
+    },
+    {
+      "ticker": "000720",
+      "direction": "bullish",
+      "sources": [
+        "forecast",
+        "scientific"
+      ],
+      "source_count": 2,
+      "consensus_strength": 0.5,
+      "avg_confidence": 0.7317,
+      "conviction_score": 0.2439
+    },
+    {
+      "ticker": "010170",
+      "direction": "bullish",
+      "sources": [
+        "forecast",
+        "scientific"
+      ],
+      "source_count": 2,
+      "consensus_strength": 0.5,
+      "avg_confidence": 0.7317,
+      "conviction_score": 0.2439
+    },
+    {
+      "ticker": "017900",
+      "direction": "bullish",
+      "sources": [
+        "forecast",
+        "scientific"
+      ],
+      "source_count": 2,
+      "consensus_strength": 0.5,
+      "avg_confidence": 0.7317,
+      "conviction_score": 0.2439
+    },
+    {
+      "ticker": "033160",
+      "direction": "bullish",
+      "sources": [
+        "forecast",
+        "scientific"
+      ],
+      "source_count": 2,
+      "consensus_strength": 0.5,
+      "avg_confidence": 0.7317,
+      "conviction_score": 0.2439
+    },
+    {
+      "ticker": "047040",
+      "direction": "bullish",
+      "sources": [
+        "forecast",
+        "scientific"
+      ],
+      "source_count": 2,
+      "consensus_strength": 0.5,
+      "avg_confidence": 0.7317,
+      "conviction_score": 0.2439
+    },
+    {
+      "ticker": "049080",
+      "direction": "bullish",
+      "sources": [
+        "forecast",
+        "scientific"
+      ],
+      "source_count": 2,
+      "consensus_strength": 0.5,
+      "avg_confidence": 0.7317,
+      "conviction_score": 0.2439
+    },
+    {
+      "ticker": "092600",
+      "direction": "bullish",
+      "sources": [
+        "forecast",
+        "scientific"
+      ],
+      "source_count": 2,
+      "consensus_strength": 0.5,
+      "avg_confidence": 0.7317,
+      "conviction_score": 0.2439
+    },
+    {
+      "ticker": "0NF",
+      "direction": "bullish",
+      "sources": [
+        "forecast",
+        "scientific"
+      ],
+      "source_count": 2,
+      "consensus_strength": 0.5,
+      "avg_confidence": 0.7317,
+      "conviction_score": 0.2439
+    },
+    {
+      "ticker": "4AP",
+      "direction": "bullish",
+      "sources": [
+        "forecast",
+        "scientific"
+      ],
+      "source_count": 2,
+      "consensus_strength": 0.5,
+      "avg_confidence": 0.7317,
+      "conviction_score": 0.2439
+    },
+    {
+      "ticker": "BFHJ",
+      "direction": "bullish",
+      "sources": [
+        "forecast",
+        "scientific"
+      ],
+      "source_count": 2,
+      "consensus_strength": 0.5,
+      "avg_confidence": 0.7317,
+      "conviction_score": 0.2439
+    },
+    {
+      "ticker": "CRNA",
+      "direction": "bullish",
+      "sources": [
+        "forecast",
+        "scientific"
+      ],
+      "source_count": 2,
+      "consensus_strength": 0.5,
+      "avg_confidence": 0.7317,
+      "conviction_score": 0.2439
+    },
+    {
+      "ticker": "CUBT",
+      "direction": "bullish",
+      "sources": [
+        "forecast",
+        "scientific"
+      ],
+      "source_count": 2,
+      "consensus_strength": 0.5,
+      "avg_confidence": 0.7317,
+      "conviction_score": 0.2439
+    },
+    {
+      "ticker": "DLTI",
+      "direction": "bullish",
+      "sources": [
+        "forecast",
+        "scientific"
+      ],
+      "source_count": 2,
+      "consensus_strength": 0.5,
+      "avg_confidence": 0.7317,
+      "conviction_score": 0.2439
     },
     {
       "ticker": "ENZN",
@@ -1162,9 +1387,9 @@ window.__RV_LEARNING_REPORT__ = {
         "scientific"
       ],
       "source_count": 2,
-      "consensus_strength": 1,
-      "avg_confidence": 0.7813,
-      "conviction_score": 0.5208
+      "consensus_strength": 0.5,
+      "avg_confidence": 0.7317,
+      "conviction_score": 0.2439
     },
     {
       "ticker": "EXAS",
@@ -1174,21 +1399,57 @@ window.__RV_LEARNING_REPORT__ = {
         "scientific"
       ],
       "source_count": 2,
-      "consensus_strength": 1,
-      "avg_confidence": 0.7813,
-      "conviction_score": 0.5208
+      "consensus_strength": 0.5,
+      "avg_confidence": 0.7317,
+      "conviction_score": 0.2439
     },
     {
-      "ticker": "GWIN",
+      "ticker": "EXL1V",
       "direction": "bullish",
       "sources": [
         "forecast",
         "scientific"
       ],
       "source_count": 2,
-      "consensus_strength": 1,
-      "avg_confidence": 0.7813,
-      "conviction_score": 0.5208
+      "consensus_strength": 0.5,
+      "avg_confidence": 0.7317,
+      "conviction_score": 0.2439
+    },
+    {
+      "ticker": "HLONF",
+      "direction": "bullish",
+      "sources": [
+        "forecast",
+        "scientific"
+      ],
+      "source_count": 2,
+      "consensus_strength": 0.5,
+      "avg_confidence": 0.7317,
+      "conviction_score": 0.2439
+    },
+    {
+      "ticker": "HMGN",
+      "direction": "bullish",
+      "sources": [
+        "forecast",
+        "scientific"
+      ],
+      "source_count": 2,
+      "consensus_strength": 0.5,
+      "avg_confidence": 0.7317,
+      "conviction_score": 0.2439
+    },
+    {
+      "ticker": "IPRC",
+      "direction": "bullish",
+      "sources": [
+        "forecast",
+        "scientific"
+      ],
+      "source_count": 2,
+      "consensus_strength": 0.5,
+      "avg_confidence": 0.7317,
+      "conviction_score": 0.2439
     },
     {
       "ticker": "LDDFF",
@@ -1198,21 +1459,33 @@ window.__RV_LEARNING_REPORT__ = {
         "scientific"
       ],
       "source_count": 2,
-      "consensus_strength": 1,
-      "avg_confidence": 0.7813,
-      "conviction_score": 0.5208
+      "consensus_strength": 0.5,
+      "avg_confidence": 0.7317,
+      "conviction_score": 0.2439
     },
     {
-      "ticker": "LRKKF",
+      "ticker": "MKRO",
       "direction": "bullish",
       "sources": [
         "forecast",
         "scientific"
       ],
       "source_count": 2,
-      "consensus_strength": 1,
-      "avg_confidence": 0.7813,
-      "conviction_score": 0.5208
+      "consensus_strength": 0.5,
+      "avg_confidence": 0.7317,
+      "conviction_score": 0.2439
+    },
+    {
+      "ticker": "MYCOF",
+      "direction": "bullish",
+      "sources": [
+        "forecast",
+        "scientific"
+      ],
+      "source_count": 2,
+      "consensus_strength": 0.5,
+      "avg_confidence": 0.7317,
+      "conviction_score": 0.2439
     },
     {
       "ticker": "ONPH",
@@ -1222,9 +1495,9 @@ window.__RV_LEARNING_REPORT__ = {
         "scientific"
       ],
       "source_count": 2,
-      "consensus_strength": 1,
-      "avg_confidence": 0.7813,
-      "conviction_score": 0.5208
+      "consensus_strength": 0.5,
+      "avg_confidence": 0.7317,
+      "conviction_score": 0.2439
     },
     {
       "ticker": "PED",
@@ -1234,21 +1507,9 @@ window.__RV_LEARNING_REPORT__ = {
         "scientific"
       ],
       "source_count": 2,
-      "consensus_strength": 1,
-      "avg_confidence": 0.7813,
-      "conviction_score": 0.5208
-    },
-    {
-      "ticker": "QSU",
-      "direction": "bullish",
-      "sources": [
-        "forecast",
-        "scientific"
-      ],
-      "source_count": 2,
-      "consensus_strength": 1,
-      "avg_confidence": 0.7813,
-      "conviction_score": 0.5208
+      "consensus_strength": 0.5,
+      "avg_confidence": 0.7317,
+      "conviction_score": 0.2439
     },
     {
       "ticker": "RFXRF",
@@ -1258,9 +1519,9 @@ window.__RV_LEARNING_REPORT__ = {
         "scientific"
       ],
       "source_count": 2,
-      "consensus_strength": 1,
-      "avg_confidence": 0.7813,
-      "conviction_score": 0.5208
+      "consensus_strength": 0.5,
+      "avg_confidence": 0.7317,
+      "conviction_score": 0.2439
     },
     {
       "ticker": "SCAN",
@@ -1270,383 +1531,86 @@ window.__RV_LEARNING_REPORT__ = {
         "scientific"
       ],
       "source_count": 2,
-      "consensus_strength": 1,
-      "avg_confidence": 0.7813,
-      "conviction_score": 0.5208
+      "consensus_strength": 0.5,
+      "avg_confidence": 0.7317,
+      "conviction_score": 0.2439
     },
     {
-      "ticker": "VTMLF",
+      "ticker": "SER",
       "direction": "bullish",
       "sources": [
         "forecast",
         "scientific"
       ],
       "source_count": 2,
-      "consensus_strength": 1,
-      "avg_confidence": 0.7813,
-      "conviction_score": 0.5208
+      "consensus_strength": 0.5,
+      "avg_confidence": 0.7317,
+      "conviction_score": 0.2439
     },
     {
-      "ticker": "WALRF",
+      "ticker": "TA50",
       "direction": "bullish",
       "sources": [
         "forecast",
         "scientific"
       ],
       "source_count": 2,
-      "consensus_strength": 1,
-      "avg_confidence": 0.7813,
-      "conviction_score": 0.5208
+      "consensus_strength": 0.5,
+      "avg_confidence": 0.7317,
+      "conviction_score": 0.2439
     },
     {
-      "ticker": "AHII",
+      "ticker": "065440",
       "direction": "bullish",
       "sources": [
         "forecast",
         "scientific"
       ],
       "source_count": 2,
-      "consensus_strength": 1,
-      "avg_confidence": 0.7763,
-      "conviction_score": 0.5175
+      "consensus_strength": 0.5,
+      "avg_confidence": 0.7292,
+      "conviction_score": 0.2431
     },
     {
-      "ticker": "CRTG",
+      "ticker": "006360",
       "direction": "bullish",
       "sources": [
         "forecast",
         "scientific"
       ],
       "source_count": 2,
-      "consensus_strength": 1,
-      "avg_confidence": 0.7763,
-      "conviction_score": 0.5175
+      "consensus_strength": 0.5,
+      "avg_confidence": 0.729,
+      "conviction_score": 0.243
     },
     {
-      "ticker": "MPP",
+      "ticker": "009150",
       "direction": "bullish",
       "sources": [
         "forecast",
         "scientific"
       ],
       "source_count": 2,
-      "consensus_strength": 1,
-      "avg_confidence": 0.7763,
-      "conviction_score": 0.5175
+      "consensus_strength": 0.5,
+      "avg_confidence": 0.729,
+      "conviction_score": 0.243
     },
     {
-      "ticker": "236030",
-      "direction": "bullish",
-      "sources": [
-        "forecast",
-        "scientific",
-        "elliott"
-      ],
-      "source_count": 3,
-      "consensus_strength": 0.6667,
-      "avg_confidence": 0.7724,
-      "conviction_score": 0.515
-    },
-    {
-      "ticker": "020400",
-      "direction": "bullish",
-      "sources": [
-        "forecast",
-        "scientific",
-        "elliott"
-      ],
-      "source_count": 3,
-      "consensus_strength": 0.6667,
-      "avg_confidence": 0.7724,
-      "conviction_score": 0.515
-    },
-    {
-      "ticker": "20MP",
+      "ticker": "GOOG",
       "direction": "bullish",
       "sources": [
         "forecast",
         "scientific"
       ],
       "source_count": 2,
-      "consensus_strength": 1,
-      "avg_confidence": 0.7713,
-      "conviction_score": 0.5142
-    },
-    {
-      "ticker": "6CPA",
-      "direction": "bullish",
-      "sources": [
-        "forecast",
-        "scientific"
-      ],
-      "source_count": 2,
-      "consensus_strength": 1,
-      "avg_confidence": 0.7713,
-      "conviction_score": 0.5142
-    },
-    {
-      "ticker": "000990",
-      "direction": "bullish",
-      "sources": [
-        "forecast",
-        "scientific",
-        "elliott"
-      ],
-      "source_count": 3,
-      "consensus_strength": 0.6667,
-      "avg_confidence": 0.7709,
-      "conviction_score": 0.5139
-    },
-    {
-      "ticker": "0VG",
-      "direction": "bullish",
-      "sources": [
-        "forecast",
-        "scientific",
-        "elliott"
-      ],
-      "source_count": 3,
-      "consensus_strength": 0.6667,
-      "avg_confidence": 0.7678,
-      "conviction_score": 0.5119
-    },
-    {
-      "ticker": "RADLF",
-      "direction": "bullish",
-      "sources": [
-        "forecast",
-        "scientific"
-      ],
-      "source_count": 2,
-      "consensus_strength": 1,
-      "avg_confidence": 0.7663,
-      "conviction_score": 0.5108
-    },
-    {
-      "ticker": "115440",
-      "direction": "bearish",
-      "sources": [
-        "forecast",
-        "scientific",
-        "elliott"
-      ],
-      "source_count": 3,
-      "consensus_strength": 0.6667,
-      "avg_confidence": 0.7638,
-      "conviction_score": 0.5092
-    },
-    {
-      "ticker": "121600",
-      "direction": "bullish",
-      "sources": [
-        "forecast",
-        "scientific",
-        "elliott"
-      ],
-      "source_count": 3,
-      "consensus_strength": 0.6667,
-      "avg_confidence": 0.7638,
-      "conviction_score": 0.5092
-    },
-    {
-      "ticker": "001120",
-      "direction": "bullish",
-      "sources": [
-        "forecast",
-        "scientific",
-        "elliott"
-      ],
-      "source_count": 3,
-      "consensus_strength": 0.6667,
-      "avg_confidence": 0.7638,
-      "conviction_score": 0.5092
-    },
-    {
-      "ticker": "006280",
-      "direction": "bullish",
-      "sources": [
-        "forecast",
-        "scientific",
-        "elliott"
-      ],
-      "source_count": 3,
-      "consensus_strength": 0.6667,
-      "avg_confidence": 0.7638,
-      "conviction_score": 0.5092
-    },
-    {
-      "ticker": "006400",
-      "direction": "bullish",
-      "sources": [
-        "forecast",
-        "scientific",
-        "elliott"
-      ],
-      "source_count": 3,
-      "consensus_strength": 0.6667,
-      "avg_confidence": 0.7638,
-      "conviction_score": 0.5092
-    },
-    {
-      "ticker": "020150",
-      "direction": "bullish",
-      "sources": [
-        "forecast",
-        "scientific",
-        "elliott"
-      ],
-      "source_count": 3,
-      "consensus_strength": 0.6667,
-      "avg_confidence": 0.7638,
-      "conviction_score": 0.5092
-    },
-    {
-      "ticker": "028050",
-      "direction": "bullish",
-      "sources": [
-        "forecast",
-        "scientific",
-        "elliott"
-      ],
-      "source_count": 3,
-      "consensus_strength": 0.6667,
-      "avg_confidence": 0.7638,
-      "conviction_score": 0.5092
-    },
-    {
-      "ticker": "049430",
-      "direction": "bullish",
-      "sources": [
-        "forecast",
-        "scientific",
-        "elliott"
-      ],
-      "source_count": 3,
-      "consensus_strength": 0.6667,
-      "avg_confidence": 0.7638,
-      "conviction_score": 0.5092
-    },
-    {
-      "ticker": "052860",
-      "direction": "bullish",
-      "sources": [
-        "forecast",
-        "scientific",
-        "elliott"
-      ],
-      "source_count": 3,
-      "consensus_strength": 0.6667,
-      "avg_confidence": 0.7638,
-      "conviction_score": 0.5092
-    },
-    {
-      "ticker": "066970",
-      "direction": "bullish",
-      "sources": [
-        "forecast",
-        "scientific",
-        "elliott"
-      ],
-      "source_count": 3,
-      "consensus_strength": 0.6667,
-      "avg_confidence": 0.7638,
-      "conviction_score": 0.5092
-    },
-    {
-      "ticker": "089860",
-      "direction": "bullish",
-      "sources": [
-        "forecast",
-        "scientific",
-        "elliott"
-      ],
-      "source_count": 3,
-      "consensus_strength": 0.6667,
-      "avg_confidence": 0.7638,
-      "conviction_score": 0.5092
-    },
-    {
-      "ticker": "1RY",
-      "direction": "bullish",
-      "sources": [
-        "forecast",
-        "scientific",
-        "elliott"
-      ],
-      "source_count": 3,
-      "consensus_strength": 0.6667,
-      "avg_confidence": 0.7638,
-      "conviction_score": 0.5092
-    },
-    {
-      "ticker": "0I0B",
-      "direction": "bearish",
-      "sources": [
-        "forecast",
-        "scientific",
-        "elliott"
-      ],
-      "source_count": 3,
-      "consensus_strength": 0.6667,
-      "avg_confidence": 0.7611,
-      "conviction_score": 0.5074
-    },
-    {
-      "ticker": "101170",
-      "direction": "bullish",
-      "sources": [
-        "forecast",
-        "scientific",
-        "elliott"
-      ],
-      "source_count": 3,
-      "consensus_strength": 0.6667,
-      "avg_confidence": 0.7589,
-      "conviction_score": 0.506
-    },
-    {
-      "ticker": "112610",
-      "direction": "bullish",
-      "sources": [
-        "forecast",
-        "scientific",
-        "elliott"
-      ],
-      "source_count": 3,
-      "consensus_strength": 0.6667,
-      "avg_confidence": 0.7579,
-      "conviction_score": 0.5052
-    },
-    {
-      "ticker": "125210",
-      "direction": "bullish",
-      "sources": [
-        "forecast",
-        "scientific",
-        "elliott"
-      ],
-      "source_count": 3,
-      "consensus_strength": 0.6667,
-      "avg_confidence": 0.7579,
-      "conviction_score": 0.5052
-    },
-    {
-      "ticker": "253610",
-      "direction": "bearish",
-      "sources": [
-        "forecast",
-        "scientific",
-        "elliott"
-      ],
-      "source_count": 3,
-      "consensus_strength": 0.6667,
-      "avg_confidence": 0.7579,
-      "conviction_score": 0.5052
+      "consensus_strength": 0.5,
+      "avg_confidence": 0.7282,
+      "conviction_score": 0.2427
     }
   ],
   "stock_forward_returns": {
-    "top50_count": 37,
-    "tracked": 0,
+    "top50_count": 50,
+    "tracked": 5,
     "avg_market_return_today": -0.0097
   },
   "improvements_active": [
@@ -1654,7 +1618,6 @@ window.__RV_LEARNING_REPORT__ = {
     "forecast_adaptive_confidence",
     "scientific_signal_threshold_60",
     "scientific_setup_decay_10d",
-    "elliott_quality_filter_top500",
     "stock_ema_smoothing_alpha03",
     "cross_feature_conviction",
     "scientific_atr_breakout_threshold",

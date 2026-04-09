@@ -1597,7 +1597,7 @@
         ${(() => {
           const ev4 = payload.evaluation_v4;
           const mg = _guard.panelGates.modelConsensus;
-          const models = [{ k: 'quantlab', l: 'QuantLab' }, { k: 'elliott', l: 'Elliott' }, { k: 'forecast', l: 'Forecast' }, { k: 'scientific', l: 'Scientific' }];
+          const models = [{ k: 'quantlab', l: 'QuantLab' }, { k: 'forecast', l: 'Forecast' }, { k: 'scientific', l: 'Scientific' }];
           const dirMap = d => d === 'bullish' || d === 'BUY' ? { c: 'var(--green)', l: 'BUY' } : d === 'bearish' || d === 'SELL' || d === 'AVOID' ? { c: 'var(--red)', l: String(d).toUpperCase() } : { c: 'var(--yellow)', l: d ? String(d).toUpperCase() : 'No data' };
           const modelEvidenceView = { showSection: mg?.show !== false };
           if (!modelEvidenceView.showSection) return '';
@@ -1614,10 +1614,9 @@
           const _qlDir = _qlTone ? (_qlTone === 'good' || /buy|bullish|top/i.test(_qlTone) ? 'bullish' : _qlTone === 'bad' || /sell|bearish|avoid/i.test(_qlTone) ? 'bearish' : 'neutral') : 'neutral';
           const _fcHz = ev4?.forecast?.horizons || {};
           const _fcDir = _fcHz['5d']?.direction || _fcHz['20d']?.direction || _fcHz['1d']?.direction || null;
-          const _elDir = ev4?.elliott?.completedPattern?.direction || ev4?.elliott?.developingPattern?.direction || null;
           const _sciProb = vc?.scientific?.value?.probability ?? ev4?.scientific?.value?.probability ?? null;
           const _sciDir = _sciProb != null ? (_sciProb >= 0.55 ? 'bullish' : _sciProb <= 0.45 ? 'bearish' : 'neutral') : null;
-          const _modelDirs = { quantlab: _qlDir, forecast: _fcDir, elliott: _elDir, scientific: _sciDir };
+          const _modelDirs = { quantlab: _qlDir, forecast: _fcDir, scientific: _sciDir };
           const missingModels = (_guard.corrections.modelConsensus?.missingModels || []);
           const modelConsensusView = buildActiveModelConsensusPresentation({ evaluation: ev4, decision: _decision, missingModels, modelStates: _modelDirs });
           return `<div style="margin-top:0.6rem; padding:.5rem; border-radius:8px; background:rgba(255,255,255,0.01); border:1px solid rgba(255,255,255,0.03);">

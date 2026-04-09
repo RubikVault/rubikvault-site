@@ -377,7 +377,8 @@ function buildQuantLabDataFreshnessSummary({
   generatedAt,
   reportDate,
   rawFreshness,
-  fullchunkManifest,
+  featureStoreManifest,
+  featureStoreCandidates,
   marketData,
 }) {
   const rawCanonicalAsof = String(rawFreshness?.latest_required_data_date || rawFreshness?.latest_required_ingest_date || '');
@@ -388,8 +389,8 @@ function buildQuantLabDataFreshnessSummary({
     || rawFreshness?.latest_any_ingest_date
     || '',
   );
-  const featureAsof = String(fullchunkManifest?.ranges?.panel_max_asof_date || marketData?.featureSlice?.asofDate || '');
-  const featureSnapshotAsof = String(fullchunkManifest?.ranges?.snapshot_asof_date || '');
+  const featureAsof = String(featureStoreManifest?.ranges?.panel_max_asof_date || marketData?.featureSlice?.asofDate || '');
+  const featureSnapshotAsof = String(featureStoreManifest?.ranges?.snapshot_asof_date || '');
   const stockPublishAsof = String(marketData?.featureSlice?.asofDate || '');
 
   const featureAgeCalendarDays = ageCalendarDaysFromDateId(featureAsof, reportDate);
@@ -474,17 +475,26 @@ function buildQuantLabDataFreshnessSummary({
       reasonCodes: rawFreshness?.reason_codes || [],
     },
     featureStore: {
-      version: 'v4_q1panel_fullchunk_daily',
-      snapshotId: String(fullchunkManifest?.snapshot_id || ''),
+      version: String(featureStoreManifest?.feature_store_version || marketData?.featureSlice?.featureStoreVersion || 'v4_q1panel_overnight'),
+      snapshotId: String(featureStoreManifest?.snapshot_id || ''),
       snapshotAsOfDate: featureSnapshotAsof || null,
       snapshotAgeCalendarDays: featureSnapshotAgeCalendarDays,
       asOfDate: featureAsof || null,
       ageCalendarDays: featureAgeCalendarDays,
       lagVsRawCanonicalCalendarDays: featureLagVsRawCanonicalCalendarDays,
       lagVsRawAnyCalendarDays: featureLagVsRawAnyCalendarDays,
-      rowsTotal: Number(fullchunkManifest?.counts?.rows_total || 0),
-      asofDatesTotal: Number(fullchunkManifest?.counts?.asof_dates_total || 0),
-      manifestPath: path.join('features/store/feature_store_version=v4_q1panel_fullchunk_daily', 'feature_panel_manifest.json'),
+      rowsTotal: Number(featureStoreManifest?.counts?.rows_total || 0),
+      asofDatesTotal: Number(featureStoreManifest?.counts?.asof_dates_total || 0),
+      manifestPath: featureStoreManifest?.feature_store_version
+        ? path.join(`features/store/feature_store_version=${featureStoreManifest.feature_store_version}`, 'feature_panel_manifest.json')
+        : null,
+      availableVersions: Array.isArray(featureStoreCandidates)
+        ? featureStoreCandidates.filter((item) => item?.available).map((item) => ({
+            version: item.version,
+            asOfDate: item.panelMaxAsofDate,
+            snapshotAsOfDate: item.snapshotAsofDate,
+          }))
+        : [],
     },
     stockPublish: {
       asOfDate: stockPublishAsof || null,
@@ -498,6 +508,31 @@ function buildQuantLabDataFreshnessSummary({
       latestPath: '/data/quantlab/reports/v4-daily-latest.json',
     },
   };
+}
+
+function summarizeFeatureStoreCandidate(version, manifest) {
+  return {
+    version,
+    available: Boolean(manifest),
+    manifest,
+    panelMaxAsofDate: String(manifest?.ranges?.panel_max_asof_date || ''),
+    snapshotAsofDate: String(manifest?.ranges?.snapshot_asof_date || ''),
+    rowsTotal: Number(manifest?.counts?.rows_total || 0),
+  };
+}
+
+function selectOperationalFeatureStore(candidates, marketData) {
+  const preferredVersion = String(marketData?.featureSlice?.featureStoreVersion || '');
+  const available = (candidates || []).filter((item) => item?.available);
+  if (preferredVersion) {
+    const matched = available.find((item) => item.version === preferredVersion);
+    if (matched) return matched;
+  }
+  return available.sort((a, b) => (
+    String(b.panelMaxAsofDate).localeCompare(String(a.panelMaxAsofDate))
+    || String(b.snapshotAsofDate).localeCompare(String(a.snapshotAsofDate))
+    || Number(b.rowsTotal || 0) - Number(a.rowsTotal || 0)
+  ))[0] || null;
 }
 
 function extractDateFromPath(text) {
@@ -979,6 +1014,10 @@ function main() {
   const overnightManifest = readJson(path.join(quantRoot, 'features/store/feature_store_version=v4_q1panel_overnight/feature_panel_manifest.json'));
   const fullchunkManifest = readJson(path.join(quantRoot, 'features/store/feature_store_version=v4_q1panel_fullchunk_daily/feature_panel_manifest.json'));
   const legacyQuantLatest = readJson(path.join(REPO_ROOT, 'public/data/quantlab/latest.json'));
+  const featureStoreCandidates = [
+    summarizeFeatureStoreCandidate('v4_q1panel_overnight', overnightManifest),
+    summarizeFeatureStoreCandidate('v4_q1panel_fullchunk_daily', fullchunkManifest),
+  ];
 
   const stagebReports = sortByGeneratedAtDesc(
     walkFind(runsRoot, 'stage_b_q1_run_report.json')
@@ -1246,11 +1285,13 @@ function main() {
     fullchunkManifest,
     generatedAt: now.toISOString(),
   });
+  const operationalFeatureStore = selectOperationalFeatureStore(featureStoreCandidates, marketData);
   const operationalStatus = buildQuantLabDataFreshnessSummary({
     generatedAt: now.toISOString(),
     reportDate,
     rawFreshness,
-    fullchunkManifest,
+    featureStoreManifest: operationalFeatureStore?.manifest || null,
+    featureStoreCandidates,
     marketData,
   });
 

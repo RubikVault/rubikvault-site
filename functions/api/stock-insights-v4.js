@@ -55,7 +55,6 @@ export async function onRequestGet(context) {
     universe: decisionInputs.universe,
     scientificState: decisionInputs.scientificState,
     forecastState: decisionInputs.forecastState,
-    elliottState: decisionInputs.elliottState,
     quantlabState: decisionInputs.quantlabState,
     forecastMeta: decisionInputs.forecastMeta,
     inputFingerprints: decisionInputs.input_fingerprints,

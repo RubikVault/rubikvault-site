@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+from concurrent.futures import ThreadPoolExecutor, as_completed
 import gzip
 import hashlib
 import json
@@ -115,13 +116,32 @@ def resolve_repo_rel(repo_root: Path, value: str) -> Path:
     return p if p.is_absolute() else (repo_root / p)
 
 
+def is_placeholder_secret(value: str) -> bool:
+    text = str(value or "").strip().strip('"').strip("'")
+    if not text:
+        return True
+    upper = text.upper()
+    placeholders = {
+        "DEIN_KEY",
+        "YOUR_KEY",
+        "YOUR_API_KEY",
+        "API_KEY",
+        "CHANGE_ME",
+        "CHANGEME",
+        "REPLACE_ME",
+        "REPLACEME",
+        "TOKEN_HERE",
+    }
+    return upper in placeholders
+
+
 def load_env_value(env_path: Path, key_names: Iterable[str]) -> str:
     wanted = [str(key).strip() for key in key_names if str(key).strip()]
     if not wanted:
         raise RuntimeError("env_keys_missing")
     for key in wanted:
         value = str(os.environ.get(key) or "").strip().strip('"').strip("'")
-        if value:
+        if value and not is_placeholder_secret(value):
             return value
     if not env_path.exists():
         return ""
@@ -133,7 +153,7 @@ def load_env_value(env_path: Path, key_names: Iterable[str]) -> str:
         if current_key.strip() not in wanted:
             continue
         value = value.strip().strip('"').strip("'")
-        if value:
+        if value and not is_placeholder_secret(value):
             return value
     return ""
 
@@ -204,6 +224,8 @@ def parse_args(argv: Iterable[str]) -> argparse.Namespace:
     p.add_argument("--from-date", required=True)
     p.add_argument("--to-date", default="")
     p.add_argument("--max-assets", type=int, default=0)
+    p.add_argument("--concurrency", type=int, default=1)
+    p.add_argument("--progress-every", type=int, default=0)
     p.add_argument("--sleep-ms", type=int, default=0)
     p.add_argument("--timeout-sec", type=float, default=25.0)
     p.add_argument("--max-retries", type=int, default=3)
@@ -509,6 +531,41 @@ def update_pack(
     return True, changed_assets
 
 
+def fetch_asset_rows(
+    *,
+    index: int,
+    canonical_id: str,
+    meta: AssetMeta,
+    api_key: str,
+    from_date: str,
+    to_date: str,
+    timeout_sec: float,
+    max_retries: int,
+) -> dict[str, Any]:
+    result = fetch_daily_eod(
+        api_key=api_key,
+        symbol=meta.symbol,
+        exchange=meta.exchange,
+        from_date=from_date,
+        to_date=to_date,
+        timeout_sec=timeout_sec,
+        max_retries=max_retries,
+    )
+    rows = list(result.get("rows") or [])
+    return {
+        "index": index,
+        "canonical_id": canonical_id,
+        "symbol": meta.symbol,
+        "exchange": meta.exchange,
+        "type_norm": meta.type_norm,
+        "history_pack": meta.history_pack,
+        "rows": rows,
+        "query_symbol": str(result.get("query_symbol") or ""),
+        "attempts": int(result.get("attempts") or 0),
+        "last_date": str(rows[-1]["date"]) if rows else "",
+    }
+
+
 def resolve_history_pack_path(history_root: Path, rel_pack: str) -> Path:
     primary = history_root / rel_pack
     if primary.exists():
@@ -553,57 +610,132 @@ def main(argv: Iterable[str]) -> int:
     acquire_job_lock(lock_path)
     try:
         state_root.mkdir(parents=True, exist_ok=True)
-        fetched_assets: list[dict[str, Any]] = []
+        fetched_assets_by_index: dict[int, dict[str, Any]] = {}
         fetch_errors: list[dict[str, Any]] = []
         pack_updates: dict[str, dict[str, list[dict[str, Any]]]] = {}
         api_attempts_total = 0
         fetched_with_data = 0
-
-        for index, canonical_id in enumerate(allowlist_ids, start=1):
+        concurrency = max(1, int(args.concurrency or 1))
+        progress_every = max(0, int(args.progress_every or 0))
+        indexed_allowlist = list(enumerate(allowlist_ids, start=1))
+        indexed_registry: list[tuple[int, str, AssetMeta]] = []
+        for index, canonical_id in indexed_allowlist:
             meta = registry.get(canonical_id)
             if meta is None:
                 fetch_errors.append({"canonical_id": canonical_id, "error": "missing_registry_entry"})
                 continue
-            try:
-                result = fetch_daily_eod(
-                    api_key=api_key,
-                    symbol=meta.symbol,
-                    exchange=meta.exchange,
-                    from_date=from_date,
-                    to_date=to_date,
-                    timeout_sec=float(args.timeout_sec),
-                    max_retries=int(args.max_retries),
-                )
-                api_attempts_total += int(result.get("attempts") or 0)
-                rows = list(result.get("rows") or [])
-                if rows:
-                    fetched_with_data += 1
-                    pack_updates.setdefault(meta.history_pack, {})[canonical_id] = rows
-                fetched_assets.append(
-                    {
-                        "canonical_id": canonical_id,
-                        "symbol": meta.symbol,
-                        "exchange": meta.exchange,
-                        "type_norm": meta.type_norm,
-                        "history_pack": meta.history_pack,
-                        "rows_fetched": len(rows),
-                        "query_symbol": str(result.get("query_symbol") or ""),
-                        "attempts": int(result.get("attempts") or 0),
-                        "last_date": str(rows[-1]["date"]) if rows else "",
-                    }
-                )
-            except Exception as exc:
-                fetch_errors.append(
-                    {
-                        "canonical_id": canonical_id,
-                        "symbol": meta.symbol,
-                        "exchange": meta.exchange,
-                        "history_pack": meta.history_pack,
-                        "error": f"{type(exc).__name__}:{exc}",
-                    }
-                )
-            if int(args.sleep_ms) > 0 and index < len(allowlist_ids):
-                time.sleep(float(args.sleep_ms) / 1000.0)
+            indexed_registry.append((index, canonical_id, meta))
+
+        def _record_fetch(item: dict[str, Any]) -> None:
+            nonlocal api_attempts_total, fetched_with_data
+            api_attempts_total += int(item.get("attempts") or 0)
+            rows = list(item.get("rows") or [])
+            if rows:
+                fetched_with_data += 1
+                pack_updates.setdefault(str(item["history_pack"]), {})[str(item["canonical_id"])] = rows
+            fetched_assets_by_index[int(item["index"])] = {
+                "canonical_id": str(item["canonical_id"]),
+                "symbol": str(item["symbol"]),
+                "exchange": str(item["exchange"]),
+                "type_norm": str(item["type_norm"]),
+                "history_pack": str(item["history_pack"]),
+                "rows_fetched": len(rows),
+                "query_symbol": str(item.get("query_symbol") or ""),
+                "attempts": int(item.get("attempts") or 0),
+                "last_date": str(item.get("last_date") or ""),
+            }
+
+        if concurrency <= 1:
+            for index, canonical_id, meta in indexed_registry:
+                try:
+                    item = fetch_asset_rows(
+                        index=index,
+                        canonical_id=canonical_id,
+                        meta=meta,
+                        api_key=api_key,
+                        from_date=from_date,
+                        to_date=to_date,
+                        timeout_sec=float(args.timeout_sec),
+                        max_retries=int(args.max_retries),
+                    )
+                    _record_fetch(item)
+                except Exception as exc:
+                    fetch_errors.append(
+                        {
+                            "canonical_id": canonical_id,
+                            "symbol": meta.symbol,
+                            "exchange": meta.exchange,
+                            "history_pack": meta.history_pack,
+                            "error": f"{type(exc).__name__}:{exc}",
+                        }
+                    )
+                if progress_every > 0 and index % progress_every == 0:
+                    print(
+                        json.dumps(
+                            {
+                                "progress": {
+                                    "completed": index,
+                                    "total": len(allowlist_ids),
+                                    "assets_fetched_with_data": fetched_with_data,
+                                    "api_attempts_total": api_attempts_total,
+                                    "fetch_errors_total": len(fetch_errors),
+                                }
+                            }
+                        ),
+                        flush=True,
+                    )
+                if int(args.sleep_ms) > 0 and index < len(allowlist_ids):
+                    time.sleep(float(args.sleep_ms) / 1000.0)
+        else:
+            completed = 0
+            with ThreadPoolExecutor(max_workers=concurrency) as executor:
+                future_to_ctx = {
+                    executor.submit(
+                        fetch_asset_rows,
+                        index=index,
+                        canonical_id=canonical_id,
+                        meta=meta,
+                        api_key=api_key,
+                        from_date=from_date,
+                        to_date=to_date,
+                        timeout_sec=float(args.timeout_sec),
+                        max_retries=int(args.max_retries),
+                    ): (canonical_id, meta)
+                    for index, canonical_id, meta in indexed_registry
+                }
+                for future in as_completed(future_to_ctx):
+                    canonical_id, meta = future_to_ctx[future]
+                    completed += 1
+                    try:
+                        item = future.result()
+                        _record_fetch(item)
+                    except Exception as exc:
+                        fetch_errors.append(
+                            {
+                                "canonical_id": canonical_id,
+                                "symbol": meta.symbol,
+                                "exchange": meta.exchange,
+                                "history_pack": meta.history_pack,
+                                "error": f"{type(exc).__name__}:{exc}",
+                            }
+                        )
+                    if progress_every > 0 and completed % progress_every == 0:
+                        print(
+                            json.dumps(
+                                {
+                                    "progress": {
+                                        "completed": completed,
+                                        "total": len(indexed_registry),
+                                        "assets_fetched_with_data": fetched_with_data,
+                                        "api_attempts_total": api_attempts_total,
+                                        "fetch_errors_total": len(fetch_errors),
+                                    }
+                                }
+                            ),
+                            flush=True,
+                        )
+
+        fetched_assets = [fetched_assets_by_index[key] for key in sorted(fetched_assets_by_index)]
 
         changed_packs: list[dict[str, Any]] = []
         changed_entries: list[dict[str, Any]] = []

@@ -1,3 +1,11 @@
+## Lessons Learned — Pflichtlektüre
+
+> Vor jeder Arbeit in diesem Repo: [`docs/ops/lessons-learned.md`](docs/ops/lessons-learned.md) lesen.
+> Nach jedem Incident oder nicht-offensichtlichem Fix: Lektion dort eintragen.
+> Dieses Dokument wird von allen KIs und Entwicklern gepflegt — egal wer den Fehler gemacht hat.
+
+---
+
 ## RubikVault Agent Rules
 
 - Never delete existing features or hide blocks; only extend.

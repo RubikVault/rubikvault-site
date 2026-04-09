@@ -91,18 +91,17 @@ const DEFAULT_OPS_POLICY = {
     production: { scheduler_expected: true, pipeline_expected: false, kv_expected: true }
   },
   core: {
-    api: ['API_STOCK', 'API_ELLIOTT_SCANNER'],
+    api: ['API_STOCK'],
     assets: [
       'ASSET_UNIVERSE',
       'ASSET_STOCK_ANALYSIS',
       'ASSET_EOD_BATCH',
-      'ASSET_MARKETPHASE_INDEX',
       'ASSET_MARKET_PRICES'
     ]
   },
   enhancers: {
     api: ['API_FUNDAMENTALS'],
-    assets: ['ASSET_MARKETPHASE_SAMPLE'],
+    assets: [],
     pipeline: []
   }
 };
@@ -1415,13 +1414,12 @@ export async function onRequestGet(context) {
     Object.entries(providersRaw).map(([k, v]) => [k, summarizeProviderStats(v)])
   );
 
-  const [opsDaily, usageReport, providerState, seedManifest, nasdaq100Universe, marketPhaseIndex, healthProfilesRaw, thresholdsRaw, sourceMapRaw, eodManifestRaw] = await Promise.all([
+  const [opsDaily, usageReport, providerState, seedManifest, nasdaq100Universe, healthProfilesRaw, thresholdsRaw, sourceMapRaw, eodManifestRaw] = await Promise.all([
     fetchAssetJson(request.url, '/data/ops-daily.json', null),
     fetchAssetJson(request.url, '/data/usage-report.json', null),
     fetchAssetJson(request.url, '/data/provider-state.json', null),
     fetchAssetJson(request.url, '/data/seed-manifest.json', null),
     fetchAssetJson(request.url, '/data/universe/nasdaq100.json', []),
-    fetchAssetJson(request.url, '/data/marketphase/index.json', null),
     fetchAssetJson(request.url, '/data/ops/health-profiles.v1.json', null),
     fetchAssetJson(request.url, '/data/ops/thresholds.v1.json', null),
     fetchAssetJson(request.url, '/data/ops/source-map.v1.json', null),
@@ -1738,15 +1736,11 @@ export async function onRequestGet(context) {
   const [
     universeDoc,
     stockAnalysisDoc,
-    eodBatchDoc,
-    marketphaseIndexDoc,
-    marketphaseSampleDoc
+    eodBatchDoc
   ] = await Promise.all([
     fetchAssetJson(request.url, '/data/universe/nasdaq100.json', null),
     fetchAssetJson(request.url, '/data/snapshots/stock-analysis.json', null),
-    fetchAssetJson(request.url, '/data/eod/batches/eod.latest.000.json', null),
-    fetchAssetJson(request.url, '/data/marketphase/index.json', null),
-    fetchAssetJson(request.url, `/data/marketphase/${encodeURIComponent(ssotSampleTicker)}.json`, null)
+    fetchAssetJson(request.url, '/data/eod/batches/eod.latest.000.json', null)
   ]);
 
   const apiSamples = await Promise.all(
@@ -1757,7 +1751,6 @@ export async function onRequestGet(context) {
   );
 
   const fundamentalsSample = await fetchApiJson(request.url, '/api/fundamentals', { ticker: ssotSampleTicker });
-  const elliottSample = await fetchApiJson(request.url, '/api/elliott-scanner');
 
   const priceTruth = buildPriceTruthChain({
     traces: traceAssets,
@@ -1792,19 +1785,6 @@ export async function onRequestGet(context) {
         schema_version: fundamentalsSample.response?.schema_version || null,
         meta_status: fundamentalsSample.response?.meta?.status || null,
         error: fundamentalsSample.response?.error?.code || null
-      }
-    }),
-    buildCheck({
-      id: 'API_ELLIOTT_SCANNER',
-      label: '/api/elliott-scanner',
-      required: true,
-      ok: elliottSample.ok && elliottSample.response?.ok === true && Array.isArray(elliottSample.response?.setups),
-      reason: elliottSample.ok ? 'INVALID_RESPONSE' : `HTTP_${elliottSample.status ?? 'ERR'}`,
-      path: elliottSample.url,
-      evidence: {
-        status: elliottSample.status,
-        ok: elliottSample.response?.ok ?? null,
-        setups: Array.isArray(elliottSample.response?.setups) ? elliottSample.response.setups.length : null
       }
     })
   ];
@@ -1845,28 +1825,6 @@ export async function onRequestGet(context) {
       evidence: {
         symbols: Array.isArray(eodBatchDoc?.symbols) ? eodBatchDoc.symbols.length : null,
         has_data: Boolean(eodBatchDoc?.data)
-      }
-    }),
-    buildCheck({
-      id: 'ASSET_MARKETPHASE_INDEX',
-      label: '/data/marketphase/index.json',
-      required: true,
-      ok: Array.isArray(marketphaseIndexDoc?.data?.symbols) ? marketphaseIndexDoc.data.symbols.length > 0 : Array.isArray(marketphaseIndexDoc?.symbols),
-      reason: 'MARKETPHASE_INDEX_MISSING',
-      path: '/data/marketphase/index.json',
-      evidence: {
-        symbols: Array.isArray(marketphaseIndexDoc?.data?.symbols) ? marketphaseIndexDoc.data.symbols.length : (Array.isArray(marketphaseIndexDoc?.symbols) ? marketphaseIndexDoc.symbols.length : null)
-      }
-    }),
-    buildCheck({
-      id: 'ASSET_MARKETPHASE_SAMPLE',
-      label: `/data/marketphase/${ssotSampleTicker}.json`,
-      required: false,
-      ok: marketphaseSampleDoc?.ok === true,
-      reason: 'MARKETPHASE_SAMPLE_MISSING',
-      path: `/data/marketphase/${ssotSampleTicker}.json`,
-      evidence: {
-        ok: marketphaseSampleDoc?.ok ?? null
       }
     }),
     buildCheck({
@@ -1996,18 +1954,7 @@ export async function onRequestGet(context) {
     );
   })();
 
-  const staleList = (() => {
-    const out = [];
-    const symbols = Array.isArray(marketPhaseIndex?.data?.symbols) ? marketPhaseIndex.data.symbols : [];
-    for (const s of symbols) {
-      const sym = s?.symbol ? String(s.symbol).toUpperCase() : null;
-      const updatedAt = s?.updatedAt ? String(s.updatedAt).slice(0, 10) : null;
-      if (!sym || !updatedAt) continue;
-      if (updatedAt < expectedTradingDay) out.push(sym);
-    }
-    out.sort();
-    return out;
-  })();
+  const staleList = [];
 
   const opsComputed = {
     providers: opsProviders.sort((a, b) => String(a.name).localeCompare(String(b.name))),

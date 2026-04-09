@@ -1,0 +1,53 @@
+{
+  "schema_version": "nas.stage4.candidates.v1",
+  "phase": "phase_c_offline",
+  "candidates": [
+    {
+      "id": "scientific_summary",
+      "job_type": "mixed",
+      "command": "node scripts/build-scientific-summary.mjs",
+      "input_manifest": "scripts/nas/inputs/stage-4.scientific-summary.paths",
+      "outputs": [
+        "public/data/supermodules/scientific-summary.json"
+      ]
+    },
+    {
+      "id": "best_setups_v4",
+      "job_type": "mixed",
+      "command": "ALLOW_REMOTE_BAR_FETCH=0 BEST_SETUPS_DISABLE_NETWORK=1 node scripts/build-best-setups-v4.mjs",
+      "input_manifest": "scripts/nas/inputs/stage-4.best-setups-v4.paths",
+      "outputs": [
+        "public/data/snapshots/best-setups-v4.json"
+      ]
+    },
+    {
+      "id": "etf_diagnostic",
+      "job_type": "mixed",
+      "command": "node scripts/learning/diagnose-best-setups-etf-drop.mjs",
+      "input_manifest": "scripts/nas/inputs/stage-4.etf-diagnostic.paths",
+      "outputs": [
+        "public/data/reports/best-setups-etf-diagnostic-latest.json",
+        "mirrors/learning/reports/best-setups-etf-diagnostic-latest.json"
+      ]
+    },
+    {
+      "id": "daily_audit_report",
+      "job_type": "mixed",
+      "command": "node scripts/learning/quantlab-v1/daily-audit-report.mjs",
+      "input_manifest": "scripts/nas/inputs/stage-4.daily-audit-report.paths",
+      "outputs": [
+        "public/data/reports/quantlab-v1-latest.json",
+        "mirrors/learning/quantlab-v1/reports/<TODAY_UTC>-internal.json"
+      ]
+    },
+    {
+      "id": "cutover_readiness_report",
+      "job_type": "mixed",
+      "command": "node scripts/learning/quantlab-v1/cutover-readiness-report.mjs",
+      "input_manifest": "scripts/nas/inputs/stage-4.cutover-readiness.paths",
+      "outputs": [
+        "mirrors/learning/quantlab-v1/reports/cutover-readiness-<TODAY_UTC>.json"
+      ]
+    }
+  ]
+}

@@ -20,6 +20,8 @@ ETF_DIAG_PATH = REPO_ROOT / "public" / "data" / "reports" / "best-setups-etf-dia
 CALIBRATION_PATH = REPO_ROOT / "mirrors" / "forecast" / "champion" / "calibration_latest.json"
 PARITY_REPORT_PATH = REPO_ROOT / "mirrors" / "learning" / "reports" / "best-setups-ssot-parity-latest.json"
 STABILITY_5D_PATH = REPO_ROOT / "public" / "data" / "reports" / "learning-stability-5d-latest.json"
+FORECAST_STATUS_PATH = REPO_ROOT / "public" / "data" / "forecast" / "system" / "status.json"
+FORECAST_LATEST_PATH = REPO_ROOT / "public" / "data" / "forecast" / "latest.json"
 
 STEPS = [
     ("forecast_run_daily", ["node", "scripts/forecast/run_daily.mjs"]),
@@ -34,6 +36,25 @@ STEPS = [
     ("stability_5d", ["node", "scripts/learning/run-5day-stability-observation.mjs"]),
     ("ssot_parity_validation", ["node", "scripts/validate/best-setups-ssot-local-parity.mjs"]),
 ]
+
+STEP_ENV_OVERRIDES = {
+    "forecast_run_daily": {
+        "FORECAST_SKIP_MATURED_EVAL": "1",
+        "NODE_OPTIONS": "--max-old-space-size=12288",
+    },
+    "forecast_backfill_outcomes": {
+        "NODE_OPTIONS": "--max-old-space-size=8192",
+    },
+    "forecast_calibration": {
+        "NODE_OPTIONS": "--max-old-space-size=8192",
+    },
+    "build_best_setups": {
+        "NODE_OPTIONS": "--max-old-space-size=12288",
+    },
+    "analyzer_backfill": {
+        "NODE_OPTIONS": "--max-old-space-size=8192",
+    },
+}
 
 
 def now_utc() -> str:
@@ -131,6 +152,20 @@ def summarize_outputs() -> dict[str, Any]:
     }
 
 
+def forecast_daily_already_current() -> bool:
+    status = read_json(FORECAST_STATUS_PATH) or {}
+    latest = read_json(FORECAST_LATEST_PATH) or {}
+    last_run = str(status.get("last_run") or "")[:10]
+    status_value = str(status.get("status") or "").lower()
+    generated_at = str((latest.get("meta") or {}).get("generated_at") or "")[:10]
+    today = now_utc()[:10]
+    if last_run != today:
+        return False
+    if generated_at and generated_at != today:
+        return False
+    return status_value in {"ok", "stale"}
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Refresh V5 prediction artifacts after train runs.")
     parser.add_argument("--mode", choices=["day", "night"], required=True)
@@ -170,6 +205,17 @@ def main() -> int:
             prior = (state.get("steps") or {}).get(step_name) or {}
             if prior.get("status") == "completed":
                 continue
+            if step_name == "forecast_run_daily" and forecast_daily_already_current():
+                state.setdefault("steps", {})[step_name] = {
+                    "status": "completed",
+                    "started_at": now_utc(),
+                    "finished_at": now_utc(),
+                    "returncode": 0,
+                    "command": command,
+                    "external_completion": True,
+                }
+                write_json(state_path, state)
+                continue
             step_state = {
                 "status": "running",
                 "started_at": now_utc(),
@@ -178,7 +224,9 @@ def main() -> int:
             state.setdefault("steps", {})[step_name] = step_state
             write_json(state_path, state)
 
-            proc = subprocess.run(command, cwd=str(REPO_ROOT), check=False)
+            env = os.environ.copy()
+            env.update(STEP_ENV_OVERRIDES.get(step_name, {}))
+            proc = subprocess.run(command, cwd=str(REPO_ROOT), check=False, env=env)
             step_state["finished_at"] = now_utc()
             step_state["returncode"] = int(proc.returncode)
             step_state["status"] = "completed" if proc.returncode == 0 else "failed"

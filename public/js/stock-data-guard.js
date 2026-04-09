@@ -328,12 +328,10 @@ export function guardModelConsensus(decision, ev4) {
   const states = ev4.input_states;
   const hasScientific = states.scientific?.status === 'ok';
   const hasForecast = states.forecast?.status === 'ok';
-  const hasElliott = states.elliott?.status === 'ok';
   const hasQuantlab = states.quantlab?.status === 'ok';
-  const available = [hasScientific, hasForecast, hasElliott, hasQuantlab].filter(Boolean).length;
+  const available = [hasScientific, hasForecast, hasQuantlab].filter(Boolean).length;
   const missingModels = [
     !hasQuantlab ? 'QuantLab' : null,
-    !hasElliott ? 'Elliott' : null,
     !hasForecast ? 'Forecast' : null,
     !hasScientific ? 'Scientific' : null,
   ].filter(Boolean);
@@ -346,7 +344,7 @@ export function guardModelConsensus(decision, ev4) {
 
   return { 
     valid: true, 
-    warning: available < 4 ? `Model consensus: ${available}/4 models available` : null, 
+    warning: available < 3 ? `Model consensus: ${available}/3 models available` : null, 
     available, 
     missingModels, 
     degraded: isUiDegraded 

@@ -15,6 +15,7 @@
 
 - **Ops Runbook (central):** [`docs/ops/runbook.md`](docs/ops/runbook.md)
 - **NAS Runbook:** [`docs/ops/nas-runbook.md`](docs/ops/nas-runbook.md)
+- **NAS Monitoring Runbook:** [`docs/ops/nas-monitoring-runbook.md`](docs/ops/nas-monitoring-runbook.md)
 - **NAS Benchmark Plan:** [`docs/ops/nas-benchmark-plan.md`](docs/ops/nas-benchmark-plan.md)
 - **NAS Migration Journal:** [`docs/ops/nas-migration-journal.md`](docs/ops/nas-migration-journal.md)
 - **NAS Capacity Matrix:** `tmp/nas-benchmarks/nas-capacity-decision-matrix.md`
