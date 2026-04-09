@@ -5,6 +5,7 @@
   const events = Array.isArray(payload.events) ? payload.events : [];
   const hotWindows = Array.isArray(payload.hotWindows) ? payload.hotWindows : [];
   const reports = Array.isArray(payload.reports) ? payload.reports : [];
+  const charts = new Map();
 
   function byId(id) {
     return document.getElementById(id);
@@ -37,6 +38,38 @@
     box.className = "metric";
     box.innerHTML = `<div class="label">${label}</div><div class="value">${value}</div>`;
     return box;
+  }
+
+  function emptyNode(canvasId) {
+    return byId(`${canvasId}-empty`);
+  }
+
+  function setChartEmpty(canvasId, message) {
+    const canvas = byId(canvasId);
+    const empty = emptyNode(canvasId);
+    if (canvas) {
+      canvas.hidden = true;
+    }
+    if (empty) {
+      empty.hidden = false;
+      empty.textContent = message;
+    }
+    const chart = charts.get(canvasId);
+    if (chart) {
+      chart.destroy();
+      charts.delete(canvasId);
+    }
+  }
+
+  function setChartReady(canvasId) {
+    const canvas = byId(canvasId);
+    const empty = emptyNode(canvasId);
+    if (canvas) {
+      canvas.hidden = false;
+    }
+    if (empty) {
+      empty.hidden = true;
+    }
   }
 
   function renderStatus() {
@@ -80,18 +113,17 @@
       const li = document.createElement("li");
       li.innerHTML = `<strong>Keine Hotspots</strong><span class="muted">Noch keine wiederkehrenden Repo-/Job-Fenster erkannt.</span>`;
       hotList.appendChild(li);
-      return;
+    } else {
+      hotWindows.forEach((entry) => {
+        const li = document.createElement("li");
+        li.innerHTML = `
+          <strong>${entry.window || "n/a"}</strong>
+          <span>${entry.message || ""}</span>
+          <span class="muted mono">${(entry.topProcesses || []).join(" | ") || "keine korrelierten Repo-Prozesse"}</span>
+        `;
+        hotList.appendChild(li);
+      });
     }
-
-    hotWindows.forEach((entry) => {
-      const li = document.createElement("li");
-      li.innerHTML = `
-        <strong>${entry.window || "n/a"}</strong>
-        <span>${entry.message || ""}</span>
-        <span class="muted mono">${(entry.topProcesses || []).join(" | ") || "keine korrelierten Repo-Prozesse"}</span>
-      `;
-      hotList.appendChild(li);
-    });
 
     const reportsList = byId("reports-list");
     reportsList.innerHTML = "";
@@ -116,16 +148,73 @@
     return rows.map((row) => String(row.timestamp || "").slice(5, 16).replace("T", " "));
   }
 
+  function normalizedSeries(values) {
+    return values.map((value) => {
+      const num = Number(value);
+      return Number.isFinite(num) ? num : null;
+    });
+  }
+
+  function baseChartOptions() {
+    return {
+      responsive: true,
+      maintainAspectRatio: false,
+      resizeDelay: 120,
+      animation: false,
+      plugins: {
+        legend: {
+          labels: {
+            color: "#172128",
+            boxWidth: 10,
+            usePointStyle: true
+          }
+        }
+      },
+      layout: {
+        padding: {
+          top: 4,
+          right: 10,
+          bottom: 0,
+          left: 0
+        }
+      },
+      scales: {
+        x: {
+          ticks: { color: "#5f6a6f", maxTicksLimit: 8, maxRotation: 0 },
+          grid: { color: "rgba(23, 33, 40, 0.08)" }
+        },
+        y: {
+          ticks: { color: "#5f6a6f" },
+          grid: { color: "rgba(23, 33, 40, 0.08)" }
+        }
+      }
+    };
+  }
+
   function makeChart(canvasId, label, values, color) {
     const node = byId(canvasId);
     if (!node || !window.Chart) return;
-    new window.Chart(node, {
+    const labels = historyLabels(history);
+    const series = normalizedSeries(values);
+    const visiblePoints = series.filter((value) => value != null);
+    if (labels.length < 2 || visiblePoints.length < 2) {
+      setChartEmpty(canvasId, "Zu wenig Verlauf fuer einen Chart.");
+      return;
+    }
+
+    setChartReady(canvasId);
+    const existing = charts.get(canvasId);
+    if (existing) {
+      existing.destroy();
+    }
+
+    const chart = new window.Chart(node, {
       type: "line",
       data: {
-        labels: historyLabels(history),
+        labels,
         datasets: [{
           label,
-          data: values,
+          data: series,
           borderColor: color,
           backgroundColor: color + "33",
           borderWidth: 2,
@@ -134,29 +223,9 @@
           fill: true
         }]
       },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: {
-            labels: {
-              color: "#172128",
-              boxWidth: 10
-            }
-          }
-        },
-        scales: {
-          x: {
-            ticks: { color: "#5f6a6f", maxTicksLimit: 8 },
-            grid: { color: "rgba(23, 33, 40, 0.08)" }
-          },
-          y: {
-            ticks: { color: "#5f6a6f" },
-            grid: { color: "rgba(23, 33, 40, 0.08)" }
-          }
-        }
-      }
+      options: baseChartOptions()
     });
+    charts.set(canvasId, chart);
   }
 
   function renderCharts() {
@@ -167,11 +236,15 @@
 
     const diskNode = byId("disk-chart");
     if (!diskNode || !window.Chart) return;
+    if (!diskColumns.length || history.length < 2) {
+      setChartEmpty("disk-chart", "Keine Disk-Temperaturdaten vorhanden.");
+      return;
+    }
     const datasets = diskColumns.map((column, index) => {
       const palette = ["#28724c", "#0f6d78", "#bb3e2f", "#7b4b94"];
       return {
         label: column.replace(/^disk_/, "").replace(/_temp_c$/, ""),
-        data: history.map((row) => Number(row[column] || 0)),
+        data: normalizedSeries(history.map((row) => row[column])),
         borderColor: palette[index % palette.length],
         backgroundColor: palette[index % palette.length] + "22",
         borderWidth: 2,
@@ -181,32 +254,26 @@
       };
     });
 
-    new window.Chart(diskNode, {
+    if (!datasets.some((dataset) => dataset.data.filter((value) => value != null).length > 1)) {
+      setChartEmpty("disk-chart", "Keine Disk-Temperaturdaten vorhanden.");
+      return;
+    }
+
+    setChartReady("disk-chart");
+    const existing = charts.get("disk-chart");
+    if (existing) {
+      existing.destroy();
+    }
+
+    const chart = new window.Chart(diskNode, {
       type: "line",
       data: {
         labels: historyLabels(history),
         datasets
       },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: {
-            labels: { color: "#172128", boxWidth: 10 }
-          }
-        },
-        scales: {
-          x: {
-            ticks: { color: "#5f6a6f", maxTicksLimit: 8 },
-            grid: { color: "rgba(23, 33, 40, 0.08)" }
-          },
-          y: {
-            ticks: { color: "#5f6a6f" },
-            grid: { color: "rgba(23, 33, 40, 0.08)" }
-          }
-        }
-      }
+      options: baseChartOptions()
     });
+    charts.set("disk-chart", chart);
   }
 
   renderStatus();

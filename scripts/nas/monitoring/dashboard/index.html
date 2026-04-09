@@ -54,7 +54,10 @@
           <p class="eyebrow">7 / 30 Tage</p>
           <h2>CPU Load</h2>
         </div>
-        <canvas id="cpu-chart"></canvas>
+        <div class="chart-frame">
+          <canvas id="cpu-chart"></canvas>
+          <p id="cpu-chart-empty" class="chart-empty" hidden>Zu wenig Verlauf fuer einen Chart.</p>
+        </div>
       </section>
 
       <section class="card chart-card">
@@ -62,7 +65,10 @@
           <p class="eyebrow">7 / 30 Tage</p>
           <h2>RAM %</h2>
         </div>
-        <canvas id="ram-chart"></canvas>
+        <div class="chart-frame">
+          <canvas id="ram-chart"></canvas>
+          <p id="ram-chart-empty" class="chart-empty" hidden>Zu wenig Verlauf fuer einen Chart.</p>
+        </div>
       </section>
 
       <section class="card chart-card">
@@ -70,7 +76,10 @@
           <p class="eyebrow">7 / 30 Tage</p>
           <h2>Disk Temperaturen</h2>
         </div>
-        <canvas id="disk-chart"></canvas>
+        <div class="chart-frame">
+          <canvas id="disk-chart"></canvas>
+          <p id="disk-chart-empty" class="chart-empty" hidden>Keine Disk-Temperaturdaten vorhanden.</p>
+        </div>
       </section>
 
       <section class="card chart-card">
@@ -78,7 +87,10 @@
           <p class="eyebrow">7 / 30 Tage</p>
           <h2>Volume %</h2>
         </div>
-        <canvas id="volume-chart"></canvas>
+        <div class="chart-frame">
+          <canvas id="volume-chart"></canvas>
+          <p id="volume-chart-empty" class="chart-empty" hidden>Zu wenig Verlauf fuer einen Chart.</p>
+        </div>
       </section>
 
       <section class="card events-card">

@@ -1,6 +1,6 @@
 # NAS Solution Attempt Log
 
-Generated at: 2026-04-09T12:33:20.882Z
+Generated at: 2026-04-09T13:06:16.148Z
 
 ## Summary
 
@@ -139,7 +139,7 @@ Jede Lösungsoption bleibt hier sichtbar, inklusive aktuellem Stand und kurzem G
 
 - Section status: verified_failure
 - Current evidence: `best_setups_v4_smoke`
-- Current note: best_setups_v4_smoke: 6/6 fehlgeschlagen; letzter Grund: nonzero_exit
+- Current note: best_setups_v4_smoke: 7/7 fehlgeschlagen; letzter Grund: nonzero_exit
 
 | Variant | Catalog status | Current evidence status | Current note |
 |---|---|---|---|

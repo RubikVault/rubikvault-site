@@ -1,6 +1,6 @@
 # NAS Transfer Status
 
-Generated at: 2026-04-09T12:33:20.837Z
+Generated at: 2026-04-09T13:06:16.104Z
 
 ## Progress
 
@@ -8,7 +8,7 @@ Generated at: 2026-04-09T12:33:20.837Z
 - Finished/classified: 81
 - Remaining untested: 15
 - Completion: 84.4%
-- Evidence runs total so far: 1722
+- Evidence runs total so far: 1726
 
 ## Full Variant Catalog
 
