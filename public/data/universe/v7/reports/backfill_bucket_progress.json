@@ -1,0 +1,75 @@
+{
+  "schema": "rv_v7_backfill_bucket_progress_v1",
+  "generated_at": "2026-04-08T07:06:58.792Z",
+  "env_file": null,
+  "skip_archeology": false,
+  "backfill_max": 2000,
+  "max_runs_per_bucket": 50,
+  "max_no_progress_runs": 3,
+  "strict_bucket_order": false,
+  "max_throttle_stops": 3,
+  "throttle_cooldown_ms": 120000,
+  "backfill_waivers": {
+    "path": "mirrors/universe-v7/state/backfill_waivers.json",
+    "exists": false,
+    "count": 0
+  },
+  "budget_stopped": false,
+  "fatal": {
+    "bucket": "stocks",
+    "code": 90,
+    "reason": "pipeline_failed"
+  },
+  "blocked_by_incomplete_bucket": null,
+  "buckets": [
+    {
+      "id": "stocks",
+      "priority": 1,
+      "allowlist": [
+        "STOCK"
+      ],
+      "runs": [
+        {
+          "run": 1,
+          "status": 90,
+          "code": 90,
+          "run_id": null,
+          "reason": null,
+          "remaining_global": 87649,
+          "before": {
+            "total": 74474,
+            "backfill_real": 0,
+            "with_bars": 0,
+            "remaining": 74474,
+            "checkpoint_done": 0,
+            "checkpoint_pending": 0,
+            "progress_units": 0
+          },
+          "after": {
+            "total": 74474,
+            "backfill_real": 0,
+            "with_bars": 0,
+            "remaining": 74474,
+            "checkpoint_done": 0,
+            "checkpoint_pending": 0,
+            "progress_units": 0
+          },
+          "delta_backfill_real": 0,
+          "delta_progress_units": 0,
+          "delta_with_bars": 0
+        }
+      ],
+      "throttled_stops": 0,
+      "completed": false,
+      "last_progress": {
+        "total": 74474,
+        "backfill_real": 0,
+        "with_bars": 0,
+        "remaining": 74474,
+        "checkpoint_done": 0,
+        "checkpoint_pending": 0,
+        "progress_units": 0
+      }
+    }
+  ]
+}

@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0",
   "type": "pipeline.truth",
-  "generated_at": "2026-04-06T22:56:54.719Z",
+  "generated_at": "2026-04-08T22:58:04.100Z",
   "universe": "nasdaq100",
   "refs": {
     "universe_ref": "/data/universe/nasdaq100.json",
@@ -9,16 +9,197 @@
   },
   "counts": {
     "expected": 100,
-    "fetched": 100,
-    "validated": 100,
+    "fetched": 0,
+    "validated": 0,
     "computed": 2449,
     "static_ready": 2449
   },
-  "root_failure": null,
+  "root_failure": {
+    "class": "PROVIDER_EMPTY",
+    "hint": "All providers returned empty/invalid rows; keeping last_good artifacts."
+  },
   "degraded_summary": {
-    "count": 0,
-    "classes": {},
-    "sample": []
+    "count": 100,
+    "classes": {
+      "RATE_LIMIT": 100
+    },
+    "sample": [
+      {
+        "symbol": "AAPL",
+        "stage": "fetch",
+        "class": "RATE_LIMIT",
+        "hint": "Upstream rate limit hit (provider=tiingo)",
+        "since": "2026-04-08T22:58:04.100Z"
+      },
+      {
+        "symbol": "ABNB",
+        "stage": "fetch",
+        "class": "RATE_LIMIT",
+        "hint": "Upstream rate limit hit (provider=tiingo)",
+        "since": "2026-04-08T22:58:04.100Z"
+      },
+      {
+        "symbol": "ADBE",
+        "stage": "fetch",
+        "class": "RATE_LIMIT",
+        "hint": "Upstream rate limit hit (provider=tiingo)",
+        "since": "2026-04-08T22:58:04.100Z"
+      },
+      {
+        "symbol": "ADI",
+        "stage": "fetch",
+        "class": "RATE_LIMIT",
+        "hint": "Upstream rate limit hit (provider=tiingo)",
+        "since": "2026-04-08T22:58:04.100Z"
+      },
+      {
+        "symbol": "ADP",
+        "stage": "fetch",
+        "class": "RATE_LIMIT",
+        "hint": "Upstream rate limit hit (provider=tiingo)",
+        "since": "2026-04-08T22:58:04.100Z"
+      },
+      {
+        "symbol": "ADSK",
+        "stage": "fetch",
+        "class": "RATE_LIMIT",
+        "hint": "Upstream rate limit hit (provider=tiingo)",
+        "since": "2026-04-08T22:58:04.100Z"
+      },
+      {
+        "symbol": "AEP",
+        "stage": "fetch",
+        "class": "RATE_LIMIT",
+        "hint": "Upstream rate limit hit (provider=tiingo)",
+        "since": "2026-04-08T22:58:04.100Z"
+      },
+      {
+        "symbol": "AMAT",
+        "stage": "fetch",
+        "class": "RATE_LIMIT",
+        "hint": "Upstream rate limit hit (provider=tiingo)",
+        "since": "2026-04-08T22:58:04.100Z"
+      },
+      {
+        "symbol": "AMD",
+        "stage": "fetch",
+        "class": "RATE_LIMIT",
+        "hint": "Upstream rate limit hit (provider=tiingo)",
+        "since": "2026-04-08T22:58:04.100Z"
+      },
+      {
+        "symbol": "AMGN",
+        "stage": "fetch",
+        "class": "RATE_LIMIT",
+        "hint": "Upstream rate limit hit (provider=tiingo)",
+        "since": "2026-04-08T22:58:04.100Z"
+      },
+      {
+        "symbol": "AMZN",
+        "stage": "fetch",
+        "class": "RATE_LIMIT",
+        "hint": "Upstream rate limit hit (provider=tiingo)",
+        "since": "2026-04-08T22:58:04.100Z"
+      },
+      {
+        "symbol": "APP",
+        "stage": "fetch",
+        "class": "RATE_LIMIT",
+        "hint": "Upstream rate limit hit (provider=tiingo)",
+        "since": "2026-04-08T22:58:04.100Z"
+      },
+      {
+        "symbol": "ARM",
+        "stage": "fetch",
+        "class": "RATE_LIMIT",
+        "hint": "Upstream rate limit hit (provider=tiingo)",
+        "since": "2026-04-08T22:58:04.100Z"
+      },
+      {
+        "symbol": "ASML",
+        "stage": "fetch",
+        "class": "RATE_LIMIT",
+        "hint": "Upstream rate limit hit (provider=tiingo)",
+        "since": "2026-04-08T22:58:04.100Z"
+      },
+      {
+        "symbol": "AVGO",
+        "stage": "fetch",
+        "class": "RATE_LIMIT",
+        "hint": "Upstream rate limit hit (provider=tiingo)",
+        "since": "2026-04-08T22:58:04.100Z"
+      },
+      {
+        "symbol": "AXON",
+        "stage": "fetch",
+        "class": "RATE_LIMIT",
+        "hint": "Upstream rate limit hit (provider=tiingo)",
+        "since": "2026-04-08T22:58:04.100Z"
+      },
+      {
+        "symbol": "AZN",
+        "stage": "fetch",
+        "class": "RATE_LIMIT",
+        "hint": "Upstream rate limit hit (provider=tiingo)",
+        "since": "2026-04-08T22:58:04.100Z"
+      },
+      {
+        "symbol": "BIIB",
+        "stage": "fetch",
+        "class": "RATE_LIMIT",
+        "hint": "Upstream rate limit hit (provider=tiingo)",
+        "since": "2026-04-08T22:58:04.100Z"
+      },
+      {
+        "symbol": "BKNG",
+        "stage": "fetch",
+        "class": "RATE_LIMIT",
+        "hint": "Upstream rate limit hit (provider=tiingo)",
+        "since": "2026-04-08T22:58:04.100Z"
+      },
+      {
+        "symbol": "BKR",
+        "stage": "fetch",
+        "class": "RATE_LIMIT",
+        "hint": "Upstream rate limit hit (provider=tiingo)",
+        "since": "2026-04-08T22:58:04.100Z"
+      },
+      {
+        "symbol": "CCEP",
+        "stage": "fetch",
+        "class": "RATE_LIMIT",
+        "hint": "Upstream rate limit hit (provider=tiingo)",
+        "since": "2026-04-08T22:58:04.100Z"
+      },
+      {
+        "symbol": "CDNS",
+        "stage": "fetch",
+        "class": "RATE_LIMIT",
+        "hint": "Upstream rate limit hit (provider=tiingo)",
+        "since": "2026-04-08T22:58:04.100Z"
+      },
+      {
+        "symbol": "CDW",
+        "stage": "fetch",
+        "class": "RATE_LIMIT",
+        "hint": "Upstream rate limit hit (provider=tiingo)",
+        "since": "2026-04-08T22:58:04.100Z"
+      },
+      {
+        "symbol": "CHTR",
+        "stage": "fetch",
+        "class": "RATE_LIMIT",
+        "hint": "Upstream rate limit hit (provider=tiingo)",
+        "since": "2026-04-08T22:58:04.100Z"
+      },
+      {
+        "symbol": "CMCSA",
+        "stage": "fetch",
+        "class": "RATE_LIMIT",
+        "hint": "Upstream rate limit hit (provider=tiingo)",
+        "since": "2026-04-08T22:58:04.100Z"
+      }
+    ]
   },
   "metadata": {
     "computed_not_applicable": false,
@@ -26,6 +207,7 @@
       "eodhd",
       "tiingo"
     ],
-    "fallback_used": false
+    "fallback_used": true,
+    "last_good_pipeline_ref": "/data/pipeline/nasdaq100.latest.json"
   }
 }
