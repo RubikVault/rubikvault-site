@@ -41,6 +41,7 @@ const RSYNC_EXCLUDES = [
   'data/forecast/reports/',    // gitignored
   'data/forecast/v6/',         // gitignored
   'data/eod/bars/',            // gitignored bars JSON
+  'data/eod/history/packs',   // symlink → QuantLabHot/storage/universe-v7-history (local-only, up to 56MB files)
   'data/rvci/',                // gitignored
   'data/features-v4/stock-insights/index.json', // gitignored
   'data/snapshots/stock-analysis.json',          // gitignored
