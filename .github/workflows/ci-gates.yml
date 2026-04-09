@@ -24,23 +24,36 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build deploy bundle (dist/pages-prod/)
+        run: node scripts/ops/build-deploy-bundle.mjs --strict
+        # Builds dist/pages-prod/ via rsync with excludes — same bundle Cloudflare Pages deploys.
+        # --strict exits non-zero if file count exceeds BUNDLE_FILE_LIMIT (18,000).
+        # In CI, public/ only has git-tracked files (~2,500), so this accurately reflects
+        # the committed bundle budget without local gitignored blobs.
+
       - name: Check Asset Budget
         run: |
           echo "🔍 Checking Asset Budget..."
-          mkdir -p public/data
-          if ! find public/data -type f -name "*.json" -print -quit | grep -q .; then
-            SENTINEL_PATH="public/data/.budget_sentinel.json"
-            SENTINEL_TS=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-            cat > "$SENTINEL_PATH" <<EOF
-          {"meta":{"type":"asset_budget_sentinel","sha":"${GITHUB_SHA:-local}","created_at":"${SENTINEL_TS}"}}
-          EOF
-            echo "ℹ️ Created budget sentinel at $SENTINEL_PATH (no tracked public/data json artifacts in checkout)"
-          fi
-          
-          # Count files in public/data
-          TOTAL_FILES=$(find public/data -type f -name "*.json" | wc -l | tr -d ' ')
-          echo "Total JSON files: $TOTAL_FILES"
-          
+
+          # Primary deploy-bundle check: dist/pages-prod/ (built above by build-deploy-bundle)
+          BUNDLE_FILES=$(find dist/pages-prod -type f | wc -l | tr -d ' ')
+          BUNDLE_SIZE_MB=$(du -sm dist/pages-prod 2>/dev/null | cut -f1 || echo 0)
+          echo "Deploy bundle files: $BUNDLE_FILES / 18000 limit"
+          echo "Deploy bundle size:  ${BUNDLE_SIZE_MB}MB"
+
+          # Secondary: git-tracked JSON count (protects against accidental mass-commit)
+          TOTAL_FILES=$(find public/data -type f -name "*.json" 2>/dev/null | wc -l | tr -d ' ')
+          echo "Git-tracked JSON:    $TOTAL_FILES"
+
           # Check total file count (Cloudflare Pages limit: 20k files, we use 15k as safety)
           MAX_FILES=15000
           if [ $TOTAL_FILES -gt $MAX_FILES ]; then
