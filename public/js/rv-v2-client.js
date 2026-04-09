@@ -65,10 +65,10 @@ export async function fetchV1Stock(ticker) {
 export async function fetchV2StockPage(ticker) {
   const [summary, historical, governance, fundamentals, historicalProfile] = await Promise.all([
     fetchV2Summary(ticker),
-    fetchV2Historical(ticker).catch(() => ({ ok: false, data: null, meta: null, source: 'v2_historical' })),
+    fetchV2Historical(ticker).catch(() => ({ ok: false, data: null, meta: {}, source: 'v2_historical' })),
     fetchV2Governance(ticker),
-    fetchFundamentals(ticker).catch(() => ({ ok: false, data: null, meta: null, source: 'fundamentals' })),
-    fetchV2HistoricalProfile(ticker).catch(() => ({ ok: false, data: null, meta: null, source: 'v2_historical_profile' })),
+    fetchFundamentals(ticker).catch(() => ({ ok: false, data: null, meta: {}, source: 'fundamentals' })),
+    fetchV2HistoricalProfile(ticker).catch(() => ({ ok: false, data: null, meta: {}, source: 'v2_historical_profile' })),
   ]);
   const latestHistoricalDate = historical?.data?.bars?.length
     ? historical.data.bars[historical.data.bars.length - 1]?.date

@@ -2,8 +2,12 @@ name = "rubikvault-site"
 compatibility_date = "2025-12-17"
 compatibility_flags = ["nodejs_compat"]
 
-# Cloudflare Pages output folder (must match Pages settings)
-pages_build_output_dir = "public"
+# Cloudflare Pages deploy output folder.
+# Built locally by: npm run build:deploy  (scripts/ops/build-deploy-bundle.mjs)
+# Deployed by:      node scripts/ops/release-gate-check.mjs  (MacBook supervisor only)
+# GitHub integration should be DISABLED in the Cloudflare Pages dashboard — deploy
+# is triggered exclusively via explicit wrangler CLI from the MacBook supervisor.
+pages_build_output_dir = "dist/pages-prod"
 
 # KV binding for Pages Functions + local dev
 [[kv_namespaces]]

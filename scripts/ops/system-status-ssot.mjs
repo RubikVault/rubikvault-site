@@ -342,3 +342,95 @@ export const STOCK_ANALYZER_WEB_VALIDATION_CHAIN = [
     success_signal: 'dashboard_v7 reflects the current status artifacts without stale cache or missing fields',
   },
 ];
+
+// ─── Release State Schema ─────────────────────────────────────────────────────
+//
+// Canonical schema for public/data/ops/release-state-latest.json
+// Written by: Night Supervisor (phase transitions), Catchup Supervisor (QuantLab state)
+// Read by:    release-gate-check.mjs, dashboard_v7, monitoring scripts
+//
+// This is the authoritative End-to-End Release SSOT. No other file determines
+// whether a deploy is allowed.
+
+export const RELEASE_STATE_SCHEMA = {
+  schema: 'rv_release_state_v1',
+  // Current pipeline phase (night supervisor or release gate phase)
+  // Lifecycle: NIGHT_START → HIST_PROBS_1 → EODHD_REFRESH → HIST_PROBS_2
+  //            → QUANTLAB → RELEASE_READY → DEPLOY_REQUESTED → DEPLOY_VERIFIED → DONE
+  phase: 'NIGHT_START',
+  // The trading date this release targets (ISO YYYY-MM-DD)
+  target_date: null,
+  // Last phase that completed successfully (for recovery)
+  last_success_phase: null,
+  // Human-readable blocker description (null = no blocker)
+  blocker: null,
+  // Retry counters per phase
+  retry_counts: {},
+  // Active PIDs (for monitoring)
+  pids: {
+    hist_probs: null,
+    eodhd_refresh: null,
+    catchup_supervisor: null,
+  },
+  // Reference to deploy proof (populated after successful deploy)
+  deploy_proof_path: 'public/data/ops/deploy-proof-latest.json',
+  // QuantLab pipeline state (from catchup-supervisor-state.json)
+  quantlab: {
+    phase: null,
+    target_date: null,
+    completed_at: null,
+  },
+  // Timestamps
+  started_at: null,
+  completed_at: null,
+  last_updated: null,
+};
+
+// ─── Deploy Proof Schema ──────────────────────────────────────────────────────
+//
+// Canonical schema for public/data/ops/deploy-proof-latest.json
+// Written by: scripts/ops/release-gate-check.mjs after successful wrangler deploy
+// Read by:    monitoring, dashboard_v7, CI verification
+
+export const DEPLOY_PROOF_SCHEMA = {
+  schema: 'rv_deploy_proof_v1',
+  // Git commit SHA that was deployed
+  deployed_commit: null,
+  // Cloudflare deployment ID (from wrangler output)
+  deployment_id: null,
+  // Cloudflare deployment URL (preview or production)
+  deployment_url: null,
+  // Smoke test results
+  smokes: {
+    dashboard_v7: null,    // HTTP status code
+    api_diag: null,        // HTTP status code
+    api_stock_sample: null, // HTTP status code (sample ticker)
+    ops_pulse: null,       // HTTP status code
+  },
+  // Whether all smokes passed
+  smokes_ok: false,
+  // When wrangler deploy was requested
+  requested_at: null,
+  // When deploy was verified (smokes passed)
+  verified_at: null,
+  // Bundle stats at deploy time
+  bundle_file_count: null,
+  bundle_size_mb: null,
+};
+
+// ─── Pipeline Step Registry ───────────────────────────────────────────────────
+//
+// Machine-readable registry of all pipeline steps.
+// Generated into: public/data/ops/pipeline-step-registry.json
+// by:             scripts/ops/build-pipeline-step-registry.mjs
+
+export const PIPELINE_STEP_REGISTRY = Object.entries(SYSTEM_STATUS_STEP_CONTRACTS).map(
+  ([id, contract]) => ({
+    id,
+    run_command: contract.run_command,
+    verify_commands: contract.verify_commands || [],
+    outputs: contract.outputs || [],
+    ui_surfaces: contract.ui_surfaces || [],
+    failure_signals: contract.failure_signals || [],
+  })
+);

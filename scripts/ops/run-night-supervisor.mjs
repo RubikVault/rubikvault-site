@@ -28,11 +28,13 @@ const QUANT_ROOT = process.env.QUANT_ROOT
 const PYTHON = process.env.PYTHON_BIN
   || path.join(REPO_ROOT, 'quantlab/.venv/bin/python');
 
-const STATE_PATH   = path.join(QUANT_ROOT, 'ops/night-supervisor-state.json');
-const LOG_PATH     = path.join(REPO_ROOT, 'logs/night-supervisor.log');
-const EODHD_LOCK   = path.join(REPO_ROOT, 'mirrors/universe-v7/state/API_LIMIT_REACHED.lock.json');
-const CATCHUP_STATE = path.join(QUANT_ROOT, 'ops/catchup-supervisor-state.json');
-const CATCHUP_LOCK  = path.join(QUANT_ROOT, 'ops/catchup-supervisor.lock');
+const STATE_PATH        = path.join(QUANT_ROOT, 'ops/night-supervisor-state.json');
+const LOG_PATH          = path.join(REPO_ROOT, 'logs/night-supervisor.log');
+const EODHD_LOCK        = path.join(REPO_ROOT, 'mirrors/universe-v7/state/API_LIMIT_REACHED.lock.json');
+const CATCHUP_STATE     = path.join(QUANT_ROOT, 'ops/catchup-supervisor-state.json');
+const CATCHUP_LOCK      = path.join(QUANT_ROOT, 'ops/catchup-supervisor.lock');
+// Release state SSOT — authoritative End-to-End pipeline state
+const RELEASE_STATE_PATH = path.join(REPO_ROOT, 'public/data/ops/release-state-latest.json');
 
 const HIST_PROBS_LOG = path.join(REPO_ROOT, 'logs/hist-probs-rebuild-night.log');
 const EODHD_LOG      = path.join(REPO_ROOT, 'logs/eodhd-refresh-night.log');
@@ -151,6 +153,34 @@ function saveState(s) {
   writeJson(STATE_PATH, { ...s, last_updated: nowIso() });
 }
 
+/**
+ * Write/update the release-state SSOT in public/data/ops/release-state-latest.json.
+ * Called at each meaningful phase transition so release-gate-check.mjs
+ * and the dashboard always reflect the current pipeline status.
+ */
+function updateReleaseState(patch) {
+  try {
+    fs.mkdirSync(path.dirname(RELEASE_STATE_PATH), { recursive: true });
+    const existing = (() => {
+      try { return JSON.parse(fs.readFileSync(RELEASE_STATE_PATH, 'utf8')); } catch { return {}; }
+    })();
+    const today = new Date().toISOString().slice(0, 10);
+    const next = {
+      schema: 'rv_release_state_v1',
+      target_date: today,
+      started_at: existing.started_at || nowIso(),
+      ...existing,
+      ...patch,
+      last_updated: nowIso(),
+    };
+    const tmp = `${RELEASE_STATE_PATH}.${process.pid}.tmp`;
+    fs.writeFileSync(tmp, JSON.stringify(next, null, 2) + '\n');
+    fs.renameSync(tmp, RELEASE_STATE_PATH);
+  } catch (e) {
+    log(`[RELEASE_STATE] Failed to update: ${e.message}`);
+  }
+}
+
 // ─── Sub-tasks ─────────────────────────────────────────────────────────────────
 
 function rebuildSystemStatus() {
@@ -254,6 +284,23 @@ async function cycle() {
   state.cycles = (state.cycles || 0) + 1;
   log(`\n════ Night Supervisor Cycle #${state.cycles} ════`);
 
+  // Update release state at the start of every cycle so it's always fresh
+  updateReleaseState({
+    phase: state.completed_at ? 'DONE' : 'NIGHT_RUNNING',
+    pids: {
+      hist_probs: state.hist_probs_2_pid || state.hist_probs_1_pid || null,
+      eodhd_refresh: state.eodhd_refresh_pid || null,
+      catchup_supervisor: (() => {
+        const cs = (() => { try { return JSON.parse(fs.readFileSync(CATCHUP_STATE, 'utf8')); } catch { return null; } })();
+        return cs ? (cs.training_pid || cs.fs_build_pid || null) : null;
+      })(),
+    },
+    quantlab: (() => {
+      const cs = (() => { try { return JSON.parse(fs.readFileSync(CATCHUP_STATE, 'utf8')); } catch { return null; } })();
+      return cs ? { phase: cs.phase, target_date: cs.target_date, completed_at: cs.completed_at } : null;
+    })(),
+  });
+
   // ── 1. Monitor hist_probs 1 ───────────────────────────────────────────────────
   if (!state.hist_probs_1_done) {
     const pid = state.hist_probs_1_pid;
@@ -264,6 +311,7 @@ async function cycle() {
       log('[HIST1] hist_probs first run completed.');
       state.hist_probs_1_done = true;
       saveState(state);
+      updateReleaseState({ phase: 'HIST_PROBS_1_DONE', last_success_phase: 'HIST_PROBS_1' });
     }
     if (alive) {
       // Check progress
@@ -315,6 +363,7 @@ async function cycle() {
       log('[EODHD] Refresh process completed.');
       state.eodhd_refresh_done = true;
       saveState(state);
+      updateReleaseState({ phase: 'EODHD_DONE', last_success_phase: 'EODHD_REFRESH' });
     }
 
     if (alive && elapsedH > MAX_EODHD_WAIT_H) {
@@ -402,6 +451,13 @@ async function cycle() {
     log('[DONE] Night supervisor sequence complete.');
     state.completed_at = nowIso();
     saveState(state);
+    updateReleaseState({
+      phase: 'RELEASE_READY',
+      last_success_phase: 'HIST_PROBS_2',
+      completed_at: state.completed_at,
+      blocker: null,
+    });
+    log('[RELEASE_STATE] Phase set to RELEASE_READY — run node scripts/ops/release-gate-check.mjs to deploy.');
   }
 
   // ── 9. Every cycle: system-status rebuild + catchup monitor ──────────────────
@@ -420,6 +476,9 @@ async function cycle() {
 
 async function main() {
   log('═══ Night Supervisor starting ═══');
+
+  // Seed release state on startup
+  updateReleaseState({ phase: 'NIGHT_START', started_at: nowIso(), blocker: null });
 
   // Pre-populate known PIDs
   let state = loadState();

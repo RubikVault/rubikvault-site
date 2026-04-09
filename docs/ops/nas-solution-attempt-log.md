@@ -1,6 +1,6 @@
 # NAS Solution Attempt Log
 
-Generated at: 2026-04-09T11:56:15.023Z
+Generated at: 2026-04-09T12:33:20.882Z
 
 ## Summary
 
@@ -175,16 +175,16 @@ Jede Lösungsoption bleibt hier sichtbar, inklusive aktuellem Stand und kurzem G
 
 - Section status: mixed_results
 - Current evidence: `universe_audit_sample`, `ui_contract_probe`
-- Current note: universe_audit_sample: 37/37 erfolgreich; letzter Lauf ok. | ui_contract_probe: 6/6 fehlgeschlagen; letzter Grund: nonzero_exit
+- Current note: universe_audit_sample: 38/38 erfolgreich; letzter Lauf ok. | ui_contract_probe: 6/6 fehlgeschlagen; letzter Grund: nonzero_exit
 
 | Variant | Catalog status | Current evidence status | Current note |
 |---|---|---|---|
-| 9A Contract-Based UI Testing | live_probe | mixed_results | universe_audit_sample: 37/37 erfolgreich; letzter Lauf ok. | ui_contract_probe: 6/6 fehlgeschlagen; letzter Grund: nonzero_exit |
+| 9A Contract-Based UI Testing | live_probe | mixed_results | universe_audit_sample: 38/38 erfolgreich; letzter Lauf ok. | ui_contract_probe: 6/6 fehlgeschlagen; letzter Grund: nonzero_exit |
 | 9B Visual Diff Testing | queued_design | not_yet_tested | Noch nicht implementiert; aktuell nur als Backlog-Variante erfasst. |
 | 9C Headless Snapshot Benchmark | queued_design | not_yet_tested | Noch nicht implementiert; aktuell nur als Backlog-Variante erfasst. |
 | 9D Browser-Tests aus NAS herausziehen | manual_or_external | manual_or_external | Nicht im autonomen NAS-Probe-Pfad; braucht Admin, Hardware oder externen Worker. |
 | 9E Playwright/Puppeteer separat | manual_or_external | manual_or_external | Nicht im autonomen NAS-Probe-Pfad; braucht Admin, Hardware oder externen Worker. |
-| 9F UI Audit komplett von Daily Core entkoppeln | covered_by_report | mixed_results | universe_audit_sample: 37/37 erfolgreich; letzter Lauf ok. | ui_contract_probe: 6/6 fehlgeschlagen; letzter Grund: nonzero_exit |
+| 9F UI Audit komplett von Daily Core entkoppeln | covered_by_report | mixed_results | universe_audit_sample: 38/38 erfolgreich; letzter Lauf ok. | ui_contract_probe: 6/6 fehlgeschlagen; letzter Grund: nonzero_exit |
 
 ## P10 md0 / Root-FS / Scheduler
 

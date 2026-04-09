@@ -98,10 +98,12 @@ Current NAS benchmark verdict:
    └─ Commits to Git (retry logic)
 
 3. DEPLOY (Cloudflare Pages)
-   ├─ Git push triggers deployment (~2 min)
-   ├─ Cloudflare Pages builds
-   ├─ Functions deployed (/api/*, /internal/*)
-   ├─ Service Worker registered
+   ├─ MacBook night supervisor runs `npm run release:gate`
+   ├─ Gate checks release-state-latest.json (phase=RELEASE_READY)
+   ├─ Builds dist/pages-prod/ via rsync excludes (~2,500 files)
+   ├─ `wrangler pages deploy dist/pages-prod/ --project-name rubikvault-site`
+   ├─ Smoke tests: /dashboard_v7, /api/diag, stock ticker, ops-pulse
+   ├─ Writes deploy-proof-latest.json with verified_at
    └─ Site live
 
 4. SERVE (Zero-Downtime)

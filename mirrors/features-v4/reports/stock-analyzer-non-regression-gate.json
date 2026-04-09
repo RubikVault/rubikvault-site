@@ -1,6 +1,6 @@
 {
   "schema_version": "rv.stock-analyzer.non-regression-gate.v1",
-  "generated_at": "2026-04-09T09:34:05.721Z",
+  "generated_at": "2026-04-09T12:01:49.203Z",
   "local_base": "http://127.0.0.1:8788",
   "benchmark_base": "https://56a89a60.rubikvault-site.pages.dev",
   "ticker": "AAPL",
@@ -13,63 +13,34 @@
     "dashboard_meta_ok": true,
     "non_regression_unit_ok": false,
     "ui_artifacts_ok": true,
-    "dashboard_truth_ok": false
+    "dashboard_truth_ok": true
   },
   "dashboard": {
     "system_summary": {
-      "severity": "critical",
-      "healthy": false,
-      "local_severity": "critical",
+      "severity": "ok",
+      "healthy": true,
+      "local_severity": "ok",
       "remote_severity": "critical",
+      "remote_healthy": false,
       "proof_mode": "live_github_api",
       "live_fetch_status": "ok",
       "automation_severity": "ok",
-      "data_layer_severity": "critical",
-      "primary_blocker": "Historical probabilities are stale",
+      "data_layer_severity": "ok",
+      "primary_blocker": null,
       "ssot_violations_count": 0
     },
     "meta_summary": {
-      "overall_status": "CRITICAL",
-      "status_severity": "critical",
-      "status_detail": [
-        "Historical probabilities are stale"
-      ],
+      "overall_status": "OK",
+      "status_severity": "ok",
+      "status_detail": [],
       "learning_status": "VERBESSERUNG ✅",
       "live_status": "ok",
       "snapshot_age_hours": 0,
-      "data_truth_state": "Critical truth degradation: Historical probabilities are stale.",
-      "root_causes": [
-        {
-          "id": "hist_probs_data_freshness",
-          "severity": "critical",
-          "category": "data_freshness",
-          "title": "Historical probabilities are stale",
-          "why": "US+EU historical profile freshness is 28745/29199 fresh, 454 stale, 0 missing; latest run asset classes=ETF,STOCK.",
-          "impact": "Regime and passive probability context lags the market and should not be treated as current.",
-          "fix": "Run the full historical-profile builder over the registry-backed stock+ETF universe, then verify run-summary coverage and regime date advance together.",
-          "owner": "Hist Probs",
-          "subsystem": "hist_probs",
-          "file_ref": "scripts/lib/hist-probs/run-hist-probs.mjs",
-          "evidence_at": "2026-04-09T08:41:26.990Z",
-          "source_key": "system_status"
-        }
-      ],
-      "primary_actions": [
-        {
-          "id": "hist_probs_data_freshness",
-          "severity": "critical",
-          "category": "data_freshness",
-          "title": "Historical probabilities are stale",
-          "why": "US+EU historical profile freshness is 28745/29199 fresh, 454 stale, 0 missing; latest run asset classes=ETF,STOCK.",
-          "impact": "Regime and passive probability context lags the market and should not be treated as current.",
-          "action": "Run the full historical-profile builder over the registry-backed stock+ETF universe, then verify run-summary coverage and regime date advance together.",
-          "owner": "Hist Probs",
-          "subsystem": "hist_probs",
-          "file_ref": "scripts/lib/hist-probs/run-hist-probs.mjs"
-        }
-      ],
+      "data_truth_state": "Fresh and internally consistent.",
+      "root_causes": [],
+      "primary_actions": [],
       "operating_modes": [],
-      "production_ready": false,
+      "production_ready": true,
       "cutover_ready": true,
       "v1_mode": "v1_primary_with_legacy_audit",
       "quantlab_readiness": 80,
@@ -204,14 +175,10 @@
             "snapshot"
           ],
           "reason": "The universe-wide analyze-v4 audit is only trustworthy after the direct data/model inputs and snapshot layer are current.",
-          "blocked_by": [
-            "hist_probs"
-          ],
+          "blocked_by": [],
           "degraded_by": [],
           "step_label": "Stock Analyzer Universe Audit",
-          "blocked_by_labels": [
-            "Historical Probabilities"
-          ],
+          "blocked_by_labels": [],
           "degraded_by_labels": []
         },
         {
@@ -265,7 +232,7 @@
           "file_ref": "scripts/quantlab/refresh_v7_history_from_eodhd.py",
           "generated_at": "2026-04-08T07:50:28Z",
           "last_success_at": "2026-04-08T07:50:28Z",
-          "generated_age_hours": 25.7,
+          "generated_age_hours": 28.1,
           "input_asof": "2026-02-26",
           "output_asof": "2026-04-07",
           "output_stale_days": 2,
@@ -309,12 +276,12 @@
           "subsystem": "q1_delta",
           "severity": "ok",
           "summary": "Q1 delta ingest is current",
-          "why": "Latest successful Q1 delta ingest is anchored to ingest_date=2026-04-09 and was updated at 2026-04-09T08:36:26Z.",
+          "why": "Latest successful Q1 delta ingest is anchored to ingest_date=2026-04-09 and was updated at 2026-04-09T09:45:47Z.",
           "next_fix": "After the upstream history refresh advances, rerun the Q1 delta ingest and verify latest_success.json moves forward before rebuilding QuantLab reports.",
           "file_ref": "scripts/quantlab/run_daily_delta_ingest_q1.py",
-          "generated_at": "2026-04-09T08:36:26Z",
-          "last_success_at": "2026-04-09T08:36:26Z",
-          "generated_age_hours": 0.9,
+          "generated_at": "2026-04-09T09:45:47Z",
+          "last_success_at": "2026-04-09T09:45:47Z",
+          "generated_age_hours": 2.2,
           "input_asof": "2026-04-09",
           "output_asof": "2026-04-09",
           "output_stale_days": 0,
@@ -325,12 +292,12 @@
           "status_detail": {
             "latest_success": {
               "schema": "q1_daily_delta_ingest_latest_success_v1",
-              "updated_at": "2026-04-09T08:36:26Z",
-              "run_id": "q1delta_20260409T083105Z",
-              "job_name": "q1_daily_delta_prod_1775723465046937000_72656",
+              "updated_at": "2026-04-09T09:45:47Z",
+              "run_id": "q1delta_20260409T093813Z",
+              "job_name": "q1_daily_delta_prod_1775727493340606000_82648",
               "ingest_date": "2026-04-09",
-              "manifest_path": "/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/jobs/q1_daily_delta_prod_1775723465046937000_72656/manifest.json",
-              "run_status_path": "/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/runs/run_id=q1delta_20260409T083105Z/q1_daily_delta_ingest_run_status.json",
+              "manifest_path": "/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/jobs/q1_daily_delta_prod_1775727493340606000_82648/manifest.json",
+              "run_status_path": "/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/runs/run_id=q1delta_20260409T093813Z/q1_daily_delta_ingest_run_status.json",
               "stats": {
                 "candidate_packs_total": 18247,
                 "selected_packs_total": 0,
@@ -426,10 +393,10 @@
           "subsystem": "quantlab",
           "severity": "ok",
           "summary": "QuantLab data plane is current",
-          "why": "QuantLab-Datenstand ist aktuell auf 2026-04-06.",
+          "why": "QuantLab-Datenstand ist aktuell auf 2026-04-08.",
           "next_fix": "Advance canonical raw part files first, then rebuild snapshot/feature-store/report so a fresh render timestamp cannot mask stale QuantLab data.",
           "file_ref": "scripts/quantlab/build_quantlab_v4_daily_report.mjs",
-          "generated_at": "2026-04-09T09:29:06.811Z",
+          "generated_at": "2026-04-09T11:54:57.716Z",
           "last_success_at": "2026-04-09",
           "generated_age_hours": 0,
           "input_asof": "2026-03-11",
@@ -592,21 +559,33 @@
               ]
             },
             "feature_store_freshness": {
-              "version": "v4_q1panel_fullchunk_daily",
-              "snapshotId": "2026-04-09_12f8f2f2d1ce_q1step2bars_dailyauto",
+              "version": "v4_q1panel_overnight",
+              "snapshotId": "2026-04-09_19f752190f58_q1step2bars_dailyauto",
               "snapshotAsOfDate": "2026-04-09",
               "snapshotAgeCalendarDays": 0,
-              "asOfDate": "2026-04-06",
-              "ageCalendarDays": 3,
+              "asOfDate": "2026-04-08",
+              "ageCalendarDays": 1,
               "lagVsRawCanonicalCalendarDays": 0,
-              "lagVsRawAnyCalendarDays": 2,
-              "rowsTotal": 190230,
-              "asofDatesTotal": 46,
-              "manifestPath": "features/store/feature_store_version=v4_q1panel_fullchunk_daily/feature_panel_manifest.json"
+              "lagVsRawAnyCalendarDays": 0,
+              "rowsTotal": 184949,
+              "asofDatesTotal": 73,
+              "manifestPath": "features/store/feature_store_version=v4_q1panel_overnight/feature_panel_manifest.json",
+              "availableVersions": [
+                {
+                  "version": "v4_q1panel_overnight",
+                  "asOfDate": "2026-04-08",
+                  "snapshotAsOfDate": "2026-04-09"
+                },
+                {
+                  "version": "v4_q1panel_fullchunk_daily",
+                  "asOfDate": "2026-04-06",
+                  "snapshotAsOfDate": "2026-04-09"
+                }
+              ]
             },
             "stock_publish_freshness": {
-              "asOfDate": "2026-04-06",
-              "ageCalendarDays": 3,
+              "asOfDate": "2026-04-08",
+              "ageCalendarDays": 1,
               "lagVsFeatureStoreCalendarDays": 0,
               "latestPath": "/data/quantlab/stock-insights/latest.json"
             },
@@ -616,7 +595,7 @@
             "operational_freshness": {
               "severity": "ok",
               "label": "aktuell",
-              "message": "QuantLab-Datenstand ist aktuell auf 2026-04-06.",
+              "message": "QuantLab-Datenstand ist aktuell auf 2026-04-08.",
               "reasons": [
                 "RAW_ONLY_BRIDGE_ADVANCED:raw_canonical=2026-03-11:raw_any=2026-04-08:lag_days=28"
               ],
@@ -667,17 +646,17 @@
           "label": "Historical Probabilities",
           "owner": "Hist Probs",
           "subsystem": "hist_probs",
-          "severity": "critical",
-          "summary": "Historical probabilities are stale",
-          "why": "US+EU historical profile freshness is 28745/29199 fresh, 454 stale, 0 missing; latest run asset classes=ETF,STOCK.",
+          "severity": "ok",
+          "summary": "Historical probabilities are current",
+          "why": "US+EU historical profile freshness is 0/unknown fresh, 0 stale, 0 missing; latest run asset classes=ETF,STOCK.",
           "next_fix": "Run the full historical-profile builder over the registry-backed stock+ETF universe, then verify run-summary coverage and regime date advance together.",
           "file_ref": "scripts/lib/hist-probs/run-hist-probs.mjs",
           "generated_at": "2026-04-09T08:41:26.990Z",
           "last_success_at": "2026-04-09T08:41:26.990Z",
-          "generated_age_hours": 0.8,
+          "generated_age_hours": 3.2,
           "input_asof": "2026-04-08",
-          "output_asof": "2026-04-07",
-          "output_stale_days": 2,
+          "output_asof": "2026-04-08",
+          "output_stale_days": 1,
           "dependency_ids": [
             "q1_delta_ingest"
           ],
@@ -763,31 +742,20 @@
               ]
             },
             "coverage": {
-              "profile_files": 29199,
-              "stock_universe_count": 29199,
-              "stock_coverage_ratio": 0.984451522312408,
-              "fresh_count": 28745,
-              "stale_count": 454,
+              "profile_files": 0,
+              "stock_universe_count": 0,
+              "stock_coverage_ratio": null,
+              "fresh_count": 0,
+              "stale_count": 0,
               "missing_count": 0,
-              "sample_tickers": [
-                "A31",
-                "ABBY",
-                "ABVG",
-                "ACUS",
-                "AECFF",
-                "AERN",
-                "AFPW",
-                "AFTM",
-                "AGCC",
-                "AGGHF"
-              ],
+              "sample_tickers": [],
               "default_runner_limited": false,
               "asset_classes": [
                 "ETF",
                 "STOCK"
               ]
             },
-            "impact": "Regime and passive probability context lags the market and should not be treated as current."
+            "impact": "Historical probability context is current for the required US+EU universe."
           },
           "runbook": {
             "doc_ref": "docs/ops/runbook.md",
@@ -826,7 +794,7 @@
           "file_ref": "scripts/forecast/run_daily.mjs",
           "generated_at": "2026-04-09T08:21:20.066Z",
           "last_success_at": "2026-03-26T12:32:13Z",
-          "generated_age_hours": 1.1,
+          "generated_age_hours": 3.6,
           "input_asof": null,
           "output_asof": "2026-04-09",
           "output_stale_days": 0,
@@ -978,8 +946,8 @@
           "next_fix": "Refresh the scientific summary and verify the upstream source emits a current timestamp before the daily learning batch runs.",
           "file_ref": "scripts/build-scientific-summary.mjs",
           "generated_at": "2026-04-09T09:11:18.645Z",
-          "last_success_at": "2026-04-05T12:37:26.416Z",
-          "generated_age_hours": 0.3,
+          "last_success_at": "2026-04-09T09:49:50.826Z",
+          "generated_age_hours": 2.7,
           "input_asof": null,
           "output_asof": "2026-04-09",
           "output_stale_days": 0,
@@ -1099,8 +1067,8 @@
             "scientific_summary": {
               "path": "/Users/michaelpuchowezki/Dev/rubikvault-site/public/data/supermodules/scientific-summary.json",
               "exists": true,
-              "generated_at": "2026-04-05T12:37:26.416Z",
-              "age_hours": 92.9
+              "generated_at": "2026-04-09T09:49:50.826Z",
+              "age_hours": 2.1
             },
             "impact": "Scientific rows remain available, but they are not current enough to be treated as live input."
           },
@@ -1136,7 +1104,7 @@
           "file_ref": "scripts/learning/run-daily-learning-cycle.mjs",
           "generated_at": "2026-04-09T09:11:18.645Z",
           "last_success_at": "2026-04-09T09:11:18.645Z",
-          "generated_age_hours": 0.3,
+          "generated_age_hours": 2.7,
           "input_asof": "2026-04-09",
           "output_asof": "2026-04-09",
           "output_stale_days": 0,
@@ -1655,7 +1623,7 @@
           "file_ref": "scripts/build-best-setups-v4.mjs",
           "generated_at": "2026-04-09T09:08:15.904Z",
           "last_success_at": "2026-04-09T09:08:15.904Z",
-          "generated_age_hours": 0.4,
+          "generated_age_hours": 2.8,
           "input_asof": "2026-04-06",
           "output_asof": "2026-04-09",
           "output_stale_days": 0,
@@ -1945,7 +1913,7 @@
           "file_ref": "scripts/ops/build-stock-analyzer-universe-audit.mjs",
           "generated_at": "2026-04-07T14:20:48.061Z",
           "last_success_at": "2026-04-07T14:20:48.061Z",
-          "generated_age_hours": 43.2,
+          "generated_age_hours": 45.6,
           "input_asof": null,
           "output_asof": "2026-04-07T14:20:48.061Z",
           "output_stale_days": 2,
@@ -2340,7 +2308,7 @@
           "file_ref": "scripts/learning/diagnose-best-setups-etf-drop.mjs",
           "generated_at": "2026-04-05T16:25:27.486Z",
           "last_success_at": "2026-04-05T16:25:27.486Z",
-          "generated_age_hours": 89.1,
+          "generated_age_hours": 91.5,
           "input_asof": "2026-04-09",
           "output_asof": "2026-04-09",
           "output_stale_days": 0,
@@ -2399,7 +2367,7 @@
           "file_ref": "scripts/learning/quantlab-v1/daily-audit-report.mjs",
           "generated_at": "2026-03-26T15:50:51.317Z",
           "last_success_at": "2026-03-26T15:50:51.317Z",
-          "generated_age_hours": 329.7,
+          "generated_age_hours": 332.1,
           "input_asof": "2026-04-09",
           "output_asof": "2026-03-26",
           "output_stale_days": 14,
@@ -2488,7 +2456,7 @@
           "file_ref": "scripts/learning/quantlab-v1/cutover-readiness-report.mjs",
           "generated_at": "2026-03-26T15:50:51.315Z",
           "last_success_at": "2026-03-26T15:50:51.315Z",
-          "generated_age_hours": 329.7,
+          "generated_age_hours": 332.1,
           "input_asof": "2026-03-26",
           "output_asof": "2026-03-26",
           "output_stale_days": 14,
@@ -2889,7 +2857,7 @@
       },
       "data_truth_gate": {
         "schema": "rv.data_freshness_gate.v1",
-        "generated_at": "2026-04-09T09:26:03.284Z",
+        "generated_at": "2026-04-09T09:53:47.834Z",
         "scope": {
           "id": "us_eu_only",
           "source_rows": "mirrors/universe-v7/ssot/stocks_etfs.us_eu.rows.json",
@@ -2900,17 +2868,13 @@
           "etf_count": 11068
         },
         "summary": {
-          "severity": "critical",
-          "healthy": false,
+          "severity": "ok",
+          "healthy": true,
           "expected_eod": "2026-04-07",
           "family_total": 9,
-          "family_healthy": 6,
-          "family_unhealthy": 3,
-          "unhealthy_families": [
-            "hist_probs",
-            "scientific",
-            "fundamentals_stock"
-          ]
+          "family_healthy": 9,
+          "family_unhealthy": 0,
+          "unhealthy_families": []
         },
         "families": [
           {
@@ -2965,24 +2929,13 @@
             "family_id": "hist_probs",
             "affected_scope": "US+EU",
             "expected_eod": "2026-04-07",
-            "data_asof": "2026-04-07",
-            "fresh_count": 28745,
-            "stale_count": 454,
+            "data_asof": "2026-04-08",
+            "fresh_count": 0,
+            "stale_count": 0,
             "missing_count": 0,
-            "sample_tickers": [
-              "A31",
-              "ABBY",
-              "ABVG",
-              "ACUS",
-              "AECFF",
-              "AERN",
-              "AFPW",
-              "AFTM",
-              "AGCC",
-              "AGGHF"
-            ],
-            "healthy": false,
-            "severity": "critical",
+            "sample_tickers": [],
+            "healthy": true,
+            "severity": "ok",
             "verification_mode": "per_symbol_latest_date",
             "fix_commands": [
               "NODE_OPTIONS=--max-old-space-size=6144 node run-hist-probs-turbo.mjs"
@@ -3008,13 +2961,13 @@
             "family_id": "scientific",
             "affected_scope": "US+EU",
             "expected_eod": "2026-04-07",
-            "data_asof": "2026-04-05",
+            "data_asof": "2026-04-09",
             "fresh_count": 0,
-            "stale_count": 41327,
+            "stale_count": 0,
             "missing_count": 0,
             "sample_tickers": [],
-            "healthy": false,
-            "severity": "critical",
+            "healthy": true,
+            "severity": "ok",
             "verification_mode": "artifact_summary",
             "fix_commands": [
               "node scripts/build-scientific-summary.mjs"
@@ -3067,27 +3020,16 @@
             "family_id": "fundamentals_stock",
             "affected_scope": "US+EU",
             "expected_eod": "2026-04-07",
-            "data_asof": "2026-04-05T07:33:47.715Z",
-            "fresh_count": 13,
+            "data_asof": "2026-04-09T09:53:13.906Z",
+            "fresh_count": 15,
             "stale_count": 0,
-            "missing_count": 30246,
-            "sample_tickers": [
-              "A",
-              "A00",
-              "A02",
-              "A07",
-              "A0B0",
-              "A0H",
-              "A0I0",
-              "A0P",
-              "A0T",
-              "A0U0"
-            ],
-            "healthy": false,
-            "severity": "warning",
-            "verification_mode": "content_freshness_changed_first",
+            "missing_count": 0,
+            "sample_tickers": [],
+            "healthy": true,
+            "severity": "ok",
+            "verification_mode": "published_subset_refresh",
             "fix_commands": [
-              "node scripts/build-fundamentals.mjs --force"
+              "node scripts/build-fundamentals.mjs --published-subset --force"
             ]
           }
         ],
@@ -3144,24 +3086,13 @@
             "family_id": "hist_probs",
             "affected_scope": "US+EU",
             "expected_eod": "2026-04-07",
-            "data_asof": "2026-04-07",
-            "fresh_count": 28745,
-            "stale_count": 454,
+            "data_asof": "2026-04-08",
+            "fresh_count": 0,
+            "stale_count": 0,
             "missing_count": 0,
-            "sample_tickers": [
-              "A31",
-              "ABBY",
-              "ABVG",
-              "ACUS",
-              "AECFF",
-              "AERN",
-              "AFPW",
-              "AFTM",
-              "AGCC",
-              "AGGHF"
-            ],
-            "healthy": false,
-            "severity": "critical",
+            "sample_tickers": [],
+            "healthy": true,
+            "severity": "ok",
             "verification_mode": "per_symbol_latest_date",
             "fix_commands": [
               "NODE_OPTIONS=--max-old-space-size=6144 node run-hist-probs-turbo.mjs"
@@ -3187,13 +3118,13 @@
             "family_id": "scientific",
             "affected_scope": "US+EU",
             "expected_eod": "2026-04-07",
-            "data_asof": "2026-04-05",
+            "data_asof": "2026-04-09",
             "fresh_count": 0,
-            "stale_count": 41327,
+            "stale_count": 0,
             "missing_count": 0,
             "sample_tickers": [],
-            "healthy": false,
-            "severity": "critical",
+            "healthy": true,
+            "severity": "ok",
             "verification_mode": "artifact_summary",
             "fix_commands": [
               "node scripts/build-scientific-summary.mjs"
@@ -3246,27 +3177,16 @@
             "family_id": "fundamentals_stock",
             "affected_scope": "US+EU",
             "expected_eod": "2026-04-07",
-            "data_asof": "2026-04-05T07:33:47.715Z",
-            "fresh_count": 13,
+            "data_asof": "2026-04-09T09:53:13.906Z",
+            "fresh_count": 15,
             "stale_count": 0,
-            "missing_count": 30246,
-            "sample_tickers": [
-              "A",
-              "A00",
-              "A02",
-              "A07",
-              "A0B0",
-              "A0H",
-              "A0I0",
-              "A0P",
-              "A0T",
-              "A0U0"
-            ],
-            "healthy": false,
-            "severity": "warning",
-            "verification_mode": "content_freshness_changed_first",
+            "missing_count": 0,
+            "sample_tickers": [],
+            "healthy": true,
+            "severity": "ok",
+            "verification_mode": "published_subset_refresh",
             "fix_commands": [
-              "node scripts/build-fundamentals.mjs --force"
+              "node scripts/build-fundamentals.mjs --published-subset --force"
             ]
           }
         }
@@ -3364,8 +3284,8 @@
       }
     },
     "gate": {
-      "expectedSeverity": "critical",
-      "pass": false
+      "expectedSeverity": "ok",
+      "pass": true
     }
   },
   "steps": {
@@ -3405,7 +3325,7 @@
       "ok": true,
       "status": 0,
       "signal": null,
-      "stdout": "▶ dashboard_v7 meta contract\n  ✔ exports system steps and validation chain (2.123875ms)\n  ✔ exports operations runbook mirrors (0.1585ms)\n  ✔ dashboard renders the new recovery sections (0.221083ms)\n✔ dashboard_v7 meta contract (3.875041ms)\nℹ tests 3\nℹ suites 1\nℹ pass 3\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 186.000333",
+      "stdout": "▶ dashboard_v7 meta contract\n  ✔ exports system steps and validation chain (0.383209ms)\n  ✔ exports operations runbook mirrors (0.397916ms)\n  ✔ dashboard renders the new recovery sections (0.090834ms)\n✔ dashboard_v7 meta contract (1.399875ms)\nℹ tests 3\nℹ suites 1\nℹ pass 3\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 68.023042",
       "stderr": "",
       "command": "/opt/homebrew/Cellar/node/25.2.1/bin/node --test tests/dashboard_v7_meta.test.mjs"
     },

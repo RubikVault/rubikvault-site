@@ -10,10 +10,66 @@ This is the **single operational entrypoint** for the live status chain behind:
 
 ---
 
+## Release State & Deploy
+
+### Authoritative Release State (End-to-End Pipeline SSOT)
+
+| File | Purpose | Producer |
+|------|---------|---------|
+| `public/data/ops/release-state-latest.json` | Current pipeline phase, blockers, target date, QuantLab state | `run-night-supervisor.mjs` (phase transitions) |
+| `public/data/ops/deploy-proof-latest.json` | Deployed commit, Cloudflare deployment ID/URL, smoke results, `verified_at` | `scripts/ops/release-gate-check.mjs` |
+| `dist/pages-prod/` | Slim Cloudflare Pages deploy bundle (excluded: hist-probs, marketphase, v3/series) | `npm run build:deploy` |
+
+### Release Phase Lifecycle
+```
+NIGHT_START → HIST_PROBS_1_DONE → EODHD_DONE → HIST_PROBS_2_DONE
+→ RELEASE_READY → DEPLOY_REQUESTED → DEPLOY_VERIFIED → DONE
+```
+- **RELEASE_READY**: Night supervisor completed — safe to deploy.
+- **DEPLOY_VERIFIED**: All smoke tests passed (`verified_at` is set).
+- If `blocker` is set: do NOT deploy until resolved.
+
+### Deploy Commands
+```bash
+# Check current release state
+cat public/data/ops/release-state-latest.json | jq '{phase,target_date,last_success_phase,blocker}'
+
+# Dry run: build bundle and check budget, no deploy
+npm run release:gate:dry-run
+
+# Deploy (requires RELEASE_READY state or --force)
+npm run release:gate
+
+# Force deploy despite state (emergency)
+node scripts/ops/release-gate-check.mjs --force
+
+# Build bundle only
+npm run build:deploy
+npm run build:deploy:dry-run   # count files without writing
+```
+
+### Deploy Bundle Excludes
+The following dirs are excluded from `dist/pages-prod/` (too large or gitignored):
+- `public/data/hist-probs/` — 40K+ files, served via API (not static Pages)
+- `public/data/marketphase/` — 53K+ files
+- `public/data/v3/series/` — 13K+ files
+- `public/data/forecast/reports/`, `public/data/features-v2/`, etc.
+
+Full exclude list: `scripts/ops/build-deploy-bundle.mjs` → `RSYNC_EXCLUDES`.
+
+### Check Deploy Proof
+```bash
+cat public/data/ops/deploy-proof-latest.json | jq '{deployed_commit,deployment_url,smokes_ok,verified_at}'
+```
+
+---
+
 ## SSOT — Single Sources Of Truth
 
 | What | File | Producer |
 |------|------|---------|
+| **Release pipeline state** | `public/data/ops/release-state-latest.json` | `run-night-supervisor.mjs` |
+| **Deploy proof** | `public/data/ops/deploy-proof-latest.json` | `release-gate-check.mjs` |
 | Operational status | `public/data/reports/system-status-latest.json` | `node scripts/ops/build-system-status-report.mjs` |
 | Dashboard aggregation | `public/dashboard_v6_meta_data.json` | `node scripts/generate_meta_dashboard_data.mjs` |
 | Stock Analyzer universe audit | `public/data/reports/stock-analyzer-universe-audit-latest.json` | `node scripts/ops/build-stock-analyzer-universe-audit.mjs --base-url http://127.0.0.1:8788 --registry-path public/data/universe/v7/registry/registry.ndjson.gz --asset-classes STOCK,ETF --max-tickers 0` |

@@ -1,14 +1,14 @@
 # NAS Evidence Hub
 
-Generated at: 2026-04-09T11:56:15.241Z
+Generated at: 2026-04-09T12:33:20.931Z
 
 ## Current Verdict
 
 - Production GO on NAS: false
 - Current primary runtime: Mac
-- Night-watch status: monitoring / cycle_complete / remote_connected=true
+- Night-watch status: monitoring / night_watch_started / remote_connected=false
 - Native-matrix campaign: 20260409T092417Z / running
-- Open-probe campaign: 20260408T201518Z / running / cycles=49 / runs=113 / failed=51
+- Open-probe campaign: 20260408T201518Z / running / cycles=51 / runs=115 / failed=51
 - Root filesystem: 2.3G / 2.3G (100%)
 
 ## Hard Blockers
@@ -42,7 +42,7 @@ Generated at: 2026-04-09T11:56:15.241Z
 | Daily Audit Report Smoke | verified_success | 6/6 | 544.65 | 667.43 | stable sample path |
 | Daily Learning Cycle | verified_failure | 0/37 | 279.43 | 695.48 | nonzero_exit; |
 | ETF Diagnostic Smoke | verified_success | 6/6 | 3.78 | 264.85 | stable sample path |
-| Forecast Daily | verified_success | 37/37 | 142.50 | 648.72 | stable sample path |
+| Forecast Daily | verified_success | 38/38 | 146.84 | 648.65 | stable sample path |
 | Fundamentals Sample | mixed_results | 1/42 | 143.76 | 66.18 | provider_chain_failed; |
 | Hist Probs Sample | verified_success | 38/38 | 147.33 | 671.83 | stable sample path |
 | Hist Probs Sample W1 | verified_failure | 0/6 | 1811.24 | 669.58 | nonzero_exit; |
@@ -54,7 +54,7 @@ Generated at: 2026-04-09T11:56:15.241Z
 | Refresh V7 History Sample | mixed_results | 40/42 | 7.92 | 20.70 | stable sample path |
 | Runtime Control Probe | verified_failure | 0/6 | 0.99 | 31.92 | nonzero_exit; |
 | UI Contract Probe | verified_failure | 0/6 | 0.93 | 36.80 | nonzero_exit; |
-| Universe Audit Sample | verified_success | 37/37 | 1.26 | 49.10 | stable sample path |
+| Universe Audit Sample | verified_success | 38/38 | 1.25 | 48.97 | stable sample path |
 
 ## Problem -> Best Current NAS Solution
 
@@ -80,9 +80,9 @@ Generated at: 2026-04-09T11:56:15.241Z
 
 - Daily Audit Report Smoke: 6/6 successful, latest=success, avg_peak_rss_mb=667.43
 - ETF Diagnostic Smoke: 6/6 successful, latest=success, avg_peak_rss_mb=264.85
-- Forecast Daily: 37/37 successful, latest=success, avg_peak_rss_mb=648.72
+- Forecast Daily: 38/38 successful, latest=success, avg_peak_rss_mb=648.65
 - Hist Probs Sample: 38/38 successful, latest=success, avg_peak_rss_mb=671.83
-- Universe Audit Sample: 37/37 successful, latest=success, avg_peak_rss_mb=49.10
+- Universe Audit Sample: 38/38 successful, latest=success, avg_peak_rss_mb=48.97
 - stage1: recommended variant is `volume1_caches` with 72/72 successful native-matrix runs.
 - stage2: recommended variant is `node384` with 71/71 successful native-matrix runs.
 - stage3: recommended variant is `node512` with 71/71 successful native-matrix runs.

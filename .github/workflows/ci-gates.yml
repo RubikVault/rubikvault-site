@@ -385,15 +385,17 @@ jobs:
             echo "✅ .gitignore blanket ignore guard OK"
           fi
           
-          # Check: No build/ directory committed
-          if [ -d "build" ]; then
-            BUILD_FILES=$(find build -type f | wc -l)
-            if [ $BUILD_FILES -gt 0 ]; then
-              echo "❌ VIOLATION: build/ directory contains $BUILD_FILES files"
-              echo "build/ must not be committed (add to .gitignore)"
-              VIOLATIONS=$((VIOLATIONS + 1))
+          # Check: No build/ or dist/ directory committed
+          for check_dir in build dist; do
+            if [ -d "$check_dir" ]; then
+              DIR_FILES=$(find "$check_dir" -type f | wc -l)
+              if [ $DIR_FILES -gt 0 ]; then
+                echo "❌ VIOLATION: $check_dir/ directory contains $DIR_FILES files"
+                echo "$check_dir/ must not be committed (add to .gitignore)"
+                VIOLATIONS=$((VIOLATIONS + 1))
+              fi
             fi
-          fi
+          done
           
           # Check: No modules write to provider-state.json
           PROVIDER_STATE_WRITES=$(grep -r "provider-state.json" scripts/providers/ 2>/dev/null | grep -v "read" | grep -v "#" || true)

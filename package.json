@@ -222,7 +222,13 @@
     "test:v3:fixtures": "node scripts/contracts/validate-v3-fixtures.mjs",
     "test:v3:unit": "node --test tests/unit/*.v3.test.mjs",
     "test:v3:contracts": "node scripts/contracts/validate-v3-artifacts.mjs && node tests/contracts/market-hub-time-semantics.test.mjs && node tests/contracts/market-hub-regression.test.mjs",
-    "test:v3:dry-run": "node scripts/contracts/run-v3-dry-run.mjs"
+    "test:v3:dry-run": "node scripts/contracts/run-v3-dry-run.mjs",
+    "build:deploy": "node scripts/ops/build-deploy-bundle.mjs",
+    "build:deploy:dry-run": "node scripts/ops/build-deploy-bundle.mjs --dry-run",
+    "build:deploy:strict": "node scripts/ops/build-deploy-bundle.mjs --strict",
+    "build:pipeline-registry": "node scripts/ops/build-pipeline-step-registry.mjs",
+    "release:gate": "node scripts/ops/release-gate-check.mjs",
+    "release:gate:dry-run": "node scripts/ops/release-gate-check.mjs --dry-run"
   },
   "dependencies": {
     "d3-dsv": "^3.0.1",

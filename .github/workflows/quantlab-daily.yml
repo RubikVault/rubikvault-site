@@ -19,26 +19,48 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Check quantlab available
+        id: check-quantlab
+        run: |
+          if [ -f quantlab/pyproject.toml ]; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            echo "## QuantLab Daily — Skipped" >> "$GITHUB_STEP_SUMMARY"
+            echo "quantlab/ directory not found in this repo. Runs externally in QuantLabHot/rubikvault-quantlab." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
       - uses: actions/setup-python@v5
+        if: steps.check-quantlab.outputs.available == 'true'
         with:
           python-version: '3.11'
 
       - name: Setup uv
+        if: steps.check-quantlab.outputs.available == 'true'
         uses: astral-sh/setup-uv@v3
 
       - name: Sync deps
+        if: steps.check-quantlab.outputs.available == 'true'
         run: uv sync --extra dev
+        working-directory: quantlab
 
       - name: Run daily
+        if: steps.check-quantlab.outputs.available == 'true'
         run: uv run python -m quantlab run daily
+        working-directory: quantlab
 
       - name: Publish
+        if: steps.check-quantlab.outputs.available == 'true'
         run: uv run python -m quantlab publish
+        working-directory: quantlab
 
       - name: Audit verify
+        if: steps.check-quantlab.outputs.available == 'true'
         run: uv run python -m quantlab audit verify
+        working-directory: quantlab
 
       - name: Commit artifacts
+        if: steps.check-quantlab.outputs.available == 'true'
         run: |
           cd ..
           git config user.name "github-actions[bot]"

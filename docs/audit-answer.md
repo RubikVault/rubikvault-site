@@ -5,7 +5,7 @@
 *   **Repository Visibility**: Public.
     *   *Source*: Verified via `git remote -v` and external check.
 *   **Deployment Target**: Cloudflare Pages.
-    *   *Evidence*: `wrangler.toml` (lines 1-6) defines `pages_build_output_dir = "public"`.
+    *   *Evidence*: `wrangler.toml` defines `pages_build_output_dir = "dist/pages-prod"` (slim bundle built via `npm run build:deploy`, not raw `public/`).
 *   **Current Universe**: 101 Tickers (NASDAQ-100).
     *   *Evidence*: `public/data/universe/nasdaq100.json` (lines 1-402, 101 entries).
 *   **Data Write Pattern**:
