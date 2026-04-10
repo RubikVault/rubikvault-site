@@ -1,6 +1,6 @@
 {
   "schema_version": "rv.stock-analyzer.non-regression-gate.v1",
-  "generated_at": "2026-04-09T12:01:49.203Z",
+  "generated_at": "2026-04-10T03:31:09.560Z",
   "local_base": "http://127.0.0.1:8788",
   "benchmark_base": "https://56a89a60.rubikvault-site.pages.dev",
   "ticker": "AAPL",
@@ -13,32 +13,62 @@
     "dashboard_meta_ok": true,
     "non_regression_unit_ok": false,
     "ui_artifacts_ok": true,
-    "dashboard_truth_ok": true
+    "dashboard_truth_ok": false
   },
   "dashboard": {
     "system_summary": {
-      "severity": "ok",
-      "healthy": true,
-      "local_severity": "ok",
+      "severity": "warning",
+      "healthy": false,
+      "local_severity": "warning",
       "remote_severity": "critical",
       "remote_healthy": false,
       "proof_mode": "live_github_api",
       "live_fetch_status": "ok",
       "automation_severity": "ok",
-      "data_layer_severity": "ok",
-      "primary_blocker": null,
-      "ssot_violations_count": 0
+      "data_layer_severity": "warning",
+      "primary_blocker": "Market-data refresh ran but fetched no data (pre-market or quota issue)",
+      "ssot_violations_count": 1
     },
     "meta_summary": {
-      "overall_status": "OK",
-      "status_severity": "ok",
-      "status_detail": [],
-      "learning_status": "VERBESSERUNG ✅",
+      "overall_status": "WARNING",
+      "status_severity": "warning",
+      "status_detail": [
+        "Market-data refresh ran but fetched no data (pre-market or quota issue)"
+      ],
+      "learning_status": "VERSCHLECHTERUNG 🔴",
       "live_status": "ok",
       "snapshot_age_hours": 0,
-      "data_truth_state": "Fresh and internally consistent.",
-      "root_causes": [],
-      "primary_actions": [],
+      "data_truth_state": "Partially degraded truth: Market-data refresh ran but fetched no data (pre-market or quota issue).",
+      "root_causes": [
+        {
+          "id": "market_data_refresh_data_freshness",
+          "severity": "warning",
+          "category": "data_freshness",
+          "title": "Market-data refresh ran but fetched no data (pre-market or quota issue)",
+          "why": "Refresh report generated at 2026-04-10T02:50:01Z but assets_fetched_with_data=0 — API returned no data. Likely a pre-market run or provider quota issue. Re-run after market close or inspect provider auth.",
+          "impact": "No newer market history can flow into delta ingest, QuantLab raw bars, hist-probs, or the snapshot dependency chain.",
+          "fix": "API ran but returned no data. Re-run after market close with: python3 scripts/quantlab/refresh_v7_history_from_eodhd.py --allowlist-path public/data/universe/v7/ssot/stocks.max.canonical.ids.json --from-date <YYYY-MM-DD>",
+          "owner": "Market Data",
+          "subsystem": "v7_history",
+          "file_ref": "scripts/quantlab/refresh_v7_history_from_eodhd.py",
+          "evidence_at": "2026-04-10T02:50:01Z",
+          "source_key": "system_status"
+        }
+      ],
+      "primary_actions": [
+        {
+          "id": "market_data_refresh_data_freshness",
+          "severity": "warning",
+          "category": "data_freshness",
+          "title": "Market-data refresh ran but fetched no data (pre-market or quota issue)",
+          "why": "Refresh report generated at 2026-04-10T02:50:01Z but assets_fetched_with_data=0 — API returned no data. Likely a pre-market run or provider quota issue. Re-run after market close or inspect provider auth.",
+          "impact": "No newer market history can flow into delta ingest, QuantLab raw bars, hist-probs, or the snapshot dependency chain.",
+          "action": "API ran but returned no data. Re-run after market close with: python3 scripts/quantlab/refresh_v7_history_from_eodhd.py --allowlist-path public/data/universe/v7/ssot/stocks.max.canonical.ids.json --from-date <YYYY-MM-DD>",
+          "owner": "Market Data",
+          "subsystem": "v7_history",
+          "file_ref": "scripts/quantlab/refresh_v7_history_from_eodhd.py"
+        }
+      ],
       "operating_modes": [],
       "production_ready": true,
       "cutover_ready": true,
@@ -89,10 +119,14 @@
           ],
           "reason": "Q1 delta ingest can only advance after v7 history refresh touches newer packs.",
           "blocked_by": [],
-          "degraded_by": [],
+          "degraded_by": [
+            "market_data_refresh"
+          ],
           "step_label": "Q1 Delta Ingest",
           "blocked_by_labels": [],
-          "degraded_by_labels": []
+          "degraded_by_labels": [
+            "Market Data Refresh"
+          ]
         },
         {
           "id": "quantlab_daily_report",
@@ -176,10 +210,14 @@
           ],
           "reason": "The universe-wide analyze-v4 audit is only trustworthy after the direct data/model inputs and snapshot layer are current.",
           "blocked_by": [],
-          "degraded_by": [],
+          "degraded_by": [
+            "market_data_refresh"
+          ],
           "step_label": "Stock Analyzer Universe Audit",
           "blocked_by_labels": [],
-          "degraded_by_labels": []
+          "degraded_by_labels": [
+            "Market Data Refresh"
+          ]
         },
         {
           "id": "etf_diagnostic",
@@ -225,23 +263,23 @@
           "label": "Market Data Refresh",
           "owner": "Market Data",
           "subsystem": "v7_history",
-          "severity": "ok",
-          "summary": "Market-data refresh is current",
-          "why": "Latest v7 history refresh report was generated at 2026-04-08T07:50:28Z with observed market data only up to 2026-04-07.",
-          "next_fix": "Run the provider-backed history refresh first; if it does not advance, inspect provider auth/quota and refresh report outputs before touching downstream jobs.",
+          "severity": "warning",
+          "summary": "Market-data refresh ran but fetched no data (pre-market or quota issue)",
+          "why": "Refresh report generated at 2026-04-10T02:50:01Z but assets_fetched_with_data=0 — API returned no data. Likely a pre-market run or provider quota issue. Re-run after market close or inspect provider auth.",
+          "next_fix": "API ran but returned no data. Re-run after market close with: python3 scripts/quantlab/refresh_v7_history_from_eodhd.py --allowlist-path public/data/universe/v7/ssot/stocks.max.canonical.ids.json --from-date <YYYY-MM-DD>",
           "file_ref": "scripts/quantlab/refresh_v7_history_from_eodhd.py",
-          "generated_at": "2026-04-08T07:50:28Z",
-          "last_success_at": "2026-04-08T07:50:28Z",
-          "generated_age_hours": 28.1,
-          "input_asof": "2026-02-26",
-          "output_asof": "2026-04-07",
-          "output_stale_days": 2,
+          "generated_at": "2026-04-10T02:50:01Z",
+          "last_success_at": "2026-04-10T02:50:01Z",
+          "generated_age_hours": 0.6,
+          "input_asof": "2026-03-25",
+          "output_asof": null,
+          "output_stale_days": 0,
           "dependency_ids": [],
           "blocked_by": [],
           "status_detail": {
-            "assets_requested": 9041,
-            "assets_fetched_with_data": 9039,
-            "fetch_errors_total": 0,
+            "assets_requested": 41327,
+            "assets_fetched_with_data": 0,
+            "fetch_errors_total": 18597,
             "api_lock": null,
             "impact": "No newer market history can flow into delta ingest, QuantLab raw bars, hist-probs, or the snapshot dependency chain."
           },
@@ -276,14 +314,14 @@
           "subsystem": "q1_delta",
           "severity": "ok",
           "summary": "Q1 delta ingest is current",
-          "why": "Latest successful Q1 delta ingest is anchored to ingest_date=2026-04-09 and was updated at 2026-04-09T09:45:47Z.",
+          "why": "Latest successful Q1 delta ingest is anchored to ingest_date=2026-04-10 and was updated at 2026-04-10T02:50:26Z.",
           "next_fix": "After the upstream history refresh advances, rerun the Q1 delta ingest and verify latest_success.json moves forward before rebuilding QuantLab reports.",
           "file_ref": "scripts/quantlab/run_daily_delta_ingest_q1.py",
-          "generated_at": "2026-04-09T09:45:47Z",
-          "last_success_at": "2026-04-09T09:45:47Z",
-          "generated_age_hours": 2.2,
-          "input_asof": "2026-04-09",
-          "output_asof": "2026-04-09",
+          "generated_at": "2026-04-10T02:50:26Z",
+          "last_success_at": "2026-04-10T02:50:26Z",
+          "generated_age_hours": 0.6,
+          "input_asof": "2026-04-10",
+          "output_asof": "2026-04-10",
           "output_stale_days": 0,
           "dependency_ids": [
             "market_data_refresh"
@@ -292,12 +330,12 @@
           "status_detail": {
             "latest_success": {
               "schema": "q1_daily_delta_ingest_latest_success_v1",
-              "updated_at": "2026-04-09T09:45:47Z",
-              "run_id": "q1delta_20260409T093813Z",
-              "job_name": "q1_daily_delta_prod_1775727493340606000_82648",
-              "ingest_date": "2026-04-09",
-              "manifest_path": "/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/jobs/q1_daily_delta_prod_1775727493340606000_82648/manifest.json",
-              "run_status_path": "/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/runs/run_id=q1delta_20260409T093813Z/q1_daily_delta_ingest_run_status.json",
+              "updated_at": "2026-04-10T02:50:26Z",
+              "run_id": "q1delta_20260410T025024Z",
+              "job_name": "q1_daily_delta_prod_1775789423962349000_61917",
+              "ingest_date": "2026-04-10",
+              "manifest_path": "/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/jobs/q1_daily_delta_prod_1775789423962349000_61917/manifest.json",
+              "run_status_path": "/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/runs/run_id=q1delta_20260410T025024Z/q1_daily_delta_ingest_run_status.json",
               "stats": {
                 "candidate_packs_total": 18247,
                 "selected_packs_total": 0,
@@ -363,7 +401,7 @@
             "noop_detected": false,
             "selected_packs_total": null,
             "noop_no_changed_packs": null,
-            "upstream_refresh_asof": "2026-04-07",
+            "upstream_refresh_asof": "2026-04-08",
             "impact": "QuantLab raw-bar freshness cannot advance until the delta ingest layer has incorporated newer market history."
           },
           "runbook": {
@@ -396,12 +434,12 @@
           "why": "QuantLab-Datenstand ist aktuell auf 2026-04-08.",
           "next_fix": "Advance canonical raw part files first, then rebuild snapshot/feature-store/report so a fresh render timestamp cannot mask stale QuantLab data.",
           "file_ref": "scripts/quantlab/build_quantlab_v4_daily_report.mjs",
-          "generated_at": "2026-04-09T11:54:57.716Z",
-          "last_success_at": "2026-04-09",
-          "generated_age_hours": 0,
+          "generated_at": "2026-04-10T02:53:28.294Z",
+          "last_success_at": "2026-04-10",
+          "generated_age_hours": 0.6,
           "input_asof": "2026-03-11",
           "output_asof": "2026-04-08",
-          "output_stale_days": 1,
+          "output_stale_days": 2,
           "dependency_ids": [
             "q1_delta_ingest"
           ],
@@ -453,8 +491,8 @@
               "latestAnyRequiredIngestDate": "2026-04-08",
               "latestCanonicalRequiredDataDate": "2026-03-11",
               "latestAnyRequiredDataDate": "2026-04-08",
-              "latestCanonicalAgeCalendarDays": 29,
-              "latestAnyAgeCalendarDays": 1,
+              "latestCanonicalAgeCalendarDays": 30,
+              "latestAnyAgeCalendarDays": 2,
               "bridgeOnlyAdvanceCalendarDays": 28,
               "requiredAssetTypesFresh": false,
               "coverageByAssetType": {
@@ -554,7 +592,7 @@
                 }
               },
               "reasonCodes": [
-                "RAW_BARS_REQUIRED_TYPES_STALE:latest_required_ingest_date=2026-03-11:age_days=29",
+                "RAW_BARS_REQUIRED_TYPES_STALE:latest_required_ingest_date=2026-03-11:age_days=30",
                 "RAW_BARS_ONLY_BRIDGE_ADVANCED:latest_required_ingest_date=2026-03-11:latest_required_any_ingest_date=2026-04-08:lag_days=28"
               ]
             },
@@ -562,9 +600,9 @@
               "version": "v4_q1panel_overnight",
               "snapshotId": "2026-04-09_19f752190f58_q1step2bars_dailyauto",
               "snapshotAsOfDate": "2026-04-09",
-              "snapshotAgeCalendarDays": 0,
+              "snapshotAgeCalendarDays": 1,
               "asOfDate": "2026-04-08",
-              "ageCalendarDays": 1,
+              "ageCalendarDays": 2,
               "lagVsRawCanonicalCalendarDays": 0,
               "lagVsRawAnyCalendarDays": 0,
               "rowsTotal": 184949,
@@ -579,13 +617,13 @@
                 {
                   "version": "v4_q1panel_fullchunk_daily",
                   "asOfDate": "2026-04-06",
-                  "snapshotAsOfDate": "2026-04-09"
+                  "snapshotAsOfDate": "2026-04-10"
                 }
               ]
             },
             "stock_publish_freshness": {
               "asOfDate": "2026-04-08",
-              "ageCalendarDays": 1,
+              "ageCalendarDays": 2,
               "lagVsFeatureStoreCalendarDays": 0,
               "latestPath": "/data/quantlab/stock-insights/latest.json"
             },
@@ -651,12 +689,12 @@
           "why": "US+EU historical profile freshness is 0/unknown fresh, 0 stale, 0 missing; latest run asset classes=ETF,STOCK.",
           "next_fix": "Run the full historical-profile builder over the registry-backed stock+ETF universe, then verify run-summary coverage and regime date advance together.",
           "file_ref": "scripts/lib/hist-probs/run-hist-probs.mjs",
-          "generated_at": "2026-04-09T08:41:26.990Z",
-          "last_success_at": "2026-04-09T08:41:26.990Z",
-          "generated_age_hours": 3.2,
+          "generated_at": "2026-04-10T02:54:37.020Z",
+          "last_success_at": "2026-04-10T02:54:37.020Z",
+          "generated_age_hours": 0.5,
           "input_asof": "2026-04-08",
           "output_asof": "2026-04-08",
-          "output_stale_days": 1,
+          "output_stale_days": 2,
           "dependency_ids": [
             "q1_delta_ingest"
           ],
@@ -665,23 +703,24 @@
             "market_regime": "bull",
             "breadth_regime": "normal",
             "run_summary": {
-              "ran_at": "2026-04-09T08:47:39.987Z",
-              "tickers_total": 29199,
+              "ran_at": "2026-04-10T02:54:37.168Z",
+              "tickers_total": 0,
               "tickers_input_total": 41327,
-              "tickers_excluded_no_data": 12128,
-              "tickers_processed": 454,
-              "tickers_skipped": 28745,
+              "tickers_excluded_no_data": 12117,
+              "tickers_excluded_inactive": 29210,
+              "tickers_processed": 0,
+              "tickers_skipped": 0,
               "tickers_errors": 0,
-              "tickers_no_data": 11,
-              "tickers_covered": 29199,
+              "tickers_no_data": 0,
+              "tickers_covered": 0,
               "tickers_remaining": 0,
               "invalid_existing_files": 0,
-              "stale_existing_files": 455,
-              "missing_existing_files": 10,
+              "stale_existing_files": 0,
+              "missing_existing_files": 0,
               "worker_hard_failures": 0,
               "skip_existing": true,
               "workers_requested": 15,
-              "workers_used": 15,
+              "workers_used": 1,
               "source_mode": "us_eu_scope",
               "asset_classes": [
                 "ETF",
@@ -689,57 +728,12 @@
               ],
               "max_tickers": 0,
               "regime_date": "2026-04-08",
-              "elapsed_seconds": 367,
+              "elapsed_seconds": 0,
               "market_regime": "bull",
               "volatility_regime": "high_vol",
               "breadth_regime": "normal",
               "error_samples": [],
-              "no_data_samples": [
-                {
-                  "ticker": "A3Z",
-                  "message": "NO_DATA"
-                },
-                {
-                  "ticker": "JN9",
-                  "message": "NO_DATA"
-                },
-                {
-                  "ticker": "P0G",
-                  "message": "NO_DATA"
-                },
-                {
-                  "ticker": "NJX",
-                  "message": "NO_DATA"
-                },
-                {
-                  "ticker": "LPTVQ",
-                  "message": "NO_DATA"
-                },
-                {
-                  "ticker": "CSMRF",
-                  "message": "NO_DATA"
-                },
-                {
-                  "ticker": "STRC",
-                  "message": "NO_DATA"
-                },
-                {
-                  "ticker": "XT4",
-                  "message": "NO_DATA"
-                },
-                {
-                  "ticker": "EG5",
-                  "message": "NO_DATA"
-                },
-                {
-                  "ticker": "O9B",
-                  "message": "NO_DATA"
-                },
-                {
-                  "ticker": "J1A",
-                  "message": "NO_DATA"
-                }
-              ]
+              "no_data_samples": []
             },
             "coverage": {
               "profile_files": 0,
@@ -749,7 +743,7 @@
               "stale_count": 0,
               "missing_count": 0,
               "sample_tickers": [],
-              "default_runner_limited": false,
+              "default_runner_limited": true,
               "asset_classes": [
                 "ETF",
                 "STOCK"
@@ -789,15 +783,15 @@
           "subsystem": "forecast",
           "severity": "ok",
           "summary": "Forecast daily batch is healthy",
-          "why": "Forecast latest artifact was generated at 2026-04-09T08:21:20.066Z with as-of 2026-04-09.",
+          "why": "Forecast latest artifact was generated at 2026-04-10T02:47:16.691Z with as-of 2026-04-09.",
           "next_fix": "Use scripts/forecast/run_daily.mjs as the primary batch health check and treat engine-level files as implementation detail unless run_daily fails.",
           "file_ref": "scripts/forecast/run_daily.mjs",
-          "generated_at": "2026-04-09T08:21:20.066Z",
+          "generated_at": "2026-04-10T02:47:16.691Z",
           "last_success_at": "2026-03-26T12:32:13Z",
-          "generated_age_hours": 3.6,
+          "generated_age_hours": 0.7,
           "input_asof": null,
           "output_asof": "2026-04-09",
-          "output_stale_days": 0,
+          "output_stale_days": 1,
           "dependency_ids": [],
           "blocked_by": [],
           "status_detail": {
@@ -942,14 +936,14 @@
           "subsystem": "scientific",
           "severity": "ok",
           "summary": "Scientific source is current",
-          "why": "Scientific source_meta as-of is 2026-04-09.",
+          "why": "Scientific source_meta as-of is 2026-04-10.",
           "next_fix": "Refresh the scientific summary and verify the upstream source emits a current timestamp before the daily learning batch runs.",
           "file_ref": "scripts/build-scientific-summary.mjs",
-          "generated_at": "2026-04-09T09:11:18.645Z",
+          "generated_at": "2026-04-10T03:17:18.115Z",
           "last_success_at": "2026-04-09T09:49:50.826Z",
-          "generated_age_hours": 2.7,
+          "generated_age_hours": 0.2,
           "input_asof": null,
-          "output_asof": "2026-04-09",
+          "output_asof": "2026-04-10",
           "output_stale_days": 0,
           "dependency_ids": [],
           "blocked_by": [],
@@ -957,75 +951,75 @@
             "learning_feature": {
               "name": "Scientific Analyzer v9.1",
               "type": "setup_trigger_breakout",
-              "predictions_total": 10466,
-              "outcomes_resolved": 10466,
-              "accuracy_all": 0.6108,
-              "brier_all": 0.248,
-              "ece_all": 0.2144,
-              "hit_rate_all": 0.0032,
-              "accuracy_7d": 0.6258,
-              "brier_7d": 0.2336,
-              "ece_7d": 0.431,
+              "predictions_total": 11589,
+              "outcomes_resolved": 11589,
+              "accuracy_all": 0.6094,
+              "brier_all": 0.2467,
+              "ece_all": 0.2394,
+              "hit_rate_all": 0.0029,
+              "accuracy_7d": 0.3928,
+              "brier_7d": 0.3565,
+              "ece_7d": 0.5672,
               "hit_rate_7d": 0,
-              "precision_10": 0.0167,
-              "precision_50": 0.0267,
-              "precision_at_10": 0.0167,
-              "precision_at_50": 0.0267,
-              "coverage_per_day": 348.87,
-              "coverage_7d": 432.14,
+              "precision_10": 0.0154,
+              "precision_50": 0.0246,
+              "precision_at_10": 0.0154,
+              "precision_at_50": 0.0246,
+              "coverage_per_day": 386.3,
+              "coverage_7d": 243.29,
               "by_horizon": {
                 "5d": {
-                  "predictions_total": 10466,
-                  "outcomes_resolved": 10466,
-                  "accuracy_all": 0.6108,
-                  "brier_all": 0.248,
-                  "ece_all": 0.2144,
-                  "hit_rate_all": 0.0032,
-                  "accuracy_7d": 0.6258,
-                  "brier_7d": 0.2336,
-                  "ece_7d": 0.431,
+                  "predictions_total": 11589,
+                  "outcomes_resolved": 11589,
+                  "accuracy_all": 0.6094,
+                  "brier_all": 0.2467,
+                  "ece_all": 0.2394,
+                  "hit_rate_all": 0.0029,
+                  "accuracy_7d": 0.3928,
+                  "brier_7d": 0.3565,
+                  "ece_7d": 0.5672,
                   "hit_rate_7d": 0,
-                  "precision_10": 0.0167,
-                  "precision_50": 0.0267,
-                  "coverage_per_day": 348.87,
-                  "trend_accuracy": "stable",
-                  "trend_brier": "improving"
+                  "precision_10": 0.0154,
+                  "precision_50": 0.0246,
+                  "coverage_per_day": 386.3,
+                  "trend_accuracy": "declining",
+                  "trend_brier": "declining"
                 }
               },
               "by_asset_class": {
                 "stock": {
-                  "predictions_total": 10466,
-                  "outcomes_resolved": 10466,
-                  "accuracy_all": 0.6108,
-                  "brier_all": 0.248,
-                  "ece_all": 0.2144,
-                  "hit_rate_all": 0.0032,
-                  "accuracy_7d": 0.6258,
-                  "brier_7d": 0.2336,
-                  "ece_7d": 0.431,
+                  "predictions_total": 11589,
+                  "outcomes_resolved": 11589,
+                  "accuracy_all": 0.6094,
+                  "brier_all": 0.2467,
+                  "ece_all": 0.2394,
+                  "hit_rate_all": 0.0029,
+                  "accuracy_7d": 0.3928,
+                  "brier_7d": 0.3565,
+                  "ece_7d": 0.5672,
                   "hit_rate_7d": 0,
-                  "precision_10": 0.0167,
-                  "precision_50": 0.0267,
-                  "coverage_per_day": 348.87,
-                  "trend_accuracy": "stable",
-                  "trend_brier": "improving",
+                  "precision_10": 0.0154,
+                  "precision_50": 0.0246,
+                  "coverage_per_day": 386.3,
+                  "trend_accuracy": "declining",
+                  "trend_brier": "declining",
                   "by_horizon": {
                     "5d": {
-                      "predictions_total": 10466,
-                      "outcomes_resolved": 10466,
-                      "accuracy_all": 0.6108,
-                      "brier_all": 0.248,
-                      "ece_all": 0.2144,
-                      "hit_rate_all": 0.0032,
-                      "accuracy_7d": 0.6258,
-                      "brier_7d": 0.2336,
-                      "ece_7d": 0.431,
+                      "predictions_total": 11589,
+                      "outcomes_resolved": 11589,
+                      "accuracy_all": 0.6094,
+                      "brier_all": 0.2467,
+                      "ece_all": 0.2394,
+                      "hit_rate_all": 0.0029,
+                      "accuracy_7d": 0.3928,
+                      "brier_7d": 0.3565,
+                      "ece_7d": 0.5672,
                       "hit_rate_7d": 0,
-                      "precision_10": 0.0167,
-                      "precision_50": 0.0267,
-                      "coverage_per_day": 348.87,
-                      "trend_accuracy": "stable",
-                      "trend_brier": "improving"
+                      "precision_10": 0.0154,
+                      "precision_50": 0.0246,
+                      "coverage_per_day": 386.3,
+                      "trend_accuracy": "declining",
+                      "trend_brier": "declining"
                     }
                   }
                 }
@@ -1036,30 +1030,30 @@
                   "liquidity_bucket": "unknown",
                   "market_cap_bucket": "unknown",
                   "learning_lane": "core",
-                  "predictions_total": 10466,
-                  "outcomes_resolved": 10466,
-                  "accuracy_all": 0.6108,
-                  "brier_all": 0.248,
-                  "ece_all": 0.2144,
-                  "hit_rate_all": 0.0032,
-                  "accuracy_7d": 0.6258,
-                  "brier_7d": 0.2336,
-                  "ece_7d": 0.431,
+                  "predictions_total": 11589,
+                  "outcomes_resolved": 11589,
+                  "accuracy_all": 0.6094,
+                  "brier_all": 0.2467,
+                  "ece_all": 0.2394,
+                  "hit_rate_all": 0.0029,
+                  "accuracy_7d": 0.3928,
+                  "brier_7d": 0.3565,
+                  "ece_7d": 0.5672,
                   "hit_rate_7d": 0,
-                  "precision_10": 0.0167,
-                  "precision_50": 0.0267,
-                  "coverage_per_day": 348.87,
-                  "trend_accuracy": "stable",
-                  "trend_brier": "improving"
+                  "precision_10": 0.0154,
+                  "precision_50": 0.0246,
+                  "coverage_per_day": 386.3,
+                  "trend_accuracy": "declining",
+                  "trend_brier": "declining"
                 }
               },
               "false_positive_classes": {},
-              "trend_accuracy": "stable",
-              "trend_brier": "improving",
+              "trend_accuracy": "declining",
+              "trend_brier": "declining",
               "predictions_today": 2500,
               "source_meta": {
                 "source": "scientific_snapshot",
-                "asof": "2026-04-09",
+                "asof": "2026-04-10",
                 "fresh": true,
                 "stale_days": 0
               }
@@ -1068,7 +1062,7 @@
               "path": "/Users/michaelpuchowezki/Dev/rubikvault-site/public/data/supermodules/scientific-summary.json",
               "exists": true,
               "generated_at": "2026-04-09T09:49:50.826Z",
-              "age_hours": 2.1
+              "age_hours": 17.6
             },
             "impact": "Scientific rows remain available, but they are not current enough to be treated as live input."
           },
@@ -1099,14 +1093,14 @@
           "subsystem": "learning",
           "severity": "ok",
           "summary": "Learning report is available",
-          "why": "Learning report generated 2026-04-09T09:11:18.645Z with status VERBESSERUNG ✅.",
+          "why": "Learning report generated 2026-04-10T03:17:18.115Z with status VERSCHLECHTERUNG 🔴.",
           "next_fix": "Regenerate the daily learning report after forecast/scientific artifacts are current enough to support it.",
           "file_ref": "scripts/learning/run-daily-learning-cycle.mjs",
-          "generated_at": "2026-04-09T09:11:18.645Z",
-          "last_success_at": "2026-04-09T09:11:18.645Z",
-          "generated_age_hours": 2.7,
+          "generated_at": "2026-04-10T03:17:18.115Z",
+          "last_success_at": "2026-04-10T03:17:18.115Z",
+          "generated_age_hours": 0.2,
           "input_asof": "2026-04-09",
-          "output_asof": "2026-04-09",
+          "output_asof": "2026-04-10",
           "output_stale_days": 0,
           "dependency_ids": [
             "forecast_daily",
@@ -1114,80 +1108,133 @@
           ],
           "blocked_by": [],
           "status_detail": {
-            "learning_status": "VERBESSERUNG ✅",
+            "learning_status": "VERSCHLECHTERUNG 🔴",
             "stock_analyzer": {
               "name": "Stock Analyzer",
               "type": "best_setups_horizon_buy_signals",
-              "predictions_total": 848,
-              "outcomes_resolved": 848,
-              "accuracy_all": 0.1804,
-              "brier_all": 0.3965,
-              "ece_all": 0.4907,
-              "hit_rate_all": 0.1804,
-              "accuracy_7d": 0.321,
-              "brier_7d": 0.3679,
-              "ece_7d": 0.4016,
-              "hit_rate_7d": 0.321,
-              "precision_10": 0.3031,
-              "precision_50": 0.2941,
-              "precision_at_10": 0.3031,
-              "precision_at_50": 0.2941,
-              "coverage_per_day": 28.27,
-              "coverage_7d": 11.57,
+              "predictions_total": 657,
+              "outcomes_resolved": 657,
+              "accuracy_all": 0.1735,
+              "brier_all": 0.4003,
+              "ece_all": 0.4988,
+              "hit_rate_all": 0.1735,
+              "accuracy_7d": 0.3194,
+              "brier_7d": 0.3648,
+              "ece_7d": 0.4129,
+              "hit_rate_7d": 0.3194,
+              "precision_10": 0.2893,
+              "precision_50": 0.2892,
+              "precision_at_10": 0.2893,
+              "precision_at_50": 0.2892,
+              "coverage_per_day": 21.9,
+              "coverage_7d": 10.29,
               "by_horizon": {
+                "20d": {
+                  "predictions_total": 603,
+                  "outcomes_resolved": 603,
+                  "accuracy_all": 0.1559,
+                  "brier_all": 0.4124,
+                  "ece_all": 0.5201,
+                  "hit_rate_all": 0.1559,
+                  "accuracy_7d": 0.2687,
+                  "brier_7d": 0.392,
+                  "ece_7d": 0.4437,
+                  "hit_rate_7d": 0.2687,
+                  "precision_10": 0.2317,
+                  "precision_50": 0.2293,
+                  "coverage_per_day": 20.1,
+                  "trend_accuracy": "improving",
+                  "trend_brier": "improving"
+                },
                 "1d": {
-                  "predictions_total": 21,
-                  "outcomes_resolved": 21,
-                  "accuracy_all": 0.381,
-                  "brier_all": 0.3008,
-                  "ece_all": 0.39,
-                  "hit_rate_all": 0.381,
+                  "predictions_total": 5,
+                  "outcomes_resolved": 5,
+                  "accuracy_all": 1,
+                  "brier_all": 0,
+                  "ece_all": 0,
+                  "hit_rate_all": 1,
                   "accuracy_7d": 1,
                   "brier_7d": 0,
                   "ece_7d": 0,
                   "hit_rate_7d": 1,
-                  "precision_10": 0.7667,
-                  "precision_50": 0.7292,
-                  "coverage_per_day": 0.7,
+                  "precision_10": 1,
+                  "precision_50": 1,
+                  "coverage_per_day": 0.17,
                   "trend_accuracy": "no_data",
                   "trend_brier": "no_data"
                 },
-                "20d": {
-                  "predictions_total": 777,
-                  "outcomes_resolved": 777,
-                  "accuracy_all": 0.166,
-                  "brier_all": 0.4059,
-                  "ece_all": 0.5062,
-                  "hit_rate_all": 0.166,
-                  "accuracy_7d": 0.2763,
-                  "brier_7d": 0.3921,
-                  "ece_7d": 0.428,
-                  "hit_rate_7d": 0.2763,
-                  "precision_10": 0.221,
-                  "precision_50": 0.2114,
-                  "coverage_per_day": 25.9,
-                  "trend_accuracy": "improving",
-                  "trend_brier": "improving"
-                },
                 "5d": {
-                  "predictions_total": 50,
-                  "outcomes_resolved": 50,
-                  "accuracy_all": 0.32,
-                  "brier_all": 0.2902,
-                  "ece_all": 0.3558,
-                  "hit_rate_all": 0.32,
+                  "predictions_total": 49,
+                  "outcomes_resolved": 49,
+                  "accuracy_all": 0.3061,
+                  "brier_all": 0.2912,
+                  "ece_all": 0.3531,
+                  "hit_rate_all": 0.3061,
                   "accuracy_7d": null,
                   "brier_7d": null,
                   "ece_7d": null,
                   "hit_rate_7d": null,
-                  "precision_10": 0.435,
-                  "precision_50": 0.4469,
-                  "coverage_per_day": 1.67,
+                  "precision_10": 0.2938,
+                  "precision_50": 0.3086,
+                  "coverage_per_day": 1.63,
                   "trend_accuracy": "no_data",
                   "trend_brier": "no_data"
                 }
               },
               "by_asset_class": {
+                "stock": {
+                  "predictions_total": 652,
+                  "outcomes_resolved": 652,
+                  "accuracy_all": 0.1672,
+                  "brier_all": 0.4033,
+                  "ece_all": 0.5027,
+                  "hit_rate_all": 0.1672,
+                  "accuracy_7d": 0.2687,
+                  "brier_7d": 0.392,
+                  "ece_7d": 0.4437,
+                  "hit_rate_7d": 0.2687,
+                  "precision_10": 0.2403,
+                  "precision_50": 0.2402,
+                  "coverage_per_day": 21.73,
+                  "trend_accuracy": "improving",
+                  "trend_brier": "improving",
+                  "by_horizon": {
+                    "20d": {
+                      "predictions_total": 603,
+                      "outcomes_resolved": 603,
+                      "accuracy_all": 0.1559,
+                      "brier_all": 0.4124,
+                      "ece_all": 0.5201,
+                      "hit_rate_all": 0.1559,
+                      "accuracy_7d": 0.2687,
+                      "brier_7d": 0.392,
+                      "ece_7d": 0.4437,
+                      "hit_rate_7d": 0.2687,
+                      "precision_10": 0.2317,
+                      "precision_50": 0.2293,
+                      "coverage_per_day": 20.1,
+                      "trend_accuracy": "improving",
+                      "trend_brier": "improving"
+                    },
+                    "5d": {
+                      "predictions_total": 49,
+                      "outcomes_resolved": 49,
+                      "accuracy_all": 0.3061,
+                      "brier_all": 0.2912,
+                      "ece_all": 0.3531,
+                      "hit_rate_all": 0.3061,
+                      "accuracy_7d": null,
+                      "brier_7d": null,
+                      "ece_7d": null,
+                      "hit_rate_7d": null,
+                      "precision_10": 0.2938,
+                      "precision_50": 0.3086,
+                      "coverage_per_day": 1.63,
+                      "trend_accuracy": "no_data",
+                      "trend_brier": "no_data"
+                    }
+                  }
+                },
                 "etf": {
                   "predictions_total": 5,
                   "outcomes_resolved": 5,
@@ -1223,79 +1270,30 @@
                       "trend_brier": "no_data"
                     }
                   }
-                },
-                "stock": {
-                  "predictions_total": 843,
-                  "outcomes_resolved": 843,
-                  "accuracy_all": 0.1756,
-                  "brier_all": 0.3989,
-                  "ece_all": 0.4936,
-                  "hit_rate_all": 0.1756,
-                  "accuracy_7d": 0.2763,
-                  "brier_7d": 0.3921,
-                  "ece_7d": 0.428,
-                  "hit_rate_7d": 0.2763,
-                  "precision_10": 0.2581,
-                  "precision_50": 0.2486,
-                  "coverage_per_day": 28.1,
-                  "trend_accuracy": "improving",
-                  "trend_brier": "improving",
-                  "by_horizon": {
-                    "20d": {
-                      "predictions_total": 777,
-                      "outcomes_resolved": 777,
-                      "accuracy_all": 0.166,
-                      "brier_all": 0.4059,
-                      "ece_all": 0.5062,
-                      "hit_rate_all": 0.166,
-                      "accuracy_7d": 0.2763,
-                      "brier_7d": 0.3921,
-                      "ece_7d": 0.428,
-                      "hit_rate_7d": 0.2763,
-                      "precision_10": 0.221,
-                      "precision_50": 0.2114,
-                      "coverage_per_day": 25.9,
-                      "trend_accuracy": "improving",
-                      "trend_brier": "improving"
-                    },
-                    "5d": {
-                      "predictions_total": 50,
-                      "outcomes_resolved": 50,
-                      "accuracy_all": 0.32,
-                      "brier_all": 0.2902,
-                      "ece_all": 0.3558,
-                      "hit_rate_all": 0.32,
-                      "accuracy_7d": null,
-                      "brier_7d": null,
-                      "ece_7d": null,
-                      "hit_rate_7d": null,
-                      "precision_10": 0.435,
-                      "precision_50": 0.4469,
-                      "coverage_per_day": 1.67,
-                      "trend_accuracy": "no_data",
-                      "trend_brier": "no_data"
-                    },
-                    "1d": {
-                      "predictions_total": 16,
-                      "outcomes_resolved": 16,
-                      "accuracy_all": 0.1875,
-                      "brier_all": 0.3948,
-                      "ece_all": 0.5119,
-                      "hit_rate_all": 0.1875,
-                      "accuracy_7d": null,
-                      "brier_7d": null,
-                      "ece_7d": null,
-                      "hit_rate_7d": null,
-                      "precision_10": 0.3,
-                      "precision_50": 0.1875,
-                      "coverage_per_day": 0.53,
-                      "trend_accuracy": "no_data",
-                      "trend_brier": "no_data"
-                    }
-                  }
                 }
               },
               "by_segment": {
+                "stock|unknown|unknown|core": {
+                  "asset_class": "stock",
+                  "liquidity_bucket": "unknown",
+                  "market_cap_bucket": "unknown",
+                  "learning_lane": "core",
+                  "predictions_total": 652,
+                  "outcomes_resolved": 652,
+                  "accuracy_all": 0.1672,
+                  "brier_all": 0.4033,
+                  "ece_all": 0.5027,
+                  "hit_rate_all": 0.1672,
+                  "accuracy_7d": 0.2687,
+                  "brier_7d": 0.392,
+                  "ece_7d": 0.4437,
+                  "hit_rate_7d": 0.2687,
+                  "precision_10": 0.2403,
+                  "precision_50": 0.2402,
+                  "coverage_per_day": 21.73,
+                  "trend_accuracy": "improving",
+                  "trend_brier": "improving"
+                },
                 "etf|low|fund|peripheral": {
                   "asset_class": "etf",
                   "liquidity_bucket": "low",
@@ -1316,36 +1314,14 @@
                   "coverage_per_day": 0.17,
                   "trend_accuracy": "no_data",
                   "trend_brier": "no_data"
-                },
-                "stock|unknown|unknown|core": {
-                  "asset_class": "stock",
-                  "liquidity_bucket": "unknown",
-                  "market_cap_bucket": "unknown",
-                  "learning_lane": "core",
-                  "predictions_total": 843,
-                  "outcomes_resolved": 843,
-                  "accuracy_all": 0.1756,
-                  "brier_all": 0.3989,
-                  "ece_all": 0.4936,
-                  "hit_rate_all": 0.1756,
-                  "accuracy_7d": 0.2763,
-                  "brier_7d": 0.3921,
-                  "ece_7d": 0.428,
-                  "hit_rate_7d": 0.2763,
-                  "precision_10": 0.2581,
-                  "precision_50": 0.2486,
-                  "coverage_per_day": 28.1,
-                  "trend_accuracy": "improving",
-                  "trend_brier": "improving"
                 }
               },
               "false_positive_classes": {
-                "weak_consensus": 99
+                "weak_consensus": 92
               },
               "trend_accuracy": "improving",
               "trend_brier": "improving",
               "outcome_dates": [
-                "2026-03-11",
                 "2026-03-12",
                 "2026-03-13",
                 "2026-03-16",
@@ -1369,10 +1345,11 @@
                 "2026-04-06",
                 "2026-04-07",
                 "2026-04-08",
-                "2026-04-09"
+                "2026-04-09",
+                "2026-04-10"
               ],
-              "stability": 0.087,
-              "churn": 42,
+              "stability": 1,
+              "churn": 0,
               "learning_status": "BOOTSTRAP",
               "safety_switch": {
                 "level": "BOOTSTRAP",
@@ -1388,15 +1365,15 @@
                   "ready_for_safety": false,
                   "by_horizon": {
                     "1d": {
-                      "outcomes_resolved": 21,
+                      "outcomes_resolved": 5,
                       "satisfied": false
                     },
                     "5d": {
-                      "outcomes_resolved": 50,
+                      "outcomes_resolved": 49,
                       "satisfied": false
                     },
                     "20d": {
-                      "outcomes_resolved": 777,
+                      "outcomes_resolved": 603,
                       "satisfied": true
                     }
                   }
@@ -1410,45 +1387,45 @@
                 "ready_for_safety": false,
                 "by_horizon": {
                   "1d": {
-                    "outcomes_resolved": 21,
+                    "outcomes_resolved": 5,
                     "satisfied": false
                   },
                   "5d": {
-                    "outcomes_resolved": 50,
+                    "outcomes_resolved": 49,
                     "satisfied": false
                   },
                   "20d": {
-                    "outcomes_resolved": 777,
+                    "outcomes_resolved": 603,
                     "satisfied": true
                   }
                 }
               },
               "false_positive_classes_30d": {
-                "weak_consensus": 99
+                "weak_consensus": 92
               },
-              "predictions_today": 52,
+              "predictions_today": 58,
               "source_meta": {
                 "source": "shared_decision_core_quantlab_forecast_snapshot",
                 "asof": "2026-04-09",
-                "fresh": true,
-                "stale_days": 0,
+                "fresh": false,
+                "stale_days": 1,
                 "gate_rejection_breakdown": {
                   "short": {
-                    "rejected_non_buy_total": 240,
+                    "rejected_non_buy_total": 269,
                     "rejected_non_high_total": 0,
                     "rejected_gated_total": 0,
                     "rejected_non_uptrend_total": 0,
                     "missing_doc_total": 0,
                     "by_asset_class": {
                       "stock": {
-                        "rejected_non_buy_total": 235,
+                        "rejected_non_buy_total": 261,
                         "rejected_non_high_total": 0,
                         "rejected_gated_total": 0,
                         "rejected_non_uptrend_total": 0,
                         "missing_doc_total": 0
                       },
                       "etf": {
-                        "rejected_non_buy_total": 5,
+                        "rejected_non_buy_total": 8,
                         "rejected_non_high_total": 0,
                         "rejected_gated_total": 0,
                         "rejected_non_uptrend_total": 0,
@@ -1457,21 +1434,21 @@
                     }
                   },
                   "medium": {
-                    "rejected_non_buy_total": 237,
+                    "rejected_non_buy_total": 267,
                     "rejected_non_high_total": 2,
                     "rejected_gated_total": 0,
                     "rejected_non_uptrend_total": 0,
                     "missing_doc_total": 0,
                     "by_asset_class": {
                       "stock": {
-                        "rejected_non_buy_total": 228,
+                        "rejected_non_buy_total": 255,
                         "rejected_non_high_total": 2,
                         "rejected_gated_total": 0,
                         "rejected_non_uptrend_total": 0,
                         "missing_doc_total": 0
                       },
                       "etf": {
-                        "rejected_non_buy_total": 9,
+                        "rejected_non_buy_total": 12,
                         "rejected_non_high_total": 0,
                         "rejected_gated_total": 0,
                         "rejected_non_uptrend_total": 0,
@@ -1480,21 +1457,21 @@
                     }
                   },
                   "long": {
-                    "rejected_non_buy_total": 234,
+                    "rejected_non_buy_total": 264,
                     "rejected_non_high_total": 3,
                     "rejected_gated_total": 0,
                     "rejected_non_uptrend_total": 1,
                     "missing_doc_total": 0,
                     "by_asset_class": {
                       "stock": {
-                        "rejected_non_buy_total": 226,
+                        "rejected_non_buy_total": 253,
                         "rejected_non_high_total": 3,
                         "rejected_gated_total": 0,
                         "rejected_non_uptrend_total": 1,
                         "missing_doc_total": 0
                       },
                       "etf": {
-                        "rejected_non_buy_total": 8,
+                        "rejected_non_buy_total": 11,
                         "rejected_non_high_total": 0,
                         "rejected_gated_total": 0,
                         "rejected_non_uptrend_total": 0,
@@ -1510,29 +1487,29 @@
                     "long": 10
                   },
                   "etfs": {
-                    "short": 5,
-                    "medium": 9,
-                    "long": 8
+                    "short": 8,
+                    "medium": 10,
+                    "long": 10
                   }
                 }
               },
               "gate_rejection_breakdown": {
                 "short": {
-                  "rejected_non_buy_total": 240,
+                  "rejected_non_buy_total": 269,
                   "rejected_non_high_total": 0,
                   "rejected_gated_total": 0,
                   "rejected_non_uptrend_total": 0,
                   "missing_doc_total": 0,
                   "by_asset_class": {
                     "stock": {
-                      "rejected_non_buy_total": 235,
+                      "rejected_non_buy_total": 261,
                       "rejected_non_high_total": 0,
                       "rejected_gated_total": 0,
                       "rejected_non_uptrend_total": 0,
                       "missing_doc_total": 0
                     },
                     "etf": {
-                      "rejected_non_buy_total": 5,
+                      "rejected_non_buy_total": 8,
                       "rejected_non_high_total": 0,
                       "rejected_gated_total": 0,
                       "rejected_non_uptrend_total": 0,
@@ -1541,21 +1518,21 @@
                   }
                 },
                 "medium": {
-                  "rejected_non_buy_total": 237,
+                  "rejected_non_buy_total": 267,
                   "rejected_non_high_total": 2,
                   "rejected_gated_total": 0,
                   "rejected_non_uptrend_total": 0,
                   "missing_doc_total": 0,
                   "by_asset_class": {
                     "stock": {
-                      "rejected_non_buy_total": 228,
+                      "rejected_non_buy_total": 255,
                       "rejected_non_high_total": 2,
                       "rejected_gated_total": 0,
                       "rejected_non_uptrend_total": 0,
                       "missing_doc_total": 0
                     },
                     "etf": {
-                      "rejected_non_buy_total": 9,
+                      "rejected_non_buy_total": 12,
                       "rejected_non_high_total": 0,
                       "rejected_gated_total": 0,
                       "rejected_non_uptrend_total": 0,
@@ -1564,21 +1541,21 @@
                   }
                 },
                 "long": {
-                  "rejected_non_buy_total": 234,
+                  "rejected_non_buy_total": 264,
                   "rejected_non_high_total": 3,
                   "rejected_gated_total": 0,
                   "rejected_non_uptrend_total": 1,
                   "missing_doc_total": 0,
                   "by_asset_class": {
                     "stock": {
-                      "rejected_non_buy_total": 226,
+                      "rejected_non_buy_total": 253,
                       "rejected_non_high_total": 3,
                       "rejected_gated_total": 0,
                       "rejected_non_uptrend_total": 1,
                       "missing_doc_total": 0
                     },
                     "etf": {
-                      "rejected_non_buy_total": 8,
+                      "rejected_non_buy_total": 11,
                       "rejected_non_high_total": 0,
                       "rejected_gated_total": 0,
                       "rejected_non_uptrend_total": 0,
@@ -1618,15 +1595,15 @@
           "subsystem": "breakout_v2",
           "severity": "ok",
           "summary": "Snapshot output is current",
-          "why": "Snapshot data_asof=2026-04-09, quantlab_asof=2026-04-06, rows_emitted=52.",
+          "why": "Snapshot data_asof=2026-04-09, quantlab_asof=2026-04-08, rows_emitted=58.",
           "next_fix": "Keep snapshot generation tied to explicit upstream freshness checks so QuantLab staleness cannot hide behind a fresh render timestamp.",
           "file_ref": "scripts/build-best-setups-v4.mjs",
-          "generated_at": "2026-04-09T09:08:15.904Z",
-          "last_success_at": "2026-04-09T09:08:15.904Z",
-          "generated_age_hours": 2.8,
-          "input_asof": "2026-04-06",
+          "generated_at": "2026-04-10T03:15:04.076Z",
+          "last_success_at": "2026-04-10T03:15:04.076Z",
+          "generated_age_hours": 0.2,
+          "input_asof": "2026-04-08",
           "output_asof": "2026-04-09",
-          "output_stale_days": 0,
+          "output_stale_days": 1,
           "dependency_ids": [
             "forecast_daily",
             "quantlab_daily_report"
@@ -1634,18 +1611,18 @@
           "blocked_by": [],
           "status_detail": {
             "snapshot_meta": {
-              "generated_at": "2026-04-09T09:08:15.904Z",
+              "generated_at": "2026-04-10T03:15:04.076Z",
               "source": "shared_decision_core_quantlab_forecast_snapshot",
               "decision_path": "assembleDecisionInputs + buildStockInsightsV4Evaluation",
-              "quantlab_generated_at": "2026-04-09T08:40:02.741Z",
+              "quantlab_generated_at": "2026-04-10T02:53:13.183Z",
               "quantlab_generated_at_by_class": {
-                "stocks": "2026-04-09T08:40:02.741Z",
-                "etfs": null
+                "stocks": "2026-04-10T02:53:13.183Z",
+                "etfs": "2026-04-10T02:53:13.183Z"
               },
-              "quantlab_asof": "2026-04-06",
+              "quantlab_asof": "2026-04-08",
               "quantlab_asof_by_class": {
-                "stocks": "2026-04-06",
-                "etfs": null
+                "stocks": "2026-04-08",
+                "etfs": "2026-04-08"
               },
               "forecast_asof": "2026-04-09",
               "data_asof": "2026-04-09",
@@ -1657,20 +1634,20 @@
                 "forecast_path": "public/data/forecast/latest.json"
               },
               "candidate_counts": {
-                "quantlab_rows_total": 3,
-                "quantlab_rows_stocks": 3,
-                "quantlab_rows_etfs": 0,
-                "analyzable_tickers": 618,
-                "quantlab_ranked": 0,
-                "quantlab_ranked_stocks": 0,
-                "quantlab_ranked_etfs": 0,
+                "quantlab_rows_total": 435,
+                "quantlab_rows_stocks": 423,
+                "quantlab_rows_etfs": 12,
+                "analyzable_tickers": 649,
+                "quantlab_ranked": 31,
+                "quantlab_ranked_stocks": 28,
+                "quantlab_ranked_etfs": 3,
                 "forecast_short": 240,
                 "forecast_medium": 239,
                 "forecast_long": 240,
-                "unique_tickers": 618,
+                "unique_tickers": 649,
                 "shard_count": {
-                  "stocks": 2,
-                  "etfs": 0
+                  "stocks": 25,
+                  "etfs": 2
                 }
               },
               "verified_counts": {
@@ -1680,33 +1657,33 @@
                   "long": 10
                 },
                 "etfs": {
-                  "short": 5,
-                  "medium": 9,
-                  "long": 8
+                  "short": 8,
+                  "medium": 10,
+                  "long": 10
                 }
               },
               "setup_phase_counts": {
-                "early": 0,
-                "mid": 3,
-                "late": 15
+                "early": 2,
+                "mid": 14,
+                "late": 22
               },
               "rejection_counts": {
                 "short": {
-                  "rejected_non_buy_total": 240,
+                  "rejected_non_buy_total": 269,
                   "rejected_non_high_total": 0,
                   "rejected_gated_total": 0,
                   "rejected_non_uptrend_total": 0,
                   "missing_doc_total": 0,
                   "by_asset_class": {
                     "stock": {
-                      "rejected_non_buy_total": 235,
+                      "rejected_non_buy_total": 261,
                       "rejected_non_high_total": 0,
                       "rejected_gated_total": 0,
                       "rejected_non_uptrend_total": 0,
                       "missing_doc_total": 0
                     },
                     "etf": {
-                      "rejected_non_buy_total": 5,
+                      "rejected_non_buy_total": 8,
                       "rejected_non_high_total": 0,
                       "rejected_gated_total": 0,
                       "rejected_non_uptrend_total": 0,
@@ -1715,21 +1692,21 @@
                   }
                 },
                 "medium": {
-                  "rejected_non_buy_total": 237,
+                  "rejected_non_buy_total": 267,
                   "rejected_non_high_total": 2,
                   "rejected_gated_total": 0,
                   "rejected_non_uptrend_total": 0,
                   "missing_doc_total": 0,
                   "by_asset_class": {
                     "stock": {
-                      "rejected_non_buy_total": 228,
+                      "rejected_non_buy_total": 255,
                       "rejected_non_high_total": 2,
                       "rejected_gated_total": 0,
                       "rejected_non_uptrend_total": 0,
                       "missing_doc_total": 0
                     },
                     "etf": {
-                      "rejected_non_buy_total": 9,
+                      "rejected_non_buy_total": 12,
                       "rejected_non_high_total": 0,
                       "rejected_gated_total": 0,
                       "rejected_non_uptrend_total": 0,
@@ -1738,21 +1715,21 @@
                   }
                 },
                 "long": {
-                  "rejected_non_buy_total": 234,
+                  "rejected_non_buy_total": 264,
                   "rejected_non_high_total": 3,
                   "rejected_gated_total": 0,
                   "rejected_non_uptrend_total": 1,
                   "missing_doc_total": 0,
                   "by_asset_class": {
                     "stock": {
-                      "rejected_non_buy_total": 226,
+                      "rejected_non_buy_total": 253,
                       "rejected_non_high_total": 3,
                       "rejected_gated_total": 0,
                       "rejected_non_uptrend_total": 1,
                       "missing_doc_total": 0
                     },
                     "etf": {
-                      "rejected_non_buy_total": 8,
+                      "rejected_non_buy_total": 11,
                       "rejected_non_high_total": 0,
                       "rejected_gated_total": 0,
                       "rejected_non_uptrend_total": 0,
@@ -1768,29 +1745,29 @@
                   "long": 10
                 },
                 "etfs": {
-                  "short": 5,
-                  "medium": 9,
-                  "long": 8
+                  "short": 8,
+                  "medium": 10,
+                  "long": 10
                 },
-                "total": 52
+                "total": 58
               },
               "rows_rejected": {
                 "short": {
-                  "rejected_non_buy_total": 240,
+                  "rejected_non_buy_total": 269,
                   "rejected_non_high_total": 0,
                   "rejected_gated_total": 0,
                   "rejected_non_uptrend_total": 0,
                   "missing_doc_total": 0,
                   "by_asset_class": {
                     "stock": {
-                      "rejected_non_buy_total": 235,
+                      "rejected_non_buy_total": 261,
                       "rejected_non_high_total": 0,
                       "rejected_gated_total": 0,
                       "rejected_non_uptrend_total": 0,
                       "missing_doc_total": 0
                     },
                     "etf": {
-                      "rejected_non_buy_total": 5,
+                      "rejected_non_buy_total": 8,
                       "rejected_non_high_total": 0,
                       "rejected_gated_total": 0,
                       "rejected_non_uptrend_total": 0,
@@ -1799,21 +1776,21 @@
                   }
                 },
                 "medium": {
-                  "rejected_non_buy_total": 237,
+                  "rejected_non_buy_total": 267,
                   "rejected_non_high_total": 2,
                   "rejected_gated_total": 0,
                   "rejected_non_uptrend_total": 0,
                   "missing_doc_total": 0,
                   "by_asset_class": {
                     "stock": {
-                      "rejected_non_buy_total": 228,
+                      "rejected_non_buy_total": 255,
                       "rejected_non_high_total": 2,
                       "rejected_gated_total": 0,
                       "rejected_non_uptrend_total": 0,
                       "missing_doc_total": 0
                     },
                     "etf": {
-                      "rejected_non_buy_total": 9,
+                      "rejected_non_buy_total": 12,
                       "rejected_non_high_total": 0,
                       "rejected_gated_total": 0,
                       "rejected_non_uptrend_total": 0,
@@ -1822,21 +1799,21 @@
                   }
                 },
                 "long": {
-                  "rejected_non_buy_total": 234,
+                  "rejected_non_buy_total": 264,
                   "rejected_non_high_total": 3,
                   "rejected_gated_total": 0,
                   "rejected_non_uptrend_total": 1,
                   "missing_doc_total": 0,
                   "by_asset_class": {
                     "stock": {
-                      "rejected_non_buy_total": 226,
+                      "rejected_non_buy_total": 253,
                       "rejected_non_high_total": 3,
                       "rejected_gated_total": 0,
                       "rejected_non_uptrend_total": 1,
                       "missing_doc_total": 0
                     },
                     "etf": {
-                      "rejected_non_buy_total": 8,
+                      "rejected_non_buy_total": 11,
                       "rejected_non_high_total": 0,
                       "rejected_gated_total": 0,
                       "rejected_non_uptrend_total": 0,
@@ -1850,28 +1827,28 @@
                 "dominant_rejection": [
                   {
                     "horizon": "short",
-                    "rejected_non_buy_total": 240,
+                    "rejected_non_buy_total": 269,
                     "rejected_non_high_total": 0,
                     "rejected_gated_total": 0,
                     "rejected_non_uptrend_total": 0
                   },
                   {
                     "horizon": "medium",
-                    "rejected_non_buy_total": 237,
+                    "rejected_non_buy_total": 267,
                     "rejected_non_high_total": 2,
                     "rejected_gated_total": 0,
                     "rejected_non_uptrend_total": 0
                   },
                   {
                     "horizon": "long",
-                    "rejected_non_buy_total": 234,
+                    "rejected_non_buy_total": 264,
                     "rejected_non_high_total": 3,
                     "rejected_gated_total": 0,
                     "rejected_non_uptrend_total": 1
                   }
                 ]
               },
-              "duration_ms": 1090221
+              "duration_ms": 1069553
             },
             "upstream_quantlab_severity": "ok",
             "upstream_forecast_severity": "ok",
@@ -1913,10 +1890,10 @@
           "file_ref": "scripts/ops/build-stock-analyzer-universe-audit.mjs",
           "generated_at": "2026-04-07T14:20:48.061Z",
           "last_success_at": "2026-04-07T14:20:48.061Z",
-          "generated_age_hours": 45.6,
+          "generated_age_hours": 61.1,
           "input_asof": null,
           "output_asof": "2026-04-07T14:20:48.061Z",
-          "output_stale_days": 2,
+          "output_stale_days": 3,
           "dependency_ids": [
             "market_data_refresh",
             "q1_delta_ingest",
@@ -2308,10 +2285,10 @@
           "file_ref": "scripts/learning/diagnose-best-setups-etf-drop.mjs",
           "generated_at": "2026-04-05T16:25:27.486Z",
           "last_success_at": "2026-04-05T16:25:27.486Z",
-          "generated_age_hours": 91.5,
+          "generated_age_hours": 107,
           "input_asof": "2026-04-09",
           "output_asof": "2026-04-09",
-          "output_stale_days": 0,
+          "output_stale_days": 1,
           "dependency_ids": [
             "snapshot"
           ],
@@ -2367,10 +2344,10 @@
           "file_ref": "scripts/learning/quantlab-v1/daily-audit-report.mjs",
           "generated_at": "2026-03-26T15:50:51.317Z",
           "last_success_at": "2026-03-26T15:50:51.317Z",
-          "generated_age_hours": 332.1,
-          "input_asof": "2026-04-09",
+          "generated_age_hours": 347.6,
+          "input_asof": "2026-04-10",
           "output_asof": "2026-03-26",
-          "output_stale_days": 14,
+          "output_stale_days": 15,
           "dependency_ids": [
             "learning_daily",
             "snapshot"
@@ -2456,10 +2433,10 @@
           "file_ref": "scripts/learning/quantlab-v1/cutover-readiness-report.mjs",
           "generated_at": "2026-03-26T15:50:51.315Z",
           "last_success_at": "2026-03-26T15:50:51.315Z",
-          "generated_age_hours": 332.1,
+          "generated_age_hours": 347.6,
           "input_asof": "2026-03-26",
           "output_asof": "2026-03-26",
-          "output_stale_days": 14,
+          "output_stale_days": 15,
           "dependency_ids": [
             "v1_audit"
           ],
@@ -3275,7 +3252,23 @@
       ],
       "missing_step_ids": [],
       "untracked_step_ids": [],
-      "ssot_violations": [],
+      "ssot_violations": [
+        {
+          "id": "market_refresh_no_data",
+          "severity": "warning",
+          "title": "Market data refresh ran but returned zero data points",
+          "ssot_doc": "docs/ops/runbook.md (Step Contract: Market Data Refresh)",
+          "why": "Refresh report at 2026-04-10T02:50:01Z recorded assets_requested=41327 but assets_fetched_with_data=0. No data flows into delta ingest or any downstream step until a successful re-run.",
+          "evidence": {
+            "assets_requested": 41327,
+            "assets_fetched_with_data": 0,
+            "generated_at": "2026-04-10T02:50:01Z"
+          },
+          "fix_command": "node scripts/universe-v7/build-us-eu-scope.mjs && python3 scripts/quantlab/refresh_v7_history_from_eodhd.py --allowlist-path public/data/universe/v7/ssot/stocks_etfs.us_eu.canonical.ids.json --from-date <YYYY-MM-DD>",
+          "success_signal": "assets_fetched_with_data > 0 and output_asof is a valid market date",
+          "detected_at": "2026-04-10T03:27:22.632Z"
+        }
+      ],
       "regime": {
         "market": "bull",
         "volatility": "high_vol",
@@ -3284,8 +3277,8 @@
       }
     },
     "gate": {
-      "expectedSeverity": "ok",
-      "pass": true
+      "expectedSeverity": "warning",
+      "pass": false
     }
   },
   "steps": {
@@ -3325,7 +3318,7 @@
       "ok": true,
       "status": 0,
       "signal": null,
-      "stdout": "▶ dashboard_v7 meta contract\n  ✔ exports system steps and validation chain (0.383209ms)\n  ✔ exports operations runbook mirrors (0.397916ms)\n  ✔ dashboard renders the new recovery sections (0.090834ms)\n✔ dashboard_v7 meta contract (1.399875ms)\nℹ tests 3\nℹ suites 1\nℹ pass 3\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 68.023042",
+      "stdout": "▶ dashboard_v7 meta contract\n  ✔ exports system steps and validation chain (0.345917ms)\n  ✔ exports operations runbook mirrors (0.368583ms)\n  ✔ dashboard renders the new recovery sections (0.079125ms)\n✔ dashboard_v7 meta contract (1.279791ms)\nℹ tests 3\nℹ suites 1\nℹ pass 3\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 61.716292",
       "stderr": "",
       "command": "/opt/homebrew/Cellar/node/25.2.1/bin/node --test tests/dashboard_v7_meta.test.mjs"
     },

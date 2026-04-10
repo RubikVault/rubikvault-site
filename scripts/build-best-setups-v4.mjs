@@ -202,6 +202,7 @@ function decorateForHorizon(row, horizon) {
 
 function buildHorizonRows(rows, horizon) {
   return rows
+    .filter((row) => String(row?.verdict || '').toUpperCase() === 'BUY')
     .map((row) => decorateForHorizon(row, horizon))
     .sort((a, b) => {
       if (b.score !== a.score) return b.score - a.score;

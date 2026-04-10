@@ -1,3 +1,5 @@
+import { compareUniverseSearchCandidates } from '../../../public/js/universe-ssot.js';
+
 const ALLOWED_CLASSES = new Set(['ALL', 'FUND', 'STOCK', 'ETF', 'CRYPTO', 'FOREX', 'BOND', 'INDEX', 'OTHER']);
 const ALLOWED_SORT_FIELDS = new Set(['symbol', 'name', 'class', 'exchange', 'status', 'bars', 'lastTrade']);
 const STATUS_PRIORITY = {
@@ -388,27 +390,21 @@ async function searchUniverse(context, params = {}) {
   const limit = Math.max(1, Math.min(20, Math.floor(toFinite(params.limit, 20))));
   const classFilter = normalizeClass(params.class || 'ALL');
   const rows = await getSearchTop(context);
-
-  const prefix = [];
-  const contains = [];
-
-  for (const row of rows) {
-    if (classFilter !== 'ALL' && row.class !== classFilter) continue;
+  const filtered = rows.filter((row) => {
+    if (classFilter !== 'ALL' && row.class !== classFilter) return false;
+    if (!q) return true;
     const symbol = String(row.symbol || '').toLowerCase();
     const name = String(row.name || '').toLowerCase();
-    if (!q) {
-      prefix.push(row);
-      continue;
-    }
-    if (symbol.startsWith(q) || name.startsWith(q)) {
-      prefix.push(row);
-    } else if (symbol.includes(q) || name.includes(q)) {
-      contains.push(row);
-    }
-    if (prefix.length >= limit) break;
-  }
+    return symbol.includes(q) || name.includes(q);
+  });
 
-  const items = q ? [...prefix, ...contains].slice(0, limit) : prefix.slice(0, limit);
+  const items = filtered
+    .sort((a, b) => {
+      const ranked = compareUniverseSearchCandidates(b, a, { query: q, symbolQuery: q });
+      if (ranked !== 0) return ranked;
+      return String(a.canonical_id || '').localeCompare(String(b.canonical_id || ''));
+    })
+    .slice(0, limit);
   return { q, limit, items };
 }
 

@@ -1,7 +1,7 @@
 {
   "schema": "rv.stock_analyzer_control.v1",
-  "generated_at": "2026-04-09T09:11:18.644Z",
-  "report_date": "2026-04-09",
+  "generated_at": "2026-04-10T03:17:18.114Z",
+  "report_date": "2026-04-10",
   "learning_status": "BOOTSTRAP",
   "safety_switch": {
     "level": "BOOTSTRAP",
@@ -17,15 +17,15 @@
       "ready_for_safety": false,
       "by_horizon": {
         "1d": {
-          "outcomes_resolved": 21,
+          "outcomes_resolved": 5,
           "satisfied": false
         },
         "5d": {
-          "outcomes_resolved": 50,
+          "outcomes_resolved": 49,
           "satisfied": false
         },
         "20d": {
-          "outcomes_resolved": 777,
+          "outcomes_resolved": 603,
           "satisfied": true
         }
       }
@@ -39,21 +39,21 @@
     "ready_for_safety": false,
     "by_horizon": {
       "1d": {
-        "outcomes_resolved": 21,
+        "outcomes_resolved": 5,
         "satisfied": false
       },
       "5d": {
-        "outcomes_resolved": 50,
+        "outcomes_resolved": 49,
         "satisfied": false
       },
       "20d": {
-        "outcomes_resolved": 777,
+        "outcomes_resolved": 603,
         "satisfied": true
       }
     }
   },
   "false_positive_classes_30d": {
-    "weak_consensus": 99
+    "weak_consensus": 92
   },
   "policy": {
     "schema_version": "best_setups_policy_v1",

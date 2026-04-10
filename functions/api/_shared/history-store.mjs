@@ -24,16 +24,46 @@ export async function getStaticBars(symbol, baseUrl, assetFetcher = null) {
     try {
         const candidates = buildSymbolCandidates(symbol);
         const cleanSymbol = candidates[0]?.replace(/[^A-Z0-9.\-]/g, '') || '';
+        let mergedBars = [];
 
         async function fetchGzipNdjson(relPath) {
-            if (typeof DecompressionStream === 'undefined') return null;
             const url = baseUrl ? new URL(relPath, baseUrl).toString() : relPath;
             const response = assetFetcher && relPath.startsWith('/data/')
                 ? await assetFetcher.fetch(url)
                 : await fetch(url);
             if (!response.ok || !response.body) return null;
-            const stream = response.body.pipeThrough(new DecompressionStream('gzip'));
-            const text = await new Response(stream).text();
+            const contentEncoding = String(response.headers.get('content-encoding') || '').toLowerCase();
+            const contentType = String(response.headers.get('content-type') || '').toLowerCase();
+            const maybeGzip =
+                relPath.endsWith('.gz') ||
+                contentEncoding.includes('gzip') ||
+                contentType.includes('application/gzip') ||
+                contentType.includes('application/x-gzip');
+            let text = null;
+
+            if (maybeGzip && typeof DecompressionStream !== 'undefined') {
+                const responseClone = response.clone();
+                try {
+                    const stream = response.body.pipeThrough(new DecompressionStream('gzip'));
+                    text = await new Response(stream).text();
+                } catch {
+                    try {
+                        text = await responseClone.text();
+                    } catch {
+                        text = null;
+                    }
+                }
+            }
+
+            if (text == null) {
+                try {
+                    text = await response.text();
+                } catch {
+                    return null;
+                }
+            }
+
+            if (!text) return null;
             return text
                 .split('\n')
                 .map((line) => line.trim())
@@ -71,6 +101,12 @@ export async function getStaticBars(symbol, baseUrl, assetFetcher = null) {
                 })
                 .filter(Boolean)
                 .sort((a, b) => a.date.localeCompare(b.date));
+        }
+
+        function mergeInBars(rows) {
+            const normalized = normalizeRows(rows);
+            if (!normalized.length) return;
+            mergedBars = mergeBars(mergedBars, normalized);
         }
 
         async function fetchJson(relPath) {
@@ -149,10 +185,6 @@ export async function getStaticBars(symbol, baseUrl, assetFetcher = null) {
                 || null
             ))
             .filter(Boolean);
-        for (const entry of lookupEntries) {
-            const bars = await fetchHistoryPackBars(entry.pack, entry.canonical_id);
-            if (bars.length) return bars;
-        }
 
         const packManifest = await loadHistoryPackManifest();
         const manifestEntries = candidates
@@ -162,26 +194,19 @@ export async function getStaticBars(symbol, baseUrl, assetFetcher = null) {
                 || null
             ))
             .filter(Boolean);
-        for (const entry of manifestEntries) {
-            const bars = await fetchHistoryPackBars(entry.pack, entry.canonical_id);
-            if (bars.length) return bars;
-        }
 
         const seriesCandidates = [
-            `/data/v3/series/adjusted/US__${cleanSymbol}.ndjson.gz`,
-            `/public/data/v3/series/adjusted/US__${cleanSymbol}.ndjson.gz`
+            `/data/v3/series/adjusted/US__${cleanSymbol}.ndjson.gz`
         ];
         for (const relPath of seriesCandidates) {
             const rows = await fetchGzipNdjson(relPath);
-            const bars = normalizeRows(rows);
-            if (bars.length) return bars;
+            mergeInBars(rows);
         }
 
         // New: Try Sharded History (100% universe fallback)
         const shard = cleanSymbol[0] || '_';
         const shardCandidates = [
-            `/data/eod/history/shards/${shard}.json`,
-            `/public/data/eod/history/shards/${shard}.json`
+            `/data/eod/history/shards/${shard}.json`
         ];
 
         for (const shardPath of shardCandidates) {
@@ -195,7 +220,7 @@ export async function getStaticBars(symbol, baseUrl, assetFetcher = null) {
                     for (const candidate of candidates) {
                         const tickerBarsRaw = shardData[candidate] || shardData[candidate.replace(/[^A-Z0-9.\-]/g, '')];
                         if (Array.isArray(tickerBarsRaw)) {
-                            const bars = tickerBarsRaw.map(b => ({
+                            mergeInBars(tickerBarsRaw.map(b => ({
                                 date: b[0],
                                 open: b[1],
                                 high: b[2],
@@ -203,29 +228,34 @@ export async function getStaticBars(symbol, baseUrl, assetFetcher = null) {
                                 close: b[4],
                                 adjClose: b[5],
                                 volume: b[6]
-                            }));
-                            if (bars.length) return bars;
+                            })));
                         }
                     }
                 }
             } catch { /* ignore */ }
         }
 
+        const packEntries = [...lookupEntries, ...manifestEntries]
+            .filter(Boolean)
+            .filter((entry, index, list) => list.findIndex((candidate) => candidate.pack === entry.pack && candidate.canonical_id === entry.canonical_id) === index);
+        for (const entry of packEntries) {
+            const bars = await fetchHistoryPackBars(entry.pack, entry.canonical_id);
+            if (bars.length) mergedBars = mergeBars(mergedBars, bars);
+        }
+
         const latestCandidates = [
-            '/data/v3/eod/US/latest.ndjson.gz',
-            '/public/data/v3/eod/US/latest.ndjson.gz'
+            '/data/v3/eod/US/latest.ndjson.gz'
         ];
         for (const relPath of latestCandidates) {
             const rows = await fetchGzipNdjson(relPath);
             if (!Array.isArray(rows)) continue;
             for (const candidate of candidates) {
                 const hit = rows.find((row) => String(row?.ticker || row?.symbol || '').toUpperCase() === candidate);
-                const bars = normalizeRows(hit ? [hit] : []);
-                if (bars.length) return bars;
+                mergeInBars(hit ? [hit] : []);
             }
         }
 
-        return null;
+        return mergedBars.length ? mergedBars : null;
     } catch (err) {
         return null;
     }

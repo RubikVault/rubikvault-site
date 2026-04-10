@@ -35,9 +35,7 @@ const TICKER_MAX_LENGTH = 12;
 const VALID_TICKER_REGEX = /^[A-Z0-9.\-:]+$/;
 const SNAPSHOT_PATH_TEMPLATES = [
   '/data/snapshots/{module}/latest.json',
-  '/public/data/snapshots/{module}/latest.json',
   '/data/snapshots/{module}.json',
-  '/public/data/snapshots/{module}.json',
   '/data/{module}.json'
 ];
 const MODULE_PATHS = ['universe', 'market-prices', 'market-stats', 'market-score'];
@@ -531,9 +529,7 @@ async function fetchStaticEodBar(ticker, request) {
   const baseUrl = new URL(request.url);
   const batchPaths = [
     '/data/eod/batches/eod.latest.000.json',
-    '/data/eod/batches/eod.latest.001.json',
-    '/public/data/eod/batches/eod.latest.000.json',
-    '/public/data/eod/batches/eod.latest.001.json'
+    '/data/eod/batches/eod.latest.001.json'
   ];
   for (const path of batchPaths) {
     try {
@@ -1045,12 +1041,10 @@ export async function onRequestGet(context) {
       const fetchFn = fetch;
 
       const eodCandidates = [
-        `/data/v3/eod/${v3Exchange}/latest.ndjson.gz`,
-        `/public/data/v3/eod/${v3Exchange}/latest.ndjson.gz`
+        `/data/v3/eod/${v3Exchange}/latest.ndjson.gz`
       ];
       const indicatorsCandidates = [
-        `/data/v3/derived/indicators/${v3Exchange}__${ticker}.json`,
-        `/public/data/v3/derived/indicators/${v3Exchange}__${ticker}.json`
+        `/data/v3/derived/indicators/${v3Exchange}__${ticker}.json`
       ];
 
       async function fetchFirst(paths) {

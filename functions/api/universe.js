@@ -1,8 +1,10 @@
 import { serveStaticJson } from "./_shared/static-only.js";
 import {
+  compareUniverseSearchCandidates,
   comparePreferredUniverseRows,
   isAllowedWebUniverseRecord,
   normalizeUniverseAssetClassFilter,
+  normalizeUniverseSearchCompanyName,
   normalizeUniverseTypeNorm,
   parseUniverseAssetClassFilter,
 } from "../../public/js/universe-ssot.js";
@@ -242,8 +244,8 @@ export async function onRequestGet(context) {
             return (sym && sym.startsWith(q)) || (name && name.startsWith(q));
           })
       .sort((a, b) => {
-        const preferred = comparePreferredUniverseRows(b, a);
-        if (preferred !== 0) return preferred;
+        const searchRank = compareUniverseSearchCandidates(b, a, { query: q, symbolQuery: qSymbol || q });
+        if (searchRank !== 0) return searchRank;
         const aSym = String(a?.symbol || "").toUpperCase();
         const bSym = String(b?.symbol || "").toUpperCase();
         const aExact = aSym === qSymbol ? 0 : 1;
@@ -361,22 +363,6 @@ export async function onRequestGet(context) {
       return "";
     }
 
-    function normalizeCompanyName(name) {
-      let s = String(name || "").trim().toLowerCase();
-      s = s.replace(/\.com\b/g, "");
-      s = s.replace(/[.,\-()\/\\]/g, " ");
-      s = s.replace(/\b(inc|corp|corporation|ltd|limited|llc|plc|sa|ag|se|nv|co|company|group|holdings)\b/g, "");
-      s = s.replace(/\b(cdr|adr|gdr|depositary|receipt|receipts|tokenized|xstock)\b/g, "");
-      s = s.replace(/\b(stock|price|shares|share)\b/g, "");
-      s = s.replace(/\b(usd|eur|gbp|jpy|cad|aud|chf)\b/g, "");
-      s = s.replace(/\bclass\s*[a-z]\b/g, "");
-      s = s.replace(/\bdl[\s\-]*\d+\b/g, "");
-      s = s.replace(/\beo[\s\-]*\d+\b/g, "");
-      s = s.replace(/\breg\.?\s*s\b/g, "");
-      s = s.replace(/\s+/g, " ").trim();
-      return s;
-    }
-
     const seenSymbols = new Set();
     const seenCompanyNames = new Set();
 
@@ -391,8 +377,8 @@ export async function onRequestGet(context) {
         return (sym && (sym.startsWith(q) || sym.includes(q))) || (name && name.includes(q));
       })
       .sort((a, b) => {
-        const preferred = comparePreferredUniverseRows(b, a);
-        if (preferred !== 0) return preferred;
+        const searchRank = compareUniverseSearchCandidates(b, a, { query: q, symbolQuery: qSymbol || q });
+        if (searchRank !== 0) return searchRank;
         const aSym = String(a?.symbol || a?.ticker || "").toUpperCase();
         const bSym = String(b?.symbol || b?.ticker || "").toUpperCase();
         const aName = String(a?.name || "").toLowerCase();
@@ -420,7 +406,7 @@ export async function onRequestGet(context) {
       .filter((it) => {
         const rawName = String(it?.name || "").trim();
         if (!rawName || rawName.length < 3) return true;
-        const normName = normalizeCompanyName(rawName);
+        const normName = normalizeUniverseSearchCompanyName(rawName);
         if (!normName || normName.length < 3) return true;
         if (seenCompanyNames.has(normName)) return false;
         seenCompanyNames.add(normName);

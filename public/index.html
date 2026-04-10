@@ -3075,6 +3075,7 @@
           ...(Array.isArray(stockBuckets?.[horizon]) ? stockBuckets[horizon] : []),
           ...(Array.isArray(etfBuckets?.[horizon]) ? etfBuckets[horizon] : [])
         ]
+          .filter((row) => String(row?.verdict || '').toUpperCase() === 'BUY')
           .sort((a, b) => Number(b?.rank_score ?? b?.score ?? 0) - Number(a?.rank_score ?? a?.score ?? 0));
         out[horizon] = takeTop(rows.map((row) => ({
           ...row,
@@ -4476,22 +4477,19 @@
       const rows = await fetchUniverseMatches(query, { limit: 100, assetClass });
       const dedupe = new Set();
       const filtered = rows
-        .map((row) => ({ symbol: normalizeTicker(row.symbol || ''), name: row.name || null }))
         .filter((item) => {
-          if (!item.symbol) return false;
+          const symbol = normalizeTicker(item?.symbol || '');
+          if (!symbol) return false;
           const nameUpper = String(item.name || '').toUpperCase();
-          return item.symbol.startsWith(queryUpper) || nameUpper.startsWith(queryUpper);
+          return symbol.startsWith(queryUpper) || nameUpper.startsWith(queryUpper);
         })
         .filter((item) => {
-          if (dedupe.has(item.symbol)) return false;
-          dedupe.add(item.symbol);
+          const symbol = normalizeTicker(item?.symbol || '');
+          if (dedupe.has(symbol)) return false;
+          dedupe.add(symbol);
           return true;
         })
-        .sort((a, b) => {
-          const s = a.symbol.localeCompare(b.symbol);
-          if (s !== 0) return s;
-          return String(a.name || '').localeCompare(String(b.name || ''));
-        });
+        .map((item) => ({ symbol: normalizeTicker(item?.symbol || ''), name: item?.name || null }));
       typeahead.items = filtered.slice(0, 20);
       typeahead.activeIndex = -1;
       typeahead.open = typeahead.items.length > 0;

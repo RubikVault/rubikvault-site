@@ -36,14 +36,11 @@ async function fetchResolveIndex(request, { preferFull = false } = {}) {
   const baseUrl = new URL(request.url);
   const candidates = preferFull
     ? [
-      '/data/symbol-resolve.v1.json',
-      '/public/data/symbol-resolve.v1.json'
+      '/data/symbol-resolve.v1.json'
     ]
     : [
       '/data/symbol-resolve.v1.lookup.json',
-      '/public/data/symbol-resolve.v1.lookup.json',
-      '/data/symbol-resolve.v1.json',
-      '/public/data/symbol-resolve.v1.json'
+      '/data/symbol-resolve.v1.json'
     ];
   for (const candidate of candidates) {
     const url = new URL(candidate, baseUrl);
