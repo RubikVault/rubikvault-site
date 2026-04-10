@@ -49,6 +49,10 @@ const RSYNC_EXCLUDES = [
   'data/marketphase/',         // 53K+ files — market phase per-ticker
   'data/v3/series/',           // 13K+ files — v3 per-ticker series
   'data/quantlab/reports/',    // large model report archives
+  // Universe v7 search buckets: locally the pipeline generates 23K+ gitignored buckets;
+  // only the ~1K git-tracked buckets should be deployed. We exclude all here and
+  // then explicitly copy git-tracked bucket files below.
+  'data/universe/v7/search/buckets/',
   // Build artifacts that must not be deployed
   'data/ops/build-bundle-meta.json', // written by this script, added after rsync
 ];
@@ -133,6 +137,31 @@ if (!isDryRun) {
   // Print rsync stats to console
   const statsLines = (rsyncResult.stdout || '').split('\n').filter(l => l.trim());
   for (const line of statsLines.slice(-10)) log(line);
+
+  // Copy only git-tracked search bucket files (excludes 22K+ gitignored local buckets)
+  const bucketsResult = spawnSync('git', ['ls-files', 'public/data/universe/v7/search/buckets'], {
+    cwd: REPO_ROOT,
+    encoding: 'utf8',
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
+  if (bucketsResult.status === 0 && bucketsResult.stdout.trim()) {
+    const bucketFiles = bucketsResult.stdout.trim().split('\n').filter(Boolean);
+    const destBuckets = path.join(DIST_DIR, 'data/universe/v7/search/buckets');
+    fs.mkdirSync(destBuckets, { recursive: true });
+    // Remove any stale bucket files in dest not in git
+    if (fs.existsSync(destBuckets)) {
+      const gitTrackedNames = new Set(bucketFiles.map(f => path.basename(f)));
+      for (const name of fs.readdirSync(destBuckets)) {
+        if (!gitTrackedNames.has(name)) fs.rmSync(path.join(destBuckets, name), { force: true });
+      }
+    }
+    for (const relPath of bucketFiles) {
+      const src = path.join(REPO_ROOT, relPath);
+      const dest = path.join(REPO_ROOT, 'dist/pages-prod', relPath.replace(/^public\//, ''));
+      if (fs.existsSync(src)) fs.copyFileSync(src, dest);
+    }
+    log(`Copied ${bucketFiles.length} git-tracked search bucket files to dist/`);
+  }
 }
 
 // Count bundle files: in dry-run parse rsync --stats output; otherwise count actual files
