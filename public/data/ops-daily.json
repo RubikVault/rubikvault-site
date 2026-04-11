@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0",
-  "asOf": "2026-04-10T22:58:05.552Z",
+  "asOf": "2026-04-11T07:57:07.328Z",
   "baseline": {
     "expectedUniverse": 2453,
     "pipeline": {
@@ -13,19 +13,19 @@
       "missing": [
         {
           "ticker": "AKE",
-          "reason": "PROVIDER_HTTP_ERROR"
+          "reason": "NO_EOD_BARS"
         },
         {
           "ticker": "MPLT",
-          "reason": "PROVIDER_HTTP_ERROR"
+          "reason": "NOT_SUPPORTED_SHORT_HISTORY"
         },
         {
           "ticker": "NAVN",
-          "reason": "PROVIDER_HTTP_ERROR"
+          "reason": "NOT_SUPPORTED_SHORT_HISTORY"
         },
         {
           "ticker": "P5N994",
-          "reason": "PROVIDER_HTTP_ERROR"
+          "reason": "NO_EOD_BARS"
         }
       ]
     },
@@ -148,7 +148,7 @@
     "cloudflare": {
       "requestsToday": null,
       "requestsLast24h": null,
-      "notes": "CF analytics not configured"
+      "notes": "ok"
     },
     "safety": {
       "kvWritesToday": 0,
