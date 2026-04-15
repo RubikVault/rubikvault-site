@@ -2,7 +2,7 @@
   "schema": "rv.final_integrity_seal.v1",
   "run_id": "pipeline-master-2026-04-14",
   "target_market_date": "2026-04-14",
-  "generated_at": "2026-04-15T09:24:47.854Z",
+  "generated_at": "2026-04-15T09:36:04.536Z",
   "producer": "scripts/ops/final-integrity-seal.mjs",
   "upstream_run_ids": [
     "pipeline-master-2026-04-14",
@@ -27,7 +27,7 @@
     "learning-2026-04-14",
     "run-stock-analyzer-audit-2026-04-15"
   ],
-  "phase": "VERIFY",
+  "phase": "SLA_BREACH",
   "ui_green": false,
   "global_green": false,
   "release_ready": false,
@@ -89,8 +89,8 @@
         "audit_provenance_complete": true,
         "canary_ok": false,
         "checked_canaries": 2,
-        "failed_checks": 2,
-        "optional_advisory_count": 0,
+        "failed_checks": 3,
+        "optional_advisory_count": 1,
         "advisory_reasons": []
       }
     }
@@ -132,13 +132,13 @@
     "audit_provenance_complete": true,
     "canary_ok": false,
     "checked_canaries": 2,
-    "failed_checks": 2,
-    "optional_advisory_count": 0,
+    "failed_checks": 3,
+    "optional_advisory_count": 1,
     "advisory_reasons": []
   },
   "launchd": {
     "schema": "rv.launchd_reconcile.v1",
-    "generated_at": "2026-04-15T09:17:24.627Z",
+    "generated_at": "2026-04-15T09:30:56.513Z",
     "mode": "report",
     "skip_install_missing": false,
     "allowlist_path": "scripts/ops/launchd-allowlist.json",
@@ -154,14 +154,14 @@
   },
   "storage": {
     "schema_version": "v1",
-    "generated_at": "2026-04-15T09:17:40.669Z",
+    "generated_at": "2026-04-15T09:32:11.477Z",
     "disk": {
-      "free_gb": 119.4,
+      "free_gb": 125.5,
       "target_free_gb": 120,
       "warn_free_gb": 100,
       "block_heavy_jobs_free_gb": 80,
       "emergency_free_gb": 60,
-      "severity": "below_target",
+      "severity": "ok",
       "heavy_jobs_allowed": true
     },
     "nas": {
@@ -188,7 +188,7 @@
       "old_partitions_archivable": 0
     },
     "recoverable_estimate_gb": 14.4,
-    "after_archive_estimate_gb": 133.8,
+    "after_archive_estimate_gb": 139.9,
     "latest_stageb_run_date": "2026-04-10"
   }
 }

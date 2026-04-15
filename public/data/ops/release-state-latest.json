@@ -2,7 +2,7 @@
   "schema": "rv_release_state_v3",
   "run_id": "pipeline-master-2026-04-14",
   "target_market_date": "2026-04-14",
-  "generated_at": "2026-04-15T09:24:49.469Z",
+  "generated_at": "2026-04-15T09:36:04.589Z",
   "producer": "scripts/ops/run-pipeline-master-supervisor.mjs",
   "upstream_run_ids": [
     "pipeline-master-2026-04-14",
@@ -42,8 +42,8 @@
         "audit_provenance_complete": true,
         "canary_ok": false,
         "checked_canaries": 2,
-        "failed_checks": 2,
-        "optional_advisory_count": 0,
+        "failed_checks": 3,
+        "optional_advisory_count": 1,
         "advisory_reasons": []
       }
     }
@@ -73,5 +73,5 @@
   "runtime_phase": "running",
   "epoch_pipeline_ok": true,
   "system_release_ready": true,
-  "last_updated": "2026-04-15T09:24:49.469Z"
+  "last_updated": "2026-04-15T09:36:04.589Z"
 }
