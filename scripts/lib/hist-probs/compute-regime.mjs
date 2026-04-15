@@ -64,7 +64,7 @@ function rollingVolPercentile(closes) {
 
 export async function computeRegime() {
   console.log('[regime] Loading benchmark bars:', BENCHMARK_TICKER);
-  const bars = await loadLocalBars(BENCHMARK_TICKER);
+  const bars = await loadLocalBars(BENCHMARK_TICKER, { preferredExchange: 'US' });
   if (!bars.length) {
     console.warn('[regime] No benchmark bars found for', BENCHMARK_TICKER);
     return null;
@@ -93,7 +93,7 @@ export async function computeRegime() {
   let aboveCount = 0, totalCount = 0;
   await Promise.allSettled(BREADTH_PROXY_SET.map(async ticker => {
     try {
-      const tickerBars = await loadLocalBars(ticker);
+      const tickerBars = await loadLocalBars(ticker, { preferredExchange: 'US' });
       if (!tickerBars.length) return;
       const tickerCloses = tickerBars.map(b => Number.isFinite(b.adjClose) ? b.adjClose : b.close).filter(Number.isFinite);
       const ma50 = sma(tickerCloses, 50);

@@ -1,24 +1,36 @@
 import fs from 'node:fs/promises';
 import fsSync from 'node:fs';
+import { createHash } from 'node:crypto';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { PIPELINE_STEP_ORDER } from './ops/system-status-ssot.mjs';
 
 const REPO_ROOT = path.resolve(new URL('.', import.meta.url).pathname, '..');
 const LEARNING_REPORT_PATH = path.join(REPO_ROOT, 'mirrors/learning/reports/latest.json');
 const QUANTLAB_REPORT_PATH = path.join(REPO_ROOT, 'mirrors/quantlab/reports/v4-daily/latest.json');
 const QUANTLAB_OPERATIONAL_STATUS_PATH = path.join(REPO_ROOT, 'public/data/quantlab/status/operational-status.json');
 const FORECAST_LATEST_PATH = path.join(REPO_ROOT, 'public/data/forecast/latest.json');
+const NIGHTLY_STATUS_PATH = path.join(REPO_ROOT, 'public/data/reports/nightly-stock-analyzer-status.json');
+const RECOVERY_REPORT_PATH = path.join(REPO_ROOT, 'public/data/reports/dashboard-green-recovery-latest.json');
+const RECOVERY_STATE_PATH = path.join(REPO_ROOT, 'mirrors/ops/dashboard-green/state.json');
+const RECOVERY_ACTION_LOG_PATH = path.join(REPO_ROOT, 'logs/dashboard_v7/recovery-actions.log');
+const RECOVERY_HEARTBEAT_LOG_PATH = path.join(REPO_ROOT, 'logs/dashboard_v7/recovery-heartbeat.log');
+const RELEASE_STATE_PATH = path.join(REPO_ROOT, 'public/data/ops/release-state-latest.json');
+const FINAL_INTEGRITY_SEAL_PATH = path.join(REPO_ROOT, 'public/data/ops/final-integrity-seal-latest.json');
+const PIPELINE_RUNTIME_PATH = path.join(REPO_ROOT, 'public/data/pipeline/runtime/latest.json');
+const PIPELINE_EPOCH_PATH = path.join(REPO_ROOT, 'public/data/pipeline/epoch.json');
 const DECISION_LOGIC_PATH = path.join(REPO_ROOT, 'functions/api/_shared/stock-decisions-v1.js');
 const V1_AUDIT_REPORT_PATH = path.join(REPO_ROOT, 'public/data/reports/quantlab-v1-latest.json');
 const V1_WEIGHTS_PATH = path.join(REPO_ROOT, 'mirrors/learning/quantlab-v1/weights/latest.json');
 const V1_WEIGHTS_DIR = path.join(REPO_ROOT, 'mirrors/learning/quantlab-v1/weights');
 const DIAGNOSTIC_PATH = path.join(REPO_ROOT, 'public/data/reports/best-setups-etf-diagnostic-latest.json');
 const REGIME_DAILY_PATH = path.join(REPO_ROOT, 'public/data/hist-probs/regime-daily.json');
-const V5_AUTOPILOT_PATH = path.join(REPO_ROOT, 'public/data/reports/v5-autopilot-status.json');
 const SYSTEM_STATUS_PATH = path.join(REPO_ROOT, 'public/data/reports/system-status-latest.json');
 const DATA_FRESHNESS_PATH = path.join(REPO_ROOT, 'public/data/reports/data-freshness-latest.json');
 const BEST_SETUPS_PATH = path.join(REPO_ROOT, 'public/data/snapshots/best-setups-v4.json');
+const PIPELINE_LEDGER_PATH = path.join(REPO_ROOT, 'public/data/ops/pipeline-run-ledger.ndjson');
 const OUTPUT_PATH = path.join(REPO_ROOT, 'public/dashboard_v6_meta_data.json');
+const V7_STATUS_OUTPUT_PATH = path.join(REPO_ROOT, 'public/data/ui/dashboard-v7-status.json');
 
 const DEFAULT_V1_WEIGHTS = {
   forecast: 0.20, scientific: 0.20, elliott: 0.15,
@@ -305,11 +317,288 @@ function rootCause(severity, category, title, why, impact, fix, owner, subsystem
   };
 }
 
+function buildPipelineErrorFrequency(ledgerPath) {
+  try {
+    if (!fsSync.existsSync(ledgerPath)) return {};
+    const raw = fsSync.readFileSync(ledgerPath, 'utf8');
+    const lines = raw.split('\n').filter(Boolean);
+    const cutoffMs = Date.now() - (30 * 86400000);
+    const grouped = {};
+    for (const line of lines) {
+      let entry = null;
+      try {
+        entry = JSON.parse(line);
+      } catch {
+        continue;
+      }
+      const ts = new Date(entry?.ts || entry?.created_at || 0).getTime();
+      if (!Number.isFinite(ts) || ts < cutoffMs) continue;
+      const stepId = String(entry?.step_id || '').trim();
+      if (!stepId) continue;
+      const bucket = grouped[stepId] || {
+        total_runs: 0,
+        failures: 0,
+        last_failure_at: null,
+        last_failure_msg: null,
+        common_error: null,
+      };
+      bucket.total_runs += 1;
+      const status = String(entry?.status || '').toLowerCase();
+      const failed = status === 'failed' || status === 'critical' || status === 'warning';
+      if (failed) {
+        bucket.failures += 1;
+        if (!bucket.last_failure_at || ts > new Date(bucket.last_failure_at).getTime()) {
+          bucket.last_failure_at = entry.ts || null;
+          bucket.last_failure_msg = entry.error_message || null;
+        }
+      }
+      bucket._errors = bucket._errors || {};
+      if (entry?.error_message) {
+        bucket._errors[entry.error_message] = (bucket._errors[entry.error_message] || 0) + 1;
+      }
+      grouped[stepId] = bucket;
+    }
+    for (const bucket of Object.values(grouped)) {
+      const rankedErrors = Object.entries(bucket._errors || {}).sort((a, b) => b[1] - a[1]);
+      bucket.common_error = rankedErrors[0]?.[0] || null;
+      bucket.failure_rate = bucket.total_runs > 0 ? bucket.failures / bucket.total_runs : 0;
+      delete bucket._errors;
+    }
+    return grouped;
+  } catch {
+    return {};
+  }
+}
+
+function buildRecoveryMetrics({ recoveryReport, recoveryStatePath, actionLogPath, heartbeatLogPath, windowDays = 7 }) {
+  const cutoffMs = Date.now() - (windowDays * 86400000);
+  const state = (() => {
+    try {
+      if (!fsSync.existsSync(recoveryStatePath)) return null;
+      return JSON.parse(fsSync.readFileSync(recoveryStatePath, 'utf8'));
+    } catch {
+      return null;
+    }
+  })();
+  const stepActivity = new Map();
+  const blockerCounts = new Map();
+  const runningStepCounts = new Map();
+  const runningPatternCounts = new Map();
+
+  function ensureStep(stepId) {
+    if (!stepActivity.has(stepId)) {
+      stepActivity.set(stepId, {
+        step_id: stepId,
+        launches: 0,
+        starts: 0,
+        restarts: 0,
+        blocked_count: 0,
+        completions: 0,
+        last_started_at: null,
+        last_completed_at: null,
+        last_blocked_reason: null,
+        _durations: [],
+      });
+    }
+    return stepActivity.get(stepId);
+  }
+
+  try {
+    if (fsSync.existsSync(actionLogPath)) {
+      const lines = fsSync.readFileSync(actionLogPath, 'utf8').split('\n').filter(Boolean);
+      for (const line of lines) {
+        const match = line.match(/^\[([^\]]+)\]\s+(.*)$/);
+        if (!match) continue;
+        const ts = Date.parse(match[1]);
+        if (!Number.isFinite(ts) || ts < cutoffMs) continue;
+        const message = match[2];
+
+        let entry = message.match(/^started\s+([a-z0-9_]+)\s+pid=\d+/i);
+        if (entry) {
+          const bucket = ensureStep(entry[1]);
+          bucket.starts += 1;
+          bucket.launches += 1;
+          bucket.last_started_at = match[1];
+          continue;
+        }
+
+        entry = message.match(/^restarted stalled\s+([a-z0-9_]+)\s+/i);
+        if (entry) {
+          const bucket = ensureStep(entry[1]);
+          bucket.restarts += 1;
+          bucket.launches += 1;
+          bucket.last_started_at = match[1];
+          continue;
+        }
+
+        entry = message.match(/^blocked\s+([a-z0-9_]+)\s+(.+)$/i);
+        if (entry) {
+          const bucket = ensureStep(entry[1]);
+          bucket.blocked_count += 1;
+          bucket.last_blocked_reason = entry[2];
+          continue;
+        }
+
+        entry = message.match(/^completed\s+([a-z0-9_]+)(?:\s+duration_ms=(\d+))?$/i);
+        if (entry) {
+          const bucket = ensureStep(entry[1]);
+          bucket.completions += 1;
+          bucket.last_completed_at = match[1];
+          if (entry[2]) bucket._durations.push(Number(entry[2]));
+        }
+      }
+    }
+  } catch {}
+
+  try {
+    if (fsSync.existsSync(heartbeatLogPath)) {
+      const lines = fsSync.readFileSync(heartbeatLogPath, 'utf8').split('\n').filter(Boolean);
+      for (const line of lines) {
+        const match = line.match(/^\[([^\]]+)\]\s+(.*)$/);
+        if (!match) continue;
+        const ts = Date.parse(match[1]);
+        if (!Number.isFinite(ts) || ts < cutoffMs) continue;
+        const message = match[2];
+        const runningMatch = message.match(/\brunning=([^\s]+)/);
+        const blockerMatch = message.match(/\bblocker=(.+?)\s+next=/);
+        if (blockerMatch) {
+          const blocker = blockerMatch[1].trim();
+          if (blocker && blocker !== 'n/a') {
+            blockerCounts.set(blocker, (blockerCounts.get(blocker) || 0) + 1);
+          }
+        }
+        if (runningMatch) {
+          const runningRaw = runningMatch[1].trim();
+          if (runningRaw && runningRaw !== '-') {
+            runningPatternCounts.set(runningRaw, (runningPatternCounts.get(runningRaw) || 0) + 1);
+            for (const stepId of runningRaw.split(',').map((value) => value.trim()).filter(Boolean)) {
+              runningStepCounts.set(stepId, (runningStepCounts.get(stepId) || 0) + 1);
+            }
+          }
+        }
+      }
+    }
+  } catch {}
+
+  const completedIds = new Set(recoveryReport?.completed_steps || []);
+  const runningById = new Map((recoveryReport?.running_steps || []).map((row) => [row.id, row]));
+  const blockedById = new Map((recoveryReport?.blocked_steps || []).map((row) => [row.id, row]));
+  const stepIds = new Set([
+    ...Object.keys(state?.steps || {}),
+    ...completedIds,
+    ...runningById.keys(),
+    ...blockedById.keys(),
+  ]);
+
+  const currentSteps = [...stepIds].sort().map((stepId) => {
+    const stepState = state?.steps?.[stepId] || {};
+    const startedAt = stepState.last_started_at || null;
+    const completedAt = stepState.completed_at || null;
+    const runningInfo = runningById.get(stepId) || null;
+    const blockedInfo = blockedById.get(stepId) || null;
+    let status = 'pending';
+    if (completedIds.has(stepId)) status = 'completed';
+    else if (runningInfo) status = 'running';
+    else if (blockedInfo) status = 'blocked';
+    const elapsedMinutes = (() => {
+      if (!startedAt) return null;
+      const startTime = Date.parse(startedAt);
+      if (!Number.isFinite(startTime)) return null;
+      const endTime = status === 'completed' && completedAt ? Date.parse(completedAt) : Date.now();
+      if (!Number.isFinite(endTime) || endTime < startTime) return null;
+      return Math.round(((endTime - startTime) / 60000) * 10) / 10;
+    })();
+    return {
+      step_id: stepId,
+      status,
+      pid: runningInfo?.pid || stepState.pid || null,
+      restarted: Boolean(runningInfo?.restarted),
+      restarts: Number(stepState.restarts || 0),
+      blocked_reason: blockedInfo?.reason || stepState.blocked_reason || null,
+      last_started_at: startedAt,
+      completed_at: completedAt,
+      elapsed_minutes: elapsedMinutes,
+    };
+  }).sort((a, b) => {
+    const rank = { running: 0, blocked: 1, completed: 2, pending: 3 };
+    return (rank[a.status] ?? 9) - (rank[b.status] ?? 9) || a.step_id.localeCompare(b.step_id);
+  });
+
+  const stepStats = [...stepActivity.values()]
+    .map((bucket) => ({
+      step_id: bucket.step_id,
+      launches: bucket.launches,
+      starts: bucket.starts,
+      restarts: bucket.restarts,
+      blocked_count: bucket.blocked_count,
+      completions: bucket.completions,
+      running_samples: runningStepCounts.get(bucket.step_id) || 0,
+      last_started_at: bucket.last_started_at,
+      last_completed_at: bucket.last_completed_at,
+      last_blocked_reason: bucket.last_blocked_reason,
+      avg_duration_minutes: bucket._durations.length
+        ? Math.round((bucket._durations.reduce((sum, value) => sum + value, 0) / bucket._durations.length / 60000) * 10) / 10
+        : null,
+      max_duration_minutes: bucket._durations.length
+        ? Math.round((Math.max(...bucket._durations) / 60000) * 10) / 10
+        : null,
+    }))
+    .sort((a, b) => b.launches - a.launches || b.restarts - a.restarts || b.blocked_count - a.blocked_count);
+
+  return {
+    window_days: windowDays,
+    current_campaign: recoveryReport ? {
+      run_id: recoveryReport.run_id || null,
+      target_market_date: recoveryReport.target_market_date || null,
+      campaign_started_at: recoveryReport.campaign_started_at || null,
+      completed_count: Array.isArray(recoveryReport.completed_steps) ? recoveryReport.completed_steps.length : 0,
+      running_count: Array.isArray(recoveryReport.running_steps) ? recoveryReport.running_steps.length : 0,
+      blocked_count: Array.isArray(recoveryReport.blocked_steps) ? recoveryReport.blocked_steps.length : 0,
+      next_step: recoveryReport.next_step || null,
+      steps: currentSteps,
+    } : null,
+    summary: {
+      total_launches: stepStats.reduce((sum, step) => sum + step.launches, 0),
+      total_restarts: stepStats.reduce((sum, step) => sum + step.restarts, 0),
+      total_blocks: stepStats.reduce((sum, step) => sum + step.blocked_count, 0),
+      total_completions: stepStats.reduce((sum, step) => sum + step.completions, 0),
+      active_running_patterns: [...runningPatternCounts.values()].reduce((sum, value) => sum + value, 0),
+    },
+    step_activity: stepStats.slice(0, 12),
+    top_blockers: [...blockerCounts.entries()]
+      .map(([blocker, count]) => ({ blocker, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 8),
+    running_patterns: [...runningPatternCounts.entries()]
+      .map(([pattern, count]) => ({ pattern, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 8),
+  };
+}
+
 function buildRootCauses({ models, pipelineDiagnostic, v1Report, recentFailures, v1Weights, operatingModes, systemStatusReport }) {
   const causes = (systemStatusReport?.root_causes || []).map((cause) => ({
     ...cause,
     source_key: cause.source_key || 'system_status',
   }));
+  for (const reason of systemStatusReport?.final_integrity_seal?.blocking_reasons || []) {
+    const label = String(reason?.id || 'final_integrity_blocked')
+      .split('_')
+      .filter(Boolean)
+      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+      .join(' ');
+    causes.push(rootCause(
+      reason?.severity || 'critical',
+      'release_integrity',
+      `Final integrity blocked: ${label}`,
+      `Final integrity seal reports blocker ${reason?.id || 'unknown'}.`,
+      'Dashboard V7 and Stock Analyzer UI cannot be marked green while the final integrity seal remains blocked.',
+      'Resolve the leading blocking reason in public/data/ops/final-integrity-seal-latest.json and rerun the publish/status chain.',
+      'Ops',
+      'final_integrity_seal',
+      { file_ref: 'public/data/ops/final-integrity-seal-latest.json', source_key: 'final_integrity_seal' }
+    ));
+  }
   const latestFailure = recentFailures[0];
   if (latestFailure?.failed_step === 'forecast_run_daily') {
     causes.push(rootCause(
@@ -419,7 +708,7 @@ function buildRootCauses({ models, pipelineDiagnostic, v1Report, recentFailures,
       'Increase resolved outcomes coverage before enabling promotions or cutover decisions.',
       'Learning',
       'learning',
-      { file_ref: 'public/data/reports/v5-autopilot-status.json', source_key: 'learning' }
+      { file_ref: 'public/data/reports/nightly-stock-analyzer-status.json', source_key: 'learning' }
     ));
   }
 
@@ -497,8 +786,138 @@ function sourceFileMeta(filePath, extra = {}) {
   };
 }
 
+function computeArtifactHash(document) {
+  const cloned = JSON.parse(JSON.stringify(document));
+  delete cloned.artifact_hash;
+  return createHash('sha256').update(JSON.stringify(cloned)).digest('hex');
+}
+
+async function writeJsonWithHash(filePath, document) {
+  const payload = {
+    ...document,
+    artifact_hash: computeArtifactHash(document),
+  };
+  await fs.mkdir(path.dirname(filePath), { recursive: true });
+  await fs.writeFile(filePath, JSON.stringify(payload, null, 2), 'utf-8');
+}
+
+function normalizeSealReason(reason) {
+  if (!reason || typeof reason !== 'object') return null;
+  const id = String(reason.id || 'seal_blocker');
+  const title = String(reason.title || id)
+    .split('_')
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ');
+  return {
+    id,
+    severity: String(reason.severity || 'critical'),
+    category: 'release_integrity',
+    title,
+    why: reason.why || `Final integrity seal reports blocker ${id}.`,
+    impact: reason.impact || 'Dashboard V7 and release status must stay blocked until this blocker is resolved.',
+    fix: reason.fix || 'Resolve the leading blocker in public/data/ops/final-integrity-seal-latest.json and rerun the status/publish chain.',
+    owner: reason.owner || 'Ops',
+    subsystem: reason.subsystem || 'final_integrity_seal',
+    file_ref: 'public/data/ops/final-integrity-seal-latest.json',
+    source_key: 'final_integrity_seal',
+    evidence_at: reason.evidence_at || null,
+  };
+}
+
+function buildDashboardV7Document({ output, systemStatusReport, finalIntegritySeal }) {
+  const sealBlockers = (finalIntegritySeal?.blocking_reasons || [])
+    .map(normalizeSealReason)
+    .filter(Boolean);
+  const sourceRootCauses = Array.isArray(output.system?.root_causes) ? output.system.root_causes : [];
+  const sourcePrimaryActions = Array.isArray(output.system?.primary_actions) ? output.system.primary_actions : [];
+  const fallbackBlockingRootCauses = sourceRootCauses.filter((cause) => String(cause?.severity || '').toLowerCase() === 'critical');
+  const releaseReady = finalIntegritySeal?.release_ready === true;
+  const blockingReasons = sealBlockers.length > 0
+    ? sealBlockers
+    : (releaseReady ? [] : fallbackBlockingRootCauses);
+  const blockingSeverity = blockingReasons.length > 0 ? 'critical' : 'ok';
+  const advisorySeverity = String(
+    systemStatusReport?.summary?.advisory_severity
+      || (blockingSeverity === 'ok' ? systemStatusReport?.summary?.severity : output.system?.status_severity)
+      || output.system?.status_severity
+      || 'ok'
+  ).toLowerCase();
+  const blockingIds = new Set(blockingReasons.map((cause) => cause.id));
+  const advisoryReasons = sourceRootCauses.filter((cause) => !blockingIds.has(cause.id));
+  const uiGreen = releaseReady === true && blockingReasons.length === 0;
+  const targetMarketDate = finalIntegritySeal?.target_market_date
+    || systemStatusReport?.summary?.target_market_date
+    || output.operations?.release_state?.target_market_date
+    || null;
+  const runId = finalIntegritySeal?.run_id
+    || systemStatusReport?.run_id
+    || output.operations?.release_state?.run_id
+    || output.operations?.release_state?.control_plane?.run_id
+    || null;
+
+  let statusSeverity = blockingSeverity === 'ok' ? 'ok' : blockingSeverity;
+  if (statusSeverity === 'ok' && (!releaseReady || !uiGreen)) statusSeverity = 'warning';
+  const overallStatus = statusSeverity === 'critical'
+    ? 'CRITICAL'
+    : statusSeverity === 'warning'
+      ? 'WARNING'
+      : 'OK';
+  const liveStatus = statusSeverity === 'critical'
+    ? 'failed'
+    : statusSeverity === 'warning'
+      ? 'degraded'
+      : 'ok';
+  const primaryBlocker = blockingReasons[0]?.title || advisoryReasons[0]?.title || null;
+  const primaryActions = blockingReasons.length > 0
+    ? buildPrimaryActions(blockingReasons)
+    : sourcePrimaryActions;
+
+  const system = {
+    ...output.system,
+    overall_status: overallStatus,
+    status_severity: statusSeverity,
+    live_status: liveStatus,
+    data_truth_state: blockingReasons.length > 0
+      ? `Blocking truth degradation: ${blockingReasons[0]?.title || 'blocking issues detected'}.`
+      : 'Fresh and internally consistent.',
+    production_ready: releaseReady,
+    cutover_ready: releaseReady,
+    ui_green: uiGreen,
+    global_green: systemStatusReport?.summary?.global_green ?? uiGreen,
+    target_market_date: targetMarketDate,
+    run_id: runId,
+    blocking_severity: blockingSeverity,
+    advisory_severity: advisorySeverity,
+    primary_blocker: primaryBlocker,
+    root_causes: blockingReasons,
+    blocking_reasons: blockingReasons,
+    advisory_reasons: advisoryReasons,
+    primary_actions: primaryActions,
+    advisory_actions: advisoryReasons.length > 0 ? buildPrimaryActions(advisoryReasons) : [],
+  };
+
+  return {
+    ...output,
+    schema_version: 'rv.dashboard_v7_status.v1',
+    generator_id: 'scripts/generate_meta_dashboard_data.mjs',
+    generated_at: output.generated_at,
+    run_id: runId,
+    target_market_date: targetMarketDate,
+    ui_green: uiGreen,
+    release_ready: releaseReady,
+    blocking_severity: blockingSeverity,
+    advisory_severity: advisorySeverity,
+    primary_blocker: primaryBlocker,
+    blocking_reasons: blockingReasons,
+    advisory_reasons: advisoryReasons,
+    legacy_meta_ref: 'public/dashboard_v6_meta_data.json',
+    system,
+  };
+}
+
 async function main() {
-  const [learning, quantlab, quantlabOperationalStatus, forecastLatest, legacyWeights, v1AuditReport, v1WeightsLatest, diagnostic, regimeDaily, autopilot, systemStatusReport, dataFreshnessReport, bestSetups] = await Promise.all([
+  const [learning, quantlab, quantlabOperationalStatus, forecastLatest, legacyWeights, v1AuditReport, v1WeightsLatest, diagnostic, regimeDaily, nightlyStatus, recoveryReport, releaseState, finalIntegritySealDoc, systemStatusReport, dataFreshnessReport, bestSetups] = await Promise.all([
     readJsonSafely(LEARNING_REPORT_PATH),
     readJsonSafely(QUANTLAB_REPORT_PATH),
     readJsonSafely(QUANTLAB_OPERATIONAL_STATUS_PATH),
@@ -508,20 +927,49 @@ async function main() {
     readJsonSafely(V1_WEIGHTS_PATH),
     readJsonSafely(DIAGNOSTIC_PATH),
     readJsonSafely(REGIME_DAILY_PATH),
-    readJsonSafely(V5_AUTOPILOT_PATH),
+    readJsonSafely(NIGHTLY_STATUS_PATH),
+    readJsonSafely(RECOVERY_REPORT_PATH),
+    readJsonSafely(RELEASE_STATE_PATH),
+    readJsonSafely(FINAL_INTEGRITY_SEAL_PATH),
     readJsonSafely(SYSTEM_STATUS_PATH),
     readJsonSafely(DATA_FRESHNESS_PATH),
     readJsonSafely(BEST_SETUPS_PATH),
   ]);
+  const finalIntegritySeal = finalIntegritySealDoc || systemStatusReport?.final_integrity_seal || null;
+  const systemStatusView = systemStatusReport
+    ? { ...systemStatusReport, final_integrity_seal: finalIntegritySeal }
+    : { final_integrity_seal: finalIntegritySeal };
 
   const v1WeightHistory = loadWeightHistory();
-  const recentFailures = extractRecentFailures(autopilot);
-  const lastSuccessfulJobs = extractLastSuccessfulJobs(autopilot);
+  const recentFailures = [];
+  const lastSuccessfulJobs = [
+    nightlyStatus?.phase === 'completed' ? {
+      mode: 'nightly',
+      status: nightlyStatus.phase,
+      finished_at: nightlyStatus.updated_at || nightlyStatus.heartbeat || statMtimeIso(NIGHTLY_STATUS_PATH),
+    } : null,
+    recoveryReport?.generated_at ? {
+      mode: 'recovery',
+      status: recoveryReport?.dashboard_summary?.severity || 'ok',
+      finished_at: recoveryReport.generated_at,
+    } : null,
+    releaseState?.last_updated ? {
+      mode: 'release_state',
+      status: releaseState.phase || null,
+      finished_at: releaseState.last_updated,
+    } : null,
+  ].filter(Boolean);
   const latestForecastFailure = recentFailures.find((item) => item.failed_step === 'forecast_run_daily');
   const forecastArtifactGeneratedAt = forecastLatest?.generated_at || statMtimeIso(FORECAST_LATEST_PATH);
   const forecastFailureActive = failureStillActive(latestForecastFailure, forecastArtifactGeneratedAt || forecastLatest?.data?.asof || null);
   const bestSetupsGeneratedAt = bestSetups?.meta?.generated_at || bestSetups?.generated_at || statMtimeIso(BEST_SETUPS_PATH);
   const bestSetupsDataAsof = bestSetups?.meta?.data_asof || bestSetups?.meta?.forecast_asof || bestSetups?.meta?.quantlab_asof || null;
+  const recoveryMetrics = buildRecoveryMetrics({
+    recoveryReport,
+    recoveryStatePath: RECOVERY_STATE_PATH,
+    actionLogPath: RECOVERY_ACTION_LOG_PATH,
+    heartbeatLogPath: RECOVERY_HEARTBEAT_LOG_PATH,
+  });
 
   const output = {
     generated_at: new Date().toISOString(),
@@ -545,7 +993,12 @@ async function main() {
         diagnostic: sourceFileMeta(DIAGNOSTIC_PATH, { date: diagnostic?.generated_at || null }),
         regime_daily: sourceFileMeta(REGIME_DAILY_PATH, { date: regimeDaily?.date || null }),
         best_setups_snapshot: sourceFileMeta(BEST_SETUPS_PATH, { date: bestSetupsGeneratedAt }),
-        v5_autopilot: sourceFileMeta(V5_AUTOPILOT_PATH, { date: autopilot?.generated_at || null }),
+        nightly_status: sourceFileMeta(NIGHTLY_STATUS_PATH, { date: nightlyStatus?.updated_at || nightlyStatus?.heartbeat || null }),
+        dashboard_green_recovery: sourceFileMeta(RECOVERY_REPORT_PATH, { date: recoveryReport?.generated_at || null }),
+        release_state: sourceFileMeta(RELEASE_STATE_PATH, { date: releaseState?.last_updated || null }),
+        final_integrity_seal: sourceFileMeta(FINAL_INTEGRITY_SEAL_PATH, { date: finalIntegritySeal?.generated_at || null }),
+        pipeline_runtime: sourceFileMeta(PIPELINE_RUNTIME_PATH),
+        pipeline_epoch: sourceFileMeta(PIPELINE_EPOCH_PATH),
         system_status: sourceFileMeta(SYSTEM_STATUS_PATH, { date: systemStatusReport?.generated_at || null }),
       },
     },
@@ -830,9 +1283,12 @@ async function main() {
     };
   }
 
-  // 9. Operations (from V5 sources)
+  // 9. Operations
   output.operations = {
-    autopilot: autopilot || null,
+    nightly_status: nightlyStatus || null,
+    recovery_status: recoveryReport || null,
+    recovery_metrics: recoveryMetrics,
+    release_state: releaseState || null,
     candidate_counts: bestSetups?.meta?.candidate_counts || null,
     setup_phases: bestSetups?.meta?.setup_phase_counts || null,
     snapshots_date: bestSetupsGeneratedAt,
@@ -882,13 +1338,13 @@ async function main() {
     recentFailures: forecastFailureActive ? output.operations.recent_failures : output.operations.recent_failures.filter((item) => item.failed_step !== 'forecast_run_daily'),
     v1Weights: output.v1_weights,
     operatingModes: provisionalModes,
-    systemStatusReport,
+    systemStatusReport: systemStatusView,
   });
   const primaryActions = buildPrimaryActions(rootCauses);
   const systemStatus = summarizeSystemStatus(
     rootCauses,
     learning?.summary?.overall_status || 'UNKNOWN',
-    systemStatusReport
+    systemStatusView
   );
   const operatingModes = buildOperatingModes({
     learning: learning || {},
@@ -903,25 +1359,54 @@ async function main() {
     status_severity: systemStatus.severity,
     status_detail: systemStatus.detail,
     learning_status: systemStatus.learning_status,
+    local_data_green: systemStatusReport?.summary?.local_data_green ?? null,
+    global_green: systemStatusReport?.summary?.global_green ?? null,
+    ui_green: systemStatusReport?.summary?.ui_green ?? null,
     live_status: 'ok',
     snapshot_age_hours: 0,
     data_truth_state: dataTruthState(systemStatus.severity, rootCauses),
     root_causes: rootCauses,
     primary_actions: primaryActions,
     operating_modes: operatingModes,
-    production_ready: rootCauses.every((cause) => cause.severity !== 'critical') && (output.v1_report?.signals_today || 0) > 0 && operatingModes.length === 0,
-    cutover_ready: !operatingModes.some((mode) => ['SHADOW_ONLY', 'BOOTSTRAP', 'FALLBACK_WEIGHTS', 'PROMOTION_BLOCKED', 'CUTOVER_BLOCKED'].includes(mode)),
+    production_ready: finalIntegritySeal?.release_ready === true,
+    cutover_ready: finalIntegritySeal?.release_ready === true,
     v1_mode: v1AuditReport?.mode || 'shadow_v1',
     quantlab_readiness: quantlab?.progress?.readiness?.pct ?? null,
     quantlab_implementation: quantlab?.progress?.implementation?.pct ?? null,
     automation_health: systemStatusReport?.automation || null,
     dependency_health: systemStatusReport?.dependencies || [],
     steps: systemStatusReport?.steps || {},
+    pipeline_step_order: PIPELINE_STEP_ORDER,
+    pipeline_error_frequency: buildPipelineErrorFrequency(PIPELINE_LEDGER_PATH),
+    recovery_metrics: recoveryMetrics,
     stock_analyzer_universe_audit: systemStatusReport?.stock_analyzer_universe_audit || null,
+    universe_field_quality: (() => {
+      try {
+        const audit = JSON.parse(fsSync.readFileSync(
+          path.join(REPO_ROOT, 'public/data/reports/stock-analyzer-universe-audit-latest.json'),
+          'utf8',
+        ));
+        return audit.field_problem_stats || null;
+      } catch {
+        return null;
+      }
+    })(),
+    final_integrity_seal: finalIntegritySeal,
     data_truth_gate: dataFreshnessReport || systemStatusReport?.data_truth_gate || null,
     web_validation_chain: systemStatusReport?.ssot?.web_validation_chain || [],
     ssot_doc_ref: systemStatusReport?.ssot?.doc_ref || null,
     recovery_script: systemStatusReport?.ssot?.recovery_script || null,
+    green_contract: {
+      title: 'Dashboard V7 Green Contract',
+      doc_ref: 'docs/ops/dashboard-v7-green-contract.md',
+      items: [
+        'Single Writer: pipeline-master ist der einzige residente Writer für autoritative Latest-Artefakte.',
+        'Full-Universe-Audit beweist Artefaktvollständigkeit getrennt von Live-Canaries.',
+        'Hist-Probs no-data / insufficient-history / inactive gelten neutral und nicht als fehlende UI-Wahrheit.',
+        'Fundamentals bleiben Warning-only im priorisierten Scope und nie Final-Seal-Blocker.',
+        'Q1/Market-Data dürfen dem Release-Target voraus sein; nur Rückstand ist kritisch.',
+      ],
+    },
     tracked_step_ids: systemStatusReport?.ssot?.tracked_step_ids || [],
     missing_step_ids: systemStatusReport?.ssot?.missing_step_ids || [],
     untracked_step_ids: systemStatusReport?.ssot?.untracked_step_ids || [],
@@ -934,7 +1419,14 @@ async function main() {
     } : null,
   };
 
+  const dashboardV7Status = buildDashboardV7Document({
+    output,
+    systemStatusReport,
+    finalIntegritySeal,
+  });
+
   await fs.writeFile(OUTPUT_PATH, JSON.stringify(output, null, 2), 'utf-8');
+  await writeJsonWithHash(V7_STATUS_OUTPUT_PATH, dashboardV7Status);
 }
 
 export {

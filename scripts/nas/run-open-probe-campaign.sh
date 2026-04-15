@@ -21,10 +21,10 @@ SAMPLE_TICKERS_JSON="$CAMPAIGN_DIR/sample-tickers.json"
 END_LOCAL_DATE="${END_LOCAL_DATE:-}"
 END_LOCAL_HOUR="${END_LOCAL_HOUR:-20}"
 END_LOCAL_MINUTE="${END_LOCAL_MINUTE:-0}"
-MAX_CYCLES="${MAX_CYCLES:-240}"
+MAX_CYCLES="${MAX_CYCLES:-480}"
 SLEEP_BETWEEN_PROBES_SEC="${SLEEP_BETWEEN_PROBES_SEC:-15}"
 SLEEP_BETWEEN_CYCLES_SEC="${SLEEP_BETWEEN_CYCLES_SEC:-120}"
-PROBE_PLAN_VERSION="${PROBE_PLAN_VERSION:-2026-04-08b}"
+PROBE_PLAN_VERSION="${PROBE_PLAN_VERSION:-2026-04-13a}"
 
 mkdir -p "$CAMPAIGN_DIR" "$RUNS_DIR" "$REPORTS_DIR" "$(dirname "$LOCK_DIR")"
 if [[ -L "$REPO_ROOT/mirrors/universe-v7/history" && ! -e "$REPO_ROOT/mirrors/universe-v7/history" ]]; then
@@ -455,31 +455,33 @@ while [[ "$(should_continue)" == "yes" ]]; do
   mixed_tickers="$(pick_all_tickers)"
   slot=$((cycle % 8))
   if [[ "$slot" -eq 1 ]]; then
-    run_probe "refresh_history_sample" 600 "$REPO_ROOT" "python3 scripts/quantlab/refresh_v7_history_from_eodhd.py --allowlist-path '$SAMPLE_IDS_JSON' --from-date 2026-04-01 --max-assets 12 --report-path '$RUNS_DIR/refresh-history-sample-latest.report.json'"
-    run_probe "fundamentals_sample" 900 "$REPO_ROOT" "NODE_OPTIONS='--max-old-space-size=768' node scripts/build-fundamentals.mjs --ticker '$stock_tickers' --force"
+    run_probe "q1_delta_preflight" 120 "$REPO_ROOT" "node scripts/nas/probes/q1-delta-preflight.mjs"
+    run_probe "q1_delta_ingest_smoke" 1200 "$REPO_ROOT" "python3 scripts/quantlab/run_daily_delta_ingest_q1.py --ingest-date 2026-04-07 --limit-packs 1 --max-emitted-rows 500"
     run_probe "quantlab_v4_daily_report" 600 "$REPO_ROOT" "node scripts/quantlab/build_quantlab_v4_daily_report.mjs"
   elif [[ "$slot" -eq 2 ]]; then
-    run_probe "q1_delta_ingest_smoke" 1200 "$REPO_ROOT" "python3 scripts/quantlab/run_daily_delta_ingest_q1.py --ingest-date 2026-04-07 --limit-packs 1 --max-emitted-rows 500"
-    run_probe "hist_probs_sample" 1800 "$REPO_ROOT" "NODE_OPTIONS='--max-old-space-size=768' node scripts/lib/hist-probs/run-hist-probs.mjs --tickers '$mixed_tickers'"
-  elif [[ "$slot" -eq 3 ]]; then
-    run_probe "forecast_daily" 2400 "$REPO_ROOT" "NODE_OPTIONS='--max-old-space-size=1024' FORECAST_SKIP_MATURED_EVAL=1 node scripts/forecast/run_daily.mjs --date=2026-04-07"
-    run_probe "universe_audit_sample" 900 "$REPO_ROOT" "NODE_OPTIONS='--max-old-space-size=512' node scripts/ops/build-stock-analyzer-universe-audit.mjs --base-url http://127.0.0.1:8788 --tickers '$mixed_tickers' --max-tickers 8"
-  elif [[ "$slot" -eq 4 ]]; then
-    run_probe "best_setups_v4_smoke" 2400 "$REPO_ROOT" "ALLOW_REMOTE_BAR_FETCH=0 BEST_SETUPS_DISABLE_NETWORK=1 NODE_OPTIONS='--max-old-space-size=1024' node scripts/build-best-setups-v4.mjs"
-    run_probe "etf_diagnostic_smoke" 1200 "$REPO_ROOT" "NODE_OPTIONS='--max-old-space-size=768' node scripts/learning/diagnose-best-setups-etf-drop.mjs"
-  elif [[ "$slot" -eq 5 ]]; then
-    run_probe "daily_audit_report_smoke" 1800 "$REPO_ROOT" "NODE_OPTIONS='--max-old-space-size=768' node scripts/learning/quantlab-v1/daily-audit-report.mjs"
-    run_probe "cutover_readiness_smoke" 1200 "$REPO_ROOT" "NODE_OPTIONS='--max-old-space-size=768' node scripts/learning/quantlab-v1/cutover-readiness-report.mjs"
-    run_probe "hist_probs_sample_w2" 1800 "$REPO_ROOT" "HIST_PROBS_WORKERS=2 HIST_PROBS_SKIP_EXISTING=0 NODE_OPTIONS='--max-old-space-size=768' node run-hist-probs-turbo.mjs"
-  elif [[ "$slot" -eq 6 ]]; then
-    run_probe "q1_delta_preflight" 120 "$REPO_ROOT" "node scripts/nas/probes/q1-delta-preflight.mjs"
     run_probe "quantlab_boundary_audit" 120 "$REPO_ROOT" "node scripts/nas/probes/quantlab-boundary-audit.mjs"
-  elif [[ "$slot" -eq 7 ]]; then
     run_probe "runtime_control_probe" 120 "$REPO_ROOT" "node scripts/nas/probes/runtime-control-probe.mjs"
+    run_probe "daily_learning_cycle" 2400 "$REPO_ROOT" "RUBIKVAULT_ROOT='$REPO_ROOT' NODE_OPTIONS='--max-old-space-size=1536' node scripts/learning/run-daily-learning-cycle.mjs --date=2026-04-07"
+  elif [[ "$slot" -eq 3 ]]; then
     run_probe "ui_contract_probe" 120 "$REPO_ROOT" "node scripts/nas/probes/ui-contract-probe.mjs"
+    run_probe "universe_audit_sample" 900 "$REPO_ROOT" "NODE_OPTIONS='--max-old-space-size=512' node scripts/ops/build-stock-analyzer-universe-audit.mjs --base-url http://127.0.0.1:8788 --tickers '$mixed_tickers' --max-tickers 8"
+    run_probe "forecast_daily" 2400 "$REPO_ROOT" "NODE_OPTIONS='--max-old-space-size=1536' FORECAST_SKIP_MATURED_EVAL=1 node scripts/forecast/run_daily.mjs --date=2026-04-07"
+  elif [[ "$slot" -eq 4 ]]; then
+    run_probe "best_setups_v4_smoke" 2400 "$REPO_ROOT" "ALLOW_REMOTE_BAR_FETCH=0 BEST_SETUPS_DISABLE_NETWORK=1 NODE_OPTIONS='--max-old-space-size=1536' node scripts/build-best-setups-v4.mjs"
+    run_probe "daily_audit_report_smoke" 1800 "$REPO_ROOT" "NODE_OPTIONS='--max-old-space-size=1024' node scripts/learning/quantlab-v1/daily-audit-report.mjs"
+  elif [[ "$slot" -eq 5 ]]; then
+    run_probe "hist_probs_sample_w2" 1800 "$REPO_ROOT" "HIST_PROBS_WORKERS=2 HIST_PROBS_SKIP_EXISTING=0 NODE_OPTIONS='--max-old-space-size=1536' node run-hist-probs-turbo.mjs"
+    run_probe "hist_probs_sample" 1800 "$REPO_ROOT" "NODE_OPTIONS='--max-old-space-size=1024' node scripts/lib/hist-probs/run-hist-probs.mjs --tickers '$mixed_tickers'"
+  elif [[ "$slot" -eq 6 ]]; then
+    run_probe "refresh_history_sample" 600 "$REPO_ROOT" "python3 scripts/quantlab/refresh_v7_history_from_eodhd.py --allowlist-path '$SAMPLE_IDS_JSON' --from-date 2026-04-01 --max-assets 12 --report-path '$RUNS_DIR/refresh-history-sample-latest.report.json'"
+    run_probe "fundamentals_sample" 900 "$REPO_ROOT" "NODE_OPTIONS='--max-old-space-size=1024' node scripts/build-fundamentals.mjs --ticker '$stock_tickers' --force"
+    run_probe "cutover_readiness_smoke" 1200 "$REPO_ROOT" "NODE_OPTIONS='--max-old-space-size=1024' node scripts/learning/quantlab-v1/cutover-readiness-report.mjs"
+  elif [[ "$slot" -eq 7 ]]; then
+    run_probe "quantlab_boundary_audit" 120 "$REPO_ROOT" "node scripts/nas/probes/quantlab-boundary-audit.mjs"
+    run_probe "etf_diagnostic_smoke" 1200 "$REPO_ROOT" "NODE_OPTIONS='--max-old-space-size=768' node scripts/learning/diagnose-best-setups-etf-drop.mjs"
   else
-    run_probe "daily_learning_cycle" 2400 "$REPO_ROOT" "NODE_OPTIONS='--max-old-space-size=1024' node scripts/learning/run-daily-learning-cycle.mjs --date=2026-04-07"
-    run_probe "hist_probs_sample_w1" 1800 "$REPO_ROOT" "HIST_PROBS_WORKERS=1 HIST_PROBS_SKIP_EXISTING=0 NODE_OPTIONS='--max-old-space-size=768' node run-hist-probs-turbo.mjs"
+    run_probe "runtime_control_probe" 120 "$REPO_ROOT" "node scripts/nas/probes/runtime-control-probe.mjs"
+    run_probe "hist_probs_sample_w1" 1800 "$REPO_ROOT" "HIST_PROBS_WORKERS=1 HIST_PROBS_SKIP_EXISTING=0 NODE_OPTIONS='--max-old-space-size=1536' node run-hist-probs-turbo.mjs"
   fi
   advance_cycle "$cycle"
   sleep "$SLEEP_BETWEEN_CYCLES_SEC"

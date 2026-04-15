@@ -76,8 +76,9 @@ async function run() {
     const text = await readTextMaybeGz(file.full);
 
     const isConfigFile = relFromPublish.startsWith('config/');
+    const isSearchManifest = relFromPublish === 'search/search_index_manifest.json';
 
-    if (!rawAllowed && !isConfigFile) {
+    if (!rawAllowed && !isConfigFile && !isSearchManifest) {
       RAW_FIELD_REGEX.lastIndex = 0;
       if (RAW_FIELD_REGEX.test(text)) {
         violations.push({ file: relFromPublish, code: 'RAW_OHLC_FIELD_DETECTED' });

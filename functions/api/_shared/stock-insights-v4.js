@@ -513,6 +513,7 @@ export function buildStockInsightsV4Evaluation({
   segmentationProfile = null,
   scientificState,
   forecastState,
+  elliottState = null,
   quantlabState = null,
   forecastMeta = null,
   inputFingerprints = null,
@@ -545,13 +546,19 @@ export function buildStockInsightsV4Evaluation({
     confluence,
     fallback,
     scientificEligibility,
-    featureStates: { scientific: scientificState, forecast: forecastState, quantlab: quantlabState },
+    featureStates: { scientific: scientificState, forecast: forecastState, elliott: elliottState, quantlab: quantlabState },
     outcomes,
   });
 
   const v4Contract = {
     scientific: scientificState,
     forecast: forecastState,
+    elliott: elliottState || makeContractState(null, {
+      as_of: asOf,
+      source: "elliott.stock-insights",
+      status: "unavailable",
+      reason: REASON_CODES.MISSING_ELLIOTT_ENTRY,
+    }),
     quantlab: quantlabState || makeContractState(null, {
       as_of: asOf,
       source: "quantlab.stock-insights",
@@ -668,6 +675,16 @@ export function buildStockInsightsV4Evaluation({
     contributing_clusters: 0,
     data_quality_score: 80,
   });
+  if (runtimeControl?.learning_gate) {
+    layerDecision.learning_gate = runtimeControl.learning_gate;
+    layerDecision.learning_status = layerDecision.learning_status || runtimeControl.learning_gate.learning_status || null;
+    layerDecision.minimum_n_not_met = runtimeControl.learning_gate.minimum_n_not_met === true;
+    layerDecision.safety_switch = layerDecision.safety_switch || runtimeControl.learning_gate.safety_switch || null;
+    layerDecision.safety = {
+      ...(layerDecision.safety || {}),
+      trigger: runtimeControl.learning_gate.blocked_reason || layerDecision?.safety?.trigger || null,
+    };
+  }
   const layerExplanation = buildExplanation(ticker, layerDecision, layerStates);
 
   return {
@@ -690,6 +707,7 @@ export function buildStockInsightsV4Evaluation({
     v4_contract: v4Contract,
     scientific: scientificState?.value || null,
     forecast: forecastState?.value || null,
+    elliott: (elliottState || v4Contract.elliott)?.value || null,
     quantlab: quantlabState?.value || null,
     forecast_meta: forecastMeta || null,
     input_fingerprints: inputFingerprints || null,

@@ -70,6 +70,24 @@ jobs:
       - name: Build pipeline truth (NASDAQ-100)
         run: node scripts/pipeline/build-ndx100-pipeline-truth.mjs
 
+      - name: Build pipeline runtime
+        run: npm run ops:pipeline-runtime
+
+      - name: Build pipeline epoch
+        run: npm run ops:pipeline-epoch
+
+      - name: Build pipeline compute audit
+        run: npm run ops:pipeline-compute-audit
+
+      - name: Build pipeline monitoring
+        run: npm run ops:pipeline-monitoring
+
+      - name: Verify retention policy
+        run: npm run ops:retention-verify
+
+      - name: Build stock-analyzer probability calibration
+        run: npm run forecast:build-probability-calibration
+
       - name: Build safety snapshot
         run: node scripts/ops/build-safety-snapshot.mjs
 
@@ -108,6 +126,18 @@ jobs:
           fi
           echo "skip_publish=false" >> "$GITHUB_OUTPUT"
 
+      - name: Validate frontpage signal links
+        if: steps.mc-gate.outputs.skip_publish != 'true'
+        run: npm run test:frontpage-links
+
+      - name: Validate control-plane cutover
+        if: steps.mc-gate.outputs.skip_publish != 'true'
+        run: npm run test:control-plane-cutover
+
+      - name: Validate retention policy
+        if: steps.mc-gate.outputs.skip_publish != 'true'
+        run: npm run test:retention-policy
+
       - name: Commit + push (if changed)
         if: steps.mc-gate.outputs.skip_publish != 'true'
         run: |
@@ -115,7 +145,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add public/data/marketphase/*.json
-          git add public/data/pipeline/*.json public/data/ops public/data/ops-daily.json
+          git add public/data/pipeline/*.json public/data/ops public/data/ops-daily.json public/data/reports/pipeline-compute-audit-latest.json public/data/reports/pipeline-monitoring-latest.json public/data/reports/frontpage-signal-link-validation-latest.json public/data/reports/stock-analyzer-probability-calibration-latest.json public/data/reports/retention-verification-latest.json
           if git diff --cached --quiet; then
             echo "No staged changes"
             exit 0

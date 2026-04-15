@@ -142,6 +142,19 @@ Current day+night watcher behavior:
   - publish refreshed benchmark rollups and NAS docs
 - target window remains bounded by the configured long-run `END_LOCAL_DATE` and local `08:00` cutoff unless overridden
 
+Current autonomous NAS-only runtime:
+
+- As of `2026-04-14`, the active evidence loops can run without the Mac staying online.
+- Open-probe supervisor and campaign are started directly on the NAS and keep running until their configured `target_end_local`.
+- Native-matrix supervisor and campaign are started directly on the NAS and keep running until their configured `target_end_local`.
+- Current direct-NAS day run:
+  - open-probes supervisor stamp: `20260414T061431Z`
+  - open-probes campaign stamp: `20260414T061440Z`
+  - native-matrix supervisor stamp: `20260414T061431Z`
+  - native-matrix campaign stamp: `20260414T061440Z`
+  - target end: `2026-04-14T23:00:00+02:00`
+- If the Mac goes offline, these NAS-side processes continue; only repo-local report mirroring to the Mac pauses.
+
 ## Current NAS Workspace
 
 ```text

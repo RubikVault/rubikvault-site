@@ -14,8 +14,9 @@
 
 import path from 'node:path';
 import fs from 'node:fs/promises';
-import { REPO_ROOT, loadLocalBars } from '../best-setups-local-loader.mjs';
-import { computeHistIndicators } from './compute-hist-indicators.mjs';
+import { REPO_ROOT, loadLocalBars, setLocalBarsRuntimeOverrides } from '../best-setups-local-loader.mjs';
+import { HistProbsRollingCore } from '../indicators/rolling-core.mjs';
+import { histProbsWriteTargets } from './path-resolver.mjs';
 
 const OUTPUT_BASE = path.join(REPO_ROOT, 'public/data/hist-probs');
 const HORIZONS = [5, 10, 20, 60, 120, 250];
@@ -70,7 +71,7 @@ function aggregateOutcomes(observations) {
 
 // ─── Extract all active events from a computed indicator snapshot ─────────────
 
-function activeEventKeys(snap) {
+export function activeEventKeys(snap) {
   const keys = [];
   if (!snap || snap.short_history_flag) return keys;
 
@@ -104,10 +105,14 @@ function activeEventKeys(snap) {
   return keys;
 }
 
+export function configureComputeOutcomesRuntime(overrides = {}) {
+  setLocalBarsRuntimeOverrides(overrides);
+}
+
 // ─── Main: compute for a single ticker ───────────────────────────────────────
 
-export async function computeOutcomes(ticker) {
-  const bars = await loadLocalBars(ticker);
+export async function computeOutcomes(ticker, options = {}) {
+  const bars = await loadLocalBars(ticker, options);
   if (bars.length < 60) {
     console.log(`[outcomes] ${ticker}: insufficient history (${bars.length} bars)`);
     return null;
@@ -118,10 +123,11 @@ export async function computeOutcomes(ticker) {
 
   const n = bars.length;
   const MIN_WINDOW = 30; // minimum bars needed to compute indicators
+  const rollingCore = new HistProbsRollingCore();
 
-  for (let t = MIN_WINDOW; t < n - 1; t++) {
-    const windowBars = bars.slice(0, t + 1);
-    const snap = computeHistIndicators(windowBars);
+  for (let t = 0; t < n; t++) {
+    const snap = rollingCore.push(bars[t]);
+    if (t < MIN_WINDOW || t >= n - 1) continue;
     const events = activeEventKeys(snap);
     if (!events.length) continue;
 
@@ -183,12 +189,14 @@ export async function computeOutcomes(ticker) {
   }
 
   // Write output
-  const outPath = path.join(OUTPUT_BASE, `${ticker.toUpperCase()}.json`);
+  const { flatPath: outPath, shardPath } = histProbsWriteTargets(OUTPUT_BASE, ticker);
   const tmpPath = path.join(OUTPUT_BASE, `.${ticker.toUpperCase()}.${process.pid}.${Date.now()}.tmp`);
   await fs.mkdir(OUTPUT_BASE, { recursive: true });
+  await fs.mkdir(path.dirname(shardPath), { recursive: true });
   try {
     await fs.writeFile(tmpPath, JSON.stringify(result, null, 2), 'utf8');
     await fs.rename(tmpPath, outPath);
+    await fs.copyFile(outPath, shardPath);
   } finally {
     await fs.rm(tmpPath, { force: true }).catch(() => {});
   }

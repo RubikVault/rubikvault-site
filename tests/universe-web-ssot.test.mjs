@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import {
+  compareUniverseSearchCandidates,
   comparePreferredUniverseRows,
   getUniverseAssetClassOptions,
   isAllowedWebUniverseRecord,
@@ -22,6 +23,36 @@ test('preferred row selection forces US credit ETF over duplicate symbol variant
   const us = { symbol: 'HYG', canonical_id: 'US:HYG', type_norm: 'ETF', exchange: 'US', bars_count: 1200, avg_volume_30d: 1000000 };
   const lse = { symbol: 'HYG', canonical_id: 'LSE:HYG', type_norm: 'STOCK', exchange: 'LSE', bars_count: 3000, avg_volume_30d: 2000000 };
   assert.equal(comparePreferredUniverseRows(us, lse) > 0, true);
+});
+
+test('preferred row selection favors home-market common stock over ETF lookalikes', () => {
+  const usStock = { symbol: 'AMZN', canonical_id: 'US:AMZN', type_norm: 'STOCK', exchange: 'US', name: 'Amazon.com Inc', bars_count: 18, avg_volume_30d: 43000000 };
+  const etf = { symbol: 'AMZN', canonical_id: 'AS:AMZN', type_norm: 'ETF', exchange: 'AS', name: '1X AMZN', bars_count: 1232, avg_volume_30d: 0 };
+  assert.equal(comparePreferredUniverseRows(usStock, etf) > 0, true);
+});
+
+test('preferred row selection favors US primary listing over foreign duplicates', () => {
+  const us = { symbol: 'AAPL', canonical_id: 'US:AAPL', type_norm: 'STOCK', exchange: 'US', name: 'Apple Inc', bars_count: 18, avg_volume_30d: 40000000 };
+  const ba = { symbol: 'AAPL', canonical_id: 'BA:AAPL', type_norm: 'STOCK', exchange: 'BA', name: 'Apple Inc DRC', bars_count: 3536, avg_volume_30d: 55281 };
+  assert.equal(comparePreferredUniverseRows(us, ba) > 0, true);
+});
+
+test('search ranking favors exact normalized issuer match over similarly named stocks', () => {
+  const apple = { symbol: 'AAPL', canonical_id: 'US:AAPL', type_norm: 'STOCK', exchange: 'US', name: 'Apple Inc', avg_volume_30d: 40000000 };
+  const appleRush = { symbol: 'APRU', canonical_id: 'US:APRU', type_norm: 'STOCK', exchange: 'US', name: 'Apple Rush Company', avg_volume_30d: 10000 };
+  assert.equal(compareUniverseSearchCandidates(apple, appleRush, { query: 'apple', symbolQuery: 'APPLE' }) > 0, true);
+});
+
+test('search ranking favors exact normalized amazon issuer over amazonas prefix collisions', () => {
+  const amazon = { symbol: 'AMZN', canonical_id: 'US:AMZN', type_norm: 'STOCK', exchange: 'US', name: 'Amazon.com Inc', avg_volume_30d: 43000000 };
+  const amazonas = { symbol: 'AZFL', canonical_id: 'US:AZFL', type_norm: 'STOCK', exchange: 'US', name: 'Amazonas Florestal Ltd', avg_volume_30d: 1000 };
+  assert.equal(compareUniverseSearchCandidates(amazon, amazonas, { query: 'amazon', symbolQuery: 'AMAZON' }) > 0, true);
+});
+
+test('search ranking favors US primary listing on exact issuer query', () => {
+  const us = { symbol: 'TSLA', canonical_id: 'US:TSLA', type_norm: 'STOCK', exchange: 'US', name: 'Tesla Inc', avg_volume_30d: 61000000 };
+  const lse = { symbol: 'TSLA', canonical_id: 'LSE:TSLA', type_norm: 'ETF', exchange: 'LSE', name: 'LS 1x Tesla Tracker ETP Securities GBP', avg_volume_30d: 12000 };
+  assert.equal(compareUniverseSearchCandidates(us, lse, { query: 'tesla', symbolQuery: 'TESLA' }) > 0, true);
 });
 
 test('asset class filter exposes only supported web classes', () => {

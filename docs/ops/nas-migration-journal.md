@@ -36,6 +36,53 @@ Rules:
 
 ## Entries
 
+### 2026-04-14: NAS-only day run re-seeded on fresh repo state
+
+- Goal: keep evidence collection running for the full day without requiring the MacBook to remain online or in the home network.
+- Actions:
+  - re-synced the current repo state to `/volume1/homes/neoboy/Dev/rubikvault-site`
+  - stopped the previous open-probe and native-matrix supervisor/campaign pairs
+  - restarted both supervisor families directly on the NAS
+  - set both supervisor families to run until `2026-04-14T23:00:00+02:00`
+- Active NAS-side runtime after restart:
+  - open-probes supervisor: `20260414T061431Z`
+  - open-probes campaign: `20260414T061440Z`
+  - native-matrix supervisor: `20260414T061431Z`
+  - native-matrix campaign: `20260414T061440Z`
+- Validation result:
+  - both supervisor PIDs are owned by PID 1 on the NAS
+  - both campaign PIDs are owned by PID 1 on the NAS
+  - `target_end_local` for both families is `2026-04-14T23:00:00+02:00`
+  - the Mac is no longer required as a control plane for this day's active run window
+- Rollback:
+  - stop the four NAS-side processes
+  - remove the four NAS lock directories
+  - restart only the desired supervisor family if needed
+- Decision:
+  - today's run is intentionally NAS-only
+  - repo-local mirroring/report publishing on the Mac is optional during this window
+  - evidence should be read from NAS runtime state first
+
+### 2026-04-14: Run window extended through the next night and tomorrow
+
+- Goal: keep the NAS evidence loops running through the next night and the full next day on the latest synced repo state.
+- Actions:
+  - re-synced the current repo state to `/volume1/homes/neoboy/Dev/rubikvault-site`
+  - stopped the earlier `20260414T061431Z` supervisor pair and their campaigns
+  - restarted both supervisor families with a new target end at `2026-04-15T23:00:00+02:00`
+- Active NAS-side runtime after extension:
+  - open-probes supervisor: `20260414T184858Z`
+  - open-probes campaign: `20260414T184911Z`
+  - native-matrix supervisor: `20260414T184900Z`
+  - native-matrix campaign: `20260414T184912Z`
+- Validation result:
+  - open-probe status shows `phase=monitoring`, `note=campaign_restarted`, `probe_plan_version=2026-04-13a`
+  - native-matrix status shows `phase=monitoring`, `note=campaign_restarted`
+  - both families now carry `target_end_local=2026-04-15T23:00:00+02:00`
+- Decision:
+  - tonight's and tomorrow's evidence collection is NAS-side and autonomous
+  - the Mac is not required as a control plane during this window
+
 ### 2026-04-04: Baseline safety, toolchain, and offload
 
 - Confirmed NAS access via `ssh neonas`.

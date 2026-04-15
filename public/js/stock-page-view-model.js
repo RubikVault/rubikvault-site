@@ -269,20 +269,24 @@ export function inferAssetClass({ ticker, name, universe, fundamentals } = {}) {
   return 'Stock';
 }
 
-export function buildCatalystPresentation({ ticker, name, fundamentals, universe } = {}) {
+export function buildCatalystPresentation({ ticker, name, fundamentals, universe, catalysts } = {}) {
   const assetClass = inferAssetClass({ ticker, name, universe, fundamentals });
-  const nextEarningsDate = fundamentals?.nextEarningsDate
+  const nextEarningsDate = catalysts?.next_earnings_date
+    || fundamentals?.nextEarningsDate
     || fundamentals?.earningsDate
     || universe?.nextEarningsDate
     || null;
   const asOf = normalizeAsOf(fundamentals?.updatedAt);
-  if (Array.isArray(fundamentals?.confirmedCatalysts) && fundamentals.confirmedCatalysts.length > 0) {
+  const confirmedItems = Array.isArray(catalysts?.items) && catalysts.items.length > 0
+    ? catalysts.items
+    : (Array.isArray(fundamentals?.confirmedCatalysts) ? fundamentals.confirmedCatalysts : []);
+  if (confirmedItems.length > 0) {
     return {
       status: 'confirmed',
       renderMode: 'card',
       variant: 'card',
       assetClass,
-      items: fundamentals.confirmedCatalysts,
+      items: confirmedItems,
       title: 'Upcoming Catalysts',
     };
   }
@@ -323,6 +327,10 @@ export function buildCatalystPresentation({ ticker, name, fundamentals, universe
 export function buildFundamentalsPresentation({ ticker, name, fundamentals, universe } = {}) {
   const assetClass = inferAssetClass({ ticker, name, universe, fundamentals });
   const asOf = normalizeAsOf(fundamentals?.updatedAt);
+  const typedStatus = String(fundamentals?.typed_status || '').toUpperCase();
+  const scopeStatus = String(fundamentals?.scope_status || '').toLowerCase();
+  const scopeName = fundamentals?.scope_name || 'Fundamentals-Universum';
+  const scopeRank = Number.isFinite(Number(fundamentals?.scope_rank)) ? Number(fundamentals.scope_rank) : null;
   const metrics = [
     { label: 'Market Cap', value: formatMarketCap(fundamentals?.marketCap) },
     { label: 'P/E (TTM)', value: formatRatio(fundamentals?.pe_ttm, 1) },
@@ -333,6 +341,61 @@ export function buildFundamentalsPresentation({ ticker, name, fundamentals, univ
   const availableLabels = metrics.filter((metric) => metric.value != null).map((metric) => metric.label);
   const unavailableLabels = metrics.filter((metric) => metric.value == null).map((metric) => metric.label);
   const sectorLine = [fundamentals?.sector, fundamentals?.industry].filter(Boolean).join(' · ') || null;
+
+  if (typedStatus === 'OUT_OF_SCOPE' || scopeStatus === 'out_of_scope') {
+    return {
+      status: 'out_of_scope',
+      renderMode: 'compact',
+      assetClass,
+      title: 'Fundamentals',
+      asOf,
+      metrics: [],
+      availableLabels,
+      unavailableLabels,
+      sectorLine,
+      primaryText: 'Nicht im priorisierten Fundamentals-Universum.',
+      secondaryText: scopeRank != null
+        ? `${scopeName} Rang ${scopeRank}`
+        : `${scopeName} deckt nur priorisierte Assets ab.`,
+      dimOpacity: 0.82,
+    };
+  }
+
+  if (typedStatus === 'NOT_APPLICABLE' || scopeStatus === 'not_applicable') {
+    return {
+      status: 'not_applicable',
+      renderMode: 'compact',
+      assetClass,
+      title: 'Fundamentals',
+      asOf,
+      metrics: [],
+      availableLabels,
+      unavailableLabels,
+      sectorLine,
+      primaryText: assetClass === 'ETF'
+        ? 'Für dieses ETF ist kein Fundamentals-Scope vorgesehen.'
+        : 'Fundamentals sind für dieses Asset nicht relevant.',
+      secondaryText: fundamentals?.typed_reason || null,
+      dimOpacity: 0.8,
+    };
+  }
+
+  if (typedStatus === 'UPDATING' || scopeStatus === 'updating') {
+    return {
+      status: 'updating',
+      renderMode: 'compact',
+      assetClass,
+      title: 'Fundamentals',
+      asOf,
+      metrics,
+      availableLabels,
+      unavailableLabels,
+      sectorLine,
+      primaryText: 'Fundamentals werden aktualisiert.',
+      secondaryText: fundamentals?.typed_reason || (asOf ? `Stand ${asOf}` : 'Scope-Mitglied, Refresh ausstehend.'),
+      dimOpacity: 0.78,
+    };
+  }
 
   if (!fundamentals || availableCount === 0) {
     return {
@@ -380,10 +443,16 @@ export function buildFundamentalsPresentation({ ticker, name, fundamentals, univ
 export function buildModuleFreshnessPresentation(payload = {}, now = new Date()) {
   const data = payload?.data || {};
   const prices = data?.market_prices || {};
-  const bars = data?.bars || [];
   const evaluation = payload?.evaluation_v4 || {};
   const moduleFreshness = data?.module_freshness || {};
-  const historicalAsOf = normalizeAsOf(moduleFreshness.historical_as_of || bars[bars.length - 1]?.date);
+  const historicalProfile = data?.historical_profile || {};
+  const historicalAsOf = normalizeAsOf(
+    moduleFreshness.historical_profile_as_of
+    || historicalProfile?.profile?.latest_date
+    || historicalProfile?.regime?.date
+    || moduleFreshness.historical_as_of
+    || null
+  );
   const items = [
     { label: 'Price', value: normalizeAsOf(moduleFreshness.price_as_of || prices?.date) },
     { label: 'Historical', value: historicalAsOf },
@@ -394,7 +463,7 @@ export function buildModuleFreshnessPresentation(payload = {}, now = new Date())
   ].filter((item) => item.value);
 
   return items.map((item) => {
-    const ageDays = calendarDaysBetween(item.value, now);
+    const ageDays = businessDaysBetween(item.value, now);
     return {
       ...item,
       ageDays,
@@ -421,6 +490,7 @@ export function buildTrustPresentation({
   const isPartial = modelEvidenceLimited
     || fundamentalsStatus === 'degraded'
     || fundamentalsStatus === 'unavailable'
+    || fundamentalsStatus === 'updating'
     || moduleFreshness.some((item) => item.state === 'stale' || item.state === 'delayed');
   const coverageLabel = isPartial ? 'partial' : 'full';
   const canonicalDate = normalizeAsOf(priceAsOf || decisionAsOf);

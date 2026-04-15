@@ -9,6 +9,33 @@
   <link rel="icon" type="image/svg+xml" href="/images/branding/rubikvault_stacked_logo.svg" />
   <link rel="apple-touch-icon" href="/images/branding/rubikvault_stacked_logo.svg" />
   <link rel="stylesheet" href="/style.css" />
+  <script>
+    (() => {
+      const host = window.location.hostname;
+      const isLocal = host === '127.0.0.1' || host === 'localhost' || host === '0.0.0.0';
+      if (!isLocal) return;
+      const buildId = 'rv-local-dev-2026-04-12-stock';
+      window.__RV_DEV_BUILD_ID__ = buildId;
+      const purgeLocalDevState = async () => {
+        try {
+          if ('serviceWorker' in navigator) {
+            const registrations = await navigator.serviceWorker.getRegistrations();
+            await Promise.all(registrations.map((registration) => registration.unregister()));
+          }
+          if ('caches' in window) {
+            const cacheNames = await caches.keys();
+            await Promise.all(cacheNames.filter((name) => name.startsWith('rv-')).map((name) => caches.delete(name)));
+          }
+          sessionStorage.setItem('rv.dev.cache.reset', buildId);
+        } catch (error) {
+          console.warn('[RV][stock][local-cache-reset]', error);
+        }
+      };
+      if (sessionStorage.getItem('rv.dev.cache.reset') !== buildId) {
+        window.addEventListener('load', () => { void purgeLocalDevState(); }, { once: true });
+      }
+    })();
+  </script>
   <style>
     :root {
       --bg: #020617;
@@ -430,7 +457,8 @@
       </nav>
       <div class="rv-header-tools" aria-live="polite">
         <div class="rv-data-updated" style="font-size: 12px; color: var(--rv-text-muted);">Snapshot: <span
-            id="rv-data-updated-date">...</span> · Price as-of: <span id="rv-data-asof">...</span></div>
+            id="rv-data-updated-date">...</span> · Price as-of: <span id="rv-data-asof">...</span><span
+            id="rv-dev-build-indicator" style="display:none"></span></div>
         <div class="rv-market-clock">
           <span class="rv-clock-time" id="rv-ny-time">NY: --:--:--</span>
           <span class="rv-clock-status">
@@ -521,12 +549,19 @@
       } = await import('/js/stock-page-view-model.js');
       let payload;
       let _rvDataSource = 'v2';
+      let _rvResolution = { mode: 'full', source: 'v2', notice: null, missingModules: [] };
       try {
         if (isV4View) {
           const { fetchWithFallback } = await import('/js/rv-v2-client.js');
           const resolved = await fetchWithFallback(ticker);
           payload = resolved.payload;
           _rvDataSource = resolved.source === 'v2' ? 'v2' : 'v1';
+          _rvResolution = {
+            mode: resolved.mode || 'full',
+            source: resolved.source || _rvDataSource,
+            notice: resolved.notice || null,
+            missingModules: Array.isArray(resolved.missingModules) ? resolved.missingModules : [],
+          };
         } else {
           // Legacy V1 fallback (if needed for non-analyzer routes)
           const res = await fetch('/api/stock?ticker=' + encodeURIComponent(ticker));
@@ -539,6 +574,25 @@
         document.getElementById('sc-content').innerHTML = '<div style="color:var(--red);text-align:center;padding:2rem">Unable to load data. Please try again.</div>'; return;
       }
       window._rvDataSource = _rvDataSource;
+      window._rvResolution = _rvResolution;
+
+      if (_rvResolution.mode === 'empty_state') {
+        document.title = ticker + ' — Analysis · RubikVault';
+        document.getElementById('sc-ticker').textContent = ticker;
+        document.getElementById('sc-symbol').textContent = '';
+        document.getElementById('sc-price').textContent = '—';
+        const asOf = document.getElementById('rv-data-asof');
+        if (asOf) asOf.textContent = 'unavailable';
+        document.getElementById('sc-content').innerHTML = `
+          <div style="max-width:760px;margin:0 auto;padding:1.5rem;border:1px solid var(--border);border-radius:16px;background:rgba(255,255,255,0.02)">
+            <div style="font-size:1rem;font-weight:800;color:var(--text);margin-bottom:.5rem">Data currently unavailable</div>
+            <div style="font-size:.85rem;line-height:1.6;color:var(--text-muted)">
+              ${_esc(_rvResolution.notice || `No complete stock page data is currently available for ${ticker}.`)}
+            </div>
+          </div>
+        `;
+        return;
+      }
 
       // Data Guard: validate and annotate payload before rendering
       const { guardPayload } = await import('/js/stock-data-guard.js');
@@ -609,10 +663,11 @@
 
       // Global integrity status
       const _integrityItems = [];
+      const _learningGate = _decision.learning_gate || payload.evaluation_v4?.decision?.learning_gate || null;
       if (_decision.regime_transition_active) _integrityItems.push({ text: 'Regime transition active', color: 'var(--red)' });
       if (fundamentalsView.status === 'unavailable' || fundamentalsView.status === 'degraded') _integrityItems.push({ text: 'Fundamentals limited · Technisches Modell unabhängig davon', color: 'var(--yellow)' });
-      if ((_decision.learning_status || payload.evaluation_v4?.decision?.learning_status) === 'BOOTSTRAP') _integrityItems.push({ text: 'Learning bootstrap active', color: 'var(--yellow)' });
-      if (_decision.minimum_n_not_met || payload.evaluation_v4?.decision?.minimum_n_not_met || payload.evaluation_v4?.decision?.safety_switch?.trigger === 'minimum_n_not_met') _integrityItems.push({ text: 'Minimum sample gate not met', color: 'var(--yellow)' });
+      if ((_learningGate?.learning_status || _decision.learning_status || payload.evaluation_v4?.decision?.learning_status) === 'BOOTSTRAP') _integrityItems.push({ text: 'Learning bootstrap active', color: 'var(--yellow)' });
+      if (_learningGate?.minimum_n_not_met || _decision.minimum_n_not_met || payload.evaluation_v4?.decision?.minimum_n_not_met || payload.evaluation_v4?.decision?.safety_switch?.trigger === 'minimum_n_not_met') _integrityItems.push({ text: 'Minimum sample gate not met', color: 'var(--yellow)' });
       if (moduleFreshness.some(item => item.state === 'stale')) _integrityItems.push({ text: 'Modules have mixed as-of dates', color: 'var(--yellow)' });
       if (_guard.corrections.modelConsensus?.degraded) _integrityItems.push({ text: 'Model evidence limited', color: 'var(--yellow)' });
       if (_guard.panelGates.keyLevels?.show === false) _integrityItems.push({ text: 'Key levels awaiting coherent price stack', color: 'var(--yellow)' });
@@ -1362,6 +1417,7 @@
         name: displayName,
         fundamentals: data.fundamentals,
         universe: payload.universe || payload.evaluation_v4?.universe || null,
+        catalysts: data.catalysts || null,
       });
       const breakoutDensityView = buildBreakoutDensityPresentation({ breakout: data.breakout_v2 || {}, verdict: effectiveVerdict });
       const catalystMode = catalystView.renderMode || catalystView.variant || 'inline';
@@ -1748,9 +1804,27 @@
     <div id="rv-bottom-sheet-body"></div>
   </div>
 
-  `;
+      `;
 
       document.getElementById('sc-content').innerHTML = layout;
+      if (_rvResolution.mode === 'v2_degraded' || _rvResolution.mode === 'v1_fallback') {
+        const banner = document.createElement('div');
+        banner.id = 'rv-degraded-banner';
+        banner.setAttribute('role', 'alert');
+        banner.style.cssText = [
+          'background:rgba(251,191,36,0.1)',
+          'border:1px solid rgba(251,191,36,0.35)',
+          'border-radius:10px',
+          'padding:0.8rem 1rem',
+          'margin:0 0 1rem 0',
+          'color:#fbbf24',
+          'font-size:0.82rem',
+          'line-height:1.5',
+        ].join(';');
+        const label = _rvResolution.mode === 'v1_fallback' ? 'Legacy fallback mode' : 'Partial data mode';
+        banner.innerHTML = `<strong>${label}</strong> — ${_esc(_rvResolution.notice || 'Showing available data.')}`;
+        document.getElementById('sc-content')?.prepend(banner);
+      }
 
       window._applyMobilePanel = function (panelKey = 'overview') {
         const grid = document.querySelector('.dash-grid');
@@ -2238,6 +2312,11 @@
       const elAsOf = document.getElementById("rv-data-asof");
       if (elAsOf && window._rvCanonicalMetrics?.asOf) { elAsOf.textContent = window._rvCanonicalMetrics.asOf + ' (EOD)'; }
       else if (elAsOf) { elAsOf.textContent = 'unavailable'; }
+      const devBuild = document.getElementById("rv-dev-build-indicator");
+      if (devBuild && window.__RV_DEV_BUILD_ID__ && /^(127\\.0\\.0\\.1|localhost|0\\.0\\.0\\.0)$/i.test(window.location.hostname)) {
+        devBuild.style.display = 'inline';
+        devBuild.textContent = ' · Dev build: ' + window.__RV_DEV_BUILD_ID__;
+      }
     })();
 
     // Search bar navigation

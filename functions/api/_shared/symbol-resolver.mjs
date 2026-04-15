@@ -32,6 +32,8 @@ function normalizeExactKey(input) {
     .toUpperCase();
 }
 
+let cachedLookupMaps = globalThis.__rvCachedLookupMaps || null;
+
 async function fetchResolveIndex(request, { preferFull = false } = {}) {
   const baseUrl = new URL(request.url);
   const candidates = preferFull
@@ -143,21 +145,44 @@ export async function resolveSymbol(query, request) {
     };
   }
 
-  let indexPayload;
-  try {
-    indexPayload = await fetchResolveIndex(request);
-  } catch (error) {
+  const asTicker = normalizeTicker(normalized);
+  const treatAsTicker = Boolean(asTicker);
+  if (treatAsTicker) {
     return {
-      ok: false,
-      error: {
-        code: error.code || 'RESOLVE_INDEX_UNAVAILABLE',
-        message: 'Resolve index is not available',
-        details: { message: error.message }
+      ok: true,
+      data: {
+        ticker: asTicker,
+        name: null,
+        exchange: null,
+        country: null,
+        canonical_id: null,
+        type_norm: null,
+        confidence: 1,
+        method: 'ticker_fast_path',
       }
     };
   }
 
-  let maps = buildLookupMaps(indexPayload);
+  let maps = cachedLookupMaps;
+  if (!maps) {
+    let indexPayload;
+    try {
+      indexPayload = await fetchResolveIndex(request);
+    } catch (error) {
+      return {
+        ok: false,
+        error: {
+          code: error.code || 'RESOLVE_INDEX_UNAVAILABLE',
+          message: 'Resolve index is not available',
+          details: { message: error.message }
+        }
+      };
+    }
+    maps = buildLookupMaps(indexPayload);
+    maps.hasFullEntries = Array.isArray(indexPayload?.entries);
+    cachedLookupMaps = maps;
+    globalThis.__rvCachedLookupMaps = maps;
+  }
   const exactKey = normalizeExactKey(normalized);
   const exactHit = maps.byExact.get(exactKey) || null;
   if (exactHit) {
@@ -176,29 +201,13 @@ export async function resolveSymbol(query, request) {
     };
   }
 
-  const asTicker = normalizeTicker(normalized);
-  const treatAsTicker = asTicker && normalized === normalized.toUpperCase();
-  if (treatAsTicker) {
-    const tickerHit = maps.byTicker.get(asTicker) || null;
-    return {
-      ok: true,
-      data: {
-        ticker: asTicker,
-        name: tickerHit?.name || null,
-        exchange: tickerHit?.exchange || null,
-        country: tickerHit?.country || null,
-        canonical_id: tickerHit?.canonical_id || null,
-        type_norm: tickerHit?.type_norm || null,
-        confidence: 1,
-        method: 'ticker'
-      }
-    };
-  }
-
-  if (!Array.isArray(indexPayload?.entries)) {
+  if (!maps.hasFullEntries) {
     try {
-      indexPayload = await fetchResolveIndex(request, { preferFull: true });
+      const indexPayload = await fetchResolveIndex(request, { preferFull: true });
       maps = buildLookupMaps(indexPayload);
+      maps.hasFullEntries = Array.isArray(indexPayload?.entries);
+      cachedLookupMaps = maps;
+      globalThis.__rvCachedLookupMaps = maps;
     } catch {
       // keep lightweight maps and fall through
     }

@@ -65,25 +65,26 @@ function runNodeArgs(args = [], env = {}, commandLabel = '') {
   };
 }
 
-export function evaluateDashboardSeverity(systemStatus, dashboardMeta) {
-  const severity = String(systemStatus?.summary?.severity || '').toLowerCase();
-  const liveStatus = String(dashboardMeta?.system?.live_status || '').toLowerCase();
-  const truthState = String(dashboardMeta?.system?.data_truth_state || '');
-  if (severity === 'ok') {
-    return {
-      expectedSeverity: severity,
-      pass: liveStatus === 'ok' && /fresh|consistent|operational/i.test(truthState),
-    };
-  }
-  if (severity === 'degraded') {
-    return {
-      expectedSeverity: severity,
-      pass: liveStatus === 'degraded',
-    };
-  }
+export function evaluateDashboardSeverity(systemStatus, dashboardStatus) {
+  const systemBlockingSeverity = String(systemStatus?.summary?.blocking_severity || '').toLowerCase();
+  const dashboardBlockingSeverity = String(
+    dashboardStatus?.blocking_severity || dashboardStatus?.system?.blocking_severity || ''
+  ).toLowerCase();
+  const dashboardUiGreen = dashboardStatus?.ui_green ?? dashboardStatus?.system?.ui_green;
+  const dashboardReleaseReady = dashboardStatus?.release_ready ?? dashboardStatus?.system?.production_ready;
+  const dashboardLiveStatus = String(dashboardStatus?.system?.live_status || '').toLowerCase();
+  const effectiveBlockingSeverity = dashboardBlockingSeverity || systemBlockingSeverity || 'unknown';
+
   return {
-    expectedSeverity: severity || 'unknown',
-    pass: liveStatus === 'failed',
+    expectedSeverity: effectiveBlockingSeverity,
+    pass: (
+      effectiveBlockingSeverity === 'ok' &&
+      dashboardUiGreen === true &&
+      dashboardReleaseReady === true &&
+      dashboardLiveStatus === 'ok' &&
+      (systemBlockingSeverity ? systemBlockingSeverity === 'ok' : true) &&
+      systemStatus?.summary?.ui_green !== false
+    ),
   };
 }
 
@@ -93,10 +94,10 @@ async function main() {
   const steps = {
     ui_logic: runNodeScript('tests/stock-analyzer-ui.test.mjs'),
     v4_contract: runNodeScript('tests/stock-insights-v4.test.mjs'),
-    v2_summary_truth: runNodeScript('tests/data-interface-summary-selection.test.mjs'),
-    v2_promotion_gate: runNodeScript('tests/rv-v2-promotion-gate.test.mjs'),
+    v4_truth: runNodeArgs(['--test', path.resolve(ROOT, 'tests/rv-v2-client.test.mjs')], {}, `${process.execPath} --test tests/rv-v2-client.test.mjs`),
+    no_legacy_fallback: runNodeArgs(['--test', path.resolve(ROOT, 'tests/stock-analyzer-no-legacy-fallback.test.mjs')], {}, `${process.execPath} --test tests/stock-analyzer-no-legacy-fallback.test.mjs`),
     dashboard_meta: runNodeArgs(['--test', path.resolve(ROOT, 'tests/dashboard_v7_meta.test.mjs')], {}, `${process.execPath} --test tests/dashboard_v7_meta.test.mjs`),
-    non_regression_unit: runNodeScript('tests/stock-analyzer-non-regression-gate.test.mjs'),
+    q1_target_truth: runNodeArgs(['--test', path.resolve(ROOT, 'tests/ops/q1-delta-ingest-hardening.test.mjs')], {}, `${process.execPath} --test tests/ops/q1-delta-ingest-hardening.test.mjs`),
     ui_artifacts: runNodeScript('scripts/ci/verify-stock-ui-artifacts.mjs', [], {
       RV_STOCK_UI_STRICT: '0',
     }),
@@ -104,22 +105,23 @@ async function main() {
 
   const systemStatus = await readJson(path.resolve(ROOT, 'public/data/reports/system-status-latest.json'), null);
   const dashboardMetaDoc = await readJson(path.resolve(ROOT, 'public/dashboard_v6_meta_data.json'), null);
-  const dashboardGate = evaluateDashboardSeverity(systemStatus, dashboardMetaDoc);
+  const dashboardV7StatusDoc = await readJson(path.resolve(ROOT, 'public/data/ui/dashboard-v7-status.json'), null);
+  const dashboardGate = evaluateDashboardSeverity(systemStatus, dashboardV7StatusDoc || dashboardMetaDoc);
 
   const checks = {
     ui_logic_ok: steps.ui_logic.ok,
     v4_contract_ok: steps.v4_contract.ok,
-    v2_summary_truth_ok: steps.v2_summary_truth.ok,
-    v2_promotion_gate_ok: steps.v2_promotion_gate.ok,
+    v4_truth_ok: steps.v4_truth.ok,
+    no_legacy_fallback_ok: steps.no_legacy_fallback.ok,
     dashboard_meta_ok: steps.dashboard_meta.ok,
-    non_regression_unit_ok: steps.non_regression_unit.ok,
+    q1_target_truth_ok: steps.q1_target_truth.ok,
     ui_artifacts_ok: steps.ui_artifacts.ok,
     dashboard_truth_ok: dashboardGate.pass,
   };
 
   const pass = Object.values(checks).every(Boolean);
   const report = {
-    schema_version: 'rv.stock-analyzer.non-regression-gate.v1',
+    schema_version: 'rv.stock-analyzer.non-regression-gate.v2',
     generated_at: new Date().toISOString(),
     local_base: String(args.localBase || '').replace(/\/+$/, ''),
     benchmark_base: String(args.benchmarkBase || '').replace(/\/+$/, ''),
@@ -128,6 +130,7 @@ async function main() {
     checks,
     dashboard: {
       system_summary: systemStatus?.summary || null,
+      v7_status: dashboardV7StatusDoc || null,
       meta_summary: dashboardMetaDoc?.system || null,
       gate: dashboardGate,
     },

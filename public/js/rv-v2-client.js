@@ -1,6 +1,6 @@
 /**
  * RubikVault V2 Client Adapter
- * Provides dual-path fetching: V2 endpoints with V1 fallback.
+ * Uses the V2/V4 contract path only and returns typed empty state when incomplete.
  */
 
 import { buildCanonicalMarketContext } from './stock-ssot.js';
@@ -57,45 +57,103 @@ export async function fetchFundamentals(ticker) {
   return { ok: true, data: payload?.data || null, meta: payload?.meta || payload?.metadata || null, source: 'fundamentals' };
 }
 
-export async function fetchV1Stock(ticker) {
-  const payload = await fetchJsonWithTimeout(`/api/stock?ticker=${encodeURIComponent(ticker)}`);
-  return { ok: true, data: payload || null, source: 'v1_stock' };
+function settleModule(promise, source) {
+  return promise.catch((error) => ({
+    ok: false,
+    data: null,
+    meta: {},
+    source,
+    error: error instanceof Error ? error.message : String(error || source),
+  }));
+}
+
+function moduleMissingKeys({ summary, historical, governance, fundamentals, historicalProfile }) {
+  return [
+    !summary?.data?.ticker && 'summary',
+    !(Array.isArray(historical?.data?.bars) || summary?.data?.latest_bar) && 'price_history',
+    !governance?.data && 'governance',
+    !fundamentals?.data && 'fundamentals',
+    !historicalProfile?.data && 'historical_profile',
+  ].filter(Boolean);
+}
+
+function missingModulesLabel(missingModules = []) {
+  return missingModules.length ? missingModules.map((item) => item.replace(/_/g, ' ')).join(', ') : 'unknown';
+}
+
+function buildEmptyStatePayload(ticker) {
+  return {
+    data: {
+      ticker,
+      name: ticker,
+      bars: [],
+      market_prices: {},
+      market_stats: { stats: {} },
+      change: {},
+      fundamentals: null,
+      module_freshness: {},
+    },
+    metadata: {
+      request: {
+        ticker,
+        normalized_ticker: ticker,
+        effective_ticker: ticker,
+      },
+      as_of: null,
+    },
+    meta: {},
+    states: {},
+    decision: {},
+    explanation: {},
+    evaluation_v4: null,
+    universe: null,
+    market_score: null,
+    error: null,
+    _rv_source: 'empty_state',
+  };
 }
 
 export async function fetchV2StockPage(ticker) {
   const [summary, historical, governance, fundamentals, historicalProfile] = await Promise.all([
-    fetchV2Summary(ticker),
-    fetchV2Historical(ticker).catch(() => ({ ok: false, data: null, meta: {}, source: 'v2_historical' })),
-    fetchV2Governance(ticker),
-    fetchFundamentals(ticker).catch(() => ({ ok: false, data: null, meta: {}, source: 'fundamentals' })),
-    fetchV2HistoricalProfile(ticker).catch(() => ({ ok: false, data: null, meta: {}, source: 'v2_historical_profile' })),
+    settleModule(fetchV2Summary(ticker), 'v2_summary'),
+    settleModule(fetchV2Historical(ticker), 'v2_historical'),
+    settleModule(fetchV2Governance(ticker), 'v2_governance'),
+    settleModule(fetchFundamentals(ticker), 'fundamentals'),
+    settleModule(fetchV2HistoricalProfile(ticker), 'v2_historical_profile'),
   ]);
   const latestHistoricalDate = historical?.data?.bars?.length
     ? historical.data.bars[historical.data.bars.length - 1]?.date
     : summary?.data?.latest_bar?.date || null;
-  const summaryDate = summary?.data?.market_prices?.date || summary?.meta?.data_date || null;
-  const needsLegacyEnrichment = Boolean(
-    !summary?.data?.name ||
-    !governance?.data?.universe?.name ||
-    !fundamentals?.ok || !fundamentals?.data ||
-    (latestHistoricalDate && summaryDate && latestHistoricalDate > summaryDate)
-  );
-  const legacy = needsLegacyEnrichment
-    ? await fetchV1Stock(ticker).catch(() => ({ ok: false, data: null, source: 'v1_stock' }))
-    : { ok: false, data: null, source: 'v1_stock' };
 
-  const fullContractOk = Boolean(
-    summary?.data?.ticker &&
-    (Array.isArray(historical?.data?.bars) || summary?.data?.latest_bar) &&
-    governance?.data
-  );
+  const missingModules = moduleMissingKeys({ summary, historical, governance, fundamentals, historicalProfile });
+  const coreContractOk = Boolean(summary?.data?.ticker && governance?.data);
 
-  if (!fullContractOk) {
-    throw new Error('V2 page contract incomplete');
+  if (!coreContractOk) {
+    return {
+      ok: false,
+      mode: 'incomplete',
+      source: 'v2',
+      ticker,
+      missingModules,
+      notice: `V2 core modules incomplete (${missingModulesLabel(missingModules)}).`,
+      moduleErrors: {
+        summary: summary?.error || null,
+        historical: historical?.error || null,
+        governance: governance?.error || null,
+        fundamentals: fundamentals?.error || null,
+        historical_profile: historicalProfile?.error || null,
+      },
+    };
   }
 
   return {
     ok: true,
+    mode: missingModules.length ? 'v2_degraded' : 'full',
+    degraded: missingModules.length > 0,
+    missingModules,
+    notice: missingModules.length
+      ? `Partial V2 data available (${missingModulesLabel(missingModules)}). Showing available modules.`
+      : null,
     data: {
       summary: summary.data,
       historical: historical?.data || { ticker: summary.data.ticker, bars: summary?.data?.latest_bar ? [summary.data.latest_bar] : [], indicators: [], breakout_v2: null },
@@ -110,7 +168,7 @@ export async function fetchV2StockPage(ticker) {
       },
       governance: governance.data,
       fundamentals: fundamentals?.data || null,
-      legacy: legacy?.data || null,
+      legacy: null,
     },
     meta: {
       summary: summary.meta || null,
@@ -118,7 +176,7 @@ export async function fetchV2StockPage(ticker) {
       governance: governance.meta || null,
       fundamentals: fundamentals?.meta || null,
       historical_profile: historicalProfile?.meta || null,
-      legacy: legacy?.data?.metadata || null,
+      legacy: null,
     },
   };
 }
@@ -143,6 +201,9 @@ function hasMeaningfulMarketStats(doc) {
 
 function countMeaningfulFundamentals(doc) {
   if (!doc || typeof doc !== 'object') return 0;
+  const typedStatus = String(doc?.typed_status || '').toUpperCase();
+  if (typedStatus === 'OUT_OF_SCOPE' || typedStatus === 'NOT_APPLICABLE') return 2;
+  if (typedStatus === 'UPDATING') return 0;
   const keys = ['marketCap', 'pe_ttm', 'eps_ttm', 'dividendYield', 'sector', 'industry', 'companyName', 'nextEarningsDate'];
   return keys.filter((key) => doc[key] != null && doc[key] !== '').length;
 }
@@ -159,16 +220,16 @@ function isMeaningfulIdentityName(name, ticker) {
   return Boolean(label) && label.toUpperCase() !== symbol;
 }
 
-function pickIdentityName({ ticker, summaryName, fundamentalsName, universeName, legacyName }) {
-  const candidates = [summaryName, fundamentalsName, universeName, legacyName];
+function pickIdentityName({ ticker, summaryName, fundamentalsName, universeName }) {
+  const candidates = [summaryName, fundamentalsName, universeName];
   for (const candidate of candidates) {
     if (isMeaningfulIdentityName(candidate, ticker)) return String(candidate).trim();
   }
   return ticker || null;
 }
 
-function hasMeaningfulIdentity({ ticker, summaryName, fundamentalsName, universeName, legacyName }) {
-  return [summaryName, fundamentalsName, universeName, legacyName].some((candidate) => isMeaningfulIdentityName(candidate, ticker));
+function hasMeaningfulIdentity({ ticker, summaryName, fundamentalsName, universeName }) {
+  return [summaryName, fundamentalsName, universeName].some((candidate) => isMeaningfulIdentityName(candidate, ticker));
 }
 
 function dateLagDays(olderValue, newerValue) {
@@ -179,7 +240,7 @@ function dateLagDays(olderValue, newerValue) {
   return Number.isFinite(ms) ? Math.max(0, Math.round(ms / 86400000)) : null;
 }
 
-function buildModuleFreshnessMap(v2, legacyPayload = null) {
+function buildModuleFreshnessMap(v2) {
   const historicalDate = v2?.data?.historical?.bars?.length
     ? v2.data.historical.bars[v2.data.historical.bars.length - 1]?.date
     : null;
@@ -191,21 +252,22 @@ function buildModuleFreshnessMap(v2, legacyPayload = null) {
     forecast_as_of: evaluation?.input_states?.forecast?.as_of || null,
     quantlab_as_of: evaluation?.input_states?.quantlab?.as_of || null,
     fundamentals_as_of: v2?.data?.fundamentals?.updatedAt || v2?.meta?.fundamentals?.asOf || null,
-    legacy_as_of: legacyPayload?.metadata?.as_of || null,
   };
 }
 
-export function evaluateV2PromotionGate(v2, legacyPayload = null) {
+export function evaluateV2PromotionGate(v2) {
   const summary = v2?.data?.summary || {};
   const governance = v2?.data?.governance || {};
   const fundamentals = v2?.data?.fundamentals || null;
   const evaluation = governance?.evaluation_v4 || {};
-  const moduleFreshness = buildModuleFreshnessMap(v2, legacyPayload);
+  const moduleFreshness = buildModuleFreshnessMap(v2);
   const latestHistoricalDate = moduleFreshness.historical_as_of;
   const summaryPriceDate = toIsoDate(summary?.market_prices?.date);
   const summaryProvider = String(summary?.market_prices?.source_provider || '').toLowerCase();
-  const learningStatus = String(evaluation?.decision?.learning_status || summary?.decision?.learning_status || '').toUpperCase();
+  const learningGate = evaluation?.decision?.learning_gate || summary?.decision?.learning_gate || null;
+  const learningStatus = String(learningGate?.learning_status || evaluation?.decision?.learning_status || summary?.decision?.learning_status || '').toUpperCase();
   const minimumNNotMet = Boolean(
+    learningGate?.minimum_n_not_met === true ||
     evaluation?.decision?.minimum_n_not_met ||
     evaluation?.decision?.safety?.trigger === 'minimum_n_not_met' ||
     summary?.decision?.minimum_n_not_met
@@ -222,7 +284,6 @@ export function evaluateV2PromotionGate(v2, legacyPayload = null) {
     summaryName: summary?.name,
     fundamentalsName: fundamentals?.companyName,
     universeName: governance?.universe?.name,
-    legacyName: legacyPayload?.data?.name,
   })) reasons.push('identity_incomplete');
   if (learningStatus === 'BOOTSTRAP') reasons.push('learning_bootstrap');
   if (minimumNNotMet) reasons.push('minimum_n_not_met');
@@ -236,7 +297,9 @@ export function evaluateV2PromotionGate(v2, legacyPayload = null) {
   const assetClassHay =
     `${summary?.ticker || ''} ${summary?.name || ''} ${governance?.universe?.name || ''} ${governance?.universe?.asset_class || ''} ${governance?.universe?.security_type || ''}`.toLowerCase();
   const isEtf = /\betf\b|\bexchange traded fund\b|\btrust\b/.test(assetClassHay);
-  if (!isEtf && countMeaningfulFundamentals(fundamentals) < 2) reasons.push('fundamentals_incomplete');
+  const fundamentalsTypedStatus = String(fundamentals?.typed_status || '').toUpperCase();
+  const fundamentalsNeutral = fundamentalsTypedStatus === 'OUT_OF_SCOPE' || fundamentalsTypedStatus === 'NOT_APPLICABLE';
+  if (!isEtf && !fundamentalsNeutral && countMeaningfulFundamentals(fundamentals) < 2) reasons.push('fundamentals_incomplete');
 
   const warningOnlyReasons = new Set([
     'learning_bootstrap',
@@ -260,17 +323,15 @@ export function evaluateV2PromotionGate(v2, legacyPayload = null) {
         summaryName: summary?.name,
         fundamentalsName: fundamentals?.companyName,
         universeName: governance?.universe?.name,
-        legacyName: legacyPayload?.data?.name,
       }),
       is_etf: isEtf,
     },
   };
 }
 
-function pickLatestMarketPrices(summaryPrices, latestBar, legacyPayload) {
-  const legacyPrices = legacyPayload?.data?.market_prices || null;
+function pickLatestMarketPrices(summaryPrices, latestBar) {
   const barPrices = latestBar ? {
-    ticker: legacyPayload?.data?.ticker || null,
+    ticker: null,
     date: latestBar.date || null,
     close: latestBar.close ?? null,
     open: latestBar.open ?? null,
@@ -278,7 +339,7 @@ function pickLatestMarketPrices(summaryPrices, latestBar, legacyPayload) {
     low: latestBar.low ?? null,
     volume: latestBar.volume ?? null,
   } : null;
-  const candidates = [summaryPrices, legacyPrices, barPrices].filter(Boolean);
+  const candidates = [summaryPrices, barPrices].filter(Boolean);
   candidates.sort((a, b) => String(b?.date || '').localeCompare(String(a?.date || '')));
   return candidates[0] || summaryPrices || {};
 }
@@ -292,12 +353,12 @@ export function transformV2ToStockShape(v2Data, v2Meta, historicalData = null, g
     summaryStats: hasMeaningfulMarketStats(v2Data.market_stats) ? v2Data.market_stats : null,
     historicalBars: bars,
     historicalIndicators: historicalData?.indicators || null,
-    legacyPrices: legacyPayload?.data?.market_prices || null,
-    legacyStats: legacyPayload?.data?.market_stats || null,
+    legacyPrices: null,
+    legacyStats: null,
   });
-  const marketPrices = canonicalMarket.marketPrices || pickLatestMarketPrices(v2Data.market_prices || {}, latestBar, legacyPayload);
-  const marketStats = canonicalMarket.marketStats || (hasMeaningfulMarketStats(v2Data.market_stats) ? v2Data.market_stats : (legacyPayload?.data?.market_stats || v2Data.market_stats || {}));
-  const mergedFundamentals = isMeaningfulFundamentals(fundamentalsData) ? fundamentalsData : (legacyPayload?.data?.fundamentals || fundamentalsData || null);
+  const marketPrices = canonicalMarket.marketPrices || pickLatestMarketPrices(v2Data.market_prices || {}, latestBar);
+  const marketStats = canonicalMarket.marketStats || (hasMeaningfulMarketStats(v2Data.market_stats) ? v2Data.market_stats : (v2Data.market_stats || {}));
+  const mergedFundamentals = isMeaningfulFundamentals(fundamentalsData) ? fundamentalsData : (fundamentalsData || null);
   const pageAsOf = marketPrices?.date || latestBar?.date || v2Meta?.data_date || null;
   const moduleFreshness = {
     ...(v2Data?.module_freshness || {}),
@@ -315,7 +376,6 @@ export function transformV2ToStockShape(v2Data, v2Meta, historicalData = null, g
     summaryName: v2Data.name,
     fundamentalsName: mergedFundamentals?.companyName,
     universeName: governanceData?.universe?.name,
-    legacyName: legacyPayload?.data?.name,
   });
   const historicalProfile = historicalProfileData || {
     ticker: v2Data.ticker,
@@ -326,6 +386,14 @@ export function transformV2ToStockShape(v2Data, v2Meta, historicalData = null, g
       reason: 'Historical profile is still loading or has not been generated for this asset yet.',
     },
   };
+  const catalysts = v2Data?.catalysts
+    || (Array.isArray(mergedFundamentals?.confirmedCatalysts) || mergedFundamentals?.nextEarningsDate
+      ? {
+        status: Array.isArray(mergedFundamentals?.confirmedCatalysts) && mergedFundamentals.confirmedCatalysts.length > 0 ? 'confirmed' : (mergedFundamentals?.nextEarningsDate ? 'estimated' : 'unavailable'),
+        next_earnings_date: mergedFundamentals?.nextEarningsDate || null,
+        items: mergedFundamentals?.confirmedCatalysts || [],
+      }
+      : null);
   return {
     data: {
       ticker: v2Data.ticker,
@@ -336,6 +404,7 @@ export function transformV2ToStockShape(v2Data, v2Meta, historicalData = null, g
       change: v2Data.change || {},
       breakout_v2: historicalData?.breakout_v2 || null,
       fundamentals: mergedFundamentals,
+      catalysts,
       historical_profile: historicalProfile,
       ssot: {
         market_context: {
@@ -356,9 +425,9 @@ export function transformV2ToStockShape(v2Data, v2Meta, historicalData = null, g
         },
       },
       source_provenance: {
-        market_stats_source: hasMeaningfulMarketStats(v2Data.market_stats) ? 'v2_summary' : (legacyPayload?.data?.market_stats ? 'legacy_inline' : 'none'),
-        fundamentals_source: isMeaningfulFundamentals(fundamentalsData) ? 'fundamentals_endpoint' : (legacyPayload?.data?.fundamentals ? 'legacy_inline' : 'none'),
-        identity_source: isMeaningfulIdentityName(v2Data.name, v2Data.ticker) ? 'v2_summary' : isMeaningfulIdentityName(mergedFundamentals?.companyName, v2Data.ticker) ? 'fundamentals' : isMeaningfulIdentityName(governanceData?.universe?.name, v2Data.ticker) ? 'governance_universe' : (isMeaningfulIdentityName(legacyPayload?.data?.name, v2Data.ticker) ? 'legacy_inline' : 'none'),
+        market_stats_source: hasMeaningfulMarketStats(v2Data.market_stats) ? 'v2_summary' : 'none',
+        fundamentals_source: isMeaningfulFundamentals(fundamentalsData) ? 'fundamentals_endpoint' : 'none',
+        identity_source: isMeaningfulIdentityName(v2Data.name, v2Data.ticker) ? 'v2_summary' : isMeaningfulIdentityName(mergedFundamentals?.companyName, v2Data.ticker) ? 'fundamentals' : isMeaningfulIdentityName(governanceData?.universe?.name, v2Data.ticker) ? 'governance_universe' : 'none',
       },
       module_freshness: moduleFreshness,
     },
@@ -376,7 +445,7 @@ export function transformV2ToStockShape(v2Data, v2Meta, historicalData = null, g
       historical: metaBundle?.historical || null,
       governance: metaBundle?.governance || null,
       fundamentals: metaBundle?.fundamentals || null,
-      legacy: metaBundle?.legacy || null,
+      legacy: null,
     },
     states: v2Data.states || {},
     decision: v2Data.decision || {},
@@ -391,25 +460,56 @@ export function transformV2ToStockShape(v2Data, v2Meta, historicalData = null, g
 }
 
 /**
- * Fetch with V2-first, V1-fallback strategy.
+ * Fetch with V2-first, empty-state-on-failure strategy.
  * @param {string} ticker
- * @returns {Promise<{payload:object, source:string}>}
+ * @returns {Promise<{payload:object, source:string, mode:string, notice:string|null, missingModules:string[]}>}
  */
 export async function fetchWithFallback(ticker) {
-  window._rvFallbackLog = window._rvFallbackLog || [];
+  const logTarget = typeof window !== 'undefined' ? window : globalThis;
+  logTarget._rvFallbackLog = logTarget._rvFallbackLog || [];
 
-  const v2 = await fetchV2StockPage(ticker);
+  let v2Error = null;
+  try {
+    const v2 = await fetchV2StockPage(ticker);
+    if (v2?.ok) {
+      logTarget._rvFallbackLog.push({ ticker, source: 'v2', mode: v2.mode, missingModules: v2.missingModules || [] });
+      return {
+        payload: transformV2ToStockShape(
+          v2.data.summary,
+          v2.meta.summary,
+          v2.data.historical,
+          v2.data.governance,
+          v2.data.fundamentals,
+          v2.meta,
+          null,
+          v2.data.historical_profile,
+        ),
+        source: 'v2',
+        mode: v2.mode || 'full',
+        notice: v2.notice || null,
+        missingModules: v2.missingModules || [],
+      };
+    }
+    v2Error = v2;
+  } catch (error) {
+    v2Error = {
+      ok: false,
+      mode: 'unavailable',
+      source: 'v2',
+      ticker,
+      missingModules: [],
+      notice: error instanceof Error ? error.message : String(error || 'V2 unavailable'),
+      error,
+    };
+  }
+
+  const missingModules = v2Error?.missingModules || [];
+  logTarget._rvFallbackLog.push({ ticker, source: 'none', mode: 'empty_state', missingModules });
   return {
-    payload: transformV2ToStockShape(
-      v2.data.summary,
-      v2.meta.summary,
-      v2.data.historical,
-      v2.data.governance,
-      v2.data.fundamentals,
-      v2.meta,
-      v2.data.legacy,
-      v2.data.historical_profile,
-    ),
-    source: 'v2',
+    payload: buildEmptyStatePayload(ticker),
+    source: 'none',
+    mode: 'empty_state',
+    notice: `V2 contract unavailable or incomplete (${missingModulesLabel(missingModules)}). Legacy fallback is disabled for this page.`,
+    missingModules,
   };
 }

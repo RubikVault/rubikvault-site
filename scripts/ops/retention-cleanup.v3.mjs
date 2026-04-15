@@ -32,6 +32,38 @@ async function removeOlderThan(dir, maxAgeDays) {
   return removed;
 }
 
+async function removeFileOlderThan(filePath, maxAgeDays) {
+  const stat = await fs.stat(filePath).catch(() => null);
+  if (!stat) return 0;
+  const ageDays = (Date.now() - stat.mtimeMs) / (1000 * 60 * 60 * 24);
+  if (ageDays <= maxAgeDays) return 0;
+  await fs.unlink(filePath).catch(() => {});
+  return 1;
+}
+
+async function trimNdjsonHistoryLike(filePath, maxAgeDays) {
+  let raw;
+  try { raw = await fs.readFile(filePath, 'utf8'); } catch { return { before: 0, after: 0, trimmed: 0 }; }
+  const cutoff = Date.now() - maxAgeDays * 86_400_000;
+  const lines = raw.split('\n').filter((line) => line.trim());
+  const kept = [];
+  for (const line of lines) {
+    try {
+      const entry = JSON.parse(line);
+      if (entry.ts && new Date(entry.ts).getTime() >= cutoff) kept.push(line);
+    } catch {
+      // drop malformed lines
+    }
+  }
+  const trimmed = lines.length - kept.length;
+  if (trimmed > 0) {
+    const tmpPath = `${filePath}.tmp`;
+    await fs.writeFile(tmpPath, kept.length > 0 ? kept.join('\n') + '\n' : '', 'utf8');
+    await fs.rename(tmpPath, filePath);
+  }
+  return { before: lines.length, after: kept.length, trimmed };
+}
+
 function parsePartitionTimestamp(filePath) {
   const normalized = String(filePath || '').replace(/\\/g, '/');
   const match = normalized.match(/\/(\d{4})\/(\d{2})\.ndjson\.gz$/);
@@ -89,6 +121,9 @@ async function main() {
   const outcomesDays = Number(policy.forecast_outcomes_retention_days || mirrorsDays);
   const forecastsDays = Number(policy.forecast_forecasts_retention_days || Math.min(mirrorsDays, 90));
   const opsDays = Number(policy.ops_ledger_retention_days || 365);
+  const histCheckpointDays = Number(policy.hist_probs_checkpoint_retention_days || 30);
+  const pendingMaturityDays = Number(policy.pending_maturity_retention_days || 30);
+  const dlqDays = Number(policy.dlq_retention_days || 7);
 
   const forecastOutcomesDir = path.join(ROOT, 'mirrors/forecast/ledger/outcomes');
   const forecastForecastsDir = path.join(ROOT, 'mirrors/forecast/ledger/forecasts');
@@ -98,6 +133,13 @@ async function main() {
     + (await removeOlderThan(forecastForecastsDir, forecastsDays));
   const removedMirrors = await removeOlderThan(path.join(ROOT, 'mirrors'), mirrorsDays);
   const removedLedgers = await removeOlderThan(path.join(ROOT, 'public/data/v3/system/drift'), opsDays);
+  const removedHistSnapshots = await removeOlderThan(path.join(ROOT, 'public/data/hist-probs/snapshots'), histCheckpointDays);
+  const removedHistCheckpoints = await removeFileOlderThan(path.join(ROOT, 'public/data/hist-probs/checkpoints.json'), histCheckpointDays);
+  const histErrorLedgerTrim = await trimNdjsonHistoryLike(
+    path.join(ROOT, 'public/data/hist-probs/error-ledger.ndjson'),
+    dlqDays
+  );
+  const removedPendingStore = await removeOlderThan(path.join(ROOT, 'mirrors/forecast/system'), pendingMaturityDays);
   const historyTrim = await trimNdjsonHistory(
     path.join(ROOT, 'public/data/v3/system/ops-history.ndjson'), opsDays
   );
@@ -112,13 +154,20 @@ async function main() {
       mirrors_retention_days: mirrorsDays,
       forecast_outcomes_retention_days: outcomesDays,
       forecast_forecasts_retention_days: forecastsDays,
-      ops_ledger_retention_days: opsDays
+      ops_ledger_retention_days: opsDays,
+      hist_probs_checkpoint_retention_days: histCheckpointDays,
+      pending_maturity_retention_days: pendingMaturityDays,
+      dlq_retention_days: dlqDays,
     },
     removed: {
       forecast_outcomes: removedForecastOutcomes,
       forecast_forecasts: removedForecastForecasts,
       mirrors: removedMirrors,
       drift_reports: removedLedgers,
+      hist_probs_snapshots: removedHistSnapshots,
+      hist_probs_checkpoints: removedHistCheckpoints,
+      hist_probs_error_ledger: histErrorLedgerTrim,
+      pending_maturity_store: removedPendingStore,
       ops_history: historyTrim
     }
   };

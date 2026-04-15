@@ -22,6 +22,7 @@ export const SYSTEM_STATUS_STEP_CONTRACTS = {
       'assets_fetched_with_data = 0 with output_asof null (pre-market run or quota exhaustion — re-run after market close)',
       'API_LIMIT_REACHED.lock.json present',
     ],
+    lessons_learned: 'Runs during market hours return partial data (EODHD day not yet closed). Schedule at ≥23:00 ET. assets_fetched_with_data=0 before market close is normal — not an error. API_LIMIT_REACHED.lock.json means quota exhausted; wait for reset or swap API key.',
   },
   q1_delta_ingest: {
     run_command: 'python3 scripts/quantlab/run_daily_delta_ingest_q1.py --ingest-date <YYYY-MM-DD>',
@@ -39,6 +40,7 @@ export const SYSTEM_STATUS_STEP_CONTRACTS = {
       'latest_success ingest_date does not advance',
       'run_status reports non-zero exit_code',
     ],
+    lessons_learned: 'Noop detection is intentional — if no packs changed, ingest skips and downstream QuantLab continues on the same partitions. Only re-run if upstream refresh has actually advanced. evidence_complete=false means the artifact is incomplete and cannot be trusted for release decisions.',
   },
   quantlab_daily_report: {
     run_command: 'node scripts/quantlab/build_quantlab_v4_daily_report.mjs',
@@ -59,6 +61,7 @@ export const SYSTEM_STATUS_STEP_CONTRACTS = {
       'raw canonical or publish as-of lags current market',
       'operational freshness severity != ok',
     ],
+    lessons_learned: 'latestCanonicalRequiredDataDate lags latestAnyRequiredDataDate by the ML label window — structural, not a bug. Only excess lag beyond the window is a violation. Report freshness reflects publish asof, not raw-bar asof. latestCanonicalRequiredDataDate was 33 days stale (2026-03-11) due to missing auto-update — monitor this field.',
   },
   hist_probs: {
     run_command: 'NODE_OPTIONS=--max-old-space-size=6144 node run-hist-probs-turbo.mjs',
@@ -81,6 +84,7 @@ export const SYSTEM_STATUS_STEP_CONTRACTS = {
       'run-summary processed count below universe target',
       'ETF tickers not included in asset_classes',
     ],
+    lessons_learned: '45–90 min for full 42k universe. Always include --asset-classes STOCK,ETF — ETFs are silently omitted if flag is missing. INACTIVE_TOLERANCE=20 trading days (was 5, now fixed). Write-verification added after each file write. fresh_skipped checkpoint enables crash recovery and idempotency. 16,755 assets (39.7%) were stale as of 2026-04-10 — run catch-up before marking release ready.',
   },
   forecast_daily: {
     run_command: 'node scripts/forecast/run_daily.mjs',
@@ -99,6 +103,7 @@ export const SYSTEM_STATUS_STEP_CONTRACTS = {
       'latest.json missing or status != ok',
       'data.asof stale',
     ],
+    lessons_learned: 'Silent quality degradation when quantlab_daily_report is stale. Always verify data_asof alignment between forecast output and quantlab canonical date before treating forecast as fresh. A data_asof gap > 2 trading days indicates an upstream stale source, not a forecast engine bug.',
   },
   scientific_summary: {
     run_command: 'node scripts/build-scientific-summary.mjs',
@@ -116,6 +121,7 @@ export const SYSTEM_STATUS_STEP_CONTRACTS = {
       'source_meta.asof missing or stale',
       'no signals and no source timestamp',
     ],
+    lessons_learned: 'source_meta.asof must equal or exceed the QuantLab canonical date. An empty signals array with a fresh asof is valid (regime with no strong setups). An empty signals array with a stale asof means upstream ingest has not advanced.',
   },
   learning_daily: {
     run_command: 'node scripts/learning/run-daily-learning-cycle.mjs --date=<YYYY-MM-DD>',
@@ -134,6 +140,7 @@ export const SYSTEM_STATUS_STEP_CONTRACTS = {
       'report missing',
       'forecast/scientific source_meta lagging behind market',
     ],
+    lessons_learned: 'Learning cycle is a downstream observer of forecast and scientific summary — it will not advance if either source is stale. safety_switch escalation is intentional when model accuracy drops; do not manually override. overall_status=DEGRADED with safety_switch=ACTIVE means the system is protecting live signal quality.',
   },
   snapshot: {
     run_command: 'NODE_OPTIONS=--max-old-space-size=6144 node scripts/build-best-setups-v4.mjs',
@@ -154,6 +161,7 @@ export const SYSTEM_STATUS_STEP_CONTRACTS = {
       'rows_emitted.total = 0 when upstream is healthy',
       'quantlab_asof lags data_asof',
     ],
+    lessons_learned: 'rows_emitted.total=0 almost always means quantlab_asof lags data_asof by more than the tolerated window. ETF count drops silently when ETF hist-probs run was omitted. diagnose-best-setups-etf-drop.mjs is the diagnostic tool — run it before re-running build-best-setups-v4. CRITICAL: Snapshot must run AFTER hist-probs is fresh. Assets with minimum_n_not_met=true and stale hist-probs are now gated out of BUY lists at row level.',
   },
   stock_analyzer_universe_audit: {
     run_command: 'node scripts/universe-v7/build-us-eu-scope.mjs && node scripts/ops/build-stock-analyzer-universe-audit.mjs --base-url http://127.0.0.1:8788 --registry-path public/data/universe/v7/registry/registry.ndjson.gz --allowlist-path public/data/universe/v7/ssot/stocks_etfs.us_eu.canonical.ids.json --asset-classes STOCK,ETF --max-tickers 0',
@@ -173,6 +181,7 @@ export const SYSTEM_STATUS_STEP_CONTRACTS = {
       'processed_assets below total_assets',
       'failure_family_count > 0',
     ],
+    lessons_learned: 'Full audit (--max-tickers 0) takes 60-90 min for 42k assets. artifact_only mode runs without wrangler and is the default for automated pipelines. artifact_hist_probs_stale is the most common critical family; run hist-probs catch-up first. sampled_mode=true means the audit result can never qualify as release_eligible.',
   },
   etf_diagnostic: {
     run_command: 'node scripts/learning/diagnose-best-setups-etf-drop.mjs',
@@ -190,6 +199,7 @@ export const SYSTEM_STATUS_STEP_CONTRACTS = {
       'snapshot_etf_total = 0',
       'diagnosis code indicates rejection funnel collapse',
     ],
+    lessons_learned: 'ETF count in best-setups-v4 can silently drop to zero if hist-probs was run without --asset-classes STOCK,ETF. Runs fast (< 30 sec) and can be run standalone. diagnosis_code=ETF_HIST_PROBS_MISSING means ETF hist-probs artifact is absent.',
   },
   v1_audit: {
     run_command: 'node scripts/learning/quantlab-v1/daily-audit-report.mjs',
@@ -206,6 +216,7 @@ export const SYSTEM_STATUS_STEP_CONTRACTS = {
       'signals_today = 0 for extended periods',
       'matured_signals = 0',
     ],
+    lessons_learned: 'V1 signals mature 5 trading days after entry. signals_today=0 with matured_signals>0 is normal (no new entries today). Persistent matured_signals=0 over multiple days indicates the signal generation pipeline has stalled upstream.',
   },
   cutover_readiness: {
     run_command: 'node scripts/learning/quantlab-v1/cutover-readiness-report.mjs',
@@ -222,8 +233,157 @@ export const SYSTEM_STATUS_STEP_CONTRACTS = {
       'cutover_recommended = false',
       'criteria_failed not empty',
     ],
+    lessons_learned: 'Cutover is gated on 7 consecutive days of legacy_shadow_write_total=0 and legacy_artifact_read_total=0 in the production context. criteria_failed items are authoritative — do not mark cutover ready manually.',
+  },
+  system_status_report: {
+    run_command: 'node scripts/ops/build-system-status-report.mjs',
+    verify_commands: [
+      "jq '.summary | {severity,healthy,target_market_date,release_ready,ui_green}' public/data/reports/system-status-latest.json",
+    ],
+    outputs: [
+      'public/data/reports/system-status-latest.json',
+    ],
+    ui_surfaces: [
+      'dashboard_v7 Operations / Pipeline Waterfall',
+    ],
+    failure_signals: [
+      'report missing',
+      'tracked_step_ids missing pipeline steps',
+    ],
+    lessons_learned: 'System status is an observer, not the release authority. It should explain the current control-plane state, never invent it. Rebuild it only after the upstream artifacts for the same target market date exist.',
+  },
+  data_freshness_report: {
+    run_command: 'node scripts/ops/build-data-freshness-report.mjs',
+    verify_commands: [
+      "jq '.summary | {severity,healthy,expected_eod,unhealthy_families}' public/data/reports/data-freshness-latest.json",
+      "jq '.families_by_id.fundamentals_scope | {expected_total,fresh_count,stale_count,missing_count,freshness_limit_trading_days}' public/data/reports/data-freshness-latest.json",
+    ],
+    outputs: [
+      'public/data/reports/data-freshness-latest.json',
+    ],
+    ui_surfaces: [
+      'dashboard_v7 Operations / Pipeline Waterfall',
+      'dashboard_v7 fundamentals freshness diagnostics',
+    ],
+    failure_signals: [
+      'expected_eod missing',
+      'fundamentals_scope stale_count or missing_count > 0 for prioritized assets',
+    ],
+    lessons_learned: 'Fundamentals freshness is tracked only for the prioritized scope and is warning-only by policy. Hist-probs and market-history remain blocking; fundamentals do not.',
+  },
+  pipeline_epoch: {
+    run_command: 'node scripts/ops/build-pipeline-epoch.mjs',
+    verify_commands: [
+      "jq '{target_market_date,pipeline_ok,minimum_blocking_module_date,run_id}' public/data/pipeline/epoch.json",
+      "jq '.modules | with_entries(.value |= {as_of,run_id,coverage_promise})' public/data/pipeline/epoch.json",
+    ],
+    outputs: [
+      'public/data/pipeline/epoch.json',
+    ],
+    ui_surfaces: [
+      'dashboard_v7 Operations / Pipeline Waterfall',
+    ],
+    failure_signals: [
+      'pipeline_ok = false',
+      'core modules have run_id = null',
+      'module as_of mismatches target_market_date',
+    ],
+    lessons_learned: 'A fresh epoch without module run_ids is not a valid control-plane success. It is only a timestamped shell. Module coherence matters more than file recency.',
+  },
+  ui_field_truth_report: {
+    run_command: 'node scripts/ops/build-ui-field-truth-report.mjs --base-url http://127.0.0.1:8788 --date=<YYYY-MM-DD>',
+    verify_commands: [
+      "jq '{ui_field_truth_ok,summary:{tickers_checked,failures,advisories},critical_endpoints,optional_endpoints}' public/data/reports/ui-field-truth-report-latest.json",
+    ],
+    outputs: [
+      'public/data/reports/ui-field-truth-report-latest.json',
+    ],
+    ui_surfaces: [
+      'dashboard_v7 Operations / Pipeline Waterfall',
+      'Stock Analyzer UI truth gate',
+    ],
+    failure_signals: [
+      'critical endpoint failures present',
+      'wrangler offline during live check',
+    ],
+    lessons_learned: 'Fundamentals is optional in UI truth. A fundamentals miss should be advisory only. If wrangler is offline, that is a runtime/readiness problem, not a field-truth defect in the artifacts themselves.',
+  },
+  final_integrity_seal: {
+    run_command: 'node scripts/ops/final-integrity-seal.mjs',
+    verify_commands: [
+      "jq '{release_ready,ui_green,target_market_date,blocking_reasons,required_gates,key_id}' public/data/ops/final-integrity-seal-latest.json",
+    ],
+    outputs: [
+      'public/data/ops/final-integrity-seal-latest.json',
+    ],
+    ui_surfaces: [
+      'dashboard_v7 global status',
+      'release gate',
+    ],
+    failure_signals: [
+      'release_ready = false',
+      'ui_green = false',
+      'blocking_reasons not empty',
+    ],
+    lessons_learned: 'Final seal is the only release SSOT. NAS reachability is advisory by default; fundamentals are non-blocking by policy. If the seal disagrees with observers, trust the seal and rebuild the observers from the same run.',
+  },
+  build_deploy_bundle: {
+    run_command: 'node scripts/ops/build-deploy-bundle.mjs',
+    verify_commands: [
+      "jq '{generated_at,target_market_date,bundle_id,release_ready}' dist/pages-prod/data/ops/build-bundle-meta.json",
+    ],
+    outputs: [
+      'dist/pages-prod/data/ops/build-bundle-meta.json',
+    ],
+    ui_surfaces: [
+      'dashboard_v7 Operations / Pipeline Waterfall',
+    ],
+    failure_signals: [
+      'bundle meta missing',
+      'bundle target market date mismatches seal',
+    ],
+    lessons_learned: 'Bundle generation is downstream of the seal. If this step is red while the seal is green, treat it as publish-path drift, not a data-plane failure.',
+  },
+  wrangler_deploy: {
+    run_command: 'node scripts/ops/release-gate-check.mjs && wrangler pages deploy',
+    verify_commands: [
+      "jq '{generated_at,target_market_date,release_ready,deploy_status,proof_mode}' public/data/ops/deploy-proof-latest.json",
+    ],
+    outputs: [
+      'public/data/ops/deploy-proof-latest.json',
+    ],
+    ui_surfaces: [
+      'dashboard_v7 Operations / Pipeline Waterfall',
+    ],
+    failure_signals: [
+      'deploy proof missing',
+      'release gate rejects dirty tree or invalid seal',
+    ],
+    lessons_learned: 'Deploy is the last mile, not the authority. The release gate must only accept a valid final seal and a clean enough publish context.',
   },
 };
+
+export const PIPELINE_STEP_ORDER = [
+  'market_data_refresh',
+  'q1_delta_ingest',
+  'quantlab_daily_report',
+  'hist_probs',
+  'forecast_daily',
+  'scientific_summary',
+  'learning_daily',
+  'snapshot',
+  'etf_diagnostic',
+  'v1_audit',
+  'cutover_readiness',
+  'stock_analyzer_universe_audit',
+  'system_status_report',
+  'data_freshness_report',
+  'pipeline_epoch',
+  'ui_field_truth_report',
+  'final_integrity_seal',
+  'build_deploy_bundle',
+  'wrangler_deploy',
+];
 
 // SSOT violation contracts — each describes a detectable invariant that, when broken,
 // means the system is NOT honoring its own single-source-of-truth rules.
@@ -346,41 +506,24 @@ export const STOCK_ANALYZER_WEB_VALIDATION_CHAIN = [
 // ─── Release State Schema ─────────────────────────────────────────────────────
 //
 // Canonical schema for public/data/ops/release-state-latest.json
-// Written by: Night Supervisor (phase transitions), Catchup Supervisor (QuantLab state)
+// Written by: Master supervisor / authority projection only
 // Read by:    release-gate-check.mjs, dashboard_v7, monitoring scripts
 //
-// This is the authoritative End-to-End Release SSOT. No other file determines
-// whether a deploy is allowed.
+// This is an authoritative control-plane projection. Deploy allow/deny is derived
+// from final-integrity-seal-latest.json, not from legacy release phases.
 
 export const RELEASE_STATE_SCHEMA = {
-  schema: 'rv_release_state_v1',
-  // Current pipeline phase (night supervisor or release gate phase)
-  // Lifecycle: NIGHT_START → HIST_PROBS_1 → EODHD_REFRESH → HIST_PROBS_2
-  //            → QUANTLAB → RELEASE_READY → DEPLOY_REQUESTED → DEPLOY_VERIFIED → DONE
-  phase: 'NIGHT_START',
-  // The trading date this release targets (ISO YYYY-MM-DD)
-  target_date: null,
-  // Last phase that completed successfully (for recovery)
-  last_success_phase: null,
-  // Human-readable blocker description (null = no blocker)
+  schema: 'rv_release_state_v3',
+  phase: 'WAIT_FOR_SOURCE_DATA',
+  target_market_date: null,
   blocker: null,
-  // Retry counters per phase
-  retry_counts: {},
-  // Active PIDs (for monitoring)
-  pids: {
-    hist_probs: null,
-    eodhd_refresh: null,
-    catchup_supervisor: null,
-  },
-  // Reference to deploy proof (populated after successful deploy)
-  deploy_proof_path: 'public/data/ops/deploy-proof-latest.json',
-  // QuantLab pipeline state (from catchup-supervisor-state.json)
-  quantlab: {
-    phase: null,
-    target_date: null,
-    completed_at: null,
-  },
-  // Timestamps
+  blockers: [],
+  ui_green: false,
+  release_ready: false,
+  full_universe_validated: false,
+  allowed_launchd_only: false,
+  final_integrity_seal_ref: 'public/data/ops/final-integrity-seal-latest.json',
+  control_plane: null,
   started_at: null,
   completed_at: null,
   last_updated: null,

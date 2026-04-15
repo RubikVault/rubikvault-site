@@ -33,11 +33,12 @@ function stubFetch() {
   const originalFetch = globalThis.fetch;
   globalThis.fetch = async (url) => {
     const u = new URL(url);
-    if (u.pathname === "/data/features-v2/stock-insights/index.json") {
+    if (u.pathname === "/data/features-v4/stock-insights/index.json") {
       return {
         ok: true,
         status: 200,
         json: async () => ({
+          generated_at: "2026-03-08T00:00:00Z",
           rows: {
             AAPL: {
               scientific: { value: true, as_of: "2026-03-08", source: "stock-analysis.snapshot", status: "ok", reason: null },
@@ -48,56 +49,117 @@ function stubFetch() {
         }),
       };
     }
-    if (u.pathname === "/api/stock-insights-v2") {
+    if (u.pathname === "/data/forecast/latest.json") {
       return {
         ok: true,
         status: 200,
         json: async () => ({
-          scientific: {
-            setup: { score: 72, proof_points: ["Price above SMA50"] },
-            trigger: { score: 58, proof_points: ["MACD histogram positive"] },
-          },
-          forecast: {
-            horizons: {
-              "1d": { probability: 0.56, direction: "bullish" },
-              "5d": { probability: 0.59, direction: "bullish" },
-              "20d": { probability: 0.61, direction: "bullish" },
-            },
-          },
-          forecast_meta: {
+          meta: {
             accuracy: { directional: 0.57, brier: 0.19 },
           },
-          elliott: {
-            completedPattern: { direction: "bullish" },
-            developingPattern: { possibleWave: "Wave 3", confidence: 64 },
-          },
-          v2_contract: {
-            scientific: { value: true, as_of: "2026-03-08", source: "stock-analysis.snapshot", status: "ok", reason: null },
-            forecast: { value: true, as_of: "2026-03-08", source: "forecast.latest", status: "ok", reason: null },
-            elliott: { value: true, as_of: "2026-03-08", source: "marketphase.per_ticker", status: "ok", reason: null },
+          data: {
+            asof: "2026-03-08",
+            forecasts: [{
+              symbol: "AAPL",
+              name: "Apple Inc.",
+              horizons: {
+                "1d": { probability: 0.56, direction: "bullish" },
+                "5d": { probability: 0.59, direction: "bullish" },
+                "20d": { probability: 0.61, direction: "bullish" },
+              },
+            }],
           },
         }),
       };
     }
-    if (u.pathname === "/api/stock") {
+    if (u.pathname === "/data/eod/history/shards/A.json") {
       return {
         ok: true,
         status: 200,
         json: async () => ({
-          data: {
-            bars,
-            market_stats: {
-              stats: {
-                sma20: 101.2,
-                sma50: 99.4,
-                sma200: 95.1,
-                rsi14: 54.2,
-                macd_hist: 0.3,
-                volatility_percentile: 62,
-              },
+          AAPL: bars.map((bar) => [
+            bar.date,
+            bar.open,
+            bar.high,
+            bar.low,
+            bar.close,
+            bar.adjClose,
+            bar.volume,
+          ]),
+        }),
+      };
+    }
+    if (u.pathname === "/data/fundamentals/AAPL.json") {
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({
+          companyName: "Apple Inc.",
+          marketCap: 3_000_000_000_000,
+          nextEarningsDate: "2026-05-02",
+        }),
+      };
+    }
+    if (u.pathname === "/data/earnings-calendar/latest.json") {
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({
+          as_of: "2026-03-08",
+          items: [],
+        }),
+      };
+    }
+    if (u.pathname === "/data/quantlab/stock-insights/stocks/A.json") {
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({
+          asOfDate: "2026-03-08",
+          byTicker: {
+            AAPL: {
+              assetClass: "stock",
+              setupScore: 61,
             },
-            universe: { sector: "Technology" },
           },
+        }),
+      };
+    }
+    if (u.pathname === "/data/quantlab/stock-insights/etfs/A.json") {
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({
+          asOfDate: "2026-03-08",
+          byTicker: {},
+        }),
+      };
+    }
+    if (u.pathname === "/data/runtime/stock-analyzer-control.json") {
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({
+          run_id: "run-test",
+          target_market_date: "2026-03-08",
+        }),
+      };
+    }
+    if (u.pathname === "/data/reports/learning-report-latest.json") {
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({
+          features: { stock_analyzer: {} },
+        }),
+      };
+    }
+    if (u.pathname === "/policies/best-setups.v1.json") {
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({
+          learning_status: { default: "BOOTSTRAP" },
         }),
       };
     }

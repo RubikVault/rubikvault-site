@@ -9,6 +9,10 @@ on:
       date:
         description: 'Override date (YYYY-MM-DD)'
         required: false
+      replay_days:
+        description: 'Backfill window in trading days (default: 14). Use 30 for one-time catchup.'
+        required: false
+        default: '14'
 
 permissions:
   contents: write
@@ -20,7 +24,7 @@ concurrency:
 jobs:
   learning-cycle:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
         with:
@@ -41,15 +45,17 @@ jobs:
           if [ -n "${{ inputs.date }}" ]; then
             DATE_ARG="--date=${{ inputs.date }}"
           fi
-          node scripts/learning/backfill-stock-analyzer-history.mjs $DATE_ARG --replay-days=7
+          REPLAY_DAYS="${{ inputs.replay_days }}"
+          REPLAY_DAYS="${REPLAY_DAYS:-14}"
+          node scripts/learning/backfill-stock-analyzer-history.mjs $DATE_ARG --replay-days=${REPLAY_DAYS}
 
-      - name: Run daily learning cycle
+      - name: Run stock-analyzer publish chain
         run: |
           DATE_ARG=""
           if [ -n "${{ inputs.date }}" ]; then
             DATE_ARG="--date=${{ inputs.date }}"
           fi
-          node scripts/learning/run-daily-learning-cycle.mjs $DATE_ARG
+          node scripts/ops/run-stock-analyzer-publish-chain.mjs $DATE_ARG
 
       - name: Generate PDF and send email
         env:
@@ -66,7 +72,23 @@ jobs:
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add public/data/reports/learning-report-latest.json public/data/reports/learning-report-latest.js
+          git add public/data/reports/learning-report-latest.json public/data/reports/learning-report-latest.js public/data/runtime/stock-analyzer-control.json
+          for optional_path in \
+            public/data/snapshots/best-setups-v4.json \
+            public/data/reports/best-setups-build-latest.json \
+            public/data/reports/frontpage-snapshot-audit-latest.json \
+            public/data/reports/analyzer-detail-audit-latest.json \
+            public/data/reports/ui-audit-latest.json \
+            public/data/reports/system-status-latest.json \
+            public/dashboard_v6_meta_data.json \
+            public/data/ops/publish-chain-latest.json \
+            public/data/pipeline/runtime/latest.json \
+            public/data/pipeline/epoch.json
+          do
+            if [ -f "$optional_path" ]; then
+              git add "$optional_path"
+            fi
+          done
           if git diff --cached --quiet; then
             echo "No learning data changes to commit"
           else

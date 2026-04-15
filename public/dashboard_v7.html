@@ -8,6 +8,33 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        (() => {
+            const host = window.location.hostname;
+            const isLocal = host === '127.0.0.1' || host === 'localhost' || host === '0.0.0.0';
+            if (!isLocal) return;
+            const buildId = 'rv-local-dev-2026-04-12-v7';
+            window.__RV_DEV_BUILD_ID__ = buildId;
+            const purgeLocalDevState = async () => {
+                try {
+                    if ('serviceWorker' in navigator) {
+                        const registrations = await navigator.serviceWorker.getRegistrations();
+                        await Promise.all(registrations.map((registration) => registration.unregister()));
+                    }
+                    if ('caches' in window) {
+                        const cacheNames = await caches.keys();
+                        await Promise.all(cacheNames.filter((name) => name.startsWith('rv-')).map((name) => caches.delete(name)));
+                    }
+                    sessionStorage.setItem('rv.dev.cache.reset', buildId);
+                } catch (error) {
+                    console.warn('[RV][dashboard_v7][local-cache-reset]', error);
+                }
+            };
+            if (sessionStorage.getItem('rv.dev.cache.reset') !== buildId) {
+                window.addEventListener('load', () => { void purgeLocalDevState(); }, { once: true });
+            }
+        })();
+    </script>
     <style>
         :root {
             --bg: #0b0f19;
@@ -280,8 +307,12 @@
     <!-- Tab 4: Operations -->
     <div class="tab-panel" id="tab-operations">
         <div class="section-box" style="margin-bottom:1.5rem">
-            <div class="section-title"><i class="fas fa-robot"></i> V5 Training Autopilot</div>
-            <div id="autopilotContent"><span style="color:var(--text-muted);font-size:.82rem">No autopilot data</span></div>
+            <div class="section-title"><i class="fas fa-water"></i> Pipeline Waterfall</div>
+            <div id="pipelineWaterfallContent"><span style="color:var(--text-muted);font-size:.82rem">No pipeline step data</span></div>
+        </div>
+        <div class="section-box" style="margin-bottom:1.5rem">
+            <div class="section-title"><i class="fas fa-file-circle-check"></i> Green Contract</div>
+            <div id="greenContractContent"><span style="color:var(--text-muted);font-size:.82rem">No green-contract data</span></div>
         </div>
         <div class="sections-grid">
             <div class="section-box">
@@ -323,8 +354,13 @@
             <div id="ssotViolationsContent"><span style="color:var(--text-muted);font-size:.82rem">Checking violations...</span></div>
         </div>
         <div class="section-box" style="margin-bottom:1.5rem">
-            <div class="section-title"><i class="fas fa-list-check"></i> SSOT Recovery Runbook</div>
-            <div id="recoveryRunbookContent"><span style="color:var(--text-muted);font-size:.82rem">No runbook data</span></div>
+            <div class="section-title"><i class="fas fa-clock-rotate-left"></i> Step Error History</div>
+            <div id="stepErrorHistoryContent"><span style="color:var(--text-muted);font-size:.82rem">No step error history</span></div>
+        </div>
+        <div class="section-box" style="margin-bottom:1.5rem">
+            <div class="section-title"><i class="fas fa-life-ring"></i> Recovery Metrics</div>
+            <div class="soft-note" style="margin-bottom:.75rem">Tracks the recovery worker itself: current campaign progress, noisy steps, restart storms, and recurring blockers that do not show up in the publish-chain ledger.</div>
+            <div id="recoveryMetricsContent"><span style="color:var(--text-muted);font-size:.82rem">No recovery metrics</span></div>
         </div>
         <div class="sections-grid">
             <div class="section-box">
@@ -335,6 +371,11 @@
                 <div class="section-title"><i class="fas fa-list-ol"></i> Ordered Recovery Plan</div>
                 <div id="stockAnalyzerRecoveryContent"><span style="color:var(--text-muted);font-size:.82rem">No ordered recovery data</span></div>
             </div>
+        </div>
+        <div class="section-box" style="margin-bottom:1.5rem">
+            <div class="section-title"><i class="fas fa-table-cells-large"></i> Universe Field Quality</div>
+            <div class="soft-note" style="margin-bottom:.75rem">Per-field problem distribution across the audited universe. Shows which UI fields are empty, stale, or wrong, plus the repair command linked to the underlying pipeline step.</div>
+            <div id="universeFieldQualityContent"><span style="color:var(--text-muted);font-size:.82rem">No field quality data</span></div>
         </div>
         <div class="section-box">
             <div class="section-title"><i class="fas fa-route"></i> Web Validation Chain</div>
@@ -399,6 +440,209 @@ function cleanLearningStatus(value, systemSeverity = 'ok') {
 function escapeHtml(value) {
     return String(value ?? '').replace(/[&<>"']/g, ch => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[ch]));
 }
+function stepSeverityClass(level) {
+    return level === 'critical' ? 'sev-critical' : level === 'warning' ? 'sev-warning' : 'sev-ok';
+}
+function formatStepAssetInfo(step) {
+    const detail = step?.status_detail || {};
+    if (detail?.fundamentals_scope) {
+        const scope = detail.fundamentals_scope;
+        const expected = scope.expected_total ?? scope.scope_total ?? null;
+        if (expected != null) {
+            return `${scope.fresh_count ?? 0} / ${expected} prioritized assets fresh`;
+        }
+    }
+    if (detail?.assets_requested != null && detail?.assets_fetched_with_data != null) {
+        return `${detail.assets_fetched_with_data} / ${detail.assets_requested} assets fetched`;
+    }
+    if (detail?.coverage?.covered_tickers != null && detail?.coverage?.target_tickers != null) {
+        return `${detail.coverage.covered_tickers} / ${detail.coverage.target_tickers} assets covered`;
+    }
+    if (detail?.audit_report?.summary?.affected_assets != null) {
+        return `${detail.audit_report.summary.affected_assets} affected assets`;
+    }
+    if (detail?.blocking_reasons?.length) {
+        return `${detail.blocking_reasons.length} blocking reasons`;
+    }
+    return '';
+}
+function renderPipelineWaterfall(steps, stepOrder, errorFrequency) {
+    if (!stepOrder.length) return '<div class="rec-item rec-warning">No pipeline step order recorded.</div>';
+    return stepOrder.map((id, index) => {
+        const step = steps[id] || null;
+        const sev = step?.severity || 'warning';
+        const sevClass = stepSeverityClass(sev);
+        const freq = errorFrequency[id] || null;
+        const assetInfo = step ? formatStepAssetInfo(step) : '';
+        const age = step?.generated_age_hours != null ? fmtAgeHours(step.generated_age_hours) : 'n/a';
+        const outputs = Array.isArray(step?.runbook?.outputs) && step.runbook.outputs.length
+            ? `<div class="pill-row">${step.runbook.outputs.map(out => `<span class="tiny-pill">${escapeHtml(out)}</span>`).join('')}</div>`
+            : '';
+        const verifyCommands = Array.isArray(step?.runbook?.verify_commands) && step.runbook.verify_commands.length
+            ? step.runbook.verify_commands.map(cmd => `<div class="soft-note" style="font-family:monospace">${escapeHtml(cmd)}</div>`).join('')
+            : '<div class="soft-note">No verify commands recorded.</div>';
+        const freqBadge = freq?.failures > 0
+            ? `<span class="tiny-pill" style="background:rgba(239,68,68,0.15)">Fails ${Math.round((freq.failure_rate || 0) * 100)}%</span>`
+            : '<span class="tiny-pill">No recent failures</span>';
+        return `<div class="action-item ${sevClass}">
+            <div class="action-head">
+                <div class="action-title">${index + 1}. ${escapeHtml(step?.label || id)}</div>
+                <div class="action-meta">${escapeHtml((sev || 'unknown').toUpperCase())}</div>
+            </div>
+            <div class="action-text">${escapeHtml(step?.summary || 'No step status available')}</div>
+            <div class="pill-row">
+                <span class="tiny-pill">Age ${escapeHtml(age)}</span>
+                ${assetInfo ? `<span class="tiny-pill">${escapeHtml(assetInfo)}</span>` : ''}
+                ${freqBadge}
+            </div>
+            <details class="diagnostic-details">
+                <summary>Why / Repair / Lessons</summary>
+                <div class="diagnostic-raw" style="font-family:inherit;white-space:normal">
+                    <div class="action-text"><strong>Why:</strong> ${escapeHtml(step?.why || 'No reason recorded')}</div>
+                    <div class="action-text"><strong>Run:</strong> <span style="font-family:monospace">${escapeHtml(step?.runbook?.run_command || step?.next_fix || 'No run command recorded')}</span></div>
+                    <div class="action-text"><strong>Lessons:</strong> ${escapeHtml(step?.runbook?.lessons_learned || 'No lessons recorded')}</div>
+                    <div class="action-text"><strong>Verify:</strong></div>
+                    ${verifyCommands}
+                    ${outputs}
+                </div>
+            </details>
+        </div>`;
+    }).join('');
+}
+function renderStepErrorHistory(steps, stepOrder, errorFrequency) {
+    const rows = stepOrder
+        .map((id) => ({ id, step: steps[id] || null, freq: errorFrequency[id] || null }))
+        .filter((entry) => (entry.freq?.failures || 0) > 0)
+        .sort((a, b) => (b.freq?.failure_rate || 0) - (a.freq?.failure_rate || 0));
+    if (!rows.length) return '<div class="rec-item rec-ok">No step failures recorded in the last 30 days.</div>';
+    return rows.map((entry) => `<div class="action-item sev-warning">
+        <div class="action-head">
+            <div class="action-title">${escapeHtml(entry.step?.label || entry.id)}</div>
+            <div class="action-meta">${Math.round((entry.freq?.failure_rate || 0) * 100)}%</div>
+        </div>
+        <div class="action-text"><strong>Failure rate:</strong> ${entry.freq?.failures || 0} / ${entry.freq?.total_runs || 0} runs</div>
+        <div class="action-text"><strong>Last failure:</strong> ${escapeHtml(fmtShortDate(entry.freq?.last_failure_at))}</div>
+        <div class="action-text"><strong>Common error:</strong> ${escapeHtml(entry.freq?.common_error || entry.freq?.last_failure_msg || 'No message recorded')}</div>
+    </div>`).join('');
+}
+function renderRecoveryMetrics(metrics) {
+    if (!metrics || (!metrics.current_campaign && !metrics.step_activity?.length)) {
+        return '<div class="rec-item rec-warning">No recovery telemetry recorded yet.</div>';
+    }
+    const campaign = metrics.current_campaign || null;
+    const summary = metrics.summary || {};
+    const stepActivity = metrics.step_activity || [];
+    const blockers = metrics.top_blockers || [];
+    const patterns = metrics.running_patterns || [];
+    const fmtMinutes = (value) => value == null ? '—' : value >= 60 ? `${(value / 60).toFixed(1)}h` : `${value.toFixed(1)}m`;
+    const statusClass = (value) => value === 'running' ? 'badge-yellow' : value === 'blocked' ? 'badge-red' : value === 'completed' ? 'badge-green' : 'badge-yellow';
+    const campaignSteps = (campaign?.steps || []).slice(0, 8).map((step) => `
+        <tr>
+            <td style="padding:.3rem .5rem;font-weight:500">${escapeHtml(step.step_id)}</td>
+            <td style="padding:.3rem .5rem"><span class="tiny-pill ${statusClass(step.status)}">${escapeHtml(step.status)}</span></td>
+            <td style="padding:.3rem .5rem;text-align:right">${escapeHtml(String(step.restarts ?? 0))}</td>
+            <td style="padding:.3rem .5rem;text-align:right">${escapeHtml(fmtMinutes(step.elapsed_minutes))}</td>
+            <td style="padding:.3rem .5rem;color:var(--text-muted);font-size:.76rem">${escapeHtml(step.blocked_reason || '—')}</td>
+        </tr>
+    `).join('');
+    const noisySteps = stepActivity.slice(0, 6).map((step) => `
+        <tr>
+            <td style="padding:.3rem .5rem;font-weight:500">${escapeHtml(step.step_id)}</td>
+            <td style="padding:.3rem .5rem;text-align:right">${escapeHtml(String(step.launches || 0))}</td>
+            <td style="padding:.3rem .5rem;text-align:right">${escapeHtml(String(step.restarts || 0))}</td>
+            <td style="padding:.3rem .5rem;text-align:right">${escapeHtml(String(step.blocked_count || 0))}</td>
+            <td style="padding:.3rem .5rem;text-align:right">${escapeHtml(fmtMinutes(step.avg_duration_minutes))}</td>
+            <td style="padding:.3rem .5rem;color:var(--text-muted);font-size:.76rem">${escapeHtml(step.last_blocked_reason || '—')}</td>
+        </tr>
+    `).join('');
+    return `
+        <div class="regime-grid" style="margin-bottom:1rem">
+            <div class="regime-pill"><div class="label">Launches (7d)</div><div class="value">${Number(summary.total_launches || 0).toLocaleString()}</div></div>
+            <div class="regime-pill"><div class="label">Restarts (7d)</div><div class="value" style="color:var(--yellow)">${Number(summary.total_restarts || 0).toLocaleString()}</div></div>
+            <div class="regime-pill"><div class="label">Blocks (7d)</div><div class="value" style="color:${summary.total_blocks ? 'var(--red)' : 'var(--green)'}">${Number(summary.total_blocks || 0).toLocaleString()}</div></div>
+            <div class="regime-pill"><div class="label">Completions (7d)</div><div class="value">${Number(summary.total_completions || 0).toLocaleString()}</div></div>
+        </div>
+        ${campaign ? `
+            <div class="action-item ${campaign.blocked_count ? 'sev-warning' : 'sev-ok'}" style="margin-bottom:1rem">
+                <div class="action-head">
+                    <div class="action-title">Current recovery campaign</div>
+                    <div class="action-meta">${escapeHtml(campaign.target_market_date || 'n/a')} · next=${escapeHtml(campaign.next_step || 'none')}</div>
+                </div>
+                <div class="action-text"><strong>Run:</strong> ${escapeHtml(campaign.run_id || 'n/a')}</div>
+                <div class="action-text"><strong>Started:</strong> ${escapeHtml(fmtShortDate(campaign.campaign_started_at))}</div>
+                <div class="action-text"><strong>Progress:</strong> ${escapeHtml(String(campaign.completed_count || 0))} completed, ${escapeHtml(String(campaign.running_count || 0))} running, ${escapeHtml(String(campaign.blocked_count || 0))} blocked</div>
+            </div>
+            <div style="overflow-x:auto;margin-bottom:1rem"><table style="width:100%;border-collapse:collapse;font-size:.82rem">
+                <thead><tr style="border-bottom:1px solid rgba(255,255,255,.08)">
+                    <th style="text-align:left;padding:.3rem .5rem;color:var(--text-muted)">Current Step</th>
+                    <th style="padding:.3rem .5rem;color:var(--text-muted)">Status</th>
+                    <th style="text-align:right;padding:.3rem .5rem;color:var(--text-muted)">Restarts</th>
+                    <th style="text-align:right;padding:.3rem .5rem;color:var(--text-muted)">Elapsed</th>
+                    <th style="padding:.3rem .5rem;color:var(--text-muted)">Blocked Reason</th>
+                </tr></thead>
+                <tbody>${campaignSteps || `<tr><td colspan="5" style="padding:.5rem;color:var(--text-muted)">No step state recorded</td></tr>`}</tbody>
+            </table></div>
+        ` : ''}
+        <div class="sections-grid">
+            <div class="section-box" style="margin-bottom:0">
+                <div class="section-title" style="font-size:.92rem"><i class="fas fa-gauge-high"></i> Noisy Steps (7d)</div>
+                <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:.82rem">
+                    <thead><tr style="border-bottom:1px solid rgba(255,255,255,.08)">
+                        <th style="text-align:left;padding:.3rem .5rem;color:var(--text-muted)">Step</th>
+                        <th style="text-align:right;padding:.3rem .5rem;color:var(--text-muted)">Launches</th>
+                        <th style="text-align:right;padding:.3rem .5rem;color:var(--text-muted)">Restarts</th>
+                        <th style="text-align:right;padding:.3rem .5rem;color:var(--text-muted)">Blocks</th>
+                        <th style="text-align:right;padding:.3rem .5rem;color:var(--text-muted)">Avg Duration</th>
+                        <th style="padding:.3rem .5rem;color:var(--text-muted)">Last Block</th>
+                    </tr></thead>
+                    <tbody>${noisySteps || `<tr><td colspan="6" style="padding:.5rem;color:var(--text-muted)">No recovery launches recorded</td></tr>`}</tbody>
+                </table></div>
+            </div>
+            <div class="section-box" style="margin-bottom:0">
+                <div class="section-title" style="font-size:.92rem"><i class="fas fa-triangle-exclamation"></i> Frequent Blockers (7d)</div>
+                ${(blockers.length ? blockers : [{ blocker: 'No blocker samples recorded', count: 0 }]).map((entry) => `
+                    <div class="action-item ${entry.count > 0 ? 'sev-warning' : 'sev-ok'}">
+                        <div class="action-head">
+                            <div class="action-title">${escapeHtml(entry.blocker)}</div>
+                            <div class="action-meta">${Number(entry.count || 0).toLocaleString()} samples</div>
+                        </div>
+                    </div>
+                `).join('')}
+                <div class="soft-note" style="margin-top:.75rem">Running patterns: ${(patterns.length ? patterns.map((entry) => `${escapeHtml(entry.pattern)} (${entry.count})`).join(' · ') : 'No samples')}</div>
+            </div>
+        </div>
+    `;
+}
+function renderUniverseFieldQuality(fieldStats, totalAssets) {
+    if (!fieldStats?.length) return '<span style="color:var(--text-muted);font-size:.82rem">No field quality data</span>';
+    const rows = fieldStats.map((field) => {
+        const pct = field.affected_ratio != null ? `${(field.affected_ratio * 100).toFixed(1)}%` : '—';
+        const sevCls = field.severity === 'critical' ? 'badge-red' : 'badge-yellow';
+        const classes = Object.entries(field.asset_classes || {}).map(([key, value]) => `${key}:${value}`).join(', ');
+        const cmd = field.repair_command
+            ? `<code style="font-size:.72rem;word-break:break-all">${escapeHtml(field.repair_command.slice(0, 110))}${field.repair_command.length > 110 ? '…' : ''}</code>`
+            : '—';
+        return `<tr>
+            <td style="padding:.3rem .5rem;font-weight:500">${escapeHtml(field.ui_field)}</td>
+            <td style="padding:.3rem .5rem;text-align:right"><span class="tiny-pill ${sevCls}">${Number(field.affected_assets || 0).toLocaleString()}</span></td>
+            <td style="padding:.3rem .5rem;text-align:right;color:var(--text-muted)">${pct}</td>
+            <td style="padding:.3rem .5rem;color:var(--text-muted);font-size:.78rem">${escapeHtml(classes)}</td>
+            <td style="padding:.3rem .5rem;font-size:.78rem;color:var(--text-muted)">${escapeHtml(field.root_cause || '—')}</td>
+            <td style="padding:.3rem .5rem">${cmd}</td>
+        </tr>`;
+    }).join('');
+    return `<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:.82rem">
+        <thead><tr style="border-bottom:1px solid rgba(255,255,255,.08)">
+            <th style="text-align:left;padding:.3rem .5rem;color:var(--text-muted)">UI Field</th>
+            <th style="text-align:right;padding:.3rem .5rem;color:var(--text-muted)">Affected</th>
+            <th style="text-align:right;padding:.3rem .5rem;color:var(--text-muted)">%</th>
+            <th style="padding:.3rem .5rem;color:var(--text-muted)">Classes</th>
+            <th style="padding:.3rem .5rem;color:var(--text-muted)">Root Cause</th>
+            <th style="padding:.3rem .5rem;color:var(--text-muted)">Repair</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+    </table></div>`;
+}
 function readCache(key) {
     try { return JSON.parse(localStorage.getItem(key) || 'null'); } catch { return null; }
 }
@@ -448,7 +692,7 @@ async function fetchDashboardPayload() {
     const previousSummary = readCache(DASHBOARD_SUMMARY_KEY);
     const failedAt = new Date().toISOString();
     try {
-        const response = await fetch('/dashboard_v6_meta_data.json?_=' + Date.now(), { cache: 'no-store' });
+        const response = await fetch('/data/ui/dashboard-v7-status.json?_=' + Date.now(), { cache: 'no-store' });
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         const data = await response.json();
         const fetchedAt = new Date().toISOString();
@@ -998,29 +1242,21 @@ async function loadDashboard() {
         // TAB 4: OPERATIONS
         // ═══════════════════════════════════════════
 
-        // Autopilot
         const ops = data.operations;
-        if (ops?.autopilot) {
-            const ap = ops.autopilot;
-            const active = ap.active_lock;
-            const learning = ap.learning || {};
-            const automation = ops.automation_summary || data.system?.automation_health || null;
-            let apHtml = `<div class="ops-grid">
-                <div class="ops-cell"><div class="ops-cell-label">Job Status</div><div class="ops-cell-value" style="color:${active?'var(--yellow)':'var(--green)'}">${active?'Running...':'Ready'}</div><div class="ops-cell-sub">Lock PID: ${active?active.pid:'none'}</div></div>
-                <div class="ops-cell"><div class="ops-cell-label">Learning (P10)</div><div class="ops-cell-value" style="color:var(--yellow)">${((learning.precision_10||0)*100).toFixed(1)}%</div><div class="ops-cell-sub">State: ${learning.learning_status||'Unknown'}</div></div>`;
-            if (ops.verified_counts) {
-                const vc = ops.verified_counts;
-                const sTotal = (vc.stocks?.short||0) + (vc.stocks?.medium||0) + (vc.stocks?.long||0);
-                const eTotal = (vc.etfs?.short||0) + (vc.etfs?.medium||0) + (vc.etfs?.long||0);
-                apHtml += `<div class="ops-cell"><div class="ops-cell-label">Verified (Stocks)</div><div class="ops-cell-value" style="color:var(--green)">\u03A3 ${sTotal}</div><div class="ops-cell-sub">S:${vc.stocks?.short||0} M:${vc.stocks?.medium||0} L:${vc.stocks?.long||0}</div></div>`;
-                apHtml += `<div class="ops-cell"><div class="ops-cell-label">Verified (ETFs)</div><div class="ops-cell-value" style="color:var(--green)">\u03A3 ${eTotal}</div><div class="ops-cell-sub">S:${vc.etfs?.short||0} M:${vc.etfs?.medium||0} L:${vc.etfs?.long||0}</div></div>`;
-            }
-            apHtml += '</div>';
-            if (ops.snapshots_date) apHtml += `<div style="font-size:.72rem;color:var(--text-muted);margin-top:.3rem">Snapshot: ${new Date(ops.snapshots_date).toLocaleString()}</div>`;
-            if (ap.generated_at) apHtml += `<div style="font-size:.72rem;color:var(--text-muted);margin-top:.3rem">Ops report: ${fmtShortDate(ap.generated_at)}</div>`;
-            if (automation?.latest_refresh?.failed_step) apHtml += `<div class="soft-note" style="margin-top:.5rem">Latest automation failure: ${escapeHtml(automation.latest_refresh.failed_step)} at ${escapeHtml(fmtShortDate(automation.latest_refresh.finished_at))}</div>`;
-            document.getElementById('autopilotContent').innerHTML = apHtml;
-        }
+        const pipelineSteps = data.system?.steps || {};
+        const pipelineStepOrder = data.system?.pipeline_step_order || data.system?.tracked_step_ids || [];
+        const pipelineErrorFrequency = data.system?.pipeline_error_frequency || {};
+        const recoveryMetrics = data.system?.recovery_metrics || ops?.recovery_metrics || null;
+        const greenContract = data.system?.green_contract || null;
+        document.getElementById('pipelineWaterfallContent').innerHTML = renderPipelineWaterfall(pipelineSteps, pipelineStepOrder, pipelineErrorFrequency);
+        document.getElementById('greenContractContent').innerHTML = greenContract
+            ? `
+                <div class="soft-note" style="margin-bottom:.75rem">${escapeHtml(greenContract.title || 'Green Contract')}</div>
+                ${(greenContract.items || []).map(item => `<div class="action-item sev-ok"><div class="action-text">${escapeHtml(item)}</div></div>`).join('')}
+                ${greenContract.doc_ref ? `<div class="soft-note" style="margin-top:.75rem">Repo doc: ${escapeHtml(greenContract.doc_ref)}</div>` : ''}
+            `
+            : '<span style="color:var(--text-muted);font-size:.82rem">No green-contract data</span>';
+        document.getElementById('recoveryMetricsContent').innerHTML = renderRecoveryMetrics(recoveryMetrics);
         if (ops?.automation_summary) {
             const automation = ops.automation_summary;
             const sevColor = automation.severity === 'critical' ? 'var(--red)' : automation.severity === 'warning' ? 'var(--yellow)' : 'var(--green)';
@@ -1156,35 +1392,11 @@ async function loadDashboard() {
             }
         }
 
-        const stepRunbook = data.system?.steps || ops?.step_runbook || {};
-        const trackedSteps = (data.system?.tracked_step_ids || []).map(id => stepRunbook[id]).filter(Boolean);
-        if (trackedSteps.length) {
-            document.getElementById('recoveryRunbookContent').innerHTML = trackedSteps.map((step) => {
-                const sev = step.severity === 'critical' ? 'sev-critical' : step.severity === 'warning' ? 'sev-warning' : 'sev-ok';
-                const verifyCommands = Array.isArray(step.runbook?.verify_commands) && step.runbook.verify_commands.length
-                    ? step.runbook.verify_commands.map(cmd => `<div class="soft-note" style="font-family:monospace">${escapeHtml(cmd)}</div>`).join('')
-                    : '<div class="soft-note">No verification command recorded.</div>';
-                const outputs = Array.isArray(step.runbook?.outputs) && step.runbook.outputs.length
-                    ? `<div class="pill-row">${step.runbook.outputs.map(out => `<span class="tiny-pill">${escapeHtml(out)}</span>`).join('')}</div>`
-                    : '';
-                const surfaces = Array.isArray(step.runbook?.ui_surfaces) && step.runbook.ui_surfaces.length
-                    ? `<div class="soft-note"><strong>UI impact:</strong> ${escapeHtml(step.runbook.ui_surfaces.join(' · '))}</div>`
-                    : '';
-                return `<div class="action-item ${sev}">
-                    <div class="action-head">
-                        <div class="action-title">${escapeHtml(step.label || step.id)}</div>
-                        <div class="action-meta">${escapeHtml((step.severity || 'unknown').toUpperCase())}</div>
-                    </div>
-                    <div class="action-text"><strong>Status:</strong> ${escapeHtml(step.summary || 'No summary')}</div>
-                    <div class="action-text"><strong>Why:</strong> ${escapeHtml(step.why || 'No reason recorded')}</div>
-                    <div class="action-text"><strong>Run:</strong> <span style="font-family:monospace">${escapeHtml(step.runbook?.run_command || step.next_fix || 'No run command recorded')}</span></div>
-                    <div class="action-text"><strong>Verify:</strong></div>
-                    ${verifyCommands}
-                    ${surfaces}
-                    ${outputs}
-                </div>`;
-            }).join('');
-        }
+        document.getElementById('stepErrorHistoryContent').innerHTML = renderStepErrorHistory(pipelineSteps, pipelineStepOrder, pipelineErrorFrequency);
+        document.getElementById('universeFieldQualityContent').innerHTML = renderUniverseFieldQuality(
+            data.system?.universe_field_quality || null,
+            data.system?.stock_analyzer_universe_audit?.summary?.total_assets || 42202
+        );
 
         const stockAnalyzerAudit = data.system?.stock_analyzer_universe_audit || ops?.stock_analyzer_universe_audit || null;
         const stockAnalyzerAuditEl = document.getElementById('stockAnalyzerAuditContent');

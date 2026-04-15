@@ -16,6 +16,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { REPO_ROOT } from '../best-setups-local-loader.mjs';
+import { histProbsReadCandidates } from './path-resolver.mjs';
 
 const SNAPSHOT_IN = path.join(REPO_ROOT, 'public/data/snapshots/best-setups-v4.json');
 const SNAPSHOT_OUT = path.join(REPO_ROOT, 'public/data/snapshots/best-setups-v4-enriched.json');
@@ -37,12 +38,13 @@ const HIGHLIGHT_EVENTS = [
 const PRIMARY_HORIZONS = ['h5d', 'h20d', 'h60d'];
 
 async function loadHistProbs(ticker) {
-  try {
-    const raw = await fs.readFile(path.join(HIST_PROBS_DIR, `${ticker.toUpperCase()}.json`), 'utf8');
-    return JSON.parse(raw);
-  } catch {
-    return null;
+  for (const candidate of histProbsReadCandidates(HIST_PROBS_DIR, ticker)) {
+    try {
+      const raw = await fs.readFile(candidate, 'utf8');
+      return JSON.parse(raw);
+    } catch {}
   }
+  return null;
 }
 
 function buildContext(histProbs, regime) {

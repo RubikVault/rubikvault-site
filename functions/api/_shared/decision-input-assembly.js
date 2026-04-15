@@ -7,6 +7,8 @@ import { computeIndicators } from './eod-indicators.mjs';
 import { getStaticBars } from './history-store.mjs';
 import { makeContractState, REASON_CODES } from './stock-insights-v4.js';
 import { buildAssetSegmentationProfile } from './asset-segmentation.mjs';
+import { deriveLearningGate } from './learning-gate.mjs';
+import { mergeCatalystFields } from './catalyst-normalization.mjs';
 
 function pickAsOf(...values) {
   for (const value of values) {
@@ -169,9 +171,10 @@ async function fetchJsonMaybeGzip(path, { request, assetFetcher } = {}) {
   }
 }
 
-let _v2IndexCache = null;
-let _v2IndexTs = 0;
-const _shardCache = new Map();
+let _featuresV4IndexCache = null;
+let _featuresV4IndexTs = 0;
+let _forecastLatestCache = null;
+let _forecastLatestTs = 0;
 let _searchExactCache = null;
 let _searchExactTs = 0;
 let _stockSetCache = null;
@@ -180,6 +183,60 @@ const _quantlabShardCache = new Map();
 let _runtimeControlCache = null;
 let _runtimeControlTs = 0;
 const CACHE_TTL = 600_000;
+
+function normalizeTickerKey(value) {
+  return String(value || '').trim().toUpperCase();
+}
+
+function buildScientificAvailabilityValue(row) {
+  if (row?.scientific?.value !== true) return null;
+  return {
+    setup: { score: null, proof_points: [], sample_count: null },
+    trigger: { score: null, proof_points: [], sample_count: null, pending: false },
+    metadata: {
+      sample_count: null,
+      source: row?.scientific?.source || 'stock-analysis.snapshot',
+      contract_level: 'availability_only',
+    },
+  };
+}
+
+function buildForecastAvailabilityValue(row) {
+  if (!row) return null;
+  return {
+    symbol: row.symbol || null,
+    name: row.name || null,
+    horizons: row.horizons || {},
+  };
+}
+
+async function loadFeaturesV4Index(fetchJson) {
+  const now = Date.now();
+  if (_featuresV4IndexCache && (now - _featuresV4IndexTs) < CACHE_TTL) return _featuresV4IndexCache;
+  const payload = await fetchJson('/data/features-v4/stock-insights/index.json');
+  if (payload) {
+    _featuresV4IndexCache = payload;
+    _featuresV4IndexTs = now;
+  }
+  return _featuresV4IndexCache;
+}
+
+async function loadForecastLatest(fetchJson) {
+  const now = Date.now();
+  if (_forecastLatestCache && (now - _forecastLatestTs) < CACHE_TTL) return _forecastLatestCache;
+  const payload = await fetchJson('/data/forecast/latest.json');
+  if (!payload) return _forecastLatestCache;
+  const rows = Array.isArray(payload?.data?.forecasts) ? payload.data.forecasts : [];
+  const rowsBySymbol = new Map();
+  for (const row of rows) {
+    const key = normalizeTickerKey(row?.symbol);
+    if (!key) continue;
+    rowsBySymbol.set(key, row);
+  }
+  _forecastLatestCache = { payload, rowsBySymbol };
+  _forecastLatestTs = now;
+  return _forecastLatestCache;
+}
 
 async function loadSearchExact(request, assetFetcher) {
   const now = Date.now();
@@ -210,10 +267,21 @@ export async function loadRequestCoreInputs(ticker, { request, assetFetcher = nu
   const bars = await getStaticBars(ticker, origin, assetFetcher) || [];
   const indicatorOut = computeIndicators(Array.isArray(bars) ? bars : []);
   const stats = mapIndicatorsToStats(indicatorOut?.indicators || []);
-  const fundamentals = await fetchJson(`/data/fundamentals/${encodeURIComponent(String(ticker || '').toUpperCase())}.json`);
+  const [fundamentalsDoc, earningsFeed] = await Promise.all([
+    fetchJson(`/data/fundamentals/${encodeURIComponent(String(ticker || '').toUpperCase())}.json`),
+    fetchJson('/data/earnings-calendar/latest.json'),
+  ]);
   // Skip loading large gzip files (search_exact_by_symbol.json.gz, stocks.max.symbols.json)
   // to prevent Worker memory limit exceeded on Cloudflare Pages.
   const universe = buildUniversePayload({ ticker, searchExact: null, universeSymbols: null });
+  const catalystNormalized = mergeCatalystFields({
+    ticker,
+    fundamentals: fundamentalsDoc,
+    earningsFeed,
+    universe,
+    name: fundamentalsDoc?.companyName || universe?.name || null,
+  });
+  const fundamentals = catalystNormalized.fundamentals;
   const segmentationProfile = buildAssetSegmentationProfile({
     ticker,
     assetClass: 'stock',
@@ -276,9 +344,18 @@ async function loadDecisionRuntimeControl(fetchJson) {
   ]);
   const stockAnalyzer = report?.features?.stock_analyzer || {};
   const control = {
+    run_id: controlDoc?.run_id || report?.run_id || null,
+    target_market_date: controlDoc?.target_market_date || report?.target_market_date || report?.date || null,
     learning_status: controlDoc?.learning_status || stockAnalyzer?.learning_status || report?.best_setups_policy?.learning_status_current || 'BOOTSTRAP',
     safety_switch: controlDoc?.safety_switch || stockAnalyzer?.safety_switch || null,
     minimum_n_status: controlDoc?.minimum_n_status || stockAnalyzer?.minimum_n_status || null,
+    learning_gate: deriveLearningGate({
+      learning_status: controlDoc?.learning_status || stockAnalyzer?.learning_status || report?.best_setups_policy?.learning_status_current || 'BOOTSTRAP',
+      safety_switch: controlDoc?.safety_switch || stockAnalyzer?.safety_switch || null,
+      minimum_n_status: controlDoc?.minimum_n_status || stockAnalyzer?.minimum_n_status || null,
+      policy,
+      default_status: policy?.learning_status?.default || null,
+    }),
     policy: policy || null,
   };
   _runtimeControlCache = control;
@@ -287,59 +364,43 @@ async function loadDecisionRuntimeControl(fetchJson) {
 }
 
 export async function assembleModelStates(ticker, { fetchJson }) {
-  const now = Date.now();
   const tickerBase = ticker.includes('.') ? ticker.split('.')[0] : ticker;
-  const sKey = shardKeyForTicker(tickerBase);
-  const shardPath = `/data/features-v2/stock-insights/shards/${sKey}.json`;
-  const indexPath = '/data/features-v2/stock-insights/index.json';
-
-  const [indexResult, shardResult] = await Promise.allSettled([
-    (async () => {
-      if (_v2IndexCache && (now - _v2IndexTs < CACHE_TTL)) return _v2IndexCache;
-      const data = await fetchJson(indexPath);
-      if (data) {
-        _v2IndexCache = data;
-        _v2IndexTs = now;
-      }
-      return _v2IndexCache;
-    })(),
-    (async () => {
-      const cached = _shardCache.get(sKey);
-      if (cached && (now - cached.time < CACHE_TTL)) return cached.data;
-      const data = await fetchJson(shardPath);
-      if (data) _shardCache.set(sKey, { data, time: now });
-      return data;
-    })(),
+  const [indexDoc, forecastBundle] = await Promise.all([
+    loadFeaturesV4Index(fetchJson),
+    loadForecastLatest(fetchJson),
   ]);
 
-  const indexDoc = indexResult.status === 'fulfilled' ? indexResult.value : null;
-  const shardDoc = shardResult.status === 'fulfilled' ? shardResult.value : null;
-
   const idxRow = indexDoc?.rows?.[ticker] || indexDoc?.rows?.[tickerBase] || null;
-  const shardRow = shardDoc?.rows?.[ticker] || shardDoc?.rows?.[tickerBase] || null;
+  const forecastRow = forecastBundle?.rowsBySymbol?.get(normalizeTickerKey(ticker))
+    || forecastBundle?.rowsBySymbol?.get(normalizeTickerKey(tickerBase))
+    || null;
 
-  const scientific = shardRow?.scientific?.value || null;
-  const scientificReason = shardRow?.scientific?.reason
-    || (shardDoc ? 'NO_RECOMMENDATION' : 'MISSING_SCIENTIFIC_ENTRY');
-
+  const scientific = buildScientificAvailabilityValue(idxRow);
   const scientificState = makeContractState(scientific, {
-    as_of: pickAsOf(idxRow?.scientific?.as_of, shardRow?.scientific?.as_of),
-    source: idxRow?.scientific?.source || shardRow?.scientific?.source || 'stock-analysis.snapshot',
-    status: idxRow?.scientific?.status || shardRow?.scientific?.status || (scientific ? 'ok' : 'unavailable'),
-    reason: idxRow?.scientific?.reason || (scientificReason === 'MISSING_SCIENTIFIC_ENTRY' && shardDoc ? 'NO_RECOMMENDATION' : scientificReason),
+    as_of: pickAsOf(idxRow?.scientific?.as_of, indexDoc?.generated_at),
+    source: idxRow?.scientific?.source || 'stock-analysis.snapshot',
+    status: idxRow?.scientific?.status || (scientific ? 'ok' : 'unavailable'),
+    reason: idxRow?.scientific?.reason || (scientific ? REASON_CODES.OK : REASON_CODES.MISSING_SCIENTIFIC_ENTRY),
   });
 
-  const forecast = shardRow?.forecast?.value || null;
-  const forecastMeta = forecast ? {
-    as_of: shardRow?.forecast?.as_of,
-    source: shardRow?.forecast?.source,
-  } : null;
+  const forecast = buildForecastAvailabilityValue(forecastRow);
+  const forecastAsOf = pickAsOf(
+    idxRow?.forecast?.as_of,
+    forecastBundle?.payload?.data?.asof,
+    forecastBundle?.payload?.meta?.freshness,
+    forecastBundle?.payload?.freshness,
+  );
+  const forecastMeta = {
+    as_of: forecastAsOf,
+    source: idxRow?.forecast?.source || 'forecast.latest',
+    accuracy: forecastBundle?.payload?.meta?.accuracy || forecastBundle?.payload?.data?.accuracy || forecastBundle?.payload?.accuracy || null,
+  };
 
   const forecastState = makeContractState(forecast, {
-    as_of: pickAsOf(idxRow?.forecast?.as_of, shardRow?.forecast?.as_of),
-    source: idxRow?.forecast?.source || shardRow?.forecast?.source || 'forecast.latest',
-    status: idxRow?.forecast?.status || shardRow?.forecast?.status || (forecast ? 'ok' : 'unavailable'),
-    reason: idxRow?.forecast?.reason || shardRow?.forecast?.reason || (forecast ? REASON_CODES.OK : REASON_CODES.MISSING_FORECAST_ENTRY),
+    as_of: forecastAsOf,
+    source: idxRow?.forecast?.source || 'forecast.latest',
+    status: idxRow?.forecast?.status || (forecast ? 'ok' : 'unavailable'),
+    reason: idxRow?.forecast?.reason || (forecast ? REASON_CODES.OK : REASON_CODES.MISSING_FORECAST_ENTRY),
   });
 
   const elliottState = makeContractState(null, {
@@ -428,13 +489,14 @@ export async function assembleDecisionInputs(ticker, {
 }
 
 export function _resetCaches() {
-  _v2IndexCache = null;
-  _v2IndexTs = 0;
+  _featuresV4IndexCache = null;
+  _featuresV4IndexTs = 0;
+  _forecastLatestCache = null;
+  _forecastLatestTs = 0;
   _searchExactCache = null;
   _searchExactTs = 0;
   _stockSetCache = null;
   _stockSetTs = 0;
-  _shardCache.clear();
   _quantlabShardCache.clear();
   _runtimeControlCache = null;
   _runtimeControlTs = 0;

@@ -72,6 +72,12 @@ def parse_args(argv: Iterable[str]) -> argparse.Namespace:
     p.add_argument("--compression", default="snappy")
     p.add_argument("--limit-packs", type=int, default=0)
     p.add_argument("--force-pack", action="append", default=[])
+    p.add_argument(
+        "--force-pack-file",
+        action="append",
+        default=[],
+        help="Optional newline-delimited rel_pack file(s); merged with --force-pack.",
+    )
     p.add_argument("--job-name", default="")
     p.add_argument(
         "--latest-date-cache-path",
@@ -91,6 +97,12 @@ def parse_args(argv: Iterable[str]) -> argparse.Namespace:
     p.add_argument("--rebuild-latest-date-cache", action="store_true")
     p.add_argument("--full-scan-packs", action="store_true", help="Ignore pack mtime cache and scan all packs")
     p.add_argument("--max-emitted-rows", type=int, default=0, help="Optional safety stop for smoke tests")
+    p.add_argument(
+        "--slow-pack-warn-sec",
+        type=float,
+        default=900.0,
+        help="Record a slow-pack warning in state when a single pack exceeds this duration.",
+    )
     p.add_argument("--expect-nonzero-delta", action="store_true", help="Fail run if emitted delta rows are zero")
     p.add_argument("--expect-min-emitted-rows", type=int, default=0, help="Fail run if emitted rows are below this value")
     p.add_argument(
@@ -129,6 +141,19 @@ def parse_args(argv: Iterable[str]) -> argparse.Namespace:
         action="store_false",
     )
     return p.parse_args(list(argv))
+
+
+def _load_force_packs(args: argparse.Namespace) -> set[str]:
+    force_packs = {str(item).strip() for item in (args.force_pack or []) if str(item).strip()}
+    for raw_path in (args.force_pack_file or []):
+        path = Path(str(raw_path)).expanduser().resolve()
+        if not path.exists():
+            raise FileNotFoundError(f"force-pack-file not found: {path}")
+        for line in path.read_text(encoding="utf-8").splitlines():
+            rel_pack = str(line).strip()
+            if rel_pack:
+                force_packs.add(rel_pack)
+    return force_packs
 
 
 def _resolve_quant_rel(quant_root: Path, p: str) -> Path:
@@ -356,6 +381,7 @@ def load_or_build_pack_state_cache(
     registry_path: Path | None = None,
     registry_pack_sha: dict[str, str] | None = None,
     force_full_scan: bool = False,
+    commit_cache: bool = True,
 ) -> tuple[dict[str, tuple[int, int]], list[str], dict[str, Any]]:
     """
     Returns:
@@ -411,11 +437,13 @@ def load_or_build_pack_state_cache(
                     "registry_pack_sha_missing": sha_missing,
                 },
             }
-            atomic_write_json(cache_path, payload)
+            if commit_cache:
+                atomic_write_json(cache_path, payload)
             return prev_map, [], {
                 "enabled": True,
                 "status": "migrated_registry_sha_fast",
                 "cache_path": str(cache_path),
+                "cache_commit": bool(commit_cache),
                 "packs_total": len(rel_packs),
                 "packs_present": len(prev_map),
                 "packs_changed": 0,
@@ -456,11 +484,13 @@ def load_or_build_pack_state_cache(
                     "registry_pack_sha_missing": sha_missing,
                 },
             }
-            atomic_write_json(cache_path, payload)
+            if commit_cache:
+                atomic_write_json(cache_path, payload)
             return current, changed, {
                 "enabled": True,
                 "status": "registry_sha_fast" if not stat_targets else "registry_sha_partial_stat",
                 "cache_path": str(cache_path),
+                "cache_commit": bool(commit_cache),
                 "packs_total": len(rel_packs),
                 "packs_present": len(current),
                 "packs_changed": len(changed),
@@ -498,11 +528,13 @@ def load_or_build_pack_state_cache(
             "registry_pack_sha_missing": sha_missing,
         },
     }
-    atomic_write_json(cache_path, payload)
+    if commit_cache:
+        atomic_write_json(cache_path, payload)
     return current, changed, {
         "enabled": True,
         "status": "rebuilt" if force_full_scan or not prev_map else "updated_stat_scan",
         "cache_path": str(cache_path),
+        "cache_commit": bool(commit_cache),
         "packs_total": len(rel_packs),
         "packs_present": len(current),
         "packs_changed": len(changed),
@@ -678,6 +710,143 @@ def filter_rows_newer_than_latest(
     }
 
 
+def flatten_delta_rows_for_pack(
+    pack_path: Path,
+    rel_pack: str,
+    wanted_assets: set[str],
+    asset_meta: dict[str, Any],
+    latest_date_by_asset: dict[str, str],
+    emitted_keys_seen: set[tuple[str, str]],
+    *,
+    max_allowed_date: str,
+    exporter: Any,
+) -> tuple[dict[str, dict[str, list[Any]]], dict[str, Any], dict[str, int]]:
+    rows_by_class: dict[str, dict[str, list[Any]]] = {}
+    per_pack_stats = {
+        "records_seen": 0,
+        "records_matched": 0,
+        "bars_written": 0,
+        "assets_emitted": 0,
+        "missing_targets_in_pack": 0,
+    }
+    filter_stats = defaultdict(int)
+    seen_assets: set[str] = set()
+
+    def ensure_bucket(asset_class: str) -> dict[str, list[Any]]:
+        if asset_class in rows_by_class:
+            return rows_by_class[asset_class]
+        rows_by_class[asset_class] = {k: [] for k in [
+            "asset_id", "date", "asset_class", "exchange", "symbol", "provider_symbol",
+            "currency", "country", "provider", "is_trading_day", "data_quality_flag",
+            "source_pack_rel", "open_raw", "high_raw", "low_raw", "close_raw", "volume_raw",
+            "adjusted_close_raw"
+        ]}
+        return rows_by_class[asset_class]
+
+    def is_finite(value: object) -> bool:
+        try:
+            f = float(value)
+            return f == f and f not in (float("inf"), float("-inf"))
+        except Exception:
+            return False
+
+    with gzip.open(pack_path, "rt", encoding="utf-8") as fh:
+        for line in fh:
+            line = line.strip()
+            if not line:
+                continue
+            per_pack_stats["records_seen"] += 1
+            try:
+                rec = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            cid = str(rec.get("canonical_id") or "").strip()
+            if cid not in wanted_assets:
+                continue
+            meta = asset_meta.get(cid)
+            if not meta:
+                continue
+            per_pack_stats["records_matched"] += 1
+            seen_assets.add(cid)
+            asset_class = exporter.sanitize_type_norm(meta.type_norm)
+            out = ensure_bucket(asset_class)
+            for bar in rec.get("bars") or []:
+                per_pack_stats["bars_written"] += 1
+                filter_stats["rows_in"] += 1
+
+                d = str(bar.get("date") or "").strip()
+                if not d:
+                    filter_stats["rows_invalid"] += 1
+                    filter_stats["rows_invalid_identity_or_date"] += 1
+                    continue
+                if max_allowed_date and d > max_allowed_date:
+                    filter_stats["rows_invalid"] += 1
+                    filter_stats["rows_future_date"] += 1
+                    continue
+
+                o = bar.get("open")
+                h = bar.get("high")
+                l = bar.get("low")
+                c = bar.get("close")
+                v = bar.get("volume")
+                if not (is_finite(o) and is_finite(h) and is_finite(l) and is_finite(c)):
+                    filter_stats["rows_invalid"] += 1
+                    filter_stats["rows_invalid_ohlc"] += 1
+                    continue
+                of = float(o)
+                hf = float(h)
+                lf = float(l)
+                cf = float(c)
+                if of < 0 or hf < 0 or lf < 0 or cf < 0 or hf < lf:
+                    filter_stats["rows_invalid"] += 1
+                    filter_stats["rows_invalid_ohlc"] += 1
+                    continue
+                if not is_finite(v) or float(v) < 0:
+                    filter_stats["rows_invalid"] += 1
+                    filter_stats["rows_invalid_volume"] += 1
+                    continue
+
+                last = latest_date_by_asset.get(cid)
+                if last is not None and d <= last:
+                    filter_stats["rows_skipped_old_or_known"] += 1
+                    continue
+                key = (cid, d)
+                if key in emitted_keys_seen:
+                    filter_stats["rows_skipped_duplicate_in_run"] += 1
+                    continue
+                emitted_keys_seen.add(key)
+
+                out["asset_id"].append(meta.asset_id)
+                out["date"].append(d)
+                out["asset_class"].append(asset_class)
+                out["exchange"].append(meta.exchange)
+                out["symbol"].append(meta.symbol)
+                out["provider_symbol"].append(meta.provider_symbol)
+                out["currency"].append(meta.currency)
+                out["country"].append(meta.country)
+                out["provider"].append("EODHD")
+                out["is_trading_day"].append(True)
+                out["data_quality_flag"].append(0)
+                out["source_pack_rel"].append(rel_pack)
+                out["open_raw"].append(o)
+                out["high_raw"].append(h)
+                out["low_raw"].append(l)
+                out["close_raw"].append(c)
+                out["volume_raw"].append(v)
+                out["adjusted_close_raw"].append(bar.get("adjusted_close"))
+                filter_stats["rows_out"] += 1
+
+    per_pack_stats["assets_emitted"] = len(seen_assets)
+    per_pack_stats["missing_targets_in_pack"] = max(0, len(wanted_assets) - len(seen_assets))
+    for key in [
+        "rows_in", "rows_out", "rows_skipped_old_or_known", "rows_skipped_duplicate_in_run",
+        "rows_invalid", "rows_future_date", "rows_invalid_identity_or_date",
+        "rows_invalid_ohlc", "rows_invalid_volume",
+    ]:
+        filter_stats[key] += 0
+    return rows_by_class, per_pack_stats, dict(filter_stats)
+
+
 def write_parquet_rows(out_path: Path, rows: Dict[str, List], compression: str = "snappy") -> int:
     if not rows or not rows.get("asset_id"):
         return 0
@@ -837,10 +1006,12 @@ def main(argv: Iterable[str]) -> int:
             registry_path=registry_path,
             registry_pack_sha=registry_pack_sha,
             force_full_scan=bool(args.full_scan_packs),
+            commit_cache=not bool(args.full_scan_packs),
         )
         selected_packs = changed_packs
-        if args.force_pack:
-            force = set(args.force_pack)
+        force_packs = _load_force_packs(args)
+        if force_packs:
+            force = set(force_packs)
             selected_packs = [p for p in rel_packs_all if p in force]
         if args.limit_packs and args.limit_packs > 0:
             selected_packs = selected_packs[: args.limit_packs]
@@ -875,7 +1046,37 @@ def main(argv: Iterable[str]) -> int:
                 pack_to_assets[rel_pack].update(touched_assets)
         if args.limit_packs and args.limit_packs > 0:
             selected_packs = selected_packs[: args.limit_packs]
+        prior_selected_total = int((state.get("stats") or {}).get("selected_packs_total") or 0)
+        prior_packs_done = len(completed_packs)
+        resume_incomplete_full_scan = (
+            not args.full_scan_packs
+            and not force_packs
+            and not args.limit_packs
+            and str(state.get("ingest_date") or "") == str(args.ingest_date)
+            and prior_selected_total >= len(rel_packs_all)
+            and prior_packs_done < prior_selected_total
+            and len(selected_packs) == 0
+        )
+        if resume_incomplete_full_scan:
+            selected_packs = [rel_pack for rel_pack in rel_packs_all if rel_pack not in completed_packs]
+            state["resume_incomplete_full_scan"] = {
+                "enabled": True,
+                "reason": "prior_full_scan_incomplete",
+                "prior_selected_packs_total": prior_selected_total,
+                "prior_packs_done": prior_packs_done,
+                "remaining_packs_total": len(selected_packs),
+                "detected_at": utc_now_iso(),
+            }
         state["history_touch_report"] = history_touch_meta
+        selected_pack_set = set(selected_packs)
+        state["pack_selection"] = {
+            "mode": "force" if force_packs else ("full_scan" if args.full_scan_packs else "changed_packs"),
+            "force_pack_file": [str(Path(str(p)).expanduser().resolve()) for p in (args.force_pack_file or [])],
+            "selected_packs_total": len(selected_packs),
+            "selected_packs_already_done": len(selected_pack_set.intersection(completed_packs)),
+            "selected_packs_done": len(selected_pack_set.intersection(completed_packs)),
+            "selected_packs_remaining": max(0, len(selected_packs) - len(selected_pack_set.intersection(completed_packs))),
+        }
         if history_touch_report:
             state["history_touch_report_summary"] = {
                 "run_id": history_touch_report.get("run_id"),
@@ -927,28 +1128,41 @@ def main(argv: Iterable[str]) -> int:
                 continue
 
             started = time.time()
+            state["current_pack"] = {
+                "rel_pack": rel_pack,
+                "index": idx,
+                "selected_packs_total": len(selected_packs),
+                "targets": len(wanted_assets),
+                "started_at": utc_now_iso(),
+                "pack_path": str(pack_abs),
+            }
+            state["updated_at"] = utc_now_iso()
+            atomic_write_json(state_path, state)
+            write_run_status(stage="processing_pack", extra={"current_pack": state["current_pack"]})
+            print(f"[q1-delta] [{idx}/{len(selected_packs)}] {rel_pack} targets={len(wanted_assets)}", flush=True)
             try:
-                rows_by_class, per_pack_stats = exporter.flatten_rows_for_pack(pack_abs, rel_pack, wanted_assets, asset_meta)
+                rows_by_class, per_pack_stats, filter_stats_total = flatten_delta_rows_for_pack(
+                    pack_abs,
+                    rel_pack,
+                    wanted_assets,
+                    asset_meta,
+                    latest_date_by_asset,
+                    emitted_keys_seen,
+                    max_allowed_date=str(args.ingest_date),
+                    exporter=exporter,
+                )
+                duration_sec = round(time.time() - started, 3)
                 state["stats"]["bars_rows_scanned_in_selected_packs"] += int(per_pack_stats.get("bars_written", 0))
                 pack_key = exporter.rel_to_pack_key(rel_pack)
                 outputs = []
-                filter_stats_total = defaultdict(int)
 
                 for asset_class, rows in rows_by_class.items():
-                    filtered, fstats = filter_rows_newer_than_latest(
-                        rows,
-                        latest_date_by_asset,
-                        emitted_keys_seen,
-                        max_allowed_date=str(args.ingest_date),
-                    )
-                    for k, v in fstats.items():
-                        filter_stats_total[k] += int(v)
-                    if not filtered.get("asset_id"):
+                    if not rows.get("asset_id"):
                         continue
-                    for aid in filtered["asset_id"]:
+                    for aid in rows["asset_id"]:
                         emitted_assets.add(aid)
                     out_path = raw_ingest_root / f"asset_class={asset_class}" / f"delta_{pack_key}.parquet"
-                    n = write_parquet_rows(out_path, filtered, compression=args.compression)
+                    n = write_parquet_rows(out_path, rows, compression=args.compression)
                     if n > 0:
                         outputs.append({"asset_class": asset_class, "path": str(out_path), "rows": n})
 
@@ -956,7 +1170,8 @@ def main(argv: Iterable[str]) -> int:
                     "ts": utc_now_iso(),
                     "rel_pack": rel_pack,
                     "pack_key": pack_key,
-                    "duration_sec": round(time.time() - started, 3),
+                    "duration_sec": duration_sec,
+                    "slow_pack": duration_sec > float(args.slow_pack_warn_sec),
                     "targets": len(wanted_assets),
                     "stats": per_pack_stats,
                     "filter_stats": dict(filter_stats_total),
@@ -978,6 +1193,20 @@ def main(argv: Iterable[str]) -> int:
                 completed_packs.add(rel_pack)
                 state["completed_packs"] = sorted(completed_packs)
                 state["stats"]["packs_done"] = len(completed_packs)
+                if state.get("pack_selection"):
+                    selected_done = len(selected_pack_set.intersection(completed_packs))
+                    state["pack_selection"]["selected_packs_done"] = selected_done
+                    state["pack_selection"]["selected_packs_remaining"] = max(0, len(selected_packs) - selected_done)
+                state.pop("current_pack", None)
+                if duration_sec > float(args.slow_pack_warn_sec):
+                    slow_packs = list(state.get("slow_packs") or [])
+                    slow_packs.append({
+                        "rel_pack": rel_pack,
+                        "duration_sec": duration_sec,
+                        "warn_threshold_sec": float(args.slow_pack_warn_sec),
+                        "completed_at": utc_now_iso(),
+                    })
+                    state["slow_packs"] = slow_packs[-100:]
                 state["updated_at"] = utc_now_iso()
                 atomic_write_json(state_path, state)
 
@@ -985,6 +1214,7 @@ def main(argv: Iterable[str]) -> int:
                     break
 
             except KeyboardInterrupt:
+                state.pop("current_pack", None)
                 state["updated_at"] = utc_now_iso()
                 atomic_write_json(state_path, state)
                 write_run_status(ok=False, exit_code=130, reason="interrupted", stage="process_packs")
@@ -993,6 +1223,7 @@ def main(argv: Iterable[str]) -> int:
                 failed_packs[rel_pack] = {"error": str(exc), "at": utc_now_iso()}
                 state["failed_packs"] = failed_packs
                 state["stats"]["packs_failed"] = len(failed_packs)
+                state.pop("current_pack", None)
                 state["updated_at"] = utc_now_iso()
                 atomic_write_json(state_path, state)
 
@@ -1088,6 +1319,7 @@ def main(argv: Iterable[str]) -> int:
             "pack_state_cache": state.get("pack_state_cache", {}),
             "latest_date_cache": state.get("latest_date_cache", {}),
             "stats": state.get("stats", {}),
+            "pack_selection": state.get("pack_selection", {}),
             "reconciliation": reconciliation,
             "artifacts": {
                 "run_status": str(run_status_path),
@@ -1095,20 +1327,6 @@ def main(argv: Iterable[str]) -> int:
             },
         }
         atomic_write_json(manifest_path, manifest)
-
-        # refresh latest success pointer for orchestration
-        latest_ptr = quant_root / "ops" / "q1_daily_delta_ingest" / "latest_success.json"
-        atomic_write_json(latest_ptr, {
-            "schema": "q1_daily_delta_ingest_latest_success_v1",
-            "updated_at": utc_now_iso(),
-            "run_id": run_id,
-            "job_name": job_name,
-            "ingest_date": args.ingest_date,
-            "manifest_path": str(manifest_path),
-            "run_status_path": str(run_status_path),
-            "stats": state.get("stats", {}),
-            "reconciliation": reconciliation,
-        })
 
         exit_code = 0
         reason = "ok"
@@ -1120,6 +1338,39 @@ def main(argv: Iterable[str]) -> int:
             reason = "reconciliation_threshold_failed"
         elif noop_no_changed_packs:
             reason = "noop_no_changed_packs"
+
+        ptr_payload = {
+            "schema": "q1_daily_delta_ingest_latest_success_v1" if exit_code == 0 else "q1_daily_delta_ingest_latest_failure_v1",
+            "updated_at": utc_now_iso(),
+            "run_id": run_id,
+            "job_name": job_name,
+            "ingest_date": args.ingest_date,
+            "manifest_path": str(manifest_path),
+            "run_status_path": str(run_status_path),
+            "stats": state.get("stats", {}),
+            "pack_selection": state.get("pack_selection", {}),
+            "reconciliation": reconciliation,
+            "exit_code": exit_code,
+            "reason": reason,
+        }
+        if exit_code == 0:
+            if args.full_scan_packs:
+                _, _, committed_pack_cache_meta = load_or_build_pack_state_cache(
+                    pack_state_cache_path,
+                    repo_root,
+                    rel_packs_all,
+                    registry_path=registry_path,
+                    registry_pack_sha=registry_pack_sha,
+                    force_full_scan=False,
+                    commit_cache=True,
+                )
+                ptr_payload["pack_state_cache_commit"] = committed_pack_cache_meta
+            latest_ptr = quant_root / "ops" / "q1_daily_delta_ingest" / "latest_success.json"
+            atomic_write_json(latest_ptr, ptr_payload)
+        else:
+            latest_failure_ptr = quant_root / "ops" / "q1_daily_delta_ingest" / "latest_failure.json"
+            atomic_write_json(latest_failure_ptr, ptr_payload)
+
         write_run_status(ok=(exit_code == 0), exit_code=exit_code, reason=reason, stage="completed", extra={
             "manifest_path": str(manifest_path),
             "reconciliation": reconciliation,

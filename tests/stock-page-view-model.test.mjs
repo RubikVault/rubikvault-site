@@ -21,6 +21,7 @@ import {
   buildTradePlanModel,
   computeTooltipFrame,
   buildPageIdentity,
+  buildModuleFreshnessPresentation,
 } from '../public/js/stock-page-view-model.js';
 
 describe('buildRiskPresentation', () => {
@@ -62,6 +63,21 @@ describe('buildCatalystPresentation', () => {
     });
     assert.equal(catalyst.renderMode, 'compact');
     assert.match(catalyst.primaryText, /2026-04-29/);
+  });
+
+  it('prefers normalized catalyst payload when server-side feed is available', () => {
+    const catalyst = buildCatalystPresentation({
+      ticker: 'AAPL',
+      name: 'Apple Inc.',
+      fundamentals: { updatedAt: '2026-04-10' },
+      catalysts: {
+        status: 'confirmed',
+        next_earnings_date: '2026-05-02',
+        items: [{ type: 'earnings', label: 'Earnings', date: '2026-05-02' }],
+      },
+    });
+    assert.equal(catalyst.renderMode, 'card');
+    assert.equal(catalyst.items.length, 1);
   });
 
   it('does not emit fake earnings fallback for ETFs', () => {
@@ -131,6 +147,24 @@ describe('buildTrustPresentation', () => {
   });
 });
 
+describe('buildModuleFreshnessPresentation', () => {
+  it('treats Friday data as fresh on Monday using business days', () => {
+    const freshness = buildModuleFreshnessPresentation({
+      data: {
+        market_prices: { date: '2026-03-06' },
+        bars: [{ date: '2026-03-06', close: 100 }],
+        module_freshness: {
+          historical_as_of: '2026-03-06',
+        },
+      },
+    }, new Date('2026-03-09T12:00:00Z'));
+
+    const historical = freshness.find((item) => item.label === 'Historical');
+    assert.equal(historical?.ageDays, 1);
+    assert.equal(historical?.state, 'fresh');
+  });
+});
+
 describe('buildWaitStatePresentation', () => {
   it('creates actionable WAIT-state guidance', () => {
     const waitView = buildWaitStatePresentation({
@@ -153,9 +187,9 @@ describe('buildModelConsensusPresentation', () => {
       decision: { verdict: 'WAIT' },
       missingModels: ['forecast', 'scientific'],
     });
-    assert.equal(view.coverageCount, 2);
+    assert.equal(view.coverageCount, 1);
     assert.match(view.actionableText, /Consensus not actionable/i);
-    assert.match(view.availabilityText, /Only 2 of 4 models available/i);
+    assert.match(view.availabilityText, /Only 1 of 3 models available/i);
   });
 });
 
@@ -196,8 +230,8 @@ describe('buildActiveModelConsensusPresentation', () => {
       missingModels: ['forecast', 'scientific'],
       modelStates: { quantlab: 'neutral', elliott: 'bullish' },
     });
-    assert.equal(view.coverageCount, 2);
-    assert.deepEqual(view.activeModels.map((item) => item.key), ['quantlab', 'elliott']);
+    assert.equal(view.coverageCount, 1);
+    assert.deepEqual(view.activeModels.map((item) => item.key), ['quantlab']);
     assert.match(view.finalInterpretation, /Not actionable/i);
   });
 });

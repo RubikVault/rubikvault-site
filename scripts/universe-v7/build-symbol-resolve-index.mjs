@@ -3,6 +3,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import zlib from 'node:zlib';
+import { comparePreferredUniverseRows } from '../../public/js/universe-ssot.js';
 
 const ROOT = process.cwd();
 const DEFAULT_REGISTRY_PATH = path.join(ROOT, 'public/data/universe/v7/registry/registry.ndjson.gz');
@@ -80,6 +81,18 @@ function buildAliases(entry) {
   return [...aliases];
 }
 
+function compareResolveRows(a, b) {
+  const aBars = Number(a?.bars_count || 0);
+  const bBars = Number(b?.bars_count || 0);
+  if (aBars !== bBars) return aBars - bBars;
+
+  const aDate = String(a?.last_trade_date || '');
+  const bDate = String(b?.last_trade_date || '');
+  if (aDate !== bDate) return aDate.localeCompare(bDate);
+
+  return String(a?.canonical_id || '').localeCompare(String(b?.canonical_id || ''));
+}
+
 function writeJsonAtomic(filePath, payload) {
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
   const tmp = `${filePath}.${process.pid}.tmp`;
@@ -96,17 +109,14 @@ function writeJsonAtomicMinified(filePath, payload) {
 
 export function buildSymbolResolveIndex(options = parseArgs(process.argv)) {
   const allowlist = readAllowlist(options.allowlistPath);
-  const entries = [];
-  const seen = new Set();
+  const bestBySymbol = new Map();
   const exact = {};
 
   for (const row of readRegistry(options.registryPath)) {
     const ticker = String(row?.symbol || '').trim().toUpperCase();
     if (!ticker) continue;
     if (allowlist && !allowlist.has(ticker)) continue;
-    if (seen.has(ticker)) continue;
-    seen.add(ticker);
-    entries.push({
+    const candidate = {
       ticker,
       name: String(row?.name || row?.display_name || '').trim() || null,
       aliases: buildAliases(row),
@@ -114,8 +124,19 @@ export function buildSymbolResolveIndex(options = parseArgs(process.argv)) {
       country: String(row?.country || '').trim().toUpperCase() || null,
       canonical_id: String(row?.canonical_id || '').trim().toUpperCase() || null,
       type_norm: String(row?.type_norm || '').trim().toUpperCase() || null,
-    });
-    const entry = entries[entries.length - 1];
+      bars_count: Number(row?.bars_count || 0),
+      last_trade_date: String(row?.last_trade_date || '').slice(0, 10) || null,
+    };
+    const prev = bestBySymbol.get(ticker);
+    const preferred = prev ? comparePreferredUniverseRows(candidate, prev) : 0;
+    if (!prev || preferred > 0 || (preferred === 0 && compareResolveRows(candidate, prev) > 0)) {
+      bestBySymbol.set(ticker, candidate);
+    }
+  }
+
+  const entries = [...bestBySymbol.values()].sort((a, b) => String(a.ticker || '').localeCompare(String(b.ticker || '')));
+
+  for (const entry of entries) {
     const packed = [
       entry.ticker,
       entry.name,

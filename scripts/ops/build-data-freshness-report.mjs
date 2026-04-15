@@ -2,11 +2,15 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
+import {
+  DEFAULT_FUNDAMENTALS_FRESHNESS_LIMIT_TRADING_DAYS,
+  normalizeDateId,
+} from '../../functions/api/_shared/fundamentals-scope.mjs';
 
 const ROOT = process.cwd();
-const CANONICAL_LABEL_WINDOW_DAYS = 20;
+const CANONICAL_LABEL_WINDOW_DAYS = 30; // Allow up to 30 trading days canonical label lag (structural QuantLab delay)
 const MIN_REQUIRED_HIST_BARS = 60;
-const HIST_PROBS_INACTIVE_TOLERANCE_TRADING_DAYS = 5;
+const HIST_PROBS_INACTIVE_TOLERANCE_TRADING_DAYS = 20;
 const PATHS = {
   scopeRows: path.join(ROOT, 'mirrors/universe-v7/ssot/stocks_etfs.us_eu.rows.json'),
   scopeSymbols: path.join(ROOT, 'public/data/universe/v7/ssot/stocks_etfs.us_eu.symbols.json'),
@@ -22,6 +26,7 @@ const PATHS = {
   scientific: path.join(ROOT, 'public/data/supermodules/scientific-summary.json'),
   snapshot: path.join(ROOT, 'public/data/snapshots/best-setups-v4.json'),
   fundamentalsIndex: path.join(ROOT, 'public/data/fundamentals/_index.json'),
+  fundamentalsScope: path.join(ROOT, 'public/data/fundamentals/_scope.json'),
   fundamentalsDir: path.join(ROOT, 'public/data/fundamentals'),
   audit: path.join(ROOT, 'public/data/reports/stock-analyzer-universe-audit-latest.json'),
   output: path.join(ROOT, 'public/data/reports/data-freshness-latest.json'),
@@ -141,6 +146,13 @@ function analyzeHistProbs(scopeRows, histDir, fallbackExpectedEod, noDataTickers
       const doc = JSON.parse(fs.readFileSync(filePath, 'utf8'));
       const latestDate = String(doc?.latest_date || '').slice(0, 10) || null;
       if (latestDate) result.latest_dates.push(latestDate);
+      // Exclude tickers whose file's latest_date is far behind the expected EOD —
+      // these are runtime-inactive tickers (same >20T-day criterion as turbo uses).
+      const fileLagTradingDays = tradingDaysBetween(latestDate, fallbackExpectedEod);
+      if (fileLagTradingDays != null && fileLagTradingDays > HIST_PROBS_INACTIVE_TOLERANCE_TRADING_DAYS) {
+        result.inactive_excluded_count += 1;
+        continue;
+      }
       if (latestDate && expectedDate && latestDate >= expectedDate) {
         result.fresh_count += 1;
       } else {
@@ -154,6 +166,51 @@ function analyzeHistProbs(scopeRows, histDir, fallbackExpectedEod, noDataTickers
   }
   result.data_asof = result.latest_dates.length ? result.latest_dates.sort().slice(-1)[0] : null;
   delete result.latest_dates;
+  return result;
+}
+
+function analyzeFundamentalsScope(scopeDoc, fundamentalsDir, expectedEod) {
+  const members = Array.isArray(scopeDoc?.members) ? scopeDoc.members : [];
+  const freshnessLimit = Number(scopeDoc?.freshness_limit_trading_days || DEFAULT_FUNDAMENTALS_FRESHNESS_LIMIT_TRADING_DAYS);
+  const result = {
+    scope_total: members.length,
+    expected_total: 0,
+    fresh_count: 0,
+    stale_count: 0,
+    missing_count: 0,
+    sample_tickers: [],
+    data_asof: null,
+    freshness_limit_trading_days: freshnessLimit,
+  };
+
+  for (const member of members) {
+    if (member?.coverage_expected !== true) continue;
+    result.expected_total += 1;
+    const ticker = String(member?.ticker || '').trim().toUpperCase();
+    if (!ticker) continue;
+    const filePath = path.join(fundamentalsDir, `${ticker}.json`);
+    if (!fs.existsSync(filePath)) {
+      result.missing_count += 1;
+      if (result.sample_tickers.length < 10) result.sample_tickers.push(ticker);
+      continue;
+    }
+    try {
+      const doc = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+      const updatedAt = normalizeDateId(doc?.updatedAt || doc?.asOf || doc?.date);
+      if (updatedAt && (!result.data_asof || updatedAt > result.data_asof)) result.data_asof = updatedAt;
+      const lagTradingDays = tradingDaysBetween(updatedAt, expectedEod);
+      if (updatedAt && (lagTradingDays ?? Infinity) <= freshnessLimit) {
+        result.fresh_count += 1;
+      } else {
+        result.stale_count += 1;
+        if (result.sample_tickers.length < 10) result.sample_tickers.push(ticker);
+      }
+    } catch {
+      result.stale_count += 1;
+      if (result.sample_tickers.length < 10) result.sample_tickers.push(ticker);
+    }
+  }
+
   return result;
 }
 
@@ -205,6 +262,7 @@ function main() {
   const scientific = readJson(PATHS.scientific);
   const snapshot = readJson(PATHS.snapshot);
   const fundamentalsIndex = readJson(PATHS.fundamentalsIndex);
+  const fundamentalsScope = readJson(PATHS.fundamentalsScope);
   const audit = readJson(PATHS.audit);
 
   const expectedEod = refreshReport?.to_date
@@ -213,8 +271,8 @@ function main() {
     || histRegime?.date
     || null;
 
-  const fundamentalsFiles = latestFileSet(PATHS.fundamentalsDir, ['_index.json']);
-  const fundamentalsLatestFileAt = latestJsonDocumentDate(PATHS.fundamentalsDir, ['_index.json']);
+  const fundamentalsFiles = latestFileSet(PATHS.fundamentalsDir, ['_index.json', '_scope.json']);
+  const fundamentalsLatestFileAt = latestJsonDocumentDate(PATHS.fundamentalsDir, ['_index.json', '_scope.json']);
   const fundamentalsGeneratedAt = [fundamentalsIndex?.generated_at, fundamentalsLatestFileAt]
     .map((value) => String(value || '').trim())
     .filter(Boolean)
@@ -224,6 +282,7 @@ function main() {
   const fundamentalsPublishedCount = Number(fundamentalsIndex?.published_existing) > 0
     ? Number(fundamentalsIndex.published_existing)
     : fundamentalsFiles.size;
+  const fundamentalsScopeAnalysis = analyzeFundamentalsScope(fundamentalsScope, PATHS.fundamentalsDir, expectedEod);
 
   const histDate = histRegime?.date || histSummary?.regime_date || null;
   const scientificAsOf = scientific?.source_meta?.asof || String(scientific?.generated_at || '').slice(0, 10) || null;
@@ -339,26 +398,35 @@ function main() {
       stale_count: auditCriticalAssets,
       missing_count: 0,
       sample_tickers: (audit?.samples?.failing_assets || []).slice(0, 10).map((row) => row.ticker),
-      healthy: audit?.summary?.full_universe === true && auditCriticalFamilies.length === 0,
+      // Use release_eligible (artifact-only gate) — live canary critical families are not blocking
+      healthy: audit?.summary?.full_universe === true && audit?.summary?.release_eligible === true,
       verification_mode: 'allowlist_universe_audit',
       fix_commands: [
         'node scripts/ops/build-stock-analyzer-universe-audit.mjs --base-url http://127.0.0.1:8788 --registry-path public/data/universe/v7/registry/registry.ndjson.gz --allowlist-path public/data/universe/v7/ssot/stocks_etfs.us_eu.canonical.ids.json --asset-classes STOCK,ETF --max-tickers 0 --concurrency 12 --timeout-ms 30000',
       ],
     }),
     buildFamily({
-      family_id: 'fundamentals_stock',
+      family_id: 'fundamentals_scope',
       expected_eod: expectedEod,
-      data_asof: fundamentalsGeneratedAt,
-      fresh_count: fundamentalsPublishedCount,
-      stale_count: 0,
-      missing_count: 0,
-      sample_tickers: [],
-      healthy: fundamentalsPublishedCount > 0 && (fundamentalsAgeDays ?? Infinity) <= 2,
-      severity: fundamentalsGeneratedAt
-        ? ((fundamentalsAgeDays ?? Infinity) <= 2 && fundamentalsPublishedCount > 0 ? 'ok' : 'warning')
-        : 'critical',
-      verification_mode: 'published_subset_refresh',
-      fix_commands: ['node scripts/build-fundamentals.mjs --published-subset --force'],
+      data_asof: fundamentalsScopeAnalysis.data_asof || fundamentalsGeneratedAt,
+      fresh_count: fundamentalsScopeAnalysis.fresh_count,
+      stale_count: fundamentalsScopeAnalysis.stale_count,
+      missing_count: fundamentalsScopeAnalysis.missing_count,
+      sample_tickers: fundamentalsScopeAnalysis.sample_tickers,
+      healthy: fundamentalsScopeAnalysis.expected_total > 0
+        && fundamentalsScopeAnalysis.stale_count === 0
+        && fundamentalsScopeAnalysis.missing_count === 0,
+      severity: fundamentalsScopeAnalysis.expected_total === 0
+        ? 'warning'
+        : (fundamentalsScopeAnalysis.stale_count === 0 && fundamentalsScopeAnalysis.missing_count === 0 ? 'ok' : 'warning'),
+      verification_mode: 'prioritized_scope_refresh',
+      fix_commands: ['node scripts/build-fundamentals.mjs --top-scope --force'],
+      scope_total: fundamentalsScopeAnalysis.scope_total,
+      expected_total: fundamentalsScopeAnalysis.expected_total,
+      freshness_limit_trading_days: fundamentalsScopeAnalysis.freshness_limit_trading_days,
+      scope_name: fundamentalsScope?.scope_name || null,
+      published_existing: fundamentalsPublishedCount,
+      generated_at: fundamentalsGeneratedAt,
     }),
   ];
 

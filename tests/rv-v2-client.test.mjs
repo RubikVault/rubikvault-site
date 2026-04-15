@@ -3,6 +3,8 @@ import assert from 'node:assert/strict';
 import {
   transformV2ToStockShape,
   fetchV2StockPage,
+  fetchWithFallback,
+  evaluateV2PromotionGate,
 } from '../public/js/rv-v2-client.js';
 
 const originalFetch = global.fetch;
@@ -46,7 +48,7 @@ describe('transformV2ToStockShape', () => {
     assert.equal(payload.metadata.as_of, '2026-03-26');
   });
 
-  it('uses fresher legacy identity and price data when V2 summary is thin or stale', () => {
+  it('uses the historical market basis when V2 summary is thin or stale', () => {
     const payload = transformV2ToStockShape(
       {
         ticker: 'QCOM',
@@ -73,7 +75,7 @@ describe('transformV2ToStockShape', () => {
       }
     );
 
-    assert.equal(payload.data.name, 'Qualcomm Incorporated');
+    assert.equal(payload.data.name, 'QCOM');
     assert.equal(payload.data.market_prices.close, 130.54);
     assert.equal(payload.metadata.as_of, '2026-03-26');
   });
@@ -134,7 +136,7 @@ describe('transformV2ToStockShape', () => {
     assert.equal(payload.data.ssot.historical_profile.profile_as_of, '2026-03-20');
   });
 
-  it('uses the planned identity fallback order for page name resolution', () => {
+  it('uses the planned identity fallback order for page name resolution without legacy input', () => {
     const payload = transformV2ToStockShape(
       {
         ticker: 'QCOM',
@@ -161,6 +163,34 @@ describe('transformV2ToStockShape', () => {
     );
 
     assert.equal(payload.data.name, 'Fundamentals Name');
+  });
+
+  it('ignores legacy-only identity when no authoritative identity exists', () => {
+    const payload = transformV2ToStockShape(
+      {
+        ticker: 'QCOM',
+        name: null,
+        market_prices: { close: 130.54, date: '2026-03-26' },
+      },
+      { data_date: '2026-03-26', provider: 'v2-summary' },
+      {
+        bars: [{ date: '2026-03-25', close: 129.5 }, { date: '2026-03-26', close: 130.54 }],
+      },
+      {
+        universe: { name: null },
+      },
+      null,
+      {},
+      {
+        data: {
+          name: 'Legacy Name',
+          market_prices: { close: 130.54, date: '2026-03-26' },
+        },
+      }
+    );
+
+    assert.equal(payload.data.name, 'QCOM');
+    assert.equal(payload.data.source_provenance.identity_source, 'none');
   });
 
   it('ignores summary placeholder names that only repeat the ticker', () => {
@@ -262,9 +292,176 @@ describe('fetchV2StockPage', () => {
   it('requires a full multi-endpoint contract before rendering V2 page data', async () => {
     const result = await fetchV2StockPage('QCOM');
     assert.equal(result.ok, true);
+    assert.equal(result.mode, 'full');
     assert.equal(result.data.summary.ticker, 'QCOM');
     assert.equal(result.data.historical.bars.length, 2);
     assert.equal(result.data.governance.universe.name, 'Qualcomm Incorporated');
     assert.equal(result.data.historical_profile.availability.status, 'ready');
+  });
+
+  it('returns an incomplete contract result instead of throwing when V2 core modules are missing', async () => {
+    global.fetch = async (url) => {
+      const href = String(url);
+      const okJson = (data) => ({ ok: true, json: async () => data });
+      if (href.includes('/summary')) {
+        return okJson({ ok: true, data: { ticker: 'VOW3.XETR', name: 'VOW3.XETR' }, meta: { data_date: '2026-03-26' } });
+      }
+      if (href.includes('/governance')) {
+        throw new Error('governance unavailable');
+      }
+      if (href.includes('/historical')) {
+        return okJson({ ok: true, data: { ticker: 'VOW3.XETR', bars: [] }, meta: { data_date: '2026-03-26' } });
+      }
+      if (href.includes('/historical-profile')) {
+        throw new Error('historical profile unavailable');
+      }
+      if (href.includes('/api/fundamentals')) {
+        throw new Error('fundamentals unavailable');
+      }
+      throw new Error(`Unexpected URL: ${href}`);
+    };
+
+    const result = await fetchV2StockPage('VOW3.XETR');
+    assert.equal(result.ok, false);
+    assert.equal(result.mode, 'incomplete');
+    assert.deepEqual(result.missingModules.includes('governance'), true);
+  });
+});
+
+describe('evaluateV2PromotionGate', () => {
+  it('respects normalized learning_gate minimum-n blockers', () => {
+    const result = evaluateV2PromotionGate({
+      data: {
+        summary: {
+          ticker: 'AAPL',
+          name: 'Apple Inc.',
+          market_prices: { close: 200, date: '2026-04-10' },
+          market_stats: { stats: { atr14: 1, sma20: 1, sma50: 1, sma200: 1 } },
+        },
+        historical: {
+          bars: [{ date: '2026-04-10', close: 200 }],
+        },
+        governance: {
+          universe: { name: 'Apple Inc.' },
+          evaluation_v4: {
+            decision: {
+              learning_gate: {
+                learning_status: 'ACTIVE',
+                minimum_n_not_met: true,
+              },
+            },
+          },
+        },
+        fundamentals: { companyName: 'Apple Inc.', nextEarningsDate: '2026-05-02' },
+      },
+      meta: {},
+    });
+    assert.equal(result.reasons.includes('minimum_n_not_met'), true);
+  });
+});
+
+describe('fetchWithFallback', () => {
+  afterEach(() => {
+    global.fetch = originalFetch;
+    delete globalThis._rvFallbackLog;
+  });
+
+  it('returns an empty state when V2 core modules are incomplete', async () => {
+    global.fetch = async (url) => {
+      const href = String(url);
+      const okJson = (data) => ({ ok: true, json: async () => data });
+      if (href.includes('/summary')) {
+        return okJson({ ok: true, data: { ticker: 'VOW3.XETR', name: 'VOW3.XETR', market_prices: { close: 101, date: '2026-03-26' } }, meta: { data_date: '2026-03-26' } });
+      }
+      if (href.includes('/governance')) {
+        throw new Error('governance unavailable');
+      }
+      if (href.includes('/historical')) {
+        return okJson({ ok: true, data: { ticker: 'VOW3.XETR', bars: [] }, meta: { data_date: '2026-03-26' } });
+      }
+      if (href.includes('/historical-profile') || href.includes('/api/fundamentals')) {
+        throw new Error('optional unavailable');
+      }
+      throw new Error(`Unexpected URL: ${href}`);
+    };
+
+    const result = await fetchWithFallback('VOW3.XETR');
+    assert.equal(result.source, 'none');
+    assert.equal(result.mode, 'empty_state');
+    assert.equal(result.payload.data.ticker, 'VOW3.XETR');
+    assert.match(result.notice, /Legacy fallback is disabled/i);
+  });
+
+  it('keeps AAPL on the full V2 path when core modules are complete', async () => {
+    global.fetch = async (url) => {
+      const href = String(url);
+      const okJson = (data) => ({ ok: true, json: async () => data });
+      if (href.includes('/summary')) {
+        return okJson({ ok: true, data: { ticker: 'AAPL', name: 'Apple Inc.', market_prices: { close: 189, date: '2026-03-26' } }, meta: { data_date: '2026-03-26' } });
+      }
+      if (href.includes('/governance')) {
+        return okJson({ ok: true, data: { ticker: 'AAPL', universe: { name: 'Apple Inc.' } }, meta: { data_date: '2026-03-26' } });
+      }
+      if (href.includes('/historical')) {
+        return okJson({ ok: true, data: { ticker: 'AAPL', bars: [{ date: '2026-03-26', close: 189 }] }, meta: { data_date: '2026-03-26' } });
+      }
+      if (href.includes('/historical-profile')) {
+        return okJson({ ok: true, data: { ticker: 'AAPL', availability: { status: 'ready', reason: 'ready' } }, meta: { data_date: '2026-03-26' } });
+      }
+      if (href.includes('/api/fundamentals')) {
+        return okJson({ data: { companyName: 'Apple Inc.' }, metadata: {} });
+      }
+      throw new Error(`Unexpected URL: ${href}`);
+    };
+
+    const result = await fetchWithFallback('AAPL');
+    assert.equal(result.source, 'v2');
+    assert.equal(result.mode, 'full');
+    assert.equal(result.payload.data.ticker, 'AAPL');
+  });
+
+  it('keeps EXX renderable on the positive path', async () => {
+    global.fetch = async (url) => {
+      const href = String(url);
+      const okJson = (data) => ({ ok: true, json: async () => data });
+      if (href.includes('/summary')) {
+        return okJson({ ok: true, data: { ticker: 'EXX', name: 'iShares STOXX Europe 600 Oil & Gas UCITS ETF', market_prices: { close: 48.2, date: '2026-03-26' } }, meta: { data_date: '2026-03-26' } });
+      }
+      if (href.includes('/governance')) {
+        return okJson({ ok: true, data: { ticker: 'EXX', universe: { name: 'iShares STOXX Europe 600 Oil & Gas UCITS ETF' } }, meta: { data_date: '2026-03-26' } });
+      }
+      if (href.includes('/historical')) {
+        return okJson({ ok: true, data: { ticker: 'EXX', bars: [{ date: '2026-03-26', close: 48.2 }] }, meta: { data_date: '2026-03-26' } });
+      }
+      if (href.includes('/historical-profile')) {
+        return okJson({ ok: true, data: { ticker: 'EXX', availability: { status: 'ready', reason: 'ready' } }, meta: { data_date: '2026-03-26' } });
+      }
+      if (href.includes('/api/fundamentals')) {
+        return okJson({ data: { companyName: 'iShares STOXX Europe 600 Oil & Gas UCITS ETF' }, metadata: {} });
+      }
+      throw new Error(`Unexpected URL: ${href}`);
+    };
+
+    const result = await fetchWithFallback('EXX');
+    assert.equal(result.mode, 'full');
+    assert.equal(result.payload.data.ticker, 'EXX');
+  });
+
+  it('returns an empty-state resolution when V2 is unavailable', async () => {
+    global.fetch = async (url) => {
+      const href = String(url);
+      if (href.includes('/summary')) {
+        throw new Error('summary unavailable');
+      }
+      if (href.includes('/governance') || href.includes('/historical') || href.includes('/historical-profile') || href.includes('/api/fundamentals')) {
+        throw new Error('module unavailable');
+      }
+      throw new Error(`Unexpected URL: ${href}`);
+    };
+
+    const result = await fetchWithFallback('FAKE999');
+    assert.equal(result.mode, 'empty_state');
+    assert.equal(result.source, 'none');
+    assert.equal(result.payload.data.ticker, 'FAKE999');
   });
 });

@@ -166,6 +166,13 @@ export function guardTradePlan(close, atr, decision) {
 
 export function guardFundamentals(fund) {
   if (!fund) return { valid: false, warning: null }; // no data is not an error
+  const typedStatus = String(fund?.typed_status || '').toUpperCase();
+  if (typedStatus === 'OUT_OF_SCOPE' || typedStatus === 'NOT_APPLICABLE') {
+    return { valid: true, warning: null, availablePrimaryFields: 0 };
+  }
+  if (typedStatus === 'UPDATING') {
+    return { valid: true, warning: null, availablePrimaryFields: 0 };
+  }
   const warnings = [];
 
   const cap = fund.marketCap;
@@ -361,6 +368,9 @@ export function guardPanelGate(panel, ctx) {
       return { show: true };
     }
     case 'fundamentals': {
+      const typedStatus = String(ctx.fund?.typed_status || '').toUpperCase();
+      if (typedStatus === 'OUT_OF_SCOPE' || typedStatus === 'NOT_APPLICABLE') return { show: true };
+      if (typedStatus === 'UPDATING') return { show: true };
       if (!ctx.fund) return { show: true, degraded: true, reason: 'No fundamentals data' };
       if (!ctx.fundCoverage) return { show: true, degraded: true, reason: 'No verified fundamentals fields' };
       if (!ctx.fundValid) return { show: true, degraded: true, reason: 'Some values out of range' };

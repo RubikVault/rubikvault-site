@@ -65,21 +65,13 @@ if [[ -z "$NODE_BIN" ]]; then
   exit 2
 fi
 
-REPORT_CMD=("$NODE_BIN" "scripts/quantlab/build_quantlab_v4_daily_report.mjs")
-STATUS_CMD=("$NODE_BIN" "scripts/ops/build-system-status-report.mjs")
-DASHBOARD_CMD=("$NODE_BIN" "scripts/generate_meta_dashboard_data.mjs")
+PUBLISH_CHAIN_CMD=("$NODE_BIN" "scripts/ops/run-stock-analyzer-publish-chain.mjs")
 
 if [[ "$PRINT_ONLY" -eq 1 ]]; then
   printf 'report_page=%s\n' "$REPORT_PAGE"
   printf 'log_file=%s\n' "$LOG_FILE"
-  printf 'report_cmd='
-  printf '%q ' "${REPORT_CMD[@]}"
-  printf '\n'
-  printf 'status_cmd='
-  printf '%q ' "${STATUS_CMD[@]}"
-  printf '\n'
-  printf 'dashboard_cmd='
-  printf '%q ' "${DASHBOARD_CMD[@]}"
+  printf 'publish_chain_cmd='
+  printf '%q ' "${PUBLISH_CHAIN_CMD[@]}"
   printf '\n'
   exit 0
 fi
@@ -88,38 +80,20 @@ fi
   echo "[quantlab-v4-daily] started_utc=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
   echo "[quantlab-v4-daily] repo_root=$REPO_ROOT"
   echo "[quantlab-v4-daily] report_page=$REPORT_PAGE"
-  printf '[quantlab-v4-daily] report_cmd='
-  printf '%q ' "${REPORT_CMD[@]}"
-  printf '\n'
-  printf '[quantlab-v4-daily] status_cmd='
-  printf '%q ' "${STATUS_CMD[@]}"
-  printf '\n'
-  printf '[quantlab-v4-daily] dashboard_cmd='
-  printf '%q ' "${DASHBOARD_CMD[@]}"
+  printf '[quantlab-v4-daily] publish_chain_cmd='
+  printf '%q ' "${PUBLISH_CHAIN_CMD[@]}"
   printf '\n'
 } | tee "$LOG_FILE"
 
 set +e
-"${REPORT_CMD[@]}" 2>&1 | tee -a "$LOG_FILE"
-REPORT_RC=${PIPESTATUS[0]}
-"${STATUS_CMD[@]}" 2>&1 | tee -a "$LOG_FILE"
-STATUS_RC=${PIPESTATUS[0]}
-"${DASHBOARD_CMD[@]}" 2>&1 | tee -a "$LOG_FILE"
-DASHBOARD_RC=${PIPESTATUS[0]}
+"${PUBLISH_CHAIN_CMD[@]}" 2>&1 | tee -a "$LOG_FILE"
+CHAIN_RC=${PIPESTATUS[0]}
 set -e
 
-RC="$REPORT_RC"
-if [[ "$STATUS_RC" -ne 0 ]]; then
-  RC="$STATUS_RC"
-fi
-if [[ "$DASHBOARD_RC" -ne 0 ]]; then
-  RC="$DASHBOARD_RC"
-fi
+RC="$CHAIN_RC"
 
 {
-  echo "[quantlab-v4-daily] report_exit_code=$REPORT_RC"
-  echo "[quantlab-v4-daily] system_status_exit_code=$STATUS_RC"
-  echo "[quantlab-v4-daily] dashboard_exit_code=$DASHBOARD_RC"
+  echo "[quantlab-v4-daily] publish_chain_exit_code=$CHAIN_RC"
   echo "[quantlab-v4-daily] exit_code=$RC"
   echo "[quantlab-v4-daily] finished_utc=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 } | tee -a "$LOG_FILE"

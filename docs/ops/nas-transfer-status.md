@@ -1,6 +1,6 @@
 # NAS Transfer Status
 
-Generated at: 2026-04-09T13:06:16.104Z
+Generated at: 2026-04-12T13:46:18.429Z
 
 ## Progress
 
@@ -8,7 +8,7 @@ Generated at: 2026-04-09T13:06:16.104Z
 - Finished/classified: 81
 - Remaining untested: 15
 - Completion: 84.4%
-- Evidence runs total so far: 1726
+- Evidence runs total so far: 1931
 
 ## Full Variant Catalog
 
@@ -26,7 +26,7 @@ Generated at: 2026-04-09T13:06:16.104Z
 
 | Step | Status | Best current NAS method | NAS replacement status | Evidence |
 |---|---|---|---|---|
-| Root FS / Scheduler foundation | RED | read-only audit + watchdog + external supervisor | PARTIAL (4 offen) | system-partition audit + night-watch blockers |
+| Root FS / Scheduler foundation | GREEN | read-only audit + watchdog + external supervisor | PARTIAL (4 offen) | system-partition audit + night-watch blockers |
 | Orchestration / SSOT / locks | GREEN | 2A Single JSON SSOT + 3A Singleton supervisor only | YES (0 offen) | solution matrix + active watcher |
 | API fetch / market data | YELLOW | 4A Isolated fetcher service | PARTIAL (11 offen) | refresh_history_sample |
 | History refresh | YELLOW | isolated refresh sample + US+EU scope artifacts | PARTIAL (11 offen) | refresh_history_sample |
@@ -47,9 +47,9 @@ Generated at: 2026-04-09T13:06:16.104Z
 
 ## Step Status Summary
 
-- GREEN: 5
+- GREEN: 6
 - YELLOW: 8
-- RED: 5
+- RED: 4
 
 ## Answer
 

@@ -11,6 +11,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import zlib from 'node:zlib';
 import { computeDigest } from '../lib/digest.js';
+import { iterateGzipNdjson, readGzipNdjson } from '../lib/io/gzip-ndjson.mjs';
 import { stripExchangeSuffix } from '../utils/symbol-normalize.mjs';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -497,6 +498,19 @@ function readHistoryPack(repoRoot, historyPackRel) {
     return map;
 }
 
+async function readHistoryPackAsync(repoRoot, historyPackRel) {
+    const absPath = path.join(repoRoot, MIRRORS_UNIVERSE_V7_BASE, historyPackRel);
+    if (!fs.existsSync(absPath)) return new Map();
+
+    const map = new Map();
+    for await (const row of iterateGzipNdjson(absPath)) {
+        const canonicalId = normalizeCanonicalId(row?.canonical_id);
+        if (!canonicalId || !Array.isArray(row?.bars) || !row.bars.length) continue;
+        map.set(canonicalId, row.bars);
+    }
+    return map;
+}
+
 /**
  * Load full price history for tickers from v7 history packs with v3 fallback.
  * @param {string} repoRoot - Repository root
@@ -508,11 +522,14 @@ function readHistoryPack(repoRoot, historyPackRel) {
 export async function loadPriceHistory(repoRoot, tickers, asOfDate, options = {}) {
     const history = {};
     const resolvedEntries = resolveUniverseEntries(repoRoot, tickers);
-    const latestPrices = {
-        ...loadV7RegistryLatestPrices(repoRoot),
-        ...loadMarketPricesSnapshot(repoRoot),
-        ...loadV3LatestPrices(repoRoot)
-    };
+    const allowLatestFallback = options?.allowLatestFallback !== false;
+    const latestPrices = allowLatestFallback
+        ? {
+            ...loadV7RegistryLatestPrices(repoRoot),
+            ...loadMarketPricesSnapshot(repoRoot),
+            ...loadV3LatestPrices(repoRoot)
+        }
+        : {};
     const seriesDir = path.join(repoRoot, V3_ADJUSTED_SERIES_DIR);
     const keyBy = String(options?.keyBy || 'symbol').trim().toLowerCase();
     const byPack = new Map();
@@ -524,7 +541,7 @@ export async function loadPriceHistory(repoRoot, tickers, asOfDate, options = {}
     }
 
     for (const [historyPackRel, entries] of byPack.entries()) {
-        const packRows = readHistoryPack(repoRoot, historyPackRel);
+        const packRows = await readHistoryPackAsync(repoRoot, historyPackRel);
         for (const entry of entries) {
             const packBars = packRows.get(normalizeCanonicalId(entry.canonical_id));
             const parsed = parseHistoryBars(packBars, asOfDate);
@@ -548,7 +565,7 @@ export async function loadPriceHistory(repoRoot, tickers, asOfDate, options = {}
         ];
         let seriesParsed = null;
         for (const sp of seriesToTry) {
-            const rows = parseGzipNdjsonFile(sp);
+            const rows = await readGzipNdjson(sp);
             seriesParsed = parseHistoryBars(rows, asOfDate);
             if (seriesParsed) break;
         }
@@ -556,6 +573,9 @@ export async function loadPriceHistory(repoRoot, tickers, asOfDate, options = {}
             history[outKey] = seriesParsed;
             continue;
         }
+
+        // Latest price fallback is forbidden for matured-evaluation lookups.
+        if (!allowLatestFallback) continue;
 
         // Latest price fallback: try both full symbol and base symbol
         const tickerData = latestPrices[entry.symbol] || latestPrices[symbolBase];

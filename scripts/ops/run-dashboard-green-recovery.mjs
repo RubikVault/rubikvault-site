@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 import { execFileSync, spawn } from 'node:child_process';
+import { normalizeQ1DeltaLatestSuccess } from '../lib/q1-delta-success.mjs';
 
 const ROOT = path.resolve(new URL('.', import.meta.url).pathname, '../..');
 const LOG_DIR = path.join(ROOT, 'logs', 'dashboard_v7');
@@ -13,14 +14,19 @@ const REPORT_PATH = path.join(ROOT, 'public', 'data', 'reports', 'dashboard-gree
 const HEARTBEAT_LOG = path.join(LOG_DIR, 'recovery-heartbeat.log');
 const ACTION_LOG = path.join(LOG_DIR, 'recovery-actions.log');
 const SYSTEM_STATUS = path.join(ROOT, 'public', 'data', 'reports', 'system-status-latest.json');
+const FORECAST_LATEST = path.join(ROOT, 'public', 'data', 'forecast', 'latest.json');
 const REFRESH_REPORT = path.join(ROOT, 'mirrors', 'universe-v7', 'state', 'refresh_v7_history_from_eodhd.report.json');
 const HIST_PROBS_SUMMARY = path.join(ROOT, 'public', 'data', 'hist-probs', 'run-summary.json');
+const HIST_PROBS_ANCHOR = path.join(ROOT, 'public', 'data', 'hist-probs', 'AAPL.json');
 const AUDIT_REPORT = path.join(ROOT, 'public', 'data', 'reports', 'stock-analyzer-universe-audit-latest.json');
 const DATA_FRESHNESS_REPORT = path.join(ROOT, 'public', 'data', 'reports', 'data-freshness-latest.json');
 const Q1_SUCCESS = '/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/ops/q1_daily_delta_ingest/latest_success.json';
 const QUANTLAB_OPERATIONAL_STATUS = path.join(ROOT, 'public', 'data', 'quantlab', 'status', 'operational-status.json');
 const DASHBOARD_META = path.join(ROOT, 'public', 'dashboard_v6_meta_data.json');
+const DASHBOARD_V7_STATUS = path.join(ROOT, 'public', 'data', 'ui', 'dashboard-v7-status.json');
 const RUNTIME_HEALTH_URL = 'http://127.0.0.1:8788/api/diag';
+const MAX_STEP_RESTARTS = 3;
+const RESTART_COOLDOWN_MIN = 15;
 
 fs.mkdirSync(LOG_DIR, { recursive: true });
 fs.mkdirSync(STATE_DIR, { recursive: true });
@@ -172,35 +178,89 @@ function latestUsMarketSessionIso(now = new Date()) {
   return isoDateUtc(session);
 }
 
+function normalizeDate(value) {
+  const iso = typeof value === 'string' ? value.slice(0, 10) : null;
+  return iso && /^\d{4}-\d{2}-\d{2}$/.test(iso) ? iso : null;
+}
+
+function histProbsAnchorFresh(expectedDate) {
+  // Primary check: AAPL.json latest_date meets target
+  const anchor = readJson(HIST_PROBS_ANCHOR);
+  const latestDate = normalizeDate(anchor?.latest_date || null);
+  if (Boolean(expectedDate && latestDate && latestDate >= expectedDate)) return true;
+  // Fallback: scope registry may lag (data not yet available for target date).
+  // Accept if run-summary.regime_date confirms the run used the correct regime.
+  const summary = readJson(HIST_PROBS_SUMMARY);
+  const regimeDate = normalizeDate(summary?.regime_date || null);
+  return Boolean(expectedDate && regimeDate && regimeDate >= expectedDate);
+}
+
 function shiftIsoDate(isoDate, deltaDays) {
   return isoDateUtc(shiftUtcDays(new Date(`${isoDate}T00:00:00Z`), deltaDays));
+}
+
+function forecastArtifactFresh(expectedDate) {
+  const doc = readJson(FORECAST_LATEST);
+  const generatedAt = doc?.generated_at ? Date.parse(doc.generated_at) : NaN;
+  const freshness = normalizeDate(
+    doc?.data?.freshness
+      || doc?.freshness
+      || doc?.meta?.freshness
+      || doc?.data?.asof
+      || null
+  );
+  const ok = doc?.ok === true || ['ok', 'success'].includes(String(doc?.status || doc?.meta?.status || '').toLowerCase());
+  return Number.isFinite(generatedAt) && ok && freshness === expectedDate;
+}
+
+function dashboardMetaFresh(expectedDate, sinceMs) {
+  const dashboardMetaMtime = statMtimeMs(DASHBOARD_META);
+  const dashboardV7 = readJson(DASHBOARD_V7_STATUS);
+  const dashboardV7Mtime = statMtimeMs(DASHBOARD_V7_STATUS);
+  return Number.isFinite(dashboardMetaMtime)
+    && dashboardMetaMtime >= sinceMs
+    && Number.isFinite(dashboardV7Mtime)
+    && dashboardV7Mtime >= sinceMs
+    && normalizeDate(dashboardV7?.target_market_date) === expectedDate;
 }
 
 function readState() {
   const current = readJson(STATE_PATH);
   if (current) return current;
+  return createFreshState();
+}
+
+function createFreshState(targetMarketDate = null) {
+  const now = new Date().toISOString();
   return {
-    schema: 'dashboard_green_recovery_state_v1',
-    campaign_started_at: new Date().toISOString(),
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
+    schema: 'dashboard_green_recovery_state_v2',
+    run_id: targetMarketDate ? `dashboard-green-${targetMarketDate}` : `dashboard-green-${now.slice(0, 10)}`,
+    target_market_date: targetMarketDate,
+    campaign_started_at: now,
+    created_at: now,
+    updated_at: now,
     steps: {},
   };
 }
 
-const state = readState();
-const campaignStartMs = Date.parse(state.campaign_started_at);
-const statusDoc = readJson(SYSTEM_STATUS) || {};
-const q1Success = readJson(Q1_SUCCESS) || {};
-const quantStatus = statusDoc?.steps?.quantlab_daily_report || {};
-const anyRequiredDate =
-  quantStatus?.status_detail?.raw_freshness?.latestAnyRequiredDataDate ||
-  q1Success?.ingest_date ||
-  new Date().toISOString().slice(0, 10);
+const resetCampaignRequested = process.argv.includes('--reset-campaign')
+  || process.env.RV_FORCE_NEW_RECOVERY_CAMPAIGN === '1';
+let state = readState();
+const requestedTargetDate = normalizeDate(process.env.RV_TARGET_MARKET_DATE || process.env.TARGET_MARKET_DATE || null);
+const forcedRunId = String(process.env.RUN_ID || process.env.RV_RUN_ID || '').trim() || null;
 const marketSessionDate = latestUsMarketSessionIso();
-const targetMarketDate = String(anyRequiredDate || '') > marketSessionDate
-  ? String(anyRequiredDate)
-  : marketSessionDate;
+const targetMarketDate = requestedTargetDate || marketSessionDate;
+if (resetCampaignRequested) {
+  state = createFreshState(targetMarketDate);
+}
+if (state?.target_market_date !== targetMarketDate) {
+  state = createFreshState(targetMarketDate);
+}
+state.schema = 'dashboard_green_recovery_state_v2';
+state.run_id = forcedRunId || state.run_id || `dashboard-green-${targetMarketDate}`;
+state.target_market_date = targetMarketDate;
+state.campaign_started_at ||= state.created_at || new Date().toISOString();
+const campaignStartMs = Date.parse(state.campaign_started_at);
 const marketRefreshFromDate = shiftIsoDate(targetMarketDate, -14);
 const learningDate = targetMarketDate;
 
@@ -238,11 +298,12 @@ const steps = [
     logFile: path.join(LOG_DIR, 'step-01-q1-delta.log'),
     dependsOn: ['market_data_refresh'],
     isComplete: () => {
-      const doc = readJson(Q1_SUCCESS);
+      const doc = normalizeQ1DeltaLatestSuccess(readJson(Q1_SUCCESS));
       const updated = doc?.updated_at ? Date.parse(doc.updated_at) : NaN;
       const ingestDate = String(doc?.ingest_date || '');
       const runLooksFresh = Number.isFinite(updated)
         && updated >= campaignStartMs
+        && doc?.evidence_complete === true
         && ingestDate === targetMarketDate;
       if (!runLooksFresh) return false;
       const systemDoc = readJson(SYSTEM_STATUS);
@@ -289,11 +350,21 @@ const steps = [
     id: 'forecast_daily',
     label: 'Forecast Daily',
     pattern: 'scripts/forecast/run_daily.mjs',
-    command: 'NODE_OPTIONS=--max-old-space-size=6144 node scripts/forecast/run_daily.mjs',
+    command: 'FORECAST_RSS_BUDGET_MB=4096 NODE_OPTIONS=--max-old-space-size=6144 node scripts/forecast/run_daily.mjs',
     logFile: path.join(LOG_DIR, 'step-04-forecast.log'),
     stallMinutes: 60,
     dependsOn: ['q1_delta_ingest'],
-    isComplete: () => fileUpdatedSince(path.join(ROOT, 'public', 'data', 'forecast', 'latest.json'), campaignStartMs),
+    isComplete: () => {
+      if (!forecastArtifactFresh(targetMarketDate)) return false;
+      const forecastDoc = readJson(FORECAST_LATEST);
+      const generatedAt = forecastDoc?.generated_at ? Date.parse(forecastDoc.generated_at) : NaN;
+      const systemDoc = readJson(SYSTEM_STATUS);
+      const systemGeneratedAt = systemDoc?.generated_at ? Date.parse(systemDoc.generated_at) : NaN;
+      if (Number.isFinite(systemGeneratedAt) && Number.isFinite(generatedAt) && systemGeneratedAt >= generatedAt) {
+        return String(systemDoc?.steps?.forecast_daily?.severity || '') === 'ok';
+      }
+      return true;
+    },
   },
   {
     id: 'fundamentals',
@@ -332,12 +403,14 @@ const steps = [
         && Number.isFinite(errors)
         && covered === total
         && remaining === 0
-        && errors === 0;
+        && errors === 0
+        && histProbsAnchorFresh(targetMarketDate);
       if (!runLooksComplete) return false;
       const systemDoc = readJson(SYSTEM_STATUS);
       const systemGeneratedAt = systemDoc?.generated_at ? Date.parse(systemDoc.generated_at) : NaN;
       if (Number.isFinite(systemGeneratedAt) && systemGeneratedAt >= ranAt) {
-        return String(systemDoc?.steps?.hist_probs?.severity || '') === 'ok';
+        return String(systemDoc?.steps?.hist_probs?.severity || '') === 'ok'
+          && systemDoc?.steps?.hist_probs?.status_detail?.coverage?.zero_coverage_guard !== true;
       }
       return true;
     },
@@ -375,12 +448,10 @@ const steps = [
     dependsOn: ['hist_probs', 'snapshot'],
     isComplete: () => {
       const doc = readJson(AUDIT_REPORT);
-      const criticalFamilies = Array.isArray(doc?.failure_families)
-        ? doc.failure_families.filter((family) => String(family?.severity || '').toLowerCase() === 'critical')
-        : [];
+      // Use release_eligible (artifact-only criterion) — live canary failures are not blocking
       return fileUpdatedSince(AUDIT_REPORT, campaignStartMs)
         && doc?.summary?.full_universe === true
-        && criticalFamilies.length === 0;
+        && doc?.summary?.release_eligible === true;
     },
   },
   {
@@ -400,10 +471,8 @@ const steps = [
       const truthGateFresh = fileUpdatedSince(DATA_FRESHNESS_REPORT, campaignStartMs);
       const auditFresh = fileUpdatedSince(AUDIT_REPORT, campaignStartMs);
       const auditDoc = readJson(AUDIT_REPORT);
-      const auditCriticalFamilies = Array.isArray(auditDoc?.failure_families)
-        ? auditDoc.failure_families.filter((family) => String(family?.severity || '').toLowerCase() === 'critical')
-        : [];
-      const auditClean = auditDoc?.summary?.full_universe === true && auditCriticalFamilies.length === 0;
+      // Use release_eligible (artifact-only criterion) — live canary failures are not blocking
+      const auditClean = auditDoc?.summary?.full_universe === true && auditDoc?.summary?.release_eligible === true;
       const latestPrereq = Math.max(statMtimeMs(AUDIT_REPORT) || 0, statMtimeMs(DATA_FRESHNESS_REPORT) || 0);
       const systemAfterPrereqs = (statMtimeMs(SYSTEM_STATUS) || 0) >= latestPrereq;
       return snapshotFresh
@@ -411,7 +480,8 @@ const steps = [
         && auditFresh
         && auditClean
         && systemAfterPrereqs
-        && systemDoc?.summary?.severity === 'ok';
+        && systemDoc?.summary?.data_layer_severity === 'ok'
+        && systemDoc?.summary?.coverage_ready === true;
     },
   },
   {
@@ -422,14 +492,14 @@ const steps = [
     logFile: path.join(LOG_DIR, 'step-12-dashboard-meta.log'),
     dependsOn: ['system_status'],
     isComplete: () => {
-      if (!fileUpdatedSince(DASHBOARD_META, campaignStartMs)) return false;
       const systemDoc = readJson(SYSTEM_STATUS);
       const systemStatusMtime = statMtimeMs(SYSTEM_STATUS);
       const dashboardMtime = statMtimeMs(DASHBOARD_META);
       return systemStatusMtime != null
         && dashboardMtime != null
         && dashboardMtime >= systemStatusMtime
-        && systemDoc?.summary?.severity === 'ok';
+        && dashboardMetaFresh(targetMarketDate, campaignStartMs)
+        && systemDoc?.summary?.data_layer_severity === 'ok';
     },
   },
 ];
@@ -469,7 +539,20 @@ for (const step of steps) {
   const stepState = state.steps[step.id];
 
   if (step.isComplete()) {
-    stepState.completed_at ||= new Date().toISOString();
+    stepState.pid = null;
+    stepState.blocked_reason = null;
+    if (!stepState.completed_at) {
+      const completedAt = new Date().toISOString();
+      stepState.completed_at = completedAt;
+      const startedAt = stepState.last_started_at ? Date.parse(stepState.last_started_at) : NaN;
+      if (Number.isFinite(startedAt)) {
+        const durationMs = Math.max(0, Date.parse(completedAt) - startedAt);
+        appendLog(
+          ACTION_LOG,
+          `[${completedAt}] completed ${step.id} duration_ms=${durationMs}`,
+        );
+      }
+    }
     completed.add(step.id);
     continue;
   }
@@ -489,8 +572,22 @@ for (const step of steps) {
     const lastProgressAt = stepState.last_progress_at ? Date.parse(stepState.last_progress_at) : Date.now();
     const stalledMinutes = (Date.now() - lastProgressAt) / 60000;
     if (stalledMinutes >= (step.stallMinutes ?? 20)) {
+      const restartCount = Number(stepState.restarts || 0);
+      const lastRestartAt = stepState.last_restart_at ? Date.parse(stepState.last_restart_at) : 0;
+      if (restartCount >= MAX_STEP_RESTARTS) {
+        stepState.blocked_reason = `restart_budget_exhausted:${restartCount}`;
+        blocked.push({ id: step.id, waiting_for: [], reason: stepState.blocked_reason });
+        appendLog(ACTION_LOG, `[${new Date().toISOString()}] blocked ${step.id} restart_budget_exhausted=${restartCount}`);
+        continue;
+      }
+      if (Date.now() - lastRestartAt < (RESTART_COOLDOWN_MIN * 60 * 1000)) {
+        blocked.push({ id: step.id, waiting_for: [], reason: 'restart_cooldown_active' });
+        continue;
+      }
       killPid(pid);
-      stepState.restarts = Number(stepState.restarts || 0) + 1;
+      stepState.restarts = restartCount + 1;
+      stepState.last_restart_at = new Date().toISOString();
+      stepState.blocked_reason = null;
       const newPid = startDetached(step.command, step.logFile);
       stepState.pid = newPid;
       stepState.last_started_at = new Date().toISOString();
@@ -519,6 +616,7 @@ for (const step of steps) {
   stepState.last_progress_at = new Date().toISOString();
   stepState.last_log_size = statMtimeMs(step.logFile) ? fs.statSync(step.logFile).size : 0;
   stepState.restarts = Number(stepState.restarts || 0);
+  stepState.blocked_reason = null;
   running.push({ id: step.id, pid, restarted: false, started: true });
   appendLog(ACTION_LOG, `[${new Date().toISOString()}] started ${step.id} pid=${pid}`);
 }
@@ -538,6 +636,8 @@ const report = {
   schema: 'dashboard_green_recovery_report_v1',
   generated_at: new Date().toISOString(),
   host: os.hostname(),
+  run_id: state.run_id,
+  target_market_date: targetMarketDate,
   campaign_started_at: state.campaign_started_at,
   completed_steps: Array.from(completed),
   running_steps: running,

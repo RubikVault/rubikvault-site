@@ -1138,7 +1138,7 @@ function _v4ContractValid(payload) {
 }
 
 function _insightsEndpoints() {
-  if (_useFeaturesV4()) return ['/api/stock-insights-v2', '/api/stock-insights-v4', '/api/stock-insights'];
+  if (_useFeaturesV4()) return ['/api/stock-insights-v4', '/api/stock-insights'];
   if (_useFeaturesV2()) return ['/api/stock-insights-v2', '/api/stock-insights'];
   return ['/api/stock-insights-v2', '/api/stock-insights'];
 }

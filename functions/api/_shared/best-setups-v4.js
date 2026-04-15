@@ -245,6 +245,11 @@ export function buildVerifiedFrontpageRow(stockDoc, candidate) {
 
   const close = toNumber(stockDoc?.data?.market_prices?.close ?? stockDoc?.data?.latest_bar?.close);
   if (close === null || isNaN(close)) { console.log(`DEBUG: buildVerifiedFrontpageRow rejected due to close is null for ${ticker}`); return null; }
+  const minimumNNotMet = decisionSlice?.minimum_n_not_met === true || decision?.minimum_n_not_met === true;
+  if (minimumNNotMet) {
+    console.log(`[best-setups-v4] Rejected ${ticker} — minimum_n_not_met=true`);
+    return null;
+  }
 
   const composite = toNumber(decisionSlice?.scores?.composite);
   const trendScore = toNumber(decisionSlice?.scores?.trend);
@@ -301,6 +306,8 @@ export function buildVerifiedFrontpageRow(stockDoc, candidate) {
     analyzer_volatility_percentile: toNumber(stats?.volatility_percentile),
     abstain_reason: decisionSlice?.abstain_reason || null,
     learning_status: decisionSlice?.learning_status || decision?.learning_status || null,
+    learning_gate: decisionSlice?.learning_gate || decision?.learning_gate || null,
+    minimum_n_not_met: minimumNNotMet,
     buy_eligible: decisionSlice?.buy_eligible !== false,
     regime_tag: decisionSlice?.regime_tag || decision?.regime_tag || null,
     market_cap_bucket: segmentationProfile.market_cap_bucket,

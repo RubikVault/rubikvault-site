@@ -16,16 +16,26 @@ import {
   evaluateTickerViaSharedCore,
   resolveLocalAssetMeta,
 } from './lib/best-setups-local-loader.mjs';
+import { histProbsReadCandidates } from './lib/hist-probs/path-resolver.mjs';
 
 const QUANTLAB_PUBLISH_DIRS = Object.freeze({
   stock: 'public/data/quantlab/stock-insights/stocks',
   etf: 'public/data/quantlab/stock-insights/etfs',
 });
 const OUTPUT_PATH = 'public/data/snapshots/best-setups-v4.json';
+const BUILD_REPORT_PATH = 'public/data/reports/best-setups-build-latest.json';
 const FORECAST_PATH = 'public/data/forecast/latest.json';
+const HIST_PROBS_CHECKPOINTS_PATH = 'public/data/hist-probs/checkpoints.json';
+const HIST_PROBS_NO_DATA_PATH = 'public/data/hist-probs/no-data-tickers.json';
+const HIST_PROBS_RUN_SUMMARY_PATH = 'public/data/hist-probs/run-summary.json';
 
 function nowIso() {
   return new Date().toISOString();
+}
+
+function normalizeDateId(value) {
+  const normalized = String(value || '').slice(0, 10).trim();
+  return normalized || null;
 }
 
 function num(value) {
@@ -41,6 +51,24 @@ function scaleTo100(value, min, max) {
   if (!Number.isFinite(value)) return 0;
   if (!Number.isFinite(min) || !Number.isFinite(max) || max <= min) return 0;
   return clamp(((value - min) / (max - min)) * 100, 0, 100);
+}
+
+function resolvedSnapshotDataAsOf(snapshotDoc, buildReport) {
+  return normalizeDateId(
+    snapshotDoc?.meta?.data_asof
+    || buildReport?.data_asof
+    || null,
+  );
+}
+
+function canReusePublishedSnapshot(snapshotDoc, buildReport, targetMarketDate) {
+  if (!snapshotDoc || snapshotDoc.ok !== true) return false;
+  if (!buildReport || typeof buildReport !== 'object') return false;
+  if (!snapshotDoc?.meta || !snapshotDoc?.data) return false;
+  const dataAsOf = resolvedSnapshotDataAsOf(snapshotDoc, buildReport);
+  if (targetMarketDate && (!dataAsOf || dataAsOf < targetMarketDate)) return false;
+  const rowsEmittedTotal = Number(buildReport?.rows_emitted_total ?? snapshotDoc?.meta?.rows_emitted?.total);
+  return Number.isFinite(rowsEmittedTotal);
 }
 
 async function writeJson(relPath, payload) {
@@ -60,18 +88,33 @@ async function mapWithConcurrency(items, limit, mapper) {
       out[index] = await mapper(items[index], index);
     }
   }
-  const workers = Array.from({ length: Math.max(1, Math.min(limit, items.length || 1)) }, () => worker());
+  const workerCount = Math.max(1, Math.min(Number(limit) || 1, items.length || 1));
+  const workers = Array.from({ length: workerCount }, () => worker());
   await Promise.all(workers);
   return out;
 }
 
 async function readQuantLabRowsForClass(assetClass) {
-  const dir = path.join(REPO_ROOT, QUANTLAB_PUBLISH_DIRS[assetClass]);
+  const dirPrimary = path.join(REPO_ROOT, QUANTLAB_PUBLISH_DIRS[assetClass]);
+  const dirFallback = path.join(REPO_ROOT, `public/data/quantlab/reports/shards/assets`);
+  
+  let dir = dirPrimary;
   let files = [];
   try {
     files = (await fs.readdir(dir)).filter((name) => name.endsWith('.json')).sort();
   } catch {
-    return { rows: [], shardCount: 0, generatedAt: null, asOfDate: null };
+    files = [];
+  }
+
+  // Fallback: If primary is empty, try the shards/assets directory
+  if (files.length === 0) {
+    dir = dirFallback;
+    try {
+      files = (await fs.readdir(dir)).filter((name) => name.endsWith('.json')).sort();
+      console.log(`[best-setups-v4] Primary directory empty for ${assetClass}, using fallback: ${dir} (${files.length} files found)`);
+    } catch {
+      return { rows: [], shardCount: 0, generatedAt: null, asOfDate: null };
+    }
   }
 
   let generatedAt = null;
@@ -82,11 +125,20 @@ async function readQuantLabRowsForClass(assetClass) {
       const payload = JSON.parse(await fs.readFile(path.join(dir, file), 'utf8'));
       if (!generatedAt && typeof payload?.generatedAt === 'string') generatedAt = payload.generatedAt;
       if (!asOfDate && typeof payload?.asOfDate === 'string') asOfDate = payload.asOfDate;
-      const byTicker = payload?.byTicker && typeof payload.byTicker === 'object' ? payload.byTicker : {};
+      
       const chunkRows = [];
-      for (const [tickerKey, row] of Object.entries(byTicker)) {
-        chunkRows.push({ ticker: row?.ticker || tickerKey, assetClass, ...row });
+      const byTicker = payload?.byTicker && typeof payload.byTicker === 'object' ? payload.byTicker : null;
+      
+      if (byTicker) {
+        // Multi-asset shard format
+        for (const [tickerKey, row] of Object.entries(byTicker)) {
+          chunkRows.push({ ticker: row?.ticker || tickerKey, assetClass, ...row });
+        }
+      } else if (payload?.ticker || payload?.canonicalId) {
+        // Single-asset format (often found in fallback directories)
+        chunkRows.push({ ticker: payload.ticker || payload.canonicalId.split(':').pop(), assetClass, ...payload });
       }
+      
       return chunkRows;
     } catch {
       return [];
@@ -272,7 +324,86 @@ function summarizeRejections(evalByTicker, candidatePools) {
   return summary;
 }
 
+async function inspectHistProbsLatestDate(ticker) {
+  for (const candidate of histProbsReadCandidates(path.join(REPO_ROOT, 'public/data/hist-probs'), ticker)) {
+    try {
+      const doc = JSON.parse(await fs.readFile(candidate, 'utf8'));
+      const latestDate = String(doc?.latest_date || '').slice(0, 10) || null;
+      if (latestDate) return latestDate;
+    } catch {}
+  }
+  return null;
+}
+
+async function buildHistProbsStaleSet(targetDate, tickers = []) {
+  const stale = new Set();
+  if (!targetDate) return stale;
+
+  const checkpointsDoc = await readJsonAbs(path.join(REPO_ROOT, HIST_PROBS_CHECKPOINTS_PATH));
+  const checkpoints = checkpointsDoc?.tickers && typeof checkpointsDoc.tickers === 'object'
+    ? checkpointsDoc.tickers
+    : {};
+
+  for (const ticker of tickers) {
+    const norm = String(ticker || '').trim().toUpperCase();
+    if (!norm) continue;
+    const fileLatestDate = await inspectHistProbsLatestDate(norm);
+    if (fileLatestDate) {
+      if (fileLatestDate < targetDate) stale.add(norm);
+      continue;
+    }
+    const latestDate = String(checkpoints[norm]?.latest_date || '').slice(0, 10) || null;
+    if (!latestDate || latestDate < targetDate) stale.add(norm);
+  }
+
+  return stale;
+}
+
+async function estimateCheckpointStaleCount(targetDate) {
+  if (!targetDate) return 0;
+  const checkpointsDoc = await readJsonAbs(path.join(REPO_ROOT, HIST_PROBS_CHECKPOINTS_PATH));
+  const noDataDoc = await readJsonAbs(path.join(REPO_ROOT, HIST_PROBS_NO_DATA_PATH));
+  const checkpoints = checkpointsDoc?.tickers && typeof checkpointsDoc.tickers === 'object'
+    ? checkpointsDoc.tickers
+    : {};
+  const neutral = new Set();
+  for (const row of noDataDoc?.tickers || []) {
+    if (row?.symbol) neutral.add(String(row.symbol).trim().toUpperCase());
+  }
+  let staleCount = 0;
+  for (const [ticker, checkpoint] of Object.entries(checkpoints)) {
+    const norm = String(ticker || '').trim().toUpperCase();
+    if (!norm || neutral.has(norm)) continue;
+    const status = String(checkpoint?.status || '').trim().toLowerCase();
+    if (['no_data', 'insufficient_history', 'inactive'].includes(status)) continue;
+    const latestDate = String(checkpoint?.latest_date || '').slice(0, 10) || null;
+    if (!latestDate || latestDate < targetDate) staleCount += 1;
+  }
+  return staleCount;
+}
+
 async function main() {
+  const publishMode = process.argv.includes('--publish');
+  const requestedTargetDate = normalizeDateId(
+    process.env.TARGET_MARKET_DATE
+    || process.env.RV_TARGET_MARKET_DATE
+    || null,
+  );
+  if (publishMode) {
+    const [existingSnapshot, existingBuildReport] = await Promise.all([
+      readJsonAbs(path.join(REPO_ROOT, OUTPUT_PATH)),
+      readJsonAbs(path.join(REPO_ROOT, BUILD_REPORT_PATH)),
+    ]);
+    if (canReusePublishedSnapshot(existingSnapshot, existingBuildReport, requestedTargetDate)) {
+      console.log(
+        `[best-setups-v4] Reusing existing published snapshot `
+        + `(data_asof=${resolvedSnapshotDataAsOf(existingSnapshot, existingBuildReport) || 'unknown'}, `
+        + `target=${requestedTargetDate || 'none'})`,
+      );
+      return;
+    }
+  }
+
   const startedAt = Date.now();
   const [quantlabResult, forecastDoc] = await Promise.all([
     readQuantLabRows(),
@@ -327,11 +458,34 @@ async function main() {
     doc: await evaluateTickerViaSharedCore(ticker),
   }));
   const evalByTicker = new Map(evalRows.map((row) => [row.ticker, row.doc]));
+  const targetDate = String(forecastDoc?.data?.asof || '').slice(0, 10) || null;
+  const histProbsStaleSet = await buildHistProbsStaleSet(targetDate, uniqueTickers);
+  console.log(`[best-setups-v4] hist-probs stale gate: ${histProbsStaleSet.size} tickers excluded (target: ${targetDate || 'unknown'})`);
+
+  if (targetDate) {
+    const runSummary = await readJsonAbs(path.join(REPO_ROOT, HIST_PROBS_RUN_SUMMARY_PATH));
+    const tickersTotal = Number(runSummary?.tickers_total || 0);
+    const checkpointStaleCount = await estimateCheckpointStaleCount(targetDate);
+    const ratio = tickersTotal > 0 ? checkpointStaleCount / tickersTotal : 0;
+    if (ratio > 0.15) {
+      console.warn(`[best-setups-v4] WARNING: ${(ratio * 100).toFixed(1)}% universe has stale hist-probs. BUY list will be smaller than usual.`);
+    }
+  }
+
+  const notHistProbsStale = (row) => {
+    if (!row) return false;
+    const ticker = String(row.ticker || '').trim().toUpperCase();
+    if (histProbsStaleSet.has(ticker)) {
+      console.log(`[best-setups-v4] Rejected ${ticker} from BUY list — hist-probs stale`);
+      return false;
+    }
+    return true;
+  };
 
   const acceptedByHorizon = {
-    short: (candidatePools.short || []).map((candidate) => buildVerifiedFrontpageRow(evalByTicker.get(candidate.ticker), candidate)).filter(Boolean),
-    medium: (candidatePools.medium || []).map((candidate) => buildVerifiedFrontpageRow(evalByTicker.get(candidate.ticker), candidate)).filter(Boolean),
-    long: (candidatePools.long || []).map((candidate) => buildVerifiedFrontpageRow(evalByTicker.get(candidate.ticker), candidate)).filter(Boolean),
+    short: (candidatePools.short || []).map((candidate) => buildVerifiedFrontpageRow(evalByTicker.get(candidate.ticker), candidate)).filter(Boolean).filter(notHistProbsStale),
+    medium: (candidatePools.medium || []).map((candidate) => buildVerifiedFrontpageRow(evalByTicker.get(candidate.ticker), candidate)).filter(Boolean).filter(notHistProbsStale),
+    long: (candidatePools.long || []).map((candidate) => buildVerifiedFrontpageRow(evalByTicker.get(candidate.ticker), candidate)).filter(Boolean).filter(notHistProbsStale),
   };
 
   const horizonsByClass = { stocks: {}, etfs: {} };
@@ -421,6 +575,29 @@ async function main() {
 
   await writeJson(OUTPUT_PATH, payload);
 
+  const buildReport = {
+    schema: 'rv.best-setups.build.v1',
+    ok: totalRowsEmitted > 0,
+    generated_at: nowIso(),
+    snapshot_path: OUTPUT_PATH,
+    snapshot_generated_at: payload.generated_at,
+    data_asof: payload.meta?.data_asof || null,
+    rows_emitted_total: totalRowsEmitted,
+    rows_emitted: emittedCounts,
+    candidate_counts: payload.meta?.candidate_counts || null,
+    rejection_counts: rejectionCounts,
+    source_dependencies: payload.meta?.source_dependencies || null,
+    quantlab_generated_at_by_class: quantlabResult.generatedAtByClass,
+    quantlab_asof_by_class: quantlabResult.asOfDateByClass,
+    duration_ms: Date.now() - startedAt,
+    fallback_used_by_class: {
+      stocks: quantlabResult.shardCount?.stocks > 0 && !quantlabResult.generatedAtByClass?.stocks,
+      etfs: quantlabResult.shardCount?.etfs > 0 && !quantlabResult.generatedAtByClass?.etfs,
+    },
+    warnings: totalRowsEmitted < 20 ? ['LOW_ROW_EMISSION'] : [],
+  };
+  await writeJson(BUILD_REPORT_PATH, buildReport);
+
   const finalTickers = new Set([
     ...horizonsByClass.stocks.short, ...horizonsByClass.stocks.medium, ...horizonsByClass.stocks.long,
     ...horizonsByClass.etfs.short, ...horizonsByClass.etfs.medium, ...horizonsByClass.etfs.long,
@@ -448,6 +625,12 @@ async function main() {
 }
 
 main().catch((error) => {
+  writeJson(BUILD_REPORT_PATH, {
+    schema: 'rv.best-setups.build.v1',
+    ok: false,
+    generated_at: nowIso(),
+    error: String(error?.stack || error?.message || error),
+  }).catch(() => {});
   console.error(`[best-setups-v4] build failed: ${error?.stack || error?.message || String(error)}`);
   process.exit(1);
 });

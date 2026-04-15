@@ -29,6 +29,18 @@ import {
 import { assembleDecisionInputs, loadRequestCoreInputs } from './_shared/decision-input-assembly.js';
 import { fetchEodhdFundamentals } from './_shared/fundamentals-eodhd.mjs';
 import { fetchFmpFundamentals } from './_shared/fundamentals-fmp.mjs';
+import {
+  annotateFundamentalsForScope,
+  resolveFundamentalsScopeMember,
+} from './_shared/fundamentals-scope.mjs';
+import { mergeCatalystFields } from './_shared/catalyst-normalization.mjs';
+import {
+  computeStatusFromDataDate,
+  diffDays,
+  isoDay,
+  minutesSinceUtcMidnight,
+  parseIsoDay,
+} from './_shared/market-calendar.js';
 
 const MODULE_NAME = 'stock';
 const TICKER_MAX_LENGTH = 12;
@@ -45,6 +57,7 @@ const DEFAULT_MAX_STALE_DAYS = 14;
 const DEFAULT_PENDING_WINDOW_MINUTES = 120;
 const V7_STOCK_SSOT_TTL_MS = 10 * 60 * 1000;
 const V7_SEARCH_EXACT_TTL_MS = 10 * 60 * 1000;
+const LOCAL_DEV_HISTORY_DAYS = 90;
 
 let v7StockSetCache = null;
 let v7StockSetCachedAt = 0;
@@ -116,51 +129,6 @@ function computeStartDateISO(daysBack) {
   return d.toISOString().slice(0, 10);
 }
 
-function isoDay(date = new Date()) {
-  return date.toISOString().slice(0, 10);
-}
-
-function parseIsoDay(value) {
-  if (typeof value !== 'string') return null;
-  const trimmed = value.trim();
-  if (!trimmed) return null;
-  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return trimmed;
-  const parsed = Date.parse(trimmed);
-  if (Number.isNaN(parsed)) return null;
-  return new Date(parsed).toISOString().slice(0, 10);
-}
-
-function diffDays(fromDay, toDay) {
-  const from = Date.UTC(
-    Number(fromDay.slice(0, 4)),
-    Number(fromDay.slice(5, 7)) - 1,
-    Number(fromDay.slice(8, 10))
-  );
-  const to = Date.UTC(
-    Number(toDay.slice(0, 4)),
-    Number(toDay.slice(5, 7)) - 1,
-    Number(toDay.slice(8, 10))
-  );
-  return Math.floor((to - from) / 86400000);
-}
-
-function minutesSinceUtcMidnight(date) {
-  return date.getUTCHours() * 60 + date.getUTCMinutes();
-}
-
-function computeStatusFromDataDate(dataDate, now, maxStaleDays, pendingWindowMinutes) {
-  const today = isoDay(now);
-  const normalized = parseIsoDay(dataDate);
-  if (!normalized) {
-    return minutesSinceUtcMidnight(now) <= pendingWindowMinutes ? 'pending' : 'error';
-  }
-  if (normalized === today) return 'fresh';
-  const ageDays = diffDays(normalized, today);
-  if (ageDays === 1 && minutesSinceUtcMidnight(now) <= pendingWindowMinutes) return 'pending';
-  if (ageDays <= maxStaleDays) return 'stale';
-  return 'error';
-}
-
 function coerceTimestampMs(value) {
   if (typeof value === 'number' && Number.isFinite(value)) {
     return value > 1e12 ? value : value * 1000;
@@ -221,38 +189,65 @@ async function getSWRPending(env, swrKey, pendingWindowSeconds) {
 
 async function fetchSnapshot(moduleName, request) {
   const baseUrl = new URL(request.url);
-  let lastError = null;
-  const attempts = [];
-
-  for (const template of SNAPSHOT_PATH_TEMPLATES) {
-    const path = template.replace('{module}', moduleName);
+  const attempts = SNAPSHOT_PATH_TEMPLATES.map((template) => template.replace('{module}', moduleName));
+  const controllers = attempts.map(() => new AbortController());
+  const attemptPromises = attempts.map(async (path, index) => {
     const url = new URL(path, baseUrl);
-    attempts.push(path);
+    const startedAt = Date.now();
     try {
-      const response = await fetch(url.toString());
-      if (response.ok) {
-        const payload = await response.json();
-        return {
-          snapshot: payload,
-          path,
-          status: response.status,
-          served_from: 'ASSET'
-        };
+      const response = await fetch(url.toString(), { signal: controllers[index].signal });
+      if (!response.ok) {
+        return { ok: false, path, error: `HTTP ${response.status}` };
       }
-      lastError = new Error(`HTTP ${response.status}`);
+      const payload = await response.json();
+      return {
+        ok: true,
+        snapshot: payload,
+        path,
+        status: response.status,
+        served_from: 'ASSET',
+        latency_ms: Date.now() - startedAt,
+      };
     } catch (error) {
-      lastError = error;
+      return {
+        ok: false,
+        path,
+        error: error instanceof Error ? error.message : String(error || 'snapshot_missing'),
+        latency_ms: Date.now() - startedAt,
+      };
     }
-  }
+  });
 
-  return {
-    snapshot: null,
-    path: attempts[0],
-    status: null,
-    served_from: null,
-    error: lastError ? lastError.message : 'snapshot_missing',
-    attempted: attempts
-  };
+  const winnerPromises = attemptPromises.map((promise) => promise.then((result) => {
+    if (result.ok) return result;
+    throw result;
+  }));
+
+  try {
+    const hit = await Promise.any(winnerPromises);
+    for (const controller of controllers) controller.abort();
+    return hit;
+  } catch {
+    const results = await Promise.all(attemptPromises);
+    const lastError = results.find((item) => item.error)?.error || 'snapshot_missing';
+    return {
+      snapshot: null,
+      path: attempts[0],
+      status: null,
+      served_from: null,
+      error: lastError,
+      attempted: results,
+    };
+  }
+}
+
+function isLocalDevRequest(request) {
+  try {
+    const url = new URL(request.url);
+    return ['127.0.0.1', 'localhost'].includes(url.hostname);
+  } catch {
+    return false;
+  }
 }
 
 async function fetchV7StockSet(request) {
@@ -638,6 +633,8 @@ export async function onRequestGet(context) {
 
   const cache = createCache(env);
   const now = new Date();
+  const localDevRequest = isLocalDevRequest(request)
+    || ['1', 'true', 'yes'].includes(String(env?.RV_LOCAL_DEV || '').trim().toLowerCase());
   const cacheId = effectiveTicker || null;
   const cacheTtlSeconds = Number(env?.EOD_CACHE_TTL_SECONDS) || DEFAULT_EOD_CACHE_TTL_SECONDS;
   const lockTtlSeconds = Number(env?.EOD_LOCK_TTL_SECONDS) || DEFAULT_EOD_LOCK_TTL_SECONDS;
@@ -725,7 +722,7 @@ export async function onRequestGet(context) {
 
   async function fetchProviderBars({ flagSet = qualityFlags, recordTiming = false } = {}) {
     const originStart = recordTiming ? Date.now() : null;
-    const startDate = computeStartDateISO(365 * 3);
+    const startDate = computeStartDateISO(localDevRequest ? LOCAL_DEV_HISTORY_DAYS : 365 * 3);
     const chainResult = await fetchBarsWithProviderChain(effectiveTicker, env, {
       outputsize: '300',
       startDate,
@@ -1034,6 +1031,37 @@ export async function onRequestGet(context) {
   /**
    * Helper to fetch v3 data (EOD + Indicators)
    */
+  async function findNdjsonRecord(response, ticker) {
+    if (!response?.body) return null;
+    const decoder = new TextDecoder();
+    let buffer = '';
+    for await (const chunk of response.body) {
+      buffer += decoder.decode(chunk, { stream: true });
+      let newlineIndex = buffer.indexOf('\n');
+      while (newlineIndex >= 0) {
+        const line = buffer.slice(0, newlineIndex).trim();
+        buffer = buffer.slice(newlineIndex + 1);
+        if (line) {
+          try {
+            const record = JSON.parse(line);
+            if (record?.ticker === ticker) return record;
+          } catch {
+            // ignore malformed row and continue scanning
+          }
+        }
+        newlineIndex = buffer.indexOf('\n');
+      }
+    }
+    const finalLine = `${buffer}${decoder.decode()}`.trim();
+    if (!finalLine) return null;
+    try {
+      const record = JSON.parse(finalLine);
+      return record?.ticker === ticker ? record : null;
+    } catch {
+      return null;
+    }
+  }
+
   async function fetchV3Data(env, request, ticker) {
     try {
       const v3Exchange = 'US'; // TODO: derive
@@ -1064,20 +1092,7 @@ export async function onRequestGet(context) {
       if (!eodHit || !indHit) return null;
 
       const indData = await indHit.res.json();
-      const eodText = await eodHit.res.text();
-      const eodLines = eodText.split('\n');
-      let eodRecord = null;
-
-      for (const line of eodLines) {
-        if (!line) continue;
-        try {
-          const rec = JSON.parse(line);
-          if (rec.ticker === ticker) {
-            eodRecord = rec;
-            break;
-          }
-        } catch (e) { }
-      }
+      const eodRecord = await findNdjsonRecord(eodHit.res, ticker);
 
       if (!eodRecord || !indData) return null;
 
@@ -1119,7 +1134,7 @@ export async function onRequestGet(context) {
   let v3Meta = null;
   // v3 overlay/shadow is opt-in only to keep stock endpoint deterministic under load.
   const useV3 = url.searchParams.get('v3') === 'true' && request.headers.get('x-rv-version') !== '2';
-  const useV3Shadow = url.searchParams.get('v3_shadow') === '1';
+  const useV3Shadow = url.searchParams.get('v3_shadow') === '1' && !localDevRequest;
 
   // 1. FOREGROUND: Hybrid Mode (Default)
   if (useV3 && effectiveTicker) {
@@ -1600,6 +1615,7 @@ export async function onRequestGet(context) {
     error: errorPayload
   };
 
+  let decisionInputs = null;
   {
     // Use the same shared raw-input path as /api/stock-insights-v4 and the offline builder.
     const origin = url.origin;
@@ -1616,7 +1632,7 @@ export async function onRequestGet(context) {
         return await res.json();
       } catch { return null; }
     }
-    const decisionInputs = await assembleDecisionInputs(effectiveTicker, {
+    decisionInputs = await assembleDecisionInputs(effectiveTicker, {
       fetchJson: fetchJsonForAssembly,
       loadCoreInputs: (resolvedTicker) => loadRequestCoreInputs(resolvedTicker, {
         request,
@@ -1633,6 +1649,7 @@ export async function onRequestGet(context) {
       segmentationProfile: decisionInputs.segmentationProfile,
       scientificState: decisionInputs.scientificState,
       forecastState: decisionInputs.forecastState,
+      elliottState: decisionInputs.elliottState,
       quantlabState: decisionInputs.quantlabState,
       forecastMeta: decisionInputs.forecastMeta,
       inputFingerprints: decisionInputs.input_fingerprints,
@@ -1643,7 +1660,9 @@ export async function onRequestGet(context) {
       requested: true,
       status: payload.evaluation_v4.status || 'unavailable',
       as_of: decisionInputs.as_of || null,
-      input_fingerprints: decisionInputs.input_fingerprints || null
+      input_fingerprints: decisionInputs.input_fingerprints || null,
+      run_id: decisionInputs.runtimeControl?.run_id || null,
+      target_market_date: decisionInputs.runtimeControl?.target_market_date || null,
     };
   }
 
@@ -1653,34 +1672,72 @@ export async function onRequestGet(context) {
     payload.decision = payload.evaluation_v4.decision;
     payload.explanation = payload.evaluation_v4.explanation;
     payload.v6 = payload.evaluation_v4.decision?.v6 || null;
+    if (decisionInputs?.runtimeControl?.learning_gate) {
+      payload.decision.learning_gate = decisionInputs.runtimeControl.learning_gate;
+      payload.decision.minimum_n_not_met = decisionInputs.runtimeControl.learning_gate.minimum_n_not_met === true;
+    }
   }
 
   // Fundamentals — 2-Layer: Live API (EODHD→FMP) → Static JSON
   {
     let _fundData = null;
-
-    // Layer 1: Live API (EODHD primary → FMP fallback)
+    let _fundScope = null;
     try {
-      const r = await fetchEodhdFundamentals(effectiveTicker, env);
-      if (r.ok && r.data) _fundData = r.data;
+      const _scopeUrl = new URL('/data/fundamentals/_scope.json', request.url);
+      const _scopeRes = await fetch(_scopeUrl.toString());
+      if (_scopeRes.ok) _fundScope = await _scopeRes.json();
     } catch {}
-    if (!_fundData) {
+    const _scopeMember = resolveFundamentalsScopeMember(_fundScope, effectiveTicker);
+
+    if (_fundScope && !_scopeMember) {
+      _fundData = annotateFundamentalsForScope({
+        ticker: effectiveTicker,
+        universe: payload.universe || null,
+        fundamentals: null,
+        scopeDoc: _fundScope,
+        targetMarketDate: _fundScope?.target_market_date || payload.metadata?.data_date || null,
+      });
+    } else {
+      // Layer 1: Live API (EODHD primary → FMP fallback)
       try {
-        const r = await fetchFmpFundamentals(effectiveTicker, env);
+        const r = await fetchEodhdFundamentals(effectiveTicker, env);
         if (r.ok && r.data) _fundData = r.data;
       } catch {}
-    }
-
-    // Layer 2: Static JSON Fallback
-    if (!_fundData) {
       try {
-        const _sUrl = new URL('/data/fundamentals/' + encodeURIComponent(effectiveTicker.toUpperCase()) + '.json', request.url);
-        const _sRes = await fetch(_sUrl.toString());
-        if (_sRes.ok) _fundData = await _sRes.json();
+        if (!_fundData) {
+          const r = await fetchFmpFundamentals(effectiveTicker, env);
+          if (r.ok && r.data) _fundData = r.data;
+        }
       } catch {}
+      if (!_fundData) {
+        try {
+          const _sUrl = new URL('/data/fundamentals/' + encodeURIComponent(effectiveTicker.toUpperCase()) + '.json', request.url);
+          const _sRes = await fetch(_sUrl.toString());
+          if (_sRes.ok) _fundData = await _sRes.json();
+        } catch {}
+      }
     }
-
-    payload.data.fundamentals = _fundData || null;
+    let _earningsFeed = null;
+    try {
+      const _eUrl = new URL('/data/earnings-calendar/latest.json', request.url);
+      const _eRes = await fetch(_eUrl.toString());
+      if (_eRes.ok) _earningsFeed = await _eRes.json();
+    } catch {}
+    const mergedCatalysts = mergeCatalystFields({
+      ticker: effectiveTicker,
+      fundamentals: _fundData,
+      earningsFeed: _earningsFeed,
+      universe: payload.universe || null,
+      name: payload.data?.name || _fundData?.companyName || null,
+    });
+    payload.data.fundamentals = annotateFundamentalsForScope({
+      ticker: effectiveTicker,
+      universe: payload.universe || null,
+      fundamentals: mergedCatalysts.fundamentals || null,
+      scopeDoc: _fundScope,
+      targetMarketDate: _fundScope?.target_market_date || payload.metadata?.data_date || null,
+    });
+    payload.data.catalysts = mergedCatalysts.catalysts || null;
   }
 
   payload.metadata.digest = await computeDigest(payload);

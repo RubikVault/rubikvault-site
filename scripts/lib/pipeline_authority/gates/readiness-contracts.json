@@ -1,0 +1,49 @@
+{
+  "schema": "rv.pipeline_authority.readiness_contracts.v1",
+  "profiles": {
+    "stock_analyzer_audit": [
+      "local_pages_diag",
+      "local_stock_summary",
+      "local_stock_historical",
+      "local_stock_governance",
+      "local_stock_historical_profile"
+    ]
+  },
+  "contracts": [
+    {
+      "id": "local_pages_diag",
+      "method": "GET",
+      "path": "/api/diag",
+      "timeout_ms": 5000,
+      "required_substrings": ["summary"]
+    },
+    {
+      "id": "local_stock_summary",
+      "method": "GET",
+      "path": "/api/v2/stocks/{ticker}/summary",
+      "timeout_ms": 5000,
+      "required_substrings": ["\"ok\":true"]
+    },
+    {
+      "id": "local_stock_historical",
+      "method": "GET",
+      "path": "/api/v2/stocks/{ticker}/historical",
+      "timeout_ms": 5000,
+      "required_substrings": ["\"ok\":true"]
+    },
+    {
+      "id": "local_stock_governance",
+      "method": "GET",
+      "path": "/api/v2/stocks/{ticker}/governance",
+      "timeout_ms": 5000,
+      "required_substrings": ["\"ok\":true"]
+    },
+    {
+      "id": "local_stock_historical_profile",
+      "method": "GET",
+      "path": "/api/v2/stocks/{ticker}/historical-profile",
+      "timeout_ms": 5000,
+      "required_substrings": ["\"ok\":true"]
+    }
+  ]
+}

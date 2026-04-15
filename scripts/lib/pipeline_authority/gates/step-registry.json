@@ -1,0 +1,11 @@
+{
+  "schema": "rv.pipeline_authority.step_registry.v1",
+  "steps": [
+    { "step_id": "runtime_preflight", "required_inputs": [], "expected_outputs": ["runtime_health"], "readiness_contract_id": "stock_analyzer_audit", "retry_budget": 2, "terminal_on": ["restart_budget_exhausted"], "resource_scope": "runtime", "publish_class": "TEMP" },
+    { "step_id": "stock_analyzer_universe_audit", "required_inputs": ["runtime_preflight"], "expected_outputs": ["public/data/reports/stock-analyzer-universe-audit-latest.json"], "readiness_contract_id": "stock_analyzer_audit", "retry_budget": 1, "terminal_on": ["CORRUPT_JSON", "SCHEMA_VERSION_MISMATCH"], "resource_scope": "audit", "publish_class": "ROLLBACK_CRITICAL" },
+    { "step_id": "system_status", "required_inputs": ["stock_analyzer_universe_audit"], "expected_outputs": ["public/data/reports/system-status-latest.json"], "readiness_contract_id": null, "retry_budget": 1, "terminal_on": ["BLOCKED_BY_TERMINAL_UPSTREAM"], "resource_scope": "ops", "publish_class": "KEEP_7D" },
+    { "step_id": "pipeline_runtime", "required_inputs": ["system_status"], "expected_outputs": ["public/data/pipeline/runtime/latest.json"], "readiness_contract_id": null, "retry_budget": 1, "terminal_on": ["BLOCKED_BY_TERMINAL_UPSTREAM"], "resource_scope": "ops", "publish_class": "KEEP_7D" },
+    { "step_id": "pipeline_epoch", "required_inputs": ["pipeline_runtime"], "expected_outputs": ["public/data/pipeline/epoch.json"], "readiness_contract_id": null, "retry_budget": 1, "terminal_on": ["BLOCKED_BY_TERMINAL_UPSTREAM"], "resource_scope": "ops", "publish_class": "KEEP_7D" },
+    { "step_id": "final_integrity_seal", "required_inputs": ["pipeline_epoch"], "expected_outputs": ["public/data/ops/final-integrity-seal-latest.json"], "readiness_contract_id": null, "retry_budget": 1, "terminal_on": ["BLOCKED_BY_TERMINAL_UPSTREAM"], "resource_scope": "ops", "publish_class": "ROLLBACK_CRITICAL" }
+  ]
+}

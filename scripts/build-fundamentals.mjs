@@ -15,6 +15,7 @@
  *   node scripts/build-fundamentals.mjs --limit 50
  *   node scripts/build-fundamentals.mjs --ticker AAPL,MSFT
  *   node scripts/build-fundamentals.mjs --published-subset
+ *   node scripts/build-fundamentals.mjs --top-scope
  *   node scripts/build-fundamentals.mjs --force   (ignore 23h incremental skip)
  *   node scripts/build-fundamentals.mjs --dry-run
  */
@@ -22,12 +23,21 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import {
+  countMeaningfulFundamentals,
+  DEFAULT_FUNDAMENTALS_FRESHNESS_LIMIT_TRADING_DAYS,
+  DEFAULT_FUNDAMENTALS_SCOPE_NAME,
+  DEFAULT_FUNDAMENTALS_SCOPE_SIZE,
+  normalizeTicker,
+} from '../functions/api/_shared/fundamentals-scope.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
 const OUT_DIR = path.join(ROOT, 'public', 'data', 'fundamentals');
 const HP_DIR = path.join(ROOT, 'public', 'data', 'hist-probs');
 const US_EU_SCOPE_ROWS_PATH = path.join(ROOT, 'mirrors', 'universe-v7', 'ssot', 'stocks_etfs.us_eu.rows.json');
+const BEST_SETUPS_PATH = path.join(ROOT, 'public', 'data', 'snapshots', 'best-setups-v4.json');
+const SCOPE_OUT_PATH = path.join(OUT_DIR, '_scope.json');
 
 // Auto-load .dev.vars (Cloudflare Wrangler convention — same as dev-local.sh)
 {
@@ -45,6 +55,7 @@ const args = process.argv.slice(2);
 const FLAG_FORCE = args.includes('--force');
 const FLAG_DRY = args.includes('--dry-run');
 const FLAG_PUBLISHED_SUBSET = args.includes('--published-subset');
+const FLAG_TOP_SCOPE = args.includes('--top-scope');
 const FLAG_LIMIT = (() => { const i = args.indexOf('--limit'); return i !== -1 ? parseInt(args[i + 1], 10) : null; })();
 const FLAG_TICKER = (() => { const i = args.indexOf('--ticker'); return i !== -1 ? args[i + 1].split(',').map(t => t.trim().toUpperCase()) : null; })();
 
@@ -81,6 +92,124 @@ async function fetchJson(url, timeoutMs = 8000) {
 function normalizeDateId(value) {
   const normalized = String(value || '').slice(0, 10).trim();
   return normalized || null;
+}
+
+async function readJsonMaybe(filePath) {
+  try {
+    return JSON.parse(await fs.readFile(filePath, 'utf8'));
+  } catch {
+    return null;
+  }
+}
+
+async function loadUsEuRows() {
+  const doc = await readJsonMaybe(US_EU_SCOPE_ROWS_PATH);
+  return Array.isArray(doc?.items) ? doc.items : [];
+}
+
+function collectBestSetupsTickers(bestSetupsDoc) {
+  const ranked = [];
+  const groups = bestSetupsDoc?.data || {};
+  for (const assetClassKey of ['stocks', 'etfs']) {
+    const assetClassGroup = groups?.[assetClassKey] || {};
+    for (const horizonKey of ['short', 'medium', 'long']) {
+      for (const row of assetClassGroup?.[horizonKey] || []) {
+        const ticker = normalizeTicker(row?.ticker || row?.symbol);
+        if (ticker) ranked.push(ticker);
+      }
+    }
+  }
+  return ranked;
+}
+
+async function loadExistingFundamentalsSnapshot() {
+  const docs = new Map();
+  const files = await fs.readdir(OUT_DIR).catch(() => []);
+  for (const file of files) {
+    if (!file.endsWith('.json') || file.startsWith('_')) continue;
+    const ticker = normalizeTicker(file.replace(/\.json$/i, ''));
+    if (!ticker) continue;
+    const doc = await readJsonMaybe(path.join(OUT_DIR, file));
+    if (doc) docs.set(ticker, doc);
+  }
+  return docs;
+}
+
+function buildScopeDocument({ rows, bestSetupsDoc, existingDocs }) {
+  const targetMarketDate = normalizeDateId(bestSetupsDoc?.meta?.data_asof)
+    || rows.map((row) => normalizeDateId(row?.last_trade_date)).filter(Boolean).sort().slice(-1)[0]
+    || null;
+  const seededTickers = collectBestSetupsTickers(bestSetupsDoc);
+  const seededRank = new Map();
+  seededTickers.forEach((ticker, index) => {
+    if (!seededRank.has(ticker)) seededRank.set(ticker, index + 1);
+  });
+
+  const candidates = rows
+    .filter((row) => ['STOCK', 'ETF'].includes(String(row?.type_norm || '').toUpperCase()))
+    .map((row) => {
+      const ticker = normalizeTicker(row?.symbol);
+      if (!ticker) return null;
+      const assetClass = String(row?.type_norm || '').toUpperCase();
+      const existing = existingDocs.get(ticker) || null;
+      const seeded = seededRank.has(ticker);
+      const meaningfulFields = countMeaningfulFundamentals(existing);
+      return {
+        ticker,
+        name: row?.name || existing?.companyName || ticker,
+        asset_class: assetClass,
+        exchange: row?.exchange || null,
+        country: row?.country || null,
+        scope_region: row?.scope_region || null,
+        bars_count: Number(row?.bars_count || 0),
+        avg_volume_30d: Number(row?.avg_volume_30d || 0),
+        market_cap: Number(existing?.marketCap || 0),
+        last_trade_date: normalizeDateId(row?.last_trade_date),
+        seeded_by_best_setups: seeded,
+        best_setups_seed_rank: seeded ? seededRank.get(ticker) : null,
+        existing_fundamentals_fields: meaningfulFields,
+        existing_fundamentals_updated_at: normalizeDateId(existing?.updatedAt || existing?.asOf || existing?.date),
+        coverage_expected: assetClass === 'STOCK' || meaningfulFields >= 2,
+      };
+    })
+    .filter(Boolean)
+    .sort((a, b) => {
+      if (Number(b.seeded_by_best_setups) !== Number(a.seeded_by_best_setups)) {
+        return Number(b.seeded_by_best_setups) - Number(a.seeded_by_best_setups);
+      }
+      if ((a.best_setups_seed_rank ?? Infinity) !== (b.best_setups_seed_rank ?? Infinity)) {
+        return (a.best_setups_seed_rank ?? Infinity) - (b.best_setups_seed_rank ?? Infinity);
+      }
+      if (b.market_cap !== a.market_cap) return b.market_cap - a.market_cap;
+      if (b.avg_volume_30d !== a.avg_volume_30d) return b.avg_volume_30d - a.avg_volume_30d;
+      if (b.bars_count !== a.bars_count) return b.bars_count - a.bars_count;
+      return a.ticker.localeCompare(b.ticker);
+    });
+
+  const scopeSize = Number(process.env.RV_FUNDAMENTALS_SCOPE_SIZE || DEFAULT_FUNDAMENTALS_SCOPE_SIZE);
+  const members = candidates.slice(0, scopeSize).map((entry, index) => ({
+    ...entry,
+    scope_rank: index + 1,
+  }));
+
+  return {
+    schema: 'rv_fundamentals_scope_v1',
+    generated_at: new Date().toISOString(),
+    target_market_date: targetMarketDate,
+    scope_name: DEFAULT_FUNDAMENTALS_SCOPE_NAME,
+    scope_size: scopeSize,
+    freshness_limit_trading_days: DEFAULT_FUNDAMENTALS_FRESHNESS_LIMIT_TRADING_DAYS,
+    selection_policy: {
+      seed: 'best_setups_v4',
+      fill: 'market_cap_desc_then_avg_volume_30d_then_bars_count_then_symbol',
+    },
+    coverage_expected_counts: {
+      total: members.filter((entry) => entry.coverage_expected).length,
+      stocks: members.filter((entry) => entry.asset_class === 'STOCK' && entry.coverage_expected).length,
+      etfs: members.filter((entry) => entry.asset_class === 'ETF' && entry.coverage_expected).length,
+    },
+    members,
+  };
 }
 
 // ── Provider: EODHD ──────────────────────────────────────────────────────────
@@ -279,21 +408,15 @@ async function fetchWaterfall(ticker) {
 const CANONICAL_SYMBOLS_PATH = path.join(ROOT, 'public', 'data', 'universe', 'v7', 'ssot', 'stocks.max.symbols.json');
 
 async function loadUsEuStockRows() {
-  try {
-    const raw = await fs.readFile(US_EU_SCOPE_ROWS_PATH, 'utf8');
-    const doc = JSON.parse(raw);
-    const rows = Array.isArray(doc?.items) ? doc.items : [];
-    return rows.filter((row) => String(row?.type_norm || '').toUpperCase() === 'STOCK');
-  } catch {
-    return [];
-  }
+  const rows = await loadUsEuRows();
+  return rows.filter((row) => String(row?.type_norm || '').toUpperCase() === 'STOCK');
 }
 
 async function loadPublishedSubsetTickers() {
   const files = await fs.readdir(OUT_DIR).catch(() => []);
   const tickers = files
-    .filter((name) => name.endsWith('.json') && name !== '_index.json')
-    .map((name) => name.replace(/\.json$/i, '').trim().toUpperCase())
+    .filter((name) => name.endsWith('.json') && !name.startsWith('_'))
+    .map((name) => normalizeTicker(name.replace(/\.json$/i, '')))
     .filter(Boolean)
     .sort();
   return FLAG_LIMIT ? tickers.slice(0, FLAG_LIMIT) : tickers;
@@ -301,6 +424,14 @@ async function loadPublishedSubsetTickers() {
 
 async function getTickers() {
   if (FLAG_TICKER) return FLAG_TICKER;
+  if (FLAG_TOP_SCOPE) {
+    const scopeDoc = await readJsonMaybe(SCOPE_OUT_PATH);
+    const tickers = (scopeDoc?.members || []).map((member) => normalizeTicker(member?.ticker)).filter(Boolean);
+    if (tickers.length > 0) {
+      console.log(`  [fundamentals] Using prioritized scope: ${tickers.length} tickers from public/data/fundamentals/_scope.json`);
+      return FLAG_LIMIT ? tickers.slice(0, FLAG_LIMIT) : tickers;
+    }
+  }
   if (FLAG_PUBLISHED_SUBSET) {
     const published = await loadPublishedSubsetTickers();
     if (published.length > 0) {
@@ -343,9 +474,9 @@ async function getTickers() {
 
 async function buildExpectedDateMap() {
   const map = new Map();
-  const rows = await loadUsEuStockRows();
+  const rows = await loadUsEuRows();
   for (const row of rows) {
-    const ticker = String(row?.symbol || '').trim().toUpperCase();
+    const ticker = normalizeTicker(row?.symbol);
     if (!ticker) continue;
     const expectedDate = normalizeDateId(row?.last_trade_date);
     if (!map.has(ticker) || (expectedDate && expectedDate > map.get(ticker))) {
@@ -401,6 +532,16 @@ async function main() {
 
   await fs.mkdir(OUT_DIR, { recursive: true });
 
+  const [rows, bestSetupsDoc, existingDocs] = await Promise.all([
+    loadUsEuRows(),
+    readJsonMaybe(BEST_SETUPS_PATH),
+    loadExistingFundamentalsSnapshot(),
+  ]);
+  const scopeDoc = buildScopeDocument({ rows, bestSetupsDoc, existingDocs });
+  if (!FLAG_DRY) {
+    await fs.writeFile(SCOPE_OUT_PATH, JSON.stringify(scopeDoc, null, 2) + '\n', 'utf8');
+  }
+
   const tickers = await getTickers();
   const expectedDateByTicker = await buildExpectedDateMap();
   console.log(`  Tickers: ${tickers.length} | Providers: EODHD→FMP→Finnhub→AV`);
@@ -424,7 +565,17 @@ async function main() {
     failed: stats.failed,
     skipped: stats.skipped,
     published_existing: (await loadPublishedSubsetTickers()).length,
-    scope: FLAG_PUBLISHED_SUBSET ? 'published_subset' : 'us_eu_stock_only',
+    scope: FLAG_TOP_SCOPE
+      ? 'top_scope'
+      : FLAG_PUBLISHED_SUBSET
+        ? 'published_subset'
+        : 'us_eu_stock_only',
+    scope_ref: 'public/data/fundamentals/_scope.json',
+    scope_name: scopeDoc.scope_name,
+    scope_size: scopeDoc.scope_size,
+    scope_member_count: Array.isArray(scopeDoc.members) ? scopeDoc.members.length : 0,
+    scope_target_market_date: scopeDoc.target_market_date || null,
+    coverage_expected_count: scopeDoc.coverage_expected_counts?.total ?? null,
     by_provider: stats.by_provider,
   };
 

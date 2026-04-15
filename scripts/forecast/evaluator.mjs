@@ -41,11 +41,15 @@ export function createOutcomeRecord(forecast, y, outcomeTradingDate) {
 
     return {
         schema: 'outcome_record_v3',
+        schema_version: 'outcome_record_v3',
+        record_status: 'active',
         outcome_id: outcomeId,
         provenance: forecast.provenance,
         forecast_id: forecast.forecast_id,
         ticker: forecast.ticker,
         horizon: forecast.horizon,
+        model_version: forecast.model_version || null,
+        feature_version: forecast.feature_version || null,
         forecast_trading_date: forecast.trading_date,
         outcome_trading_date: outcomeTradingDate,
         y,

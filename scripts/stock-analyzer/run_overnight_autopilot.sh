@@ -148,11 +148,34 @@ payload = {
     "fullRebuildDone": str(os.environ.get("FULL_REBUILD_DONE") or "0").strip() == "1",
     "lastSuccessfulStep": os.environ.get("LAST_SUCCESSFUL_STEP") or None,
     "lastError": os.environ.get("LAST_ERROR") or None,
-    "failedSteps": parse_json(os.environ.get("FAILED_STEPS_JSON") or "[]", []),
-    "stepResults": parse_json(os.environ.get("STEP_RESULTS_JSON") or "[]", []),
     "exitCode": parse_int(os.environ.get("FINAL_RC")),
-    "ok": parse_int(os.environ.get("FINAL_RC")) == 0 if os.environ.get("FINAL_RC") else None,
 }
+advisory_steps = {"forecast_calibrate", "learning_cycle", "dashboard_meta"}
+failed_steps = parse_json(os.environ.get("FAILED_STEPS_JSON") or "[]", [])
+step_results = parse_json(os.environ.get("STEP_RESULTS_JSON") or "[]", [])
+
+def step_class(step_name):
+    return "advisory" if step_name in advisory_steps else "blocking"
+
+def enrich_step(entry):
+    if not isinstance(entry, dict):
+        return {"raw": entry, "step_class": "blocking"}
+    step_name = entry.get("step")
+    enriched = dict(entry)
+    enriched["step_class"] = step_class(step_name)
+    return enriched
+
+enriched_failed = [enrich_step(item) for item in failed_steps]
+enriched_results = [enrich_step(item) for item in step_results]
+blocking_failures = [item for item in enriched_failed if item.get("step_class") == "blocking"]
+advisory_failures = [item for item in enriched_failed if item.get("step_class") == "advisory"]
+final_rc = parse_int(os.environ.get("FINAL_RC"))
+payload["failedSteps"] = enriched_failed
+payload["stepResults"] = enriched_results
+payload["step_class"] = step_class(os.environ.get("CURRENT_STEP"))
+payload["blocking_failures"] = blocking_failures
+payload["advisory_failures"] = advisory_failures
+payload["ok"] = (final_rc == 0 and not blocking_failures) if os.environ.get("FINAL_RC") else None
 for target in [os.environ.get("PUBLIC_STATUS"), os.environ.get("MIRROR_STATUS")]:
     if target:
         write_atomic(target, payload)

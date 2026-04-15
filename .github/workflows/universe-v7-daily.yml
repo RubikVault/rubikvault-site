@@ -47,10 +47,10 @@ jobs:
         # Conservative pacing reduces false stops / retry waste.
         run: node scripts/universe-v7/run-daily-stack.mjs --buckets stocks,etfs,rest --max-runs-per-bucket 50 --max-no-progress-runs 3 --backfill-max 2000 --sleep-ms 2000 --min-bars 200 --feature marketphase --allow-next-bucket-on-incomplete
 
-      - name: Build Best Setups v4
+      - name: Run stock-analyzer publish chain
         env:
           NODE_OPTIONS: --max-old-space-size=6144
-        run: node scripts/build-best-setups-v4.mjs
+        run: node scripts/ops/run-stock-analyzer-publish-chain.mjs
 
       - name: Upload Reports
         if: always()
@@ -75,10 +75,28 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add public/data/universe/v7/
           git add public/data/forecast/
-          git add public/data/snapshots/best-setups-v4.json
+          for required_path in \
+            public/data/quantlab/status/operational-status.json \
+            public/data/quantlab/reports/v4-daily-latest.json \
+            public/data/snapshots/best-setups-v4.json \
+            public/data/reports/best-setups-build-latest.json \
+            public/data/reports/frontpage-snapshot-audit-latest.json \
+            public/data/reports/analyzer-detail-audit-latest.json \
+            public/data/reports/ui-audit-latest.json \
+            public/data/reports/system-status-latest.json \
+            public/dashboard_v6_meta_data.json \
+            public/data/ops/publish-chain-latest.json \
+            public/data/pipeline/runtime/latest.json \
+            public/data/pipeline/epoch.json
+          do
+            if [ -f "$required_path" ]; then
+              git add "$required_path"
+            fi
+          done
           for optional_path in \
             public/data/reports/best-setups-etf-diagnostic-latest.json \
-            mirrors/learning/reports/best-setups-etf-diagnostic-latest.json
+            mirrors/learning/reports/best-setups-etf-diagnostic-latest.json \
+            public/data/runtime/stock-analyzer-control.json
           do
             if [ -f "$optional_path" ]; then
               git add "$optional_path"

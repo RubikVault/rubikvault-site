@@ -1,0 +1,10 @@
+{
+  "schema": "rv.pipeline_authority.gate_registry.v1",
+  "gates": [
+    { "gate_id": "runtime_readiness", "required": true, "blocking": true, "derived_from_steps": ["runtime_preflight"], "policy_version": "v1" },
+    { "gate_id": "universe_audit", "required": true, "blocking": true, "derived_from_steps": ["stock_analyzer_universe_audit"], "policy_version": "v1" },
+    { "gate_id": "bundle_coherence", "required": true, "blocking": true, "derived_from_steps": ["pipeline_runtime", "pipeline_epoch", "system_status"], "policy_version": "v1" },
+    { "gate_id": "storage_converged", "required": true, "blocking": true, "derived_from_steps": ["storage_governor"], "policy_version": "v1" },
+    { "gate_id": "final_seal_prereqs", "required": true, "blocking": true, "derived_from_steps": ["final_integrity_seal"], "policy_version": "v1" }
+  ]
+}

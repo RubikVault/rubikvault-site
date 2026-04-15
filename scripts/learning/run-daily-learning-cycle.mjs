@@ -22,9 +22,11 @@ import {
 import { resolveSsotPath } from '../universe-v7/lib/ssot-paths.mjs';
 import { addTradingDays } from '../forecast/trading_date.mjs';
 import { buildAssetSegmentationProfile } from '../../functions/api/_shared/asset-segmentation.mjs';
+import { deriveLearningGate } from '../../functions/api/_shared/learning-gate.mjs';
+import { buildArtifactEnvelope } from '../ops/pipeline-artifact-contract.mjs';
 
 // ─── Paths ──────────────────────────────────────────────────────────────────
-const ROOT = process.cwd();
+const ROOT = process.env.RUBIKVAULT_ROOT || process.cwd();
 const LEARNING = path.join(ROOT, 'mirrors/learning');
 const PRED_DIR = path.join(LEARNING, 'predictions');
 const OUTCOME_DIR = path.join(LEARNING, 'outcomes');
@@ -179,13 +181,21 @@ function loadAnalyzerPolicy() {
 
 function deriveAnalyzerLearningStatus(metrics, policyConfig) {
     const globalMin = Number(policyConfig?.learningStatus?.activation_thresholds?.global_min_predictions || 500);
+    const globalActiveMin = Number(policyConfig?.learningStatus?.activation_thresholds?.global_min_n_active || globalMin);
     const perHorizonMin = Number(policyConfig?.learningStatus?.activation_thresholds?.per_horizon_min_predictions || 150);
     const minOutcomeDays = Number(policyConfig?.learningStatus?.activation_thresholds?.min_live_outcome_days || 30);
+    const globalMinOutcomeDays = Number(policyConfig?.learningStatus?.activation_thresholds?.global_min_live_outcome_days || minOutcomeDays);
     const total = Number(metrics?.outcomes_resolved || 0);
     const outcomeDays = new Set((metrics?.outcome_dates || []).filter(Boolean)).size;
     const byHorizon = metrics?.by_horizon || {};
     const horizonsReady = ['1d', '5d', '20d'].every((horizon) => Number(byHorizon?.[horizon]?.outcomes_resolved || 0) >= perHorizonMin);
-    if (total >= globalMin && horizonsReady && outcomeDays >= minOutcomeDays) return 'ACTIVE';
+
+    // V6 Core Activation Logic:
+    // Option A: All horizons mature (the strict standard)
+    // Option B: Total samples so high (globalActiveMin) that system is considered mature regardless of horizon-lag
+    if ((total >= globalMin && horizonsReady && outcomeDays >= minOutcomeDays) || (total >= globalActiveMin && outcomeDays >= globalMinOutcomeDays)) {
+        return 'ACTIVE';
+    }
     return 'BOOTSTRAP';
 }
 
@@ -1477,6 +1487,15 @@ async function main() {
                 .flatMap((d) => readNdjson(outcomePath(d, 'stock_analyzer')))
         ),
     };
+    const learningGate = deriveLearningGate({
+        learning_status: analyzerControl.learning_status,
+        safety_switch: analyzerControl.safety_switch,
+        minimum_n_status: analyzerControl.minimum_n_status,
+        policy: bestSetupsPolicy,
+        default_status: bestSetupsPolicy?.learning_status?.default || null,
+    });
+    const generatedAt = new Date().toISOString();
+    const runId = `learning-${date}`;
 
     // 7. Build and save report
     const report = buildReport(date, forecastMetrics, scientificMetrics, quantlabMetrics, stockMetrics, stockStability, {
@@ -1489,6 +1508,16 @@ async function main() {
         stock: stockPreds.length,
         stock_source_meta: stockResult.source_meta
     }, analyzerControl);
+    report.generated_at = generatedAt;
+    Object.assign(report, buildArtifactEnvelope({
+        producer: 'scripts/learning/run-daily-learning-cycle.mjs',
+        runId,
+        targetMarketDate: date,
+        upstreamRunIds: [],
+        generatedAt,
+    }));
+    report.learning_gate = learningGate;
+    report.features.stock_analyzer.learning_gate = learningGate;
 
     // Enrich report with cross-feature data
     report.conviction_scores = convictionScores;
@@ -1508,16 +1537,25 @@ async function main() {
         system_version: bestSetupsPolicy.system?.version || null,
         learning_status_default: bestSetupsPolicy.learning_status?.default || null,
         learning_status_current: analyzerControl.learning_status,
+        learning_gate_status: learningGate.status,
         cost_model_version: bestSetupsPolicy.cost_model_version || null,
         meta_labeler_rule_version: bestSetupsPolicy.meta_labeler_rule_version || null,
     } : null;
     const runtimeControl = {
         schema: 'rv.stock_analyzer_control.v1',
-        generated_at: new Date().toISOString(),
+        ...buildArtifactEnvelope({
+            producer: 'scripts/learning/run-daily-learning-cycle.mjs',
+            runId,
+            targetMarketDate: date,
+            upstreamRunIds: [],
+            generatedAt,
+        }),
         report_date: date,
+        source_report_generated_at: generatedAt,
         learning_status: analyzerControl.learning_status || 'BOOTSTRAP',
         safety_switch: analyzerControl.safety_switch || null,
         minimum_n_status: analyzerControl.minimum_n_status || null,
+        learning_gate: learningGate,
         false_positive_classes_30d: analyzerControl.false_positive_classes_30d || {},
         policy: bestSetupsPolicy ? {
             schema_version: bestSetupsPolicy.schema_version || null,

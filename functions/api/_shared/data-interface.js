@@ -3,6 +3,10 @@
  * Thin facade over existing modules — no new business logic.
  */
 
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { gunzipSync } from 'node:zlib';
 import { resolveSymbol, normalizeTicker as normalizeTickerStrict } from './symbol-resolver.mjs';
 import { fetchBarsWithProviderChain } from './eod-providers.mjs';
 import { computeIndicators } from './eod-indicators.mjs';
@@ -11,6 +15,11 @@ import { createCache, getJsonKV, computeAgeSeconds, nowUtcIso, todayUtcDate } fr
 import { evaluateQuality } from './quality.js';
 import { computeCacheStatus } from './freshness.js';
 import { getEndpointTTL } from './freshness-config.js';
+import {
+  annotateFundamentalsForScope,
+  inferFundamentalsAssetClass,
+} from './fundamentals-scope.mjs';
+import { latestUsMarketSessionIso } from './market-calendar.js';
 import {
   normalizeTicker,
   pickLatestBar,
@@ -22,6 +31,22 @@ import {
   selectCanonicalMarketPrices,
   selectCanonicalMarketStats,
 } from './stock-helpers.js';
+import { buildHistProbsCandidatePaths } from './hist-probs-paths.js';
+
+const REPO_ROOT = (() => {
+  try {
+    const currentUrl = String(import.meta.url || '');
+    if (currentUrl.startsWith('file:')) {
+      return path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
+    }
+  } catch {
+    // fall through
+  }
+  if (typeof process !== 'undefined' && typeof process.cwd === 'function') {
+    return process.cwd();
+  }
+  return '.';
+})();
 
 function findRecord(snapshot, symbol) {
   if (!snapshot) return null;
@@ -47,6 +72,17 @@ function parseIsoDateSafe(value) {
   if (typeof value !== 'string' || value.length < 10) return null;
   const iso = value.slice(0, 10);
   return /^\d{4}-\d{2}-\d{2}$/.test(iso) ? iso : null;
+}
+
+function resolveExpectedTargetMarketDate(now = new Date()) {
+  const forced = parseIsoDateSafe(process?.env?.TARGET_MARKET_DATE || process?.env?.RV_TARGET_MARKET_DATE || null);
+  return forced || latestUsMarketSessionIso(now);
+}
+
+function isDateBehind(actual, expected) {
+  const lhs = parseIsoDateSafe(actual);
+  const rhs = parseIsoDateSafe(expected);
+  return Boolean(lhs && rhs && lhs < rhs);
 }
 
 function isMeaningfulIdentityName(name, ticker) {
@@ -96,6 +132,17 @@ function hasUsableMarketStats(record) {
   return available >= 3;
 }
 
+function buildTypedFundamentalsFallback({ ticker, universe, fundamentals, expectedDataDate, scopeDoc } = {}) {
+  return annotateFundamentalsForScope({
+    ticker,
+    universe,
+    fundamentals,
+    scopeDoc,
+    targetMarketDate: expectedDataDate,
+    assetClass: inferFundamentalsAssetClass({ ticker, universe, fundamentals }),
+  });
+}
+
 function buildEodhdSymbol(symbol, exchange) {
   const cleanSymbol = normalizeTicker(symbol);
   const cleanExchange = String(exchange || '').trim().toUpperCase();
@@ -142,6 +189,62 @@ function buildProviderSymbolMap(symbol, exchange, providerIds = null) {
   };
 }
 
+function isLocalDevRequest(request) {
+  try {
+    const { hostname } = new URL(request.url);
+    return hostname === '127.0.0.1' || hostname === 'localhost';
+  } catch {
+    return false;
+  }
+}
+
+function shouldSkipSummaryEvaluation(request) {
+  const mode = String(process?.env?.RV_V2_SUMMARY_DECISION_MODE || '').trim().toLowerCase();
+  if (mode === 'full') return false;
+  if (mode === 'skip') return true;
+  return isLocalDevRequest(request);
+}
+
+function shouldSkipSummarySnapshotJoins(request) {
+  const mode = String(process?.env?.RV_V2_SUMMARY_SNAPSHOT_MODE || '').trim().toLowerCase();
+  if (mode === 'full') return false;
+  if (mode === 'skip') return true;
+  return isLocalDevRequest(request);
+}
+
+function resolveHistoricalBarLimit(request) {
+  const forced = Number(process?.env?.RV_V2_HISTORICAL_BAR_LIMIT || 0);
+  if (Number.isFinite(forced) && forced > 0) return Math.max(50, Math.trunc(forced));
+  return isLocalDevRequest(request) ? 1500 : 0;
+}
+
+function toLocalAssetPath(requestPath) {
+  if (typeof requestPath !== 'string' || !requestPath.startsWith('/')) return null;
+  if (requestPath.startsWith('/public/')) {
+    const relative = requestPath.slice('/public/'.length);
+    if (relative.startsWith('data/')) return path.join(REPO_ROOT, 'public', relative);
+    return path.join(REPO_ROOT, relative);
+  }
+  const relative = requestPath.slice(1);
+  if (relative.startsWith('data/')) return path.join(REPO_ROOT, 'public', relative);
+  if (relative.startsWith('policies/')) return path.join(REPO_ROOT, relative);
+  return null;
+}
+
+async function readLocalJsonMaybeGzip(requestPath) {
+  const filePath = toLocalAssetPath(requestPath);
+  if (!filePath) return null;
+  try {
+    const buffer = await fs.readFile(filePath);
+    const text = filePath.endsWith('.gz')
+      ? gunzipSync(buffer).toString('utf8')
+      : buffer.toString('utf8');
+    return JSON.parse(text);
+  } catch {
+    return null;
+  }
+}
+
 async function loadStaticBarsFallback(symbol, request, env) {
   try {
     const { getStaticBars } = await import('./history-store.mjs');
@@ -157,6 +260,10 @@ async function fetchAssetJsonFromPaths(paths, request, env) {
   const assetFetcher = env?.ASSETS || null;
   for (const path of paths) {
     try {
+      if (isLocalDevRequest(request)) {
+        const localPayload = await readLocalJsonMaybeGzip(path);
+        if (localPayload) return localPayload;
+      }
       const url = new URL(path, baseUrl);
       const res = assetFetcher && path.startsWith('/data/')
         ? await assetFetcher.fetch(url.toString())
@@ -255,6 +362,10 @@ async function fetchSnapshotJson(moduleName, request, env) {
   for (const tpl of templates) {
     const path = tpl.replace('{module}', moduleName);
     try {
+      if (isLocalDevRequest(request)) {
+        const localPayload = await readLocalJsonMaybeGzip(path);
+        if (localPayload) return localPayload;
+      }
       const url = new URL(path, baseUrl);
       const res = assetFetcher && path.startsWith('/data/')
         ? await assetFetcher.fetch(url.toString())
@@ -299,6 +410,8 @@ async function resolveTickerContext(ticker, request) {
 
 async function fetchJsonMaybeGzip(url, assetFetcher = null) {
   try {
+    const localPayload = await readLocalJsonMaybeGzip(url.pathname);
+    if (localPayload) return localPayload;
     const response = assetFetcher && url.pathname.startsWith('/data/')
       ? await assetFetcher.fetch(url.toString())
       : await fetch(url.toString());
@@ -370,15 +483,14 @@ export async function fetchStockSummary(ticker, env, request) {
   let bars = [];
   let provider = 'eodhd';
   let sourceChain = buildSourceChainMetadata(null);
+  const expectedTargetMarketDate = resolveExpectedTargetMarketDate(now);
 
   const staticBars = await loadStaticBarsFallback(effectiveTicker, request, env);
-  if (staticBars.length) {
-    bars = staticBars;
-    provider = 'static_store';
-    qualityFlags.push('STATIC_FALLBACK_HISTORY');
-  }
+  const staticLatestDate = pickLatestBar(staticBars)?.date || null;
+  const staticHistoryStale = isDateBehind(staticLatestDate, expectedTargetMarketDate);
+  const shouldTryProviderChain = !staticBars.length || staticHistoryStale;
 
-  if (!bars.length) {
+  if (shouldTryProviderChain) {
     try {
       const chainResult = await fetchBarsWithProviderChain(effectiveTicker, env, {
         outputsize: '300',
@@ -387,26 +499,41 @@ export async function fetchStockSummary(ticker, env, request) {
       });
       sourceChain = buildSourceChainMetadata(chainResult.chain);
       if (chainResult.ok) {
-        bars = Array.isArray(chainResult.bars) ? chainResult.bars : [];
-        provider = chainResult.provider || sourceChain?.selected || 'eodhd';
-        const quality = evaluateQuality({ bars }, env);
-        if (quality.reject) {
-          return {
-            ok: false, data: null,
-            meta: { status: 'error', provider, data_date: todayUtcDate(), version: 'v2' },
-            error: { code: 'QUALITY_REJECT', message: quality.reject.message, retryable: false },
-          };
+        const providerBars = Array.isArray(chainResult.bars) ? chainResult.bars : [];
+        const providerLatestDate = pickLatestBar(providerBars)?.date || null;
+        const preferProviderBars = providerBars.length > 0 && (
+          !staticBars.length
+          || !staticLatestDate
+          || (providerLatestDate && providerLatestDate >= staticLatestDate)
+        );
+        if (preferProviderBars) {
+          bars = providerBars;
+          provider = chainResult.provider || sourceChain?.selected || 'eodhd';
+          const quality = evaluateQuality({ bars }, env);
+          if (quality.reject) {
+            return {
+              ok: false, data: null,
+              meta: { status: 'error', provider, data_date: todayUtcDate(), version: 'v2' },
+              error: { code: 'QUALITY_REJECT', message: quality.reject.message, retryable: false },
+            };
+          }
+          if (Array.isArray(quality.flags)) qualityFlags.push(...quality.flags);
         }
-        if (Array.isArray(quality.flags)) qualityFlags.push(...quality.flags);
       }
     } catch { /* fall through */ }
-  } else {
+  }
+
+  if (!bars.length && staticBars.length) {
+    bars = staticBars;
+    provider = 'static_store';
     sourceChain = buildSourceChainMetadata({
       primary: 'static_store',
       secondary: 'static_store',
       selected: 'static_store',
       fallbackUsed: true,
     });
+    qualityFlags.push('STATIC_FALLBACK_HISTORY');
+    if (staticHistoryStale) qualityFlags.push('STATIC_FALLBACK_STALE_VS_EXPECTED_SESSION');
   }
 
   if (!bars.length) {
@@ -429,6 +556,12 @@ export async function fetchStockSummary(ticker, env, request) {
     if (Array.isArray(quality.flags)) qualityFlags.push(...quality.flags);
   }
 
+  const historicalBarLimit = resolveHistoricalBarLimit(request);
+  if (historicalBarLimit > 0 && bars.length > historicalBarLimit) {
+    bars = bars.slice(-historicalBarLimit);
+    qualityFlags.push(`BAR_LIMIT_${historicalBarLimit}`);
+  }
+
   const latestBar = pickLatestBar(bars);
   const change = computeDayChange(bars);
   const indicatorResult = computeIndicators(bars);
@@ -443,43 +576,52 @@ export async function fetchStockSummary(ticker, env, request) {
   let decision = null;
   let explanation = null;
   let assembledFundamentals = null;
-  try {
-    const { assembleDecisionInputs, loadRequestCoreInputs } = await import('./decision-input-assembly.js');
-    const { buildStockInsightsV4Evaluation } = await import('./stock-insights-v4.js');
-    const origin = new URL(request.url).origin;
-    const assetFetcher = env?.ASSETS || null;
-    async function fetchJsonForAssembly(path) {
-      try {
-        const res = assetFetcher && path.startsWith('/data/')
-          ? await assetFetcher.fetch(new URL(path, origin).toString())
-          : await fetch(new URL(path, origin).toString());
-        return res.ok ? await res.json() : null;
-      } catch { return null; }
-    }
-    const inputs = await assembleDecisionInputs(effectiveTicker, {
-      fetchJson: fetchJsonForAssembly,
-      coreInputs: { bars, stats: marketStats.stats, as_of: dataDate },
-      loadCoreInputs: (t) => loadRequestCoreInputs(t, { request, assetFetcher, fetchJson: fetchJsonForAssembly }),
-    });
-    assembledFundamentals = inputs.fundamentals || null;
-    const evaluation = buildStockInsightsV4Evaluation({
-      ticker: effectiveTicker,
-      bars: inputs.bars,
-      stats: inputs.stats,
-      universe: inputs.universe,
-      fundamentals: inputs.fundamentals,
-      segmentationProfile: inputs.segmentationProfile,
-      scientificState: inputs.scientificState,
-      forecastState: inputs.forecastState,
-      quantlabState: inputs.quantlabState,
-      forecastMeta: inputs.forecastMeta,
-      inputFingerprints: inputs.input_fingerprints,
-      runtimeControl: inputs.runtimeControl,
-    });
-    states = evaluation?.states || null;
-    decision = evaluation?.decision || null;
-    explanation = evaluation?.explanation || null;
-  } catch { /* evaluation unavailable */ }
+  if (!shouldSkipSummaryEvaluation(request)) {
+    try {
+      const { assembleDecisionInputs, loadRequestCoreInputs } = await import('./decision-input-assembly.js');
+      const { buildStockInsightsV4Evaluation } = await import('./stock-insights-v4.js');
+      const origin = new URL(request.url).origin;
+      const assetFetcher = env?.ASSETS || null;
+      async function fetchJsonForAssembly(path) {
+        try {
+          if (isLocalDevRequest(request)) {
+            const localPayload = await readLocalJsonMaybeGzip(path);
+            if (localPayload) return localPayload;
+          }
+          const res = assetFetcher && path.startsWith('/data/')
+            ? await assetFetcher.fetch(new URL(path, origin).toString())
+            : await fetch(new URL(path, origin).toString());
+          return res.ok ? await res.json() : null;
+        } catch { return null; }
+      }
+      const inputs = await assembleDecisionInputs(effectiveTicker, {
+        fetchJson: fetchJsonForAssembly,
+        coreInputs: { bars, stats: marketStats.stats, as_of: dataDate },
+        loadCoreInputs: (t) => loadRequestCoreInputs(t, { request, assetFetcher, fetchJson: fetchJsonForAssembly }),
+      });
+      assembledFundamentals = inputs.fundamentals || null;
+      const evaluation = buildStockInsightsV4Evaluation({
+        ticker: effectiveTicker,
+        bars: inputs.bars,
+        stats: inputs.stats,
+        universe: inputs.universe,
+        fundamentals: inputs.fundamentals,
+        segmentationProfile: inputs.segmentationProfile,
+        scientificState: inputs.scientificState,
+        forecastState: inputs.forecastState,
+        elliottState: inputs.elliottState,
+        quantlabState: inputs.quantlabState,
+        forecastMeta: inputs.forecastMeta,
+        inputFingerprints: inputs.input_fingerprints,
+        runtimeControl: inputs.runtimeControl,
+      });
+      states = evaluation?.states || null;
+      decision = evaluation?.decision || null;
+      explanation = evaluation?.explanation || null;
+    } catch { /* evaluation unavailable */ }
+  } else {
+    qualityFlags.push('SUMMARY_DECISION_SKIPPED_LOCAL');
+  }
 
   // Fallback name resolution from existing snapshots if still missing
   let fallbackName = null;
@@ -489,33 +631,46 @@ export async function fetchStockSummary(ticker, env, request) {
   let universe = null;
   let snapshotMarketPrices = null;
   let snapshotMarketStats = null;
-  try {
-    const [uSnap, mpSnap, msSnap] = await Promise.all([
-      fetchSnapshotJson('universe', request, env),
-      fetchSnapshotJson('market-prices', request, env),
-      fetchSnapshotJson('market-stats', request, env),
-    ]);
-    if (uSnap) {
-      const uRec = findRecord(uSnap, effectiveTicker);
-      if (hasUsableUniverse(uRec)) universe = uRec;
-    }
-    if (mpSnap) {
-      const mpRec = findRecord(mpSnap, effectiveTicker);
-      if (mpRec) snapshotMarketPrices = mpRec;
-    }
-    if (msSnap) {
-      const msRec = findRecord(msSnap, effectiveTicker);
-      if (msRec) snapshotMarketStats = msRec;
-    }
-  } catch { /* snapshots optional */ }
+  if (!shouldSkipSummarySnapshotJoins(request)) {
+    try {
+      const [uSnap, mpSnap, msSnap] = await Promise.all([
+        fetchSnapshotJson('universe', request, env),
+        fetchSnapshotJson('market-prices', request, env),
+        fetchSnapshotJson('market-stats', request, env),
+      ]);
+      if (uSnap) {
+        const uRec = findRecord(uSnap, effectiveTicker);
+        if (hasUsableUniverse(uRec)) universe = uRec;
+      }
+      if (mpSnap) {
+        const mpRec = findRecord(mpSnap, effectiveTicker);
+        if (mpRec) snapshotMarketPrices = mpRec;
+      }
+      if (msSnap) {
+        const msRec = findRecord(msSnap, effectiveTicker);
+        if (msRec) snapshotMarketStats = msRec;
+      }
+    } catch { /* snapshots optional */ }
+  }
 
   // Fetch fundamentals as enrichment (with timeout to prevent Worker crash)
-  const fundamentals = assembledFundamentals || await fetchAssetJsonFromPaths([
+  const fetchedFundamentals = assembledFundamentals || await fetchAssetJsonFromPaths([
     `/data/fundamentals/${encodeURIComponent(String(effectiveTicker || '').toUpperCase())}.json`,
     `/public/data/fundamentals/${encodeURIComponent(String(effectiveTicker || '').toUpperCase())}.json`,
   ], request, env);
+  const fundamentalsScope = await fetchAssetJsonFromPaths([
+    '/data/fundamentals/_scope.json',
+    '/public/data/fundamentals/_scope.json',
+  ], request, env);
+  const fundamentals = buildTypedFundamentalsFallback({
+    ticker: effectiveTicker,
+    universe,
+    fundamentals: fetchedFundamentals,
+    expectedDataDate: expectedTargetMarketDate,
+    scopeDoc: fundamentalsScope,
+  });
 
-  if (!firstMeaningfulIdentityName(effectiveTicker, ctx.name, fundamentals?.companyName, universe?.name)) {
+  if (!shouldSkipSummarySnapshotJoins(request) && !firstMeaningfulIdentityName(effectiveTicker, ctx.name, fundamentals?.companyName, universe?.name)) {
     fallbackName = await fetchStaticFallbackIdentityName(effectiveTicker, request, env);
   }
 
@@ -578,13 +733,12 @@ export async function fetchStockHistorical(ticker, env, request) {
 
   let bars = [];
   let provider = 'eodhd';
+  const expectedTargetMarketDate = resolveExpectedTargetMarketDate(now);
   const staticBars = await loadStaticBarsFallback(effectiveTicker, request, env);
-  if (staticBars.length) {
-    bars = staticBars;
-    provider = 'static_store';
-    qualityFlags.push('STATIC_FALLBACK_HISTORY');
-  }
-  if (!bars.length) {
+  const staticLatestDate = pickLatestBar(staticBars)?.date || null;
+  const staticHistoryStale = isDateBehind(staticLatestDate, expectedTargetMarketDate);
+  const shouldTryProviderChain = !staticBars.length || staticHistoryStale;
+  if (shouldTryProviderChain) {
     try {
       const chainResult = await fetchBarsWithProviderChain(effectiveTicker, env, {
         outputsize: '300',
@@ -592,20 +746,34 @@ export async function fetchStockHistorical(ticker, env, request) {
         providerSymbols: providerSymbolMap,
       });
       if (chainResult.ok) {
-        bars = Array.isArray(chainResult.bars) ? chainResult.bars : [];
-        provider = chainResult.provider || 'eodhd';
-        const quality = evaluateQuality({ bars }, env);
-        if (quality.reject) {
-          return {
-            ok: false, data: null,
-            meta: { status: 'error', provider, data_date: todayUtcDate(), version: 'v2' },
-            error: { code: 'QUALITY_REJECT', message: quality.reject.message, retryable: false },
-          };
+        const providerBars = Array.isArray(chainResult.bars) ? chainResult.bars : [];
+        const providerLatestDate = pickLatestBar(providerBars)?.date || null;
+        const preferProviderBars = providerBars.length > 0 && (
+          !staticBars.length
+          || !staticLatestDate
+          || (providerLatestDate && providerLatestDate >= staticLatestDate)
+        );
+        if (preferProviderBars) {
+          bars = providerBars;
+          provider = chainResult.provider || 'eodhd';
+          const quality = evaluateQuality({ bars }, env);
+          if (quality.reject) {
+            return {
+              ok: false, data: null,
+              meta: { status: 'error', provider, data_date: todayUtcDate(), version: 'v2' },
+              error: { code: 'QUALITY_REJECT', message: quality.reject.message, retryable: false },
+            };
+          }
+          if (Array.isArray(quality.flags)) qualityFlags.push(...quality.flags);
         }
-        if (Array.isArray(quality.flags)) qualityFlags.push(...quality.flags);
       }
     } catch { /* fall through */ }
-  } else {
+  }
+  if (!bars.length && staticBars.length) {
+    bars = staticBars;
+    provider = 'static_store';
+    qualityFlags.push('STATIC_FALLBACK_HISTORY');
+    if (staticHistoryStale) qualityFlags.push('STATIC_FALLBACK_STALE_VS_EXPECTED_SESSION');
     const quality = evaluateQuality({ bars }, env);
     if (quality.reject) {
       qualityFlags.push('STATIC_FALLBACK_QUALITY_DEGRADED');
@@ -620,6 +788,12 @@ export async function fetchStockHistorical(ticker, env, request) {
       meta: { status: 'error', provider, data_date: todayUtcDate(), version: 'v2' },
       error: { code: 'NO_DATA', message: 'No historical data available', retryable: true },
     };
+  }
+
+  const historicalBarLimit = resolveHistoricalBarLimit(request);
+  if (historicalBarLimit > 0 && bars.length > historicalBarLimit) {
+    bars = bars.slice(-historicalBarLimit);
+    qualityFlags.push(`BAR_LIMIT_${historicalBarLimit}`);
   }
 
   const latestBar = pickLatestBar(bars);
@@ -695,6 +869,10 @@ export async function fetchStockGovernance(ticker, env, request) {
     const assetFetcher = env?.ASSETS || null;
     async function fetchJsonForAssembly(path) {
       try {
+        if (isLocalDevRequest(request)) {
+          const localPayload = await readLocalJsonMaybeGzip(path);
+          if (localPayload) return localPayload;
+        }
         const res = assetFetcher && path.startsWith('/data/')
           ? await assetFetcher.fetch(new URL(path, origin).toString())
           : await fetch(new URL(path, origin).toString());
@@ -714,6 +892,7 @@ export async function fetchStockGovernance(ticker, env, request) {
       segmentationProfile: inputs.segmentationProfile,
       scientificState: inputs.scientificState,
       forecastState: inputs.forecastState,
+      elliottState: inputs.elliottState,
       quantlabState: inputs.quantlabState,
       forecastMeta: inputs.forecastMeta,
       inputFingerprints: inputs.input_fingerprints,
@@ -757,10 +936,7 @@ export async function fetchStockHistoricalProfile(ticker, env, request) {
   let resolvedSymbol = null;
 
   for (const candidate of candidates) {
-    const doc = await fetchAssetJsonFromPaths([
-      `/data/hist-probs/${encodeURIComponent(candidate)}.json`,
-      `/public/data/hist-probs/${encodeURIComponent(candidate)}.json`,
-    ], request, env);
+    const doc = await fetchAssetJsonFromPaths(buildHistProbsCandidatePaths(candidate), request, env);
     if (doc) {
       profile = doc;
       resolvedSymbol = candidate;

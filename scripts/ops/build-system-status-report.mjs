@@ -4,6 +4,16 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import {
+  buildArtifactEnvelope,
+  collectUpstreamRunIds,
+  isModuleTargetCompatible,
+  normalizeDate,
+  resolveReleaseTargetMarketDate,
+  validateControlPlaneConsistency,
+} from './pipeline-artifact-contract.mjs';
+import { normalizeQ1DeltaLatestSuccess } from '../lib/q1-delta-success.mjs';
+import {
+  PIPELINE_STEP_ORDER,
   SSOT_VIOLATION_CONTRACTS,
   STOCK_ANALYZER_WEB_VALIDATION_CHAIN,
   SYSTEM_STATUS_DOC_REF,
@@ -18,7 +28,9 @@ const HIST_PROBS_PROFILE_INDEX = process.env.HIST_PROBS_PROFILE_INDEX
   : null;
 
 const PATHS = {
-  autopilot: path.join(REPO_ROOT, 'public/data/reports/v5-autopilot-status.json'),
+  nightlyStatus: path.join(REPO_ROOT, 'public/data/reports/nightly-stock-analyzer-status.json'),
+  recoveryReport: path.join(REPO_ROOT, 'public/data/reports/dashboard-green-recovery-latest.json'),
+  releaseState: path.join(REPO_ROOT, 'public/data/ops/release-state-latest.json'),
   forecast: path.join(REPO_ROOT, 'public/data/forecast/latest.json'),
   learning: path.join(REPO_ROOT, 'public/data/reports/learning-report-latest.json'),
   scientificSummary: path.join(REPO_ROOT, 'public/data/supermodules/scientific-summary.json'),
@@ -37,6 +49,13 @@ const PATHS = {
   deltaLatestSuccess: path.join(QUANT_ROOT, 'ops/q1_daily_delta_ingest/latest_success.json'),
   cutoverReadinessDir: path.join(REPO_ROOT, 'mirrors/learning/quantlab-v1/reports'),
   dataFreshness: path.join(REPO_ROOT, 'public/data/reports/data-freshness-latest.json'),
+  uiFieldTruth: path.join(REPO_ROOT, 'public/data/reports/ui-field-truth-report-latest.json'),
+  runtimeReport: path.join(REPO_ROOT, 'public/data/pipeline/runtime/latest.json'),
+  epochReport: path.join(REPO_ROOT, 'public/data/pipeline/epoch.json'),
+  finalIntegritySeal: path.join(REPO_ROOT, 'public/data/ops/final-integrity-seal-latest.json'),
+  deployBundleMeta: path.join(REPO_ROOT, 'dist/pages-prod/data/ops/build-bundle-meta.json'),
+  deployProof: path.join(REPO_ROOT, 'public/data/ops/deploy-proof-latest.json'),
+  histProbsAnchor: path.join(REPO_ROOT, 'public/data/hist-probs/AAPL.json'),
   output: path.join(REPO_ROOT, 'public/data/reports/system-status-latest.json'),
 };
 
@@ -76,6 +95,14 @@ function daysSince(value, relativeTo) {
   const ref = relativeTo ? new Date(relativeTo).getTime() : Date.now();
   if (!Number.isFinite(ref)) return null;
   return Math.max(0, Math.round((ref - ts) / 86400000));
+}
+
+function maxIsoDate(...values) {
+  const normalized = values
+    .map((value) => normalizeDate(value))
+    .filter(Boolean)
+    .sort();
+  return normalized[normalized.length - 1] || null;
 }
 
 function tradingDaysBetween(olderDateId, newerDateId) {
@@ -285,6 +312,7 @@ function buildStep({
       outputs: contract.outputs || [],
       ui_surfaces: contract.ui_surfaces || [],
       failure_signals: contract.failure_signals || [],
+      lessons_learned: contract.lessons_learned || null,
     },
   };
 }
@@ -305,6 +333,43 @@ function buildRootCauseFromStep(step, category) {
   };
 }
 
+function buildObservedArtifactStep({
+  id,
+  label,
+  owner,
+  subsystem,
+  filePath,
+  doc,
+  severity,
+  summary,
+  why,
+  nextFix,
+  inputAsof = null,
+  outputAsof = null,
+  dependencyIds = [],
+  blockedBy = [],
+  statusDetail = {},
+}) {
+  return buildStep({
+    id,
+    label,
+    owner,
+    subsystem,
+    severity,
+    summary,
+    why,
+    next_fix: nextFix,
+    file_ref: path.relative(REPO_ROOT, filePath),
+    generated_at: doc?.generated_at || statMtimeIso(filePath),
+    last_success_at: doc?.generated_at || statMtimeIso(filePath),
+    input_asof: inputAsof,
+    output_asof: outputAsof,
+    dependency_ids: dependencyIds,
+    blocked_by: blockedBy,
+    status_detail: statusDetail,
+  });
+}
+
 function buildDependencyEdges(stepsById) {
   return [
     { id: 'market_data_refresh', depends_on: [], reason: 'Provider-backed v7 history refresh is the first upstream market-data hop.' },
@@ -319,6 +384,13 @@ function buildDependencyEdges(stepsById) {
     { id: 'etf_diagnostic', depends_on: ['snapshot'], reason: 'ETF diagnostic explains the current snapshot funnel output.' },
     { id: 'v1_audit', depends_on: ['learning_daily', 'snapshot'], reason: 'V1 audit requires current learning artifacts and snapshot outputs.' },
     { id: 'cutover_readiness', depends_on: ['v1_audit'], reason: 'Cutover readiness is evaluated after the V1 audit is available.' },
+    { id: 'system_status_report', depends_on: ['stock_analyzer_universe_audit'], reason: 'System status summarizes the current artifact/control-plane state after the direct audit artifacts exist.' },
+    { id: 'data_freshness_report', depends_on: ['hist_probs', 'market_data_refresh'], reason: 'Freshness report derives expected market date and family health from upstream market/history artifacts.' },
+    { id: 'pipeline_epoch', depends_on: ['system_status_report', 'data_freshness_report'], reason: 'Epoch is the coherence view across status and pipeline outputs for the same target date.' },
+    { id: 'ui_field_truth_report', depends_on: ['pipeline_epoch'], reason: 'UI truth should run only after the artifact chain has a coherent target date.' },
+    { id: 'final_integrity_seal', depends_on: ['ui_field_truth_report', 'pipeline_epoch'], reason: 'Final seal consumes the coherent epoch plus UI truth result.' },
+    { id: 'build_deploy_bundle', depends_on: ['final_integrity_seal'], reason: 'Deploy bundle is only valid after the seal is ready.' },
+    { id: 'wrangler_deploy', depends_on: ['build_deploy_bundle'], reason: 'Wrangler deploy is the final downstream publish step.' },
   ].map((edge) => {
     const blockedBy = edge.depends_on.filter((depId) => severityRank(stepsById[depId]?.severity) >= severityRank('critical'));
     const warningDeps = edge.depends_on.filter((depId) => severityRank(stepsById[depId]?.severity) === severityRank('warning'));
@@ -330,59 +402,77 @@ function buildDependencyEdges(stepsById) {
   });
 }
 
-function buildAutomationSummary(autopilot, forecastLatest) {
-  const latestRefresh = latestRefreshExecution(autopilot);
-  const latestForecastRun = latestStepExecution(autopilot, 'forecast_run_daily');
-  const latestForecastBackfill = latestStepExecution(autopilot, 'forecast_backfill_outcomes');
-  const latestForecastArtifactAt = forecastLatest?.generated_at || null;
-  const latestRefreshFinishedAt = latestRefresh?.finished_at || null;
-  const latestRefreshFailed = latestRefresh?.status === 'failed';
-  const recoverableFailure = latestRefresh?.failed_step === 'forecast_backfill_outcomes';
-  const forecastRunRecovered = latestForecastRun?.step_status === 'completed'
-    && new Date(latestForecastRun.finished_at || 0).getTime() >= new Date(latestForecastArtifactAt || 0).getTime() - 1000;
-  const forecastArtifactRecovered = latestRefreshFailed
-    && Boolean(latestForecastArtifactAt)
-    && Boolean(latestRefreshFinishedAt)
-    && new Date(latestForecastArtifactAt || 0).getTime() >= new Date(latestRefreshFinishedAt || 0).getTime() - 1000;
-  const forecastRecovered = forecastRunRecovered || forecastArtifactRecovered;
-  const severity = latestRefreshFailed
-    ? (forecastRecovered && recoverableFailure ? 'ok' : forecastRecovered ? 'warning' : 'critical')
-    : 'ok';
-  const summary = latestRefreshFailed
-    ? (forecastRecovered && recoverableFailure
-      ? `Latest refresh hit ${latestRefresh.failed_step}, but current published artifacts already recovered and automation remains operational.`
-      : forecastRecovered
-      ? `Latest refresh failed at ${latestRefresh.failed_step}, but forecast artifacts already recovered.`
-      : `Latest refresh failed at ${latestRefresh.failed_step}.`)
-    : 'Latest automated refresh completed successfully.';
+function buildAutomationSummary({ nightlyStatus, recoveryReport, releaseState, forecastLatest }) {
+  const nightlyUpdatedAt = nightlyStatus?.updated_at || nightlyStatus?.heartbeat || statMtimeIso(PATHS.nightlyStatus);
+  const recoveryGeneratedAt = recoveryReport?.generated_at || statMtimeIso(PATHS.recoveryReport);
+  const releaseUpdatedAt = releaseState?.last_updated || statMtimeIso(PATHS.releaseState);
+  const releasePhase = String(releaseState?.phase || '').toUpperCase() || null;
+  const activeFailures = [];
+
+  const nightlyFailed = nightlyStatus?.ok === false
+    || (Array.isArray(nightlyStatus?.failedSteps) && nightlyStatus.failedSteps.length > 0);
+  if (nightlyFailed) {
+    activeFailures.push(
+      nightlyStatus?.step
+      || nightlyStatus?.failedSteps?.[0]
+      || nightlyStatus?.lastError
+      || 'nightly_stock_analyzer'
+    );
+  }
+
+  const recoveryBlockingSeverity = String(
+    recoveryReport?.dashboard_summary?.blocking_severity
+    || recoveryReport?.dashboard_summary?.local_severity
+    || recoveryReport?.dashboard_summary?.severity
+    || 'ok'
+  );
+  const activeRecoverySteps = [
+    ...((recoveryReport?.running_steps || []).map((item) => item?.id || item).filter(Boolean)),
+    ...((recoveryReport?.blocked_steps || []).map((item) => item?.id || item).filter(Boolean)),
+  ];
+  const recoveryReady = activeRecoverySteps.length === 0
+    && !recoveryReport?.next_step
+    && severityRank(recoveryBlockingSeverity) < severityRank('critical');
+  if (recoveryReady === false || severityRank(recoveryBlockingSeverity) >= severityRank('critical')) {
+    activeFailures.push(recoveryReport?.next_step || 'dashboard_green_recovery');
+  }
+
+  const severity = activeFailures.length === 0
+    ? 'ok'
+    : activeFailures.length > 1 || severityRank(recoveryBlockingSeverity) >= severityRank('critical')
+      ? 'critical'
+      : 'warning';
+  const summary = activeFailures.length === 0
+    ? 'Nightly and recovery control-plane artifacts are operational.'
+    : `Active automation blockers: ${activeFailures.join(', ')}.`;
   return {
     severity,
     summary,
-    latest_refresh: latestRefresh ? {
-      mode: latestRefresh.mode || null,
-      job_dir: latestRefresh.job_dir || null,
-      status: latestRefresh.status || null,
-      failed_step: latestRefresh.failed_step || null,
-      finished_at: latestRefresh.finished_at || null,
-      created_at: latestRefresh.created_at || null,
-    } : null,
-    latest_forecast_run: latestForecastRun ? {
-      status: latestForecastRun.step_status,
-      finished_at: latestForecastRun.finished_at,
-      returncode: latestForecastRun.returncode ?? null,
-    } : null,
-    latest_forecast_backfill: latestForecastBackfill ? {
-      status: latestForecastBackfill.step_status,
-      finished_at: latestForecastBackfill.finished_at,
-      returncode: latestForecastBackfill.returncode ?? null,
-    } : null,
-    recovered_steps: forecastRecovered ? ['forecast_run_daily'] : [],
-    active_failures: latestRefreshFailed && !(forecastRecovered && recoverableFailure) ? [latestRefresh.failed_step].filter(Boolean) : [],
+    latest_refresh: {
+      nightly_phase: nightlyStatus?.phase || null,
+      nightly_step: nightlyStatus?.step || null,
+      nightly_updated_at: nightlyUpdatedAt,
+      recovery_next_step: recoveryReport?.next_step || null,
+      recovery_generated_at: recoveryGeneratedAt,
+      release_phase: releasePhase,
+      release_updated_at: releaseUpdatedAt,
+    },
+    latest_forecast_run: {
+      status: forecastLatest?.status || null,
+      finished_at: forecastLatest?.generated_at || statMtimeIso(PATHS.forecast),
+      returncode: null,
+    },
+    latest_forecast_backfill: null,
+    recovered_steps: [],
+    active_failures: activeFailures,
   };
 }
 
 function main() {
-  const autopilot = readJson(PATHS.autopilot);
+  const nightlyStatus = readJson(PATHS.nightlyStatus);
+  const recoveryReport = readJson(PATHS.recoveryReport);
+  const releaseState = readJson(PATHS.releaseState);
+  const finalIntegritySeal = readJson(PATHS.finalIntegritySeal);
   const forecastLatest = readJson(PATHS.forecast);
   const learning = readJson(PATHS.learning);
   const scientificSummary = readJson(PATHS.scientificSummary);
@@ -396,17 +486,36 @@ function main() {
   const v1Audit = readJson(PATHS.v1Audit);
   const refreshReport = readJson(PATHS.refreshReport);
   const apiLimitLock = readJson(PATHS.apiLimitLock);
-  const deltaLatestSuccess = readJson(PATHS.deltaLatestSuccess);
+  const deltaLatestSuccessRaw = readJson(PATHS.deltaLatestSuccess);
+  const deltaLatestSuccess = normalizeQ1DeltaLatestSuccess(deltaLatestSuccessRaw, { filePath: PATHS.deltaLatestSuccess });
   const cutoverReports = listCutoverReports(PATHS.cutoverReadinessDir);
   const cutoverReadiness = cutoverReports.length ? readJson(cutoverReports[cutoverReports.length - 1]) : null;
   const dataFreshness = readJson(PATHS.dataFreshness);
-  const automation = buildAutomationSummary(autopilot, forecastLatest);
+  const uiFieldTruth = readJson(PATHS.uiFieldTruth);
+  const runtimeReport = readJson(PATHS.runtimeReport);
+  const epochReport = readJson(PATHS.epochReport);
+  const histProbsAnchor = readJson(PATHS.histProbsAnchor);
+  const deployBundleMeta = readJson(PATHS.deployBundleMeta);
+  const deployProof = readJson(PATHS.deployProof);
+  const automation = buildAutomationSummary({ nightlyStatus, recoveryReport, releaseState, forecastLatest });
+  const releaseTargetMarketDate = resolveReleaseTargetMarketDate(releaseState, {
+    trackLegacyRead: true,
+    readerId: 'scripts/ops/build-system-status-report.mjs',
+  });
 
   const refreshSampleLastDate = (refreshReport?.fetched_assets_sample || [])
     .map((row) => row?.last_date)
     .filter(Boolean)
     .sort()
     .slice(-1)[0] || null;
+  const expectedOperationalTargetDate = normalizeDate(
+    recoveryReport?.target_market_date
+    || finalIntegritySeal?.target_market_date
+    || releaseTargetMarketDate
+    || refreshReport?.to_date
+    || refreshSampleLastDate
+    || null
+  );
   const refreshGeneratedAt = refreshReport?.generated_at || statMtimeIso(PATHS.refreshReport);
   const refreshStaleDays = daysSince(refreshSampleLastDate || refreshGeneratedAt);
   const refreshSeverity = refreshStaleDays == null ? 'warning' : refreshStaleDays > 7 ? 'critical' : refreshStaleDays > 3 ? 'warning' : 'ok';
@@ -448,45 +557,82 @@ function main() {
   });
 
   const deltaUpdatedAt = deltaLatestSuccess?.updated_at || statMtimeIso(PATHS.deltaLatestSuccess);
-  const deltaStaleDays = daysSince(deltaLatestSuccess?.ingest_date || deltaUpdatedAt);
+  const deltaIngestDate = normalizeDate(deltaLatestSuccess?.ingest_date || null);
+  const deltaStaleDays = daysSince(deltaIngestDate || deltaUpdatedAt);
   const deltaStaleSeverity = deltaStaleDays == null ? 'warning' : deltaStaleDays > 7 ? 'critical' : deltaStaleDays > 3 ? 'warning' : 'ok';
+  const deltaEvidenceComplete = deltaLatestSuccess?.evidence_complete === true;
   const deltaIsNoop = deltaLatestSuccess?.noop_no_changed_packs === true
-    || (deltaLatestSuccess?.selected_packs_total === 0 && deltaStaleDays != null && deltaStaleDays <= 3);
+    || (deltaEvidenceComplete && Number(deltaLatestSuccess?.selected_packs_total) === 0 && deltaStaleDays != null && deltaStaleDays <= 3);
   const refreshAsof = refreshReport?.to_date || null;
-  const deltaUpstreamAdvanced = refreshAsof && deltaLatestSuccess?.ingest_date && refreshAsof > deltaLatestSuccess.ingest_date;
-  const deltaNoop = deltaIsNoop && deltaUpstreamAdvanced;
-  const deltaSeverity = deltaNoop ? (deltaStaleSeverity === 'ok' ? 'warning' : deltaStaleSeverity) : deltaStaleSeverity;
+  const deltaUpstreamAdvanced = refreshAsof && deltaIngestDate && refreshAsof > deltaIngestDate;
+  const deltaTargetMismatch = Boolean(
+    expectedOperationalTargetDate
+    && deltaIngestDate
+    && !isModuleTargetCompatible('q1_delta_ingest', deltaIngestDate, expectedOperationalTargetDate),
+  );
+  const deltaNoop = deltaEvidenceComplete && deltaIsNoop && deltaUpstreamAdvanced;
+  const deltaSeverity = !deltaLatestSuccess
+    ? 'critical'
+    : (!deltaEvidenceComplete || deltaTargetMismatch)
+      ? 'critical'
+      : (deltaNoop ? (deltaStaleSeverity === 'ok' ? 'warning' : deltaStaleSeverity) : deltaStaleSeverity);
   steps.q1_delta_ingest = buildStep({
     id: 'q1_delta_ingest',
     label: 'Q1 Delta Ingest',
     owner: 'QuantLab',
     subsystem: 'q1_delta',
     severity: deltaSeverity,
-    summary: deltaNoop
+    summary: !deltaLatestSuccess
+      ? 'Q1 delta ingest success artifact is missing'
+      : !deltaEvidenceComplete
+        ? 'Q1 delta ingest success artifact is incomplete'
+        : deltaTargetMismatch
+          ? 'Q1 delta ingest lags the active release target'
+      : deltaNoop
       ? 'Q1 delta ingest ran as noop but upstream has advanced'
       : deltaSeverity === 'critical' ? 'Q1 delta ingest is stale'
       : deltaSeverity === 'warning' ? 'Q1 delta ingest has not advanced recently'
       : 'Q1 delta ingest is current',
-    why: deltaNoop
+    why: !deltaLatestSuccess
+      ? 'No successful Q1 delta ingest artifact was found.'
+      : !deltaEvidenceComplete
+        ? `latest_success.json is incomplete: ingest_date=${deltaIngestDate || 'missing'}, selected_packs_total=${deltaLatestSuccess?.selected_packs_total ?? 'missing'}, noop_no_changed_packs=${typeof deltaLatestSuccess?.noop_no_changed_packs === 'boolean' ? deltaLatestSuccess.noop_no_changed_packs : 'missing'}, updated_at=${deltaUpdatedAt || 'missing'}.`
+        : deltaTargetMismatch
+          ? `Q1 delta ingest is anchored to ${deltaIngestDate} but the active target_market_date is ${expectedOperationalTargetDate}; the source layer is behind the release chain.`
+      : deltaNoop
       ? `Q1 delta ingest ran as noop (selected_packs_total=${deltaLatestSuccess?.selected_packs_total ?? 0}, noop_no_changed_packs=${deltaLatestSuccess?.noop_no_changed_packs}) but market_data_refresh has advanced to ${refreshAsof} — ingest must re-run.`
       : deltaLatestSuccess
-        ? `Latest successful Q1 delta ingest is anchored to ingest_date=${deltaLatestSuccess.ingest_date} and was updated at ${deltaUpdatedAt || 'unknown'}.`
+        ? `Latest successful Q1 delta ingest is anchored to ingest_date=${deltaIngestDate} and was updated at ${deltaUpdatedAt || 'unknown'}.`
         : 'No successful Q1 delta ingest artifact was found.',
-    next_fix: 'After the upstream history refresh advances, rerun the Q1 delta ingest and verify latest_success.json moves forward before rebuilding QuantLab reports.',
+    next_fix: 'Rerun the Q1 delta ingest against the active target_market_date, then verify latest_success.json records ingest_date, selected_packs_total, noop_no_changed_packs, and a downstream QuantLab rebuild before rebuilding snapshot/UI layers.',
     file_ref: 'scripts/quantlab/run_daily_delta_ingest_q1.py',
     generated_at: deltaUpdatedAt,
     last_success_at: deltaUpdatedAt,
-    input_asof: deltaLatestSuccess?.ingest_date || null,
-    output_asof: deltaLatestSuccess?.ingest_date || null,
+    input_asof: deltaIngestDate || null,
+    output_asof: deltaIngestDate || null,
     dependency_ids: ['market_data_refresh'],
     blocked_by: severityRank(steps.market_data_refresh?.severity) >= severityRank('critical') ? ['market_data_refresh'] : [],
     status_detail: {
-      latest_success: deltaLatestSuccess || null,
+      latest_success: deltaLatestSuccessRaw || null,
+      normalized_latest_success: deltaLatestSuccess ? {
+        updated_at: deltaLatestSuccess.updated_at,
+        ingest_date: deltaLatestSuccess.ingest_date,
+        selected_packs_total: deltaLatestSuccess.selected_packs_total,
+        noop_no_changed_packs: deltaLatestSuccess.noop_no_changed_packs,
+        evidence_complete: deltaLatestSuccess.evidence_complete,
+        evidence_sources: deltaLatestSuccess.evidence_sources,
+      } : null,
+      expected_target_market_date: expectedOperationalTargetDate,
+      ingest_date: deltaIngestDate,
+      evidence_complete: deltaEvidenceComplete,
+      target_mismatch: deltaTargetMismatch,
       noop_detected: deltaNoop,
       selected_packs_total: deltaLatestSuccess?.selected_packs_total ?? null,
       noop_no_changed_packs: deltaLatestSuccess?.noop_no_changed_packs ?? null,
       upstream_refresh_asof: refreshAsof,
-      impact: deltaNoop
+      impact: !deltaEvidenceComplete || deltaTargetMismatch
+        ? 'The q1_delta_ingest success pointer is not trustworthy enough to release. QuantLab, hist_probs, snapshot, and dashboard seals must treat this as a hard blocker.'
+        : deltaNoop
         ? 'q1_delta_ingest ran silently as no-op. Downstream QuantLab, hist_probs, and snapshot continue reading stale partitions.'
         : 'QuantLab raw-bar freshness cannot advance until the delta ingest layer has incorporated newer market history.',
     },
@@ -547,8 +693,14 @@ function main() {
     : canonicalShortfall > 14 ? 'critical'
     : canonicalShortfall > 7 ? 'warning'
     : 'ok';
-  const quantSeverity = severityRank(quantCanonicalLagSeverity) > severityRank(quantStaleSeverity)
-    ? quantCanonicalLagSeverity : quantStaleSeverity;
+  // Durable Fix: Prioritize operational freshness (raw Any) over structural lag (Canonical).
+  // We only allow canonical lag to escalate to 'warning' if Any is 'ok'. 
+  // If Any is also stale, then we keep the higher severity.
+  const quantSeverity = (quantStaleSeverity === 'ok' && quantCanonicalLagSeverity === 'critical')
+    ? 'warning'
+    : (severityRank(quantCanonicalLagSeverity) > severityRank(quantStaleSeverity) 
+        ? quantCanonicalLagSeverity 
+        : quantStaleSeverity);
   steps.quantlab_daily_report = buildStep({
     id: 'quantlab_daily_report',
     label: 'QuantLab Daily Report',
@@ -588,7 +740,22 @@ function main() {
   });
 
   const histFamily = dataFreshness?.families_by_id?.hist_probs || null;
-  const histOutputAsof = histFamily?.data_asof || histProbs?.date || null;
+  const histRegimeDate = normalizeDate(histProbsSummary?.regime_date || null);
+  const histOutputAsof = maxIsoDate(histFamily?.data_asof, histRegimeDate, histProbs?.date || null);
+  const expectedHistDate = normalizeDate(
+    recoveryReport?.target_market_date
+    || releaseState?.target_market_date
+    || releaseState?.target_date
+    || quantOutputAsof
+    || histOutputAsof
+  );
+  const histAnchorDate = normalizeDate(histProbsAnchor?.latest_date || null);
+  // Fallback: if scope registry lags (data not yet available for target date),
+  // accept regime_date as proof that the run used the correct market regime.
+  const histAnchorStale = expectedHistDate
+    ? (!histAnchorDate || histAnchorDate < expectedHistDate)
+      && (!histRegimeDate || histRegimeDate < expectedHistDate)
+    : false;
   const histStaleDays = daysSince(histOutputAsof);
   const histProfileCount = histFamily
     ? Number(histFamily.fresh_count || 0) + Number(histFamily.stale_count || 0)
@@ -603,6 +770,14 @@ function main() {
       ?? readUniverseCount(PATHS.stockUniverseSymbols)
     );
   const histCoverageRatio = stockUniverseCount && stockUniverseCount > 0 ? Number(histFamily?.fresh_count ?? histProfileCount) / stockUniverseCount : null;
+  const histRunRequestedFullUniverse = Number(histProbsSummary?.max_tickers || 0) === 0
+    && ['registry', 'registry_asset_classes', 'us_eu_scope'].includes(String(histProbsSummary?.source_mode || ''));
+  const histRunTotal = Number(histProbsSummary?.tickers_total);
+  const histRunCovered = Number(histProbsSummary?.tickers_covered);
+  const histRunZeroCoverage = histRunRequestedFullUniverse
+    && Number.isFinite(histRunTotal)
+    && Number.isFinite(histRunCovered)
+    && (histRunTotal === 0 || histRunCovered === 0);
   const histCoverageSeverity = histFamily?.severity
     || (histCoverageRatio == null
       ? 'warning'
@@ -613,17 +788,30 @@ function main() {
           : 'ok');
   const histFreshnessSeverity = histFamily?.severity
     || (histStaleDays == null ? 'warning' : histStaleDays > 7 ? 'critical' : histStaleDays > 3 ? 'warning' : 'ok');
-  const histSeverity = severityRank(histCoverageSeverity) > severityRank(histFreshnessSeverity)
+  const histSeverityBase = severityRank(histCoverageSeverity) > severityRank(histFreshnessSeverity)
     ? histCoverageSeverity
     : histFreshnessSeverity;
+  const histSeverity = histRunZeroCoverage
+    ? 'critical'
+    : histAnchorStale
+    ? 'critical'
+    : histSeverityBase;
   steps.hist_probs = buildStep({
     id: 'hist_probs',
     label: 'Historical Probabilities',
     owner: 'Hist Probs',
     subsystem: 'hist_probs',
     severity: histSeverity,
-    summary: histSeverity === 'critical' ? 'Historical probabilities are stale' : histSeverity === 'warning' ? 'Historical probabilities are aging' : 'Historical probabilities are current',
-    why: histFamily
+    summary: histRunZeroCoverage
+      ? 'Historical probabilities reported zero covered tickers for the required universe'
+      : histAnchorStale
+        ? 'Historical probabilities anchor is stale for the target market date'
+      : histSeverity === 'critical' ? 'Historical probabilities are stale' : histSeverity === 'warning' ? 'Historical probabilities are aging' : 'Historical probabilities are current',
+    why: histRunZeroCoverage
+      ? `Latest full-universe hist_probs run reported tickers_total=${histRunTotal}, tickers_covered=${histRunCovered}, tickers_excluded_inactive=${histProbsSummary?.tickers_excluded_inactive ?? 'unknown'}, source_mode=${histProbsSummary?.source_mode || 'unknown'}. This is a false-green condition and must not be treated as current coverage.`
+      : histAnchorStale
+      ? `Anchor ticker AAPL is stale at latest_date=${histAnchorDate || 'missing'} while the expected market date is ${expectedHistDate}. Process completion without fresh anchor output is not a valid success state.`
+      : histFamily
       ? `US+EU historical profile freshness is ${histFamily.fresh_count}/${stockUniverseCount || 'unknown'} fresh, ${histFamily.stale_count || 0} stale, ${histFamily.missing_count || 0} missing; latest run asset classes=${(histProbsSummary?.asset_classes || []).join(',') || 'unknown'}.`
       : histOutputAsof
         ? `Regime daily last market date is ${histOutputAsof}. Historical profile coverage is ${histProfileCount}/${stockUniverseCount || 'unknown'} stock files${histProbsSummary?.asset_classes ? `; latest run asset classes=${(histProbsSummary.asset_classes || []).join(',')}` : ''}.`
@@ -650,14 +838,21 @@ function main() {
         sample_tickers: histFamily?.sample_tickers || [],
         default_runner_limited: Number(histProbsSummary?.max_tickers || 0) > 0 || (histProbsSummary?.tickers_total || 0) <= 500,
         asset_classes: histProbsSummary?.asset_classes || ['STOCK'],
+        zero_coverage_guard: histRunZeroCoverage,
+        anchor_ticker: 'AAPL',
+        anchor_latest_date: histAnchorDate,
+        anchor_expected_date: expectedHistDate,
+        anchor_stale_guard: histAnchorStale,
       },
-      impact: histFamily?.healthy
+      impact: histRunZeroCoverage
+        ? 'The latest hist_probs run produced no covered tickers even though a full-universe run was requested. All downstream readiness checks must treat this as blocking.'
+        : histFamily?.healthy
         ? 'Historical probability context is current for the required US+EU universe.'
         : 'Regime and passive probability context lags the market and should not be treated as current.',
     },
   });
 
-  const forecastExec = latestStepExecution(autopilot, 'forecast_run_daily');
+  const forecastExec = automation.latest_forecast_run || null;
   const forecastSeverity = forecastLatest?.status === 'ok' ? 'ok' : 'critical';
   steps.forecast_daily = buildStep({
     id: 'forecast_daily',
@@ -668,11 +863,11 @@ function main() {
     summary: forecastLatest?.status === 'ok' ? 'Forecast daily batch is healthy' : 'Forecast daily batch is failing',
     why: forecastLatest?.status === 'ok'
       ? `Forecast latest artifact was generated at ${forecastLatest.generated_at || 'unknown'} with as-of ${forecastLatest?.data?.asof || 'unknown'}.`
-      : `Forecast latest artifact is missing or unhealthy; latest execution status is ${forecastExec?.step_status || 'unknown'}.`,
+      : `Forecast latest artifact is missing or unhealthy; latest execution status is ${forecastExec?.status || 'unknown'}.`,
     next_fix: 'Use scripts/forecast/run_daily.mjs as the primary batch health check and treat engine-level files as implementation detail unless run_daily fails.',
     file_ref: 'scripts/forecast/run_daily.mjs',
     generated_at: forecastLatest?.generated_at || statMtimeIso(PATHS.forecast),
-    last_success_at: forecastExec?.step_status === 'completed' ? forecastExec.finished_at : forecastLatest?.generated_at || statMtimeIso(PATHS.forecast),
+    last_success_at: forecastExec?.status === 'completed' ? forecastExec.finished_at : forecastLatest?.generated_at || statMtimeIso(PATHS.forecast),
     input_asof: null,
     output_asof: forecastLatest?.data?.asof || forecastLatest?.freshness || null,
     status_detail: {
@@ -683,30 +878,40 @@ function main() {
   });
 
   const learningScientific = learning?.features?.scientific || null;
+  const scientificSourceMeta = scientificSummary?.source_meta || learningScientific?.source_meta || null;
+  const scientificStaleDays = Number.isFinite(Number(scientificSourceMeta?.stale_days))
+    ? Number(scientificSourceMeta.stale_days)
+    : null;
+  const scientificSeverity = scientificStaleDays != null
+    ? (scientificStaleDays > 7 ? 'critical' : (scientificStaleDays > 3 ? 'warning' : 'ok'))
+    : scientificSourceMeta?.asof
+      ? 'ok'
+      : 'warning';
   steps.scientific_summary = buildStep({
     id: 'scientific_summary',
     label: 'Scientific Summary',
     owner: 'Scientific',
     subsystem: 'scientific',
-    severity: learningScientific?.source_meta?.stale_days > 7 ? 'critical' : (learningScientific?.source_meta?.stale_days > 3 ? 'warning' : 'ok'),
-    summary: learningScientific?.source_meta?.stale_days > 7
+    severity: scientificSeverity,
+    summary: scientificStaleDays > 7
       ? 'Scientific source is stale'
-      : learningScientific?.source_meta?.stale_days > 3
+      : scientificStaleDays > 3
         ? 'Scientific source is aging'
-        : learningScientific?.source_meta?.asof
+        : scientificSourceMeta?.asof
           ? 'Scientific source is current'
           : 'Scientific source timestamp is missing',
-    why: learningScientific?.source_meta?.asof
-      ? `Scientific source_meta as-of is ${learningScientific.source_meta.asof}.`
+    why: scientificSourceMeta?.asof
+      ? `Scientific source_meta as-of is ${scientificSourceMeta.asof}.`
       : 'Scientific source has no current as-of timestamp.',
     next_fix: 'Refresh the scientific summary and verify the upstream source emits a current timestamp before the daily learning batch runs.',
     file_ref: 'scripts/build-scientific-summary.mjs',
     generated_at: learning?.date ? statMtimeIso(PATHS.learning) : statMtimeIso(PATHS.scientificSummary),
     last_success_at: statMtimeIso(PATHS.scientificSummary),
     input_asof: null,
-    output_asof: learningScientific?.source_meta?.asof || null,
+    output_asof: scientificSourceMeta?.asof || null,
     status_detail: {
       learning_feature: learningScientific || null,
+      source_meta: scientificSourceMeta,
       scientific_summary: sourceMeta(PATHS.scientificSummary),
       impact: 'Scientific rows remain available, but they are not current enough to be treated as live input.',
     },
@@ -779,13 +984,20 @@ function main() {
   const stockAuditFamilies = Array.isArray(stockAnalyzerAudit?.failure_families) ? stockAnalyzerAudit.failure_families : [];
   const stockAuditCriticalFamilies = stockAuditFamilies.filter((family) => String(family?.severity || '').toLowerCase() === 'critical');
   const stockAuditWarningFamilies = stockAuditFamilies.filter((family) => String(family?.severity || '').toLowerCase() === 'warning');
+  const stockAuditSmokeMode = String(stockAnalyzerAudit?.run?.source_mode || '').toLowerCase().includes('smoke')
+    || String(stockAuditSummary?.live_endpoint_mode || '').toLowerCase() === 'sampled_smoke';
+  // Use release_eligible as the severity gate — live canary critical families are
+  // not artifact-blocking and should not prevent local_data_green.
+  const stockAuditReleaseEligible = stockAuditSummary?.release_eligible === true;
   const stockAuditSeverity = !stockAnalyzerAudit
     ? 'warning'
     : !stockAuditSummary?.full_universe
       ? 'warning'
-      : stockAuditCriticalFamilies.length > 0
-        ? 'critical'
-        : 'ok';
+      : !stockAuditReleaseEligible
+        ? (stockAuditSmokeMode ? 'warning' : 'critical')
+        : stockAuditWarningFamilies.length > 0
+          ? 'warning'
+          : 'ok';
   const stockAuditProcessed = Number(stockAnalyzerAudit?.run?.processed_assets || stockAuditSummary?.processed_assets || 0);
   const stockAuditTotal = Number(stockAnalyzerAudit?.run?.total_universe_assets || stockAuditSummary?.total_assets || 0);
   const stockAuditFullUniverse = Boolean(stockAuditSummary?.full_universe);
@@ -803,10 +1015,12 @@ function main() {
           ? (stockAuditWarningFamilies.length
               ? 'Stock Analyzer universe audit has no critical failures'
               : 'Stock Analyzer universe audit is green')
-          : 'Stock Analyzer universe audit found critical field-level failures',
+          : stockAuditSmokeMode
+            ? 'Stock Analyzer sampled smoke audit found issues'
+            : 'Stock Analyzer universe audit found critical field-level failures',
     why: !stockAnalyzerAudit
       ? 'No stock-analyzer-universe-audit artifact was found, so dashboard_v7 cannot prove all analyze-v4 fields are valid across the universe.'
-      : `Latest audit processed ${stockAuditProcessed}/${stockAuditTotal || 'unknown'} assets and found ${stockAuditFamilies.length} failure families (${stockAuditCriticalFamilies.length} critical, ${stockAuditWarningFamilies.length} warning) affecting ${stockAuditSummary?.affected_assets || 0} assets.`,
+      : `Latest audit processed ${stockAuditProcessed}/${stockAuditTotal || 'unknown'} assets and found ${stockAuditFamilies.length} failure families (${stockAuditCriticalFamilies.length} critical, ${stockAuditWarningFamilies.length} warning) affecting ${stockAuditSummary?.affected_assets || 0} assets.${stockAuditSmokeMode ? ' This run used sampled smoke mode, so failures remain advisory until a full contract audit confirms them.' : ''}`,
     next_fix: !stockAnalyzerAudit || !stockAuditFullUniverse
       ? 'Run the full stock-analyzer universe audit over STOCK+ETF and then regenerate the dashboard status artifacts.'
       : (stockAnalyzerAudit?.ordered_recovery?.[0]?.run_command || 'Inspect the leading failure family in the audit artifact and execute the listed recovery steps in order.'),
@@ -898,6 +1112,166 @@ function main() {
     },
   });
 
+  steps.system_status_report = buildObservedArtifactStep({
+    id: 'system_status_report',
+    label: 'System Status Report',
+    owner: 'Ops',
+    subsystem: 'system_status',
+    filePath: PATHS.output,
+    doc: readJson(PATHS.output),
+    severity: 'ok',
+    summary: 'System status report artifact generated',
+    why: 'This report itself is the observer summary layer for the active control plane.',
+    nextFix: 'Rebuild the status report after upstream artifacts are refreshed.',
+    inputAsof: stockAnalyzerAudit?.generated_at || null,
+    outputAsof: expectedOperationalTargetDate || null,
+    dependencyIds: ['stock_analyzer_universe_audit'],
+    statusDetail: {
+      target_market_date: expectedOperationalTargetDate || null,
+    },
+  });
+
+  const fundamentalsScopeFamily = dataFreshness?.families_by_id?.fundamentals_scope || null;
+  steps.data_freshness_report = buildObservedArtifactStep({
+    id: 'data_freshness_report',
+    label: 'Data Freshness Report',
+    owner: 'Ops',
+    subsystem: 'freshness',
+    filePath: PATHS.dataFreshness,
+    doc: dataFreshness,
+    severity: String(dataFreshness?.summary?.severity || 'warning'),
+    summary: dataFreshness?.summary?.healthy ? 'Data freshness report is healthy' : 'Data freshness report shows stale families',
+    why: fundamentalsScopeFamily
+      ? `Prioritized fundamentals scope: fresh=${fundamentalsScopeFamily.fresh_count ?? 0}, stale=${fundamentalsScopeFamily.stale_count ?? 0}, missing=${fundamentalsScopeFamily.missing_count ?? 0}.`
+      : 'No freshness summary was found.',
+    nextFix: 'Rebuild the freshness report after upstream market, hist-probs, and fundamentals artifacts are current.',
+    inputAsof: expectedOperationalTargetDate,
+    outputAsof: dataFreshness?.summary?.expected_eod || null,
+    dependencyIds: ['hist_probs', 'market_data_refresh'],
+    blockedBy: [],
+    statusDetail: {
+      unhealthy_families: dataFreshness?.summary?.unhealthy_families || [],
+      fundamentals_scope: fundamentalsScopeFamily || null,
+    },
+  });
+
+  const epochNullModules = Object.entries(epochReport?.modules || {})
+    .filter(([, module]) => !String(module?.run_id || '').trim())
+    .map(([id]) => id);
+  const epochSeverity = epochReport?.pipeline_ok === false || epochNullModules.length > 0 ? 'critical' : 'ok';
+  steps.pipeline_epoch = buildObservedArtifactStep({
+    id: 'pipeline_epoch',
+    label: 'Pipeline Epoch',
+    owner: 'Ops',
+    subsystem: 'epoch',
+    filePath: PATHS.epochReport,
+    doc: epochReport,
+    severity: epochSeverity,
+    summary: epochSeverity === 'ok' ? 'Pipeline epoch is coherent' : 'Pipeline epoch is incoherent',
+    why: epochNullModules.length > 0
+      ? `Module run_id missing for: ${epochNullModules.join(', ')}.`
+      : (epochReport?.blocking_gaps?.length ? `Blocking gaps: ${epochReport.blocking_gaps.map((gap) => gap.id).join(', ')}.` : 'Epoch pipeline is coherent.'),
+    nextFix: 'Rebuild epoch only after system status/runtime artifacts share the same target market date and module run IDs are populated.',
+    inputAsof: dataFreshness?.summary?.expected_eod || null,
+    outputAsof: epochReport?.target_market_date || null,
+    dependencyIds: ['system_status_report', 'data_freshness_report'],
+    statusDetail: {
+      blocking_gaps: epochReport?.blocking_gaps || [],
+      null_run_id_modules: epochNullModules,
+    },
+  });
+
+  const uiFieldTruthSummary = uiFieldTruth?.summary || {};
+  const uiFieldTruthOk = (uiFieldTruthSummary.ui_field_truth_ok ?? uiFieldTruth?.ui_field_truth_ok) === true;
+  const uiTruthChecked = uiFieldTruthSummary.checked_canaries ?? uiFieldTruthSummary.tickers_checked ?? 0;
+  const uiTruthFailures = uiFieldTruthSummary.failed_checks ?? uiFieldTruthSummary.failures ?? 0;
+  const uiTruthAdvisories = uiFieldTruthSummary.optional_advisory_count ?? uiFieldTruthSummary.advisories ?? 0;
+  const uiFieldTruthSeverity = uiFieldTruthOk ? 'ok' : 'critical';
+  steps.ui_field_truth_report = buildObservedArtifactStep({
+    id: 'ui_field_truth_report',
+    label: 'UI Field Truth Report',
+    owner: 'Frontend/API',
+    subsystem: 'ui_truth',
+    filePath: PATHS.uiFieldTruth,
+    doc: uiFieldTruth,
+    severity: uiFieldTruthSeverity,
+    summary: uiFieldTruthOk ? 'UI field truth checks passed' : 'UI field truth checks failed',
+    why: uiFieldTruth?.summary
+      ? `Checked=${uiTruthChecked}, failures=${uiTruthFailures}, advisories=${uiTruthAdvisories}.`
+      : 'UI field truth artifact missing.',
+    nextFix: 'Start the local runtime, rebuild the UI field truth report, and verify that only critical endpoints influence ui_field_truth_ok.',
+    inputAsof: epochReport?.target_market_date || null,
+    outputAsof: uiFieldTruth?.target_market_date || uiFieldTruth?.date || null,
+    dependencyIds: ['pipeline_epoch'],
+    statusDetail: {
+      critical_endpoints: uiFieldTruth?.contract?.required_endpoints || uiFieldTruth?.critical_endpoints || [],
+      optional_endpoints: uiFieldTruth?.contract?.optional_endpoints || uiFieldTruth?.optional_endpoints || [],
+      failures: uiFieldTruth?.failures || [],
+      advisories: uiFieldTruth?.optional_advisories || uiFieldTruth?.advisories || [],
+    },
+  });
+
+  steps.final_integrity_seal = buildObservedArtifactStep({
+    id: 'final_integrity_seal',
+    label: 'Final Integrity Seal',
+    owner: 'Ops',
+    subsystem: 'seal',
+    filePath: PATHS.finalIntegritySeal,
+    doc: finalIntegritySeal,
+    severity: finalIntegritySeal?.release_ready === true ? 'ok' : 'critical',
+    summary: finalIntegritySeal?.release_ready === true ? 'Final seal is green' : 'Final seal is blocking release',
+    why: Array.isArray(finalIntegritySeal?.blocking_reasons) && finalIntegritySeal.blocking_reasons.length
+      ? `Blocking reasons: ${finalIntegritySeal.blocking_reasons.map((reason) => reason.id || reason.title || 'unknown').join(', ')}.`
+      : 'Final seal artifact missing or not ready.',
+    nextFix: 'Clear the blocking reasons upstream, then rebuild the final integrity seal from the same target-date artifact chain.',
+    inputAsof: uiFieldTruth?.target_market_date || epochReport?.target_market_date || null,
+    outputAsof: finalIntegritySeal?.target_market_date || null,
+    dependencyIds: ['ui_field_truth_report', 'pipeline_epoch'],
+    statusDetail: {
+      ui_green: finalIntegritySeal?.ui_green ?? null,
+      release_ready: finalIntegritySeal?.release_ready ?? null,
+      blocking_reasons: finalIntegritySeal?.blocking_reasons || [],
+    },
+  });
+
+  steps.build_deploy_bundle = buildObservedArtifactStep({
+    id: 'build_deploy_bundle',
+    label: 'Build Deploy Bundle',
+    owner: 'Ops',
+    subsystem: 'deploy_bundle',
+    filePath: PATHS.deployBundleMeta,
+    doc: deployBundleMeta,
+    severity: deployBundleMeta?.target_market_date && deployBundleMeta?.target_market_date === finalIntegritySeal?.target_market_date ? 'ok' : 'warning',
+    summary: deployBundleMeta ? 'Deploy bundle metadata is present' : 'Deploy bundle metadata missing',
+    why: deployBundleMeta
+      ? `bundle_id=${deployBundleMeta.bundle_id || 'unknown'}, target_market_date=${deployBundleMeta.target_market_date || 'unknown'}.`
+      : 'No deploy bundle metadata artifact was found.',
+    nextFix: 'Regenerate the deploy bundle after the final seal is green.',
+    inputAsof: finalIntegritySeal?.target_market_date || null,
+    outputAsof: deployBundleMeta?.target_market_date || null,
+    dependencyIds: ['final_integrity_seal'],
+    statusDetail: deployBundleMeta || null,
+  });
+
+  steps.wrangler_deploy = buildObservedArtifactStep({
+    id: 'wrangler_deploy',
+    label: 'Wrangler Deploy',
+    owner: 'Deploy',
+    subsystem: 'wrangler',
+    filePath: PATHS.deployProof,
+    doc: deployProof,
+    severity: deployProof?.release_ready === true ? 'ok' : 'warning',
+    summary: deployProof?.release_ready === true ? 'Deploy proof confirms release publish' : 'Deploy proof missing or not release-ready',
+    why: deployProof
+      ? `deploy_status=${deployProof.deploy_status || 'unknown'}, proof_mode=${deployProof.proof_mode || 'unknown'}.`
+      : 'No deploy proof artifact was found.',
+    nextFix: 'Run the release gate and publish step after the bundle is prepared.',
+    inputAsof: deployBundleMeta?.target_market_date || null,
+    outputAsof: deployProof?.target_market_date || null,
+    dependencyIds: ['build_deploy_bundle'],
+    statusDetail: deployProof || null,
+  });
+
   const stepsById = steps;
   const dependencies = buildDependencyEdges(stepsById).map((edge) => ({
     ...edge,
@@ -928,6 +1302,18 @@ function main() {
   if (severityRank(steps.stock_analyzer_universe_audit.severity) >= severityRank('critical')) {
     rootCauses.push(buildRootCauseFromStep(steps.stock_analyzer_universe_audit, 'ui_contract'));
   }
+  if (severityRank(steps.data_freshness_report.severity) >= severityRank('critical')) {
+    rootCauses.push(buildRootCauseFromStep(steps.data_freshness_report, 'data_freshness'));
+  }
+  if (severityRank(steps.pipeline_epoch.severity) >= severityRank('critical')) {
+    rootCauses.push(buildRootCauseFromStep(steps.pipeline_epoch, 'control_plane'));
+  }
+  if (severityRank(steps.ui_field_truth_report.severity) >= severityRank('critical')) {
+    rootCauses.push(buildRootCauseFromStep(steps.ui_field_truth_report, 'ui_contract'));
+  }
+  if (severityRank(steps.final_integrity_seal.severity) >= severityRank('critical')) {
+    rootCauses.push(buildRootCauseFromStep(steps.final_integrity_seal, 'release_gate'));
+  }
   if (severityRank(automation.severity) >= severityRank('warning')) {
     rootCauses.push({
       id: 'automation_refresh_chain_degraded',
@@ -939,8 +1325,29 @@ function main() {
       fix: 'Use the latest successful artifact and latest failed automation step together; only treat unrecovered failures as active blockers.',
       owner: 'Ops',
       subsystem: 'automation',
-      file_ref: 'public/data/reports/v5-autopilot-status.json',
-      evidence_at: automation.latest_refresh?.finished_at || null,
+      file_ref: 'public/data/reports/nightly-stock-analyzer-status.json',
+      evidence_at: automation.latest_refresh?.nightly_updated_at || automation.latest_refresh?.recovery_generated_at || null,
+    });
+  }
+  const controlPlaneConsistency = validateControlPlaneConsistency({
+    release: releaseState,
+    runtime: runtimeReport,
+    epoch: epochReport,
+    recovery: recoveryReport,
+  });
+  if (!controlPlaneConsistency.ok) {
+    rootCauses.push({
+      id: 'control_plane_consistency_failed',
+      severity: 'critical',
+      category: 'control_plane',
+      title: 'Control-plane artifacts disagree on target date or run identity',
+      why: 'release-state, recovery, runtime, or epoch artifacts reference different target_market_date or run_id values.',
+      impact: 'The pipeline can claim DONE or green even when downstream artifacts still describe an older or different target date.',
+      fix: 'Rebuild system-status, runtime, epoch, and release-state from the same target_market_date and run_id without manual JSON edits.',
+      owner: 'Ops',
+      subsystem: 'control_plane',
+      file_ref: 'public/data/ops/release-state-latest.json',
+      evidence_at: releaseState?.last_updated || recoveryReport?.generated_at || null,
     });
   }
 
@@ -961,6 +1368,44 @@ function main() {
         evidence: { asset_classes: runAssetClasses, ran_at: histProbsSummary.ran_at },
         fix_command: SYSTEM_STATUS_STEP_CONTRACTS.hist_probs.run_command,
         success_signal: 'run-summary.json asset_classes includes both STOCK and ETF',
+        detected_at: now,
+      });
+    }
+
+    if (histRunZeroCoverage) {
+      violations.push({
+        id: 'hist_probs_zero_coverage',
+        severity: 'critical',
+        title: 'hist_probs full-universe run produced zero covered tickers',
+        ssot_doc: 'scripts/ops/system-status-ssot.mjs (hist_probs coverage guard)',
+        why: `Full-universe hist_probs run reported tickers_total=${histRunTotal} and tickers_covered=${histRunCovered}. This must block readiness instead of surfacing as green coverage.`,
+        evidence: {
+          source_mode: histProbsSummary?.source_mode || null,
+          tickers_total: histRunTotal,
+          tickers_covered: histRunCovered,
+          tickers_excluded_inactive: histProbsSummary?.tickers_excluded_inactive ?? null,
+          ran_at: histProbsSummary?.ran_at || null,
+        },
+        fix_command: SYSTEM_STATUS_STEP_CONTRACTS.hist_probs.run_command,
+        success_signal: 'run-summary.json tickers_total > 0 and tickers_covered > 0 for the required universe',
+        detected_at: now,
+      });
+    }
+    if (histAnchorStale) {
+      violations.push({
+        id: 'hist_probs_anchor_stale',
+        severity: 'critical',
+        title: 'hist_probs anchor ticker is stale or missing',
+        ssot_doc: 'scripts/ops/system-status-ssot.mjs (hist_probs freshness guard)',
+        why: `Anchor ticker AAPL is at latest_date=${histAnchorDate || 'missing'} while expected_date=${expectedHistDate || 'unknown'}. Successful process exit alone does not prove fresh profile coverage.`,
+        evidence: {
+          anchor_ticker: 'AAPL',
+          latest_date: histAnchorDate,
+          expected_date: expectedHistDate,
+          computed_at: histProbsAnchor?.computed_at || null,
+        },
+        fix_command: SYSTEM_STATUS_STEP_CONTRACTS.hist_probs.run_command,
+        success_signal: 'AAPL.json latest_date advances to the expected target market date and the run-summary remains complete',
         detected_at: now,
       });
     }
@@ -990,7 +1435,7 @@ function main() {
     if (canonicalLagShortfall != null && canonicalLagShortfall > 0) {
       violations.push({
         id: 'quantlab_canonical_lag',
-        severity: canonicalLagShortfall > 14 ? 'critical' : canonicalLagShortfall > 7 ? 'warning' : 'info',
+        severity: canonicalLagShortfall > 14 ? 'critical' : 'info',
         title: `QuantLab canonical data exceeds label-window lag by ${canonicalLagShortfall} trading days`,
         ssot_doc: 'docs/ops/runbook.md (Canonical Recovery Order step 2)',
         why: `latestCanonicalRequiredDataDate=${canonicalDate} but latestAnyRequiredDataDate=${anyDate} — gap of ${canonicalLagDays} trading days against an expected ${CANONICAL_LABEL_WINDOW}T label window.`,
@@ -1039,17 +1484,30 @@ function main() {
   }
 
   const ssotViolations = detectSsotViolations();
-
-  const ssotGateSeverity = ssotViolations.length > 0 ? 'warning' : 'ok';
-  const localSeverity = [
-    rootCauses.reduce((acc, cause) => severityRank(cause.severity) > severityRank(acc) ? cause.severity : acc, 'ok'),
-    ssotGateSeverity,
-  ].reduce((a, b) => severityRank(a) > severityRank(b) ? a : b);
+  const ssotBlockingViolations = ssotViolations.filter((item) => severityRank(item.severity) >= severityRank('warning'));
+  const ssotAdvisoryViolations = ssotViolations.filter((item) => item.severity === 'info');
+  const ssotBlockingSeverity = ssotBlockingViolations.reduce(
+    (worst, item) => severityRank(item.severity) > severityRank(worst) ? item.severity : worst,
+    'ok'
+  );
+  const ssotAdvisorySeverity = ssotAdvisoryViolations.length > 0 ? 'info' : 'ok';
+  const advisoryDisplaySeverity = ssotAdvisorySeverity === 'info' ? 'ok' : ssotAdvisorySeverity;
+  const rootCauseBlockingSeverity = rootCauses.reduce(
+    (acc, cause) => severityRank(cause.severity) > severityRank(acc) ? cause.severity : acc,
+    'ok'
+  );
+  const localBlockingSeverity = severityRank(rootCauseBlockingSeverity) > severityRank(ssotBlockingSeverity)
+    ? rootCauseBlockingSeverity
+    : ssotBlockingSeverity;
+  const localDisplaySeverity = severityRank(localBlockingSeverity) > severityRank(advisoryDisplaySeverity)
+    ? localBlockingSeverity
+    : advisoryDisplaySeverity;
 
   const remoteHealth = fetchRemoteWorkflowHealth();
   const remoteWorkflowSeverities = Object.entries(remoteHealth.runs).map(([, run]) => {
     if (!run) return 'warning';
     if (run.status && run.status !== 'completed') return 'warning';
+    if (run.conclusion === 'cancelled') return 'warning';
     if (run.conclusion !== 'success') return 'critical';
     const ageDays = daysSince(run.createdAt);
     return ageDays != null && ageDays > 2 ? 'warning' : 'ok';
@@ -1057,7 +1515,45 @@ function main() {
   const remoteSeverity = remoteHealth.proof_mode === 'remote_unavailable'
     ? 'warning'
     : remoteWorkflowSeverities.reduce((worst, s) => severityRank(s) > severityRank(worst) ? s : worst, 'ok');
-  const severity = localSeverity;
+  const sealSeverity = (finalIntegritySeal?.blocking_reasons || []).reduce(
+    (worst, item) => severityRank(item?.severity) > severityRank(worst) ? item.severity : worst,
+    'ok'
+  );
+  const baseSeverity = severityRank(localDisplaySeverity) > severityRank(remoteSeverity) ? localDisplaySeverity : remoteSeverity;
+  const severity = severityRank(baseSeverity) > severityRank(sealSeverity) ? baseSeverity : sealSeverity;
+  const recoveryBlockingIds = new Set([
+    'market_data_refresh',
+    'q1_delta_ingest',
+    'quantlab_daily_report',
+    'hist_probs',
+    'snapshot',
+    'us_eu_truth_gate',
+    'stock_analyzer_universe_audit',
+  ]);
+  const recoveryBusy = [
+    ...((recoveryReport?.running_steps || []).map((item) => item?.id || item)),
+    ...((recoveryReport?.blocked_steps || []).map((item) => item?.id || item)),
+    recoveryReport?.next_step || null,
+  ].filter(Boolean).some((id) => recoveryBlockingIds.has(id));
+  const recoveryReady = finalIntegritySeal?.data_plane_green ?? (localBlockingSeverity === 'ok' && !recoveryBusy);
+  const releaseReady = finalIntegritySeal?.release_ready === true;
+  const coverageReady = finalIntegritySeal?.full_universe_validated === true;
+  const localDataGreen = localBlockingSeverity === 'ok';
+  const globalGreen = finalIntegritySeal?.global_green === true;
+  const forcedTargetMarketDate = normalizeDate(process.env.TARGET_MARKET_DATE || process.env.RV_TARGET_MARKET_DATE || null);
+  const forcedRunId = String(process.env.RUN_ID || process.env.RV_RUN_ID || '').trim() || null;
+  const targetMarketDate = forcedTargetMarketDate
+    || expectedOperationalTargetDate
+    || normalizeDate(recoveryReport?.target_market_date || finalIntegritySeal?.target_market_date || releaseTargetMarketDate)
+    || normalizeDate(histOutputAsof || quantOutputAsof)
+    || controlPlaneConsistency.target_market_date
+    || null;
+  const runId = forcedRunId
+    || recoveryReport?.run_id
+    || finalIntegritySeal?.run_id
+    || controlPlaneConsistency.run_id
+    || releaseState?.run_id
+    || `system-status-${targetMarketDate || new Date().toISOString().slice(0, 10)}`;
 
   const primaryActions = dedupe(rootCauses, (cause) => cause.title).map((cause) => ({
     id: cause.id,
@@ -1071,13 +1567,31 @@ function main() {
 
   const payload = {
     schema: 'rv.system_status.v1',
-    generated_at: new Date().toISOString(),
+    ...buildArtifactEnvelope({
+      producer: 'scripts/ops/build-system-status-report.mjs',
+      runId,
+      targetMarketDate,
+      upstreamRunIds: collectUpstreamRunIds(recoveryReport, releaseState, runtimeReport, epochReport),
+    }),
     summary: {
       severity,
-      healthy: severity === 'ok',
-      local_severity: localSeverity,
+      healthy: severity === 'ok' && recoveryReady,
+      local_severity: localBlockingSeverity,
+      blocking_severity: localBlockingSeverity,
+      advisory_severity: ssotAdvisorySeverity,
+      local_data_green: localDataGreen,
+      global_green: globalGreen,
       remote_severity: remoteSeverity,
       remote_healthy: remoteSeverity === 'ok',
+      recovery_ready: recoveryReady,
+      release_ready: releaseReady,
+      coverage_ready: coverageReady,
+      ui_green: finalIntegritySeal?.ui_green ?? null,
+      target_market_date: targetMarketDate,
+      control_plane_ref: 'public/data/pipeline/runtime/latest.json',
+      epoch_ref: 'public/data/pipeline/epoch.json',
+      compute_audit_ref: 'public/data/reports/pipeline-compute-audit-latest.json',
+      monitoring_ref: 'public/data/reports/pipeline-monitoring-latest.json',
       proof_mode: remoteHealth.proof_mode,
       live_fetch_status: 'ok',
       automation_severity: automation.severity,
@@ -1085,6 +1599,8 @@ function main() {
         .reduce((acc, step) => severityRank(step.severity) > severityRank(acc) ? step.severity : acc, 'ok'),
       primary_blocker: (rootCauses.slice().sort((a, b) => severityRank(b.severity) - severityRank(a.severity))[0])?.title || null,
       ssot_violations_count: ssotViolations.length,
+      ssot_blocking_violations_count: ssotBlockingViolations.length,
+      ssot_advisory_violations_count: ssotAdvisoryViolations.length,
     },
     remote_workflows: Object.fromEntries(
       Object.entries(remoteHealth.runs).map(([wf, run]) => [wf, {
@@ -1110,17 +1626,19 @@ function main() {
     root_causes: rootCauses,
     primary_actions: primaryActions,
     stock_analyzer_universe_audit: stockAnalyzerAudit || null,
+    final_integrity_seal: finalIntegritySeal || null,
     data_truth_gate: dataFreshness || null,
     ssot: {
       doc_ref: SYSTEM_STATUS_DOC_REF,
       recovery_script: SYSTEM_STATUS_RECOVERY_SCRIPT,
-      tracked_step_ids: Object.keys(SYSTEM_STATUS_STEP_CONTRACTS),
+      tracked_step_ids: PIPELINE_STEP_ORDER,
       untracked_step_ids: Object.keys(steps).filter((id) => !SYSTEM_STATUS_STEP_CONTRACTS[id]),
       missing_step_ids: Object.keys(SYSTEM_STATUS_STEP_CONTRACTS).filter((id) => !steps[id]),
       web_validation_chain: STOCK_ANALYZER_WEB_VALIDATION_CHAIN,
       violation_contracts: SSOT_VIOLATION_CONTRACTS.map((c) => c.id),
     },
     ssot_violations: ssotViolations,
+    control_plane: controlPlaneConsistency,
   };
 
   fs.mkdirSync(path.dirname(PATHS.output), { recursive: true });

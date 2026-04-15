@@ -409,20 +409,20 @@ async function main() {
                 : marketphaseDeepFeatures.has(tickerBase)
                     ? marketphaseDeepFeatures.get(tickerBase)
                     : null;
-            if (deepFeatures) {
+            if (legacyFeatures) {
+                mp = legacyFeatures;
+                mpSource = 'real_marketphase_symbol';
+            } else if (deepFeatures) {
                 mp = deepFeatures;
                 mpSource = 'real_v7_deep';
-            } else if (legacyFeatures) {
-                mp = legacyFeatures;
-                mpSource = 'real_legacy_marketphase';
             }
 
             if (mp) {
                 let lastClose = (Number.isFinite(Number(mp.lastClose)) && Number(mp.lastClose) > 0)
                     ? Number(mp.lastClose)
                     : ((Number.isFinite(Number(mp.SMA50)) && Number(mp.SMA50) > 0) ? Number(mp.SMA50) : null);
-                // Some legacy marketphase payloads are missing lastClose/SMA50 even though v7 deep features exist.
-                if ((!Number.isFinite(lastClose) || lastClose <= 0) && mpSource === 'real_legacy_marketphase' && deepFeatures) {
+                // Some direct marketphase payloads are missing lastClose/SMA50 even though v7 deep features exist.
+                if ((!Number.isFinite(lastClose) || lastClose <= 0) && mpSource === 'real_marketphase_symbol' && deepFeatures) {
                     mp = deepFeatures;
                     mpSource = 'real_v7_deep';
                     lastClose = (Number.isFinite(Number(mp.lastClose)) && Number(mp.lastClose) > 0)

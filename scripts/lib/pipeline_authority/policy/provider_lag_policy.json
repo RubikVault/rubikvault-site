@@ -1,0 +1,14 @@
+{
+  "schema": "rv.pipeline_authority.provider_lag_policy.v1",
+  "policy_version": "2026.04.12",
+  "artifact_classes": {
+    "release_state": { "max_lag_days": 0, "action": "block" },
+    "runtime": { "max_lag_days": 0, "action": "block" },
+    "final_seal": { "max_lag_days": 0, "action": "block" },
+    "universe_audit": { "max_lag_days": 0, "action": "block" },
+    "forecast": { "max_lag_days": 0, "action": "block" },
+    "governance": { "max_lag_days": 2, "action": "block" },
+    "profile": { "max_lag_days": 5, "action": "warn" },
+    "static_reference": { "max_lag_days": null, "action": "exempt" }
+  }
+}

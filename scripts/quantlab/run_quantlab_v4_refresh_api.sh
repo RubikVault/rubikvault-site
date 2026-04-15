@@ -37,4 +37,8 @@ if [[ -z "$NODE_BIN" ]]; then
   exit 2
 fi
 
+# 1. Run the canonical stock-analyzer publish chain
+"$NODE_BIN" scripts/ops/run-stock-analyzer-publish-chain.mjs
+
+# 2. Start the manual refresh API
 exec "$NODE_BIN" scripts/quantlab/serve_quantlab_v4_report_refresh.mjs

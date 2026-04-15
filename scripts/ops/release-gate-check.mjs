@@ -28,11 +28,14 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { execFileSync, spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { verifySealPayload } from '../lib/pipeline_authority/gates/release-seal.mjs';
+import { resolveRuntimeConfig } from '../lib/pipeline_authority/config/runtime-config.mjs';
 
 const REPO_ROOT = path.resolve(fileURLToPath(new URL('.', import.meta.url)), '../..');
 
 // ─── Paths ─────────────────────────────────────────────────────────────────────
 const RELEASE_STATE_PATH = path.join(REPO_ROOT, 'public/data/ops/release-state-latest.json');
+const FINAL_INTEGRITY_SEAL_PATH = path.join(REPO_ROOT, 'public/data/ops/final-integrity-seal-latest.json');
 const DEPLOY_PROOF_PATH  = path.join(REPO_ROOT, 'public/data/ops/deploy-proof-latest.json');
 const BUNDLE_META_PATH   = path.join(REPO_ROOT, 'dist/pages-prod/data/ops/build-bundle-meta.json');
 const BUILD_META_PATH    = path.join(REPO_ROOT, 'public/data/ops/build-meta.json');
@@ -49,16 +52,12 @@ const SMOKE_ENDPOINTS = {
   ops_pulse:       `${PROD_BASE}/api/ops-pulse`,
 };
 
-// Phases that are considered "ready to deploy"
-const RELEASE_READY_PHASES = new Set([
-  'RELEASE_READY', 'DONE', 'QUANTLAB',  // Any of these means pipeline succeeded
-]);
-
 // ─── Args ──────────────────────────────────────────────────────────────────────
 const argv = process.argv.slice(2);
-const isDryRun   = argv.includes('--dry-run');
-const isForce    = argv.includes('--force');
-const skipSmokes = argv.includes('--skip-smokes');
+const isDryRun    = argv.includes('--dry-run');
+const isForce     = argv.includes('--force');
+const skipSmokes  = argv.includes('--skip-smokes');
+const allowDirty  = argv.includes('--allow-dirty');
 
 // ─── Logging ───────────────────────────────────────────────────────────────────
 function log(msg) { console.log(`[release-gate] ${msg}`); }
@@ -78,6 +77,7 @@ function writeJsonAtomic(p, obj) {
 }
 
 function syncPublicFileIntoBundle(publicPath) {
+  if (!fs.existsSync(publicPath)) return false;
   const rel = path.relative(PUBLIC_DIR, publicPath);
   if (!rel || rel.startsWith('..')) {
     throw new Error(`Cannot sync non-public file into bundle: ${publicPath}`);
@@ -85,9 +85,19 @@ function syncPublicFileIntoBundle(publicPath) {
   const distPath = path.join(DIST_DIR, rel);
   fs.mkdirSync(path.dirname(distPath), { recursive: true });
   fs.copyFileSync(publicPath, distPath);
+  return true;
 }
 
 function utcNow() { return new Date().toISOString(); }
+
+function readTextMaybe(filePath) {
+  if (!filePath) return null;
+  try {
+    return fs.readFileSync(path.resolve(filePath), 'utf8');
+  } catch {
+    return null;
+  }
+}
 
 function getCurrentGitSha() {
   try {
@@ -95,6 +105,47 @@ function getCurrentGitSha() {
       cwd: REPO_ROOT, encoding: 'utf8', timeout: 5000,
     }).trim();
   } catch { return null; }
+}
+
+function checkCleanWorkingTree() {
+  if (allowDirty || isForce) return;
+  try {
+    const dirty = execFileSync('/usr/bin/git', ['status', '--porcelain'], {
+      cwd: REPO_ROOT, encoding: 'utf8', timeout: 5000,
+    }).trim();
+    if (dirty) {
+      fail(`Unclean working tree — commit or stash changes before release.\nDirty files:\n${dirty}\nUse --allow-dirty to override.`);
+    }
+  } catch (e) {
+    if (e.message?.includes('Unclean working tree')) throw e;
+    warn('Could not check git status — proceeding anyway.');
+  }
+}
+
+function verifyFinalSeal(seal) {
+  const requireVerification = process.env.RV_FINAL_SEAL_VERIFY_REQUIRED === '1' || Boolean(seal?.signature);
+  const runtimeConfig = resolveRuntimeConfig({ ensureRuntimeDirs: true });
+  const publicKeyPem = process.env.RV_FINAL_SEAL_PUBLIC_KEY_PEM
+    || readTextMaybe(process.env.RV_FINAL_SEAL_PUBLIC_KEY_PATH)
+    || readTextMaybe(runtimeConfig.finalSealPublicKeyPath);
+  if (!requireVerification) {
+    return { required: false, ok: true, reason: 'verification_not_required' };
+  }
+  if (!seal?.signature || !seal?.key_id) {
+    return { required: true, ok: false, reason: 'signature_missing' };
+  }
+  if (!publicKeyPem) {
+    return { required: true, ok: false, reason: 'public_key_missing' };
+  }
+  const { signature, key_id, signature_algorithm, ...unsignedPayload } = seal;
+  const ok = verifySealPayload(unsignedPayload, { signature, publicKeyPem });
+  return {
+    required: true,
+    ok,
+    reason: ok ? 'verified' : 'signature_invalid',
+    key_id,
+    signature_algorithm: signature_algorithm || null,
+  };
 }
 
 /** Run a command, return { ok, stdout, stderr }. */
@@ -129,37 +180,33 @@ function smokeTest(url) {
 
 function checkReleaseState() {
   const state = readJson(RELEASE_STATE_PATH);
+  const seal = readJson(FINAL_INTEGRITY_SEAL_PATH);
 
-  if (!state && !isForce) {
-    fail(`release-state-latest.json not found at ${RELEASE_STATE_PATH}. ` +
-         'Run the night supervisor first, or use --force to bypass.');
-  }
+  if (!seal && !isForce) fail(`final-integrity-seal-latest.json not found at ${FINAL_INTEGRITY_SEAL_PATH}.`);
 
   if (state) {
     const phase = state.phase || 'UNKNOWN';
-    const targetDate = state.target_date;
+    const targetDate = state.target_market_date || state.target_date || null;
     const lastUpdated = state.last_updated;
     log(`Release state: phase=${phase} target_date=${targetDate} last_updated=${lastUpdated}`);
 
-    if (!isForce && !RELEASE_READY_PHASES.has(phase)) {
-      fail(`Release state phase is "${phase}" — not in RELEASE_READY states. ` +
-           `Use --force to override, or wait for the pipeline to complete. ` +
-           `Blocker: ${state.blocker || 'none'}`);
-    }
-
-    if (state.blocker && !isForce) {
+    if (state.schema === 'rv_release_state_v3' && state.blocker && !isForce) {
       fail(`Release blocked: ${state.blocker}. Use --force to override.`);
     }
-
-    if (state.quantlab?.phase && state.quantlab.phase !== 'DONE' && !isForce) {
-      warn(`QuantLab catchup is in phase "${state.quantlab.phase}" (not DONE). ` +
-           'Dashboard V7 may not be fully green. Use --force to deploy anyway.');
-    }
-  } else {
-    warn('release-state-latest.json missing — proceeding with --force.');
   }
 
-  return state;
+  const sealVerification = verifyFinalSeal(seal);
+  if (!isForce && sealVerification.required && !sealVerification.ok) {
+    fail(`Final integrity seal verification failed: ${sealVerification.reason}.`);
+  }
+
+  if (!isForce && seal?.release_ready !== true) {
+    fail(`Final integrity seal is not green. Top blocker: ${seal?.blocking_reasons?.[0]?.id || 'unknown'}`);
+  }
+
+  return state
+    ? { ...state, final_integrity_seal: seal || null, final_integrity_seal_verification: sealVerification }
+    : { final_integrity_seal: seal || null, final_integrity_seal_verification: sealVerification };
 }
 
 function checkBuildMeta() {
@@ -168,21 +215,6 @@ function checkBuildMeta() {
     log(`Current build commit: ${meta.meta.commit.slice(0, 8)}`);
   }
   return meta;
-}
-
-function updateReleaseState(phase, lastUpdated, previousState, lastSuccessPhaseOverride = undefined) {
-  if (!fs.existsSync(RELEASE_STATE_PATH)) return null;
-  const state = previousState || readJson(RELEASE_STATE_PATH) || {};
-  const nextState = {
-    ...state,
-    phase,
-    last_success_phase: lastSuccessPhaseOverride === undefined
-      ? state.last_success_phase
-      : lastSuccessPhaseOverride,
-    last_updated: lastUpdated,
-  };
-  writeJsonAtomic(RELEASE_STATE_PATH, nextState);
-  return nextState;
 }
 
 function writeDeployProof({
@@ -277,20 +309,21 @@ log(`Dry run: ${isDryRun} | Force: ${isForce} | Skip smokes: ${skipSmokes}`);
 
 const requestedAt = utcNow();
 const currentGitSha = getCurrentGitSha();
+checkCleanWorkingTree();
 
 // 1. Gate checks
 const releaseState = checkReleaseState();
+const releaseStateForProof = releaseState?.schema === 'rv_release_state_v3' ? releaseState : null;
+const finalSealForProof = releaseState?.final_integrity_seal || readJson(FINAL_INTEGRITY_SEAL_PATH);
+const proofTargetDate = finalSealForProof?.target_market_date ?? releaseStateForProof?.target_market_date ?? null;
+const proofReleasePhase = releaseStateForProof?.phase ?? null;
 checkBuildMeta();
-
-// 1b. Seed request-state artifacts before bundle build so the deployed bundle
-// always carries a current request/proof snapshot instead of stale placeholders.
-const requestedState = updateReleaseState('DEPLOY_REQUESTED', requestedAt, releaseState);
 writeDeployProof({
   deployedCommit: currentGitSha,
   requestedAt,
   bundleMeta: null,
-  releaseStatePhase: requestedState?.phase ?? 'DEPLOY_REQUESTED',
-  targetDate: releaseState?.target_date ?? null,
+  releaseStatePhase: proofReleasePhase,
+  targetDate: proofTargetDate,
 });
 
 // 2. Build deploy bundle
@@ -302,8 +335,8 @@ writeDeployProof({
   deployedCommit: currentGitSha,
   requestedAt,
   bundleMeta,
-  releaseStatePhase: requestedState?.phase ?? 'DEPLOY_REQUESTED',
-  targetDate: releaseState?.target_date ?? null,
+  releaseStatePhase: proofReleasePhase,
+  targetDate: proofTargetDate,
 });
 syncPublicFileIntoBundle(RELEASE_STATE_PATH);
 syncPublicFileIntoBundle(DEPLOY_PROOF_PATH);
@@ -340,23 +373,12 @@ writeDeployProof({
   requestedAt,
   verifiedAt: smokeResults.smokes_ok ? verifiedAt : null,
   bundleMeta,
-  releaseStatePhase: smokeResults.smokes_ok ? 'DEPLOY_VERIFIED' : 'DEPLOY_REQUESTED',
-  targetDate: releaseState?.target_date ?? null,
+  releaseStatePhase: proofReleasePhase,
+  targetDate: proofTargetDate,
 });
 log(`Deploy proof written: ${DEPLOY_PROOF_PATH}`);
 
-// 6. Update release state to DEPLOY_VERIFIED
-if (fs.existsSync(RELEASE_STATE_PATH)) {
-  updateReleaseState(
-    smokeResults.smokes_ok ? 'DEPLOY_VERIFIED' : 'DEPLOY_REQUESTED',
-    verifiedAt,
-    null,
-    smokeResults.smokes_ok ? 'DEPLOY_VERIFIED' : undefined,
-  );
-  log(`Release state updated to ${smokeResults.smokes_ok ? 'DEPLOY_VERIFIED' : 'DEPLOY_REQUESTED'}`);
-}
-
-// 7. Publish final proof/state artifacts so production serves the same machine
+// 6. Publish final proof/state artifacts so production serves the same machine
 // evidence that was just written locally.
 syncPublicFileIntoBundle(RELEASE_STATE_PATH);
 syncPublicFileIntoBundle(DEPLOY_PROOF_PATH);

@@ -1,15 +1,14 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import zlib from 'node:zlib';
+import { readGzipNdjson } from './io/gzip-ndjson.mjs';
 
 import { computeIndicators } from '../../functions/api/_shared/eod-indicators.mjs';
 import { buildStockInsightsV4Evaluation } from '../../functions/api/_shared/stock-insights-v4.js';
 import { assembleDecisionInputs } from '../../functions/api/_shared/decision-input-assembly.js';
 
-export const REPO_ROOT = process.cwd();
-const LOCAL_BAR_STALE_DAYS = Math.max(1, Number(process.env.LOCAL_BAR_STALE_DAYS || 3));
-const ALLOW_REMOTE_BAR_FETCH = !['0', 'false', 'no'].includes(String(process.env.ALLOW_REMOTE_BAR_FETCH || '').trim().toLowerCase())
-  && !['1', 'true', 'yes'].includes(String(process.env.BEST_SETUPS_DISABLE_NETWORK || '').trim().toLowerCase());
+export const REPO_ROOT = path.resolve(new URL('.', import.meta.url).pathname, '../..');
+let localBarsRuntimeOverrides = null;
 const SEARCH_EXACT_PATH = 'public/data/universe/v7/search/search_exact_by_symbol.json.gz';
 const STOCK_SYMBOLS_PATH = 'public/data/universe/v7/ssot/stocks.max.symbols.json';
 const REGISTRY_PATH = 'public/data/universe/v7/registry/registry.ndjson.gz';
@@ -21,6 +20,26 @@ const stooqBarsCache = new Map();
 let searchExactCache = null;
 let stockSymbolsCache = null;
 let registryIndexCache = null;
+
+export function setLocalBarsRuntimeOverrides(overrides = null) {
+  localBarsRuntimeOverrides = overrides && typeof overrides === 'object'
+    ? { ...overrides }
+    : null;
+}
+
+function resolveLocalBarStaleDays() {
+  const override = Number(localBarsRuntimeOverrides?.localBarStaleDays);
+  if (Number.isFinite(override) && override > 0) return Math.max(1, override);
+  return Math.max(1, Number(process.env.LOCAL_BAR_STALE_DAYS || 3));
+}
+
+function resolveAllowRemoteBarFetch() {
+  if (typeof localBarsRuntimeOverrides?.allowRemoteBarFetch === 'boolean') {
+    return localBarsRuntimeOverrides.allowRemoteBarFetch;
+  }
+  return !['0', 'false', 'no'].includes(String(process.env.ALLOW_REMOTE_BAR_FETCH || '').trim().toLowerCase())
+    && !['1', 'true', 'yes'].includes(String(process.env.BEST_SETUPS_DISABLE_NETWORK || '').trim().toLowerCase());
+}
 
 function toFinite(value) {
   const num = Number(value);
@@ -208,19 +227,7 @@ export async function readNdjsonGzAbs(absPath) {
   const cached = jsonCache.get(absPath);
   if (cached) return cached;
   try {
-    const raw = await fs.readFile(absPath);
-    const decoded = zlib.gunzipSync(raw)
-      .toString('utf8')
-      .split('\n')
-      .filter(Boolean)
-      .map((line) => {
-        try {
-          return JSON.parse(line);
-        } catch {
-          return null;
-        }
-      })
-      .filter(Boolean);
+    const decoded = await readGzipNdjson(absPath);
     jsonCache.set(absPath, decoded);
     return decoded;
   } catch {
@@ -275,20 +282,34 @@ async function loadRegistryIndex() {
 export async function resolveLocalAssetMeta(ticker) {
   const cleanTicker = normalizeTicker(ticker);
   if (!cleanTicker) return null;
+  const options = arguments.length > 1 && arguments[1] && typeof arguments[1] === 'object'
+    ? arguments[1]
+    : {};
+  const preferredExchange = normalizeTicker(options.preferredExchange);
+  const preferredCanonicalId = normalizeCanonicalId(options.preferredCanonicalId || options.canonicalId);
   const [searchExactDoc, registryIndex] = await Promise.all([
     loadSearchExact(),
     loadRegistryIndex(),
   ]);
   const searchExact = searchExactDoc?.by_symbol?.[cleanTicker] || null;
   const canonicalId = normalizeCanonicalId(searchExact?.canonical_id);
+  const symbolCandidates = registryIndex.bySymbolCandidates.get(cleanTicker) || [];
+  const byPreferredCanonical = preferredCanonicalId
+    ? (registryIndex.byCanonical.get(preferredCanonicalId) || null)
+    : null;
+  const preferred = preferredExchange
+    ? (symbolCandidates.find((candidate) => (
+        candidate?.exchange === preferredExchange ||
+        normalizeCanonicalId(candidate?.canonical_id)?.startsWith(`${preferredExchange}:`)
+      )) || null)
+    : null;
   const byCanonical = canonicalId ? registryIndex.byCanonical.get(canonicalId) : null;
   const bySymbol = registryIndex.bySymbol.get(cleanTicker) || null;
-  const symbolCandidates = registryIndex.bySymbolCandidates.get(cleanTicker) || [];
-  const resolved = byCanonical || bySymbol || null;
+  const resolved = byPreferredCanonical || preferred || byCanonical || bySymbol || null;
   if (!resolved && !searchExact) return null;
   return {
     ticker: cleanTicker,
-    canonical_id: resolved?.canonical_id || canonicalId || null,
+    canonical_id: resolved?.canonical_id || preferredCanonicalId || canonicalId || null,
     exchange: resolved?.exchange || normalizeTicker(searchExact?.exchange) || (canonicalId?.includes(':') ? canonicalId.split(':')[0] : null),
     type_norm: resolved?.type_norm || String(searchExact?.type_norm || '').trim().toUpperCase() || null,
     bars_count: Number(resolved?.bars_count || searchExact?.bars_count || 0),
@@ -327,19 +348,21 @@ async function loadBarsFromHistoryPack(assetMeta) {
   return [];
 }
 
-export async function loadLocalBars(ticker) {
+export async function loadLocalBars(ticker, options = {}) {
   const cleanTicker = normalizeTicker(ticker);
   if (!cleanTicker) return [];
+  const localBarStaleDays = resolveLocalBarStaleDays();
+  const allowRemoteBarFetch = resolveAllowRemoteBarFetch();
 
   const seriesRows = await readNdjsonGzAbs(adjustedSeriesPath(cleanTicker));
   let seriesBars = normalizeRows(seriesRows);
   const latestSeriesDate = seriesBars[seriesBars.length - 1]?.date || null;
-  if (ALLOW_REMOTE_BAR_FETCH && (!seriesBars.length || (daysFromToday(latestSeriesDate) ?? Infinity) > LOCAL_BAR_STALE_DAYS) && looksLikeUsTicker(cleanTicker)) {
+  if (allowRemoteBarFetch && (!seriesBars.length || (daysFromToday(latestSeriesDate) ?? Infinity) > localBarStaleDays) && looksLikeUsTicker(cleanTicker)) {
     const refreshedBars = await fetchStooqAdjustedSeries(cleanTicker);
     if (refreshedBars.length) seriesBars = refreshedBars;
   }
 
-  const assetMeta = await resolveLocalAssetMeta(cleanTicker);
+  const assetMeta = await resolveLocalAssetMeta(cleanTicker, options);
   const packBars = await loadBarsFromHistoryPack(assetMeta);
   if (seriesBars.length || packBars.length) {
     const barMap = new Map();

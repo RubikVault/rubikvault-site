@@ -13,6 +13,8 @@ import { applyIsotonicCalibration } from '../lib/calibration/isotonic.mjs';
 const POLICY_PATH = 'policies/forecast.v3.json';
 const CHAMPION_PATH = 'mirrors/forecast/champion/current.json';
 const CALIBRATION_ARTIFACT_TEMPLATE = 'mirrors/forecast/champion/calibration_{horizon}.json';
+export const FORECAST_SCHEMA_VERSION = 'forecast_record_v3';
+export const FORECAST_FEATURE_VERSION = 'forecast_feature_snapshot_v1';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Policy & Champion Loading
@@ -281,6 +283,8 @@ export function generateForecast({
         recentEce
     });
 
+    const modelVersion = championSpec?.model_version || championSpec?.champion_id || 'forecast_engine_v3';
+
     // Build forecast record
     const forecastContent = {
         trading_date: tradingDate,
@@ -290,13 +294,18 @@ export function generateForecast({
         champion_spec_hash: computeChampionHash(championSpec),
         policy_hash: policyHash,
         feature_snapshot_hash: featureSnapshot.feature_snapshot_hash,
-        snapshots_manifest_sha256: snapshotsManifest?.manifest_sha256 ?? null
+        snapshots_manifest_sha256: snapshotsManifest?.manifest_sha256 ?? null,
+        schema_version: FORECAST_SCHEMA_VERSION,
+        model_version: modelVersion,
+        feature_version: FORECAST_FEATURE_VERSION,
     };
 
     const forecastId = computeDigest(canonicalJSON(forecastContent));
 
     return {
-        schema: 'forecast_record_v3',
+        schema: FORECAST_SCHEMA_VERSION,
+        schema_version: FORECAST_SCHEMA_VERSION,
+        record_status: 'active',
         forecast_id: forecastId,
         provenance,
         run_id: runId,
@@ -305,6 +314,8 @@ export function generateForecast({
         ticker,
         horizon,
         champion_id: championSpec.champion_id,
+        model_version: modelVersion,
+        feature_version: FORECAST_FEATURE_VERSION,
         champion_spec_hash: computeChampionHash(championSpec),
         policy_hash: policyHash,
         code_hash: codeHash,
@@ -337,6 +348,8 @@ export default {
     loadChampion,
     computePolicyHash,
     computeChampionHash,
+    FORECAST_SCHEMA_VERSION,
+    FORECAST_FEATURE_VERSION,
     logisticPredict,
     isotonicCalibrate,
     applyNeutralBand,

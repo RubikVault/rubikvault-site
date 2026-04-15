@@ -2,8 +2,8 @@
 
 import { readLedgerRangeAsync, writeOutcomeRecords } from './ledger_writer.mjs';
 import { createOutcomeRecord, computeOutcome } from './evaluator.mjs';
-import { loadPriceHistory } from './snapshot_ingest.mjs';
 import { getHorizonOutcomeDate } from './trading_date.mjs';
+import { resolveMaturityPricePair } from './maturity-lookup.mjs';
 
 const ROOT = process.cwd();
 
@@ -36,20 +36,14 @@ async function main() {
     return outcomeDate && outcomeDate <= endDate;
   });
 
-  const tickers = Array.from(new Set(maturedForecasts.map((row) => String(row?.ticker || '').toUpperCase()).filter(Boolean)));
-  const priceHistory = await loadPriceHistory(ROOT, tickers, endDate);
   const outcomes = [];
 
   for (const forecast of maturedForecasts) {
-    const ticker = String(forecast?.ticker || '').toUpperCase();
     const horizonDays = Number(String(forecast?.horizon || '').replace('d', '')) || 1;
     const outcomeDate = getHorizonOutcomeDate(String(forecast?.trading_date || ''), horizonDays);
-    const tickerPrices = priceHistory[ticker];
-    if (!tickerPrices?.dates?.length) continue;
-    const forecastIdx = tickerPrices.dates.indexOf(String(forecast?.trading_date || ''));
-    const outcomeIdx = tickerPrices.dates.indexOf(outcomeDate);
-    if (forecastIdx === -1 || outcomeIdx === -1) continue;
-    const y = computeOutcome(tickerPrices.closes[forecastIdx], tickerPrices.closes[outcomeIdx]);
+    const pair = await resolveMaturityPricePair(ROOT, forecast, outcomeDate, endDate);
+    if (!pair.ok) continue;
+    const y = computeOutcome(pair.priceAtForecast, pair.priceAtOutcome);
     if (y == null) continue;
     outcomes.push(createOutcomeRecord(forecast, y, outcomeDate));
   }

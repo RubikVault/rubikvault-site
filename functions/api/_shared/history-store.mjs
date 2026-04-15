@@ -1,3 +1,23 @@
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { gunzipSync } from 'node:zlib';
+
+const REPO_ROOT = (() => {
+    try {
+        const currentUrl = String(import.meta.url || '');
+        if (currentUrl.startsWith('file:')) {
+            return path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
+        }
+    } catch {
+        // fall through
+    }
+    if (typeof process !== 'undefined' && typeof process.cwd === 'function') {
+        return process.cwd();
+    }
+    return '.';
+})();
+
 const historyPackManifestCache = {
     promise: null,
     value: null,
@@ -20,13 +40,75 @@ function buildSymbolCandidates(symbol) {
     return [...new Set(candidates)];
 }
 
+function latestMergedDate(rows) {
+    if (!Array.isArray(rows) || rows.length === 0) return null;
+    const latest = rows[rows.length - 1];
+    return typeof latest?.date === 'string' ? latest.date : null;
+}
+
+function isLocalOrigin(baseUrl) {
+    try {
+        const { hostname } = new URL(baseUrl);
+        return hostname === '127.0.0.1' || hostname === 'localhost';
+    } catch {
+        return false;
+    }
+}
+
+function toLocalAssetPath(relPath) {
+    const relative = String(relPath || '').startsWith('/') ? String(relPath).slice(1) : String(relPath || '');
+    if (!relative.startsWith('data/')) return null;
+    return path.join(REPO_ROOT, 'public', relative);
+}
+
+async function readLocalTextMaybe(relPath) {
+    const filePath = toLocalAssetPath(relPath);
+    if (!filePath) return null;
+    try {
+        const buffer = await fs.readFile(filePath);
+        return filePath.endsWith('.gz')
+            ? gunzipSync(buffer).toString('utf8')
+            : buffer.toString('utf8');
+    } catch {
+        return null;
+    }
+}
+
+async function readLocalJsonMaybe(relPath) {
+    const text = await readLocalTextMaybe(relPath);
+    if (!text) return null;
+    try {
+        return JSON.parse(text);
+    } catch {
+        return null;
+    }
+}
+
 export async function getStaticBars(symbol, baseUrl, assetFetcher = null) {
+    let mergedBars = [];
     try {
         const candidates = buildSymbolCandidates(symbol);
         const cleanSymbol = candidates[0]?.replace(/[^A-Z0-9.\-]/g, '') || '';
-        let mergedBars = [];
+        const localMode = isLocalOrigin(baseUrl);
 
         async function fetchGzipNdjson(relPath) {
+            if (localMode) {
+                const localText = await readLocalTextMaybe(relPath);
+                if (localText) {
+                    return localText
+                        .split('\n')
+                        .map((line) => line.trim())
+                        .filter(Boolean)
+                        .map((line) => {
+                            try {
+                                return JSON.parse(line);
+                            } catch {
+                                return null;
+                            }
+                        })
+                        .filter(Boolean);
+                }
+            }
             const url = baseUrl ? new URL(relPath, baseUrl).toString() : relPath;
             const response = assetFetcher && relPath.startsWith('/data/')
                 ? await assetFetcher.fetch(url)
@@ -110,6 +192,10 @@ export async function getStaticBars(symbol, baseUrl, assetFetcher = null) {
         }
 
         async function fetchJson(relPath) {
+            if (localMode) {
+                const localPayload = await readLocalJsonMaybe(relPath);
+                if (localPayload) return localPayload;
+            }
             try {
                 const url = baseUrl ? new URL(relPath, baseUrl).toString() : relPath;
                 const response = assetFetcher && relPath.startsWith('/data/')
@@ -211,6 +297,26 @@ export async function getStaticBars(symbol, baseUrl, assetFetcher = null) {
 
         for (const shardPath of shardCandidates) {
             try {
+                if (localMode) {
+                    const shardData = await readLocalJsonMaybe(shardPath);
+                    if (shardData && typeof shardData === 'object') {
+                        for (const candidate of candidates) {
+                            const tickerBarsRaw = shardData[candidate] || shardData[candidate.replace(/[^A-Z0-9.\-]/g, '')];
+                            if (Array.isArray(tickerBarsRaw)) {
+                                mergeInBars(tickerBarsRaw.map(b => ({
+                                    date: b[0],
+                                    open: b[1],
+                                    high: b[2],
+                                    low: b[3],
+                                    close: b[4],
+                                    adjClose: b[5],
+                                    volume: b[6]
+                                })));
+                            }
+                        }
+                        continue;
+                    }
+                }
                 const url = baseUrl ? new URL(shardPath, baseUrl).toString() : shardPath;
                 const res = assetFetcher && shardPath.startsWith('/data/')
                     ? await assetFetcher.fetch(url)
@@ -257,7 +363,7 @@ export async function getStaticBars(symbol, baseUrl, assetFetcher = null) {
 
         return mergedBars.length ? mergedBars : null;
     } catch (err) {
-        return null;
+        return mergedBars.length ? mergedBars : null;
     }
 }
 

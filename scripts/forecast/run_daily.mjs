@@ -14,12 +14,15 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { buildFeatureSnapshot } from './build_features.mjs';
-import { loadPolicy, loadChampion, computePolicyHash, generateForecast, loadCalibrationArtifact } from './forecast_engine.mjs';
+import { loadPolicy, loadChampion, computePolicyHash, generateForecast, loadCalibrationArtifact, FORECAST_SCHEMA_VERSION, FORECAST_FEATURE_VERSION } from './forecast_engine.mjs';
 import { writeForecastRecords, writeOutcomeRecords, iterateLedgerRangeAsync } from './ledger_writer.mjs';
 import { computeOutcome, createOutcomeRecord } from './evaluator.mjs';
 import { generateDailyReport, writeReport, generateScorecards, writeScorecards, updateStatus, updateLatest, updateLastGood, publishLatestFromLastGood } from './report_generator.mjs';
 import { ingestSnapshots, loadPriceHistory, loadUniverse } from './snapshot_ingest.mjs';
 import { resolveTradingDate, getHorizonOutcomeDate } from './trading_date.mjs';
+import { writeForecastPhaseStatus } from './status_artifacts.mjs';
+import { lookupMaturityHistory } from './maturity-lookup.mjs';
+import { canEvaluateOutcomeDate } from './finality.mjs';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Configuration
@@ -28,6 +31,7 @@ import { resolveTradingDate, getHorizonOutcomeDate } from './trading_date.mjs';
 const HORIZONS = ['1d', '5d', '20d'];
 const HORIZON_DAYS = { '1d': 1, '5d': 5, '20d': 20 };
 const SKIP_MATURED_EVAL = process.env.FORECAST_SKIP_MATURED_EVAL === '1';
+const FORECAST_RSS_BUDGET_MB = Math.max(128, Number(process.env.FORECAST_RSS_BUDGET_MB || 1024));
 
 async function loadExistingLedgerIds(repoRoot, ledgerType, startDate, endDate, idField) {
     const ids = new Set();
@@ -36,6 +40,18 @@ async function loadExistingLedgerIds(repoRoot, ledgerType, startDate, endDate, i
         if (id) ids.add(id);
     }
     return ids;
+}
+
+function enforceRssBudget(label, budgetMb = FORECAST_RSS_BUDGET_MB) {
+    const rssMb = Math.round(process.memoryUsage().rss / (1024 * 1024));
+    if (rssMb > budgetMb) {
+        const error = new Error(`rss_budget_exceeded:${label}:${rssMb}MB>${budgetMb}MB`);
+        error.code = 'FORECAST_RSS_BUDGET_EXCEEDED';
+        error.rss_mb = rssMb;
+        error.budget_mb = budgetMb;
+        throw error;
+    }
+    return rssMb;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -171,11 +187,20 @@ async function generateAllForecasts({
 async function evaluateMaturedForecasts({
     tradingDate,
     repoRoot,
-    priceHistory,
-    policy
+    policy,
+    champion
 }) {
     const outcomes = [];
-    const maxMonths = policy?.ledger_partitioning?.max_months_to_scan_for_metrics ?? 6;
+    const envLedgerScanMonths = Number(process.env.FORECAST_LEDGER_SCAN_MONTHS || 0);
+    const maxMonths = envLedgerScanMonths > 0
+        ? envLedgerScanMonths
+        : (policy?.ledger_partitioning?.max_months_to_scan_for_metrics ?? 6);
+    const modelVersion = champion?.model_version || champion?.champion_id || null;
+    const meta = {
+        deprecated_forecasts: 0,
+        superseded_forecasts: 0,
+        incompatible_samples: [],
+    };
 
     // Scan recent forecasts for matured horizons
     const today = new Date(tradingDate);
@@ -190,6 +215,7 @@ async function evaluateMaturedForecasts({
     );
     const seenForecastIds = new Set();
 
+    const candidateByKey = new Map();
     for await (const forecast of iterateLedgerRangeAsync(
         repoRoot,
         'forecasts',
@@ -200,18 +226,60 @@ async function evaluateMaturedForecasts({
         if (!forecastId || seenForecastIds.has(forecastId) || existingOutcomeForecastIds.has(forecastId)) continue;
         seenForecastIds.add(forecastId);
         if (forecast?.provenance !== 'live') continue;
+        if (forecast?.record_status && forecast.record_status !== 'active') continue;
+        const schemaVersion = String(forecast?.schema_version || forecast?.schema || '').trim();
+        const featureVersion = String(forecast?.feature_version || '').trim();
+        const forecastModelVersion = String(forecast?.model_version || '').trim();
+        const versionCompatible = (
+            schemaVersion === FORECAST_SCHEMA_VERSION &&
+            featureVersion === FORECAST_FEATURE_VERSION &&
+            (!modelVersion || forecastModelVersion === modelVersion)
+        );
+        if (!versionCompatible) {
+            meta.deprecated_forecasts += 1;
+            if (meta.incompatible_samples.length < 25) {
+                meta.incompatible_samples.push({
+                    forecast_id: forecastId,
+                    ticker: forecast?.ticker || null,
+                    horizon: forecast?.horizon || null,
+                    trading_date: forecast?.trading_date || null,
+                    schema_version: schemaVersion || null,
+                    feature_version: featureVersion || null,
+                    model_version: forecastModelVersion || null,
+                });
+            }
+            continue;
+        }
         const horizonDays = HORIZON_DAYS[forecast.horizon] ?? 1;
         const outcomeDate = getHorizonOutcomeDate(forecast.trading_date, horizonDays);
 
         // Check if outcome date has arrived
         if (outcomeDate > tradingDate) continue;
+        const finality = canEvaluateOutcomeDate(repoRoot, outcomeDate, tradingDate);
+        if (!finality.ok) continue;
+        const logicalKey = `${forecast.ticker}|${forecast.trading_date}|${forecast.horizon}`;
+        const previous = candidateByKey.get(logicalKey);
+        if (previous) {
+            meta.superseded_forecasts += 1;
+            const previousAsOf = String(previous.as_of || '');
+            const currentAsOf = String(forecast.as_of || '');
+            if (currentAsOf > previousAsOf) {
+                candidateByKey.set(logicalKey, { ...forecast, outcomeDate });
+            }
+            continue;
+        }
+        candidateByKey.set(logicalKey, { ...forecast, outcomeDate });
+    }
 
-        // Check if we have price data for outcome
-        const tickerPrices = priceHistory[forecast.ticker];
+    const maturedForecasts = [...candidateByKey.values()];
+    const maturityHistory = await lookupMaturityHistory(repoRoot, maturedForecasts, tradingDate);
+
+    for (const forecast of maturedForecasts) {
+        const tickerPrices = maturityHistory[String(forecast?.ticker || '').trim().toUpperCase()];
         if (!tickerPrices) continue;
 
         const forecastIdx = tickerPrices.dates?.indexOf(forecast.trading_date);
-        const outcomeIdx = tickerPrices.dates?.indexOf(outcomeDate);
+        const outcomeIdx = tickerPrices.dates?.indexOf(forecast.outcomeDate);
 
         if (forecastIdx === -1 || outcomeIdx === -1) continue;
 
@@ -221,11 +289,65 @@ async function evaluateMaturedForecasts({
         const y = computeOutcome(priceAtForecast, priceAtOutcome);
         if (y === null) continue;
 
-        const outcome = createOutcomeRecord(forecast, y, outcomeDate);
+        const outcome = createOutcomeRecord(forecast, y, forecast.outcomeDate);
         outcomes.push(outcome);
     }
 
-    return outcomes;
+    return { outcomes, meta };
+}
+
+function deriveDirection(p_up, neutralFlag) {
+    if (neutralFlag) return 'neutral';
+    if (p_up > 0.53) return 'bullish';
+    if (p_up < 0.47) return 'bearish';
+    return 'neutral';
+}
+
+function buildForecastsSummary(forecasts) {
+    const byTicker = new Map();
+    for (const forecast of forecasts || []) {
+        if (!byTicker.has(forecast.ticker)) {
+            byTicker.set(forecast.ticker, {});
+        }
+        byTicker.get(forecast.ticker)[forecast.horizon] = forecast;
+    }
+
+    const buildHorizon = (fc) => fc ? {
+        direction: deriveDirection(fc.p_up, fc.neutral_flag),
+        probability: fc.p_up
+    } : null;
+
+    return Array.from(byTicker.entries())
+        .sort((a, b) => a[0].localeCompare(b[0]))
+        .map(([ticker, horizons]) => ({
+            symbol: ticker,
+            name: null,
+            horizons: {
+                '1d': buildHorizon(horizons['1d']),
+                '5d': buildHorizon(horizons['5d']),
+                '20d': buildHorizon(horizons['20d'])
+            }
+        }));
+}
+
+function buildAccuracySummary(outcomes) {
+    if (!outcomes.length) return null;
+    return {
+        directional: Number(
+            (
+                outcomes.filter((o) => {
+                    const predicted = Number(o?.p_up) >= 0.5 ? 1 : 0;
+                    return predicted === Number(o?.y);
+                }).length / outcomes.length
+            ).toFixed(4)
+        ),
+        brier: Number(
+            (
+                outcomes.reduce((sum, o) => sum + Number(o?.metrics?.brier || 0), 0) / outcomes.length
+            ).toFixed(6)
+        ),
+        sample_count: outcomes.length
+    };
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -233,16 +355,22 @@ async function evaluateMaturedForecasts({
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * Run the complete daily pipeline
+ * Run the generate phase
  * @param {object} options
  */
-export async function runDailyPipeline(options = {}) {
+export async function runGeneratePhase(options = {}) {
     const repoRoot = options.repoRoot ?? process.cwd();
     const forceDate = options.date ?? null;
 
-    console.log('\n═══════════════════════════════════════════════════════════════');
-    console.log('  FORECAST SYSTEM v3.0 — DAILY PIPELINE');
-    console.log('═══════════════════════════════════════════════════════════════\n');
+    writeForecastPhaseStatus(repoRoot, 'generate', {
+        status: 'running',
+        trading_date: forceDate,
+        counts: {},
+        meta: {
+            log_path: process.env.FORECAST_PHASE_LOG_PATH || null,
+        },
+    });
+    const phaseStartedAt = Date.now();
 
     // 1. Load policy and champion
     console.log('[Step 1] Loading policy and champion spec...');
@@ -259,12 +387,14 @@ export async function runDailyPipeline(options = {}) {
     console.log('[Step 2] Resolving trading date...');
     const tradingDate = forceDate ?? resolveTradingDate(new Date(), policy);
     console.log(`  Trading Date: ${tradingDate}`);
+    const rssAtStart = enforceRssBudget('generate_start');
 
     // 3. Ingest snapshots
     console.log('[Step 3] Ingesting snapshots...');
     const snapshot = await ingestSnapshots(repoRoot, tradingDate, policy);
     console.log(`  Universe: ${snapshot.universe?.length ?? 0} tickers`);
     console.log(`  Missing price data: ${(snapshot.missing_price_pct ?? 0).toFixed(1)}%`);
+    const rssAfterIngest = enforceRssBudget('generate_after_ingest');
 
     // 4. Data quality gates
     console.log('[Step 4] Running data quality gates...');
@@ -288,8 +418,23 @@ export async function runDailyPipeline(options = {}) {
             last_good: fallbackLatest?.meta?.last_good_ref ?? null
         });
 
+        writeForecastPhaseStatus(repoRoot, 'generate', {
+            status: 'degraded',
+            reason: fallbackReason,
+            trading_date: tradingDate,
+        counts: {
+            universe: snapshot.universe?.length ?? 0,
+            forecasts_generated: 0,
+            forecasts_written: 0,
+            elapsed_seconds: Number(((Date.now() - phaseStartedAt) / 1000).toFixed(1)),
+        },
+            meta: {
+                log_path: process.env.FORECAST_PHASE_LOG_PATH || null,
+            },
+        });
+
         console.log('  Pipeline degraded. Published last_good.');
-        return { ok: true, degraded: true, reason: fallbackReason };
+        return { ok: true, degraded: true, reason: fallbackReason, tradingDate, policy, champion, snapshot, forecasts: [] };
     }
 
     console.log('  ✓ Data quality OK');
@@ -301,6 +446,7 @@ export async function runDailyPipeline(options = {}) {
     const BENCHMARK_CANDIDATES = ['SPY', 'VT', 'ACWI', 'IWDA'];
     const spyPrices = BENCHMARK_CANDIDATES.reduce((found, sym) => found || priceHistory[sym] || null, null);
     console.log(`  Loaded history for ${Object.keys(priceHistory).length} tickers (benchmark: ${BENCHMARK_CANDIDATES.find(s => priceHistory[s]) || 'none'})`);
+    const rssAfterHistory = enforceRssBudget('generate_after_history');
 
     // 6. Generate forecasts
     console.log('[Step 6] Generating forecasts...');
@@ -317,6 +463,7 @@ export async function runDailyPipeline(options = {}) {
         policy
     });
     console.log(`  Generated ${forecasts.length} forecasts`);
+    const rssAfterForecasts = enforceRssBudget('generate_after_forecasts');
 
     if (forecasts.length === 0) {
         const fallbackReason = 'Using last_good forecasts: no fresh forecasts generated';
@@ -331,8 +478,22 @@ export async function runDailyPipeline(options = {}) {
             last_run: tradingDate,
             last_good: fallbackLatest?.meta?.last_good_ref ?? null
         });
+        writeForecastPhaseStatus(repoRoot, 'generate', {
+            status: 'degraded',
+            reason: fallbackReason,
+            trading_date: tradingDate,
+        counts: {
+            universe: snapshot.universe?.length ?? 0,
+            forecasts_generated: 0,
+            forecasts_written: 0,
+            elapsed_seconds: Number(((Date.now() - phaseStartedAt) / 1000).toFixed(1)),
+        },
+            meta: {
+                log_path: process.env.FORECAST_PHASE_LOG_PATH || null,
+            },
+        });
         console.log('  Pipeline degraded. Published last_good.');
-        return { ok: true, degraded: true, reason: fallbackReason };
+        return { ok: true, degraded: true, reason: fallbackReason, tradingDate, policy, champion, snapshot, forecasts: [] };
     }
 
     // 7. Write forecast records
@@ -348,6 +509,72 @@ export async function runDailyPipeline(options = {}) {
     const newForecasts = forecasts.filter((forecast) => !existingForecastIds.has(String(forecast?.forecast_id || '').trim()));
     writeForecastRecords(repoRoot, newForecasts);
 
+    if (options.writeLatest === true) {
+        updateLatest(repoRoot, {
+            ok: true,
+            status: 'ok',
+            reason: null,
+            champion_id: champion.champion_id,
+            trained_at: champion.created_at ?? null,
+            freshness: tradingDate,
+            accuracy: null,
+            asof: tradingDate,
+            forecasts: buildForecastsSummary(forecasts),
+            latest_report_ref: `public/data/forecast/reports/daily/${tradingDate}.json`,
+            scorecards_ref: 'public/data/forecast/scorecards/tickers.json.gz',
+            maturity_phase: 'BOOTSTRAP'
+        });
+    }
+
+    writeForecastPhaseStatus(repoRoot, 'generate', {
+        status: 'ok',
+        trading_date: tradingDate,
+        counts: {
+            universe: snapshot.universe?.length ?? 0,
+            forecasts_generated: forecasts.length,
+            forecasts_written: newForecasts.length,
+            elapsed_seconds: Number(((Date.now() - phaseStartedAt) / 1000).toFixed(1)),
+        },
+        meta: {
+            champion_id: champion.champion_id,
+            log_path: process.env.FORECAST_PHASE_LOG_PATH || null,
+            rss_budget_mb: FORECAST_RSS_BUDGET_MB,
+            rss_usage_mb: rssAfterForecasts,
+            rss_start_mb: rssAtStart,
+            rss_after_ingest_mb: rssAfterIngest,
+            rss_after_history_mb: rssAfterHistory,
+        },
+    });
+
+    return {
+        ok: true,
+        tradingDate,
+        policy,
+        champion,
+        snapshot,
+        forecasts,
+    };
+}
+
+export async function runEvaluatePhase(options = {}) {
+    const repoRoot = options.repoRoot ?? process.cwd();
+    const policy = options.policy ?? loadPolicy(repoRoot);
+    const tradingDate = options.tradingDate ?? options.date ?? resolveTradingDate(new Date(), policy);
+    const champion = options.champion ?? null;
+    const snapshot = options.snapshot ?? null;
+    const forecasts = options.forecasts ?? [];
+
+    writeForecastPhaseStatus(repoRoot, 'evaluate', {
+        status: 'running',
+        trading_date: tradingDate,
+        counts: {},
+        meta: {
+            log_path: process.env.FORECAST_PHASE_LOG_PATH || null,
+        },
+    });
+    const phaseStartedAt = Date.now();
+    const rssAtStart = enforceRssBudget('evaluate_start');
+
     // 8. Evaluate matured forecasts
     console.log('[Step 8] Evaluating matured forecasts...');
     let outcomes = [];
@@ -357,13 +584,17 @@ export async function runDailyPipeline(options = {}) {
         console.warn('  ⚠ Skipping maturity evaluation (FORECAST_SKIP_MATURED_EVAL=1). Continuing with fresh forecasts.');
     } else {
         try {
-            outcomes = await evaluateMaturedForecasts({
+            const evaluation = await evaluateMaturedForecasts({
                 tradingDate,
                 repoRoot,
-                priceHistory,
-                policy
+                policy,
+                champion
             });
+            outcomes = evaluation.outcomes;
+            const evaluationMeta = evaluation.meta || {};
+            options._evaluationMeta = evaluationMeta;
             console.log(`  Evaluated ${outcomes.length} outcomes`);
+            enforceRssBudget('evaluate_after_maturity_lookup');
         } catch (err) {
             if (err?.code === 'ERR_STRING_TOO_LONG') {
                 evaluationWarning = `maturity_eval_skipped:${err.code}`;
@@ -391,7 +622,7 @@ export async function runDailyPipeline(options = {}) {
             circuit_state: 'closed',
             has_earnings: false,
             has_macro: false,
-            missing_price_pct: snapshot.missing_price_pct ?? 0,
+            missing_price_pct: snapshot?.missing_price_pct ?? 0,
             evaluation_warning: evaluationWarning
         }
     });
@@ -415,92 +646,97 @@ export async function runDailyPipeline(options = {}) {
             has_macro: false
         }
     });
+    let latestDoc = null;
+    if (options.writeLatest === true && champion && forecasts.length > 0) {
+        latestDoc = updateLatest(repoRoot, {
+            ok: true,
+            status: evaluationWarning ? 'degraded' : 'ok',
+            reason: evaluationWarning,
+            champion_id: champion.champion_id,
+            trained_at: champion.created_at ?? null,
+            freshness: tradingDate,
+            accuracy: buildAccuracySummary(outcomes),
+            asof: tradingDate,
+            forecasts: buildForecastsSummary(forecasts),
+            latest_report_ref: `public/data/forecast/reports/daily/${tradingDate}.json`,
+            scorecards_ref: 'public/data/forecast/scorecards/tickers.json.gz',
+            maturity_phase: report.maturity_phase
+        });
 
-    // Build forecasts summary for UI consumption
-    // Helper to derive direction from probability
-    function deriveDirection(p_up, neutralFlag) {
-        if (neutralFlag) return 'neutral';
-        if (p_up > 0.53) return 'bullish';
-        if (p_up < 0.47) return 'bearish';
-        return 'neutral';
+        updateLastGood(repoRoot, {
+            champion_id: champion.champion_id,
+            report_ref: `public/data/forecast/reports/daily/${tradingDate}.json`,
+            as_of: new Date().toISOString(),
+            latest_envelope: latestDoc
+        });
     }
 
-    const byTicker = new Map();
-    for (const forecast of forecasts) {
-        if (!byTicker.has(forecast.ticker)) {
-            byTicker.set(forecast.ticker, {});
-        }
-        byTicker.get(forecast.ticker)[forecast.horizon] = forecast;
-    }
-
-    const buildHorizon = (fc) => fc ? {
-        direction: deriveDirection(fc.p_up, fc.neutral_flag),
-        probability: fc.p_up
-    } : null;
-
-    const forecastsSummary = Array.from(byTicker.entries())
-        .sort((a, b) => a[0].localeCompare(b[0]))
-        .map(([ticker, horizons]) => ({
-            symbol: ticker,
-            name: null,  // Name lookup not implemented yet
-            horizons: {
-                '1d': buildHorizon(horizons['1d']),
-                '5d': buildHorizon(horizons['5d']),
-                '20d': buildHorizon(horizons['20d'])
-            }
-        }));
-
-    const accuracySummary = outcomes.length > 0
-        ? {
-            directional: Number(
-                (
-                    outcomes.filter((o) => {
-                        const predicted = Number(o?.p_up) >= 0.5 ? 1 : 0;
-                        return predicted === Number(o?.y);
-                    }).length / outcomes.length
-                ).toFixed(4)
-            ),
-            brier: Number(
-                (
-                    outcomes.reduce((sum, o) => sum + Number(o?.metrics?.brier || 0), 0) / outcomes.length
-                ).toFixed(6)
-            ),
-            sample_count: outcomes.length
-        }
-        : null;
-
-    const latestDoc = updateLatest(repoRoot, {
-        ok: true,
+    writeForecastPhaseStatus(repoRoot, 'evaluate', {
         status: evaluationWarning ? 'degraded' : 'ok',
         reason: evaluationWarning,
-        champion_id: champion.champion_id,
-        trained_at: champion.created_at ?? null,
-        freshness: tradingDate,
-        accuracy: accuracySummary,
-        asof: tradingDate,
-        forecasts: forecastsSummary,
-        latest_report_ref: `public/data/forecast/reports/daily/${tradingDate}.json`,
-        scorecards_ref: 'public/data/forecast/scorecards/tickers.json.gz',
-        maturity_phase: report.maturity_phase
+        trading_date: tradingDate,
+        counts: {
+            outcomes_written: outcomes.length,
+            elapsed_seconds: Number(((Date.now() - phaseStartedAt) / 1000).toFixed(1)),
+        },
+        meta: {
+            maturity_phase: report.maturity_phase,
+            log_path: process.env.FORECAST_PHASE_LOG_PATH || null,
+            deprecated_forecasts: options?._evaluationMeta?.deprecated_forecasts ?? 0,
+            superseded_forecasts: options?._evaluationMeta?.superseded_forecasts ?? 0,
+            rss_budget_mb: FORECAST_RSS_BUDGET_MB,
+            rss_usage_mb: enforceRssBudget('evaluate_complete'),
+            rss_start_mb: rssAtStart,
+        },
     });
-
-    updateLastGood(repoRoot, {
-        champion_id: champion.champion_id,
-        report_ref: `public/data/forecast/reports/daily/${tradingDate}.json`,
-        as_of: new Date().toISOString(),
-        latest_envelope: latestDoc
-    });
-
-    console.log('\n═══════════════════════════════════════════════════════════════');
-    console.log('  PIPELINE COMPLETE');
-    console.log(`  Forecasts: ${forecasts.length} | Outcomes: ${outcomes.length}`);
-    console.log('═══════════════════════════════════════════════════════════════\n');
 
     return {
         ok: true,
         tradingDate,
         forecastCount: forecasts.length,
-        outcomeCount: outcomes.length
+        outcomeCount: outcomes.length,
+        evaluationWarning,
+        latestDoc,
+    };
+}
+
+/**
+ * Run the complete daily pipeline
+ * @param {object} options
+ */
+export async function runDailyPipeline(options = {}) {
+    const repoRoot = options.repoRoot ?? process.cwd();
+    const forceDate = options.date ?? null;
+
+    console.log('\n═══════════════════════════════════════════════════════════════');
+    console.log('  FORECAST SYSTEM v3.0 — DAILY PIPELINE');
+    console.log('═══════════════════════════════════════════════════════════════\n');
+
+    const generated = await runGeneratePhase({ ...options, repoRoot, date: forceDate, writeLatest: false });
+    if (generated.degraded && (!generated.forecasts || generated.forecasts.length === 0)) {
+        return generated;
+    }
+
+    const evaluated = await runEvaluatePhase({
+        repoRoot,
+        tradingDate: generated.tradingDate,
+        policy: generated.policy,
+        champion: generated.champion,
+        snapshot: generated.snapshot,
+        forecasts: generated.forecasts,
+        writeLatest: true,
+    });
+
+    console.log('\n═══════════════════════════════════════════════════════════════');
+    console.log('  PIPELINE COMPLETE');
+    console.log(`  Forecasts: ${generated.forecasts.length} | Outcomes: ${evaluated.outcomeCount}`);
+    console.log('═══════════════════════════════════════════════════════════════\n');
+
+    return {
+        ok: true,
+        tradingDate: generated.tradingDate,
+        forecastCount: generated.forecasts.length,
+        outcomeCount: evaluated.outcomeCount,
     };
 }
 
@@ -509,8 +745,16 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     const args = process.argv.slice(2);
     const dateArg = args.find(a => a.startsWith('--date='));
     const date = dateArg ? dateArg.split('=')[1] : null;
+    const phaseArg = args.find(a => a.startsWith('--phase='));
+    const phase = phaseArg ? phaseArg.split('=')[1] : 'both';
 
-    runDailyPipeline({ repoRoot: process.cwd(), date })
+    const handler = async () => {
+        if (phase === 'generate') return runGeneratePhase({ repoRoot: process.cwd(), date, writeLatest: false });
+        if (phase === 'evaluate') return runEvaluatePhase({ repoRoot: process.cwd(), date, writeLatest: false });
+        return runDailyPipeline({ repoRoot: process.cwd(), date });
+    };
+
+    handler()
         .then(result => {
             if (!result.ok) process.exit(1);
         })
@@ -520,4 +764,4 @@ if (import.meta.url === `file://${process.argv[1]}`) {
         });
 }
 
-export default { runDailyPipeline };
+export default { runDailyPipeline, runGeneratePhase, runEvaluatePhase };

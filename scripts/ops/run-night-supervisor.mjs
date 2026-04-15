@@ -19,6 +19,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { execFileSync, spawnSync, spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { resolveRuntimeConfig } from '../lib/pipeline_authority/config/runtime-config.mjs';
 
 // ─── Paths ─────────────────────────────────────────────────────────────────────
 
@@ -33,8 +34,7 @@ const LOG_PATH          = path.join(REPO_ROOT, 'logs/night-supervisor.log');
 const EODHD_LOCK        = path.join(REPO_ROOT, 'mirrors/universe-v7/state/API_LIMIT_REACHED.lock.json');
 const CATCHUP_STATE     = path.join(QUANT_ROOT, 'ops/catchup-supervisor-state.json');
 const CATCHUP_LOCK      = path.join(QUANT_ROOT, 'ops/catchup-supervisor.lock');
-// Release state SSOT — authoritative End-to-End pipeline state
-const RELEASE_STATE_PATH = path.join(REPO_ROOT, 'public/data/ops/release-state-latest.json');
+resolveRuntimeConfig({ ensureRuntimeDirs: true });
 
 const HIST_PROBS_LOG = path.join(REPO_ROOT, 'logs/hist-probs-rebuild-night.log');
 const EODHD_LOG      = path.join(REPO_ROOT, 'logs/eodhd-refresh-night.log');
@@ -44,6 +44,7 @@ const EODHD_LOG      = path.join(REPO_ROOT, 'logs/eodhd-refresh-night.log');
 const CYCLE_MS           = 30 * 60 * 1000;  // 30 min
 const CATCHUP_STUCK_MIN  = 45;               // reset catchup supervisor if stuck > 45 min same phase
 const MAX_EODHD_WAIT_H   = 5;               // give up on EODHD refresh after 5h
+const LEGACY_SUPERVISOR_ALLOWED = process.env.RV_ALLOW_LEGACY_NIGHT_SUPERVISOR === '1';
 
 // ─── Logging ───────────────────────────────────────────────────────────────────
 
@@ -74,19 +75,28 @@ function isPidAlive(pid) {
 
 function nowIso() { return new Date().toISOString(); }
 
-/**
- * Returns true only after 00:05 UTC on 2026-04-08 (the day AFTER the API limit was set).
- * EODHD budget resets at UTC midnight. The lock was created on 2026-04-07 UTC.
- */
 function isPastUtcMidnightForEodhd() {
   const now = new Date();
-  const utcDate  = now.toISOString().slice(0, 10);  // "2026-04-08" etc.
-  const utcHour  = now.getUTCHours();
-  const utcMin   = now.getUTCMinutes();
-  // Must be April 8 UTC or later, and past 00:05
-  if (utcDate < '2026-04-08') return false;
-  if (utcDate === '2026-04-08') return utcHour > 0 || (utcHour === 0 && utcMin >= 5);
-  return true;  // any day after April 8
+  const utcHour = now.getUTCHours();
+  const utcMin = now.getUTCMinutes();
+  if (utcHour === 0 && utcMin < 5) return false;
+
+  const lockData = readJson(EODHD_LOCK);
+  if (!lockData) return true;
+
+  const lockDate = lockData.created_at
+    ? new Date(lockData.created_at).toISOString().slice(0, 10)
+    : lockData.date
+      ? String(lockData.date).slice(0, 10)
+      : (() => {
+          try {
+            return new Date(fs.statSync(EODHD_LOCK).mtimeMs).toISOString().slice(0, 10);
+          } catch {
+            return null;
+          }
+        })();
+  const todayUtc = now.toISOString().slice(0, 10);
+  return !lockDate || lockDate < todayUtc;
 }
 
 /** Run node script synchronously (blocking). Returns exit code. */
@@ -154,32 +164,10 @@ function saveState(s) {
 }
 
 /**
- * Write/update the release-state SSOT in public/data/ops/release-state-latest.json.
- * Called at each meaningful phase transition so release-gate-check.mjs
- * and the dashboard always reflect the current pipeline status.
+ * No-op: night supervisor is observer-only. Release state is written exclusively by pipeline-master.
  */
-function updateReleaseState(patch) {
-  try {
-    fs.mkdirSync(path.dirname(RELEASE_STATE_PATH), { recursive: true });
-    const existing = (() => {
-      try { return JSON.parse(fs.readFileSync(RELEASE_STATE_PATH, 'utf8')); } catch { return {}; }
-    })();
-    const today = new Date().toISOString().slice(0, 10);
-    const next = {
-      schema: 'rv_release_state_v1',
-      target_date: today,
-      started_at: existing.started_at || nowIso(),
-      ...existing,
-      ...patch,
-      last_updated: nowIso(),
-    };
-    const tmp = `${RELEASE_STATE_PATH}.${process.pid}.tmp`;
-    fs.writeFileSync(tmp, JSON.stringify(next, null, 2) + '\n');
-    fs.renameSync(tmp, RELEASE_STATE_PATH);
-  } catch (e) {
-    log(`[RELEASE_STATE] Failed to update: ${e.message}`);
-  }
-}
+// eslint-disable-next-line no-unused-vars
+function updateReleaseState(_patch) {}
 
 // ─── Sub-tasks ─────────────────────────────────────────────────────────────────
 
@@ -217,7 +205,10 @@ function clearEodhLock() {
 function startEodhRefresh() {
   // Use the us_eu canonical ids (most important for hist_probs)
   const allowlist = path.join(REPO_ROOT, 'public/data/universe/v7/ssot/stocks_etfs.us_eu.canonical.ids.json');
-  const fromDate = '2026-04-04';
+  const today = new Date().toISOString().slice(0, 10);
+  const fromDateObj = new Date(`${today}T00:00:00Z`);
+  fromDateObj.setUTCDate(fromDateObj.getUTCDate() - 14);
+  const fromDate = fromDateObj.toISOString().slice(0, 10);
   const cmd = [
     `QUANT_ROOT='${QUANT_ROOT}'`,
     `'${PYTHON}'`,
@@ -475,6 +466,10 @@ async function cycle() {
 // ─── Bootstrap ─────────────────────────────────────────────────────────────────
 
 async function main() {
+  if (!LEGACY_SUPERVISOR_ALLOWED) {
+    log('Night supervisor disabled: pipeline-master is the only supported resident writer.');
+    return;
+  }
   log('═══ Night Supervisor starting ═══');
 
   // Seed release state on startup

@@ -19,6 +19,8 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { loadLocalBars } from '../best-setups-local-loader.mjs';
+import { HistProbsRollingCore } from '../indicators/rolling-core.mjs';
+import { activeEventKeys } from './compute-outcomes.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const REPO = path.resolve(__dirname, '../../..');
@@ -63,62 +65,13 @@ function rsi(closes, n = 14) {
   return 100 - 100 / (1 + gains / n / avgLoss);
 }
 
-function detectActiveEvents(bars, t) {
-  if (t < 200) return [];
-  const slice = bars.slice(0, t + 1);
-  const closes = slice.map(b => Number(b.adjClose ?? b.close));
-  const close = closes[closes.length - 1];
-  const events = [];
-
-  const sma20v   = sma(closes.slice(-20), 20);
-  const sma50v   = sma(closes.slice(-50), 50);
-  const sma200v  = sma(closes.slice(-200), 200);
-  const rsi14    = rsi(closes, 14);
-
-  const lookback = closes.slice(-252);
-  const high52   = Math.max(...lookback);
-  const low52    = Math.min(...lookback);
-
-  if (rsi14 != null) {
-    if      (rsi14 < 30) events.push('rsi14_bin_lt_30');
-    else if (rsi14 < 50) events.push('rsi14_bin_30_50');
-    else if (rsi14 < 70) events.push('rsi14_bin_50_70');
-    else                  events.push('rsi14_bin_gt_70');
+function buildActiveEventSeries(bars) {
+  const series = [];
+  const core = new HistProbsRollingCore();
+  for (const bar of bars) {
+    series.push(activeEventKeys(core.push(bar)));
   }
-
-  if (sma200v) {
-    const d = (close - sma200v) / sma200v;
-    if      (d < -0.20) events.push('dist_sma200_bin_lt_neg20');
-    else if (d < -0.10) events.push('dist_sma200_bin_neg20_neg10');
-    else if (d <  0.10) events.push('dist_sma200_bin_neg10_pos10');
-    else if (d <  0.20) events.push('dist_sma200_bin_pos10_pos20');
-    else                 events.push('dist_sma200_bin_gt_pos20');
-  }
-
-  if (close > high52 * 0.99) events.push('event_new_52w_high');
-  if (close < low52  * 1.01) events.push('event_new_52w_low');
-
-  if (high52 > low52) {
-    const pos52 = (close - low52) / (high52 - low52);
-    if      (pos52 < 0.05) events.push('dist_to_52w_low_bin_lt_5pct');
-    else if (pos52 < 0.10) events.push('dist_to_52w_low_bin_5_10pct');
-    else if (pos52 > 0.90 && pos52 <= 0.95) events.push('dist_to_52w_low_bin_90_95');
-    else if (pos52 > 0.95) events.push('dist_to_52w_low_bin_gt_10pct_above');
-  }
-
-  if (sma20v && sma50v && sma200v) {
-    if (sma20v > sma50v && sma50v > sma200v) events.push('event_ma_stack_bull');
-    else if (sma20v < sma50v && sma50v < sma200v) events.push('event_ma_stack_bear');
-  }
-
-  const vol20 = slice.slice(-20).map(b => Number(b.volume || 0));
-  if (vol20.length === 20) {
-    const avgVol20 = vol20.reduce((a, b) => a + b, 0) / 20;
-    const lastVol  = Number(slice[t].volume || 0);
-    if (avgVol20 > 0 && lastVol > avgVol20 * 2) events.push('event_volume_spike_2x');
-  }
-
-  return events;
+  return series;
 }
 
 // ── Metrics ───────────────────────────────────────────────────────────────────
@@ -133,6 +86,7 @@ function evaluateWalkForward(ticker, hpData, bars) {
   for (const hz of HORIZONS) {
     const splitIdx = Math.floor(bars.length * TRAIN_RATIO);
     const testEnd  = bars.length - hz.days - 1;
+    const activeEventsSeries = buildActiveEventSeries(bars);
 
     if (testEnd <= splitIdx + 20) continue;
 
@@ -152,7 +106,7 @@ function evaluateWalkForward(ticker, hpData, bars) {
       const maProb  = (sma20v && sma50v) ? (sma20v > sma50v ? 0.62 : 0.38) : 0.5;
       maOnly.push({ prob: maProb, actual });
 
-      const active = detectActiveEvents(bars, t);
+      const active = activeEventsSeries[t] || [];
       const valid  = active.filter(ev => hpData.events?.[ev]?.[hz.key]?.n >= MIN_EVENT_N);
 
       if (!valid.length) {

@@ -3,6 +3,11 @@ import { getTiingoKeyInfo } from './_shared/tiingo-key.mjs';
 import { fetchFmpFundamentals } from './_shared/fundamentals-fmp.mjs';
 import { kvGetJson } from '../_lib/kv-safe.js';
 import { fetchEodhdFundamentals } from './_shared/fundamentals-eodhd.mjs';
+import { mergeCatalystFields } from './_shared/catalyst-normalization.mjs';
+import {
+  annotateFundamentalsForScope,
+  resolveFundamentalsScopeMember,
+} from './_shared/fundamentals-scope.mjs';
 
 const MODULE_NAME = 'fundamentals';
 const TTL_SECONDS = 24 * 60 * 60;
@@ -105,6 +110,90 @@ function countMeaningfulFundamentals(doc) {
   if (!doc || typeof doc !== 'object') return 0;
   const keys = ['marketCap', 'pe_ttm', 'eps_ttm', 'pb', 'companyName', 'sector', 'industry', 'nextEarningsDate'];
   return keys.filter((key) => doc[key] != null && doc[key] !== '').length;
+}
+
+function inferFundamentalsAssetClass(doc = {}) {
+  const haystack = [
+    doc.companyName,
+    doc.assetClass,
+    doc.securityType,
+    doc.sector,
+    doc.industry,
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase();
+  if (/\betf\b|\bexchange traded fund\b|\btrust\b|\bfund\b|\bucits\b/.test(haystack)) return 'ETF';
+  if (/\bindex\b|\bcomposite\b/.test(haystack)) return 'Index';
+  return 'Stock';
+}
+
+function normalizeOptionalFundamentalsContract(ticker, doc) {
+  const base = doc && typeof doc === 'object' ? { ...doc } : null;
+  if (!base) return null;
+  const assetClass = inferFundamentalsAssetClass(base);
+  if (!['ETF', 'Index'].includes(assetClass)) return base;
+  return {
+    ticker,
+    marketCap: null,
+    pe_ttm: null,
+    ps_ttm: null,
+    pb: null,
+    ev_ebitda: null,
+    revenue_ttm: null,
+    grossMargin: null,
+    operatingMargin: null,
+    netMargin: null,
+    eps_ttm: null,
+    nextEarningsDate: null,
+    updatedAt: base.updatedAt || null,
+    ...base,
+    assetClass,
+    securityType: base.securityType || assetClass,
+    typed_status: 'NOT_APPLICABLE',
+    typed_reason: assetClass === 'ETF'
+      ? 'ETF fundamentals feed is optional for this contract.'
+      : 'Index fundamentals are not applicable for this contract.',
+  };
+}
+
+async function fetchLocalArtifactFundamentals(request, ticker) {
+  try {
+    const base = new URL(request.url);
+    const candidates = [
+      new URL(`/data/fundamentals/${encodeURIComponent(ticker)}.json`, base),
+      new URL(`/public/data/fundamentals/${encodeURIComponent(ticker)}.json`, base),
+    ];
+    for (const url of candidates) {
+      const res = await fetch(url.toString(), { headers: { Accept: 'application/json' } });
+      if (!res.ok) continue;
+      const payload = await res.json();
+      if (countMeaningfulFundamentals(payload) >= 2 || payload?.companyName) {
+        return normalizeOptionalFundamentalsContract(ticker, payload);
+      }
+    }
+  } catch {
+    // ignore local artifact fallback
+  }
+  return null;
+}
+
+async function fetchFundamentalsScopeDoc(request) {
+  try {
+    const base = new URL(request.url);
+    const candidates = [
+      new URL('/data/fundamentals/_scope.json', base),
+      new URL('/public/data/fundamentals/_scope.json', base),
+    ];
+    for (const url of candidates) {
+      const res = await fetch(url.toString(), { headers: { Accept: 'application/json' } });
+      if (!res.ok) continue;
+      return await res.json();
+    }
+  } catch {
+    // ignore local scope fallback
+  }
+  return null;
 }
 
 function shouldUseRemoteFundamentalsFallback(request, env) {
@@ -233,6 +322,23 @@ async function fetchUniverseName(request, ticker) {
   return universeNameCache?.get(normalizeTicker(ticker)) || null;
 }
 
+async function withCatalysts(request, ticker, data) {
+  const baseData = data && typeof data === 'object' ? data : null;
+  if (!ticker || !baseData) return baseData;
+  let earningsFeed = null;
+  try {
+    const feedUrl = new URL('/data/earnings-calendar/latest.json', request.url);
+    const response = await fetch(feedUrl.toString());
+    if (response.ok) earningsFeed = await response.json();
+  } catch {}
+  return mergeCatalystFields({
+    ticker,
+    fundamentals: baseData,
+    earningsFeed,
+    name: baseData?.companyName || null,
+  }).fundamentals;
+}
+
 async function fetchTiingoFundamentalsDaily(ticker, env) {
   const keyInfo = getTiingoKeyInfo(env);
   if (!keyInfo.key) {
@@ -330,6 +436,7 @@ export async function onRequestGet(context) {
   const tickerParam = url.searchParams.get('ticker') || '';
   const ticker = normalizeTicker(tickerParam);
   const startedAtIso = new Date().toISOString();
+  const scopeDoc = await fetchFundamentalsScopeDoc(request);
 
   const key = `fund:${ticker || 'invalid'}`;
   const lastGoodKey = `${key}:last_good`;
@@ -370,10 +477,81 @@ export async function onRequestGet(context) {
     });
   }
 
+  const scopeMember = resolveFundamentalsScopeMember(scopeDoc, ticker);
+  if (scopeDoc && !scopeMember) {
+    const neutralData = annotateFundamentalsForScope({
+      ticker,
+      universe: { name: await fetchUniverseName(request, ticker) },
+      fundamentals: null,
+      scopeDoc,
+      targetMarketDate: scopeDoc?.target_market_date || null,
+    });
+    const payload = {
+      schema_version: '3.0',
+      meta: {
+        status: 'fresh',
+        generated_at: startedAtIso,
+        data_date: dataDateFrom(scopeDoc?.target_market_date, startedAtIso),
+        provider: 'fundamentals-api',
+        data_source: 'scope_contract',
+        mode: 'LIVE',
+        asOf: scopeDoc?.target_market_date || null,
+        freshness: 'scope_neutral'
+      },
+      metadata: {
+        module: MODULE_NAME,
+        schema_version: '3.0',
+        tier: 'standard',
+        domain: 'equities',
+        source: 'fundamentals-api',
+        fetched_at: startedAtIso,
+        published_at: startedAtIso,
+        digest: null,
+        served_from: 'RUNTIME',
+        request: { ticker: tickerParam, normalized_ticker: ticker },
+        status: 'OK',
+        provider: {
+          selected: 'scope_contract',
+          fallbackUsed: false,
+          failureReason: null,
+          keyPresent: false,
+          keySource: null,
+          httpStatus: 200,
+          latencyMs: null
+        },
+        telemetry: {
+          provider: {
+            primary: 'scope_contract',
+            selected: 'scope_contract',
+            forced: false,
+            fallbackUsed: false,
+            primaryFailure: null
+          },
+          latencyMs: null,
+          ok: true,
+          httpStatus: 200
+        }
+      },
+      data: neutralData,
+      error: null
+    };
+    payload.metadata.digest = await computeDigest(payload);
+    return new Response(JSON.stringify(payload, null, 2) + '\n', {
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
+
   const cached = await kvGetJson(env, key);
   if (cached.hit && cached.value) {
     const servedFrom = cached.layer === 'kv' ? 'KV' : 'MEM';
-    const wm = buildWatermark({ servedFrom, status: 'OK', data: cached.value });
+    const enrichedCached = annotateFundamentalsForScope({
+      ticker,
+      universe: { name: await fetchUniverseName(request, ticker) },
+      fundamentals: await withCatalysts(request, ticker, cached.value),
+      scopeDoc,
+      targetMarketDate: scopeDoc?.target_market_date || null,
+    });
+    const wm = buildWatermark({ servedFrom, status: 'OK', data: enrichedCached });
     const payload = {
       schema_version: '3.0',
       meta: {
@@ -412,12 +590,77 @@ export async function onRequestGet(context) {
           httpStatus: 200
         }
       },
-      data: cached.value,
+      data: enrichedCached,
       error: null
     };
     if (isDebug && cached.error) {
       payload.metadata.cache.error = cached.error;
     }
+    payload.metadata.digest = await computeDigest(payload);
+    return new Response(JSON.stringify(payload, null, 2) + '\n', {
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
+
+  const localArtifact = await fetchLocalArtifactFundamentals(request, ticker);
+  if (localArtifact) {
+    const enrichedLocalArtifact = annotateFundamentalsForScope({
+      ticker,
+      universe: { name: await fetchUniverseName(request, ticker) },
+      fundamentals: await withCatalysts(request, ticker, localArtifact),
+      scopeDoc,
+      targetMarketDate: scopeDoc?.target_market_date || null,
+    });
+    const wm = buildWatermark({ servedFrom: 'RUNTIME', status: 'OK', data: enrichedLocalArtifact });
+    const payload = {
+      schema_version: '3.0',
+      meta: {
+        status: 'fresh',
+        generated_at: startedAtIso,
+        data_date: dataDateFrom(wm.asOf, startedAtIso),
+        provider: 'fundamentals-api',
+        data_source: 'local_artifact',
+        mode: 'LIVE',
+        asOf: wm.asOf,
+        freshness: wm.freshness
+      },
+      metadata: {
+        module: MODULE_NAME,
+        schema_version: '3.0',
+        tier: 'standard',
+        domain: 'equities',
+        source: 'fundamentals-api',
+        fetched_at: startedAtIso,
+        published_at: startedAtIso,
+        digest: null,
+        served_from: 'RUNTIME',
+        request: { ticker: tickerParam, normalized_ticker: ticker },
+        status: 'OK',
+        provider: {
+          selected: 'local_artifact',
+          fallbackUsed: false,
+          failureReason: null,
+          keyPresent: false,
+          keySource: null,
+          httpStatus: 200,
+          latencyMs: null
+        },
+        telemetry: {
+          provider: {
+            primary: 'local_artifact',
+            selected: 'local_artifact',
+            forced: false,
+            fallbackUsed: false,
+            primaryFailure: null
+          },
+          latencyMs: null,
+          ok: true,
+          httpStatus: 200
+        }
+      },
+      data: enrichedLocalArtifact,
+      error: null
+    };
     payload.metadata.digest = await computeDigest(payload);
     return new Response(JSON.stringify(payload, null, 2) + '\n', {
       headers: { 'Content-Type': 'application/json' }
@@ -470,7 +713,14 @@ export async function onRequestGet(context) {
   }
 
   if (upstream.ok && upstream.data) {
-    const wm = buildWatermark({ servedFrom: 'RUNTIME', status: 'OK', data: upstream.data });
+    const enrichedUpstream = annotateFundamentalsForScope({
+      ticker,
+      universe: { name: await fetchUniverseName(request, ticker) },
+      fundamentals: await withCatalysts(request, ticker, upstream.data),
+      scopeDoc,
+      targetMarketDate: scopeDoc?.target_market_date || null,
+    });
+    const wm = buildWatermark({ servedFrom: 'RUNTIME', status: 'OK', data: enrichedUpstream });
     const payload = {
       schema_version: '3.0',
       meta: {
@@ -517,7 +767,7 @@ export async function onRequestGet(context) {
           httpStatus: upstream.httpStatus
         }
       },
-      data: upstream.data,
+      data: enrichedUpstream,
       error: null
     };
     payload.metadata.digest = await computeDigest(payload);
@@ -528,7 +778,14 @@ export async function onRequestGet(context) {
 
   const remoteFallback = await fetchRemoteFundamentals(request, env, ticker);
   if (remoteFallback?.ok && remoteFallback.data) {
-    const wm = buildWatermark({ servedFrom: 'RUNTIME', status: 'OK', data: remoteFallback.data });
+    const enrichedRemoteFallback = annotateFundamentalsForScope({
+      ticker,
+      universe: { name: await fetchUniverseName(request, ticker) },
+      fundamentals: await withCatalysts(request, ticker, remoteFallback.data),
+      scopeDoc,
+      targetMarketDate: scopeDoc?.target_market_date || null,
+    });
+    const wm = buildWatermark({ servedFrom: 'RUNTIME', status: 'OK', data: enrichedRemoteFallback });
     const payload = {
       schema_version: '3.0',
       meta: {
@@ -579,7 +836,7 @@ export async function onRequestGet(context) {
           metadata: remoteFallback.upstream_metadata || null,
         }
       },
-      data: remoteFallback.data,
+      data: enrichedRemoteFallback,
       error: null
     };
     payload.metadata.digest = await computeDigest(payload);
@@ -591,7 +848,14 @@ export async function onRequestGet(context) {
   const lastGood = await kvGetJson(env, lastGoodKey);
   if (lastGood.hit && lastGood.value) {
     const servedFrom = lastGood.layer === 'kv' ? 'KV' : 'MEM';
-    const wm = buildWatermark({ servedFrom, status: 'PARTIAL', data: lastGood.value });
+    const enrichedLastGood = annotateFundamentalsForScope({
+      ticker,
+      universe: { name: await fetchUniverseName(request, ticker) },
+      fundamentals: await withCatalysts(request, ticker, lastGood.value),
+      scopeDoc,
+      targetMarketDate: scopeDoc?.target_market_date || null,
+    });
+    const wm = buildWatermark({ servedFrom, status: 'PARTIAL', data: enrichedLastGood });
     const payload = {
       schema_version: '3.0',
       meta: {
@@ -638,7 +902,7 @@ export async function onRequestGet(context) {
           httpStatus: upstream.httpStatus
         }
       },
-      data: lastGood.value,
+      data: enrichedLastGood,
       error: null
     };
     payload.metadata.digest = await computeDigest(payload);
@@ -647,17 +911,24 @@ export async function onRequestGet(context) {
     });
   }
 
+  const neutralFallbackData = annotateFundamentalsForScope({
+    ticker,
+    universe: { name: await fetchUniverseName(request, ticker) },
+    fundamentals: null,
+    scopeDoc,
+    targetMarketDate: scopeDoc?.target_market_date || null,
+  });
   const payload = {
     schema_version: '3.0',
     meta: {
-      status: 'error',
+      status: neutralFallbackData.coverage_expected ? 'stale' : 'fresh',
       generated_at: startedAtIso,
       data_date: dataDateFrom(null, startedAtIso),
       provider: 'fundamentals-api',
-      data_source: 'unknown',
-      mode: 'DEGRADED',
-      asOf: null,
-      freshness: 'unknown'
+      data_source: neutralFallbackData.coverage_expected ? 'scope_refresh_pending' : 'scope_contract',
+      mode: neutralFallbackData.coverage_expected ? 'DEGRADED' : 'LIVE',
+      asOf: neutralFallbackData.scope_target_market_date || null,
+      freshness: neutralFallbackData.coverage_expected ? 'refresh_pending' : 'scope_neutral'
     },
     metadata: {
       module: MODULE_NAME,
@@ -670,7 +941,7 @@ export async function onRequestGet(context) {
       digest: null,
       served_from: 'RUNTIME',
       request: { ticker: tickerParam, normalized_ticker: ticker },
-      status: 'ERROR',
+      status: neutralFallbackData.coverage_expected ? 'PARTIAL' : 'OK',
       provider: {
         selected: upstream.provider,
         fallbackUsed: false,
@@ -693,25 +964,12 @@ export async function onRequestGet(context) {
         httpStatus: upstream.httpStatus
       }
     },
-    data: {
-      ticker,
-      companyName: await fetchUniverseName(request, ticker),
-      marketCap: null,
-      pe_ttm: null,
-      ps_ttm: null,
-      pb: null,
-      ev_ebitda: null,
-      revenue_ttm: null,
-      grossMargin: null,
-      operatingMargin: null,
-      netMargin: null,
-      eps_ttm: null,
-      nextEarningsDate: null,
-      updatedAt: null
-    },
-    error: buildErrorPayload(upstream.error?.code || lastFailure?.error?.code || 'FUNDAMENTALS_UNAVAILABLE', upstream.error?.message || lastFailure?.error?.message || 'Fundamentals unavailable', {
-      httpStatus: upstream.httpStatus || lastFailure?.httpStatus || null
-    })
+    data: neutralFallbackData,
+    error: neutralFallbackData.coverage_expected
+      ? buildErrorPayload(upstream.error?.code || lastFailure?.error?.code || 'FUNDAMENTALS_REFRESH_PENDING', upstream.error?.message || lastFailure?.error?.message || 'Fundamentals refresh pending', {
+        httpStatus: upstream.httpStatus || lastFailure?.httpStatus || null
+      })
+      : null
   };
 
   if (!isDebug) {

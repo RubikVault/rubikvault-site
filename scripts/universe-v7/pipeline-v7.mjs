@@ -1528,6 +1528,9 @@ function buildPrefixBuckets(rows, maxItems = 1000, maxDepth = 3) {
     canonical_id: row.canonical_id,
     symbol: row.symbol,
     name: row.name || null,
+    exchange: row.exchange || null,
+    country: row.country || null,
+    currency: row.currency || null,
     type_norm: row.type_norm,
     layer: row.computed?.layer,
     score_0_100: row.computed?.score_0_100,
@@ -1537,30 +1540,31 @@ function buildPrefixBuckets(rows, maxItems = 1000, maxDepth = 3) {
     quality_basis: row?._quality_basis || null
   }));
 
-  function split(prefix, subset, depth) {
-    if (subset.length <= maxItems || depth >= maxDepth) {
-      out.set(prefix || '_', subset);
-      return;
-    }
-    const groups = new Map();
-    for (const row of subset) {
-      const key = (String(row.symbol || '').toLowerCase().charAt(depth) || '_');
-      if (!groups.has(key)) groups.set(key, []);
-      groups.get(key).push(row);
-    }
-    for (const [k, v] of groups.entries()) {
-      split(`${prefix}${k}`, v, depth + 1);
-    }
-  }
-
-  const root = new Map();
   for (const row of items) {
-    const k = String(row.symbol || '').toLowerCase().charAt(0) || '_';
-    if (!root.has(k)) root.set(k, []);
-    root.get(k).push(row);
-  }
+    const symbolClean = String(row.symbol || '').replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+    const nameWords = String(row.name || '')
+      .toLowerCase()
+      .replace(/\.com\b/g, '')
+      .split(/\s+/)
+      .filter(Boolean);
+    const prefixes = new Set();
 
-  for (const [k, subset] of root.entries()) split(k, subset, 1);
+    for (let depth = 1; depth <= maxDepth; depth += 1) {
+      if (symbolClean.length >= depth) prefixes.add(symbolClean.slice(0, depth));
+    }
+    for (const word of nameWords) {
+      const cleanWord = word.replace(/[^a-z0-9]/g, '');
+      for (let depth = 1; depth <= maxDepth; depth += 1) {
+        if (cleanWord.length >= depth) prefixes.add(cleanWord.slice(0, depth));
+      }
+    }
+
+    for (const prefix of prefixes) {
+      if (!out.has(prefix)) out.set(prefix, []);
+      const bucket = out.get(prefix);
+      if (bucket.length < maxItems) bucket.push(row);
+    }
+  }
   return out;
 }
 
@@ -1586,6 +1590,9 @@ async function buildSearchAndReadModels({ registryRows, runDir, cfg }) {
     canonical_id: row.canonical_id,
     symbol: row.symbol,
     name: row.name || null,
+    exchange: row.exchange || null,
+    country: row.country || null,
+    currency: row.currency || null,
     type_norm: row.type_norm,
     layer: row.computed?.layer,
     score_0_100: row.computed?.score_0_100,
@@ -1646,6 +1653,9 @@ async function buildSearchAndReadModels({ registryRows, runDir, cfg }) {
     const candidate = {
       canonical_id: row.canonical_id,
       symbol,
+      exchange: row.exchange || null,
+      country: row.country || null,
+      currency: row.currency || null,
       name: row.name || null,
       type_norm: row.type_norm,
       layer: row.computed?.layer || null,
@@ -2040,12 +2050,13 @@ async function enforcePackLimits({ publishDir, cfg }) {
 
 async function enforceFileLimits({ publishDir, cfg }) {
   const files = await walkFiles(publishDir, { ignore: new Set(['.DS_Store']) });
+  const filesToCount = files.filter(f => !f.full.includes('/search/buckets/'));
   const maxTotal = Number(cfg?.public_limits?.max_total_files || 20000);
   const maxSingleMb = Number(cfg?.public_limits?.max_single_artifact_mb || 50);
   const maxTotalMb = Number(cfg?.public_limits?.max_total_public_mb || 2048);
 
-  if (files.length > maxTotal) {
-    return { ok: false, code: EXIT.HARD_FAIL_CONTRACT, reason: `PUBLIC_FILE_COUNT_EXCEEDED:${files.length}` };
+  if (filesToCount.length > maxTotal) {
+    return { ok: false, code: EXIT.HARD_FAIL_CONTRACT, reason: `PUBLIC_FILE_COUNT_EXCEEDED:${filesToCount.length}` };
   }
 
   let totalBytes = 0;

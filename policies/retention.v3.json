@@ -15,6 +15,9 @@
   "forecast_outcomes_retention_days": 180,
   "forecast_forecasts_retention_days": 90,
   "ops_ledger_retention_days": 365,
+  "hist_probs_checkpoint_retention_days": 30,
+  "pending_maturity_retention_days": 30,
+  "dlq_retention_days": 7,
   "cleanup_cadence": "weekly",
   "safeguards": {
     "never_remove_last_good": true,

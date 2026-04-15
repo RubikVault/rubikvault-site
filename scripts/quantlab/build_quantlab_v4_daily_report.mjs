@@ -428,15 +428,24 @@ function buildQuantLabDataFreshnessSummary({
     reasons.push(`RAW_ONLY_BRIDGE_ADVANCED:raw_canonical=${rawCanonicalAsof || 'unknown'}:raw_any=${rawAnyAsof || 'unknown'}:lag_days=${rawFreshness.bridge_only_advance_calendar_days}`);
   }
 
-  const label = severity === 'critical'
+  const operationalSeverity = severity;
+  const canonicalWindowSeverity = Boolean(rawFreshness?.required_asset_types_fresh)
+    ? 'ok'
+    : (rawFreshness?.bridge_only_advance_calendar_days ?? 0) > 14
+      ? 'warning'
+      : 'info';
+
+  const label = operationalSeverity === 'critical'
     ? 'kritisch veraltet'
-    : severity === 'warning'
+    : operationalSeverity === 'warning'
       ? 'alternd'
       : 'aktuell';
-  const message = severity === 'ok'
-    ? marketPlaneFresh && labelHorizonLagLooksExpected
-      ? `QuantLab-Marktdaten sind aktuell bis ${rawAnyAsof || featureSnapshotAsof || 'unbekannt'}; der Modell-Cutoff ${stockPublishAsof || featureAsof || 'unbekannt'} ist im erwarteten 20T-Labelfenster.`
-      : `QuantLab-Datenstand ist aktuell auf ${stockPublishAsof || featureAsof || rawCanonicalAsof || 'unbekannt'}.`
+  const message = operationalSeverity === 'ok'
+    ? canonicalWindowSeverity === 'ok'
+      ? marketPlaneFresh && labelHorizonLagLooksExpected
+        ? `QuantLab-Marktdaten sind aktuell bis ${rawAnyAsof || featureSnapshotAsof || 'unbekannt'}; der Modell-Cutoff ${stockPublishAsof || featureAsof || 'unbekannt'} ist im erwarteten 20T-Labelfenster.`
+        : `QuantLab-Datenstand ist aktuell auf ${stockPublishAsof || featureAsof || rawCanonicalAsof || 'unbekannt'}.`
+      : `QuantLab-Marktdaten sind aktuell bis ${rawAnyAsof || featureSnapshotAsof || 'unbekannt'}; der Canonical-/Modell-Cutoff liegt bei ${stockPublishAsof || featureAsof || rawCanonicalAsof || 'unbekannt'} und wird separat als advisory verfolgt.`
     : `QuantLab-Datenstand ist ${label}: Publish ${stockPublishAsof || 'unbekannt'}, Feature-Store ${featureAsof || 'unbekannt'}, Raw canonical ${rawCanonicalAsof || 'unbekannt'}, Raw any ${rawAnyAsof || 'unbekannt'}.`;
 
   return {
@@ -444,12 +453,16 @@ function buildQuantLabDataFreshnessSummary({
     generatedAt,
     reportDate,
     summary: {
-      severity,
+      severity: operationalSeverity,
       label,
       message,
       reasons,
-      healthy: severity === 'ok',
-      reportFreshButDataStale: reportDate === localDateId() && severity !== 'ok',
+      healthy: operationalSeverity === 'ok' && canonicalWindowSeverity === 'ok',
+      local_data_green: operationalSeverity === 'ok',
+      combined_green: operationalSeverity === 'ok' && canonicalWindowSeverity === 'ok',
+      operational_freshness_severity: operationalSeverity,
+      canonical_window_severity: canonicalWindowSeverity,
+      reportFreshButDataStale: reportDate === localDateId() && operationalSeverity !== 'ok',
     },
     rawBars: {
       provider: rawFreshness?.provider || 'EODHD',
