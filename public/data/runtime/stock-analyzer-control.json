@@ -1,8 +1,13 @@
 {
   "schema": "rv.stock_analyzer_control.v1",
-  "generated_at": "2026-04-10T03:17:18.114Z",
-  "report_date": "2026-04-10",
-  "learning_status": "BOOTSTRAP",
+  "run_id": "learning-2026-04-14",
+  "target_market_date": "2026-04-14",
+  "generated_at": "2026-04-15T08:31:53.270Z",
+  "producer": "scripts/learning/run-daily-learning-cycle.mjs",
+  "upstream_run_ids": [],
+  "report_date": "2026-04-14",
+  "source_report_generated_at": "2026-04-15T08:31:53.270Z",
+  "learning_status": "ACTIVE",
   "safety_switch": {
     "level": "BOOTSTRAP",
     "actions": [
@@ -21,11 +26,11 @@
           "satisfied": false
         },
         "5d": {
-          "outcomes_resolved": 49,
+          "outcomes_resolved": 29,
           "satisfied": false
         },
         "20d": {
-          "outcomes_resolved": 603,
+          "outcomes_resolved": 602,
           "satisfied": true
         }
       }
@@ -43,17 +48,76 @@
         "satisfied": false
       },
       "5d": {
-        "outcomes_resolved": 49,
+        "outcomes_resolved": 29,
         "satisfied": false
       },
       "20d": {
-        "outcomes_resolved": 603,
+        "outcomes_resolved": 602,
         "satisfied": true
       }
     }
   },
+  "learning_gate": {
+    "status": "BLOCKED",
+    "learning_status": "ACTIVE",
+    "learning_status_default": "BOOTSTRAP",
+    "safety_level": "BOOTSTRAP",
+    "safety_switch": {
+      "level": "BOOTSTRAP",
+      "actions": [
+        "log_only"
+      ],
+      "trigger": "minimum_n_not_met",
+      "minimum_n_status": {
+        "global_per_horizon_threshold": 200,
+        "asset_class_horizon_threshold": 100,
+        "regime_horizon_threshold": 75,
+        "satisfied_horizons": 1,
+        "ready_for_safety": false,
+        "by_horizon": {
+          "1d": {
+            "outcomes_resolved": 5,
+            "satisfied": false
+          },
+          "5d": {
+            "outcomes_resolved": 29,
+            "satisfied": false
+          },
+          "20d": {
+            "outcomes_resolved": 602,
+            "satisfied": true
+          }
+        }
+      }
+    },
+    "minimum_n_status": {
+      "global_per_horizon_threshold": 200,
+      "asset_class_horizon_threshold": 100,
+      "regime_horizon_threshold": 75,
+      "satisfied_horizons": 1,
+      "ready_for_safety": false,
+      "by_horizon": {
+        "1d": {
+          "outcomes_resolved": 5,
+          "satisfied": false
+        },
+        "5d": {
+          "outcomes_resolved": 29,
+          "satisfied": false
+        },
+        "20d": {
+          "outcomes_resolved": 602,
+          "satisfied": true
+        }
+      }
+    },
+    "minimum_n_not_met": true,
+    "blocked_reason": "minimum_n_not_met",
+    "ready_for_safety": false,
+    "ready_for_release": false
+  },
   "false_positive_classes_30d": {
-    "weak_consensus": 92
+    "weak_consensus": 88
   },
   "policy": {
     "schema_version": "best_setups_policy_v1",

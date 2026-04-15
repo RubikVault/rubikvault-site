@@ -1,7 +1,7 @@
 {
   "schema": "rv_v7_marketphase_deep_report_v1",
-  "started_at": "2026-04-10T02:29:25.876Z",
-  "finished_at": "2026-04-10T02:31:57.276Z",
+  "started_at": "2026-04-12T07:48:43.440Z",
+  "finished_at": "2026-04-12T07:54:24.348Z",
   "args": {
     "minBars": 200,
     "maxSymbols": null,
@@ -15,21 +15,27 @@
     "history_root": "mirrors/universe-v7"
   },
   "scan": {
-    "rows_total": 194856,
-    "stock_rows": 74474,
-    "stock_rows_in_target": 49979,
-    "stock_rows_with_pack": 49979,
-    "stock_rows_with_min_bars": 47976,
-    "selected_candidates": 34042,
-    "selected_candidate_variants": 47869
+    "rows_total": 196669,
+    "stock_rows": 75093,
+    "stock_rows_in_target": 48677,
+    "stock_rows_with_pack": 48658,
+    "stock_rows_with_min_bars": 47291,
+    "selected_candidates": 33704,
+    "selected_candidate_variants": 47190
   },
   "output": {
     "summary_path": "public/data/universe/v7/read_models/marketphase_deep_summary.json",
-    "count": 34039
+    "count": 33700
   },
   "errors": {
-    "count": 3,
+    "count": 5,
     "sample": [
+      {
+        "symbol": "COUNTRY-A",
+        "canonical_id": "SN:COUNTRY-A",
+        "reason": "history_pack_missing",
+        "pack": "history/SN/c/run_v7_20260223194431_a955a2_0001.ndjson.gz"
+      },
       {
         "symbol": "ATGE",
         "canonical_id": "US:ATGE",
@@ -47,6 +53,12 @@
         "canonical_id": "US:HLTHQ",
         "reason": "bars_below_min_after_normalize",
         "bars": 57
+      },
+      {
+        "symbol": "GS2C",
+        "canonical_id": "XETRA:GS2C",
+        "reason": "history_pack_missing",
+        "pack": "history/XETRA/g/run_v7_20260223201434_5a50e8_0001.ndjson.gz"
       }
     ]
   }

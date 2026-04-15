@@ -1,0 +1,455 @@
+{
+  "schema": "rv.publish_chain.v1",
+  "ok": true,
+  "run_id": "pipeline-master-2026-04-14",
+  "target_market_date": "2026-04-14",
+  "generated_at": "2026-04-15T08:27:52.352Z",
+  "producer": "scripts/ops/run-stock-analyzer-publish-chain.mjs",
+  "upstream_run_ids": [
+    "pipeline-master-2026-04-14",
+    "dashboard-green-2026-04-13",
+    "pipeline-master-2026-04-13",
+    "manual-green-2026-04-10",
+    "run-20260413T053223Z-289e1d54993a198a",
+    "run-20260413T071500Z-4a1f0e2b9c7d6a5f",
+    "pipeline-master-2026-04-10",
+    "dashboard-green-2026-04-10",
+    "publish_chain_20260412T134556_23723",
+    "learning-2026-04-12",
+    "publish_chain_20260412T184739_99149",
+    "publish_chain_20260412T192252_349",
+    "learning-2026-04-10",
+    "run-stock-analyzer-audit-2026-04-13",
+    "publish_chain_failed_15828",
+    "run-stock-analyzer-audit-2026-04-10",
+    "learning-2026-04-13",
+    "publish_chain_failed_2087",
+    "run-stock-analyzer-audit-2026-04-14",
+    "learning-2026-04-14",
+    "run-stock-analyzer-audit-2026-04-15"
+  ],
+  "started_at": "2026-04-15T08:27:52.352Z",
+  "finished_at": "2026-04-15T08:35:15.392Z",
+  "steps": [
+    {
+      "id": "learning",
+      "status": "ok",
+      "started_at": "2026-04-15T08:27:52.353Z",
+      "finished_at": "2026-04-15T08:31:53.434Z",
+      "exit_code": 0,
+      "timed_out": false,
+      "stdout_tail": [
+        "     Precision@50:   32.8%",
+        "     Accuracy (30d): 17.3%",
+        "     Heute: 0 Signale",
+        "═════════════════════════════════════════════════════════════════",
+        "  Report: public/data/reports/learning-report-latest.json",
+        "  Web:    https://rubikvault.com/data/reports/learning-report-latest.json",
+        "═════════════════════════════════════════════════════════════════",
+        "  🎯 Cross-Feature Conviction (Top 10):",
+        "  ────────────────────────────────────────────────────────────",
+        "     00W      bullish  Score: 0.5208 Sources: forecast+scientific",
+        "     0R5W     bullish  Score: 0.5208 Sources: forecast+scientific",
+        "     39G      bullish  Score: 0.5208 Sources: forecast+scientific",
+        "     ATXS     bullish  Score: 0.5208 Sources: forecast+scientific",
+        "     ENGY     bullish  Score: 0.5208 Sources: forecast+scientific",
+        "     GWPD     bullish  Score: 0.5208 Sources: forecast+scientific",
+        "     IVP      bullish  Score: 0.5208 Sources: forecast+scientific",
+        "     LLND     bullish  Score: 0.5208 Sources: forecast+scientific",
+        "     QSU      bullish  Score: 0.5208 Sources: forecast+scientific",
+        "     TCLIF    bullish  Score: 0.5208 Sources: forecast+scientific",
+        "[learning] Daily learning cycle complete."
+      ],
+      "stderr_tail": [],
+      "outputs": [
+        {
+          "path": "public/data/reports/learning-report-latest.json",
+          "exists": true,
+          "mtime": "2026-04-15T08:31:53.290Z",
+          "size_bytes": 50420
+        },
+        {
+          "path": "public/data/runtime/stock-analyzer-control.json",
+          "exists": true,
+          "mtime": "2026-04-15T08:31:53.290Z",
+          "size_bytes": 3351
+        }
+      ]
+    },
+    {
+      "id": "snapshot",
+      "status": "ok",
+      "started_at": "2026-04-15T08:31:53.436Z",
+      "finished_at": "2026-04-15T08:31:53.519Z",
+      "exit_code": 0,
+      "timed_out": false,
+      "stdout_tail": [
+        "[best-setups-v4] Reusing existing published snapshot (data_asof=2026-04-14, target=2026-04-14)"
+      ],
+      "stderr_tail": [],
+      "outputs": [
+        {
+          "path": "public/data/snapshots/best-setups-v4.json",
+          "exists": true,
+          "mtime": "2026-04-15T07:15:53.982Z",
+          "size_bytes": 7237
+        },
+        {
+          "path": "public/data/reports/best-setups-build-latest.json",
+          "exists": true,
+          "mtime": "2026-04-15T07:15:53.983Z",
+          "size_bytes": 3513
+        }
+      ]
+    },
+    {
+      "id": "quantlab_daily_report",
+      "status": "ok",
+      "started_at": "2026-04-15T08:31:53.520Z",
+      "finished_at": "2026-04-15T08:32:22.877Z",
+      "exit_code": 0,
+      "timed_out": false,
+      "stdout_tail": [
+        "Sharding marketData with 102 assets to /Users/michaelpuchowezki/Dev/rubikvault-site/public/data/quantlab/reports/shards...",
+        "{",
+        "  \"ok\": true,",
+        "  \"report\": \"public/data/quantlab/reports/v4-daily-latest.json\",",
+        "  \"market\": \"public/data/quantlab/reports/v4-daily-market.json\",",
+        "  \"stock_publish\": \"public/data/quantlab/stock-insights/latest.json\",",
+        "  \"history\": \"public/data/quantlab/reports/v4-daily-history.json\",",
+        "  \"mirror\": \"mirrors/quantlab/reports/v4-daily/2026-04-15.json\",",
+        "  \"readiness_pct\": 80,",
+        "  \"implementation_pct\": 60",
+        "}"
+      ],
+      "stderr_tail": [],
+      "outputs": [
+        {
+          "path": "public/data/quantlab/status/operational-status.json",
+          "exists": true,
+          "mtime": "2026-04-15T08:32:22.574Z",
+          "size_bytes": 6165
+        },
+        {
+          "path": "public/data/quantlab/reports/v4-daily-latest.json",
+          "exists": true,
+          "mtime": "2026-04-15T08:32:22.458Z",
+          "size_bytes": 86393
+        }
+      ]
+    },
+    {
+      "id": "fundamentals_scope_refresh",
+      "status": "warning",
+      "started_at": "2026-04-15T08:32:22.878Z",
+      "finished_at": "2026-04-15T08:34:22.895Z",
+      "exit_code": 124,
+      "timed_out": true,
+      "stdout_tail": [
+        "  ⏭ NKE (fmp rate limited — trying next provider)",
+        "  ✗ NKE (all providers failed)",
+        "  ⏭ FSLY (fmp rate limited — trying next provider)",
+        "  ✗ FSLY (all providers failed)",
+        "  ⏭ VSA (fmp rate limited — trying next provider)",
+        "  ✗ VSA (all providers failed)",
+        "  ⏭ FFAI (fmp rate limited — trying next provider)",
+        "  ✗ FFAI (all providers failed)",
+        "  ⏭ KEEL (fmp rate limited — trying next provider)",
+        "  ✗ KEEL (all providers failed)",
+        "  ⏭ CCL (fmp rate limited — trying next provider)",
+        "  ✗ CCL (all providers failed)",
+        "  ⏭ OHLA (fmp rate limited — trying next provider)",
+        "  ✗ OHLA (all providers failed)",
+        "  ⏭ BB (fmp rate limited — trying next provider)",
+        "  ✗ BB (all providers failed)",
+        "  ⏭ ACHR-WS (fmp rate limited — trying next provider)",
+        "  ✗ ACHR-WS (all providers failed)",
+        "  ⏭ ALIT (fmp rate limited — trying next provider)",
+        "  ✗ ALIT (all providers failed)"
+      ],
+      "stderr_tail": [],
+      "outputs": [
+        {
+          "path": "public/data/fundamentals/_scope.json",
+          "exists": true,
+          "mtime": "2026-04-15T08:32:23.120Z",
+          "size_bytes": 789277
+        },
+        {
+          "path": "public/data/v3/fundamentals/manifest.json",
+          "exists": true,
+          "mtime": "2026-04-03T08:39:32.442Z",
+          "size_bytes": 639
+        }
+      ]
+    },
+    {
+      "id": "stock_analyzer_universe_audit",
+      "status": "ok",
+      "started_at": "2026-04-15T08:34:22.898Z",
+      "finished_at": "2026-04-15T08:34:48.343Z",
+      "exit_code": 0,
+      "timed_out": false,
+      "stdout_tail": [],
+      "stderr_tail": [],
+      "outputs": [
+        {
+          "path": "public/data/reports/stock-analyzer-universe-audit-latest.json",
+          "exists": true,
+          "mtime": "2026-04-15T08:34:48.324Z",
+          "size_bytes": 12073
+        }
+      ]
+    },
+    {
+      "id": "data_freshness",
+      "status": "ok",
+      "started_at": "2026-04-15T08:34:48.345Z",
+      "finished_at": "2026-04-15T08:34:51.408Z",
+      "exit_code": 0,
+      "timed_out": false,
+      "stdout_tail": [],
+      "stderr_tail": [],
+      "outputs": [
+        {
+          "path": "public/data/reports/data-freshness-latest.json",
+          "exists": true,
+          "mtime": "2026-04-15T08:34:51.401Z",
+          "size_bytes": 10387
+        }
+      ]
+    },
+    {
+      "id": "system_status",
+      "status": "ok",
+      "started_at": "2026-04-15T08:34:51.408Z",
+      "finished_at": "2026-04-15T08:34:55.091Z",
+      "exit_code": 0,
+      "timed_out": false,
+      "stdout_tail": [],
+      "stderr_tail": [],
+      "outputs": [
+        {
+          "path": "public/data/reports/system-status-latest.json",
+          "exists": true,
+          "mtime": "2026-04-15T08:34:55.084Z",
+          "size_bytes": 180952
+        }
+      ]
+    },
+    {
+      "id": "pipeline_epoch",
+      "status": "ok",
+      "started_at": "2026-04-15T08:34:55.094Z",
+      "finished_at": "2026-04-15T08:34:55.174Z",
+      "exit_code": 0,
+      "timed_out": false,
+      "stdout_tail": [],
+      "stderr_tail": [],
+      "outputs": [
+        {
+          "path": "public/data/pipeline/epoch.json",
+          "exists": true,
+          "mtime": "2026-04-15T08:34:55.172Z",
+          "size_bytes": 24624
+        }
+      ]
+    },
+    {
+      "id": "pipeline_runtime",
+      "status": "ok",
+      "started_at": "2026-04-15T08:34:55.175Z",
+      "finished_at": "2026-04-15T08:34:55.230Z",
+      "exit_code": 0,
+      "timed_out": false,
+      "stdout_tail": [],
+      "stderr_tail": [],
+      "outputs": [
+        {
+          "path": "public/data/pipeline/runtime/latest.json",
+          "exists": true,
+          "mtime": "2026-04-15T08:34:55.228Z",
+          "size_bytes": 27142
+        }
+      ]
+    },
+    {
+      "id": "ui_audit",
+      "status": "ok",
+      "started_at": "2026-04-15T08:34:55.230Z",
+      "finished_at": "2026-04-15T08:35:11.230Z",
+      "exit_code": 0,
+      "timed_out": false,
+      "stdout_tail": [
+        "{\"ok\":true,\"target_market_date\":\"2026-04-14\",\"failed_checks\":0}"
+      ],
+      "stderr_tail": [],
+      "outputs": [
+        {
+          "path": "public/data/reports/frontpage-snapshot-audit-latest.json",
+          "exists": true,
+          "mtime": "2026-04-15T08:34:55.326Z",
+          "size_bytes": 326
+        },
+        {
+          "path": "public/data/reports/analyzer-detail-audit-latest.json",
+          "exists": true,
+          "mtime": "2026-04-15T08:35:07.120Z",
+          "size_bytes": 1275
+        },
+        {
+          "path": "public/data/reports/ui-field-truth-report-latest.json",
+          "exists": true,
+          "mtime": "2026-04-15T08:35:11.216Z",
+          "size_bytes": 5189
+        },
+        {
+          "path": "public/data/reports/ui-audit-latest.json",
+          "exists": true,
+          "mtime": "2026-04-15T08:35:11.226Z",
+          "size_bytes": 747
+        }
+      ]
+    },
+    {
+      "id": "system_status_refresh",
+      "status": "ok",
+      "started_at": "2026-04-15T08:35:11.232Z",
+      "finished_at": "2026-04-15T08:35:14.951Z",
+      "exit_code": 0,
+      "timed_out": false,
+      "stdout_tail": [],
+      "stderr_tail": [],
+      "outputs": [
+        {
+          "path": "public/data/reports/system-status-latest.json",
+          "exists": true,
+          "mtime": "2026-04-15T08:35:14.944Z",
+          "size_bytes": 180950
+        }
+      ]
+    },
+    {
+      "id": "pipeline_epoch_refresh",
+      "status": "ok",
+      "started_at": "2026-04-15T08:35:14.953Z",
+      "finished_at": "2026-04-15T08:35:15.034Z",
+      "exit_code": 0,
+      "timed_out": false,
+      "stdout_tail": [],
+      "stderr_tail": [],
+      "outputs": [
+        {
+          "path": "public/data/pipeline/epoch.json",
+          "exists": true,
+          "mtime": "2026-04-15T08:35:15.032Z",
+          "size_bytes": 24624
+        }
+      ]
+    },
+    {
+      "id": "pipeline_runtime_refresh",
+      "status": "ok",
+      "started_at": "2026-04-15T08:35:15.035Z",
+      "finished_at": "2026-04-15T08:35:15.088Z",
+      "exit_code": 0,
+      "timed_out": false,
+      "stdout_tail": [],
+      "stderr_tail": [],
+      "outputs": [
+        {
+          "path": "public/data/pipeline/runtime/latest.json",
+          "exists": true,
+          "mtime": "2026-04-15T08:35:15.086Z",
+          "size_bytes": 27142
+        }
+      ]
+    },
+    {
+      "id": "final_integrity_seal",
+      "status": "ok",
+      "started_at": "2026-04-15T08:35:15.089Z",
+      "finished_at": "2026-04-15T08:35:15.148Z",
+      "exit_code": 0,
+      "timed_out": false,
+      "stdout_tail": [
+        "{\"ok\":true,\"target_market_date\":\"2026-04-14\",\"blocker_count\":0}"
+      ],
+      "stderr_tail": [],
+      "outputs": [
+        {
+          "path": "public/data/ops/final-integrity-seal-latest.json",
+          "exists": true,
+          "mtime": "2026-04-15T08:35:15.144Z",
+          "size_bytes": 5540
+        },
+        {
+          "path": "public/data/reports/pipeline-incidents-latest.json",
+          "exists": true,
+          "mtime": "2026-04-15T08:35:15.144Z",
+          "size_bytes": 2710
+        }
+      ]
+    },
+    {
+      "id": "monitoring",
+      "status": "ok",
+      "started_at": "2026-04-15T08:35:15.149Z",
+      "finished_at": "2026-04-15T08:35:15.236Z",
+      "exit_code": 0,
+      "timed_out": false,
+      "stdout_tail": [],
+      "stderr_tail": [],
+      "outputs": [
+        {
+          "path": "public/data/reports/pipeline-monitoring-latest.json",
+          "exists": true,
+          "mtime": "2026-04-15T08:35:15.233Z",
+          "size_bytes": 1792
+        }
+      ]
+    },
+    {
+      "id": "dashboard_meta",
+      "status": "ok",
+      "started_at": "2026-04-15T08:35:15.237Z",
+      "finished_at": "2026-04-15T08:35:15.344Z",
+      "exit_code": 0,
+      "timed_out": false,
+      "stdout_tail": [],
+      "stderr_tail": [],
+      "outputs": [
+        {
+          "path": "public/dashboard_v6_meta_data.json",
+          "exists": true,
+          "mtime": "2026-04-15T08:35:15.336Z",
+          "size_bytes": 635674
+        },
+        {
+          "path": "public/data/ui/dashboard-v7-status.json",
+          "exists": true,
+          "mtime": "2026-04-15T08:35:15.342Z",
+          "size_bytes": 639259
+        }
+      ]
+    },
+    {
+      "id": "frontpage_links",
+      "status": "ok",
+      "started_at": "2026-04-15T08:35:15.344Z",
+      "finished_at": "2026-04-15T08:35:15.392Z",
+      "exit_code": 0,
+      "timed_out": false,
+      "stdout_tail": [],
+      "stderr_tail": [],
+      "outputs": [
+        {
+          "path": "public/data/reports/frontpage-signal-link-validation-latest.json",
+          "exists": true,
+          "mtime": "2026-04-15T08:22:23.271Z",
+          "size_bytes": 221
+        }
+      ]
+    }
+  ]
+}

@@ -1,9 +1,9 @@
 {
   "schema": "rv_v7_feature_universe_parity_report_v1",
-  "generated_at": "2026-04-10T02:38:57.561Z",
-  "enforce": false,
+  "generated_at": "2026-04-10T17:07:37.265Z",
+  "enforce": true,
   "ssot": {
-    "symbols_count": 71012,
+    "symbols_count": 72584,
     "symbols_path": "public/data/universe/v7/ssot/stocks.max.symbols.json",
     "rows_path": "mirrors/universe-v7/ssot/stocks.max.rows.json",
     "by_feature_path": "public/data/universe/v7/ssot/stocks.by_feature.json"
@@ -11,9 +11,9 @@
   "set_parity": {
     "analyzer": {
       "ok": true,
-      "count": 48133,
-      "eligible_count": 48133,
-      "ssot_count": 71012,
+      "count": 47500,
+      "eligible_count": 47500,
+      "ssot_count": 72584,
       "missing_from_feature_count": 0,
       "extra_in_feature_count": 0,
       "sample_missing_from_feature": [],
@@ -21,9 +21,9 @@
     },
     "scientific": {
       "ok": true,
-      "count": 48133,
-      "eligible_count": 48133,
-      "ssot_count": 71012,
+      "count": 47500,
+      "eligible_count": 47500,
+      "ssot_count": 72584,
       "missing_from_feature_count": 0,
       "extra_in_feature_count": 0,
       "sample_missing_from_feature": [],
@@ -31,9 +31,9 @@
     },
     "forecast": {
       "ok": true,
-      "count": 48133,
-      "eligible_count": 48133,
-      "ssot_count": 71012,
+      "count": 47500,
+      "eligible_count": 47500,
+      "ssot_count": 72584,
       "missing_from_feature_count": 0,
       "extra_in_feature_count": 0,
       "sample_missing_from_feature": [],
@@ -41,9 +41,9 @@
     },
     "marketphase": {
       "ok": true,
-      "count": 48133,
-      "eligible_count": 48133,
-      "ssot_count": 71012,
+      "count": 47500,
+      "eligible_count": 47500,
+      "ssot_count": 72584,
       "missing_from_feature_count": 0,
       "extra_in_feature_count": 0,
       "sample_missing_from_feature": [],
@@ -51,9 +51,9 @@
     },
     "elliott": {
       "ok": true,
-      "count": 48133,
-      "eligible_count": 48133,
-      "ssot_count": 71012,
+      "count": 47500,
+      "eligible_count": 47500,
+      "ssot_count": 72584,
       "missing_from_feature_count": 0,
       "extra_in_feature_count": 0,
       "sample_missing_from_feature": [],
@@ -62,11 +62,11 @@
   },
   "live_coverage": {
     "scientific_count": 71012,
-    "forecast_count": 34667,
+    "forecast_count": 34670,
     "marketphase_count": 2445,
-    "scientific_ratio_to_ssot": 1,
-    "forecast_ratio_to_ssot": 0.488185,
-    "marketphase_ratio_to_ssot": 0.034431
+    "scientific_ratio_to_ssot": 0.978342,
+    "forecast_ratio_to_ssot": 0.477653,
+    "marketphase_ratio_to_ssot": 0.033685
   },
   "violations": [],
   "status": "PASS"

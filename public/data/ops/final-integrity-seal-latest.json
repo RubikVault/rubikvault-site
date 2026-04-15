@@ -1,0 +1,194 @@
+{
+  "schema": "rv.final_integrity_seal.v1",
+  "run_id": "pipeline-master-2026-04-14",
+  "target_market_date": "2026-04-14",
+  "generated_at": "2026-04-15T09:24:47.854Z",
+  "producer": "scripts/ops/final-integrity-seal.mjs",
+  "upstream_run_ids": [
+    "pipeline-master-2026-04-14",
+    "dashboard-green-2026-04-13",
+    "pipeline-master-2026-04-13",
+    "manual-green-2026-04-10",
+    "run-20260413T053223Z-289e1d54993a198a",
+    "run-20260413T071500Z-4a1f0e2b9c7d6a5f",
+    "pipeline-master-2026-04-10",
+    "dashboard-green-2026-04-10",
+    "publish_chain_20260412T134556_23723",
+    "learning-2026-04-12",
+    "publish_chain_20260412T184739_99149",
+    "publish_chain_20260412T192252_349",
+    "learning-2026-04-10",
+    "run-stock-analyzer-audit-2026-04-13",
+    "publish_chain_failed_15828",
+    "run-stock-analyzer-audit-2026-04-10",
+    "learning-2026-04-13",
+    "publish_chain_failed_2087",
+    "run-stock-analyzer-audit-2026-04-14",
+    "learning-2026-04-14",
+    "run-stock-analyzer-audit-2026-04-15"
+  ],
+  "phase": "VERIFY",
+  "ui_green": false,
+  "global_green": false,
+  "release_ready": false,
+  "full_universe_validated": true,
+  "ui_field_truth_ok": false,
+  "sampled_mode": false,
+  "allowed_launchd_only": true,
+  "lock_integrity_ok": true,
+  "storage_ok": true,
+  "nas_ok": true,
+  "nas_reachable": false,
+  "nas_required_for_release": false,
+  "calendar_ok": true,
+  "data_plane_green": true,
+  "control_plane": {
+    "ok": true,
+    "run_id": "pipeline-master-2026-04-14",
+    "target_market_date": "2026-04-14",
+    "target_mismatches": [],
+    "run_id_mismatches": [],
+    "observational_sources": {
+      "recovery": {
+        "run_id": "pipeline-master-2026-04-14",
+        "target_market_date": "2026-04-14"
+      }
+    },
+    "blocking_reasons": []
+  },
+  "pipeline_consistency": {
+    "ok": true,
+    "run_id": "pipeline-master-2026-04-14",
+    "target_market_date": "2026-04-14",
+    "target_mismatches": [],
+    "run_id_mismatches": [],
+    "observational_sources": {
+      "recovery": {
+        "run_id": "pipeline-master-2026-04-14",
+        "target_market_date": "2026-04-14"
+      }
+    },
+    "blocking_reasons": []
+  },
+  "module_dates": {
+    "market_data_refresh": "2026-04-14",
+    "q1_delta_ingest": "2026-04-14",
+    "quantlab_daily_report": "2026-04-14",
+    "hist_probs": "2026-04-14",
+    "forecast_daily": "2026-04-14",
+    "scientific_summary": "2026-04-14",
+    "snapshot": "2026-04-14"
+  },
+  "blocking_reasons": [
+    {
+      "id": "ui_field_truth_report_failed",
+      "severity": "critical",
+      "details": {
+        "ui_field_truth_ok": false,
+        "full_universe_source_ok": true,
+        "audit_provenance_complete": true,
+        "canary_ok": false,
+        "checked_canaries": 2,
+        "failed_checks": 2,
+        "optional_advisory_count": 0,
+        "advisory_reasons": []
+      }
+    }
+  ],
+  "stock_analyzer_universe_audit": {
+    "severity": "warning",
+    "total_assets": 41785,
+    "processed_assets": 41785,
+    "healthy_assets": 40596,
+    "affected_assets": 1189,
+    "failure_family_count": 1,
+    "critical_failure_family_count": 0,
+    "warning_failure_family_count": 1,
+    "field_checks_total": 1002840,
+    "ui_contract_checks_per_asset": 24,
+    "full_universe": true,
+    "sampled_mode": false,
+    "ui_field_truth_ok": true,
+    "full_universe_validated": true,
+    "requested_scope_full_universe": true,
+    "processed_scope_full_universe": true,
+    "audit_mode": "full",
+    "live_endpoint_mode": "artifact_only",
+    "live_endpoint_sample_size": 0,
+    "artifact_issue_count": 1189,
+    "artifact_critical_issue_count": 0,
+    "live_canary_issue_count": 0,
+    "live_canary_ok": true,
+    "artifact_full_validated": true,
+    "validated_scope_full_universe": true,
+    "release_eligible": true,
+    "processed_scope_count": 41785,
+    "validated_scope_count": 41785,
+    "target_market_date": "2026-04-14"
+  },
+  "ui_field_truth_report": {
+    "ui_field_truth_ok": false,
+    "full_universe_source_ok": true,
+    "audit_provenance_complete": true,
+    "canary_ok": false,
+    "checked_canaries": 2,
+    "failed_checks": 2,
+    "optional_advisory_count": 0,
+    "advisory_reasons": []
+  },
+  "launchd": {
+    "schema": "rv.launchd_reconcile.v1",
+    "generated_at": "2026-04-15T09:17:24.627Z",
+    "mode": "report",
+    "skip_install_missing": false,
+    "allowlist_path": "scripts/ops/launchd-allowlist.json",
+    "allowed_labels": [
+      "com.rubikvault.pipeline.master"
+    ],
+    "loaded_labels": [
+      "com.rubikvault.pipeline.master"
+    ],
+    "disallowed_labels": [],
+    "allowed_launchd_only": true,
+    "actions": []
+  },
+  "storage": {
+    "schema_version": "v1",
+    "generated_at": "2026-04-15T09:17:40.669Z",
+    "disk": {
+      "free_gb": 119.4,
+      "target_free_gb": 120,
+      "warn_free_gb": 100,
+      "block_heavy_jobs_free_gb": 80,
+      "emergency_free_gb": 60,
+      "severity": "below_target",
+      "heavy_jobs_allowed": true
+    },
+    "nas": {
+      "ssh_host": "neonas",
+      "ssh_base": "/volume1/homes/neoboy/RepoOps/rubikvault-site",
+      "archive_path": "/volume1/homes/neoboy/RepoOps/rubikvault-site/QuantLabColdArchive",
+      "reachable": false,
+      "free_gb": null
+    },
+    "snapshots": {
+      "step2bars_total": 4,
+      "step2bars_protected": 2,
+      "step2bars_archivable": 2,
+      "step2bars_archivable_estimate_gb": 13.4,
+      "step1_total": 4,
+      "step1_protected": 2,
+      "step1_archivable": 2
+    },
+    "feature_store": {
+      "old_versions_archivable": 1,
+      "old_versions": [
+        "v4_q1panel_fullchunk_daily"
+      ],
+      "old_partitions_archivable": 0
+    },
+    "recoverable_estimate_gb": 14.4,
+    "after_archive_estimate_gb": 133.8,
+    "latest_stageb_run_date": "2026-04-10"
+  }
+}

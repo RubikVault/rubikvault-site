@@ -1,20 +1,31 @@
 {
   "meta": {
     "schema": "rv.retention.cleanup.v1",
-    "generated_at": "2026-04-09T09:35:42.770Z"
+    "generated_at": "2026-04-10T15:01:59.885Z"
   },
   "policy": {
     "strategy": "A",
     "mirrors_retention_days": 180,
     "forecast_outcomes_retention_days": 180,
     "forecast_forecasts_retention_days": 90,
-    "ops_ledger_retention_days": 365
+    "ops_ledger_retention_days": 365,
+    "hist_probs_checkpoint_retention_days": 30,
+    "pending_maturity_retention_days": 30,
+    "dlq_retention_days": 7
   },
   "removed": {
     "forecast_outcomes": 0,
     "forecast_forecasts": 0,
     "mirrors": 0,
     "drift_reports": 0,
+    "hist_probs_snapshots": 0,
+    "hist_probs_checkpoints": 0,
+    "hist_probs_error_ledger": {
+      "before": 0,
+      "after": 0,
+      "trimmed": 0
+    },
+    "pending_maturity_store": 0,
     "ops_history": {
       "before": 0,
       "after": 0,
