@@ -2,7 +2,7 @@
   "schema": "rv.final_integrity_seal.v1",
   "run_id": "pipeline-master-2026-04-14",
   "target_market_date": "2026-04-14",
-  "generated_at": "2026-04-15T09:36:04.536Z",
+  "generated_at": "2026-04-15T09:41:33.478Z",
   "producer": "scripts/ops/final-integrity-seal.mjs",
   "upstream_run_ids": [
     "pipeline-master-2026-04-14",
@@ -89,8 +89,8 @@
         "audit_provenance_complete": true,
         "canary_ok": false,
         "checked_canaries": 2,
-        "failed_checks": 3,
-        "optional_advisory_count": 1,
+        "failed_checks": 8,
+        "optional_advisory_count": 2,
         "advisory_reasons": []
       }
     }
@@ -132,13 +132,13 @@
     "audit_provenance_complete": true,
     "canary_ok": false,
     "checked_canaries": 2,
-    "failed_checks": 3,
-    "optional_advisory_count": 1,
+    "failed_checks": 8,
+    "optional_advisory_count": 2,
     "advisory_reasons": []
   },
   "launchd": {
     "schema": "rv.launchd_reconcile.v1",
-    "generated_at": "2026-04-15T09:30:56.513Z",
+    "generated_at": "2026-04-15T09:41:04.849Z",
     "mode": "report",
     "skip_install_missing": false,
     "allowlist_path": "scripts/ops/launchd-allowlist.json",
@@ -154,9 +154,9 @@
   },
   "storage": {
     "schema_version": "v1",
-    "generated_at": "2026-04-15T09:32:11.477Z",
+    "generated_at": "2026-04-15T09:41:14.954Z",
     "disk": {
-      "free_gb": 125.5,
+      "free_gb": 128.9,
       "target_free_gb": 120,
       "warn_free_gb": 100,
       "block_heavy_jobs_free_gb": 80,
@@ -188,7 +188,7 @@
       "old_partitions_archivable": 0
     },
     "recoverable_estimate_gb": 14.4,
-    "after_archive_estimate_gb": 139.9,
+    "after_archive_estimate_gb": 143.3,
     "latest_stageb_run_date": "2026-04-10"
   }
 }
