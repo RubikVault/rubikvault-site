@@ -12,7 +12,7 @@
         "policy": 2453,
         "source": 2453
       },
-      "last_run": "2026-04-12T03:09:13.124Z",
+      "last_run": "2026-04-09T01:54:27.422Z",
       "manifest": "public/data/v3/universe/manifest.json",
       "partial": false,
       "reason": null,
@@ -122,7 +122,7 @@
         "refreshed": 250,
         "total": 2453
       },
-      "last_run": "2026-03-16T07:00:11.916Z",
+      "last_run": "2026-04-13T08:00:07.121Z",
       "manifest": "public/data/v3/fundamentals/manifest.json",
       "partial": true,
       "reason": "BUDGET_THROTTLED_PARTIAL_REFRESH",
@@ -132,10 +132,10 @@
     }
   },
   "meta": {
-    "commit": "8bb15a8a3b7ce2503780265ff2dbcfdd96c555b1",
-    "generated_at": "2026-04-12T03:09:12.910Z",
+    "commit": "506a3cfd2e8e27cbe157dfcfdc242b014a9e6f40",
+    "generated_at": "2026-04-13T07:26:52.057Z",
     "policy_commit": "6a1fa2386829f7f54d534bef2040158393c5cbff",
-    "run_id": "8bb15a8a-20260412T0309-1775963352",
+    "run_id": "506a3cfd-20260413T0726-12",
     "schema": "rv.health.v3"
   },
   "system": {
@@ -146,16 +146,16 @@
     },
     "circuits": {},
     "drift_latest": {
-      "universe": "public/data/v3/system/drift/universe-drift-2026-04-12.json"
+      "universe": "public/data/v3/system/drift/universe-drift-2026-04-09.json"
     },
     "manifests": {
       "universe": "public/data/v3/universe/manifest.json"
     },
     "retention": {
       "hot_window_days": 45,
-      "last_cleanup": "2026-04-10T15:01:59.885Z",
+      "last_cleanup": "2026-04-09T09:35:42.770Z",
       "strategy": "A"
     },
-    "status": "ok"
+    "status": "degraded"
   }
 }
