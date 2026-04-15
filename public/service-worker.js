@@ -1,5 +1,5 @@
 /**
- * RubikVault Service Worker v3.3
+ * RubikVault Service Worker v3.4
  * 
  * Features:
  * - Offline-first for critical data
@@ -8,7 +8,7 @@
  * - Background sync ready
  */
 
-const CACHE_VERSION = 'rv-v3.3';
+const CACHE_VERSION = 'rv-v3.4-20260412';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const DATA_CACHE = `${CACHE_VERSION}-data`;
 const API_CACHE = `${CACHE_VERSION}-api`;
@@ -37,7 +37,7 @@ const CRITICAL_DATA = [
  * Install: Pre-cache critical assets
  */
 self.addEventListener('install', (event) => {
-  console.log('[SW] Installing v3.3...');
+  console.log('[SW] Installing v3.4...');
   
   event.waitUntil(
     Promise.all([
@@ -69,7 +69,7 @@ self.addEventListener('install', (event) => {
  * Activate: Clean old caches
  */
 self.addEventListener('activate', (event) => {
-  console.log('[SW] Activating v3.3...');
+  console.log('[SW] Activating v3.4...');
   
   event.waitUntil(
     caches.keys().then(cacheNames => {
@@ -94,6 +94,11 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
+
+  if (isLocalDevRequest(request, url)) {
+    event.respondWith(handleLocalDevRequest(request));
+    return;
+  }
   
   // 1) API REQUESTS (/api/*)
   if (url.pathname.startsWith('/api/')) {
@@ -116,6 +121,26 @@ self.addEventListener('fetch', (event) => {
   // 4) STATIC ASSETS
   event.respondWith(handleStaticRequest(request));
 });
+
+function isLocalDevRequest(request, url) {
+  const isLocalHost = ['127.0.0.1', 'localhost', '0.0.0.0'].includes(url.hostname);
+  if (!isLocalHost) return false;
+  if (request.mode === 'navigate') return true;
+  return (
+    url.pathname.startsWith('/api/') ||
+    url.pathname.startsWith('/data/') ||
+    url.pathname.startsWith('/js/') ||
+    url.pathname.startsWith('/analyze/') ||
+    url.pathname === '/stock.html'
+  );
+}
+
+async function handleLocalDevRequest(request) {
+  if (request.method !== 'GET') {
+    return fetch(request);
+  }
+  return fetch(new Request(request, { cache: 'no-store' }));
+}
 
 /**
  * Handle API requests: Network-first with cache fallback
