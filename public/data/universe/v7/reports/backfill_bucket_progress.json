@@ -1,23 +1,23 @@
 {
   "schema": "rv_v7_backfill_bucket_progress_v1",
-  "generated_at": "2026-04-12T18:43:42.178Z",
+  "generated_at": "2026-04-16T07:19:28.907Z",
   "env_file": null,
   "skip_archeology": false,
-  "backfill_max": 1500,
+  "backfill_max": 2000,
   "max_runs_per_bucket": 50,
   "max_no_progress_runs": 3,
-  "strict_bucket_order": true,
+  "strict_bucket_order": false,
   "max_throttle_stops": 3,
   "throttle_cooldown_ms": 120000,
   "backfill_waivers": {
     "path": "mirrors/universe-v7/state/backfill_waivers.json",
-    "exists": true,
-    "count": 4
+    "exists": false,
+    "count": 0
   },
   "budget_stopped": false,
   "fatal": {
     "bucket": "stocks",
-    "code": 1,
+    "code": 90,
     "reason": "pipeline_failed"
   },
   "blocked_by_incomplete_bucket": null,
@@ -31,28 +31,28 @@
       "runs": [
         {
           "run": 1,
-          "status": 1,
-          "code": 1,
+          "status": 90,
+          "code": 90,
           "run_id": null,
           "reason": null,
           "remaining_global": 107490,
           "before": {
-            "total": 75089,
-            "backfill_real": 73968,
-            "with_bars": 73968,
-            "remaining": 1121,
-            "checkpoint_done": 1474,
-            "checkpoint_pending": 1121,
-            "progress_units": 73968
+            "total": 75093,
+            "backfill_real": 0,
+            "with_bars": 0,
+            "remaining": 75093,
+            "checkpoint_done": 0,
+            "checkpoint_pending": 0,
+            "progress_units": 0
           },
           "after": {
-            "total": 75089,
-            "backfill_real": 73968,
-            "with_bars": 73968,
-            "remaining": 1121,
-            "checkpoint_done": 1474,
-            "checkpoint_pending": 1121,
-            "progress_units": 73968
+            "total": 75093,
+            "backfill_real": 0,
+            "with_bars": 0,
+            "remaining": 75093,
+            "checkpoint_done": 0,
+            "checkpoint_pending": 0,
+            "progress_units": 0
           },
           "delta_backfill_real": 0,
           "delta_progress_units": 0,
@@ -62,13 +62,13 @@
       "throttled_stops": 0,
       "completed": false,
       "last_progress": {
-        "total": 75089,
-        "backfill_real": 73968,
-        "with_bars": 73968,
-        "remaining": 1121,
-        "checkpoint_done": 1474,
-        "checkpoint_pending": 1121,
-        "progress_units": 73968
+        "total": 75093,
+        "backfill_real": 0,
+        "with_bars": 0,
+        "remaining": 75093,
+        "checkpoint_done": 0,
+        "checkpoint_pending": 0,
+        "progress_units": 0
       }
     }
   ]

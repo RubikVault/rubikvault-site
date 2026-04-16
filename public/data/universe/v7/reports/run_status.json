@@ -1,106 +1,20 @@
 {
   "schema": "rv_v7_run_status_v1",
-  "generated_at": "2026-04-10T17:07:37.283Z",
-  "run_id": "v7_20260410170558_a55b34",
-  "exit_code": 0,
-  "reason": "ok",
+  "generated_at": "2026-04-16T07:19:27.495Z",
+  "run_id": "unknown",
+  "exit_code": 90,
+  "reason": "phase0_failed",
   "steps": [
     {
-      "step": "preflight",
-      "ok": true,
-      "code": 0,
+      "step": "phase0_archeology",
+      "ok": false,
+      "code": 90,
       "output": {
-        "status": "OK",
-        "code": 0,
-        "phase": "preflight",
-        "run_id": "v7_20260410170558_a55b34",
-        "tmp_dir": "tmp/v7-build/v7_20260410170558_a55b34",
-        "run_dir": "mirrors/universe-v7/runs/v7_20260410170558_a55b34",
-        "lock_path": "mirrors/universe-v7/state/run.lock",
-        "lock_held": true
-      }
-    },
-    {
-      "step": "law_coverage",
-      "ok": true,
-      "code": 0,
-      "output": {
-        "status": "OK",
-        "code": 0,
-        "report": "public/data/universe/v7/reports/law_coverage_report.json"
-      }
-    },
-    {
-      "step": "single_ingestor",
-      "ok": true,
-      "code": 0,
-      "output": {
-        "status": "OK",
-        "code": 0,
-        "violations": 0
-      }
-    },
-    {
-      "step": "pipeline_v7",
-      "ok": true,
-      "code": 0,
-      "exit_code": 0,
-      "reason": "ok",
-      "output": {
-        "status": "OK",
-        "code": 0,
-        "run_id": "v7_20260410170558_a55b34",
-        "run_dir": "tmp/v7-build/v7_20260410170558_a55b34",
-        "publish_payload": "tmp/v7-build/v7_20260410170558_a55b34/publish_payload"
-      }
-    },
-    {
-      "step": "ui_safety",
-      "ok": true,
-      "code": 0,
-      "output": {
-        "status": "OK",
-        "code": 0,
-        "warnings": 1
-      }
-    },
-    {
-      "step": "license_leak",
-      "ok": true,
-      "code": 0,
-      "output": {
-        "status": "OK",
-        "code": 0,
-        "scanned_files": 24080
-      }
-    },
-    {
-      "step": "publish_two_phase",
-      "ok": true,
-      "code": 0,
-      "output": {
-        "status": "OK",
-        "code": 0,
-        "run_id": "v7_20260410170558_a55b34",
-        "publish_dir": "public/data/universe/v7"
-      }
-    },
-    {
-      "step": "build_stock_ssot",
-      "ok": true,
-      "code": 0,
-      "output": null
-    },
-    {
-      "step": "feature_universe_parity",
-      "ok": true,
-      "code": 0,
-      "output": {
-        "status": "OK",
-        "code": 0,
-        "report": "public/data/universe/v7/reports/feature_universe_parity_report.json",
-        "violations": 0,
-        "ssot_symbols": 72584
+        "status": "FAIL",
+        "code": 90,
+        "reason": "LEGACY_CONTRACT_MISMATCH",
+        "existing_hash": "2de62064eab675cfe3057e97c4a5aa2dbbd81a530207855d535b9bf2e0edbe6f",
+        "current_hash": "c4df62f85ab866bd9ffb128a0dbd75157150800f2dd718c6434951f0181ee723"
       }
     }
   ]
