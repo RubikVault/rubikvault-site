@@ -30,8 +30,9 @@ import { execFileSync, spawn, spawnSync } from 'node:child_process';
 // ─── Paths ────────────────────────────────────────────────────────────────────
 
 const REPO_ROOT = path.resolve(new URL('.', import.meta.url).pathname, '../..');
-const QUANT_ROOT = process.env.QUANT_ROOT
-  || '/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab';
+const QUANT_ROOT = process.env.QUANT_ROOT || (process.platform === 'linux'
+  ? '/volume1/homes/neoboy/QuantLabHot/rubikvault-quantlab'
+  : '/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab');
 // Python venv lives in REPO_ROOT/quantlab/.venv (not QUANT_ROOT/.venv).
 // See docs/ops/lessons-learned.md if this path needs updating.
 const PYTHON = process.env.PYTHON_BIN

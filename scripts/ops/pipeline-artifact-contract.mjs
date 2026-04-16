@@ -72,7 +72,10 @@ export function collectUpstreamRunIds(...docs) {
       }
     }
   }
-  return uniq(values);
+  // Remove failed run IDs (not relevant in a successful provenance trail)
+  // and cap to last 20 to prevent unbounded growth across many days.
+  const deduped = uniq(values).filter((id) => !id.startsWith('publish_chain_failed_'));
+  return deduped.slice(-20);
 }
 
 export function buildArtifactEnvelope({

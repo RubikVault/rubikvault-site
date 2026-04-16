@@ -22,7 +22,9 @@ import {
 } from './system-status-ssot.mjs';
 
 const REPO_ROOT = path.resolve(new URL('.', import.meta.url).pathname, '../..');
-const QUANT_ROOT = process.env.QUANT_ROOT || '/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab';
+const QUANT_ROOT = process.env.QUANT_ROOT || (process.platform === 'linux'
+  ? '/volume1/homes/neoboy/QuantLabHot/rubikvault-quantlab'
+  : '/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab');
 const HIST_PROBS_PROFILE_INDEX = process.env.HIST_PROBS_PROFILE_INDEX
   ? path.resolve(process.env.HIST_PROBS_PROFILE_INDEX)
   : null;

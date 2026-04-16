@@ -8,7 +8,9 @@ import { buildExpertLayer } from './quantlab_v4_daily_agents.mjs';
 import { buildQuantLabStockPublish, writeQuantLabStockPublishBundle } from './build_quantlab_stock_publish.mjs';
 
 const REPO_ROOT = process.cwd();
-const DEFAULT_QUANT_ROOT = '/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab';
+const DEFAULT_QUANT_ROOT = process.env.QUANT_ROOT || (process.platform === 'linux'
+  ? '/volume1/homes/neoboy/QuantLabHot/rubikvault-quantlab'
+  : '/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab');
 const MIRROR_DIR = path.join(REPO_ROOT, 'mirrors/quantlab/reports/v4-daily');
 const PUBLIC_REPORT = path.join(REPO_ROOT, 'public/data/quantlab/reports/v4-daily-latest.json');
 const PUBLIC_HISTORY = path.join(REPO_ROOT, 'public/data/quantlab/reports/v4-daily-history.json');
@@ -1282,7 +1284,7 @@ function main() {
   const rawRoot = path.join(quantRoot, 'data/raw/provider=EODHD');
   const snapshotsRoot = path.join(quantRoot, 'data/snapshots');
   const featureStoreRoot = path.join(quantRoot, 'features/store');
-  const v7HistoryRoot = '/Users/michaelpuchowezki/QuantLabHot/storage/universe-v7-history/history';
+  const v7HistoryRoot = path.join(path.dirname(quantRoot), 'storage/universe-v7-history/history');
 
   const latestRegistry = registryReports[0] || null;
   const latestPortfolio = portfolioReports[0] || null;

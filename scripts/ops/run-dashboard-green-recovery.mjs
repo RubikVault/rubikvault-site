@@ -20,7 +20,10 @@ const HIST_PROBS_SUMMARY = path.join(ROOT, 'public', 'data', 'hist-probs', 'run-
 const HIST_PROBS_ANCHOR = path.join(ROOT, 'public', 'data', 'hist-probs', 'AAPL.json');
 const AUDIT_REPORT = path.join(ROOT, 'public', 'data', 'reports', 'stock-analyzer-universe-audit-latest.json');
 const DATA_FRESHNESS_REPORT = path.join(ROOT, 'public', 'data', 'reports', 'data-freshness-latest.json');
-const Q1_SUCCESS = '/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/ops/q1_daily_delta_ingest/latest_success.json';
+const _QUANT_ROOT = process.env.QUANT_ROOT || (process.platform === 'linux'
+  ? '/volume1/homes/neoboy/QuantLabHot/rubikvault-quantlab'
+  : '/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab');
+const Q1_SUCCESS = path.join(_QUANT_ROOT, 'ops/q1_daily_delta_ingest/latest_success.json');
 const QUANTLAB_OPERATIONAL_STATUS = path.join(ROOT, 'public', 'data', 'quantlab', 'status', 'operational-status.json');
 const DASHBOARD_META = path.join(ROOT, 'public', 'dashboard_v6_meta_data.json');
 const DASHBOARD_V7_STATUS = path.join(ROOT, 'public', 'data', 'ui', 'dashboard-v7-status.json');
@@ -93,7 +96,8 @@ function countRecentJsonFiles(dirPath, minutes, { exclude = [] } = {}) {
 
 function parsePs(pattern) {
   try {
-    const output = execFileSync('/bin/zsh', ['-lc', `ps aux | rg '${pattern.replace(/'/g, `'\\''`)}'`], {
+    const _shell = process.platform === 'linux' ? '/bin/bash' : '/bin/zsh';
+    const output = execFileSync(_shell, ['-lc', `ps aux | grep -F '${pattern.replace(/'/g, `'\\''`)}' | grep -v 'grep '`], {
       cwd: ROOT,
       encoding: 'utf8',
       stdio: ['ignore', 'pipe', 'ignore'],
@@ -110,7 +114,8 @@ function parsePs(pattern) {
 function startDetached(command, logFile) {
   const out = fs.openSync(logFile, 'a');
   fs.appendFileSync(logFile, `\n[${new Date().toISOString()}] START ${command}\n`, 'utf8');
-  const child = spawn('/bin/zsh', ['-lc', `cd '${ROOT.replace(/'/g, `'\\''`)}' && ${command}`], {
+  const _shell = process.platform === 'linux' ? '/bin/bash' : '/bin/zsh';
+  const child = spawn(_shell, ['-lc', `cd '${ROOT.replace(/'/g, `'\\''`)}' && ${command}`], {
     detached: true,
     stdio: ['ignore', out, out],
   });
@@ -296,6 +301,10 @@ const steps = [
     pattern: 'scripts/quantlab/run_daily_delta_ingest_q1.py',
     command: `python3 scripts/quantlab/run_daily_delta_ingest_q1.py --ingest-date ${targetMarketDate} --full-scan-packs`,
     logFile: path.join(LOG_DIR, 'step-01-q1-delta.log'),
+    // q1_delta_ingest can be slow due to provider latency — allow more retries with longer cooldown
+    // than the global default (3 restarts / 15 min) to avoid premature restart_budget_exhausted.
+    maxRestarts: 5,
+    cooldownMin: 30,
     dependsOn: ['market_data_refresh'],
     isComplete: () => {
       const doc = normalizeQ1DeltaLatestSuccess(readJson(Q1_SUCCESS));
@@ -380,7 +389,7 @@ const steps = [
     id: 'hist_probs',
     label: 'Hist Probs Full (Turbo)',
     pattern: 'run-hist-probs-turbo.mjs',
-    command: 'NODE_OPTIONS=--max-old-space-size=6144 node run-hist-probs-turbo.mjs',
+    command: 'NODE_OPTIONS=--max-old-space-size=4096 node run-hist-probs-turbo.mjs',
     logFile: path.join(LOG_DIR, 'step-06-hist-probs.log'),
     stallMinutes: 360,
     dependsOn: ['q1_delta_ingest'],
@@ -419,7 +428,7 @@ const steps = [
     id: 'snapshot',
     label: 'Best Setups Snapshot',
     pattern: 'scripts/build-best-setups-v4.mjs',
-    command: 'NODE_OPTIONS=--max-old-space-size=8192 node scripts/build-best-setups-v4.mjs',
+    command: `NODE_OPTIONS=--max-old-space-size=${process.platform === 'linux' ? 4096 : 8192} node scripts/build-best-setups-v4.mjs`,
     logFile: path.join(LOG_DIR, 'step-07-snapshot.log'),
     dependsOn: ['quantlab_daily_report', 'forecast_daily'],
     isComplete: () => fileUpdatedSince(path.join(ROOT, 'public', 'data', 'snapshots', 'best-setups-v4.json'), campaignStartMs),
@@ -525,7 +534,11 @@ const running = [];
 const blocked = [];
 const restarted = [];
 
-ensureRuntime();
+// On NAS (Linux), Wrangler dev server is not available — skip runtime setup.
+// stock_analyzer_universe_audit will be skipped or fail gracefully.
+if (process.platform !== 'linux') {
+  ensureRuntime();
+}
 
 // Migration: kill any legacy sequential hist_probs if turbo is now the target runner
 for (const { pid } of parsePs('scripts/lib/hist-probs/run-hist-probs.mjs')) {
@@ -574,13 +587,15 @@ for (const step of steps) {
     if (stalledMinutes >= (step.stallMinutes ?? 20)) {
       const restartCount = Number(stepState.restarts || 0);
       const lastRestartAt = stepState.last_restart_at ? Date.parse(stepState.last_restart_at) : 0;
-      if (restartCount >= MAX_STEP_RESTARTS) {
+      const stepMaxRestarts = step.maxRestarts ?? MAX_STEP_RESTARTS;
+      const stepCooldownMin = step.cooldownMin ?? RESTART_COOLDOWN_MIN;
+      if (restartCount >= stepMaxRestarts) {
         stepState.blocked_reason = `restart_budget_exhausted:${restartCount}`;
         blocked.push({ id: step.id, waiting_for: [], reason: stepState.blocked_reason });
         appendLog(ACTION_LOG, `[${new Date().toISOString()}] blocked ${step.id} restart_budget_exhausted=${restartCount}`);
         continue;
       }
-      if (Date.now() - lastRestartAt < (RESTART_COOLDOWN_MIN * 60 * 1000)) {
+      if (Date.now() - lastRestartAt < (stepCooldownMin * 60 * 1000)) {
         blocked.push({ id: step.id, waiting_for: [], reason: 'restart_cooldown_active' });
         continue;
       }

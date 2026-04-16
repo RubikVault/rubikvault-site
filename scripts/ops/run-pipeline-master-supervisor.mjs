@@ -42,6 +42,10 @@ const RECOVERY_CORE_STEP_IDS = [
   'stock_analyzer_universe_audit',
   'system_status',
 ];
+// UPSTREAM_CRITICAL: market-data-chain steps that must complete before Release Gate.
+// `fundamentals` is intentionally excluded — it's a downstream enrichment step,
+// not a blocking upstream data dependency (it depends on q1_delta_ingest but
+// the release gate does not depend on it).
 const UPSTREAM_CRITICAL_STEP_IDS = [
   'market_data_refresh',
   'q1_delta_ingest',
@@ -282,21 +286,6 @@ function runVerifyRefresh(targetMarketDate, runId) {
       timeoutMs: 5 * 60 * 1000,
     },
     {
-      id: 'system_status_refresh',
-      script: path.join(ROOT, 'scripts/ops/build-system-status-report.mjs'),
-      timeoutMs: 10 * 60 * 1000,
-    },
-    {
-      id: 'pipeline_epoch_refresh',
-      script: path.join(ROOT, 'scripts/ops/build-pipeline-epoch.mjs'),
-      timeoutMs: 5 * 60 * 1000,
-    },
-    {
-      id: 'pipeline_runtime_refresh',
-      script: path.join(ROOT, 'scripts/ops/build-pipeline-runtime-report.mjs'),
-      timeoutMs: 5 * 60 * 1000,
-    },
-    {
       id: 'monitoring',
       script: path.join(ROOT, 'scripts/ops/build-pipeline-monitoring-report.mjs'),
       timeoutMs: 5 * 60 * 1000,
@@ -397,6 +386,11 @@ function computePhase({
 
   const hasBudgetExhausted = Array.isArray(recovery?.blocked_steps)
     && recovery.blocked_steps.some((step) => String(step?.reason || '').startsWith('restart_budget_exhausted'));
+  // Detect terminal q1_delta_ingest failure — requires manual intervention, no point continuing recovery.
+  const q1TerminallyBlocked = Array.isArray(recovery?.blocked_steps)
+    && recovery.blocked_steps.some(
+      (step) => step?.id === 'q1_delta_ingest' && String(step?.reason || '').startsWith('restart_budget_exhausted'),
+    );
   const upstreamRecoveryReady = recoveryCoreReady(targetMarketDate, recovery);
   const upstreamRefreshNeeded = !upstreamRecoveryReady || systemNeedsUpstreamRefresh(system);
 
@@ -405,6 +399,9 @@ function computePhase({
   if (!sourceReady) {
     // Market-data refresh is part of recovery; don't idle waiting for an external writer.
     functionalPhase = 'UPSTREAM_REFRESH';
+  } else if (q1TerminallyBlocked) {
+    // q1_delta_ingest exhausted its restart budget — manual fix required; stop spinning.
+    functionalPhase = 'UPSTREAM_BLOCKED';
   } else if (hasBudgetExhausted || upstreamRefreshNeeded) {
     functionalPhase = 'UPSTREAM_REFRESH';
   } else if (publishChainReady(targetMarketDate, runId) !== true) {
@@ -448,7 +445,10 @@ function writeReleaseState({ state, phase, blockers, consistency, system, runtim
     nas_ok: seal?.nas_ok ?? null,
     calendar_ok: seal?.calendar_ok ?? null,
     control_plane: consistency,
-    runtime_phase: runtime?.phase || null,
+    // data_pipeline_phase reflects the data-plane runtime state (always "running" while pipeline
+    // is active) — it is independent from the release-gate phase above. Not a blocker signal.
+    data_pipeline_phase: runtime?.phase || null,
+    runtime_phase: phase === 'RELEASE_READY' ? 'completed' : (runtime?.phase || null),
     epoch_pipeline_ok: epoch?.pipeline_ok ?? null,
     system_release_ready: system?.summary?.release_ready ?? null,
     last_updated: new Date().toISOString(),

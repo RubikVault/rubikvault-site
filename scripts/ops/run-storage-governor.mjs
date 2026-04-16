@@ -35,8 +35,9 @@ import os from 'node:os';
 // ─── Paths ────────────────────────────────────────────────────────────────────
 
 const REPO_ROOT = path.resolve(new URL('.', import.meta.url).pathname, '../..');
-const QUANT_ROOT = process.env.QUANT_ROOT
-  || '/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab';
+const QUANT_ROOT = process.env.QUANT_ROOT || (process.platform === 'linux'
+  ? '/volume1/homes/neoboy/QuantLabHot/rubikvault-quantlab'
+  : '/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab');
 const HOME = os.homedir();
 
 const QUALITY_POLICY_PATH  = path.join(REPO_ROOT, 'policies/quality-locality.v1.json');

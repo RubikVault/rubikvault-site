@@ -24,8 +24,9 @@ import { resolveRuntimeConfig } from '../lib/pipeline_authority/config/runtime-c
 // ─── Paths ─────────────────────────────────────────────────────────────────────
 
 const REPO_ROOT = path.resolve(fileURLToPath(new URL('.', import.meta.url)), '../..');
-const QUANT_ROOT = process.env.QUANT_ROOT
-  || '/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab';
+const QUANT_ROOT = process.env.QUANT_ROOT || (process.platform === 'linux'
+  ? '/volume1/homes/neoboy/QuantLabHot/rubikvault-quantlab'
+  : '/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab');
 const PYTHON = process.env.PYTHON_BIN
   || path.join(REPO_ROOT, 'quantlab/.venv/bin/python');
 

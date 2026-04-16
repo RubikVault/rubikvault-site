@@ -562,7 +562,8 @@ if (isMainThread) {
     }
 
     const numWorkers = Math.min(NUM_WORKERS, tickerList.length || 1);
-    const chunkSize = Math.ceil(tickerList.length / numWorkers);
+    // Worker recycling: max tickers per worker to prevent V8 heap bloat
+    const WORKER_BATCH_SIZE = Number(process.env.HIST_PROBS_WORKER_BATCH_SIZE || 50);
     const startTime = Date.now();
     let progressCovered = 0;
     let totalDone = 0;
@@ -575,114 +576,134 @@ if (isMainThread) {
     const noDataSamples = [];
     const runtimeNoDataTickers = new Set();
 
-    const workers = tickerList.length === 0 ? [] : Array.from({ length: numWorkers }).map((_, i) => {
-      const chunk = tickerList.slice(i * chunkSize, (i + 1) * chunkSize);
-      if (chunk.length === 0) return Promise.resolve();
-      return new Promise((resolve, reject) => {
-        const worker = new Worker(__filename, {
-          workerData: {
-            chunk,
-            skipExisting: SKIP_EXISTING,
-            histProbsDir: HIST_PROBS_DIR,
-            expectedDates: Object.fromEntries(chunk.map((ticker) => [ticker, expectedDates[ticker] || null])),
-            entryOptionsByTicker: Object.fromEntries(chunk.map((ticker) => [ticker, entryOptionsByTicker[ticker] || {}])),
-          },
-          resourceLimits: NODE_OLD_SPACE_LIMIT_MB
-            ? { maxOldGenerationSizeMb: NODE_OLD_SPACE_LIMIT_MB }
-            : undefined,
-        });
-        worker.on('message', (msg) => {
-          if (msg.type === 'progress') {
-            progressCovered += msg.count;
-            if (progressCovered > 0 && progressCovered % 1000 === 0) {
-              const elapsed = ((Date.now() - startTime)/1000).toFixed(0);
-              const rate = (progressCovered / Math.max(1, elapsed)).toFixed(1);
-              const remaining = tickerList.length - progressCovered;
-              const eta = remaining > 0 ? Math.round(remaining / Math.max(0.1, parseFloat(rate))) : 0;
-              console.log(`[Turbo-Hist] Progress: ${progressCovered + skippedCount}/${totalUniverse} done (${elapsed}s elapsed, ${rate} t/s, ETA ~${Math.ceil(eta/60)}min)`);
-            }
-          } else if (msg.type === 'summary') {
-            totalDone += Number(msg.processed || 0);
-            totalSkipped += Number(msg.skipped || 0);
-          } else if (msg.type === 'ticker_processed') {
-            setTickerState(checkpointStore, msg.ticker, {
-              status: 'processed',
-              latest_date: msg.latest_date || null,
-              ...CURRENT_VERSIONS,
-              computed_at: new Date().toISOString(),
-            });
-          } else if (msg.type === 'ticker_skipped') {
-            setTickerState(checkpointStore, msg.ticker, {
-              status: 'fresh_skipped',
-              latest_date: msg.latest_date || null,
-              ...CURRENT_VERSIONS,
-              computed_at: new Date().toISOString(),
-            });
-          } else if (msg.type === 'ticker_error') {
-            totalErrors += 1;
-            appendError({
-              ticker: msg.ticker,
-              error: 'COMPUTE_ERROR',
-              message: msg.message,
-              run_id: regime?.date || null,
-            });
-            setTickerState(checkpointStore, msg.ticker, {
-              status: 'error',
-              latest_date: msg.latest_date || expectedDates[msg.ticker] || null,
-              ...CURRENT_VERSIONS,
-              computed_at: new Date().toISOString(),
-            });
-            if (errorSamples.length < 25) {
-              errorSamples.push({ ticker: msg.ticker, message: msg.message });
-            }
-          } else if (msg.type === 'ticker_no_data') {
-            totalNoData += 1;
-            runtimeNoDataTickers.add(String(msg.ticker || '').toUpperCase());
-            appendError({
-              ticker: msg.ticker,
-              error: 'NO_DATA',
-              message: msg.message || 'NO_DATA',
-              run_id: regime?.date || null,
-              severity: 'warning',
-            });
-            setTickerState(checkpointStore, msg.ticker, {
-              status: 'no_data',
-              latest_date: expectedDates[msg.ticker] || null,
-              ...CURRENT_VERSIONS,
-              computed_at: new Date().toISOString(),
-            });
-            if (noDataSamples.length < 25) {
-              noDataSamples.push({ ticker: msg.ticker, message: msg.message || 'NO_DATA' });
-            }
-          } else if (msg.type === 'ticker_inactive') {
-            totalInactiveDetected += 1;
-            setTickerState(checkpointStore, msg.ticker, {
-              status: 'inactive',
-              latest_date: msg.latest_date || null,
-              ...CURRENT_VERSIONS,
-              computed_at: new Date().toISOString(),
-            });
-          } else if (msg.type === 'worker_fatal') {
-            hardFailures += 1;
+    // Build batch queue: fixed-size batches so each worker processes a bounded set and terminates
+    const batches = [];
+    for (let i = 0; i < tickerList.length; i += WORKER_BATCH_SIZE) {
+      batches.push(tickerList.slice(i, i + WORKER_BATCH_SIZE));
+    }
+    let batchIndex = 0;
+    let batchesCompleted = 0;
+    if (batches.length > 0) {
+      console.log(`[Turbo-Hist] Worker recycling: ${batches.length} batches of ≤${WORKER_BATCH_SIZE} tickers, ${numWorkers} concurrent slots`);
+    }
+
+    const spawnWorkerForBatch = (batch, batchIdx) => new Promise((resolve, reject) => {
+      const worker = new Worker(__filename, {
+        workerData: {
+          chunk: batch,
+          skipExisting: SKIP_EXISTING,
+          histProbsDir: HIST_PROBS_DIR,
+          expectedDates: Object.fromEntries(batch.map((ticker) => [ticker, expectedDates[ticker] || null])),
+          entryOptionsByTicker: Object.fromEntries(batch.map((ticker) => [ticker, entryOptionsByTicker[ticker] || {}])),
+        },
+        resourceLimits: NODE_OLD_SPACE_LIMIT_MB
+          ? { maxOldGenerationSizeMb: NODE_OLD_SPACE_LIMIT_MB }
+          : undefined,
+      });
+      worker.on('message', (msg) => {
+        if (msg.type === 'progress') {
+          progressCovered += msg.count;
+          if (progressCovered > 0 && progressCovered % 1000 === 0) {
+            const elapsed = ((Date.now() - startTime)/1000).toFixed(0);
+            const rate = (progressCovered / Math.max(1, elapsed)).toFixed(1);
+            const remaining = tickerList.length - progressCovered;
+            const eta = remaining > 0 ? Math.round(remaining / Math.max(0.1, parseFloat(rate))) : 0;
+            console.log(`[Turbo-Hist] Progress: ${progressCovered + skippedCount}/${totalUniverse} done (${elapsed}s elapsed, ${rate} t/s, ETA ~${Math.ceil(eta/60)}min)`);
           }
-        });
-        worker.on('error', (error) => {
+        } else if (msg.type === 'summary') {
+          totalDone += Number(msg.processed || 0);
+          totalSkipped += Number(msg.skipped || 0);
+        } else if (msg.type === 'ticker_processed') {
+          setTickerState(checkpointStore, msg.ticker, {
+            status: 'processed',
+            latest_date: msg.latest_date || null,
+            ...CURRENT_VERSIONS,
+            computed_at: new Date().toISOString(),
+          });
+        } else if (msg.type === 'ticker_skipped') {
+          setTickerState(checkpointStore, msg.ticker, {
+            status: 'fresh_skipped',
+            latest_date: msg.latest_date || null,
+            ...CURRENT_VERSIONS,
+            computed_at: new Date().toISOString(),
+          });
+        } else if (msg.type === 'ticker_error') {
+          totalErrors += 1;
+          appendError({
+            ticker: msg.ticker,
+            error: 'COMPUTE_ERROR',
+            message: msg.message,
+            run_id: regime?.date || null,
+          });
+          setTickerState(checkpointStore, msg.ticker, {
+            status: 'error',
+            latest_date: msg.latest_date || expectedDates[msg.ticker] || null,
+            ...CURRENT_VERSIONS,
+            computed_at: new Date().toISOString(),
+          });
+          if (errorSamples.length < 25) {
+            errorSamples.push({ ticker: msg.ticker, message: msg.message });
+          }
+        } else if (msg.type === 'ticker_no_data') {
+          totalNoData += 1;
+          runtimeNoDataTickers.add(String(msg.ticker || '').toUpperCase());
+          appendError({
+            ticker: msg.ticker,
+            error: 'NO_DATA',
+            message: msg.message || 'NO_DATA',
+            run_id: regime?.date || null,
+            severity: 'warning',
+          });
+          setTickerState(checkpointStore, msg.ticker, {
+            status: 'no_data',
+            latest_date: expectedDates[msg.ticker] || null,
+            ...CURRENT_VERSIONS,
+            computed_at: new Date().toISOString(),
+          });
+          if (noDataSamples.length < 25) {
+            noDataSamples.push({ ticker: msg.ticker, message: msg.message || 'NO_DATA' });
+          }
+        } else if (msg.type === 'ticker_inactive') {
+          totalInactiveDetected += 1;
+          setTickerState(checkpointStore, msg.ticker, {
+            status: 'inactive',
+            latest_date: msg.latest_date || null,
+            ...CURRENT_VERSIONS,
+            computed_at: new Date().toISOString(),
+          });
+        } else if (msg.type === 'worker_fatal') {
           hardFailures += 1;
-          reject(error);
-        });
-        worker.on('exit', (code) => {
-          if (code !== 0) {
-            hardFailures += 1;
-            reject(new Error(`Worker ${i} exited with code ${code}`));
-            return;
-          }
-          resolve();
-        });
+        }
+      });
+      worker.on('error', (error) => {
+        hardFailures += 1;
+        reject(error);
+      });
+      worker.on('exit', (code) => {
+        if (code !== 0) {
+          hardFailures += 1;
+          reject(new Error(`Worker for batch ${batchIdx} exited with code ${code}`));
+          return;
+        }
+        batchesCompleted += 1;
+        // Incremental checkpoint save: persist state after each batch (crash-safe)
+        saveCheckpoints(checkpointStore);
+        console.log(`[Turbo-Hist] Batch ${batchesCompleted}/${batches.length} complete (${batch.length} tickers)`);
+        resolve();
       });
     });
 
+    // Worker pool: each slot pulls batches from shared queue sequentially
+    const workerSlots = tickerList.length === 0 ? [] : Array.from({ length: numWorkers }).map(async () => {
+      while (true) {
+        const myBatchIdx = batchIndex++;
+        if (myBatchIdx >= batches.length) break;
+        await spawnWorkerForBatch(batches[myBatchIdx], myBatchIdx);
+      }
+    });
+
     try {
-      await Promise.all(workers);
+      await Promise.all(workerSlots);
     } catch (error) {
       console.error('[Turbo-Hist] Worker failure:', error?.message || error);
     }

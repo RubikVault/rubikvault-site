@@ -16,7 +16,7 @@ const PATHS = {
   scopeSymbols: path.join(ROOT, 'public/data/universe/v7/ssot/stocks_etfs.us_eu.symbols.json'),
   scopeCanonicalIds: path.join(ROOT, 'public/data/universe/v7/ssot/stocks_etfs.us_eu.canonical.ids.json'),
   refreshReport: path.join(ROOT, 'mirrors/universe-v7/state/refresh_v7_history_from_eodhd.report.json'),
-  deltaLatestSuccess: path.join('/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/ops/q1_daily_delta_ingest/latest_success.json'),
+  deltaLatestSuccess: path.join(process.env.QUANT_ROOT || (process.platform === 'linux' ? '/volume1/homes/neoboy/QuantLabHot/rubikvault-quantlab' : '/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab'), 'ops/q1_daily_delta_ingest/latest_success.json'),
   quantlabOperational: path.join(ROOT, 'public/data/quantlab/status/operational-status.json'),
   histProbsSummary: path.join(ROOT, 'public/data/hist-probs/run-summary.json'),
   histProbsRegime: path.join(ROOT, 'public/data/hist-probs/regime-daily.json'),
