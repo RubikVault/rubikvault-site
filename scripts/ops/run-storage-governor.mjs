@@ -194,6 +194,12 @@ function sshExec(nc, cmd, { timeout = 30000 } = {}) {
 }
 
 function nasIsReachable(nc) {
+  if (process.platform === 'linux'
+      && process.env.RV_PRODUCTION_RUNTIME === 'nas'
+      && nc?.ssh_base
+      && fs.existsSync(nc.ssh_base)) {
+    return true;
+  }
   const { ok } = sshExec(nc, 'echo ping', { timeout: 10000 });
   return ok;
 }
@@ -210,6 +216,12 @@ function nasMkdir(nc, remotePath) {
 }
 
 function nasFreeGb(nc) {
+  if (process.platform === 'linux'
+      && process.env.RV_PRODUCTION_RUNTIME === 'nas'
+      && nc?.ssh_base
+      && fs.existsSync(nc.ssh_base)) {
+    return dfFreeGb(nc.ssh_base);
+  }
   const { ok, stdout } = sshExec(nc, `df -k '${nc.ssh_base}' | tail -1`, { timeout: 10000 });
   if (!ok) return null;
   const cols = stdout.trim().split(/\s+/);
