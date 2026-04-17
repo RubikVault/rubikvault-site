@@ -65,7 +65,14 @@ def stable_hash_obj(obj: Any) -> str:
 def parse_args(argv: Iterable[str]) -> argparse.Namespace:
     p = argparse.ArgumentParser()
     p.add_argument("--repo-root", default=os.getcwd())
-    p.add_argument("--quant-root", default="/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab")
+    p.add_argument(
+        "--quant-root",
+        default=os.environ.get(
+            "QUANT_ROOT",
+            "/volume1/homes/neoboy/QuantLabHot/rubikvault-quantlab" if Path("/volume1/homes/neoboy").exists()
+            else "/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab",
+        ),
+    )
     p.add_argument("--registry", default="public/data/universe/v7/registry/registry.ndjson.gz")
     p.add_argument("--ingest-date", default=date.today().isoformat())
     p.add_argument("--include-types", default="STOCK,ETF")
