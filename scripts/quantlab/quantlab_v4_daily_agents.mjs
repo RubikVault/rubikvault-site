@@ -3,6 +3,13 @@ import path from 'node:path';
 import zlib from 'node:zlib';
 import { spawnSync } from 'node:child_process';
 
+const REPO_ROOT = path.resolve(new URL('.', import.meta.url).pathname, '../..');
+const PYTHON_BIN = process.env.PYTHON_BIN
+  || (fs.existsSync(path.join(REPO_ROOT, 'quantlab/.venv/bin/python'))
+    ? path.join(REPO_ROOT, 'quantlab/.venv/bin/python')
+    : 'python3');
+const DUCKDB_JSON_RUNNER = path.join(REPO_ROOT, 'scripts/quantlab/duckdb_json_runner.py');
+
 const TIER_ORDER = ['super_stark', 'stark', 'mittel', 'schwach', 'sehr_schwach'];
 const TIER_LABELS = {
   super_stark: 'super stark',
@@ -75,12 +82,18 @@ function sqlString(value) {
 }
 
 function duckdbJson(sql) {
-  const res = spawnSync('duckdb', ['-json', '-c', sql], {
+  let res = spawnSync(process.env.DUCKDB_BIN || 'duckdb', ['-json', '-c', sql], {
     encoding: 'utf8',
     maxBuffer: 128 * 1024 * 1024,
   });
+  if (res.error?.code === 'ENOENT' && fs.existsSync(DUCKDB_JSON_RUNNER)) {
+    res = spawnSync(PYTHON_BIN, [DUCKDB_JSON_RUNNER, '-json', '-c', sql], {
+      encoding: 'utf8',
+      maxBuffer: 128 * 1024 * 1024,
+    });
+  }
   if (res.status !== 0) {
-    throw new Error(`duckdb failed: ${res.stderr || res.stdout || 'unknown error'}`);
+    throw new Error(`duckdb failed: ${res.stderr || res.stdout || res.error?.message || 'unknown error'}`);
   }
   return JSON.parse(res.stdout || '[]');
 }
