@@ -14,7 +14,11 @@ from typing import Any, Iterable
 import pyarrow.parquet as pq
 
 
-DEFAULT_QUANT_ROOT = "/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab"
+DEFAULT_QUANT_ROOT = os.environ.get(
+    "QUANT_ROOT",
+    "/volume1/homes/neoboy/QuantLabHot/rubikvault-quantlab" if Path("/volume1/homes/neoboy").exists()
+    else "/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab",
+)
 
 
 def utc_now_iso() -> str:
