@@ -1103,10 +1103,14 @@ function startFsBuildDetached(snapshotId, manifest) {
     '--min-bars', String(params.min_bars),
   ].join(' ');
 
-  const cmd = `/usr/bin/caffeinate -dimsu ${pyArgs} >> ${q(buildLog)} 2>&1 & echo $!`;
+  const runner = fs.existsSync('/usr/bin/caffeinate')
+    ? `/usr/bin/caffeinate -dimsu ${pyArgs}`
+    : pyArgs;
+  const cmd = `${runner} >> ${q(buildLog)} 2>&1 & echo $!`;
+  const shell = fs.existsSync('/bin/zsh') ? '/bin/zsh' : '/bin/sh';
 
   try {
-    const raw = execFileSync('/bin/zsh', ['-lc', cmd], {
+    const raw = execFileSync(shell, ['-lc', cmd], {
       cwd: REPO_ROOT,
       encoding: 'utf8',
       timeout: 10000,
