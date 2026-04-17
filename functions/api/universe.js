@@ -3,8 +3,6 @@ import {
   compareUniverseSearchCandidates,
   comparePreferredUniverseRows,
   isAllowedWebUniverseRecord,
-  normalizeUniverseAssetClassFilter,
-  normalizeUniverseSearchCompanyName,
   normalizeUniverseTypeNorm,
   parseUniverseAssetClassFilter,
 } from "../../public/js/universe-ssot.js";
@@ -363,8 +361,8 @@ export async function onRequestGet(context) {
       return "";
     }
 
+    const seenCanonicalIds = new Set();
     const seenSymbols = new Set();
-    const seenCompanyNames = new Set();
 
     const filtered = sourceItems
       .filter((it) => includeByAssetClass(it))
@@ -398,18 +396,16 @@ export async function onRequestGet(context) {
         return aSym.localeCompare(bSym);
       })
       .filter((it) => {
-        const sym = String(it?.symbol || it?.ticker || "").toUpperCase();
-        if (!sym || seenSymbols.has(sym)) return false;
-        seenSymbols.add(sym);
+        const canonicalId = String(it?.canonical_id || "").trim().toUpperCase();
+        if (!canonicalId) return true;
+        if (seenCanonicalIds.has(canonicalId)) return false;
+        seenCanonicalIds.add(canonicalId);
         return true;
       })
       .filter((it) => {
-        const rawName = String(it?.name || "").trim();
-        if (!rawName || rawName.length < 3) return true;
-        const normName = normalizeUniverseSearchCompanyName(rawName);
-        if (!normName || normName.length < 3) return true;
-        if (seenCompanyNames.has(normName)) return false;
-        seenCompanyNames.add(normName);
+        const sym = String(it?.symbol || it?.ticker || "").toUpperCase();
+        if (!sym || seenSymbols.has(sym)) return false;
+        seenSymbols.add(sym);
         return true;
       })
       .slice(offset, offset + LIMIT)

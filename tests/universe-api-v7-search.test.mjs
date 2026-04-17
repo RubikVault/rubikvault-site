@@ -1,0 +1,81 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+
+import { onRequestGet } from '../functions/api/universe.js';
+
+const usVisa = {
+  canonical_id: 'US:V',
+  symbol: 'V',
+  exchange: 'US',
+  name: 'Visa Inc',
+  type_norm: 'STOCK',
+  layer: 'L0_LEGACY_CORE',
+  score_0_100: 55,
+  bars_count: 19,
+  avg_volume_30d: 8300000,
+};
+
+const brazilVisa = {
+  canonical_id: 'SA:VISA34',
+  symbol: 'VISA34',
+  exchange: 'SA',
+  name: 'Visa Inc',
+  type_norm: 'STOCK',
+  layer: 'L1_FULL',
+  score_0_100: 94,
+  bars_count: 1200,
+  avg_volume_30d: 12000,
+};
+
+const canadaVisa = {
+  canonical_id: 'TO:VISA',
+  symbol: 'VISA',
+  exchange: 'TO',
+  name: 'Visa CDR',
+  type_norm: 'STOCK',
+  layer: 'L1_FULL',
+  score_0_100: 89,
+  bars_count: 900,
+  avg_volume_30d: 25000,
+};
+
+function jsonResponse(payload) {
+  return new Response(JSON.stringify(payload), {
+    status: 200,
+    headers: { 'Content-Type': 'application/json' },
+  });
+}
+
+test('universe v7 API search keeps name matches and ranks US Visa first for visa query', async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (rawUrl) => {
+    const url = new URL(String(rawUrl));
+    if (url.pathname === '/data/universe/v7/search/search_index_manifest.json') {
+      return jsonResponse({ schema: 'rv_v7_search_manifest_v1', buckets: { vis: true } });
+    }
+    if (url.pathname === '/data/universe/v7/search/buckets/vis.json.gz') {
+      return jsonResponse({
+        schema: 'rv_v7_search_bucket_v1',
+        items: [brazilVisa, canadaVisa, usVisa],
+      });
+    }
+    if (url.pathname === '/data/universe/v7/search/search_global_top_2000.json.gz') {
+      return jsonResponse({ schema: 'rv_v7_search_top_v1', items: [] });
+    }
+    return new Response('not found', { status: 404 });
+  };
+
+  try {
+    const res = await onRequestGet({
+      request: new Request('https://rubikvault.test/api/universe?q=visa&limit=5'),
+    });
+    assert.equal(res.status, 200);
+    const payload = await res.json();
+    const symbols = payload?.data?.symbols;
+    assert.equal(Array.isArray(symbols), true);
+    assert.equal(symbols[0]?.canonical_id, 'US:V');
+    assert.equal(symbols[0]?.symbol, 'V');
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});

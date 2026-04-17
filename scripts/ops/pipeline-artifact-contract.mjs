@@ -7,6 +7,7 @@ import {
 } from '../lib/pipeline_authority/config/schema-versions.mjs';
 import { recordLegacyArtifactRead } from '../lib/pipeline_authority/state/metrics.mjs';
 import { assertAuthorizedAuthoritativeWrite } from '../lib/pipeline_authority/artifacts/write-guard.mjs';
+import { writeJsonDurableAtomicSync } from '../lib/durable-atomic-write.mjs';
 
 export function readJson(filePath) {
   try {
@@ -22,10 +23,7 @@ export function readJsonTyped(filePath, options = {}) {
 
 export function writeJsonAtomic(filePath, payload) {
   assertAuthorizedAuthoritativeWrite(filePath);
-  fs.mkdirSync(path.dirname(filePath), { recursive: true });
-  const tmp = `${filePath}.${process.pid}.${Date.now()}.tmp`;
-  fs.writeFileSync(tmp, `${JSON.stringify(payload, null, 2)}\n`, 'utf8');
-  fs.renameSync(tmp, filePath);
+  writeJsonDurableAtomicSync(filePath, payload);
 }
 
 export function normalizeDate(value) {

@@ -41,6 +41,7 @@ import {
   minutesSinceUtcMidnight,
   parseIsoDay,
 } from './_shared/market-calendar.js';
+import { readDecisionForTicker } from './_shared/decision-bundle-reader.js';
 
 const MODULE_NAME = 'stock';
 const TICKER_MAX_LENGTH = 12;
@@ -1676,6 +1677,23 @@ export async function onRequestGet(context) {
       payload.decision.learning_gate = decisionInputs.runtimeControl.learning_gate;
       payload.decision.minimum_n_not_met = decisionInputs.runtimeControl.learning_gate.minimum_n_not_met === true;
     }
+  }
+
+  {
+    const decisionBundle = await readDecisionForTicker(resolvedCanonicalId || effectiveTicker, {
+      request,
+      env,
+      targetMarketDate: envelopeDataDate,
+    });
+    payload.data.daily_decision = decisionBundle.decision || null;
+    payload.data.analysis_readiness = decisionBundle.analysis_readiness || {
+      status: 'FAILED',
+      source: 'decision_bundle',
+      blocking_reasons: ['bundle_missing'],
+      warnings: [],
+    };
+    payload.daily_decision = payload.data.daily_decision;
+    payload.analysis_readiness = payload.data.analysis_readiness;
   }
 
   // Fundamentals — 2-Layer: Live API (EODHD→FMP) → Static JSON

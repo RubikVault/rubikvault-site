@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "rv.asset_daily_decision.v1",
+  "type": "object",
+  "required": [
+    "schema",
+    "schema_version",
+    "run_id",
+    "snapshot_id",
+    "target_market_date",
+    "generated_at",
+    "canonical_id",
+    "symbol",
+    "asset_class",
+    "tradability",
+    "evaluation_role",
+    "coverage_class",
+    "pipeline_status",
+    "verdict",
+    "reason_codes",
+    "blocking_reasons",
+    "warnings",
+    "risk_assessment",
+    "model_coverage",
+    "data_freshness",
+    "input_fingerprints"
+  ],
+  "properties": {
+    "schema": { "const": "rv.asset_daily_decision.v1" },
+    "schema_version": { "const": "1.0" },
+    "run_id": { "type": ["string", "null"] },
+    "snapshot_id": { "type": ["string", "null"] },
+    "target_market_date": { "type": ["string", "null"], "pattern": "^\\d{4}-\\d{2}-\\d{2}$" },
+    "generated_at": { "type": "string" },
+    "canonical_id": { "type": "string", "minLength": 1 },
+    "symbol": { "type": ["string", "null"] },
+    "asset_class": { "type": "string" },
+    "tradability": { "type": "boolean" },
+    "evaluation_role": { "enum": ["tradable", "macro", "unknown"] },
+    "coverage_class": {
+      "enum": ["eligible", "insufficient_history", "provider_no_data", "inactive", "macro_only", "unclassified_missing"]
+    },
+    "pipeline_status": { "enum": ["OK", "DEGRADED", "FAILED"] },
+    "verdict": { "enum": ["BUY", "WAIT", "WAIT_PIPELINE_INCOMPLETE"] },
+    "reason_codes": { "type": "array", "items": { "type": "string" } },
+    "blocking_reasons": { "type": "array", "items": { "type": "string" } },
+    "warnings": { "type": "array", "items": { "type": "string" } },
+    "risk_assessment": {
+      "type": "object",
+      "required": ["level", "score", "reasoning"],
+      "properties": {
+        "level": { "enum": ["LOW", "MODERATE", "HIGH", "UNKNOWN"] },
+        "score": { "type": ["number", "null"] },
+        "reasoning": { "type": "string" }
+      }
+    },
+    "model_coverage": { "type": "object" },
+    "data_freshness": { "type": "object" },
+    "input_fingerprints": { "type": "object" },
+    "scores": { "type": "object" }
+  }
+}

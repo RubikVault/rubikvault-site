@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "rv.decision_bundle_latest.v1",
+  "type": "object",
+  "required": [
+    "schema",
+    "schema_version",
+    "status",
+    "snapshot_id",
+    "run_id",
+    "target_market_date",
+    "generated_at",
+    "valid_until",
+    "snapshot_path",
+    "manifest_path",
+    "summary_path",
+    "index_path",
+    "bundle_hash",
+    "blocking_reasons",
+    "warnings"
+  ],
+  "properties": {
+    "schema": { "const": "rv.decision_bundle_latest.v1" },
+    "schema_version": { "const": "1.0" },
+    "status": { "enum": ["OK", "DEGRADED", "FAILED"] },
+    "snapshot_id": { "type": "string", "pattern": "^dec-\\d{8}-[a-f0-9]{12}$" },
+    "run_id": { "type": ["string", "null"] },
+    "target_market_date": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$" },
+    "generated_at": { "type": "string" },
+    "valid_until": { "type": ["string", "null"] },
+    "snapshot_path": { "type": "string" },
+    "manifest_path": { "type": "string" },
+    "summary_path": { "type": "string" },
+    "index_path": { "type": "string" },
+    "bundle_hash": { "type": "string", "pattern": "^sha256:" },
+    "summary": { "type": "object" },
+    "blocking_reasons": { "type": "array", "items": { "type": "string" } },
+    "warnings": { "type": "array", "items": { "type": "string" } }
+  }
+}

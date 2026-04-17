@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "rv.decision_bundle_index.v1",
+  "type": "object",
+  "required": ["schema", "schema_version", "partition_strategy", "target_market_date", "assets", "symbols"],
+  "properties": {
+    "schema": { "const": "rv.decision_bundle_index.v1" },
+    "schema_version": { "const": "1.0" },
+    "partition_strategy": { "const": "hash_mod_64" },
+    "target_market_date": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$" },
+    "generated_at": { "type": "string" },
+    "snapshot_id": { "type": "string" },
+    "assets": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["symbol", "asset_class", "partition", "part", "decision_hash"],
+        "properties": {
+          "symbol": { "type": "string" },
+          "asset_class": { "type": "string" },
+          "partition": { "type": "integer", "minimum": 0, "maximum": 63 },
+          "part": { "type": "string", "pattern": "^part-\\d{3}\\.ndjson\\.gz$" },
+          "decision_hash": { "type": "string", "pattern": "^sha256:" }
+        }
+      }
+    },
+    "symbols": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "array",
+        "items": { "type": "string" }
+      }
+    }
+  }
+}

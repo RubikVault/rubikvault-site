@@ -104,6 +104,18 @@ function buildEmptyStatePayload(ticker) {
     meta: {},
     states: {},
     decision: {},
+    daily_decision: {
+      pipeline_status: 'FAILED',
+      verdict: 'WAIT_PIPELINE_INCOMPLETE',
+      blocking_reasons: ['bundle_missing'],
+      risk_assessment: { level: 'UNKNOWN' },
+    },
+    analysis_readiness: {
+      status: 'FAILED',
+      source: 'empty_state',
+      blocking_reasons: ['bundle_missing'],
+      warnings: [],
+    },
     explanation: {},
     evaluation_v4: null,
     universe: null,
@@ -266,7 +278,10 @@ export function evaluateV2PromotionGate(v2) {
   const summaryProvider = String(summary?.market_prices?.source_provider || '').toLowerCase();
   const learningGate = evaluation?.decision?.learning_gate || summary?.decision?.learning_gate || null;
   const learningStatus = String(learningGate?.learning_status || evaluation?.decision?.learning_status || summary?.decision?.learning_status || '').toUpperCase();
-  const minimumNNotMet = Boolean(
+  const perAssetGateEnabled = learningGate?.per_asset_gate_enabled === true ||
+    evaluation?.decision?.per_asset_gate_enabled === true ||
+    summary?.decision?.per_asset_gate_enabled === true;
+  const minimumNNotMet = !perAssetGateEnabled && Boolean(
     learningGate?.minimum_n_not_met === true ||
     evaluation?.decision?.minimum_n_not_met ||
     evaluation?.decision?.safety?.trigger === 'minimum_n_not_met' ||
@@ -430,6 +445,8 @@ export function transformV2ToStockShape(v2Data, v2Meta, historicalData = null, g
         identity_source: isMeaningfulIdentityName(v2Data.name, v2Data.ticker) ? 'v2_summary' : isMeaningfulIdentityName(mergedFundamentals?.companyName, v2Data.ticker) ? 'fundamentals' : isMeaningfulIdentityName(governanceData?.universe?.name, v2Data.ticker) ? 'governance_universe' : 'none',
       },
       module_freshness: moduleFreshness,
+      daily_decision: v2Data.daily_decision || null,
+      analysis_readiness: v2Data.analysis_readiness || null,
     },
     metadata: {
       request: {
@@ -449,6 +466,8 @@ export function transformV2ToStockShape(v2Data, v2Meta, historicalData = null, g
     },
     states: v2Data.states || {},
     decision: v2Data.decision || {},
+    daily_decision: v2Data.daily_decision || null,
+    analysis_readiness: v2Data.analysis_readiness || null,
     explanation: v2Data.explanation || {},
     v6: v2Data.decision?.v6 || null,
     evaluation_v4: governanceData?.evaluation_v4 || null,

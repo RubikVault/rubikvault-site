@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "rv.supervisor_heartbeat.v1",
+  "type": "object",
+  "required": ["schema", "run_id", "target_market_date", "pid", "pid_start_time", "host", "last_seen", "active_step", "completed_steps", "state"],
+  "properties": {
+    "schema": { "const": "rv.supervisor_heartbeat.v1" },
+    "run_id": { "type": ["string", "null"] },
+    "target_market_date": { "type": ["string", "null"] },
+    "pid": { "type": "integer" },
+    "pid_start_time": { "type": ["string", "null"] },
+    "host": { "type": "string" },
+    "last_seen": { "type": "string" },
+    "active_step": { "type": ["string", "null"] },
+    "completed_steps": { "type": "array" },
+    "state": { "type": "string" }
+  }
+}

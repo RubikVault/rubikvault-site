@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "rv.decision_bundle_summary.v1",
+  "type": "object",
+  "required": [
+    "schema",
+    "schema_version",
+    "status",
+    "run_id",
+    "snapshot_id",
+    "target_market_date",
+    "generated_at",
+    "assets_total_universe",
+    "assets_tradable_total",
+    "assets_expected_for_decision",
+    "assets_processed",
+    "assets_eligible",
+    "assets_unclassified_missing",
+    "buy_count",
+    "wait_count",
+    "wait_pipeline_incomplete_count",
+    "eligible_wait_pipeline_incomplete_count",
+    "eligible_unknown_risk_count",
+    "strict_full_coverage_count",
+    "strict_full_coverage_ratio"
+  ],
+  "properties": {
+    "schema": { "const": "rv.decision_bundle_summary.v1" },
+    "schema_version": { "const": "1.0" },
+    "status": { "enum": ["OK", "DEGRADED", "FAILED"] },
+    "run_id": { "type": ["string", "null"] },
+    "snapshot_id": { "type": "string" },
+    "target_market_date": { "type": "string" },
+    "generated_at": { "type": "string" },
+    "strict_full_coverage_ratio": { "type": "number", "minimum": 0, "maximum": 1 }
+  },
+  "additionalProperties": true
+}

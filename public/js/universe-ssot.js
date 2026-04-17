@@ -236,6 +236,13 @@ export function compareUniverseSearchCandidates(a = {}, b = {}, { query = '', sy
     return comparePreferredUniverseRows(a, b);
   }
 
+  const aIssuerNameExact = aMatch.normalizedNameExact === 1 || aMatch.normalizedFirstTokenExact === 1;
+  const bIssuerNameExact = bMatch.normalizedNameExact === 1 || bMatch.normalizedFirstTokenExact === 1;
+  if (aIssuerNameExact && bIssuerNameExact) {
+    const preferred = comparePreferredUniverseRows(a, b);
+    if (preferred !== 0) return preferred;
+  }
+
   const matchFields = [
     'symbolExact',
     'normalizedNameExact',

@@ -32,6 +32,7 @@ import {
   selectCanonicalMarketStats,
 } from './stock-helpers.js';
 import { buildHistProbsCandidatePaths } from './hist-probs-paths.js';
+import { readDecisionForTicker } from './decision-bundle-reader.js';
 
 const REPO_ROOT = (() => {
   try {
@@ -676,6 +677,18 @@ export async function fetchStockSummary(ticker, env, request) {
 
   const selectedMarketPrices = choosePreferredMarketPrices(snapshotMarketPrices, marketPrices) || marketPrices;
   const selectedMarketStats = choosePreferredMarketStats(snapshotMarketStats, marketStats) || marketStats;
+  const decisionBundle = await readDecisionForTicker(ctx.canonicalId || effectiveTicker, {
+    request,
+    env,
+    targetMarketDate: expectedTargetMarketDate,
+  });
+  const dailyDecision = decisionBundle.decision || null;
+  const analysisReadiness = decisionBundle.analysis_readiness || {
+    status: 'FAILED',
+    source: 'decision_bundle',
+    blocking_reasons: ['bundle_missing'],
+    warnings: [],
+  };
 
   return {
     ok: true,
@@ -696,12 +709,14 @@ export async function fetchStockSummary(ticker, env, request) {
       fundamentals,
       states,
       decision,
+      daily_decision: dailyDecision,
+      analysis_readiness: analysisReadiness,
       explanation,
       module_freshness: {
         price_as_of: selectedMarketPrices?.date || dataDate,
         historical_as_of: dataDate,
         market_stats_as_of: selectedMarketStats?.as_of || dataDate,
-        decision_as_of: decision?.asof || decision?.created_at || null,
+        decision_as_of: dailyDecision?.generated_at || decision?.asof || decision?.created_at || null,
       },
     },
     meta: {

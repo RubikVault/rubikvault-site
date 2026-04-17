@@ -26,5 +26,23 @@
       "warn_after_hours": 24,
       "error_after_hours": null
     }
+  },
+  "pipeline_artifacts": {
+    "decision_bundle": {
+      "expected_ttl_h": 30,
+      "deadline_timezone": "Europe/Berlin",
+      "valid_until_policy": "next_market_session_10_00_berlin"
+    },
+    "final_integrity_seal": {
+      "expected_ttl_h": 30,
+      "deadline_timezone": "Europe/Berlin",
+      "valid_until_policy": "next_market_session_10_00_berlin"
+    },
+    "supervisor_heartbeat": {
+      "expected_ttl_minutes": 45
+    },
+    "crash_seal": {
+      "expected_ttl_h": 30
+    }
   }
 }

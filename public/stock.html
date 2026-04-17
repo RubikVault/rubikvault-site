@@ -575,6 +575,14 @@
       }
       window._rvDataSource = _rvDataSource;
       window._rvResolution = _rvResolution;
+      let _rvFinalSeal = null;
+      try {
+        const _sealRes = await fetch('/data/ops/final-integrity-seal-latest.json?rv=' + Date.now(), { cache: 'no-store' });
+        if (_sealRes.ok) _rvFinalSeal = await _sealRes.json();
+      } catch (e) {
+        _rvFinalSeal = null;
+      }
+      window._rvFinalIntegritySeal = _rvFinalSeal;
 
       if (_rvResolution.mode === 'empty_state') {
         document.title = ticker + ' — Analysis · RubikVault';
@@ -633,11 +641,15 @@
       // Read backend layers (states, decision, explanation)
       const _states = payload.states || {};
       const _decision = payload.decision || {};
+      const _dailyDecision = payload.daily_decision || data.daily_decision || {};
+      const _analysisReadiness = payload.analysis_readiness || data.analysis_readiness || {};
       const _explanation = payload.explanation || {};
       const _v6 = payload.v6 || {};
       // Expose for any external feature scripts
       window._rvStates = _states;
       window._rvDecision = _decision;
+      window._rvDailyDecision = _dailyDecision;
+      window._rvAnalysisReadiness = _analysisReadiness;
       window._rvExplanation = _explanation;
       window._rvV6 = _v6;
       window._rvEnvelopeMeta = payload.meta || meta || {};
@@ -663,11 +675,38 @@
 
       // Global integrity status
       const _integrityItems = [];
+      const _finalSealStatus = String(_rvFinalSeal?.status || '').toUpperCase();
+      const _finalSealOperational = Boolean(_rvFinalSeal && _rvFinalSeal.ui_green === true && _finalSealStatus === 'OK');
+      const _bundleStatus = String(_analysisReadiness?.decision_bundle_status || '').toUpperCase();
+      const _assetPipelineStatus = String(_dailyDecision?.pipeline_status || '').toUpperCase();
+      const _assetVerdict = String(_dailyDecision?.verdict || '').toUpperCase();
+      const _assetRiskLevel = String(_dailyDecision?.risk_assessment?.level || '').toUpperCase();
+      const _assetBlockingReasons = Array.isArray(_dailyDecision?.blocking_reasons) ? _dailyDecision.blocking_reasons : [];
+      const _assetDecisionOperational = Boolean(
+        _dailyDecision?.schema === 'rv.asset_daily_decision.v1'
+        && _assetPipelineStatus === 'OK'
+        && (_bundleStatus === 'OK' || _bundleStatus === '')
+        && (_assetVerdict === 'BUY' || _assetVerdict === 'WAIT')
+        && _assetBlockingReasons.length === 0
+        && _assetRiskLevel !== 'UNKNOWN'
+      );
+      if (!_rvFinalSeal) {
+        _integrityItems.push({ text: 'Pipeline truth unavailable', color: 'var(--red)' });
+      } else if (!_finalSealOperational) {
+        _integrityItems.push({ text: _finalSealStatus === 'DEGRADED' ? 'Pipeline truth degraded' : 'Pipeline truth not release-ready', color: _finalSealStatus === 'DEGRADED' ? 'var(--yellow)' : 'var(--red)' });
+      }
+      if (!_dailyDecision?.schema) {
+        _integrityItems.push({ text: 'Daily decision unavailable', color: 'var(--red)' });
+      } else if (!_assetDecisionOperational) {
+        const _reason = _assetBlockingReasons[0] || _dailyDecision.reason_codes?.[0] || _analysisReadiness.blocking_reasons?.[0] || 'incomplete';
+        const _isCriticalDecision = _assetPipelineStatus === 'FAILED' || _assetVerdict === 'WAIT_PIPELINE_INCOMPLETE' || _assetRiskLevel === 'UNKNOWN';
+        _integrityItems.push({ text: _isCriticalDecision ? 'Analysis incomplete' : 'Analysis degraded', color: _isCriticalDecision ? 'var(--red)' : 'var(--yellow)', reason: _reason });
+      }
       const _learningGate = _decision.learning_gate || payload.evaluation_v4?.decision?.learning_gate || null;
       if (_decision.regime_transition_active) _integrityItems.push({ text: 'Regime transition active', color: 'var(--red)' });
       if (fundamentalsView.status === 'unavailable' || fundamentalsView.status === 'degraded') _integrityItems.push({ text: 'Fundamentals limited · Technisches Modell unabhängig davon', color: 'var(--yellow)' });
       if ((_learningGate?.learning_status || _decision.learning_status || payload.evaluation_v4?.decision?.learning_status) === 'BOOTSTRAP') _integrityItems.push({ text: 'Learning bootstrap active', color: 'var(--yellow)' });
-      if (_learningGate?.minimum_n_not_met || _decision.minimum_n_not_met || payload.evaluation_v4?.decision?.minimum_n_not_met || payload.evaluation_v4?.decision?.safety_switch?.trigger === 'minimum_n_not_met') _integrityItems.push({ text: 'Minimum sample gate not met', color: 'var(--yellow)' });
+      { const _minNNotMet = _learningGate?.minimum_n_not_met || _decision.minimum_n_not_met || payload.evaluation_v4?.decision?.minimum_n_not_met || payload.evaluation_v4?.decision?.safety_switch?.trigger === 'minimum_n_not_met'; const _perAssetGateEnabled = _learningGate?.per_asset_gate_enabled === true || _decision.per_asset_gate_enabled === true || payload.evaluation_v4?.decision?.per_asset_gate_enabled === true; if (_minNNotMet && !_perAssetGateEnabled) _integrityItems.push({ text: 'Minimum sample gate not met', color: 'var(--yellow)' }); }
       if (moduleFreshness.some(item => item.state === 'stale')) _integrityItems.push({ text: 'Modules have mixed as-of dates', color: 'var(--yellow)' });
       if (_guard.corrections.modelConsensus?.degraded) _integrityItems.push({ text: 'Model evidence limited', color: 'var(--yellow)' });
       if (_guard.panelGates.keyLevels?.show === false) _integrityItems.push({ text: 'Key levels awaiting coherent price stack', color: 'var(--yellow)' });
@@ -1427,11 +1466,12 @@
       const showDecisionTelemetry = (_v6.bucket || _v6.hold_state) && (effectiveVerdict === 'BUY' || effectiveVerdict === 'SELL');
 
       // ── Construct Layout ──
-      const _statusSeverity = _integrityItems.some(item => item.color === 'var(--red)') ? 'critical' : (_integrityItems.length ? 'warning' : 'ok');
+      const _allSystemsOperational = _finalSealOperational && _assetDecisionOperational && _integrityItems.length === 0;
+      const _statusSeverity = !_allSystemsOperational && _integrityItems.some(item => item.color === 'var(--red)') ? 'critical' : (_allSystemsOperational ? 'ok' : 'warning');
       const _statusTitle = _statusSeverity === 'ok'
         ? 'All systems operational'
         : _statusSeverity === 'critical'
-          ? 'System attention required'
+          ? (_assetVerdict === 'WAIT_PIPELINE_INCOMPLETE' ? 'Analysis incomplete' : 'System attention required')
           : (_integrityItems[0]?.text || 'Data notice');
       const _statusSubline = _statusSeverity === 'ok'
         ? `Data as-of ${_esc(pageAsOf || '—')}`

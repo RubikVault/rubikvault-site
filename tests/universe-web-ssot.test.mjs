@@ -55,6 +55,14 @@ test('search ranking favors US primary listing on exact issuer query', () => {
   assert.equal(compareUniverseSearchCandidates(us, lse, { query: 'tesla', symbolQuery: 'TESLA' }) > 0, true);
 });
 
+test('search ranking favors US Visa primary listing over foreign Visa symbol-prefix listings', () => {
+  const usVisa = { symbol: 'V', canonical_id: 'US:V', type_norm: 'STOCK', exchange: 'US', name: 'Visa Inc', score_0_100: 55, bars_count: 19, avg_volume_30d: 8300000 };
+  const brazilVisa = { symbol: 'VISA34', canonical_id: 'SA:VISA34', type_norm: 'STOCK', exchange: 'SA', name: 'Visa Inc', score_0_100: 94, bars_count: 1200, avg_volume_30d: 12000 };
+  const canadaVisa = { symbol: 'VISA', canonical_id: 'TO:VISA', type_norm: 'STOCK', exchange: 'TO', name: 'Visa CDR', score_0_100: 89, bars_count: 900, avg_volume_30d: 25000 };
+  assert.equal(compareUniverseSearchCandidates(usVisa, brazilVisa, { query: 'visa', symbolQuery: 'VISA' }) > 0, true);
+  assert.equal(compareUniverseSearchCandidates(usVisa, canadaVisa, { query: 'visa', symbolQuery: 'VISA' }) > 0, true);
+});
+
 test('asset class filter exposes only supported web classes', () => {
   assert.equal(normalizeUniverseAssetClassFilter('fund'), 'all');
   assert.equal(normalizeUniverseAssetClassFilter('crypto'), 'all');

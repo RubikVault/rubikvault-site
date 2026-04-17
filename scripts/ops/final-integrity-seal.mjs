@@ -15,6 +15,9 @@ import {
   signSealPayload,
 } from '../lib/pipeline_authority/gates/release-seal.mjs';
 import { resolveRuntimeConfig } from '../lib/pipeline_authority/config/runtime-config.mjs';
+import { evaluateCoveragePolicy } from '../lib/decision-bundle-contract.mjs';
+import { assertMayWriteProductionTruth } from './prod-runtime-guard.mjs';
+import { readLeafSeal, REQUIRED_LEAF_SEAL_STEP_IDS } from '../lib/write-leaf-seal.mjs';
 
 const ROOT = path.resolve(new URL('.', import.meta.url).pathname, '../..');
 export const FINAL_INTEGRITY_SEAL_PATH = path.join(ROOT, 'public/data/ops/final-integrity-seal-latest.json');
@@ -30,6 +33,10 @@ const PATHS = {
   uiFieldTruth: path.join(ROOT, 'public/data/reports/ui-field-truth-report-latest.json'),
   launchd: path.join(ROOT, 'public/data/ops/launchd-reconcile-latest.json'),
   storage: path.join(ROOT, 'public/data/reports/storage-budget-latest.json'),
+  decisionBundle: path.join(ROOT, 'public/data/decisions/latest.json'),
+  decisionBundleOps: path.join(ROOT, 'public/data/ops/decision-bundle-latest.json'),
+  heartbeat: path.join(ROOT, 'mirrors/ops/pipeline-master/supervisor-heartbeat.json'),
+  crashSeal: path.join(ROOT, 'public/data/ops/crash-seal-latest.json'),
 };
 
 function severityRank(value) {
@@ -53,6 +60,140 @@ function stockAuditSummary(stockAnalyzerAudit = null, system = null) {
     || null;
 }
 
+function reason(id, severity = 'critical', details = null) {
+  return { id, severity, details };
+}
+
+function parseTimeMs(value) {
+  const ms = Date.parse(value || '');
+  return Number.isFinite(ms) ? ms : null;
+}
+
+export function evaluateDecisionBundleHealth(decisionBundle, {
+  expectedTargetDate = null,
+  now = new Date(),
+} = {}) {
+  if (!decisionBundle || typeof decisionBundle !== 'object') {
+    return {
+      status: 'FAILED',
+      blocking_reasons: [reason('bundle_missing')],
+      warnings: [],
+      summary: null,
+    };
+  }
+  if (decisionBundle.schema !== 'rv.decision_bundle_latest.v1' && decisionBundle.schema !== 'rv.decision_bundle_seal.v1') {
+    return {
+      status: 'FAILED',
+      blocking_reasons: [reason('bundle_hash_mismatch', 'critical', { schema: decisionBundle.schema || null })],
+      warnings: [],
+      summary: decisionBundle.summary || null,
+    };
+  }
+  const blocking = [];
+  const warnings = [];
+  const target = normalizeDate(expectedTargetDate);
+  const bundleTarget = normalizeDate(decisionBundle.target_market_date);
+  if (target && bundleTarget && target !== bundleTarget) {
+    blocking.push(reason('target_date_mismatch', 'critical', { expected: target, actual: bundleTarget }));
+  }
+  const validUntilMs = parseTimeMs(decisionBundle.valid_until);
+  if (validUntilMs != null && validUntilMs < now.getTime()) {
+    blocking.push(reason('bundle_stale', 'critical', { valid_until: decisionBundle.valid_until }));
+  }
+  const leafSealCheck = evaluateRequiredLeafSeals();
+  const summary = decisionBundle.summary || null;
+  if (!summary) {
+    blocking.push(reason('summary_missing'));
+  } else {
+    const policy = evaluateCoveragePolicy(summary, {
+      requiredLeafFailed: leafSealCheck.anyFailed,
+      bundleCorrupt: false,
+    });
+    for (const id of policy.blocking_reasons || []) {
+      blocking.push(reason(id, 'critical', {
+        strict_full_coverage_ratio: summary.strict_full_coverage_ratio,
+        assets_unclassified_missing: summary.assets_unclassified_missing,
+        eligible_wait_pipeline_incomplete_count: summary.eligible_wait_pipeline_incomplete_count,
+        eligible_unknown_risk_count: summary.eligible_unknown_risk_count,
+      }));
+    }
+    for (const id of policy.warnings || []) {
+      warnings.push(reason(id, 'warning', {
+        strict_full_coverage_ratio: summary.strict_full_coverage_ratio,
+        strict_full_coverage_count: summary.strict_full_coverage_count,
+        assets_expected_for_decision: summary.assets_expected_for_decision,
+      }));
+    }
+  }
+  const declaredStatus = String(decisionBundle.status || '').toUpperCase();
+  if (declaredStatus === 'FAILED') {
+    blocking.push(reason('decision_bundle_failed', 'critical', decisionBundle.blocking_reasons || []));
+  } else if (declaredStatus === 'DEGRADED') {
+    warnings.push(reason('decision_bundle_degraded', 'warning', decisionBundle.warnings || []));
+  }
+  const status = blocking.length > 0 ? 'FAILED' : warnings.length > 0 ? 'DEGRADED' : 'OK';
+  return { status, blocking_reasons: blocking, warnings, summary };
+}
+
+function evaluateCrashAndHeartbeat({ crashSeal = null, heartbeat = null, previousFinal = null, now = new Date() } = {}) {
+  const blocking = [];
+  const warnings = [];
+  if (crashSeal?.status === 'FAILED') {
+    blocking.push(reason('crash_unresolved', 'critical', {
+      run_id: crashSeal.run_id || null,
+      failed_step: crashSeal.failed_step || null,
+      failure_class: crashSeal.failure_class || null,
+    }));
+  }
+  const heartbeatMs = parseTimeMs(heartbeat?.last_seen);
+  const heartbeatStale = heartbeatMs == null || (now.getTime() - heartbeatMs) > 45 * 60 * 1000;
+  const previousFinalMs = parseTimeMs(previousFinal?.generated_at);
+  const previousFinalStale = previousFinalMs == null || (now.getTime() - previousFinalMs) > 30 * 60 * 60 * 1000;
+  if (heartbeatStale && previousFinalStale) {
+    blocking.push(reason('heartbeat_stale', 'critical', {
+      heartbeat_last_seen: heartbeat?.last_seen || null,
+      previous_final_generated_at: previousFinal?.generated_at || null,
+    }));
+  } else if (heartbeatStale) {
+    warnings.push(reason('heartbeat_stale', 'warning', {
+      heartbeat_last_seen: heartbeat?.last_seen || null,
+    }));
+  }
+  return {
+    status: blocking.length > 0 ? 'FAILED' : warnings.length > 0 ? 'DEGRADED' : 'OK',
+    blocking_reasons: blocking,
+    warnings,
+  };
+}
+
+function evaluateRequiredLeafSeals() {
+  let anyFailed = false;
+  const details = {};
+  for (const stepId of REQUIRED_LEAF_SEAL_STEP_IDS) {
+    const seal = readLeafSeal(stepId);
+    const status = String(seal?.status || 'MISSING').toUpperCase();
+    details[stepId] = status;
+    // Only existing seals with explicit FAILED status block the gate.
+    // MISSING means the seal hasn't been written yet (first-run / not-yet-deployed).
+    if (status === 'FAILED') anyFailed = true;
+  }
+  return { anyFailed, details };
+}
+
+function evaluateZeroBuyAnomaly(decisionBundleSummary, regimeDoc) {
+  const buyCount = Number(decisionBundleSummary?.buy_count ?? -1);
+  if (buyCount !== 0) return null; // not a zero-buy situation
+  const coverage = Number(decisionBundleSummary?.strict_full_coverage_ratio ?? 0);
+  if (coverage < 0.95) {
+    // Coverage incomplete → DEGRADED or FAILED per coverage matrix (already handled elsewhere)
+    return null;
+  }
+  // Full coverage, zero BUYs — assess macro context
+  const regime = String(regimeDoc?.market_regime || '').toLowerCase();
+  const riskOff = ['bear', 'crash', 'extreme_bear', 'risk_off'].includes(regime);
+  return riskOff ? 'OK' : 'DEGRADED';
+}
+
 export function buildFinalIntegritySeal({
   runId = null,
   targetMarketDate = null,
@@ -67,11 +208,16 @@ export function buildFinalIntegritySeal({
   uiFieldTruth = null,
   launchd = null,
   storage = null,
+  decisionBundle = null,
+  heartbeat = null,
+  crashSeal = null,
+  previousFinal = null,
   lockIntegrityOk = true,
   allowPublishInFlight = false,
   now = new Date(),
 } = {}) {
   const expectedTargetDate = normalizeDate(targetMarketDate) || latestUsMarketSessionIso(now);
+  const regimeDoc = readJson(path.join(ROOT, 'public/data/hist-probs/regime-daily.json'));
   const moduleDates = normalizeModuleDates(epoch, system);
   const moduleDateMismatches = Object.entries(moduleDates)
     .filter(([id, asOf]) => asOf && expectedTargetDate && !isModuleTargetCompatible(id, asOf, expectedTargetDate))
@@ -122,6 +268,7 @@ export function buildFinalIntegritySeal({
       publishInFlightOk
     );
   const blockingReasons = [];
+  const warningReasons = [];
   if (!calendarOk) {
     blockingReasons.push({
       id: 'calendar_target_mismatch',
@@ -252,6 +399,30 @@ export function buildFinalIntegritySeal({
     });
   }
 
+  const decisionBundleHealth = evaluateDecisionBundleHealth(decisionBundle, {
+    expectedTargetDate,
+    now,
+  });
+  blockingReasons.push(...decisionBundleHealth.blocking_reasons);
+  warningReasons.push(...decisionBundleHealth.warnings);
+  const runtimeLiveness = evaluateCrashAndHeartbeat({
+    crashSeal,
+    heartbeat,
+    previousFinal,
+    now,
+  });
+  blockingReasons.push(...runtimeLiveness.blocking_reasons);
+  warningReasons.push(...runtimeLiveness.warnings);
+
+  const zeroBuyAnomaly = evaluateZeroBuyAnomaly(decisionBundleHealth.summary, regimeDoc);
+  if (zeroBuyAnomaly === 'DEGRADED') {
+    warningReasons.push(reason('zero_buy_anomaly', 'warning', {
+      buy_count: decisionBundleHealth.summary?.buy_count ?? 0,
+      market_regime: regimeDoc?.market_regime || null,
+      strict_full_coverage_ratio: decisionBundleHealth.summary?.strict_full_coverage_ratio ?? null,
+    }));
+  }
+
   const uniqueBlockingReasons = [];
   const seen = new Set();
   for (const reason of blockingReasons) {
@@ -260,17 +431,27 @@ export function buildFinalIntegritySeal({
     seen.add(key);
     uniqueBlockingReasons.push(reason);
   }
+  const uniqueWarningReasons = [];
+  const seenWarnings = new Set();
+  for (const item of warningReasons) {
+    const key = `${item.id}:${JSON.stringify(item.details || null)}`;
+    if (seenWarnings.has(key)) continue;
+    seenWarnings.add(key);
+    uniqueWarningReasons.push(item);
+  }
 
-  const uiGreen = uniqueBlockingReasons.length === 0;
+  const status = uniqueBlockingReasons.length > 0 ? 'FAILED' : uniqueWarningReasons.length > 0 ? 'DEGRADED' : 'OK';
+  const uiGreen = status === 'OK';
   return {
     schema: 'rv.final_integrity_seal.v1',
     ...buildArtifactEnvelope({
       producer: 'scripts/ops/final-integrity-seal.mjs',
       runId: runId || runtime?.run_id || release?.run_id || system?.run_id || null,
       targetMarketDate: expectedTargetDate,
-      upstreamRunIds: collectUpstreamRunIds(system, runtime, epoch, recovery, release, publish, stockAnalyzerAudit),
+      upstreamRunIds: collectUpstreamRunIds(system, runtime, epoch, recovery, release, publish, stockAnalyzerAudit, decisionBundle, crashSeal),
     }),
     phase: phase || release?.phase || null,
+    status,
     ui_green: uiGreen,
     global_green: uiGreen,
     release_ready: uiGreen,
@@ -289,6 +470,16 @@ export function buildFinalIntegritySeal({
     pipeline_consistency: consistency,
     module_dates: moduleDates,
     blocking_reasons: uniqueBlockingReasons,
+    warnings: uniqueWarningReasons,
+    decision_bundle: {
+      status: decisionBundleHealth.status,
+      snapshot_id: decisionBundle?.snapshot_id || null,
+      target_market_date: decisionBundle?.target_market_date || null,
+      summary: decisionBundleHealth.summary,
+    },
+    zero_buy_anomaly_status: zeroBuyAnomaly,
+    leaf_seals: evaluateRequiredLeafSeals().details,
+    runtime_liveness: runtimeLiveness,
     stock_analyzer_universe_audit: summary,
     ui_field_truth_report: uiFieldTruthSummary,
     launchd,
@@ -297,6 +488,10 @@ export function buildFinalIntegritySeal({
 }
 
 export function writeFinalIntegritySeal(payload) {
+  const guard = assertMayWriteProductionTruth({ job: 'final-integrity-seal' });
+  if (!guard.ok) {
+    throw new Error(`PROD_RUNTIME_BLOCKED:${guard.failures.join(',')}`);
+  }
   writeJsonAtomic(FINAL_INTEGRITY_SEAL_PATH, payload);
   return payload;
 }
@@ -374,6 +569,7 @@ function attachSealSignature(seal) {
   if (!signing.signature || !signing.key_id) {
     return {
       ...seal,
+      status: 'FAILED',
       release_ready: false,
       ui_green: false,
       global_green: false,
@@ -405,6 +601,10 @@ async function main() {
   const uiFieldTruth = readJson(PATHS.uiFieldTruth) || null;
   const launchd = readJson(PATHS.launchd) || null;
   const storage = readJson(PATHS.storage) || null;
+  const decisionBundle = readJson(PATHS.decisionBundle) || readJson(PATHS.decisionBundleOps) || null;
+  const heartbeat = readJson(PATHS.heartbeat) || null;
+  const crashSeal = readJson(PATHS.crashSeal) || null;
+  const previousFinal = readJson(FINAL_INTEGRITY_SEAL_PATH) || null;
   const releaseTargetMarketDate = resolveReleaseTargetMarketDate(release, {
     trackLegacyRead: true,
     readerId: 'scripts/ops/final-integrity-seal.mjs',
@@ -432,6 +632,10 @@ async function main() {
     uiFieldTruth,
     launchd,
     storage,
+    decisionBundle,
+    heartbeat,
+    crashSeal,
+    previousFinal,
     lockIntegrityOk: release?.lock_integrity_ok !== false,
     allowPublishInFlight: options.allowPublishInFlight,
     now: new Date(),
@@ -448,11 +652,13 @@ async function main() {
     runId: seal.run_id,
     release,
   });
-  process.stdout.write(`${JSON.stringify({
-    ok: seal.release_ready === true,
-    target_market_date: seal.target_market_date,
-    blocker_count: Array.isArray(seal.blocking_reasons) ? seal.blocking_reasons.length : 0,
-  })}\n`);
+	  process.stdout.write(`${JSON.stringify({
+	    ok: seal.release_ready === true,
+	    status: seal.status || null,
+	    target_market_date: seal.target_market_date,
+	    blocker_count: Array.isArray(seal.blocking_reasons) ? seal.blocking_reasons.length : 0,
+	    warning_count: Array.isArray(seal.warnings) ? seal.warnings.length : 0,
+	  })}\n`);
   if (!options.allowUnready && seal.release_ready !== true) {
     process.exit(1);
   }

@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "rv.crash_seal.v1",
+  "type": "object",
+  "required": ["schema", "schema_version", "status", "run_id", "target_market_date", "generated_at", "failed_step", "exit_code", "signal", "failure_class", "blocking_reasons"],
+  "properties": {
+    "schema": { "const": "rv.crash_seal.v1" },
+    "schema_version": { "const": "1.0" },
+    "status": { "enum": ["OK", "FAILED"] },
+    "run_id": { "type": ["string", "null"] },
+    "target_market_date": { "type": ["string", "null"] },
+    "generated_at": { "type": "string" },
+    "failed_step": { "type": ["string", "null"] },
+    "exit_code": { "type": ["integer", "null"] },
+    "signal": { "type": ["string", "null"] },
+    "failure_class": { "type": ["string", "null"] },
+    "blocking_reasons": { "type": "array", "items": { "type": "string" } }
+  }
+}

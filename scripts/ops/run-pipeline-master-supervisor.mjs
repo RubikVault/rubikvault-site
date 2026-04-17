@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import {
@@ -20,10 +21,16 @@ import {
 import { latestUsMarketSessionIso } from '../../functions/api/_shared/market-calendar.js';
 import { acquirePipelineLock, refreshPipelineLock } from './pipeline-lock.mjs';
 import { runReadinessProfile } from '../lib/pipeline_authority/gates/readiness-runner.mjs';
+import { writeJsonDurableAtomicSync } from '../lib/durable-atomic-write.mjs';
+import { assertProductionRuntime } from './prod-runtime-guard.mjs';
 
 const ROOT = path.resolve(new URL('.', import.meta.url).pathname, '../..');
 const STATE_PATH = path.join(ROOT, 'mirrors/ops/pipeline-master/state.json');
 const LOCK_PATH = path.join(ROOT, 'mirrors/ops/pipeline-master/lock.json');
+const HEARTBEAT_PATH = path.join(ROOT, 'mirrors/ops/pipeline-master/supervisor-heartbeat.json');
+const CRASH_DIR = path.join(ROOT, 'mirrors/ops/pipeline-master/crashes');
+const STEP_CONTEXT_DIR = path.join(ROOT, 'mirrors/ops/pipeline-master/step-context');
+const CRASH_SEAL_PATH = path.join(ROOT, 'public/data/ops/crash-seal-latest.json');
 const RELEASE_STATE_PATH = path.join(ROOT, 'public/data/ops/release-state-latest.json');
 const LOG_PATH = path.join(ROOT, 'logs/pipeline-master-supervisor.log');
 const CYCLE_MS = 5 * 60 * 1000;
@@ -59,6 +66,7 @@ const UPSTREAM_CRITICAL_STEP_IDS = [
 const PATHS = {
   refresh: path.join(ROOT, 'mirrors/universe-v7/state/refresh_v7_history_from_eodhd.report.json'),
   recovery: path.join(ROOT, 'public/data/reports/dashboard-green-recovery-latest.json'),
+  recoveryState: path.join(ROOT, 'mirrors/ops/dashboard-green/state.json'),
   system: path.join(ROOT, 'public/data/reports/system-status-latest.json'),
   dashboardStatus: path.join(ROOT, 'public/data/ui/dashboard-v7-status.json'),
   runtime: path.join(ROOT, 'public/data/pipeline/runtime/latest.json'),
@@ -70,6 +78,15 @@ const PATHS = {
   storage: path.join(ROOT, 'public/data/reports/storage-budget-latest.json'),
   launchd: path.join(ROOT, 'public/data/ops/launchd-reconcile-latest.json'),
   seal: FINAL_INTEGRITY_SEAL_PATH,
+  decisionBundle: path.join(ROOT, 'public/data/decisions/latest.json'),
+  heartbeat: HEARTBEAT_PATH,
+  crashSeal: CRASH_SEAL_PATH,
+};
+
+let activeRunContext = {
+  run_id: null,
+  target_market_date: null,
+  active_step: 'startup',
 };
 
 function log(message) {
@@ -81,6 +98,90 @@ function log(message) {
 
 function sleepMs(ms) {
   Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
+}
+
+function writeSupervisorHeartbeat(state, activeStep = null, completedSteps = null) {
+  const payload = {
+    schema: 'rv.supervisor_heartbeat.v1',
+    run_id: state?.run_id || activeRunContext.run_id || null,
+    target_market_date: state?.target_market_date || activeRunContext.target_market_date || null,
+    pid: process.pid,
+    pid_start_time: activeRunContext.pid_start_time || null,
+    host: os.hostname(),
+    last_seen: new Date().toISOString(),
+    active_step: activeStep || activeRunContext.active_step || null,
+    completed_steps: Array.isArray(completedSteps) ? completedSteps : [],
+    state: 'running',
+  };
+  writeJsonDurableAtomicSync(HEARTBEAT_PATH, payload);
+  return payload;
+}
+
+function writeCrashSeal({
+  state = null,
+  failedStep = null,
+  exitCode = null,
+  signal = null,
+  failureClass = null,
+  error = null,
+} = {}) {
+  const payload = {
+    schema: 'rv.crash_seal.v1',
+    schema_version: '1.0',
+    status: 'FAILED',
+    run_id: state?.run_id || activeRunContext.run_id || null,
+    target_market_date: state?.target_market_date || activeRunContext.target_market_date || null,
+    generated_at: new Date().toISOString(),
+    failed_step: failedStep || activeRunContext.active_step || null,
+    exit_code: exitCode,
+    signal,
+    failure_class: failureClass || (exitCode === 137 || signal === 'SIGKILL' ? 'oom_or_killed' : 'process_failure'),
+    blocking_reasons: ['crash_unresolved'],
+    error: error ? String(error?.stack || error?.message || error).slice(0, 4000) : null,
+  };
+  fs.mkdirSync(CRASH_DIR, { recursive: true });
+  const runBoundPath = path.join(CRASH_DIR, `${payload.run_id || `unknown-${Date.now()}`}.json`);
+  writeJsonDurableAtomicSync(runBoundPath, payload);
+  writeJsonDurableAtomicSync(CRASH_SEAL_PATH, payload);
+  return payload;
+}
+
+function clearCrashSeal(state) {
+  const payload = {
+    schema: 'rv.crash_seal.v1',
+    schema_version: '1.0',
+    status: 'OK',
+    run_id: state?.run_id || activeRunContext.run_id || null,
+    target_market_date: state?.target_market_date || activeRunContext.target_market_date || null,
+    generated_at: new Date().toISOString(),
+    failed_step: null,
+    exit_code: null,
+    signal: null,
+    failure_class: null,
+    blocking_reasons: [],
+  };
+  writeJsonDurableAtomicSync(CRASH_SEAL_PATH, payload);
+  return payload;
+}
+
+function writeStepContext({ runId, stepId, startedAt = null, completedAt = null, exitCode = null, outputArtifacts = [] } = {}) {
+  if (!runId || !stepId) return;
+  try {
+    const dir = path.join(STEP_CONTEXT_DIR, String(runId));
+    fs.mkdirSync(dir, { recursive: true });
+    writeJsonDurableAtomicSync(path.join(dir, `${stepId}.json`), {
+      schema: 'rv.step_context.v1',
+      run_id: runId,
+      step_id: stepId,
+      started_at: startedAt || null,
+      completed_at: completedAt || null,
+      exit_code: exitCode,
+      output_artifacts: outputArtifacts,
+      written_at: new Date().toISOString(),
+    });
+  } catch {
+    // step context write must not block the supervisor cycle
+  }
 }
 
 function getBerlinClock(now = new Date()) {
@@ -245,6 +346,15 @@ function recoveryCoreReady(targetMarketDate, recovery) {
   return RECOVERY_CORE_STEP_IDS.every((stepId) => completed.has(stepId));
 }
 
+function recoveryStateBlockedSteps(recoveryState) {
+  return Object.entries(recoveryState?.steps || {})
+    .filter(([, stepState]) => String(stepState?.blocked_reason || '').trim())
+    .map(([id, stepState]) => ({
+      id,
+      reason: String(stepState?.blocked_reason || '').trim(),
+    }));
+}
+
 function systemNeedsUpstreamRefresh(system) {
   if (!system?.summary) return true;
   if (String(system.summary.data_layer_severity || '').toLowerCase() === 'critical') return true;
@@ -333,6 +443,7 @@ function computePhase({
   berlinClock,
   sourceReady,
   recovery,
+  recoveryState,
   system,
   runtime,
   epoch,
@@ -341,9 +452,13 @@ function computePhase({
   stockAudit,
   uiFieldTruth,
   launchdReport,
-  storageReport,
-  lockIntegrityOk,
-}) {
+	  storageReport,
+	  decisionBundle = null,
+	  heartbeat = null,
+	  crashSeal = null,
+	  previousFinal = null,
+	  lockIntegrityOk,
+	}) {
   const consistency = validateControlPlaneConsistency({ system, release, runtime, epoch, recovery });
   const seal = buildFinalIntegritySeal({
     runId: runId || consistency.run_id || release?.run_id || runtime?.run_id || null,
@@ -356,11 +471,15 @@ function computePhase({
     release,
     publish,
     stockAnalyzerAudit: stockAudit,
-    uiFieldTruth,
-    launchd: launchdReport,
-    storage: storageReport,
-    lockIntegrityOk,
-  });
+	    uiFieldTruth,
+	    launchd: launchdReport,
+	    storage: storageReport,
+	    decisionBundle,
+	    heartbeat,
+	    crashSeal,
+	    previousFinal,
+	    lockIntegrityOk,
+	  });
 
   if (seal.ui_green) {
     if (!dashboardMetaFresh(targetMarketDate, seal)) {
@@ -384,13 +503,12 @@ function computePhase({
   const nasRequired = process.env.RV_REQUIRE_NAS_FOR_RELEASE === '1';
   if (nasRequired && storageReport?.nas?.reachable !== true) return { phase: 'WAIT_FOR_NAS', blockers, consistency, seal };
 
-  const hasBudgetExhausted = Array.isArray(recovery?.blocked_steps)
-    && recovery.blocked_steps.some((step) => String(step?.reason || '').startsWith('restart_budget_exhausted'));
+  const liveBlockedSteps = recoveryStateBlockedSteps(recoveryState);
+  const hasBudgetExhausted = liveBlockedSteps.some((step) => step.reason.startsWith('restart_budget_exhausted'));
   // Detect terminal q1_delta_ingest failure — requires manual intervention, no point continuing recovery.
-  const q1TerminallyBlocked = Array.isArray(recovery?.blocked_steps)
-    && recovery.blocked_steps.some(
-      (step) => step?.id === 'q1_delta_ingest' && String(step?.reason || '').startsWith('restart_budget_exhausted'),
-    );
+  const q1TerminallyBlocked = liveBlockedSteps.some(
+    (step) => step.id === 'q1_delta_ingest' && step.reason.startsWith('restart_budget_exhausted'),
+  );
   const upstreamRecoveryReady = recoveryCoreReady(targetMarketDate, recovery);
   const upstreamRefreshNeeded = !upstreamRecoveryReady || systemNeedsUpstreamRefresh(system);
 
@@ -468,6 +586,7 @@ export function rebuildReleaseStateOnce(targetMarketDate = latestUsMarketSession
   const launchdReport = ensureLaunchdHealthy(sourceReady);
   const storageReport = ensureStorageReport();
   const recovery = readJson(PATHS.recovery);
+  const recoveryState = readJson(PATHS.recoveryState);
   const system = readJson(PATHS.system);
   const runtime = readJson(PATHS.runtime);
   const epoch = readJson(PATHS.epoch);
@@ -475,6 +594,10 @@ export function rebuildReleaseStateOnce(targetMarketDate = latestUsMarketSession
   const publish = readJson(PATHS.publish);
   const stockAudit = readJson(PATHS.stockAudit);
   const uiFieldTruth = readJson(PATHS.uiFieldTruth);
+  const decisionBundle = readJson(PATHS.decisionBundle);
+  const heartbeat = readJson(PATHS.heartbeat);
+  const crashSeal = readJson(PATHS.crashSeal);
+  const previousFinal = readJson(PATHS.seal);
   const releaseCandidate = {
     ...(release || {}),
     run_id: state.run_id,
@@ -488,6 +611,7 @@ export function rebuildReleaseStateOnce(targetMarketDate = latestUsMarketSession
     berlinClock,
     sourceReady,
     recovery,
+    recoveryState,
     system,
     runtime,
     epoch,
@@ -497,6 +621,10 @@ export function rebuildReleaseStateOnce(targetMarketDate = latestUsMarketSession
     uiFieldTruth,
     launchdReport,
     storageReport,
+    decisionBundle,
+    heartbeat,
+    crashSeal,
+    previousFinal,
     lockIntegrityOk: true,
   });
 
@@ -527,6 +655,24 @@ export function rebuildReleaseStateOnce(targetMarketDate = latestUsMarketSession
 }
 
 function main() {
+  assertProductionRuntime({ job: 'pipeline-master-supervisor', exitOnFailure: true });
+  activeRunContext.pid_start_time = new Date().toISOString();
+  process.on('uncaughtException', (error) => {
+    try {
+      writeCrashSeal({ failedStep: activeRunContext.active_step, exitCode: 1, failureClass: 'uncaught_exception', error });
+    } finally {
+      console.error(error);
+      process.exit(1);
+    }
+  });
+  process.on('unhandledRejection', (error) => {
+    try {
+      writeCrashSeal({ failedStep: activeRunContext.active_step, exitCode: 1, failureClass: 'unhandled_rejection', error });
+    } finally {
+      console.error(error);
+      process.exit(1);
+    }
+  });
   rotateOpsLogs();
   const initialTarget = latestUsMarketSessionIso(new Date());
   const initialState = loadState(initialTarget);
@@ -544,16 +690,39 @@ function main() {
     process.exit(0);
   }
   let lockDoc = lockState.lock;
+  let prevCompletedSteps = new Set();
 
   while (true) {
     const targetMarketDate = latestUsMarketSessionIso(new Date());
     const berlinClock = getBerlinClock();
     const state = loadState(targetMarketDate);
+    activeRunContext = {
+      ...activeRunContext,
+      run_id: state.run_id,
+      target_market_date: targetMarketDate,
+      active_step: 'supervisor_cycle',
+    };
+    writeSupervisorHeartbeat(state, 'supervisor_cycle', Array.from(prevCompletedSteps));
     lockDoc = refreshPipelineLock(LOCK_PATH, lockDoc, Math.round((CYCLE_MS * 3) / 1000));
     const sourceReady = sourceDataReady(targetMarketDate);
     const launchdReport = ensureLaunchdHealthy(sourceReady);
     const storageReport = ensureStorageReport();
     const recovery = readJson(PATHS.recovery);
+    const currentCompletedSteps = new Set(recovery?.completed_steps || []);
+    for (const stepId of currentCompletedSteps) {
+      if (!prevCompletedSteps.has(stepId)) {
+        const stepStateEntry = readJson(PATHS.recoveryState)?.steps?.[stepId] || {};
+        writeStepContext({
+          runId: state.run_id,
+          stepId,
+          startedAt: stepStateEntry.last_started_at || null,
+          completedAt: stepStateEntry.completed_at || new Date().toISOString(),
+          exitCode: 0,
+        });
+      }
+    }
+    prevCompletedSteps = currentCompletedSteps;
+    const recoveryState = readJson(PATHS.recoveryState);
     const system = readJson(PATHS.system);
     const runtime = readJson(PATHS.runtime);
     const epoch = readJson(PATHS.epoch);
@@ -561,12 +730,17 @@ function main() {
     const publish = readJson(PATHS.publish);
     const stockAudit = readJson(PATHS.stockAudit);
     const uiFieldTruth = readJson(PATHS.uiFieldTruth);
+    const decisionBundle = readJson(PATHS.decisionBundle);
+    const heartbeat = readJson(PATHS.heartbeat);
+    const crashSeal = readJson(PATHS.crashSeal);
+    const previousFinal = readJson(PATHS.seal);
     const current = computePhase({
       targetMarketDate,
       runId: state.run_id,
       berlinClock,
       sourceReady,
       recovery,
+      recoveryState,
       system,
       runtime,
       epoch,
@@ -576,22 +750,27 @@ function main() {
       uiFieldTruth,
       launchdReport,
       storageReport,
+      decisionBundle,
+      heartbeat,
+      crashSeal,
+      previousFinal,
       lockIntegrityOk: true,
     });
 
     const actionPhase = current.functionalPhase || current.phase;
+    activeRunContext.active_step = actionPhase;
+    writeSupervisorHeartbeat(state, actionPhase, Array.from(currentCompletedSteps));
     if (actionPhase === 'UPSTREAM_REFRESH') {
       log(`phase=${current.phase} functionalPhase=${actionPhase} target=${targetMarketDate}`);
-      const recoveryEnv = current.hasBudgetExhausted ? { RV_FORCE_NEW_RECOVERY_CAMPAIGN: '1' } : {};
       const result = runNode(path.join(ROOT, 'scripts/ops/run-dashboard-green-recovery.mjs'), [], {
         timeoutMs: 4 * 60 * 1000,
-        env: recoveryEnv,
       });
       state.last_recovery_attempt_at = new Date().toISOString();
       if (current.hasBudgetExhausted) {
-        log(`recovery_campaign_reset=1 target=${targetMarketDate}`);
+        log(`recovery_budget_exhausted=1 reset_suppressed=1 target=${targetMarketDate}`);
       }
       updateRestartSignature(state, 'UPSTREAM_REFRESH', result.status);
+      if (result.status !== 0) writeCrashSeal({ state, failedStep: actionPhase, exitCode: result.status, failureClass: 'step_failed' });
     } else if (actionPhase === 'PUBLISH') {
       log(`phase=${current.phase} functionalPhase=${actionPhase} target=${targetMarketDate}`);
       const readiness = ensureAuditRuntimeReady();
@@ -609,9 +788,10 @@ function main() {
             RV_ALLOW_STANDALONE_PUBLISH_CHAIN: '1',
           },
         });
-        state.last_publish_attempt_at = new Date().toISOString();
-        updateRestartSignature(state, actionPhase, result.status);
-      } else {
+	        state.last_publish_attempt_at = new Date().toISOString();
+	        updateRestartSignature(state, actionPhase, result.status);
+	        if (result.status !== 0) writeCrashSeal({ state, failedStep: actionPhase, exitCode: result.status, failureClass: 'step_failed' });
+	      } else {
         state.last_recovery_attempt_at = new Date().toISOString();
         updateRestartSignature(state, 'RUNTIME_PREFLIGHT', 1);
       }
@@ -625,6 +805,7 @@ function main() {
     }
 
     const refreshedRecovery = readJson(PATHS.recovery);
+    const refreshedRecoveryState = readJson(PATHS.recoveryState);
     const refreshedSystem = readJson(PATHS.system);
     const refreshedRuntime = readJson(PATHS.runtime);
     const refreshedEpoch = readJson(PATHS.epoch);
@@ -634,6 +815,10 @@ function main() {
     const refreshedUiFieldTruth = readJson(PATHS.uiFieldTruth);
     const refreshedLaunchd = readJson(PATHS.launchd);
     const refreshedStorage = readJson(PATHS.storage);
+    const refreshedDecisionBundle = readJson(PATHS.decisionBundle);
+    const refreshedHeartbeat = readJson(PATHS.heartbeat);
+    const refreshedCrashSeal = readJson(PATHS.crashSeal);
+    const refreshedPreviousFinal = readJson(PATHS.seal);
 
     const finalPhase = computePhase({
       targetMarketDate,
@@ -641,6 +826,7 @@ function main() {
       berlinClock,
       sourceReady,
       recovery: refreshedRecovery,
+      recoveryState: refreshedRecoveryState,
       system: refreshedSystem,
       runtime: refreshedRuntime,
       epoch: refreshedEpoch,
@@ -650,6 +836,10 @@ function main() {
       uiFieldTruth: refreshedUiFieldTruth,
       launchdReport: refreshedLaunchd,
       storageReport: refreshedStorage,
+      decisionBundle: refreshedDecisionBundle,
+      heartbeat: refreshedHeartbeat,
+      crashSeal: refreshedCrashSeal,
+      previousFinal: refreshedPreviousFinal,
       lockIntegrityOk: true,
     });
 
@@ -658,6 +848,7 @@ function main() {
     state.updated_at = new Date().toISOString();
     if (finalPhase.phase === 'RELEASE_READY') {
       state.completed_at ||= new Date().toISOString();
+      clearCrashSeal(state);
     }
 
     writeJsonAtomic(STATE_PATH, state);
@@ -682,6 +873,7 @@ function main() {
       epoch: refreshedEpoch,
       seal: finalPhase.seal,
     });
+    writeSupervisorHeartbeat(state, 'sleep');
     sleepMs(CYCLE_MS);
   }
 }

@@ -17,6 +17,9 @@ import {
   resolveLocalAssetMeta,
 } from './lib/best-setups-local-loader.mjs';
 import { histProbsReadCandidates } from './lib/hist-probs/path-resolver.mjs';
+import { writeJsonDurableAtomicSync } from './lib/durable-atomic-write.mjs';
+import { writeLeafSeal } from './lib/write-leaf-seal.mjs';
+import { assertMayWriteProductionTruth } from './ops/prod-runtime-guard.mjs';
 
 const QUANTLAB_PUBLISH_DIRS = Object.freeze({
   stock: 'public/data/quantlab/stock-insights/stocks',
@@ -28,6 +31,7 @@ const FORECAST_PATH = 'public/data/forecast/latest.json';
 const HIST_PROBS_CHECKPOINTS_PATH = 'public/data/hist-probs/checkpoints.json';
 const HIST_PROBS_NO_DATA_PATH = 'public/data/hist-probs/no-data-tickers.json';
 const HIST_PROBS_RUN_SUMMARY_PATH = 'public/data/hist-probs/run-summary.json';
+const DECISION_BUNDLE_LATEST_PATH = 'public/data/decisions/latest.json';
 
 function nowIso() {
   return new Date().toISOString();
@@ -73,8 +77,58 @@ function canReusePublishedSnapshot(snapshotDoc, buildReport, targetMarketDate) {
 
 async function writeJson(relPath, payload) {
   const absPath = path.join(REPO_ROOT, relPath);
-  await fs.mkdir(path.dirname(absPath), { recursive: true });
-  await fs.writeFile(absPath, JSON.stringify(payload, null, 2) + '\n', 'utf8');
+  writeJsonDurableAtomicSync(absPath, payload);
+}
+
+async function readDecisionBundleBuyRows() {
+  const latest = await readJsonAbs(path.join(REPO_ROOT, DECISION_BUNDLE_LATEST_PATH));
+  if (!latest || latest.schema !== 'rv.decision_bundle_latest.v1') return null;
+  const snapshotPath = String(latest.snapshot_path || '').replace(/^\/+/, 'public/').replace(/\/+$/, '');
+  const manifest = await readJsonAbs(path.join(REPO_ROOT, snapshotPath, 'manifest.json'));
+  if (!manifest || manifest.status === 'FAILED') return { latest, rows: [], manifest };
+  const partNames = Array.from({ length: 64 }, (_, idx) => `part-${String(idx).padStart(3, '0')}.ndjson.gz`);
+  const rows = [];
+  for (const part of partNames) {
+    const partPath = path.join(REPO_ROOT, snapshotPath, part);
+    let buffer;
+    try {
+      buffer = await fs.readFile(partPath);
+    } catch {
+      return { latest, rows: [], manifest, error: `missing_part:${part}` };
+    }
+    const text = zlib.gunzipSync(buffer).toString('utf8');
+    for (const line of text.split('\n')) {
+      if (!line.trim()) continue;
+      const decision = JSON.parse(line);
+      if (
+        decision?.verdict !== 'BUY'
+        || decision?.pipeline_status !== 'OK'
+        || decision?.coverage_class !== 'eligible'
+        || decision?.tradability !== true
+        || decision?.target_market_date !== latest.target_market_date
+      ) {
+        continue;
+      }
+      const scores = decision.scores || {};
+      rows.push({
+        ticker: decision.symbol,
+        canonical_id: decision.canonical_id,
+        asset_class: String(decision.asset_class || '').toUpperCase() === 'ETF' ? 'etf' : 'stock',
+        verdict: 'BUY',
+        confidence: 'HIGH',
+        buy_eligible: true,
+        trigger_fulfilled: true,
+        analyzer_composite: num(scores.composite) ?? 0,
+        analyzer_trend_score: num(scores.trend) ?? num(scores.composite) ?? 0,
+        analyzer_entry_score: num(scores.entry) ?? num(scores.composite) ?? 0,
+        analyzer_risk_score: num(scores.risk) ?? num(scores.composite) ?? 0,
+        analyzer_context_score: num(scores.context) ?? num(scores.composite) ?? 0,
+        decision_snapshot_id: latest.snapshot_id,
+        decision_reason_codes: decision.reason_codes || [],
+      });
+    }
+  }
+  return { latest, rows, manifest };
 }
 
 async function mapWithConcurrency(items, limit, mapper) {
@@ -383,6 +437,8 @@ async function estimateCheckpointStaleCount(targetDate) {
 }
 
 async function main() {
+  const guard = assertMayWriteProductionTruth({ job: 'build-best-setups-v4', exitOnFailure: true });
+  if (!guard.ok) throw new Error(`PROD_RUNTIME_BLOCKED:${guard.failures.join(',')}`);
   const publishMode = process.argv.includes('--publish');
   const requestedTargetDate = normalizeDateId(
     process.env.TARGET_MARKET_DATE
@@ -405,6 +461,85 @@ async function main() {
   }
 
   const startedAt = Date.now();
+  const decisionBundleMode = process.env.BEST_SETUPS_USE_DECISION_BUNDLE !== '0'
+    ? await readDecisionBundleBuyRows()
+    : null;
+  if (decisionBundleMode) {
+    const buyRows = decisionBundleMode.rows || [];
+    const horizonsByClass = { stocks: {}, etfs: {} };
+    for (const horizon of ['short', 'medium', 'long']) {
+      horizonsByClass.stocks[horizon] = buildHorizonRows(buyRows.filter((row) => row?.asset_class !== 'etf'), horizon);
+      horizonsByClass.etfs[horizon] = buildHorizonRows(buyRows.filter((row) => row?.asset_class === 'etf'), horizon);
+    }
+    const emittedCounts = {
+      stocks: {
+        short: horizonsByClass.stocks.short.length,
+        medium: horizonsByClass.stocks.medium.length,
+        long: horizonsByClass.stocks.long.length,
+      },
+      etfs: {
+        short: horizonsByClass.etfs.short.length,
+        medium: horizonsByClass.etfs.medium.length,
+        long: horizonsByClass.etfs.long.length,
+      },
+    };
+    const totalRowsEmitted = Object.values(emittedCounts.stocks).reduce((sum, value) => sum + value, 0)
+      + Object.values(emittedCounts.etfs).reduce((sum, value) => sum + value, 0);
+    const payload = {
+      ok: true,
+      schema_version: 'rv.best-setups.shared-core.snapshot.v3',
+      generated_at: nowIso(),
+      meta: {
+        generated_at: nowIso(),
+        source: 'decision_bundle_consumer',
+        decision_path: 'public/data/decisions/latest.json',
+        data_asof: decisionBundleMode.latest?.target_market_date || null,
+        decision_bundle: {
+          status: decisionBundleMode.latest?.status || null,
+          snapshot_id: decisionBundleMode.latest?.snapshot_id || null,
+          target_market_date: decisionBundleMode.latest?.target_market_date || null,
+        },
+        candidate_counts: {
+          decision_bundle_buy_rows: buyRows.length,
+          unique_tickers: new Set(buyRows.map((row) => row.ticker)).size,
+        },
+        verified_counts: emittedCounts,
+        rows_emitted: {
+          ...emittedCounts,
+          total: totalRowsEmitted,
+        },
+        reason_summary: {
+          snapshot_empty: totalRowsEmitted === 0,
+          source: decisionBundleMode.error || null,
+        },
+        duration_ms: Date.now() - startedAt,
+      },
+      data: {
+        stocks: horizonsByClass.stocks,
+        etfs: horizonsByClass.etfs,
+      },
+    };
+    await writeJson(OUTPUT_PATH, payload);
+    await writeJson(BUILD_REPORT_PATH, {
+      schema: 'rv.best-setups.build.v1',
+      ok: totalRowsEmitted > 0,
+      generated_at: nowIso(),
+      snapshot_path: OUTPUT_PATH,
+      snapshot_generated_at: payload.generated_at,
+      data_asof: payload.meta?.data_asof || null,
+      rows_emitted_total: totalRowsEmitted,
+      rows_emitted: emittedCounts,
+      candidate_counts: payload.meta?.candidate_counts || null,
+      source_dependencies: {
+        decision_bundle_latest_path: DECISION_BUNDLE_LATEST_PATH,
+      },
+      duration_ms: Date.now() - startedAt,
+      warnings: totalRowsEmitted === 0 ? ['NO_BUY_ROWS_IN_DECISION_BUNDLE'] : [],
+    });
+    console.log(`[best-setups-v4] decision-bundle consumer mode snapshot=${decisionBundleMode.latest?.snapshot_id || 'unknown'} buys=${buyRows.length}`);
+    return;
+  }
+
   const [quantlabResult, forecastDoc] = await Promise.all([
     readQuantLabRows(),
     readJsonAbs(path.join(REPO_ROOT, FORECAST_PATH)),
@@ -617,6 +752,16 @@ async function main() {
     }
   }
 
+  const targetDateForSeal = payload.meta?.data_asof || requestedTargetDate || null;
+  try {
+    writeLeafSeal('snapshot', totalRowsEmitted > 0 ? 'OK' : 'DEGRADED', {
+      targetMarketDate: targetDateForSeal,
+      outputsVerified: [OUTPUT_PATH],
+      warnings: totalRowsEmitted < 20 ? ['LOW_ROW_EMISSION'] : [],
+    });
+  } catch {
+    // leaf seal write must not block the build
+  }
   console.log(`[best-setups-v4] wrote ${OUTPUT_PATH}`);
   console.log(`[best-setups-v4] backfilled ${backfills} candidate histories for live compatibility.`);
   console.log(
