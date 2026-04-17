@@ -23,6 +23,10 @@ const DATA_FRESHNESS_REPORT = path.join(ROOT, 'public', 'data', 'reports', 'data
 const _QUANT_ROOT = process.env.QUANT_ROOT || (process.platform === 'linux'
   ? '/volume1/homes/neoboy/QuantLabHot/rubikvault-quantlab'
   : '/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab');
+const PYTHON_BIN = process.env.PYTHON_BIN
+  || (fs.existsSync(path.join(ROOT, 'quantlab/.venv/bin/python'))
+    ? path.join(ROOT, 'quantlab/.venv/bin/python')
+    : 'python3');
 const Q1_SUCCESS = path.join(_QUANT_ROOT, 'ops/q1_daily_delta_ingest/latest_success.json');
 const QUANTLAB_OPERATIONAL_STATUS = path.join(ROOT, 'public', 'data', 'quantlab', 'status', 'operational-status.json');
 const DASHBOARD_META = path.join(ROOT, 'public', 'dashboard_v6_meta_data.json');
@@ -53,6 +57,10 @@ function writeJsonAtomic(filePath, payload) {
 
 function appendLog(filePath, line) {
   fs.appendFileSync(filePath, `${line}\n`, 'utf8');
+}
+
+function shQuote(value) {
+  return `'${String(value).replace(/'/g, `'\\''`)}'`;
 }
 
 function statMtimeMs(filePath) {
@@ -274,7 +282,7 @@ const steps = [
     id: 'market_data_refresh',
     label: 'Market Data Refresh',
     pattern: 'scripts/quantlab/refresh_v7_history_from_eodhd.py',
-    command: `node scripts/universe-v7/build-us-eu-scope.mjs && python3 scripts/quantlab/refresh_v7_history_from_eodhd.py --allowlist-path public/data/universe/v7/ssot/stocks_etfs.us_eu.canonical.ids.json --from-date ${marketRefreshFromDate} --to-date ${targetMarketDate} --concurrency 12 --progress-every 500`,
+    command: `node scripts/universe-v7/build-us-eu-scope.mjs && QUANT_ROOT=${shQuote(_QUANT_ROOT)} ${shQuote(PYTHON_BIN)} scripts/quantlab/refresh_v7_history_from_eodhd.py --allowlist-path public/data/universe/v7/ssot/stocks_etfs.us_eu.canonical.ids.json --from-date ${marketRefreshFromDate} --to-date ${targetMarketDate} --concurrency 12 --progress-every 500`,
     logFile: path.join(LOG_DIR, 'step-00-market-refresh.log'),
     stallMinutes: 180,
     dependsOn: [],
@@ -299,7 +307,7 @@ const steps = [
     id: 'q1_delta_ingest',
     label: 'Q1 Delta Ingest',
     pattern: 'scripts/quantlab/run_daily_delta_ingest_q1.py',
-    command: `python3 scripts/quantlab/run_daily_delta_ingest_q1.py --ingest-date ${targetMarketDate} --full-scan-packs`,
+    command: `QUANT_ROOT=${shQuote(_QUANT_ROOT)} ${shQuote(PYTHON_BIN)} scripts/quantlab/run_daily_delta_ingest_q1.py --quant-root ${shQuote(_QUANT_ROOT)} --ingest-date ${targetMarketDate} --full-scan-packs`,
     logFile: path.join(LOG_DIR, 'step-01-q1-delta.log'),
     // q1_delta_ingest can be slow due to provider latency — allow more retries with longer cooldown
     // than the global default (3 restarts / 15 min) to avoid premature restart_budget_exhausted.
