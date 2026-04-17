@@ -95,10 +95,18 @@ def _load_snapshot_context(args: argparse.Namespace):
         raise SystemExit(f"FATAL: bars_dataset_root missing in {snap_dir / 'snapshot_manifest.json'}")
     bars_root = Path(str(bars_dataset_root_value))
     if not bars_root.exists():
-        raise SystemExit(f"FATAL: bars_dataset_root missing or not found: {bars_root}")
+        local_bars_root = snap_dir / "bars"
+        if local_bars_root.exists():
+            bars_root = local_bars_root
+        else:
+            raise SystemExit(f"FATAL: bars_dataset_root missing or not found: {bars_root}")
     universe_path = Path((manifest.get("artifacts") or {}).get("universe_parquet") or (snap_dir / "universe.parquet"))
     if not universe_path.exists():
-        raise SystemExit(f"FATAL: universe.parquet not found for snapshot {snapshot_id}")
+        local_universe_path = snap_dir / "universe.parquet"
+        if local_universe_path.exists():
+            universe_path = local_universe_path
+        else:
+            raise SystemExit(f"FATAL: universe.parquet not found for snapshot {snapshot_id}")
     return quant_root, snap_dir, manifest, snapshot_id, asof_date, bars_root, universe_path
 
 
