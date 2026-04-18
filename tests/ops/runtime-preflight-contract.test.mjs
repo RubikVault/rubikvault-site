@@ -50,6 +50,8 @@ test('recovery and supervisor treat runtime_preflight as a first-class blocker',
   assert.match(runtimePreflight, /runtime_owner_node_mismatch/);
   assert.match(runtimePreflight, /runtime_owner_wrangler_mismatch/);
   assert.match(runtimePreflight, /!command\.startsWith\(process\.execPath\)/);
+  assert.match(runtimePreflight, /node_modules', 'wrangler', 'wrangler-dist', 'cli\.js'/);
+  assert.match(runtimePreflight, /\/bin\/sh/);
 });
 
 test('ui field truth keeps runtime failures separate from endpoint contract failures', () => {

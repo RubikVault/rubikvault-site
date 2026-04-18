@@ -110,10 +110,17 @@ function buildWranglerDevArgs(wranglerBin) {
   ];
 }
 
+function findWranglerCli(wranglerBin) {
+  const directCli = path.join(ROOT, 'node_modules', 'wrangler', 'wrangler-dist', 'cli.js');
+  if (safeStat(directCli)) return directCli;
+  return wranglerBin;
+}
+
 function readWranglerVersion(wranglerBin) {
   if (!wranglerBin) return { ok: false, reason: 'repo_wrangler_missing', version: null, raw: null };
   try {
-    const raw = execFileSync(wranglerBin, ['--version'], {
+    const wranglerCli = findWranglerCli(wranglerBin);
+    const raw = execFileSync(process.execPath, [wranglerCli, '--version'], {
       cwd: ROOT,
       encoding: 'utf8',
       stdio: ['ignore', 'pipe', 'pipe'],
@@ -137,26 +144,35 @@ function readWranglerVersion(wranglerBin) {
 }
 
 function readFdLimit() {
-  try {
-    const raw = execFileSync('/bin/zsh', ['-lc', 'ulimit -n'], {
-      cwd: ROOT,
-      encoding: 'utf8',
-      stdio: ['ignore', 'pipe', 'pipe'],
-    }).trim();
-    const value = Number(raw);
-    return {
-      value,
-      ok: Number.isFinite(value) && value >= MIN_FD_LIMIT,
-      reason: Number.isFinite(value) && value >= MIN_FD_LIMIT ? null : 'fd_limit_too_low',
-    };
-  } catch (error) {
-    return {
-      value: null,
-      ok: false,
-      reason: 'fd_limit_read_failed',
-      error: String(error?.message || error),
-    };
+  const shells = [...new Set([
+    process.env.SHELL,
+    '/bin/zsh',
+    '/bin/bash',
+    '/bin/sh',
+  ].filter((value) => value && safeStat(value)))];
+  for (const shell of shells) {
+    try {
+      const raw = execFileSync(shell, ['-lc', 'ulimit -n'], {
+        cwd: ROOT,
+        encoding: 'utf8',
+        stdio: ['ignore', 'pipe', 'pipe'],
+      }).trim();
+      const value = Number(raw);
+      return {
+        value,
+        ok: Number.isFinite(value) && value >= MIN_FD_LIMIT,
+        reason: Number.isFinite(value) && value >= MIN_FD_LIMIT ? null : 'fd_limit_too_low',
+      };
+    } catch {
+      // Try the next available shell.
+    }
   }
+  return {
+    value: null,
+    ok: false,
+    reason: 'fd_limit_read_failed',
+    error: 'no_supported_shell_for_ulimit',
+  };
 }
 
 async function findResourceForkFiles(rootDir, limit = 25) {
