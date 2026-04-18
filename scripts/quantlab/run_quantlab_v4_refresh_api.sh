@@ -32,13 +32,19 @@ find_bin() {
 }
 
 NODE_BIN="$(find_bin "${NODE_BIN:-}" node || true)"
+if [[ -x "$REPO_ROOT/scripts/ops/resolve-node20-bin.sh" ]]; then
+  NODE_BIN="$("$REPO_ROOT/scripts/ops/resolve-node20-bin.sh")"
+fi
 if [[ -z "$NODE_BIN" ]]; then
   echo "FATAL: node not found" >&2
   exit 2
 fi
 
-# 1. Run the canonical stock-analyzer publish chain
+# 1. Fail fast if the shared runtime is not healthy enough for publish/UI truth
+"$NODE_BIN" scripts/ops/runtime-preflight.mjs --ensure-runtime --mode=hard
+
+# 2. Run the canonical stock-analyzer publish chain
 "$NODE_BIN" scripts/ops/run-stock-analyzer-publish-chain.mjs
 
-# 2. Start the manual refresh API
+# 3. Start the manual refresh API
 exec "$NODE_BIN" scripts/quantlab/serve_quantlab_v4_report_refresh.mjs

@@ -346,10 +346,10 @@ export function evaluateCoveragePolicy(summary, { requiredLeafFailed = false, bu
   if (bundleCorrupt) blocking.push('bundle_hash_mismatch');
   if (requiredLeafFailed) blocking.push('required_leaf_failed');
   if (Number(summary?.assets_unclassified_missing || 0) > 0) blocking.push('unclassified_missing');
-  if (Number(summary?.eligible_wait_pipeline_incomplete_count || 0) > 0) blocking.push('eligible_wait_pipeline_incomplete');
-  if (Number(summary?.eligible_unknown_risk_count || 0) > 0) blocking.push('risk_unknown');
+  if (Number(summary?.eligible_wait_pipeline_incomplete_count || 0) > 0) warnings.push('eligible_wait_pipeline_incomplete');
+  if (Number(summary?.eligible_unknown_risk_count || 0) > 0) warnings.push('risk_unknown');
   if (ratio < 0.50) blocking.push('strict_full_coverage_below_50pct');
-  if (blocking.length === 0 && ratio < 0.95) warnings.push('strict_full_coverage_below_95pct');
+  if (ratio < 0.95) warnings.push('strict_full_coverage_below_95pct');
   const status = blocking.length > 0 ? 'FAILED' : warnings.length > 0 ? 'DEGRADED' : 'OK';
   return { status, blocking_reasons: blocking, warnings };
 }

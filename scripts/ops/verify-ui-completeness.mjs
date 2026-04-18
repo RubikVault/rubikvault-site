@@ -34,6 +34,7 @@ function main() {
   const detailRc = runStep(['scripts/ops/verify-stock-analyzer-detail-contract.mjs']);
   const frontpageLinksRc = runStep(['scripts/ci/validate-frontpage-signal-links.mjs']);
   const dashboardOpsRc = runStep(['scripts/ops/verify-dashboard-ops-contract.mjs']);
+  const runtimePreflightRc = runStep(['scripts/ops/runtime-preflight.mjs', '--ensure-runtime', '--mode=hard']);
   const uiFieldTruthRc = runStep(['scripts/ops/build-ui-field-truth-report.mjs']);
   const snapshot = readJson(path.join(ROOT, 'public/data/reports/frontpage-snapshot-audit-latest.json'));
   const detail = readJson(path.join(ROOT, 'public/data/reports/analyzer-detail-audit-latest.json'));
@@ -67,7 +68,15 @@ function main() {
       error: dashboardOps?.failures?.[0]?.error || `exit_code_${dashboardOpsRc}`,
     });
   }
-  if (uiFieldTruthRc !== 0 || uiFieldTruth?.summary?.ui_field_truth_ok !== true) {
+  const uiRuntimeFailed = runtimePreflightRc !== 0
+    || uiFieldTruth?.summary?.runtime_ok === false
+    || Number(uiFieldTruth?.summary?.runtime_failure_count || 0) > 0;
+  if (uiRuntimeFailed) {
+    failures.push({
+      family: 'ui_runtime',
+      error: uiFieldTruth?.failures?.[0]?.error || `runtime_preflight_exit_${runtimePreflightRc}`,
+    });
+  } else if (uiFieldTruthRc !== 0 || uiFieldTruth?.summary?.ui_field_truth_ok !== true) {
     failures.push({
       family: 'ui_field_truth',
       error: uiFieldTruth?.failures?.[0]?.error || `exit_code_${uiFieldTruthRc}`,
@@ -83,7 +92,8 @@ function main() {
       catalyst: frontpageLinksPass ? 'PASS' : 'FAIL',
       snapshot_frontpage: snapshot?.status === 'PASS' ? 'PASS' : 'FAIL',
       ops_dashboard: dashboardOps?.status || 'FAIL',
-      ui_field_truth: uiFieldTruth?.summary?.ui_field_truth_ok === true ? 'PASS' : 'FAIL',
+      ui_runtime: uiRuntimeFailed ? 'FAIL' : 'PASS',
+      ui_field_truth: !uiRuntimeFailed && uiFieldTruth?.summary?.ui_field_truth_ok === true ? 'PASS' : 'FAIL',
     },
     total_failures: failures.length,
     failures,

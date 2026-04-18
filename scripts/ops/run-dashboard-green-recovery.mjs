@@ -18,8 +18,11 @@ const FORECAST_LATEST = path.join(ROOT, 'public', 'data', 'forecast', 'latest.js
 const REFRESH_REPORT = path.join(ROOT, 'mirrors', 'universe-v7', 'state', 'refresh_v7_history_from_eodhd.report.json');
 const HIST_PROBS_SUMMARY = path.join(ROOT, 'public', 'data', 'hist-probs', 'run-summary.json');
 const HIST_PROBS_ANCHOR = path.join(ROOT, 'public', 'data', 'hist-probs', 'AAPL.json');
+const HIST_PROBS_NO_DATA = path.join(ROOT, 'public', 'data', 'hist-probs', 'no-data-tickers.json');
+const HIST_PROBS_ERROR_TRIAGE = path.join(ROOT, 'public', 'data', 'hist-probs', 'error-triage-latest.json');
 const AUDIT_REPORT = path.join(ROOT, 'public', 'data', 'reports', 'stock-analyzer-universe-audit-latest.json');
 const DATA_FRESHNESS_REPORT = path.join(ROOT, 'public', 'data', 'reports', 'data-freshness-latest.json');
+const RUNTIME_PREFLIGHT = path.join(ROOT, 'public', 'data', 'ops', 'runtime-preflight-latest.json');
 const _QUANT_ROOT = process.env.QUANT_ROOT || (process.platform === 'linux'
   ? '/volume1/homes/neoboy/QuantLabHot/rubikvault-quantlab'
   : '/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab');
@@ -127,6 +130,21 @@ function startDetached(command, logFile) {
     detached: true,
     stdio: ['ignore', out, out],
   });
+  fs.closeSync(out);
+  child.unref();
+  return child.pid;
+}
+
+function startDetachedProcess(command, args, logFile) {
+  const out = fs.openSync(logFile, 'a');
+  const rendered = [command, ...(args || [])].map((value) => shQuote(value)).join(' ');
+  fs.appendFileSync(logFile, `\n[${new Date().toISOString()}] START ${rendered}\n`, 'utf8');
+  const child = spawn(command, args || [], {
+    cwd: ROOT,
+    detached: true,
+    stdio: ['ignore', out, out],
+  });
+  fs.closeSync(out);
   child.unref();
   return child.pid;
 }
@@ -196,6 +214,10 @@ function normalizeDate(value) {
   return iso && /^\d{4}-\d{2}-\d{2}$/.test(iso) ? iso : null;
 }
 
+function normalizeTicker(value) {
+  return String(value || '').trim().toUpperCase() || null;
+}
+
 function histProbsAnchorFresh(expectedDate) {
   // Primary check: AAPL.json latest_date meets target
   const anchor = readJson(HIST_PROBS_ANCHOR);
@@ -206,6 +228,49 @@ function histProbsAnchorFresh(expectedDate) {
   const summary = readJson(HIST_PROBS_SUMMARY);
   const regimeDate = normalizeDate(summary?.regime_date || null);
   return Boolean(expectedDate && regimeDate && regimeDate >= expectedDate);
+}
+
+function readHistProbsNoDataTickers() {
+  const doc = readJson(HIST_PROBS_NO_DATA);
+  const rows = Array.isArray(doc?.tickers) ? doc.tickers : [];
+  return new Set(rows.map((row) => normalizeTicker(row?.ticker || row?.symbol)).filter(Boolean));
+}
+
+function histProbsNeutralizedErrors(doc) {
+  const triage = readJson(HIST_PROBS_ERROR_TRIAGE);
+  const triageTarget = normalizeDate(triage?.target_market_date || null);
+  const regimeDate = normalizeDate(doc?.regime_date || null);
+  const triageNeutralized = triageTarget && regimeDate && triageTarget === regimeDate
+    ? Number(triage?.summary?.reclassify_no_data_count || 0) + Number(triage?.summary?.reclassify_inactive_count || 0)
+    : 0;
+  if (triageNeutralized > 0) return triageNeutralized;
+
+  const noDataTickers = readHistProbsNoDataTickers();
+  const samples = Array.isArray(doc?.error_samples) ? doc.error_samples : [];
+  return samples.reduce((count, sample) => {
+    const ticker = normalizeTicker(sample?.ticker);
+    const message = String(sample?.message || sample?.error || '').toLowerCase();
+    if (ticker && noDataTickers.has(ticker)) return count + 1;
+    if (message.includes('insufficient_history')) return count + 1;
+    if (message.includes('provider_no_data')) return count + 1;
+    if (message.includes('scope_expected_date_before_target')) return count + 1;
+    if (message.includes('inactive')) return count + 1;
+    return count;
+  }, 0);
+}
+
+function histProbsEffectiveCoverage(doc) {
+  const covered = Number(doc?.tickers_covered);
+  const neutralCoverage = Number(doc?.tickers_no_data || 0)
+    + Number(doc?.tickers_excluded_no_data || 0)
+    + Number(doc?.tickers_excluded_inactive || 0);
+  return Number.isFinite(covered) ? covered + neutralCoverage : NaN;
+}
+
+function histProbsBlockingErrors(doc) {
+  const errors = Number(doc?.tickers_errors);
+  if (!Number.isFinite(errors)) return NaN;
+  return Math.max(0, errors - histProbsNeutralizedErrors(doc));
 }
 
 function shiftIsoDate(isoDate, deltaDays) {
@@ -235,6 +300,33 @@ function dashboardMetaFresh(expectedDate, sinceMs) {
     && Number.isFinite(dashboardV7Mtime)
     && dashboardV7Mtime >= sinceMs
     && normalizeDate(dashboardV7?.target_market_date) === expectedDate;
+}
+
+function runtimePreflightFresh(sinceMs) {
+  const doc = readJson(RUNTIME_PREFLIGHT);
+  const generatedAt = doc?.generated_at ? Date.parse(doc.generated_at) : NaN;
+  return Number.isFinite(generatedAt) && generatedAt >= sinceMs && doc?.ok === true;
+}
+
+function findRepoWrangler() {
+  const localBin = path.join(ROOT, 'node_modules', '.bin', 'wrangler');
+  return fs.existsSync(localBin) ? localBin : null;
+}
+
+function buildWranglerDevArgs(wranglerBin) {
+  return [
+    wranglerBin,
+    'pages',
+    'dev',
+    'public',
+    '--port',
+    '8788',
+    '--kv',
+    'RV_KV',
+    '--persist-to',
+    '.wrangler/state',
+    '--compatibility-date=2025-12-17',
+  ];
 }
 
 function readState() {
@@ -311,6 +403,7 @@ const steps = [
     logFile: path.join(LOG_DIR, 'step-01-q1-delta.log'),
     // q1_delta_ingest can be slow due to provider latency — allow more retries with longer cooldown
     // than the global default (3 restarts / 15 min) to avoid premature restart_budget_exhausted.
+    stallMinutes: 90,
     maxRestarts: 5,
     cooldownMin: 30,
     dependsOn: ['market_data_refresh'],
@@ -407,9 +500,9 @@ const steps = [
       const classes = Array.isArray(doc?.asset_classes) ? doc.asset_classes.slice().sort().join(',') : '';
       const fullUniverse = Number(doc?.max_tickers) === 0 || doc?.source_mode === 'registry_asset_classes';
       const total = Number(doc?.tickers_total);
-      const covered = Number(doc?.tickers_covered);
+      const covered = histProbsEffectiveCoverage(doc);
       const remaining = Number(doc?.tickers_remaining);
-      const errors = Number(doc?.tickers_errors);
+      const errors = histProbsBlockingErrors(doc);
       const runLooksComplete = Number.isFinite(ranAt)
         && ranAt >= campaignStartMs
         && classes === 'ETF,STOCK'
@@ -457,18 +550,26 @@ const steps = [
     },
   },
   {
+    id: 'runtime_preflight',
+    label: 'Runtime Preflight',
+    pattern: 'scripts/ops/runtime-preflight.mjs',
+    command: 'node scripts/ops/runtime-preflight.mjs --ensure-runtime --mode=hard',
+    logFile: path.join(LOG_DIR, 'step-09-runtime-preflight.log'),
+    dependsOn: ['hist_probs', 'snapshot'],
+    isComplete: () => runtimePreflightFresh(campaignStartMs),
+  },
+  {
     id: 'stock_analyzer_universe_audit',
     label: 'Universe Audit',
     pattern: 'scripts/ops/build-stock-analyzer-universe-audit.mjs',
     command: 'node scripts/universe-v7/build-us-eu-scope.mjs && node scripts/ops/build-us-eu-history-pack-manifest.mjs && node scripts/ops/build-stock-analyzer-universe-audit.mjs --base-url http://127.0.0.1:8788 --registry-path public/data/universe/v7/registry/registry.ndjson.gz --allowlist-path public/data/universe/v7/ssot/stocks_etfs.us_eu.canonical.ids.json --asset-classes STOCK,ETF --max-tickers 0 --concurrency 12 --timeout-ms 30000',
     logFile: path.join(LOG_DIR, 'step-10-universe-audit.log'),
-    dependsOn: ['hist_probs', 'snapshot'],
+    dependsOn: ['hist_probs', 'snapshot', 'runtime_preflight'],
     isComplete: () => {
       const doc = readJson(AUDIT_REPORT);
-      // Use release_eligible (artifact-only criterion) — live canary failures are not blocking
       return fileUpdatedSince(AUDIT_REPORT, campaignStartMs)
         && doc?.summary?.full_universe === true
-        && doc?.summary?.release_eligible === true;
+        && doc?.summary?.artifact_release_ready === true;
     },
   },
   {
@@ -488,17 +589,19 @@ const steps = [
       const truthGateFresh = fileUpdatedSince(DATA_FRESHNESS_REPORT, campaignStartMs);
       const auditFresh = fileUpdatedSince(AUDIT_REPORT, campaignStartMs);
       const auditDoc = readJson(AUDIT_REPORT);
-      // Use release_eligible (artifact-only criterion) — live canary failures are not blocking
-      const auditClean = auditDoc?.summary?.full_universe === true && auditDoc?.summary?.release_eligible === true;
-      const latestPrereq = Math.max(statMtimeMs(AUDIT_REPORT) || 0, statMtimeMs(DATA_FRESHNESS_REPORT) || 0);
+      const auditClean = auditDoc?.summary?.full_universe === true && auditDoc?.summary?.artifact_release_ready === true;
+      const runtimePreflightMtime = statMtimeMs(RUNTIME_PREFLIGHT) || 0;
+      const latestPrereq = Math.max(statMtimeMs(AUDIT_REPORT) || 0, statMtimeMs(DATA_FRESHNESS_REPORT) || 0, runtimePreflightMtime);
       const systemAfterPrereqs = (statMtimeMs(SYSTEM_STATUS) || 0) >= latestPrereq;
       return snapshotFresh
         && truthGateFresh
         && auditFresh
         && auditClean
+        && runtimePreflightFresh(campaignStartMs)
         && systemAfterPrereqs
         && systemDoc?.summary?.data_layer_severity === 'ok'
-        && systemDoc?.summary?.coverage_ready === true;
+        && systemDoc?.summary?.release_policy_ready === true
+        && systemDoc?.summary?.runtime_preflight_ok === true;
     },
   },
   {
@@ -516,7 +619,8 @@ const steps = [
         && dashboardMtime != null
         && dashboardMtime >= systemStatusMtime
         && dashboardMetaFresh(targetMarketDate, campaignStartMs)
-        && systemDoc?.summary?.data_layer_severity === 'ok';
+        && systemDoc?.summary?.data_layer_severity === 'ok'
+        && systemDoc?.summary?.runtime_preflight_ok === true;
     },
   },
 ];
@@ -531,7 +635,9 @@ function ensureRuntime() {
     }
     sleepMs(1000);
   }
-  const pid = startDetached('npm run dev:pages:persist:std', path.join(LOG_DIR, 'runtime-wrangler.log'));
+  const wranglerBin = findRepoWrangler();
+  if (!wranglerBin) throw new Error('runtime_wrangler_missing');
+  const pid = startDetachedProcess(process.execPath, buildWranglerDevArgs(wranglerBin), path.join(LOG_DIR, 'runtime-wrangler.log'));
   appendLog(ACTION_LOG, `[${new Date().toISOString()}] started runtime wrangler pid=${pid}`);
   waitForRuntime();
   return pid;
@@ -542,11 +648,7 @@ const running = [];
 const blocked = [];
 const restarted = [];
 
-// On NAS (Linux), Wrangler dev server is not available — skip runtime setup.
-// stock_analyzer_universe_audit will be skipped or fail gracefully.
-if (process.platform !== 'linux') {
-  ensureRuntime();
-}
+ensureRuntime();
 
 // Migration: kill any legacy sequential hist_probs if turbo is now the target runner
 for (const { pid } of parsePs('scripts/lib/hist-probs/run-hist-probs.mjs')) {
@@ -644,6 +746,41 @@ for (const step of steps) {
   appendLog(ACTION_LOG, `[${new Date().toISOString()}] started ${step.id} pid=${pid}`);
 }
 
+function classifyRecoveryStep(step, stepState, runningRows, blockedRows, completedIds) {
+  const runningInfo = runningRows.find((row) => row.id === step.id) || null;
+  const blockedInfo = blockedRows.find((row) => row.id === step.id) || null;
+  const waitingFor = Array.isArray(blockedInfo?.waiting_for) ? blockedInfo.waiting_for : [];
+  let stateClass = 'pending';
+  if (completedIds.has(step.id)) stateClass = 'completed';
+  else if (runningInfo) stateClass = 'running';
+  else if (blockedInfo?.reason) {
+    stateClass = String(blockedInfo.reason || '').startsWith('restart_budget_exhausted')
+      ? 'blocked_terminal'
+      : 'blocked_retryable';
+  }
+  return {
+    step_id: step.id,
+    state: stateClass,
+    reason: blockedInfo?.reason || stepState?.blocked_reason || null,
+    waiting_for: waitingFor,
+    pid: runningInfo?.pid || stepState?.pid || null,
+    restarted: Boolean(runningInfo?.restarted),
+    restarts: Number(stepState?.restarts || 0),
+    last_started_at: stepState?.last_started_at || null,
+    completed_at: stepState?.completed_at || null,
+  };
+}
+
+const stepStates = steps.map((step) => classifyRecoveryStep(step, state.steps[step.id] || {}, running, blocked, completed));
+const leadBlockerStep = stepStates.find((step) => step.state === 'blocked_terminal')?.step_id
+  || stepStates.find((step) => step.state === 'blocked_retryable')?.step_id
+  || null;
+const nextStep = leadBlockerStep
+  || stepStates.find((step) => step.state === 'pending' && step.waiting_for.length === 0)?.step_id
+  || stepStates.find((step) => step.state === 'running')?.step_id
+  || steps.find((step) => !completed.has(step.id))?.id
+  || null;
+
 state.updated_at = new Date().toISOString();
 writeJsonAtomic(STATE_PATH, state);
 
@@ -665,14 +802,16 @@ const report = {
   completed_steps: Array.from(completed),
   running_steps: running,
   blocked_steps: blocked,
+  step_states: stepStates,
   restarted_steps: restarted,
-  next_step: steps.find((step) => !completed.has(step.id))?.id || null,
+  lead_blocker_step: leadBlockerStep,
+  next_step: nextStep,
   dashboard_summary: currentStatus.summary || null,
   progress,
 };
 
 appendLog(
   HEARTBEAT_LOG,
-  `[${report.generated_at}] completed=${report.completed_steps.length}/${steps.length} running=${running.map((row) => row.id).join(',') || '-'} hist_recent15=${progress.hist_probs_recent_15m} fund_recent15=${progress.fundamentals_recent_15m} blocker=${report.dashboard_summary?.primary_blocker || 'n/a'} next=${report.next_step || 'none'}`
+  `[${report.generated_at}] completed=${report.completed_steps.length}/${steps.length} running=${running.map((row) => row.id).join(',') || '-'} hist_recent15=${progress.hist_probs_recent_15m} fund_recent15=${progress.fundamentals_recent_15m} blocker=${report.dashboard_summary?.primary_blocker || 'n/a'} lead=${report.lead_blocker_step || 'none'} next=${report.next_step || 'none'}`
 );
 writeJsonAtomic(REPORT_PATH, report);

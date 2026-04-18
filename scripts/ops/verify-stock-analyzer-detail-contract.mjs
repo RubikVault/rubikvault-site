@@ -24,6 +24,11 @@ function writeJson(filePath, payload) {
   fs.writeFileSync(filePath, `${JSON.stringify(payload, null, 2)}\n`, 'utf8');
 }
 
+function findRepoWrangler() {
+  const wranglerBin = path.join(ROOT, 'node_modules', '.bin', 'wrangler');
+  return fs.existsSync(wranglerBin) ? wranglerBin : null;
+}
+
 function parseArgs(argv) {
   const options = {
     port: DEFAULT_PORT,
@@ -83,7 +88,23 @@ async function canUseExistingServer(baseUrl) {
 }
 
 function spawnLocalServer(port) {
-  const child = spawn('npm', ['run', 'dev:pages:port'], {
+  const wranglerBin = findRepoWrangler();
+  if (!wranglerBin) {
+    throw new Error('repo_wrangler_missing');
+  }
+  const child = spawn(process.execPath, [
+    wranglerBin,
+    'pages',
+    'dev',
+    'public',
+    '--port',
+    String(port),
+    '--kv',
+    'RV_KV',
+    '--persist-to',
+    '.wrangler/state',
+    '--compatibility-date=2025-12-17',
+  ], {
     cwd: ROOT,
     env: { ...process.env, PORT: String(port) },
     stdio: ['ignore', 'pipe', 'pipe'],

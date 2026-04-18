@@ -72,6 +72,7 @@ const PATHS = {
   runtime: path.join(ROOT, 'public/data/pipeline/runtime/latest.json'),
   epoch: path.join(ROOT, 'public/data/pipeline/epoch.json'),
   publish: path.join(ROOT, 'public/data/ops/publish-chain-latest.json'),
+  runtimePreflight: path.join(ROOT, 'public/data/ops/runtime-preflight-latest.json'),
   release: RELEASE_STATE_PATH,
   stockAudit: path.join(ROOT, 'public/data/reports/stock-analyzer-universe-audit-latest.json'),
   uiFieldTruth: path.join(ROOT, 'public/data/reports/ui-field-truth-report-latest.json'),
@@ -358,7 +359,8 @@ function recoveryStateBlockedSteps(recoveryState) {
 function systemNeedsUpstreamRefresh(system) {
   if (!system?.summary) return true;
   if (String(system.summary.data_layer_severity || '').toLowerCase() === 'critical') return true;
-  if (system.summary.coverage_ready === false) return true;
+  if (system.summary.runtime_preflight_ok === false) return true;
+  if (system.summary.release_policy_ready === false && system.summary.policy_neutral_structural_gaps_only !== true) return true;
   return UPSTREAM_CRITICAL_STEP_IDS.some((stepId) => String(system?.steps?.[stepId]?.severity || '').toLowerCase() === 'critical');
 }
 
@@ -449,6 +451,7 @@ function computePhase({
   epoch,
   release,
   publish,
+  runtimePreflight = null,
   stockAudit,
   uiFieldTruth,
   launchdReport,
@@ -470,16 +473,18 @@ function computePhase({
     recovery,
     release,
     publish,
+    runtimePreflight,
     stockAnalyzerAudit: stockAudit,
 	    uiFieldTruth,
 	    launchd: launchdReport,
 	    storage: storageReport,
 	    decisionBundle,
-	    heartbeat,
-	    crashSeal,
-	    previousFinal,
-	    lockIntegrityOk,
-	  });
+    heartbeat,
+    crashSeal,
+    previousFinal,
+    controlPlaneConsistency: consistency,
+    lockIntegrityOk,
+  });
 
   if (seal.ui_green) {
     if (!dashboardMetaFresh(targetMarketDate, seal)) {
@@ -553,7 +558,9 @@ function writeReleaseState({ state, phase, blockers, consistency, system, runtim
     completed_at: phase === 'RELEASE_READY' ? (state.completed_at || new Date().toISOString()) : null,
     phase,
     blocker: blockers?.[0]?.id || null,
+    lead_blocker_step: seal?.lead_blocker_step || null,
     blockers,
+    next_step: seal?.next_step || null,
     final_integrity_seal_ref: 'public/data/ops/final-integrity-seal-latest.json',
     ui_green: seal?.ui_green ?? null,
     release_ready: seal?.release_ready ?? null,
@@ -562,6 +569,10 @@ function writeReleaseState({ state, phase, blockers, consistency, system, runtim
     storage_ok: seal?.storage_ok ?? null,
     nas_ok: seal?.nas_ok ?? null,
     calendar_ok: seal?.calendar_ok ?? null,
+    observer_stale: seal?.observer_stale ?? null,
+    observer_generated_at: seal?.observer_generated_at ?? null,
+    runtime_preflight_ok: seal?.runtime_preflight_ok ?? null,
+    runtime_preflight_ref: seal?.runtime_preflight_ref || null,
     control_plane: consistency,
     // data_pipeline_phase reflects the data-plane runtime state (always "running" while pipeline
     // is active) — it is independent from the release-gate phase above. Not a blocker signal.
@@ -592,6 +603,7 @@ export function rebuildReleaseStateOnce(targetMarketDate = latestUsMarketSession
   const epoch = readJson(PATHS.epoch);
   const release = readJson(PATHS.release);
   const publish = readJson(PATHS.publish);
+  const runtimePreflight = readJson(PATHS.runtimePreflight);
   const stockAudit = readJson(PATHS.stockAudit);
   const uiFieldTruth = readJson(PATHS.uiFieldTruth);
   const decisionBundle = readJson(PATHS.decisionBundle);
@@ -617,6 +629,7 @@ export function rebuildReleaseStateOnce(targetMarketDate = latestUsMarketSession
     epoch,
     release: releaseCandidate,
     publish,
+    runtimePreflight,
     stockAudit,
     uiFieldTruth,
     launchdReport,
@@ -728,6 +741,7 @@ function main() {
     const epoch = readJson(PATHS.epoch);
     const release = readJson(PATHS.release);
     const publish = readJson(PATHS.publish);
+    const runtimePreflight = readJson(PATHS.runtimePreflight);
     const stockAudit = readJson(PATHS.stockAudit);
     const uiFieldTruth = readJson(PATHS.uiFieldTruth);
     const decisionBundle = readJson(PATHS.decisionBundle);
@@ -746,6 +760,7 @@ function main() {
       epoch,
       release,
       publish,
+      runtimePreflight,
       stockAudit,
       uiFieldTruth,
       launchdReport,
@@ -811,6 +826,7 @@ function main() {
     const refreshedEpoch = readJson(PATHS.epoch);
     const refreshedRelease = readJson(PATHS.release);
     const refreshedPublish = readJson(PATHS.publish);
+    const refreshedRuntimePreflight = readJson(PATHS.runtimePreflight);
     const refreshedAudit = readJson(PATHS.stockAudit);
     const refreshedUiFieldTruth = readJson(PATHS.uiFieldTruth);
     const refreshedLaunchd = readJson(PATHS.launchd);
@@ -832,6 +848,7 @@ function main() {
       epoch: refreshedEpoch,
       release: refreshedRelease,
       publish: refreshedPublish,
+      runtimePreflight: refreshedRuntimePreflight,
       stockAudit: refreshedAudit,
       uiFieldTruth: refreshedUiFieldTruth,
       launchdReport: refreshedLaunchd,

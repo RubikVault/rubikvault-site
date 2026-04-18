@@ -15,6 +15,7 @@ import {
   readJsonAbs,
   evaluateTickerViaSharedCore,
   resolveLocalAssetMeta,
+  setLocalBarsRuntimeOverrides,
 } from './lib/best-setups-local-loader.mjs';
 import { histProbsReadCandidates } from './lib/hist-probs/path-resolver.mjs';
 import { writeJsonDurableAtomicSync } from './lib/durable-atomic-write.mjs';
@@ -32,6 +33,7 @@ const HIST_PROBS_CHECKPOINTS_PATH = 'public/data/hist-probs/checkpoints.json';
 const HIST_PROBS_NO_DATA_PATH = 'public/data/hist-probs/no-data-tickers.json';
 const HIST_PROBS_RUN_SUMMARY_PATH = 'public/data/hist-probs/run-summary.json';
 const DECISION_BUNDLE_LATEST_PATH = 'public/data/decisions/latest.json';
+const MAX_HIST_STALE_LOGS = Math.max(0, Number(process.env.BEST_SETUPS_MAX_HIST_STALE_LOGS || process.env.BEST_SETUPS_MAX_REJECTION_LOGS || 25));
 
 function nowIso() {
   return new Date().toISOString();
@@ -55,6 +57,23 @@ function scaleTo100(value, min, max) {
   if (!Number.isFinite(value)) return 0;
   if (!Number.isFinite(min) || !Number.isFinite(max) || max <= min) return 0;
   return clamp(((value - min) / (max - min)) * 100, 0, 100);
+}
+
+function createLimitedLogger(limit, overflowMessage) {
+  let emitted = 0;
+  let overflowNoted = false;
+  return (message) => {
+    if (limit <= 0) return;
+    if (emitted < limit) {
+      console.log(message);
+      emitted += 1;
+      return;
+    }
+    if (!overflowNoted) {
+      console.log(overflowMessage(limit));
+      overflowNoted = true;
+    }
+  };
 }
 
 function resolvedSnapshotDataAsOf(snapshotDoc, buildReport) {
@@ -440,6 +459,11 @@ async function main() {
   const guard = assertMayWriteProductionTruth({ job: 'build-best-setups-v4', exitOnFailure: true });
   if (!guard.ok) throw new Error(`PROD_RUNTIME_BLOCKED:${guard.failures.join(',')}`);
   const publishMode = process.argv.includes('--publish');
+  if (publishMode) {
+    setLocalBarsRuntimeOverrides({
+      allowRemoteBarFetch: false,
+    });
+  }
   const requestedTargetDate = normalizeDateId(
     process.env.TARGET_MARKET_DATE
     || process.env.RV_TARGET_MARKET_DATE
@@ -607,11 +631,15 @@ async function main() {
     }
   }
 
+  const logHistProbsStaleRejection = createLimitedLogger(
+    MAX_HIST_STALE_LOGS,
+    (limit) => `[best-setups-v4] Additional hist-probs stale rejection logs suppressed after ${limit} entries.`,
+  );
   const notHistProbsStale = (row) => {
     if (!row) return false;
     const ticker = String(row.ticker || '').trim().toUpperCase();
     if (histProbsStaleSet.has(ticker)) {
-      console.log(`[best-setups-v4] Rejected ${ticker} from BUY list — hist-probs stale`);
+      logHistProbsStaleRejection(`[best-setups-v4] Rejected ${ticker} from BUY list — hist-probs stale`);
       return false;
     }
     return true;

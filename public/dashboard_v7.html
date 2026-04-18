@@ -700,8 +700,54 @@ async function fetchDashboardPayload() {
         const delta = computeDelta(previousSummary, currentSummary);
         writeCache(DASHBOARD_CACHE_KEY, { data, fetchedAt });
         writeCache(DASHBOARD_SUMMARY_KEY, currentSummary);
+
+        // === TRUTH LAYER: Fetch integrity seal as authoritative source ===
+        let seal = null;
+        let sealFetchStatus = 'missing';
+        let sealErrorMessage = null;
+        try {
+            const sealRes = await fetch('/data/ops/final-integrity-seal-latest.json?_=' + Date.now(), { cache: 'no-store' });
+            if (!sealRes.ok) {
+                sealFetchStatus = 'failed';
+                sealErrorMessage = `HTTP ${sealRes.status}`;
+            } else {
+                seal = await sealRes.json();
+                sealFetchStatus = 'ok';
+            }
+        } catch (sealErr) {
+            sealFetchStatus = 'failed';
+            sealErrorMessage = sealErr?.message || String(sealErr);
+        }
+
+        // === Compute real-time staleness from authoritative timestamps, never stale_days ===
+        const now = new Date();
+        const statusFileAgeHours = data.generated_at ? Math.max(0, (now - new Date(data.generated_at)) / 3600000) : null;
+        const sealGeneratedAt = seal?.generated_at || null;
+        const statusGeneratedMs = data.generated_at ? Date.parse(data.generated_at) : NaN;
+        const sealGeneratedMs = sealGeneratedAt ? Date.parse(sealGeneratedAt) : NaN;
+        const statusFileOlderThanSeal = Number.isFinite(statusGeneratedMs)
+            && Number.isFinite(sealGeneratedMs)
+            && statusGeneratedMs < sealGeneratedMs;
+        const statusFileStale = statusFileOlderThanSeal
+            || statusFileAgeHours == null
+            || statusFileAgeHours > 48;
+        const statusFileStaleReason = statusFileOlderThanSeal
+            ? 'older_than_integrity_seal'
+            : statusFileAgeHours == null
+                ? 'missing_generated_at'
+                : statusFileAgeHours > 48
+                    ? 'older_than_48h'
+                    : null;
+        const realTimeStaleDays = Object.values(data.models || {}).map(m => {
+            const freshnessBasis = m.data_asof || m.generated_at || data.generated_at || null;
+            if (!freshnessBasis) return 99;
+            return Math.max(0, Math.floor((now - new Date(freshnessBasis)) / 86400000));
+        });
+        const worstRealStale = realTimeStaleDays.length ? Math.max(...realTimeStaleDays) : 0;
+
         return {
             data,
+            seal,
             runtime: {
                 fetch_status: 'ok',
                 stale_snapshot_mode: false,
@@ -709,6 +755,14 @@ async function fetchDashboardPayload() {
                 last_successful_fetch_at: fetchedAt,
                 last_failed_fetch_at: null,
                 snapshot_age_hours: 0,
+                status_file_age_hours: statusFileAgeHours,
+                status_file_stale: statusFileStale,
+                status_file_stale_reason: statusFileStaleReason,
+                status_file_older_than_seal: statusFileOlderThanSeal,
+                worst_realtime_stale_days: worstRealStale,
+                seal_fetch_status: sealFetchStatus,
+                seal_error_message: sealErrorMessage,
+                seal_generated_at: sealGeneratedAt,
                 delta,
             },
         };
@@ -716,6 +770,7 @@ async function fetchDashboardPayload() {
         if (cache?.data) {
             return {
                 data: cache.data,
+                seal: null,
                 runtime: {
                     fetch_status: 'failed',
                     stale_snapshot_mode: true,
@@ -723,6 +778,14 @@ async function fetchDashboardPayload() {
                     last_successful_fetch_at: cache.fetchedAt || null,
                     last_failed_fetch_at: failedAt,
                     snapshot_age_hours: hoursSince(cache.fetchedAt),
+                    status_file_age_hours: null,
+                    status_file_stale: true,
+                    status_file_stale_reason: 'cached_snapshot_only',
+                    status_file_older_than_seal: false,
+                    worst_realtime_stale_days: null,
+                    seal_fetch_status: 'unknown',
+                    seal_error_message: null,
+                    seal_generated_at: null,
                     delta: computeDelta(previousSummary, summaryShape(cache.data)),
                 },
             };
@@ -920,7 +983,7 @@ function deepDiagnosis(key, feat, history) {
 
 async function loadDashboard() {
     try {
-        const { data, runtime } = await fetchDashboardPayload();
+        const { data, seal, runtime } = await fetchDashboardPayload();
         renderTrustGrid(data, runtime);
         renderExecutiveSummary(data, runtime);
         renderOperationalReadiness(data);
@@ -928,13 +991,40 @@ async function loadDashboard() {
         renderRefreshDelta(runtime, data);
         renderDiagnosticMode(data, runtime);
 
-        // === Global Banner ===
+        // === Global Banner (with real-time truth cross-checks) ===
         const allModels = Object.values(data.models || {});
-        const worstStale = allModels.reduce((w, m) => Math.max(w, m.stale_days || 0), 0);
+        // Use REAL-TIME staleness, not the value frozen in the status JSON
+        const worstStale = runtime.worst_realtime_stale_days ?? allModels.reduce((w, m) => Math.max(w, m.stale_days || 0), 0);
+        const statusFileAge = runtime.status_file_age_hours ?? 0;
+        const statusFileStale = runtime.status_file_stale === true;
+        const statusFileOlderThanSeal = runtime.status_file_older_than_seal === true;
+        const statusFileStaleReason = runtime.status_file_stale_reason || null;
+        // Cross-check: integrity seal says the real truth
+        const sealOverride = seal && seal.ui_green === false;
+        const sealPhase = seal?.phase || null;
+        const sealAffected = seal?.full_universe_validated === false ? (seal?.blocking_reasons?.length || 0) : 0;
+        const sealFetchFailed = runtime.seal_fetch_status === 'failed';
+
         const banner = document.getElementById('govBanner');
         if (runtime.fetch_status === 'failed') {
             banner.style.background = 'rgba(239,68,68,0.1)'; banner.style.borderColor = 'rgba(239,68,68,0.3)'; banner.style.color = 'var(--red)';
             banner.innerHTML = `<i class="fas fa-wifi"></i> LIVE FETCH FAILED: showing cached snapshot from ${runtime.last_successful_fetch_at ? fmtShortDate(runtime.last_successful_fetch_at) : 'unknown'} (${fmtAgeHours(runtime.snapshot_age_hours)} old)`;
+        } else if (sealFetchFailed) {
+            banner.style.background = 'rgba(245,158,11,0.1)'; banner.style.borderColor = 'rgba(245,158,11,0.3)'; banner.style.color = 'var(--yellow)';
+            banner.innerHTML = `<i class="fas fa-shield-halved"></i> SEAL UNAVAILABLE: dashboard cannot verify truth layer (${escapeHtml(runtime.seal_error_message || 'unknown error')})`;
+        } else if (sealOverride) {
+            // INTEGRITY SEAL OVERRIDE: The seal is the authoritative source of truth
+            banner.style.background = 'rgba(239,68,68,0.1)'; banner.style.borderColor = 'rgba(239,68,68,0.3)'; banner.style.color = 'var(--red)';
+            const sealMsg = sealPhase === 'SLA_BREACH' ? 'SLA BREACH' : (sealPhase || 'PIPELINE NOT GREEN');
+            banner.innerHTML = `<i class="fas fa-shield-halved"></i> ${escapeHtml(sealMsg)}: Pipeline integrity seal reports ui_green=false${sealAffected ? ` · ${sealAffected} blocker(s)` : ''}`;
+        } else if (statusFileStale) {
+            banner.style.background = 'rgba(245,158,11,0.1)'; banner.style.borderColor = 'rgba(245,158,11,0.3)'; banner.style.color = 'var(--yellow)';
+            const staleReason = statusFileOlderThanSeal
+                ? 'status file is older than the integrity seal'
+                : statusFileStaleReason === 'missing_generated_at'
+                    ? 'status file is missing generated_at'
+                : `status data is ${Math.round(statusFileAge)}h old`;
+            banner.innerHTML = `<i class="fas fa-clock"></i> STALE DASHBOARD: ${escapeHtml(staleReason)} — dashboard snapshot is not live truth`;
         } else if (data.system?.status_severity === 'critical' || worstStale > 7) {
             banner.style.background = 'rgba(239,68,68,0.1)'; banner.style.borderColor = 'rgba(239,68,68,0.3)'; banner.style.color = 'var(--red)';
             banner.innerHTML = `<i class="fas fa-exclamation-triangle"></i> CRITICAL: ${escapeHtml(data.system?.root_causes?.[0]?.title || `Data ${worstStale}d stale`)}`;

@@ -176,13 +176,17 @@ def _resolve_repo_rel(repo_root: Path, p: str) -> Path:
 def _history_pack_path(repo_root: Path, rel_pack: str) -> Path:
     # Local Mac storage can be mounted either as mirrors/universe-v7/<rel_pack>
     # or under the history symlink target as mirrors/universe-v7/history/<rel_pack>.
-    primary = repo_root / "mirrors/universe-v7" / rel_pack
-    if primary.exists():
-        return primary
-    fallback = repo_root / "mirrors/universe-v7" / "history" / rel_pack
-    if fallback.exists():
-        return fallback
-    return primary
+    rel = Path(str(rel_pack).strip())
+    stripped = Path(*rel.parts[1:]) if rel.parts[:1] == ("history",) else rel
+    candidates = [
+        repo_root / "mirrors/universe-v7" / rel,
+        repo_root / "mirrors/universe-v7" / "history" / stripped,
+        repo_root / "mirrors/universe-v7" / "history" / rel,
+    ]
+    for candidate in candidates:
+        if candidate.exists():
+            return candidate
+    return candidates[0]
 
 
 def _load_exporter_module(repo_root: Path):
@@ -378,6 +382,40 @@ def load_or_build_latest_date_cache(
         "assets_total": len(latest),
         "fingerprint": fp["fingerprint"],
         "rows_scanned": stats["rows_scanned"],
+    }
+
+
+def persist_latest_date_cache(
+    cache_path: Path,
+    raw_provider_root: Path,
+    files: list[Path],
+    latest_dates: dict[str, str],
+    *,
+    status: str,
+) -> dict[str, Any]:
+    fp = raw_files_fingerprint(files, raw_provider_root)
+    payload = {
+        "schema": "q1_daily_delta_latest_date_cache_v1",
+        "generated_at": utc_now_iso(),
+        "raw_provider_root": str(raw_provider_root),
+        **fp,
+        "stats": {
+            "files_scanned": 0,
+            "rows_scanned": 0,
+            "assets_seen": len(latest_dates),
+            "mode": status,
+        },
+        "latest_dates": latest_dates,
+    }
+    atomic_write_json(cache_path, payload)
+    return {
+        "enabled": True,
+        "status": status,
+        "cache_path": str(cache_path),
+        "files_total": fp["files_total"],
+        "assets_total": len(latest_dates),
+        "fingerprint": fp["fingerprint"],
+        "rows_scanned": 0,
     }
 
 
@@ -727,7 +765,7 @@ def flatten_delta_rows_for_pack(
     *,
     max_allowed_date: str,
     exporter: Any,
-) -> tuple[dict[str, dict[str, list[Any]]], dict[str, Any], dict[str, int]]:
+) -> tuple[dict[str, dict[str, list[Any]]], dict[str, Any], dict[str, int], dict[str, str]]:
     rows_by_class: dict[str, dict[str, list[Any]]] = {}
     per_pack_stats = {
         "records_seen": 0,
@@ -738,6 +776,7 @@ def flatten_delta_rows_for_pack(
     }
     filter_stats = defaultdict(int)
     seen_assets: set[str] = set()
+    emitted_latest_dates: dict[str, str] = {}
 
     def ensure_bucket(asset_class: str) -> dict[str, list[Any]]:
         if asset_class in rows_by_class:
@@ -842,6 +881,9 @@ def flatten_delta_rows_for_pack(
                 out["volume_raw"].append(v)
                 out["adjusted_close_raw"].append(bar.get("adjusted_close"))
                 filter_stats["rows_out"] += 1
+                prev_latest = emitted_latest_dates.get(meta.asset_id)
+                if prev_latest is None or d > prev_latest:
+                    emitted_latest_dates[meta.asset_id] = d
 
     per_pack_stats["assets_emitted"] = len(seen_assets)
     per_pack_stats["missing_targets_in_pack"] = max(0, len(wanted_assets) - len(seen_assets))
@@ -851,7 +893,7 @@ def flatten_delta_rows_for_pack(
         "rows_invalid_ohlc", "rows_invalid_volume",
     ]:
         filter_stats[key] += 0
-    return rows_by_class, per_pack_stats, dict(filter_stats)
+    return rows_by_class, per_pack_stats, dict(filter_stats), emitted_latest_dates
 
 
 def write_parquet_rows(out_path: Path, rows: Dict[str, List], compression: str = "snappy") -> int:
@@ -1020,6 +1062,9 @@ def main(argv: Iterable[str]) -> int:
         if force_packs:
             force = set(force_packs)
             selected_packs = [p for p in rel_packs_all if p in force]
+            if completed_packs:
+                completed_packs = {p for p in completed_packs if p not in force}
+                state["completed_packs"] = sorted(completed_packs)
         if args.limit_packs and args.limit_packs > 0:
             selected_packs = selected_packs[: args.limit_packs]
         state["pack_state_cache"] = pack_cache_meta
@@ -1148,7 +1193,7 @@ def main(argv: Iterable[str]) -> int:
             write_run_status(stage="processing_pack", extra={"current_pack": state["current_pack"]})
             print(f"[q1-delta] [{idx}/{len(selected_packs)}] {rel_pack} targets={len(wanted_assets)}", flush=True)
             try:
-                rows_by_class, per_pack_stats, filter_stats_total = flatten_delta_rows_for_pack(
+                rows_by_class, per_pack_stats, filter_stats_total, emitted_latest_dates = flatten_delta_rows_for_pack(
                     pack_abs,
                     rel_pack,
                     wanted_assets,
@@ -1172,6 +1217,10 @@ def main(argv: Iterable[str]) -> int:
                     n = write_parquet_rows(out_path, rows, compression=args.compression)
                     if n > 0:
                         outputs.append({"asset_class": asset_class, "path": str(out_path), "rows": n})
+                for aid, latest_date in emitted_latest_dates.items():
+                    prev_latest = latest_date_by_asset.get(aid)
+                    if prev_latest is None or latest_date > prev_latest:
+                        latest_date_by_asset[aid] = latest_date
 
                 event = {
                     "ts": utc_now_iso(),
@@ -1345,6 +1394,20 @@ def main(argv: Iterable[str]) -> int:
             reason = "reconciliation_threshold_failed"
         elif noop_no_changed_packs:
             reason = "noop_no_changed_packs"
+
+        if exit_code == 0 and int(state["stats"].get("bars_rows_emitted_delta") or 0) > 0:
+            raw_files = list_raw_parquet_files(raw_provider_root, include_asset_classes)
+            latest_cache_meta = persist_latest_date_cache(
+                latest_date_cache_path,
+                raw_provider_root,
+                raw_files,
+                latest_date_by_asset,
+                status="incremental_refresh_after_emit",
+            )
+            state["latest_date_cache"] = latest_cache_meta
+            state["raw_files_total"] = len(raw_files)
+            state["updated_at"] = utc_now_iso()
+            atomic_write_json(state_path, state)
 
         ptr_payload = {
             "schema": "q1_daily_delta_ingest_latest_success_v1" if exit_code == 0 else "q1_daily_delta_ingest_latest_failure_v1",

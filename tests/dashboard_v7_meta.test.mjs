@@ -7,6 +7,7 @@ const ROOT = process.cwd();
 const META_PATH = path.join(ROOT, 'public/dashboard_v6_meta_data.json');
 const V7_STATUS_PATH = path.join(ROOT, 'public/data/ui/dashboard-v7-status.json');
 const DASHBOARD_PATH = path.join(ROOT, 'public/dashboard_v7.html');
+const GENERATOR_PATH = path.join(ROOT, 'scripts/generate_meta_dashboard_data.mjs');
 
 function readJson(filePath) {
   return JSON.parse(fs.readFileSync(filePath, 'utf8'));
@@ -16,6 +17,7 @@ describe('dashboard_v7 meta contract', () => {
   const meta = readJson(META_PATH);
   const v7Status = readJson(V7_STATUS_PATH);
   const html = fs.readFileSync(DASHBOARD_PATH, 'utf8');
+  const generator = fs.readFileSync(GENERATOR_PATH, 'utf8');
 
   it('exports system steps and validation chain', () => {
     assert.ok(meta.system.steps && typeof meta.system.steps === 'object');
@@ -41,17 +43,19 @@ describe('dashboard_v7 meta contract', () => {
     assert.ok(Array.isArray(v7Status.advisory_reasons));
     assert.ok(Object.prototype.hasOwnProperty.call(v7Status.system, 'blocking_severity'));
     assert.ok(Object.prototype.hasOwnProperty.call(v7Status.system, 'advisory_severity'));
+    assert.ok(generator.includes('runtime_preflight_ok'));
+    assert.ok(generator.includes('runtime_preflight_ref'));
   });
 
-  it('dashboard renders the new recovery sections', () => {
-    assert.ok(html.includes('SSOT Recovery Runbook'));
-    assert.ok(html.includes('Stock Analyzer Universe Audit'));
-    assert.ok(html.includes('Ordered Recovery Plan'));
-    assert.ok(html.includes('Web Validation Chain'));
-    assert.ok(html.includes('recoveryRunbookContent'));
-    assert.ok(html.includes('stockAnalyzerAuditContent'));
-    assert.ok(html.includes('stockAnalyzerRecoveryContent'));
-    assert.ok(html.includes('validationChainContent'));
+  it('dashboard truth banner uses seal and realtime freshness sources', () => {
     assert.ok(html.includes('/data/ui/dashboard-v7-status.json'));
+    assert.ok(html.includes('/data/ops/final-integrity-seal-latest.json'));
+    assert.ok(html.includes('seal_fetch_status'));
+    assert.ok(html.includes('status_file_stale'));
+    assert.ok(html.includes('status_file_older_than_seal'));
+    assert.ok(html.includes('worst_realtime_stale_days'));
+    assert.ok(html.includes('m.data_asof || m.generated_at || data.generated_at'));
+    assert.ok(html.includes('SEAL UNAVAILABLE'));
+    assert.ok(html.includes('status file is older than the integrity seal'));
   });
 });

@@ -7,6 +7,9 @@ export const BEST_SETUP_LIMIT = 10;
 export const BEST_SETUP_CANDIDATE_LIMIT = 36;
 export const BEST_SETUP_QUANTLAB_LIMIT = 120;
 export const BEST_SETUP_FORECAST_LIMIT = 240;
+const MAX_REJECTION_LOGS = Math.max(0, Number(process.env.BEST_SETUPS_MAX_REJECTION_LOGS || 25));
+let rejectionLogsEmitted = 0;
+let rejectionLogOverflowNoted = false;
 
 export const HORIZON_CONFIG = Object.freeze({
   short: { key: '1d', label: 'Short-Term (1-5 days)', minBullishProbability: 0.6 },
@@ -28,6 +31,19 @@ function toNumber(value) {
   if (value === null || value === undefined || value === '') return null;
   const num = Number(value);
   return Number.isFinite(num) ? num : null;
+}
+
+function logRejectedCandidate(message) {
+  if (MAX_REJECTION_LOGS <= 0) return;
+  if (rejectionLogsEmitted < MAX_REJECTION_LOGS) {
+    console.log(message);
+    rejectionLogsEmitted += 1;
+    return;
+  }
+  if (!rejectionLogOverflowNoted) {
+    console.log(`[best-setups-v4] Additional candidate rejection logs suppressed after ${MAX_REJECTION_LOGS} entries.`);
+    rejectionLogOverflowNoted = true;
+  }
 }
 
 export function bullishProbability(horizonDoc) {
@@ -247,7 +263,7 @@ export function buildVerifiedFrontpageRow(stockDoc, candidate) {
   if (close === null || isNaN(close)) { console.log(`DEBUG: buildVerifiedFrontpageRow rejected due to close is null for ${ticker}`); return null; }
   const minimumNNotMet = decisionSlice?.minimum_n_not_met === true || decision?.minimum_n_not_met === true;
   if (minimumNNotMet) {
-    console.log(`[best-setups-v4] Rejected ${ticker} — minimum_n_not_met=true`);
+    logRejectedCandidate(`[best-setups-v4] Rejected ${ticker} — minimum_n_not_met=true`);
     return null;
   }
 

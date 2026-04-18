@@ -39,16 +39,37 @@ test('dashboard recovery target selection is not pulled forward by q1 latest_suc
   assert.doesNotMatch(content, /q1Success\?\.ingest_date/);
 });
 
+test('dashboard recovery gives q1 a longer stall budget and explicit blocker classes', () => {
+  const content = fs.readFileSync(path.join(ROOT, 'scripts/ops/run-dashboard-green-recovery.mjs'), 'utf8');
+  assert.match(content, /id: 'q1_delta_ingest'[\s\S]*stallMinutes: 90/);
+  assert.match(content, /blocked_retryable/);
+  assert.match(content, /blocked_terminal/);
+  assert.match(content, /lead_blocker_step/);
+  assert.match(content, /step_states/);
+});
+
+test('hist-probs recovery completion tolerates neutral no-data and inactive reclassifications', () => {
+  const content = fs.readFileSync(path.join(ROOT, 'scripts/ops/run-dashboard-green-recovery.mjs'), 'utf8');
+  assert.match(content, /histProbsNeutralizedErrors/);
+  assert.match(content, /tickers_excluded_no_data/);
+  assert.match(content, /tickers_excluded_inactive/);
+  assert.match(content, /reclassify_no_data_count/);
+  assert.match(content, /reclassify_inactive_count/);
+});
+
 test('q1 runner does not publish success before completion and protects full-scan cache state', () => {
   const content = fs.readFileSync(path.join(ROOT, 'scripts/quantlab/run_daily_delta_ingest_q1.py'), 'utf8');
   assert.match(content, /--force-pack-file/);
   assert.match(content, /def _load_force_packs/);
   assert.match(content, /def flatten_delta_rows_for_pack/);
-  assert.match(content, /rows_by_class, per_pack_stats, filter_stats_total = flatten_delta_rows_for_pack/);
+  assert.match(content, /rows_by_class, per_pack_stats, filter_stats_total, emitted_latest_dates = flatten_delta_rows_for_pack/);
   assert.match(content, /state\["pack_selection"\]/);
   assert.match(content, /commit_cache=not bool\(args\.full_scan_packs\)/);
   assert.match(content, /resume_incomplete_full_scan/);
   assert.match(content, /state\["current_pack"\]/);
+  assert.match(content, /completed_packs = \{p for p in completed_packs if p not in force\}/);
+  assert.match(content, /def persist_latest_date_cache/);
+  assert.match(content, /for aid, latest_date in emitted_latest_dates\.items\(\):/);
   assert.match(content, /latest_failure\.json/);
   assert.match(content, /if exit_code == 0:\n\s+if args\.full_scan_packs:/);
   assert.doesNotMatch(content, /latest_success\.json"\)\n\s+atomic_write_json\(latest_ptr[\s\S]*exit_code = 0/);

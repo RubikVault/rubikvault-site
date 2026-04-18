@@ -9,6 +9,7 @@ import {
   readJson,
   resolveReleaseTargetMarketDate,
 } from './pipeline-artifact-contract.mjs';
+import { classifyRuntimeFailure } from './runtime-preflight.mjs';
 
 const ROOT = path.resolve(new URL('..', import.meta.url).pathname, '..');
 const OUTPUT_PATH = path.join(ROOT, 'public/data/reports/ui-field-truth-report-latest.json');
@@ -17,6 +18,7 @@ const PATHS = {
   runtime: path.join(ROOT, 'public/data/pipeline/runtime/latest.json'),
   system: path.join(ROOT, 'public/data/reports/system-status-latest.json'),
   stockAudit: path.join(ROOT, 'public/data/reports/stock-analyzer-universe-audit-latest.json'),
+  runtimePreflight: path.join(ROOT, 'public/data/ops/runtime-preflight-latest.json'),
 };
 const DEFAULT_BASE_URL = 'http://127.0.0.1:8788';
 const CRITICAL_ENDPOINTS = ['summary', 'historical', 'governance', 'historical-profile'];
@@ -122,7 +124,9 @@ function shouldRetryViaCurl(baseUrl, errorMessage) {
   }
   return normalizedMessage.includes('eperm')
     || normalizedMessage.includes('eaddrnotavail')
+    || normalizedMessage.includes('econnreset')
     || normalizedMessage.includes('econnrefused')
+    || normalizedMessage.includes('timeout_after_')
     || normalizedMessage.includes('failed to fetch');
 }
 
@@ -211,6 +215,19 @@ async function fetchJson(baseUrl, endpointPath, timeoutMs) {
   }
 }
 
+function classifyCheckFailure(endpoint, response, payload, ok) {
+  if (ok) return null;
+  const runtimeFailure = classifyRuntimeFailure(response.error);
+  if (runtimeFailure) return runtimeFailure;
+  if (!response.http_ok && response.status === 0) return 'runtime_unavailable';
+  if (response.status >= 500) return 'runtime_unstable';
+  if (payload?.ok === false && payload?.error) {
+    const payloadFailure = classifyRuntimeFailure(payload.error?.message || payload.error);
+    if (payloadFailure) return payloadFailure;
+  }
+  return OPTIONAL_ENDPOINTS.includes(endpoint) ? 'advisory_contract_failed' : 'endpoint_contract_failed';
+}
+
 function buildArtifactHash(payload) {
   return createHash('sha256').update(JSON.stringify({ ...payload, artifact_hash: null })).digest('hex');
 }
@@ -241,6 +258,7 @@ async function checkCanary(baseUrl, targetMarketDate, canary, timeoutMs) {
     const hasData = payloadHasData(payload, endpoint);
     const currentEnough = endpointCurrentEnough(endpoint, payload, targetMarketDate);
     const ok = response.http_ok && payload?.ok === true && hasData && currentEnough && fallbackUsed !== true;
+    const failureClass = classifyCheckFailure(endpoint, response, payload, ok);
     return {
       endpoint,
       ok,
@@ -251,6 +269,7 @@ async function checkCanary(baseUrl, targetMarketDate, canary, timeoutMs) {
       current_enough: currentEnough,
       provider: payload?.meta?.provider || null,
       quality_flags: Array.isArray(payload?.meta?.quality_flags) ? payload.meta.quality_flags : [],
+      failure_class: failureClass,
       error: ok ? null : (response.error || payload?.error?.message || payload?.error || 'endpoint_contract_failed'),
     };
   });
@@ -269,6 +288,7 @@ async function main() {
   const runtime = readJson(PATHS.runtime) || null;
   const system = readJson(PATHS.system) || null;
   const stockAudit = readJson(PATHS.stockAudit) || null;
+  const runtimePreflight = readJson(PATHS.runtimePreflight) || null;
   const targetMarketDate = options.targetMarketDate
     || resolveReleaseTargetMarketDate(release)
     || normalizeDate(runtime?.target_market_date)
@@ -292,8 +312,9 @@ async function main() {
     ));
   }
   const auditSummary = stockAudit?.summary || null;
-  const auditGreen = (auditSummary?.artifact_full_validated === true || auditSummary?.full_universe_validated === true)
-    && auditSummary?.release_eligible === true
+  const auditGreen = (auditSummary?.artifact_release_ready === true
+      || (auditSummary?.artifact_full_validated === true || auditSummary?.full_universe_validated === true)
+    && auditSummary?.release_eligible === true)
     && auditSummary?.sampled_mode !== true;
   const advisory = [];
   const auditProvenanceComplete = Boolean(
@@ -312,6 +333,7 @@ async function main() {
     .map((check) => ({
       ticker: canary.ticker,
       endpoint: check.endpoint,
+      failure_class: check.failure_class || 'endpoint_contract_failed',
       error: check.error,
     })));
   const optionalAdvisories = canaries.flatMap((canary) => canary.checks
@@ -319,8 +341,17 @@ async function main() {
     .map((check) => ({
       ticker: canary.ticker,
       endpoint: check.endpoint,
+      failure_class: check.failure_class || 'advisory_contract_failed',
       error: check.error,
     })));
+  const runtimeFailures = failures.filter((entry) => entry.failure_class === 'runtime_unavailable' || entry.failure_class === 'runtime_unstable');
+  const endpointFailures = failures.filter((entry) => entry.failure_class === 'endpoint_contract_failed');
+  const runtimeFailureClass = runtimeFailures.some((entry) => entry.failure_class === 'runtime_unstable')
+    ? 'runtime_unstable'
+    : (runtimeFailures.length > 0 ? 'runtime_unavailable' : null);
+  if (runtimePreflight?.ok === false && !advisory.includes('runtime_preflight_failed')) {
+    advisory.push('runtime_preflight_failed');
+  }
 
   const payload = {
     schema: 'rv.ui_field_truth_report.v1',
@@ -341,12 +372,23 @@ async function main() {
       full_universe_source_ok: auditGreen,
       audit_provenance_complete: auditProvenanceComplete,
       canary_ok: failures.length === 0,
+      runtime_ok: runtimePreflight?.ok !== false && runtimeFailures.length === 0,
+      runtime_failure_class: runtimeFailureClass,
+      runtime_failure_count: runtimeFailures.length,
+      endpoint_contract_failure_count: endpointFailures.length,
       checked_canaries: canaries.length,
       failed_checks: failures.length,
       optional_advisory_count: optionalAdvisories.length,
       advisory_reasons: advisory,
     },
     full_universe_audit_ref: 'public/data/reports/stock-analyzer-universe-audit-latest.json',
+    runtime_preflight_ref: 'public/data/ops/runtime-preflight-latest.json',
+    runtime_preflight_ok: runtimePreflight?.ok === true,
+    runtime_preflight: runtimePreflight ? {
+      ok: runtimePreflight.ok === true,
+      generated_at: runtimePreflight.generated_at || null,
+      failure_reasons: Array.isArray(runtimePreflight.failure_reasons) ? runtimePreflight.failure_reasons : [],
+    } : null,
     canaries,
     failures,
     optional_advisories: optionalAdvisories,

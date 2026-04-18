@@ -41,6 +41,13 @@ function resolveAllowRemoteBarFetch() {
     && !['1', 'true', 'yes'].includes(String(process.env.BEST_SETUPS_DISABLE_NETWORK || '').trim().toLowerCase());
 }
 
+function resolveRemoteBarFetchTimeoutMs() {
+  const override = Number(localBarsRuntimeOverrides?.remoteBarFetchTimeoutMs);
+  if (Number.isFinite(override) && override > 0) return Math.max(250, override);
+  const envTimeout = Number(process.env.BEST_SETUPS_NETWORK_TIMEOUT_MS || process.env.LOCAL_BAR_FETCH_TIMEOUT_MS || 5000);
+  return Number.isFinite(envTimeout) && envTimeout > 0 ? Math.max(250, envTimeout) : 5000;
+}
+
 function toFinite(value) {
   const num = Number(value);
   return Number.isFinite(num) ? num : null;
@@ -135,38 +142,46 @@ async function fetchStooqAdjustedSeries(ticker) {
   if (cached) return cached;
 
   try {
-    const response = await fetch(`https://stooq.com/q/d/l/?s=${encodeURIComponent(stooqSymbol(cleanTicker))}&i=d`, {
-      headers: { 'user-agent': 'RubikVault-local-bars/1.0' },
-    });
-    if (!response.ok) return [];
-    const csv = await response.text();
-    const lines = csv.split('\n').map((line) => line.trim()).filter(Boolean);
-    if (lines.length < 2 || !/^Date,Open,High,Low,Close,Volume$/i.test(lines[0])) return [];
-    const rows = [];
-    for (const line of lines.slice(1)) {
-      const [trading_date, open, high, low, close, volume] = line.split(',');
-      if (!trading_date || trading_date === 'Date' || !close) continue;
-      const closeNum = Number(close);
-      if (!Number.isFinite(closeNum) || closeNum <= 0) continue;
-      rows.push({
-        canonical_id: `US:${cleanTicker}`,
-        ticker: cleanTicker,
-        exchange: 'US',
-        trading_date,
-        open: Number.isFinite(Number(open)) ? Number(open) : closeNum,
-        high: Number.isFinite(Number(high)) ? Number(high) : closeNum,
-        low: Number.isFinite(Number(low)) ? Number(low) : closeNum,
-        close: closeNum,
-        adjusted_close: closeNum,
-        volume: Number.isFinite(Number(volume)) ? Number(volume) : 0,
-        provider: 'stooq',
+    const controller = new AbortController();
+    const timeoutMs = resolveRemoteBarFetchTimeoutMs();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      const response = await fetch(`https://stooq.com/q/d/l/?s=${encodeURIComponent(stooqSymbol(cleanTicker))}&i=d`, {
+        headers: { 'user-agent': 'RubikVault-local-bars/1.0' },
+        signal: controller.signal,
       });
+      if (!response.ok) return [];
+      const csv = await response.text();
+      const lines = csv.split('\n').map((line) => line.trim()).filter(Boolean);
+      if (lines.length < 2 || !/^Date,Open,High,Low,Close,Volume$/i.test(lines[0])) return [];
+      const rows = [];
+      for (const line of lines.slice(1)) {
+        const [trading_date, open, high, low, close, volume] = line.split(',');
+        if (!trading_date || trading_date === 'Date' || !close) continue;
+        const closeNum = Number(close);
+        if (!Number.isFinite(closeNum) || closeNum <= 0) continue;
+        rows.push({
+          canonical_id: `US:${cleanTicker}`,
+          ticker: cleanTicker,
+          exchange: 'US',
+          trading_date,
+          open: Number.isFinite(Number(open)) ? Number(open) : closeNum,
+          high: Number.isFinite(Number(high)) ? Number(high) : closeNum,
+          low: Number.isFinite(Number(low)) ? Number(low) : closeNum,
+          close: closeNum,
+          adjusted_close: closeNum,
+          volume: Number.isFinite(Number(volume)) ? Number(volume) : 0,
+          provider: 'stooq',
+        });
+      }
+      if (!rows.length) return [];
+      await writeNdjsonGzAbs(adjustedSeriesPath(cleanTicker), rows);
+      const normalized = normalizeRows(rows);
+      stooqBarsCache.set(cleanTicker, normalized);
+      return normalized;
+    } finally {
+      clearTimeout(timer);
     }
-    if (!rows.length) return [];
-    await writeNdjsonGzAbs(adjustedSeriesPath(cleanTicker), rows);
-    const normalized = normalizeRows(rows);
-    stooqBarsCache.set(cleanTicker, normalized);
-    return normalized;
   } catch {
     return [];
   }

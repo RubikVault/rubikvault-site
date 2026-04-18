@@ -45,9 +45,10 @@ function parseArgs(argv) {
     skipFinalIntegritySeal: false,
     skipFrontpageValidator: false,
     fullUniverseAudit: process.env.RV_FULL_UNIVERSE_AUDIT === '1',
-    liveAuditSampleSize: Math.max(0, Number(process.env.RV_STOCK_ANALYZER_LIVE_SAMPLE_SIZE || (process.env.RV_FULL_UNIVERSE_AUDIT === '1' ? 0 : 300))),
+    liveAuditSampleSize: null,
     date: null,
   };
+  let liveAuditSampleSizeExplicit = false;
   for (const arg of argv.slice(2)) {
     if (arg === '--print-only') options.printOnly = true;
     else if (arg.startsWith('--run-id=')) options.runId = String(arg.split('=')[1] || '').trim() || null;
@@ -69,6 +70,16 @@ function parseArgs(argv) {
     else if (arg === '--skip-final-integrity-seal') options.skipFinalIntegritySeal = true;
     else if (arg === '--skip-frontpage-validator') options.skipFrontpageValidator = true;
     else if (arg === '--full-universe-audit') options.fullUniverseAudit = true;
+    else if (arg.startsWith('--live-audit-sample-size=')) {
+      options.liveAuditSampleSize = Math.max(0, Number(arg.split('=')[1]) || 0);
+      liveAuditSampleSizeExplicit = true;
+    }
+  }
+  if (!liveAuditSampleSizeExplicit) {
+    options.liveAuditSampleSize = Math.max(
+      0,
+      Number(process.env.RV_STOCK_ANALYZER_LIVE_SAMPLE_SIZE || (options.fullUniverseAudit ? 0 : 300)),
+    );
   }
   return options;
 }
@@ -161,7 +172,13 @@ function defineSteps(options, context) {
       enabled: !options.skipSnapshot,
       command: node,
       args: ['scripts/build-best-setups-v4.mjs', '--publish'],
-      env: stepEnv(context, { NODE_OPTIONS: '--max-old-space-size=8192' }),
+      env: stepEnv(context, {
+        NODE_OPTIONS: '--max-old-space-size=8192',
+        BEST_SETUPS_DISABLE_NETWORK: '1',
+        ALLOW_REMOTE_BAR_FETCH: '0',
+        BEST_SETUPS_CONCURRENCY: process.env.BEST_SETUPS_CONCURRENCY || '2',
+        BEST_SETUPS_META_CONCURRENCY: process.env.BEST_SETUPS_META_CONCURRENCY || '4',
+      }),
       outputs: [
         'public/data/snapshots/best-setups-v4.json',
         'public/data/reports/best-setups-build-latest.json',
@@ -190,6 +207,14 @@ function defineSteps(options, context) {
         'public/data/fundamentals/_scope.json',
         'public/data/v3/fundamentals/manifest.json',
       ],
+    },
+    {
+      id: 'runtime_preflight',
+      enabled: true,
+      command: node,
+      args: ['scripts/ops/runtime-preflight.mjs', '--ensure-runtime', '--mode=hard'],
+      env: stepEnv(context),
+      outputs: ['public/data/ops/runtime-preflight-latest.json'],
     },
     {
       id: 'stock_analyzer_universe_audit',
@@ -276,6 +301,21 @@ function defineSteps(options, context) {
       args: ['scripts/ops/build-pipeline-runtime-report.mjs'],
       env: stepEnv(context),
       outputs: ['public/data/pipeline/runtime/latest.json'],
+    },
+    {
+      id: 'decision_bundle',
+      enabled: true,
+      command: node,
+      args: [
+        'scripts/ops/build-full-universe-decisions.mjs',
+        `--target-market-date=${context.targetMarketDate}`,
+        '--replace',
+      ],
+      env: stepEnv(context),
+      outputs: [
+        'public/data/decisions/latest.json',
+        'public/data/ops/decision-bundle-latest.json',
+      ],
     },
     {
       id: 'final_integrity_seal',

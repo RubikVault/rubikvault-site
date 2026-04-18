@@ -500,12 +500,15 @@ function buildQuantLabDataFreshnessSummary({
       lagVsRawAnyCalendarDays: featureLagVsRawAnyCalendarDays,
       rowsTotal: Number(featureStoreManifest?.counts?.rows_total || 0),
       asofDatesTotal: Number(featureStoreManifest?.counts?.asof_dates_total || 0),
-      manifestPath: featureStoreManifest?.feature_store_version
-        ? path.join(`features/store/feature_store_version=${featureStoreManifest.feature_store_version}`, 'feature_panel_manifest.json')
-        : null,
+      manifestPath: featureStoreManifest?.__resolved_path
+        || (featureStoreManifest?.feature_store_version
+          ? path.join(`features/store/feature_store_version=${featureStoreManifest.feature_store_version}`, 'feature_panel_manifest.json')
+          : null),
       availableVersions: Array.isArray(featureStoreCandidates)
         ? featureStoreCandidates.filter((item) => item?.available).map((item) => ({
             version: item.version,
+            source: item.source || null,
+            manifestPath: item.manifestPath || null,
             asOfDate: item.panelMaxAsofDate,
             snapshotAsOfDate: item.snapshotAsofDate,
           }))
@@ -525,11 +528,78 @@ function buildQuantLabDataFreshnessSummary({
   };
 }
 
+function featureStoreSourceRank(source) {
+  return { runs: 0, ops: 1, legacy: 2 }[String(source || '').toLowerCase()] ?? 9;
+}
+
+function featureStoreVersionMatches(expectedVersion, manifest, filePath) {
+  const versions = [
+    String(manifest?.feature_store_version || '').trim(),
+    String(filePath || '').trim(),
+  ].filter(Boolean);
+  return versions.some((value) => value.includes(expectedVersion));
+}
+
+function decorateFeatureStoreManifest(quantRoot, filePath, manifest, source, expectedVersion) {
+  if (!manifest || typeof manifest !== 'object') return null;
+  return {
+    ...manifest,
+    feature_store_version: String(manifest.feature_store_version || expectedVersion || ''),
+    __resolved_path: path.relative(quantRoot, filePath),
+    __resolved_source: source,
+  };
+}
+
+function resolveFeatureStoreManifest(quantRoot, expectedVersion) {
+  const candidates = [];
+  const searchRoots = [
+    { root: path.join(quantRoot, 'runs'), source: 'runs' },
+    { root: path.join(quantRoot, 'ops'), source: 'ops' },
+  ];
+  for (const { root, source } of searchRoots) {
+    for (const filePath of walkFind(root, 'feature_panel_manifest.json')) {
+      const manifest = readJson(filePath);
+      if (!featureStoreVersionMatches(expectedVersion, manifest, filePath)) continue;
+      const decorated = decorateFeatureStoreManifest(quantRoot, filePath, manifest, source, expectedVersion);
+      if (!decorated) continue;
+      candidates.push({
+        source,
+        filePath,
+        manifest: decorated,
+        panelMaxAsofDate: String(decorated?.ranges?.panel_max_asof_date || ''),
+        snapshotAsofDate: String(decorated?.ranges?.snapshot_asof_date || ''),
+        rowsTotal: Number(decorated?.counts?.rows_total || 0),
+      });
+    }
+  }
+  const legacyPath = path.join(quantRoot, `features/store/feature_store_version=${expectedVersion}/feature_panel_manifest.json`);
+  const legacyManifest = readJson(legacyPath);
+  if (legacyManifest) {
+    const decorated = decorateFeatureStoreManifest(quantRoot, legacyPath, legacyManifest, 'legacy', expectedVersion);
+    candidates.push({
+      source: 'legacy',
+      filePath: legacyPath,
+      manifest: decorated,
+      panelMaxAsofDate: String(decorated?.ranges?.panel_max_asof_date || ''),
+      snapshotAsofDate: String(decorated?.ranges?.snapshot_asof_date || ''),
+      rowsTotal: Number(decorated?.counts?.rows_total || 0),
+    });
+  }
+  return candidates.sort((a, b) => (
+    featureStoreSourceRank(a.source) - featureStoreSourceRank(b.source)
+    || String(b.panelMaxAsofDate).localeCompare(String(a.panelMaxAsofDate))
+    || String(b.snapshotAsofDate).localeCompare(String(a.snapshotAsofDate))
+    || Number(b.rowsTotal || 0) - Number(a.rowsTotal || 0)
+  ))[0] || null;
+}
+
 function summarizeFeatureStoreCandidate(version, manifest) {
   return {
     version,
     available: Boolean(manifest),
     manifest,
+    source: manifest?.__resolved_source || null,
+    manifestPath: manifest?.__resolved_path || null,
     panelMaxAsofDate: String(manifest?.ranges?.panel_max_asof_date || ''),
     snapshotAsofDate: String(manifest?.ranges?.snapshot_asof_date || ''),
     rowsTotal: Number(manifest?.counts?.rows_total || 0),
@@ -1026,8 +1096,8 @@ function main() {
   const laneComparison = readJson(path.join(opsRoot, 'stage_b_diagnostics/lane_comparison_latest.json'));
   const redFlags = readJson(path.join(opsRoot, 'red_flags/latest.json'));
 
-  const overnightManifest = readJson(path.join(quantRoot, 'features/store/feature_store_version=v4_q1panel_overnight/feature_panel_manifest.json'));
-  const fullchunkManifest = readJson(path.join(quantRoot, 'features/store/feature_store_version=v4_q1panel_fullchunk_daily/feature_panel_manifest.json'));
+  const overnightManifest = resolveFeatureStoreManifest(quantRoot, 'v4_q1panel_overnight')?.manifest || null;
+  const fullchunkManifest = resolveFeatureStoreManifest(quantRoot, 'v4_q1panel_fullchunk_daily')?.manifest || null;
   const legacyQuantLatest = readJson(path.join(REPO_ROOT, 'public/data/quantlab/latest.json'));
   const featureStoreCandidates = [
     summarizeFeatureStoreCandidate('v4_q1panel_overnight', overnightManifest),
@@ -1112,7 +1182,7 @@ function main() {
     {
       id: 'feature_store',
       label: 'Feature Store',
-      ok: Boolean(overnightManifest?.counts?.rows_total),
+      ok: featureStoreCandidates.some((item) => item.version === 'v4_q1panel_overnight' && item.available),
       detail: 'Canonical v4_q1panel_overnight panel manifest is present.',
     },
     {

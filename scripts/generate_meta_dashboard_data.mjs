@@ -872,6 +872,23 @@ function buildDashboardV7Document({ output, systemStatusReport, finalIntegritySe
   const primaryActions = blockingReasons.length > 0
     ? buildPrimaryActions(blockingReasons)
     : sourcePrimaryActions;
+  const controlPlaneGreen = finalIntegritySeal?.status === 'OK' || releaseReady === true;
+  const leadBlockerStep = controlPlaneGreen
+    ? null
+    : (
+      finalIntegritySeal?.lead_blocker_step
+      || output.operations?.release_state?.lead_blocker_step
+      || output.operations?.recovery?.current_campaign?.next_step
+      || null
+    );
+  const nextStep = controlPlaneGreen
+    ? null
+    : (
+      finalIntegritySeal?.next_step
+      || output.operations?.release_state?.next_step
+      || output.operations?.recovery?.current_campaign?.next_step
+      || null
+    );
 
   const system = {
     ...output.system,
@@ -890,6 +907,12 @@ function buildDashboardV7Document({ output, systemStatusReport, finalIntegritySe
     blocking_severity: blockingSeverity,
     advisory_severity: advisorySeverity,
     primary_blocker: primaryBlocker,
+    lead_blocker_step: leadBlockerStep,
+    next_step: nextStep,
+    observer_stale: finalIntegritySeal?.observer_stale ?? null,
+    observer_generated_at: finalIntegritySeal?.observer_generated_at ?? null,
+    runtime_preflight_ok: finalIntegritySeal?.runtime_preflight_ok ?? null,
+    runtime_preflight_ref: finalIntegritySeal?.runtime_preflight_ref || null,
     root_causes: blockingReasons,
     blocking_reasons: blockingReasons,
     advisory_reasons: advisoryReasons,
@@ -909,6 +932,12 @@ function buildDashboardV7Document({ output, systemStatusReport, finalIntegritySe
     blocking_severity: blockingSeverity,
     advisory_severity: advisorySeverity,
     primary_blocker: primaryBlocker,
+    lead_blocker_step: leadBlockerStep,
+    next_step: nextStep,
+    observer_stale: finalIntegritySeal?.observer_stale ?? null,
+    observer_generated_at: finalIntegritySeal?.observer_generated_at ?? null,
+    runtime_preflight_ok: finalIntegritySeal?.runtime_preflight_ok ?? null,
+    runtime_preflight_ref: finalIntegritySeal?.runtime_preflight_ref || null,
     blocking_reasons: blockingReasons,
     advisory_reasons: advisoryReasons,
     legacy_meta_ref: 'public/dashboard_v6_meta_data.json',
@@ -1289,6 +1318,7 @@ async function main() {
     recovery_status: recoveryReport || null,
     recovery_metrics: recoveryMetrics,
     release_state: releaseState || null,
+    final_integrity_seal: finalIntegritySeal || null,
     candidate_counts: bestSetups?.meta?.candidate_counts || null,
     setup_phases: bestSetups?.meta?.setup_phase_counts || null,
     snapshots_date: bestSetupsGeneratedAt,

@@ -19,6 +19,7 @@ const PATHS = {
   system: path.join(ROOT, 'public/data/reports/system-status-latest.json'),
   release: path.join(ROOT, 'public/data/ops/release-state-latest.json'),
   seal: path.join(ROOT, 'public/data/ops/final-integrity-seal-latest.json'),
+  runtimePreflight: path.join(ROOT, 'public/data/ops/runtime-preflight-latest.json'),
   output: path.join(ROOT, 'public/data/pipeline/runtime/latest.json'),
   epoch: path.join(ROOT, 'public/data/pipeline/epoch.json'),
 };
@@ -43,6 +44,7 @@ const recovery = readJson(PATHS.recovery) || {};
 const system = readJson(PATHS.system) || {};
 const release = readJson(PATHS.release) || {};
 const seal = readJson(PATHS.seal) || {};
+const runtimePreflight = readJson(PATHS.runtimePreflight) || {};
 const epoch = readJson(PATHS.epoch) || {};
 const consistency = validateControlPlaneConsistency({ system, release, epoch, recovery });
 const releaseTargetMarketDate = resolveReleaseTargetMarketDate(release, {
@@ -99,6 +101,8 @@ const payload = {
   step,
   blocking_state: blockingState,
   advisory_state: system?.summary?.advisory_severity || 'ok',
+  runtime_preflight_ok: runtimePreflight?.ok === true,
+  runtime_preflight_ref: 'public/data/ops/runtime-preflight-latest.json',
   blockers,
   pipeline_consistency: consistency,
   step_states: Object.fromEntries(
@@ -130,8 +134,13 @@ const payload = {
       path: 'public/data/ops/final-integrity-seal-latest.json',
       generated_at: seal.generated_at || statMtimeIso(PATHS.seal),
     },
+    runtime_preflight: {
+      path: 'public/data/ops/runtime-preflight-latest.json',
+      generated_at: runtimePreflight.generated_at || statMtimeIso(PATHS.runtimePreflight),
+    },
   },
   final_integrity_seal: seal || null,
+  runtime_preflight: runtimePreflight || null,
 };
 
 writeJsonAtomic(PATHS.output, payload);

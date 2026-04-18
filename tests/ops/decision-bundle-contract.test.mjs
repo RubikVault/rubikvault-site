@@ -49,7 +49,7 @@ test('classified insufficient-history backlog degrades instead of failing by its
   assert.deepEqual(evaluateCoveragePolicy(summary).status, 'DEGRADED');
 });
 
-test('unclassified missing and eligible unknown risk are hard failures', () => {
+test('unclassified missing fails, while eligible unknown risk degrades as a bounded structural gap', () => {
   const unclassified = buildAssetDecision({ symbol: 'BROKEN', type_norm: 'STOCK' }, {
     runId: 'run',
     snapshotId: 'snap',
@@ -64,9 +64,21 @@ test('unclassified missing and eligible unknown risk are hard failures', () => {
     snapshotId: 'snap',
     targetMarketDate: '2026-04-16',
   });
-  summary = computeDecisionSummary([unknownRisk]);
+  summary = computeDecisionSummary([
+    unknownRisk,
+    buildAssetDecision(row('US:OKA'), {
+      runId: 'run',
+      snapshotId: 'snap',
+      targetMarketDate: '2026-04-16',
+    }),
+    buildAssetDecision(row('US:OKB'), {
+      runId: 'run',
+      snapshotId: 'snap',
+      targetMarketDate: '2026-04-16',
+    }),
+  ]);
   assert.equal(summary.eligible_unknown_risk_count, 1);
-  assert.equal(evaluateCoveragePolicy(summary).status, 'FAILED');
+  assert.equal(evaluateCoveragePolicy(summary).status, 'DEGRADED');
 });
 
 test('decision hashes are stable for canonical JSON', () => {

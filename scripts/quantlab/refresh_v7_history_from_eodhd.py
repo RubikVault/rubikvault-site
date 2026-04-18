@@ -567,13 +567,17 @@ def fetch_asset_rows(
 
 
 def resolve_history_pack_path(history_root: Path, rel_pack: str) -> Path:
-    primary = history_root / rel_pack
-    if primary.exists():
-        return primary
-    secondary = history_root.parent / rel_pack
-    if secondary.exists():
-        return secondary
-    return primary
+    rel = Path(str(rel_pack).strip())
+    stripped = Path(*rel.parts[1:]) if rel.parts[:1] == ("history",) else rel
+    candidates = [
+        history_root.parent / rel,
+        history_root / stripped,
+        history_root / rel,
+    ]
+    for candidate in candidates:
+        if candidate.exists():
+            return candidate
+    return candidates[0]
 
 
 def main(argv: Iterable[str]) -> int:

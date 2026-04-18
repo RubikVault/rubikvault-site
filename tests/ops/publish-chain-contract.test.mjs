@@ -22,3 +22,11 @@ test('publish-chain runtime rejects skip flags unless explicit override is set',
   assert.match(content, /publish_chain_skip_flags_forbidden/);
   assert.match(content, /RV_ALLOW_SKIP_PUBLISH_CHAIN/);
 });
+
+test('full-universe flag recomputes the live audit sample default after CLI parsing', () => {
+  const content = fs.readFileSync(path.join(ROOT, 'scripts/ops/run-stock-analyzer-publish-chain.mjs'), 'utf8');
+  assert.match(content, /liveAuditSampleSize: null/);
+  assert.match(content, /arg === '--full-universe-audit'/);
+  assert.match(content, /if \(!liveAuditSampleSizeExplicit\)/);
+  assert.match(content, /options\.fullUniverseAudit \? 0 : 300/);
+});

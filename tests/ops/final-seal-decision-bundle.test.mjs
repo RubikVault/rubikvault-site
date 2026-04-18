@@ -29,25 +29,39 @@ test('final seal accepts classified backlog as degraded, not failed', () => {
   const health = evaluateDecisionBundleHealth(latestWithSummary(), {
     expectedTargetDate: '2026-04-16',
     now: new Date('2026-04-17T08:00:00Z'),
+    requiredLeafFailed: false,
   });
   assert.equal(health.status, 'DEGRADED');
   assert.equal(health.blocking_reasons.length, 0);
   assert.ok(health.warnings.some((warning) => warning.id === 'strict_full_coverage_below_95pct'));
 });
 
-test('final seal fails low coverage, unclassified missing, and eligible unknown risk', () => {
+test('final seal fails low coverage and unclassified missing, but degrades bounded structural decision gaps', () => {
   for (const summary of [
     { strict_full_coverage_ratio: 0.49 },
     { assets_unclassified_missing: 1 },
+  ]) {
+    const health = evaluateDecisionBundleHealth(latestWithSummary(summary), {
+      expectedTargetDate: '2026-04-16',
+      now: new Date('2026-04-17T08:00:00Z'),
+      requiredLeafFailed: false,
+    });
+    assert.equal(health.status, 'FAILED');
+    assert.ok(health.blocking_reasons.length > 0);
+  }
+
+  for (const summary of [
     { eligible_unknown_risk_count: 1 },
     { eligible_wait_pipeline_incomplete_count: 1 },
   ]) {
     const health = evaluateDecisionBundleHealth(latestWithSummary(summary), {
       expectedTargetDate: '2026-04-16',
       now: new Date('2026-04-17T08:00:00Z'),
+      requiredLeafFailed: false,
     });
-    assert.equal(health.status, 'FAILED');
-    assert.ok(health.blocking_reasons.length > 0);
+    assert.equal(health.status, 'DEGRADED');
+    assert.equal(health.blocking_reasons.length, 0);
+    assert.ok(health.warnings.length > 0);
   }
 });
 
@@ -57,6 +71,7 @@ test('final seal fails stale or target-mismatched bundle', () => {
   }), {
     expectedTargetDate: '2026-04-16',
     now: new Date('2026-04-17T08:00:00Z'),
+    requiredLeafFailed: false,
   }).status, 'FAILED');
 
   assert.equal(evaluateDecisionBundleHealth(latestWithSummary({}, {
@@ -64,5 +79,6 @@ test('final seal fails stale or target-mismatched bundle', () => {
   }), {
     expectedTargetDate: '2026-04-16',
     now: new Date('2026-04-17T08:00:00Z'),
+    requiredLeafFailed: false,
   }).status, 'FAILED');
 });

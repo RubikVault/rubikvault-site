@@ -52,6 +52,7 @@ const PATHS = {
   cutoverReadinessDir: path.join(REPO_ROOT, 'mirrors/learning/quantlab-v1/reports'),
   dataFreshness: path.join(REPO_ROOT, 'public/data/reports/data-freshness-latest.json'),
   uiFieldTruth: path.join(REPO_ROOT, 'public/data/reports/ui-field-truth-report-latest.json'),
+  runtimePreflight: path.join(REPO_ROOT, 'public/data/ops/runtime-preflight-latest.json'),
   runtimeReport: path.join(REPO_ROOT, 'public/data/pipeline/runtime/latest.json'),
   epochReport: path.join(REPO_ROOT, 'public/data/pipeline/epoch.json'),
   finalIntegritySeal: path.join(REPO_ROOT, 'public/data/ops/final-integrity-seal-latest.json'),
@@ -494,6 +495,7 @@ function main() {
   const cutoverReadiness = cutoverReports.length ? readJson(cutoverReports[cutoverReports.length - 1]) : null;
   const dataFreshness = readJson(PATHS.dataFreshness);
   const uiFieldTruth = readJson(PATHS.uiFieldTruth);
+  const runtimePreflight = readJson(PATHS.runtimePreflight);
   const runtimeReport = readJson(PATHS.runtimeReport);
   const epochReport = readJson(PATHS.epochReport);
   const histProbsAnchor = readJson(PATHS.histProbsAnchor);
@@ -1183,6 +1185,35 @@ function main() {
     },
   });
 
+  const runtimePreflightOk = runtimePreflight?.ok === true;
+  const runtimePreflightSeverity = !runtimePreflight
+    ? 'warning'
+    : runtimePreflightOk
+      ? 'ok'
+      : 'critical';
+  steps.runtime_preflight = buildObservedArtifactStep({
+    id: 'runtime_preflight',
+    label: 'Runtime Preflight',
+    owner: 'Ops',
+    subsystem: 'runtime',
+    filePath: PATHS.runtimePreflight,
+    doc: runtimePreflight,
+    severity: runtimePreflightSeverity,
+    summary: !runtimePreflight
+      ? 'Runtime preflight artifact is missing'
+      : runtimePreflightOk
+        ? 'Runtime preflight passed'
+        : 'Runtime preflight is blocking publish',
+    why: runtimePreflight
+      ? `node_ok=${runtimePreflight.node_ok === true}, wrangler_ok=${runtimePreflight.wrangler_ok === true}, diag_ok=${runtimePreflight.diag_ok === true}, canary_ok=${runtimePreflight.canary_ok === true}.`
+      : 'No runtime preflight artifact was found.',
+    nextFix: 'Stabilize the local/NAS Pages runtime first, then rerun publish and UI truth from the same target-date chain.',
+    inputAsof: epochReport?.target_market_date || null,
+    outputAsof: runtimePreflight?.generated_at || null,
+    dependencyIds: ['pipeline_epoch'],
+    statusDetail: runtimePreflight || null,
+  });
+
   const uiFieldTruthSummary = uiFieldTruth?.summary || {};
   const uiFieldTruthOk = (uiFieldTruthSummary.ui_field_truth_ok ?? uiFieldTruth?.ui_field_truth_ok) === true;
   const uiTruthChecked = uiFieldTruthSummary.checked_canaries ?? uiFieldTruthSummary.tickers_checked ?? 0;
@@ -1204,7 +1235,7 @@ function main() {
     nextFix: 'Start the local runtime, rebuild the UI field truth report, and verify that only critical endpoints influence ui_field_truth_ok.',
     inputAsof: epochReport?.target_market_date || null,
     outputAsof: uiFieldTruth?.target_market_date || uiFieldTruth?.date || null,
-    dependencyIds: ['pipeline_epoch'],
+    dependencyIds: ['runtime_preflight', 'pipeline_epoch'],
     statusDetail: {
       critical_endpoints: uiFieldTruth?.contract?.required_endpoints || uiFieldTruth?.critical_endpoints || [],
       optional_endpoints: uiFieldTruth?.contract?.optional_endpoints || uiFieldTruth?.optional_endpoints || [],
@@ -1309,6 +1340,9 @@ function main() {
   }
   if (severityRank(steps.pipeline_epoch.severity) >= severityRank('critical')) {
     rootCauses.push(buildRootCauseFromStep(steps.pipeline_epoch, 'control_plane'));
+  }
+  if (severityRank(steps.runtime_preflight.severity) >= severityRank('critical')) {
+    rootCauses.push(buildRootCauseFromStep(steps.runtime_preflight, 'runtime'));
   }
   if (severityRank(steps.ui_field_truth_report.severity) >= severityRank('critical')) {
     rootCauses.push(buildRootCauseFromStep(steps.ui_field_truth_report, 'ui_contract'));
@@ -1540,6 +1574,10 @@ function main() {
   const recoveryReady = finalIntegritySeal?.data_plane_green ?? (localBlockingSeverity === 'ok' && !recoveryBusy);
   const releaseReady = finalIntegritySeal?.release_ready === true;
   const coverageReady = finalIntegritySeal?.full_universe_validated === true;
+  const releasePolicyReady = finalIntegritySeal?.release_ready === true
+    || stockAuditSummary?.artifact_release_ready === true;
+  const policyNeutralStructuralGapsOnly = stockAuditSummary?.policy_neutral_structural_gaps_only === true
+    || finalIntegritySeal?.policy_neutral_structural_gaps_only === true;
   const localDataGreen = localBlockingSeverity === 'ok';
   const globalGreen = finalIntegritySeal?.global_green === true;
   const forcedTargetMarketDate = normalizeDate(process.env.TARGET_MARKET_DATE || process.env.RV_TARGET_MARKET_DATE || null);
@@ -1587,7 +1625,9 @@ function main() {
       remote_healthy: remoteSeverity === 'ok',
       recovery_ready: recoveryReady,
       release_ready: releaseReady,
+      release_policy_ready: releasePolicyReady,
       coverage_ready: coverageReady,
+      policy_neutral_structural_gaps_only: policyNeutralStructuralGapsOnly,
       ui_green: finalIntegritySeal?.ui_green ?? null,
       target_market_date: targetMarketDate,
       control_plane_ref: 'public/data/pipeline/runtime/latest.json',
@@ -1597,6 +1637,7 @@ function main() {
       proof_mode: remoteHealth.proof_mode,
       live_fetch_status: 'ok',
       automation_severity: automation.severity,
+      runtime_preflight_ok: runtimePreflightOk,
       data_layer_severity: [steps.market_data_refresh, steps.q1_delta_ingest, steps.quantlab_daily_report, steps.hist_probs]
         .reduce((acc, step) => severityRank(step.severity) > severityRank(acc) ? step.severity : acc, 'ok'),
       primary_blocker: (rootCauses.slice().sort((a, b) => severityRank(b.severity) - severityRank(a.severity))[0])?.title || null,

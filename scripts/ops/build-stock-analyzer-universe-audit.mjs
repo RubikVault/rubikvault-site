@@ -41,6 +41,14 @@ const GENERATOR_ID = 'scripts/ops/build-stock-analyzer-universe-audit.mjs';
 const UI_CONTRACT_CHECKS_PER_ASSET = 24;
 const DEFAULT_LIVE_CANARY_SIZE = 4;
 const STABLE_LIVE_CANARIES = ['AAPL', 'SPY', 'SAP', 'EXSA'];
+const POLICY_NEUTRAL_STRUCTURAL_FAMILIES = new Set([
+  'historical_profile_unavailable',
+  'artifact_fundamentals_missing',
+  'fundamentals_unavailable',
+  'model_consensus_degraded',
+  'key_levels_unavailable',
+  'artifact_provider_no_data_excluded',
+]);
 const CANONICAL_RECOVERY_ORDER = [
   'market_data_refresh',
   'q1_delta_ingest',
@@ -1016,6 +1024,10 @@ export function summarizeAuditFindings({ totalAssets = 0, processedAssets = 0, r
       sampled_mode: false,
       ui_field_truth_ok: severity === 'ok',
       full_universe_validated: false,
+      artifact_release_ready: false,
+      policy_neutral_structural_gap_count: 0,
+      policy_blocking_failure_family_count: failureFamilies.length,
+      policy_neutral_structural_gaps_only: false,
     },
     failureFamilies,
     orderedRecovery,
@@ -1126,15 +1138,22 @@ export function buildPayload({
   const artifactRecords = artifactChecks.flatMap((entry) => entry.records);
   const artifactCriticalIssueCount = artifactRecords.filter((record) => String(record?.severity || '').toLowerCase() === 'critical').length;
   const liveCanaryOk = canaryIssueRecords.length === 0;
+  const policyNeutralFailureFamilies = summarized.failureFamilies.filter((family) => POLICY_NEUTRAL_STRUCTURAL_FAMILIES.has(family.family_id));
+  const policyBlockingFailureFamilies = summarized.failureFamilies.filter((family) => !POLICY_NEUTRAL_STRUCTURAL_FAMILIES.has(family.family_id));
+  const artifactReleaseReady = processedFullUniverse && policyBlockingFailureFamilies.length === 0;
   summarized.summary.artifact_issue_count = artifactRecords.length;
   summarized.summary.artifact_critical_issue_count = artifactCriticalIssueCount;
   summarized.summary.live_canary_issue_count = canaryIssueRecords.length;
   summarized.summary.live_canary_ok = liveCanaryOk;
   summarized.summary.artifact_full_validated = processedFullUniverse && artifactCriticalIssueCount === 0;
-  summarized.summary.ui_field_truth_ok = summarized.summary.artifact_full_validated && liveCanaryOk;
+  summarized.summary.artifact_release_ready = artifactReleaseReady;
+  summarized.summary.policy_neutral_structural_gap_count = policyNeutralFailureFamilies.length;
+  summarized.summary.policy_blocking_failure_family_count = policyBlockingFailureFamilies.length;
+  summarized.summary.policy_neutral_structural_gaps_only = artifactReleaseReady && policyNeutralFailureFamilies.length > 0;
+  summarized.summary.ui_field_truth_ok = artifactReleaseReady && liveCanaryOk;
   summarized.summary.full_universe_validated = summarized.summary.artifact_full_validated;
   summarized.summary.validated_scope_full_universe = summarized.summary.artifact_full_validated;
-  summarized.summary.release_eligible = summarized.summary.artifact_full_validated;
+  summarized.summary.release_eligible = artifactReleaseReady;
   summarized.summary.processed_scope_count = processedEntries.length;
   summarized.summary.validated_scope_count = summarized.summary.artifact_full_validated === true ? processedEntries.length : 0;
   summarized.summary.target_market_date = options.targetMarketDate || null;

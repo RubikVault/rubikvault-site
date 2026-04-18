@@ -28,7 +28,7 @@ SNAPSHOT_ID="${Q1_DAILY_SNAPSHOT_ID:-}"
 AUTO_REFRESH_SNAPSHOT="${Q1_DAILY_AUTO_REFRESH_SNAPSHOT:-1}"
 AUTO_REFRESH_ASOF_DATE="${Q1_DAILY_ASOF_DATE:-$(date +%F)}"
 if [[ -z "$SNAPSHOT_ID" ]]; then
-  if [[ "$AUTO_REFRESH_SNAPSHOT" == "1" ]]; then
+  if [[ "$PRINT_ONLY" -ne 1 && "$AUTO_REFRESH_SNAPSHOT" == "1" ]]; then
     STEP1_SCRIPT="$REPO_ROOT/scripts/quantlab/build_t9_snapshot_q1.py"
     STEP2_SCRIPT="$REPO_ROOT/scripts/quantlab/materialize_snapshot_bars_q1.py"
     STEP1_SNAPSHOT_NAME="${Q1_DAILY_STEP1_SNAPSHOT_NAME:-q1step1_dailyauto}"

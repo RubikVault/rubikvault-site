@@ -7,6 +7,7 @@ import {
   normalizeDate,
   readJson,
   resolveReleaseTargetMarketDate,
+  validateControlPlaneConsistency,
   writeJsonAtomic,
 } from './pipeline-artifact-contract.mjs';
 import { latestUsMarketSessionIso } from '../../functions/api/_shared/market-calendar.js';
@@ -29,6 +30,7 @@ const PATHS = {
   recovery: path.join(ROOT, 'public/data/reports/dashboard-green-recovery-latest.json'),
   release: path.join(ROOT, 'public/data/ops/release-state-latest.json'),
   publish: path.join(ROOT, 'public/data/ops/publish-chain-latest.json'),
+  runtimePreflight: path.join(ROOT, 'public/data/ops/runtime-preflight-latest.json'),
   stockAudit: path.join(ROOT, 'public/data/reports/stock-analyzer-universe-audit-latest.json'),
   uiFieldTruth: path.join(ROOT, 'public/data/reports/ui-field-truth-report-latest.json'),
   launchd: path.join(ROOT, 'public/data/ops/launchd-reconcile-latest.json'),
@@ -69,9 +71,97 @@ function parseTimeMs(value) {
   return Number.isFinite(ms) ? ms : null;
 }
 
+function normalizeObserverInput(source, doc, expectedTargetDate) {
+  const generatedAt = doc?.generated_at || doc?.generatedAt || doc?.updated_at || doc?.last_updated || null;
+  const targetMarketDate = normalizeDate(
+    doc?.target_market_date
+    || doc?.target_date
+    || doc?.summary?.target_market_date
+    || null
+  );
+  return {
+    source,
+    present: Boolean(doc && typeof doc === 'object'),
+    generated_at: generatedAt,
+    target_market_date: targetMarketDate,
+    target_mismatch: Boolean(expectedTargetDate && targetMarketDate && targetMarketDate !== expectedTargetDate),
+  };
+}
+
+function evaluateObserverFreshness({
+  expectedTargetDate = null,
+  runtime = null,
+  epoch = null,
+  recovery = null,
+  release = null,
+} = {}) {
+  const observerInputs = [
+    normalizeObserverInput('runtime', runtime, expectedTargetDate),
+    normalizeObserverInput('epoch', epoch, expectedTargetDate),
+  ];
+  const chainInputs = [
+    normalizeObserverInput('recovery', recovery, expectedTargetDate),
+    normalizeObserverInput('release', release, expectedTargetDate),
+  ];
+  const activeTargetSeen = chainInputs.some((item) => item.target_market_date === expectedTargetDate);
+  const staleSources = observerInputs
+    .filter((item) => item.present)
+    .filter((item) => item.target_mismatch || (activeTargetSeen && !item.generated_at));
+  const generatedTimes = observerInputs
+    .map((item) => parseTimeMs(item.generated_at))
+    .filter((value) => value != null);
+  return {
+    stale: staleSources.length > 0,
+    generated_at: generatedTimes.length > 0 ? new Date(Math.min(...generatedTimes)).toISOString() : null,
+    inputs: [...observerInputs, ...chainInputs],
+    stale_sources: staleSources.map((item) => ({
+      source: item.source,
+      generated_at: item.generated_at,
+      target_market_date: item.target_market_date,
+      target_mismatch: item.target_mismatch,
+    })),
+  };
+}
+
+function deriveLeadBlockerStep(blockingReasons = [], recovery = null) {
+  const top = Array.isArray(blockingReasons) ? blockingReasons[0] || null : null;
+  const recoveryLead = recovery?.lead_blocker_step || recovery?.next_step || null;
+  if (!top) return null;
+  if (top.id === 'runtime_preflight_failed') return 'runtime_preflight';
+  if (top.id === 'observer_stale') return recoveryLead || 'pipeline_runtime';
+  if (top.id === 'target_market_date_mismatch') return recoveryLead || 'pipeline_runtime';
+  if (top.id === 'module_target_date_mismatch') return top.details?.[0]?.id || recoveryLead || 'pipeline_epoch';
+  if (top.id === 'data_plane_not_green') return recoveryLead || 'pipeline_epoch';
+  if (top.id === 'publish_chain_not_ok') return 'publish';
+  if (top.id === 'full_universe_ui_field_truth_missing' || top.id === 'ui_field_truth_failures') return 'stock_analyzer_universe_audit';
+  if (String(top.id || '').startsWith('ui_field_truth_report_')) return 'ui_field_truth_report';
+  if (String(top.id || '').startsWith('bundle_') || String(top.id || '').startsWith('decision_bundle_')) return 'decision_bundle';
+  if (top.id === 'launchd_allowlist_not_satisfied') return 'launchd_reconcile';
+  if (top.id === 'storage_blocked' || top.id === 'nas_unreachable') return 'storage_governor';
+  return recoveryLead;
+}
+
+function deriveNextStep({ leadBlockerStep = null, recovery = null, blockingReasons = [] } = {}) {
+  if ((!Array.isArray(blockingReasons) || blockingReasons.length === 0) && !leadBlockerStep) return null;
+  return leadBlockerStep
+    || recovery?.lead_blocker_step
+    || recovery?.next_step
+    || blockingReasons?.[0]?.id
+    || null;
+}
+
+const ADVISORY_ONLY_WARNING_IDS = new Set([
+  'policy_neutral_structural_gap',
+  'decision_bundle_degraded',
+  'eligible_wait_pipeline_incomplete',
+  'risk_unknown',
+  'strict_full_coverage_below_95pct',
+]);
+
 export function evaluateDecisionBundleHealth(decisionBundle, {
   expectedTargetDate = null,
   now = new Date(),
+  requiredLeafFailed = null,
 } = {}) {
   if (!decisionBundle || typeof decisionBundle !== 'object') {
     return {
@@ -100,7 +190,9 @@ export function evaluateDecisionBundleHealth(decisionBundle, {
   if (validUntilMs != null && validUntilMs < now.getTime()) {
     blocking.push(reason('bundle_stale', 'critical', { valid_until: decisionBundle.valid_until }));
   }
-  const leafSealCheck = evaluateRequiredLeafSeals();
+  const leafSealCheck = {
+    anyFailed: requiredLeafFailed == null ? evaluateRequiredLeafSeals().anyFailed : requiredLeafFailed === true,
+  };
   const summary = decisionBundle.summary || null;
   if (!summary) {
     blocking.push(reason('summary_missing'));
@@ -204,6 +296,7 @@ export function buildFinalIntegritySeal({
   recovery = null,
   release = null,
   publish = null,
+  runtimePreflight = null,
   stockAnalyzerAudit = null,
   uiFieldTruth = null,
   launchd = null,
@@ -212,8 +305,10 @@ export function buildFinalIntegritySeal({
   heartbeat = null,
   crashSeal = null,
   previousFinal = null,
+  controlPlaneConsistency = null,
   lockIntegrityOk = true,
   allowPublishInFlight = false,
+  requiredLeafFailed = null,
   now = new Date(),
 } = {}) {
   const expectedTargetDate = normalizeDate(targetMarketDate) || latestUsMarketSessionIso(now);
@@ -238,8 +333,10 @@ export function buildFinalIntegritySeal({
       && sampledMode !== true
       && Number(summary?.critical_failure_family_count ?? 0) === 0
     );
+  const artifactReleaseReady = summary?.artifact_release_ready === true || artifactFullValidated;
+  const policyNeutralStructuralGapsOnly = summary?.policy_neutral_structural_gaps_only === true;
   const auditCriticalIssueCount = Number(summary?.artifact_critical_issue_count ?? summary?.critical_issue_count ?? 0);
-  const uiFieldTruthOk = artifactFullValidated === true
+  const uiFieldTruthOk = artifactReleaseReady === true
     && uiFieldTruthSummary?.ui_field_truth_ok === true;
   const calendarTarget = latestUsMarketSessionIso(now);
   const calendarOk = !expectedTargetDate || calendarTarget === expectedTargetDate;
@@ -248,17 +345,29 @@ export function buildFinalIntegritySeal({
   const nasReachable = storage?.nas?.reachable === true;
   const nasRequiredForRelease = process.env.RV_REQUIRE_NAS_FOR_RELEASE === '1';
   const nasOk = nasRequiredForRelease ? nasReachable : true;
-  const consistency = runtime?.pipeline_consistency || null;
+  const consistency = controlPlaneConsistency || validateControlPlaneConsistency({
+    system,
+    release,
+    runtime,
+    epoch,
+    recovery,
+  });
+  const observerFreshness = evaluateObserverFreshness({
+    expectedTargetDate,
+    runtime,
+    epoch,
+    recovery,
+    release,
+  });
   // NOTE: local_data_green intentionally excluded — it depends on the seal itself (circular).
   // Epoch pipeline_ok is the authoritative data-plane gate; runtime consistency confirms
   // the control-plane artifacts are coherent.
   // run_id_mismatch is expected during recovery (system uses recovery run_id, release uses master run_id)
   // and is intentionally tolerated here (same rationale as in build-pipeline-epoch.mjs).
-  const runtimeConsistencyNonCircularReasons = (runtime?.pipeline_consistency?.blocking_reasons || [])
-    .filter((r) => r.id !== 'run_id_mismatch');
-  const runtimeConsistencyOk = runtime?.pipeline_consistency?.ok !== false
-    || runtimeConsistencyNonCircularReasons.length === 0;
-  const dataPlaneGreen = epoch?.pipeline_ok === true && runtimeConsistencyOk;
+  const consistencyNonCircularReasons = (consistency?.blocking_reasons || [])
+    .filter((r) => r.id !== 'run_id_mismatch' && r.id !== 'runtime_pipeline_consistency_failed');
+  const runtimeConsistencyOk = consistencyNonCircularReasons.length === 0;
+  const dataPlaneGreen = epoch?.pipeline_ok === true && runtimeConsistencyOk && observerFreshness.stale !== true;
   const publishInFlightOk = allowPublishInFlight === true
     && Array.isArray(publish?.steps)
     && publish.steps.length > 0
@@ -305,8 +414,21 @@ export function buildFinalIntegritySeal({
     });
   }
   const epochNowClean = epoch?.pipeline_ok === true && (!Array.isArray(epoch?.blocking_gaps) || epoch.blocking_gaps.length === 0);
+  if (observerFreshness.stale) {
+    blockingReasons.push({
+      id: 'observer_stale',
+      severity: 'critical',
+      details: {
+        expected_target_market_date: expectedTargetDate,
+        observer_generated_at: observerFreshness.generated_at,
+        observer_inputs: observerFreshness.inputs,
+        stale_sources: observerFreshness.stale_sources,
+      },
+    });
+  }
   for (const reason of consistency?.blocking_reasons || []) {
     if (reason.id === 'nas_unreachable' && !nasRequiredForRelease) continue;
+    if (reason.id === 'runtime_pipeline_consistency_failed') continue;
     // Skip epoch-related reasons from stale runtime consistency when the current epoch is clean.
     // These are artifacts of a stale runtime snapshot and would create a false blocker.
     if (epochNowClean && (reason.id === 'epoch_blocking_gaps' || reason.id === 'epoch_module_target_mismatch')) continue;
@@ -340,7 +462,8 @@ export function buildFinalIntegritySeal({
       details: {
         local_data_green: system?.summary?.local_data_green ?? null,
         pipeline_ok: epoch?.pipeline_ok ?? null,
-        pipeline_consistency_ok: runtime?.pipeline_consistency?.ok ?? null,
+        pipeline_consistency_ok: consistency?.ok ?? null,
+        observer_stale: observerFreshness.stale,
       },
     });
   }
@@ -358,7 +481,7 @@ export function buildFinalIntegritySeal({
         details: { live_endpoint_mode: summary.live_endpoint_mode },
       });
     }
-    if (!artifactFullValidated) {
+    if (!artifactReleaseReady) {
       blockingReasons.push({
         id: 'full_universe_ui_field_truth_missing',
         severity: 'critical',
@@ -372,6 +495,28 @@ export function buildFinalIntegritySeal({
         details: summary,
       });
     }
+    if (policyNeutralStructuralGapsOnly) {
+      warningReasons.push({
+        id: 'policy_neutral_structural_gap',
+        severity: 'warning',
+        details: {
+          policy_neutral_structural_gap_count: summary?.policy_neutral_structural_gap_count ?? 0,
+          policy_blocking_failure_family_count: summary?.policy_blocking_failure_family_count ?? 0,
+        },
+      });
+    }
+  }
+  if (runtimePreflight?.ok === false) {
+    blockingReasons.push({
+      id: 'runtime_preflight_failed',
+      severity: 'critical',
+      details: {
+        generated_at: runtimePreflight.generated_at || null,
+        failure_reasons: runtimePreflight.failure_reasons || [],
+        diag_ok: runtimePreflight.diag_ok ?? null,
+        canary_ok: runtimePreflight.canary_ok ?? null,
+      },
+    });
   }
   if (!uiFieldTruth) {
     blockingReasons.push({
@@ -402,6 +547,7 @@ export function buildFinalIntegritySeal({
   const decisionBundleHealth = evaluateDecisionBundleHealth(decisionBundle, {
     expectedTargetDate,
     now,
+    requiredLeafFailed,
   });
   blockingReasons.push(...decisionBundleHealth.blocking_reasons);
   warningReasons.push(...decisionBundleHealth.warnings);
@@ -431,17 +577,29 @@ export function buildFinalIntegritySeal({
     seen.add(key);
     uniqueBlockingReasons.push(reason);
   }
-  const uniqueWarningReasons = [];
+  const dedupedWarningReasons = [];
   const seenWarnings = new Set();
   for (const item of warningReasons) {
     const key = `${item.id}:${JSON.stringify(item.details || null)}`;
     if (seenWarnings.has(key)) continue;
     seenWarnings.add(key);
-    uniqueWarningReasons.push(item);
+    dedupedWarningReasons.push(item);
+  }
+  const advisoryReasons = [];
+  const uniqueWarningReasons = [];
+  for (const item of dedupedWarningReasons) {
+    if (ADVISORY_ONLY_WARNING_IDS.has(String(item?.id || ''))) advisoryReasons.push(item);
+    else uniqueWarningReasons.push(item);
   }
 
   const status = uniqueBlockingReasons.length > 0 ? 'FAILED' : uniqueWarningReasons.length > 0 ? 'DEGRADED' : 'OK';
   const uiGreen = status === 'OK';
+  const leadBlockerStep = deriveLeadBlockerStep(uniqueBlockingReasons, recovery);
+  const nextStep = deriveNextStep({
+    leadBlockerStep,
+    recovery,
+    blockingReasons: uniqueBlockingReasons,
+  });
   return {
     schema: 'rv.final_integrity_seal.v1',
     ...buildArtifactEnvelope({
@@ -456,6 +614,7 @@ export function buildFinalIntegritySeal({
     global_green: uiGreen,
     release_ready: uiGreen,
     full_universe_validated: artifactFullValidated,
+    policy_neutral_structural_gaps_only: policyNeutralStructuralGapsOnly,
     ui_field_truth_ok: uiFieldTruthOk,
     sampled_mode: sampledMode,
     allowed_launchd_only: launchdOk,
@@ -466,11 +625,19 @@ export function buildFinalIntegritySeal({
     nas_required_for_release: nasRequiredForRelease,
     calendar_ok: calendarOk,
     data_plane_green: dataPlaneGreen,
+    observer_stale: observerFreshness.stale,
+    observer_generated_at: observerFreshness.generated_at,
+    observer_inputs: observerFreshness.inputs,
+    lead_blocker_step: leadBlockerStep,
+    next_step: nextStep,
+    runtime_preflight_ok: runtimePreflight?.ok === true,
+    runtime_preflight_ref: 'public/data/ops/runtime-preflight-latest.json',
     control_plane: consistency,
     pipeline_consistency: consistency,
     module_dates: moduleDates,
     blocking_reasons: uniqueBlockingReasons,
     warnings: uniqueWarningReasons,
+    advisories: advisoryReasons,
     decision_bundle: {
       status: decisionBundleHealth.status,
       snapshot_id: decisionBundle?.snapshot_id || null,
@@ -481,6 +648,13 @@ export function buildFinalIntegritySeal({
     leaf_seals: evaluateRequiredLeafSeals().details,
     runtime_liveness: runtimeLiveness,
     stock_analyzer_universe_audit: summary,
+    runtime_preflight: runtimePreflight
+      ? {
+          ok: runtimePreflight.ok === true,
+          generated_at: runtimePreflight.generated_at || null,
+          failure_reasons: Array.isArray(runtimePreflight.failure_reasons) ? runtimePreflight.failure_reasons : [],
+        }
+      : null,
     ui_field_truth_report: uiFieldTruthSummary,
     launchd,
     storage,
@@ -597,6 +771,7 @@ async function main() {
   const recovery = readJson(PATHS.recovery) || null;
   const release = readJson(PATHS.release) || null;
   const publish = readJson(PATHS.publish) || null;
+  const runtimePreflight = readJson(PATHS.runtimePreflight) || null;
   const stockAnalyzerAudit = readJson(PATHS.stockAudit) || null;
   const uiFieldTruth = readJson(PATHS.uiFieldTruth) || null;
   const launchd = readJson(PATHS.launchd) || null;
@@ -628,6 +803,7 @@ async function main() {
     recovery,
     release,
     publish,
+    runtimePreflight,
     stockAnalyzerAudit,
     uiFieldTruth,
     launchd,
