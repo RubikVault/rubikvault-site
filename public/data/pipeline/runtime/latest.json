@@ -1,10 +1,19 @@
 {
   "schema": "rv_pipeline_runtime_v1",
-  "run_id": "pipeline-master-2026-04-14",
-  "target_market_date": "2026-04-14",
-  "generated_at": "2026-04-15T09:02:50.211Z",
+  "run_id": "pipeline-master-2026-04-17",
+  "target_market_date": "2026-04-17",
+  "generated_at": "2026-04-19T08:39:34.633Z",
   "producer": "scripts/ops/build-pipeline-runtime-report.mjs",
   "upstream_run_ids": [
+    "run-stock-analyzer-audit-2026-04-10",
+    "learning-2026-04-13",
+    "pipeline-master-2026-04-16",
+    "run-stock-analyzer-audit-2026-04-14",
+    "learning-2026-04-14",
+    "run-stock-analyzer-audit-2026-04-15",
+    "run-stock-analyzer-audit-2026-04-17",
+    "run-stock-analyzer-audit-2026-04-18",
+    "learning-2026-04-17",
     "pipeline-master-2026-04-14",
     "dashboard-green-2026-04-13",
     "pipeline-master-2026-04-13",
@@ -14,27 +23,31 @@
     "pipeline-master-2026-04-10",
     "dashboard-green-2026-04-10",
     "publish_chain_20260412T134556_23723",
-    "learning-2026-04-12",
-    "publish_chain_20260412T184739_99149",
-    "publish_chain_20260412T192252_349",
-    "learning-2026-04-10",
-    "run-stock-analyzer-audit-2026-04-13",
-    "publish_chain_failed_15828",
-    "run-stock-analyzer-audit-2026-04-10",
-    "learning-2026-04-13",
-    "publish_chain_failed_2087",
-    "run-stock-analyzer-audit-2026-04-14",
-    "learning-2026-04-14",
-    "run-stock-analyzer-audit-2026-04-15"
+    "mac_publish_20260417",
+    "dashboard-green-2026-04-17"
   ],
-  "updated_at": "2026-04-15T09:02:50.074Z",
+  "updated_at": "2026-04-19T08:39:34.519Z",
   "owner_orchestrator": "nightly",
   "mode": "recovery",
-  "phase": "running",
-  "step": "targeted_refresh",
+  "phase": "interrupted",
+  "step": "hist_probs",
   "blocking_state": "critical",
-  "advisory_state": "info",
+  "advisory_state": "ok",
+  "runtime_preflight_ok": true,
+  "runtime_preflight_ref": "public/data/ops/runtime-preflight-latest.json",
   "blockers": [
+    {
+      "id": "data_freshness_report_data_freshness",
+      "severity": "critical",
+      "title": "Data freshness report shows stale families",
+      "subsystem": "freshness"
+    },
+    {
+      "id": "final_integrity_seal_release_gate",
+      "severity": "critical",
+      "title": "Final seal is blocking release",
+      "subsystem": "seal"
+    },
     {
       "id": "automation_refresh_chain_degraded",
       "severity": "critical",
@@ -44,14 +57,14 @@
   ],
   "pipeline_consistency": {
     "ok": true,
-    "run_id": "pipeline-master-2026-04-14",
-    "target_market_date": "2026-04-14",
+    "run_id": "pipeline-master-2026-04-17",
+    "target_market_date": "2026-04-17",
     "target_mismatches": [],
     "run_id_mismatches": [],
     "observational_sources": {
       "recovery": {
-        "run_id": "pipeline-master-2026-04-14",
-        "target_market_date": "2026-04-14"
+        "run_id": "dashboard-green-2026-04-17",
+        "target_market_date": "2026-04-17"
       }
     },
     "blocking_reasons": []
@@ -60,61 +73,61 @@
     "market_data_refresh": {
       "severity": "ok",
       "summary": "Market-data refresh is current",
-      "output_asof": "2026-04-14",
+      "output_asof": "2026-04-17",
       "owner": "Market Data"
     },
     "q1_delta_ingest": {
       "severity": "ok",
       "summary": "Q1 delta ingest is current",
-      "output_asof": "2026-04-14",
+      "output_asof": "2026-04-17",
       "owner": "QuantLab"
     },
     "quantlab_daily_report": {
       "severity": "ok",
       "summary": "QuantLab data plane is current",
-      "output_asof": "2026-04-14",
+      "output_asof": "2026-04-08",
       "owner": "QuantLab"
     },
     "hist_probs": {
       "severity": "ok",
       "summary": "Historical probabilities are current",
-      "output_asof": "2026-04-14",
+      "output_asof": "2026-04-17",
       "owner": "Hist Probs"
     },
     "forecast_daily": {
       "severity": "ok",
       "summary": "Forecast daily batch is healthy",
-      "output_asof": "2026-04-14",
+      "output_asof": "2026-04-17",
       "owner": "Forecast"
     },
     "scientific_summary": {
       "severity": "ok",
       "summary": "Scientific source is current",
-      "output_asof": "2026-04-14",
+      "output_asof": "2026-04-17",
       "owner": "Scientific"
     },
     "learning_daily": {
       "severity": "ok",
       "summary": "Learning report is available",
-      "output_asof": "2026-04-14",
+      "output_asof": "2026-04-17",
       "owner": "Learning"
     },
     "snapshot": {
       "severity": "ok",
       "summary": "Snapshot output is current",
-      "output_asof": "2026-04-14",
+      "output_asof": "2026-04-17",
       "owner": "Snapshot"
     },
     "stock_analyzer_universe_audit": {
       "severity": "warning",
       "summary": "Stock Analyzer universe audit found critical field-level failures",
-      "output_asof": "2026-04-15T08:34:48.313Z",
+      "output_asof": "2026-04-18T15:22:41.393Z",
       "owner": "Stock Analyzer"
     },
     "etf_diagnostic": {
       "severity": "ok",
       "summary": "ETF diagnostic is healthy",
-      "output_asof": "2026-04-14",
+      "output_asof": "2026-04-17",
       "owner": "Snapshot"
     },
     "v1_audit": {
@@ -132,31 +145,37 @@
     "system_status_report": {
       "severity": "ok",
       "summary": "System status report artifact generated",
-      "output_asof": "2026-04-14",
+      "output_asof": "2026-04-17",
       "owner": "Ops"
     },
     "data_freshness_report": {
-      "severity": "warning",
+      "severity": "critical",
       "summary": "Data freshness report shows stale families",
-      "output_asof": "2026-04-14",
+      "output_asof": "2026-04-17",
       "owner": "Ops"
     },
     "pipeline_epoch": {
       "severity": "ok",
       "summary": "Pipeline epoch is coherent",
-      "output_asof": "2026-04-14",
+      "output_asof": "2026-04-17",
+      "owner": "Ops"
+    },
+    "runtime_preflight": {
+      "severity": "ok",
+      "summary": "Runtime preflight passed",
+      "output_asof": "2026-04-19T08:39:30.041Z",
       "owner": "Ops"
     },
     "ui_field_truth_report": {
       "severity": "ok",
       "summary": "UI field truth checks passed",
-      "output_asof": "2026-04-14",
+      "output_asof": "2026-04-17",
       "owner": "Frontend/API"
     },
     "final_integrity_seal": {
-      "severity": "ok",
-      "summary": "Final seal is green",
-      "output_asof": "2026-04-14",
+      "severity": "critical",
+      "summary": "Final seal is blocking release",
+      "output_asof": "2026-04-17",
       "owner": "Ops"
     },
     "build_deploy_bundle": {
@@ -175,32 +194,45 @@
   "source_refs": {
     "nightly_status": {
       "path": "public/data/reports/nightly-stock-analyzer-status.json",
-      "generated_at": "2026-04-13T20:18:48.988Z"
+      "generated_at": "2026-04-16T10:58:45.923Z"
     },
     "recovery_report": {
       "path": "public/data/reports/dashboard-green-recovery-latest.json",
-      "generated_at": "2026-04-15T08:37:12.967Z"
+      "generated_at": "2026-04-19T08:35:06.209Z"
     },
     "system_status": {
       "path": "public/data/reports/system-status-latest.json",
-      "generated_at": "2026-04-15T09:02:50.074Z"
+      "generated_at": "2026-04-19T08:39:34.519Z"
     },
     "release_state": {
       "path": "public/data/ops/release-state-latest.json",
-      "generated_at": "2026-04-15T08:57:18.708Z"
+      "generated_at": "2026-04-19T08:35:06.243Z"
     },
     "final_integrity_seal": {
       "path": "public/data/ops/final-integrity-seal-latest.json",
-      "generated_at": "2026-04-15T09:02:46.444Z"
+      "generated_at": "2026-04-19T08:35:06.219Z"
+    },
+    "runtime_preflight": {
+      "path": "public/data/ops/runtime-preflight-latest.json",
+      "generated_at": "2026-04-19T08:39:30.041Z"
     }
   },
   "final_integrity_seal": {
     "schema": "rv.final_integrity_seal.v1",
-    "run_id": "pipeline-master-2026-04-14",
-    "target_market_date": "2026-04-14",
-    "generated_at": "2026-04-15T09:02:46.444Z",
+    "run_id": "pipeline-master-2026-04-17",
+    "target_market_date": "2026-04-17",
+    "generated_at": "2026-04-19T08:35:06.219Z",
     "producer": "scripts/ops/final-integrity-seal.mjs",
     "upstream_run_ids": [
+      "run-stock-analyzer-audit-2026-04-10",
+      "learning-2026-04-13",
+      "pipeline-master-2026-04-16",
+      "run-stock-analyzer-audit-2026-04-14",
+      "learning-2026-04-14",
+      "run-stock-analyzer-audit-2026-04-15",
+      "run-stock-analyzer-audit-2026-04-17",
+      "run-stock-analyzer-audit-2026-04-18",
+      "learning-2026-04-17",
       "pipeline-master-2026-04-14",
       "dashboard-green-2026-04-13",
       "pipeline-master-2026-04-13",
@@ -210,72 +242,208 @@
       "pipeline-master-2026-04-10",
       "dashboard-green-2026-04-10",
       "publish_chain_20260412T134556_23723",
-      "learning-2026-04-12",
-      "publish_chain_20260412T184739_99149",
-      "publish_chain_20260412T192252_349",
-      "learning-2026-04-10",
-      "run-stock-analyzer-audit-2026-04-13",
-      "publish_chain_failed_15828",
-      "run-stock-analyzer-audit-2026-04-10",
-      "learning-2026-04-13",
-      "publish_chain_failed_2087",
-      "run-stock-analyzer-audit-2026-04-14",
-      "learning-2026-04-14",
-      "run-stock-analyzer-audit-2026-04-15"
+      "mac_publish_20260417",
+      "dashboard-green-2026-04-17"
     ],
     "phase": "RELEASE_READY",
-    "ui_green": true,
-    "global_green": true,
-    "release_ready": true,
+    "status": "FAILED",
+    "ui_green": false,
+    "global_green": false,
+    "release_ready": false,
     "full_universe_validated": true,
+    "policy_neutral_structural_gaps_only": true,
     "ui_field_truth_ok": true,
     "sampled_mode": false,
     "allowed_launchd_only": true,
     "lock_integrity_ok": true,
     "storage_ok": true,
     "nas_ok": true,
-    "nas_reachable": false,
+    "nas_reachable": true,
     "nas_required_for_release": false,
     "calendar_ok": true,
     "data_plane_green": true,
+    "observer_stale": false,
+    "observer_generated_at": "2026-04-19T08:34:09.003Z",
+    "observer_inputs": [
+      {
+        "source": "runtime",
+        "present": true,
+        "generated_at": "2026-04-19T08:34:09.052Z",
+        "target_market_date": "2026-04-17",
+        "target_mismatch": false
+      },
+      {
+        "source": "epoch",
+        "present": true,
+        "generated_at": "2026-04-19T08:34:09.003Z",
+        "target_market_date": "2026-04-17",
+        "target_mismatch": false
+      },
+      {
+        "source": "recovery",
+        "present": true,
+        "generated_at": "2026-04-19T08:35:06.209Z",
+        "target_market_date": "2026-04-17",
+        "target_mismatch": false
+      },
+      {
+        "source": "release",
+        "present": true,
+        "generated_at": "2026-04-19T08:34:09.303Z",
+        "target_market_date": "2026-04-17",
+        "target_mismatch": false
+      }
+    ],
+    "lead_blocker_step": "hist_probs",
+    "next_step": "hist_probs",
+    "runtime_preflight_ok": true,
+    "runtime_preflight_ref": "public/data/ops/runtime-preflight-latest.json",
     "control_plane": {
       "ok": true,
-      "run_id": "pipeline-master-2026-04-14",
-      "target_market_date": "2026-04-14",
+      "run_id": "pipeline-master-2026-04-17",
+      "target_market_date": "2026-04-17",
       "target_mismatches": [],
       "run_id_mismatches": [],
       "observational_sources": {
         "recovery": {
-          "run_id": "pipeline-master-2026-04-14",
-          "target_market_date": "2026-04-14"
+          "run_id": "dashboard-green-2026-04-17",
+          "target_market_date": "2026-04-17"
         }
       },
       "blocking_reasons": []
     },
     "pipeline_consistency": {
       "ok": true,
-      "run_id": "pipeline-master-2026-04-14",
-      "target_market_date": "2026-04-14",
+      "run_id": "pipeline-master-2026-04-17",
+      "target_market_date": "2026-04-17",
       "target_mismatches": [],
       "run_id_mismatches": [],
       "observational_sources": {
         "recovery": {
-          "run_id": "pipeline-master-2026-04-14",
-          "target_market_date": "2026-04-14"
+          "run_id": "dashboard-green-2026-04-17",
+          "target_market_date": "2026-04-17"
         }
       },
       "blocking_reasons": []
     },
     "module_dates": {
-      "market_data_refresh": "2026-04-14",
-      "q1_delta_ingest": "2026-04-14",
-      "quantlab_daily_report": "2026-04-14",
-      "hist_probs": "2026-04-14",
-      "forecast_daily": "2026-04-14",
-      "scientific_summary": "2026-04-14",
-      "snapshot": "2026-04-14"
+      "market_data_refresh": "2026-04-17",
+      "q1_delta_ingest": "2026-04-17",
+      "quantlab_daily_report": "2026-04-08",
+      "hist_probs": "2026-04-17",
+      "forecast_daily": "2026-04-17",
+      "scientific_summary": "2026-04-17",
+      "snapshot": "2026-04-17"
     },
-    "blocking_reasons": [],
+    "blocking_reasons": [
+      {
+        "id": "eligible_wait_pipeline_incomplete",
+        "severity": "critical",
+        "details": {
+          "strict_full_coverage_ratio": 0.581766,
+          "assets_unclassified_missing": 0,
+          "eligible_wait_pipeline_incomplete_count": 2442,
+          "eligible_unknown_risk_count": 2442
+        }
+      },
+      {
+        "id": "risk_unknown",
+        "severity": "critical",
+        "details": {
+          "strict_full_coverage_ratio": 0.581766,
+          "assets_unclassified_missing": 0,
+          "eligible_wait_pipeline_incomplete_count": 2442,
+          "eligible_unknown_risk_count": 2442
+        }
+      }
+    ],
+    "warnings": [
+      {
+        "id": "policy_neutral_structural_gap",
+        "severity": "warning",
+        "details": {
+          "policy_neutral_structural_gap_count": 1,
+          "policy_blocking_failure_family_count": 0
+        }
+      },
+      {
+        "id": "decision_bundle_degraded",
+        "severity": "warning",
+        "details": [
+          "eligible_wait_pipeline_incomplete",
+          "risk_unknown",
+          "strict_full_coverage_below_95pct"
+        ]
+      }
+    ],
+    "decision_bundle": {
+      "status": "FAILED",
+      "snapshot_id": "dec-20260417-b5176288e7b3",
+      "target_market_date": "2026-04-17",
+      "summary": {
+        "schema": "rv.decision_bundle_summary.v1",
+        "schema_version": "1.0",
+        "status": "DEGRADED",
+        "run_id": "pipeline-master-2026-04-17",
+        "snapshot_id": "dec-20260417-b5176288e7b3",
+        "target_market_date": "2026-04-17",
+        "generated_at": "2026-04-19T06:55:12.265Z",
+        "coverage_policy": {
+          "ok_threshold": 0.95,
+          "degraded_threshold": 0.5,
+          "blocking_reasons": [],
+          "warnings": [
+            "eligible_wait_pipeline_incomplete",
+            "risk_unknown",
+            "strict_full_coverage_below_95pct"
+          ]
+        },
+        "assets_total_universe": 42218,
+        "assets_tradable_total": 42218,
+        "assets_macro_total": 0,
+        "assets_expected_for_decision": 42218,
+        "assets_processed": 42218,
+        "assets_eligible": 27003,
+        "assets_insufficient_history": 14802,
+        "assets_provider_no_data": 413,
+        "assets_inactive": 0,
+        "assets_macro_only": 0,
+        "assets_unclassified_missing": 0,
+        "buy_count": 0,
+        "wait_count": 24561,
+        "wait_pipeline_incomplete_count": 17657,
+        "eligible_wait_pipeline_incomplete_count": 2442,
+        "pipeline_ok_count": 24561,
+        "pipeline_degraded_count": 15215,
+        "pipeline_failed_count": 2442,
+        "unknown_risk_count": 17657,
+        "eligible_unknown_risk_count": 2442,
+        "strict_full_coverage_count": 24561,
+        "strict_full_coverage_ratio": 0.581766,
+        "partial_data_count": 17657,
+        "zero_buy_anomaly_status": "not_evaluated",
+        "counts_by_asset_class": {
+          "STOCK": 30962,
+          "ETF": 11256
+        }
+      }
+    },
+    "zero_buy_anomaly_status": null,
+    "leaf_seals": {
+      "market_data_refresh": "MISSING",
+      "q1_delta_ingest": "MISSING",
+      "quantlab_daily_report": "MISSING",
+      "hist_probs": "MISSING",
+      "forecast_daily": "MISSING",
+      "scientific_summary": "MISSING",
+      "snapshot": "DEGRADED",
+      "decision_bundle": "DEGRADED"
+    },
+    "runtime_liveness": {
+      "status": "OK",
+      "blocking_reasons": [],
+      "warnings": []
+    },
     "stock_analyzer_universe_audit": {
       "severity": "warning",
       "total_assets": 41785,
@@ -291,6 +459,10 @@
       "sampled_mode": false,
       "ui_field_truth_ok": true,
       "full_universe_validated": true,
+      "artifact_release_ready": true,
+      "policy_neutral_structural_gap_count": 1,
+      "policy_blocking_failure_family_count": 0,
+      "policy_neutral_structural_gaps_only": true,
       "requested_scope_full_universe": true,
       "processed_scope_full_universe": true,
       "audit_mode": "full",
@@ -305,13 +477,22 @@
       "release_eligible": true,
       "processed_scope_count": 41785,
       "validated_scope_count": 41785,
-      "target_market_date": "2026-04-14"
+      "target_market_date": "2026-04-17"
+    },
+    "runtime_preflight": {
+      "ok": true,
+      "generated_at": "2026-04-19T08:34:04.458Z",
+      "failure_reasons": []
     },
     "ui_field_truth_report": {
       "ui_field_truth_ok": true,
       "full_universe_source_ok": true,
       "audit_provenance_complete": true,
       "canary_ok": true,
+      "runtime_ok": true,
+      "runtime_failure_class": null,
+      "runtime_failure_count": 0,
+      "endpoint_contract_failure_count": 0,
       "checked_canaries": 2,
       "failed_checks": 0,
       "optional_advisory_count": 0,
@@ -319,7 +500,7 @@
     },
     "launchd": {
       "schema": "rv.launchd_reconcile.v1",
-      "generated_at": "2026-04-15T09:02:18.887Z",
+      "generated_at": "2026-04-19T08:35:04.303Z",
       "mode": "report",
       "skip_install_missing": false,
       "allowlist_path": "scripts/ops/launchd-allowlist.json",
@@ -335,31 +516,31 @@
     },
     "storage": {
       "schema_version": "v1",
-      "generated_at": "2026-04-15T09:02:28.969Z",
+      "generated_at": "2026-04-19T08:35:04.802Z",
       "disk": {
-        "free_gb": 116.6,
+        "free_gb": 171.7,
         "target_free_gb": 120,
         "warn_free_gb": 100,
         "block_heavy_jobs_free_gb": 80,
         "emergency_free_gb": 60,
-        "severity": "below_target",
+        "severity": "ok",
         "heavy_jobs_allowed": true
       },
       "nas": {
         "ssh_host": "neonas",
         "ssh_base": "/volume1/homes/neoboy/RepoOps/rubikvault-site",
         "archive_path": "/volume1/homes/neoboy/RepoOps/rubikvault-site/QuantLabColdArchive",
-        "reachable": false,
-        "free_gb": null
+        "reachable": true,
+        "free_gb": 8548.7
       },
       "snapshots": {
-        "step2bars_total": 4,
-        "step2bars_protected": 2,
-        "step2bars_archivable": 2,
-        "step2bars_archivable_estimate_gb": 13.4,
-        "step1_total": 4,
-        "step1_protected": 2,
-        "step1_archivable": 2
+        "step2bars_total": 1,
+        "step2bars_protected": 1,
+        "step2bars_archivable": 0,
+        "step2bars_archivable_estimate_gb": 0,
+        "step1_total": 1,
+        "step1_protected": 1,
+        "step1_archivable": 0
       },
       "feature_store": {
         "old_versions_archivable": 1,
@@ -368,12 +549,164 @@
         ],
         "old_partitions_archivable": 0
       },
-      "recoverable_estimate_gb": 14.4,
-      "after_archive_estimate_gb": 131,
+      "recoverable_estimate_gb": 1,
+      "after_archive_estimate_gb": 172.7,
       "latest_stageb_run_date": "2026-04-10"
+    }
+  },
+  "runtime_preflight": {
+    "schema": "runtime_preflight_v1",
+    "generated_at": "2026-04-19T08:39:30.041Z",
+    "host": "MacBook-Air.fritz.box",
+    "mode": "hard",
+    "base_url": "http://127.0.0.1:8788",
+    "runtime_owner": {
+      "host": "127.0.0.1:8788",
+      "ensure_runtime": true,
+      "ok": true,
+      "reasons": [],
+      "process_count": 3,
+      "wrangler_pid": 83615,
+      "wrangler_command": "/Users/michaelpuchowezki/.npm/_npx/ebaba8b9e55fd0a9/node_modules/node/bin/node /Users/michaelpuchowezki/Dev/rubikvault-site/node_modules/.bin/wrangler pages dev public --port 8788 --kv RV_KV --persist-to .wrangler/state --compatibility-date=2025-12-17",
+      "processes": [
+        {
+          "pid": 83615,
+          "command": "/Users/michaelpuchowezki/.npm/_npx/ebaba8b9e55fd0a9/node_modules/node/bin/node /Users/michaelpuchowezki/Dev/rubikvault-site/node_modules/.bin/wrangler pages dev public --port 8788 --kv RV_KV --persist-to .wrangler/state --compatibility-date=2025-12-17"
+        },
+        {
+          "pid": 83616,
+          "command": "/Users/michaelpuchowezki/.npm/_npx/ebaba8b9e55fd0a9/node_modules/node/bin/node --no-warnings --experimental-vm-modules /Users/michaelpuchowezki/Dev/rubikvault-site/node_modules/wrangler/wrangler-dist/cli.js pages dev public --port 8788 --kv RV_KV --persist-to .wrangler/state --compatibility-date=2025-12-17"
+        },
+        {
+          "pid": 83621,
+          "command": "/Users/michaelpuchowezki/Dev/rubikvault-site/node_modules/@cloudflare/workerd-darwin-arm64/bin/workerd serve --binary --experimental --socket-addr=entry=localhost:8788 --external-addr=loopback=localhost:55276 --control-fd=3 -"
+        }
+      ],
+      "ensure_result": {
+        "attempted": false,
+        "started": false,
+        "outcome": "already_healthy",
+        "detail": {
+          "ok": true,
+          "url": "http://127.0.0.1:8788/api/diag",
+          "status": 200,
+          "body": {
+            "ok": true,
+            "data": {
+              "summary": {
+                "status": "STUB",
+                "reason": "DIAG_ASSET_MISSING",
+                "message": "Diagnostic snapshot is not available yet"
+              },
+              "snapshots": []
+            },
+            "meta": {
+              "status": "STUB",
+              "reason": "DIAG_ASSET_MISSING",
+              "updatedAt": "2026-04-19T08:39:30.493Z",
+              "source": "stub",
+              "fetchedAt": "2026-04-19T08:39:30.493Z",
+              "digest": null,
+              "validation": {
+                "passed": true
+              },
+              "provider": "stub",
+              "data_date": "2026-04-19",
+              "generated_at": "2026-04-19T08:39:30.493Z"
+            },
+            "schemaVersion": "v1",
+            "error": null
+          }
+        },
+        "process_count": 3,
+        "runtime_owner": {
+          "ok": true,
+          "reasons": [],
+          "wrangler_pid": 83615,
+          "wrangler_command": "/Users/michaelpuchowezki/.npm/_npx/ebaba8b9e55fd0a9/node_modules/node/bin/node /Users/michaelpuchowezki/Dev/rubikvault-site/node_modules/.bin/wrangler pages dev public --port 8788 --kv RV_KV --persist-to .wrangler/state --compatibility-date=2025-12-17",
+          "process_count": 3,
+          "processes": [
+            {
+              "pid": 83615,
+              "command": "/Users/michaelpuchowezki/.npm/_npx/ebaba8b9e55fd0a9/node_modules/node/bin/node /Users/michaelpuchowezki/Dev/rubikvault-site/node_modules/.bin/wrangler pages dev public --port 8788 --kv RV_KV --persist-to .wrangler/state --compatibility-date=2025-12-17"
+            },
+            {
+              "pid": 83616,
+              "command": "/Users/michaelpuchowezki/.npm/_npx/ebaba8b9e55fd0a9/node_modules/node/bin/node --no-warnings --experimental-vm-modules /Users/michaelpuchowezki/Dev/rubikvault-site/node_modules/wrangler/wrangler-dist/cli.js pages dev public --port 8788 --kv RV_KV --persist-to .wrangler/state --compatibility-date=2025-12-17"
+            },
+            {
+              "pid": 83621,
+              "command": "/Users/michaelpuchowezki/Dev/rubikvault-site/node_modules/@cloudflare/workerd-darwin-arm64/bin/workerd serve --binary --experimental --socket-addr=entry=localhost:8788 --external-addr=loopback=localhost:55276 --control-fd=3 -"
+            }
+          ]
+        }
+      }
     },
-    "signature": "dy4FFLeMiSSBZfyzZQI1wuXuxdXLylwE6lKgz3ie9Nk/DYUtxqoDfIjhb2dXJwmFPYsv888KNn9kJkcRUujwCQ==",
-    "key_id": "ed25519-724d3322ff9f7f71",
-    "signature_algorithm": "ed25519"
+    "node_version": "20.20.2",
+    "node_ok": true,
+    "node_bin": "/Users/michaelpuchowezki/.npm/_npx/ebaba8b9e55fd0a9/node_modules/node/bin/node",
+    "wrangler_version": "4.71.0",
+    "wrangler_ok": true,
+    "wrangler_bin": "node_modules/.bin/wrangler",
+    "port_8788_ok": true,
+    "diag_ok": true,
+    "diag": {
+      "ok": true,
+      "url": "http://127.0.0.1:8788/api/diag",
+      "status": 200,
+      "body": {
+        "ok": true,
+        "data": {
+          "summary": {
+            "status": "STUB",
+            "reason": "DIAG_ASSET_MISSING",
+            "message": "Diagnostic snapshot is not available yet"
+          },
+          "snapshots": []
+        },
+        "meta": {
+          "status": "STUB",
+          "reason": "DIAG_ASSET_MISSING",
+          "updatedAt": "2026-04-19T08:39:30.493Z",
+          "source": "stub",
+          "fetchedAt": "2026-04-19T08:39:30.493Z",
+          "digest": null,
+          "validation": {
+            "passed": true
+          },
+          "provider": "stub",
+          "data_date": "2026-04-19",
+          "generated_at": "2026-04-19T08:39:30.493Z"
+        },
+        "schemaVersion": "v1",
+        "error": null
+      }
+    },
+    "canary_ok": true,
+    "canaries": [
+      {
+        "ticker": "AAPL",
+        "endpoint": "/api/v2/stocks/AAPL/summary",
+        "ok": true,
+        "status": 200,
+        "failure_class": null,
+        "error": null
+      },
+      {
+        "ticker": "SPY",
+        "endpoint": "/api/v2/stocks/SPY/summary",
+        "ok": true,
+        "status": 200,
+        "failure_class": null,
+        "error": null
+      }
+    ],
+    "fd_limit": 1048575,
+    "fd_limit_ok": true,
+    "resource_fork_ok": true,
+    "resource_fork_examples": [],
+    "compatible": true,
+    "ok": true,
+    "failure_reasons": []
   }
 }

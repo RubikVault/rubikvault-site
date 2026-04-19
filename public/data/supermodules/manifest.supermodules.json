@@ -1,29 +1,48 @@
 {
   "artifacts": [
     {
-      "bytes": 344,
-      "path": "public/data/supermodules/fundamental-truth.82dd89eae1ad.json",
-      "sha256": "82dd89eae1ad72504ca1c77a4c02143416d6e9cd2b6134edf0d7ea5173ddf6d1"
+      "bytes": 3927692,
+      "path": "public/data/supermodules/risk-resilience.2eba9bd2134c.json",
+      "sha256": "2eba9bd2134ca1a8483cfc0974689e11d1c1a20d6253febb262ddb00afdb4b75"
+    },
+    {
+      "bytes": 315,
+      "path": "public/data/supermodules/macro-os.9b427967a1af.json",
+      "sha256": "9b427967a1af28b39427dc7e20cb80a95e3f3788e1751fbc301bb251b13fc33a"
+    },
+    {
+      "bytes": 347,
+      "path": "public/data/supermodules/fundamental-truth.37faa2ffabc2.json",
+      "sha256": "37faa2ffabc254c385b2f1e7f4cea81777c5f86c3be1df8459a2f9816bb35484"
     }
   ],
   "meta": {
-    "commit": "a55aafdfe52ebebe378b84455e313804c5ec288d",
-    "generated_at": "2026-03-21T00:01:35.032Z",
+    "commit": "4583e2ec5d5ac97b3e0fb300f109cdd14c3b8ed3",
+    "generated_at": "2026-04-19T06:15:58.962Z",
     "lineage": {
       "macro_hub": "mirrors/macro-hub.json",
       "series_dir": "public/data/v3/series/adjusted"
     },
-    "policy_commit": "b01ca19c62cf1036ecd5dc4416eeab5407c4a948",
+    "policy_commit": "65da9b0ce4bc27c73bfac56d1171a842947dc171",
     "quality": {
       "modules": {
         "fundamental_truth": {
           "rows": 0,
+          "status": "MISSING_API_KEY"
+        },
+        "macro_os": {
+          "metrics": 0,
+          "regime": "UNKNOWN",
+          "status": "NO_SOURCE_DATA"
+        },
+        "risk_resilience": {
+          "rows": 2497,
           "status": "OK"
         }
       },
-      "status": "green"
+      "status": "degraded"
     },
-    "run_id": "a55aafdf-20260321T0001-15",
+    "run_id": "4583e2ec-20260419T0615-1776579358",
     "schema": "rv.supermodules.v1"
   }
 }

@@ -1,10 +1,19 @@
 {
   "schema": "rv_release_state_v3",
-  "run_id": "pipeline-master-2026-04-14",
-  "target_market_date": "2026-04-14",
-  "generated_at": "2026-04-15T09:54:42.950Z",
+  "run_id": "pipeline-master-2026-04-17",
+  "target_market_date": "2026-04-17",
+  "generated_at": "2026-04-19T08:44:46.852Z",
   "producer": "scripts/ops/run-pipeline-master-supervisor.mjs",
   "upstream_run_ids": [
+    "run-stock-analyzer-audit-2026-04-10",
+    "learning-2026-04-13",
+    "pipeline-master-2026-04-16",
+    "run-stock-analyzer-audit-2026-04-14",
+    "learning-2026-04-14",
+    "run-stock-analyzer-audit-2026-04-15",
+    "run-stock-analyzer-audit-2026-04-17",
+    "run-stock-analyzer-audit-2026-04-18",
+    "learning-2026-04-17",
     "pipeline-master-2026-04-14",
     "dashboard-green-2026-04-13",
     "pipeline-master-2026-04-13",
@@ -14,64 +23,46 @@
     "pipeline-master-2026-04-10",
     "dashboard-green-2026-04-10",
     "publish_chain_20260412T134556_23723",
-    "learning-2026-04-12",
-    "publish_chain_20260412T184739_99149",
-    "publish_chain_20260412T192252_349",
-    "learning-2026-04-10",
-    "run-stock-analyzer-audit-2026-04-13",
-    "publish_chain_failed_15828",
-    "run-stock-analyzer-audit-2026-04-10",
-    "learning-2026-04-13",
-    "publish_chain_failed_2087",
-    "run-stock-analyzer-audit-2026-04-14",
-    "learning-2026-04-14",
-    "run-stock-analyzer-audit-2026-04-15"
+    "mac_publish_20260417",
+    "dashboard-green-2026-04-17"
   ],
-  "target_date": "2026-04-14",
-  "started_at": "2026-04-14T20:20:14.089Z",
-  "completed_at": null,
-  "phase": "SLA_BREACH",
-  "blocker": "ui_field_truth_report_failed",
-  "blockers": [
-    {
-      "id": "ui_field_truth_report_failed",
-      "severity": "critical",
-      "details": {
-        "ui_field_truth_ok": false,
-        "full_universe_source_ok": true,
-        "audit_provenance_complete": true,
-        "canary_ok": false,
-        "checked_canaries": 2,
-        "failed_checks": 8,
-        "optional_advisory_count": 2,
-        "advisory_reasons": []
-      }
-    }
-  ],
+  "target_date": "2026-04-17",
+  "started_at": "2026-04-17T20:17:43.036Z",
+  "completed_at": "2026-04-18T15:23:30.270Z",
+  "phase": "RELEASE_READY",
+  "blocker": null,
+  "lead_blocker_step": null,
+  "blockers": [],
+  "next_step": null,
   "final_integrity_seal_ref": "public/data/ops/final-integrity-seal-latest.json",
-  "ui_green": false,
-  "release_ready": false,
+  "ui_green": true,
+  "release_ready": true,
   "full_universe_validated": true,
   "allowed_launchd_only": true,
   "storage_ok": true,
   "nas_ok": true,
   "calendar_ok": true,
+  "observer_stale": false,
+  "observer_generated_at": "2026-04-19T08:39:34.585Z",
+  "runtime_preflight_ok": true,
+  "runtime_preflight_ref": "public/data/ops/runtime-preflight-latest.json",
   "control_plane": {
     "ok": true,
-    "run_id": "pipeline-master-2026-04-14",
-    "target_market_date": "2026-04-14",
+    "run_id": "pipeline-master-2026-04-17",
+    "target_market_date": "2026-04-17",
     "target_mismatches": [],
     "run_id_mismatches": [],
     "observational_sources": {
       "recovery": {
-        "run_id": "pipeline-master-2026-04-14",
-        "target_market_date": "2026-04-14"
+        "run_id": "dashboard-green-2026-04-17",
+        "target_market_date": "2026-04-17"
       }
     },
     "blocking_reasons": []
   },
-  "runtime_phase": "running",
+  "data_pipeline_phase": "interrupted",
+  "runtime_phase": "completed",
   "epoch_pipeline_ok": true,
-  "system_release_ready": true,
-  "last_updated": "2026-04-15T09:54:42.950Z"
+  "system_release_ready": false,
+  "last_updated": "2026-04-19T08:44:46.852Z"
 }

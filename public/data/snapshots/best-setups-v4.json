@@ -1,46 +1,20 @@
 {
   "ok": true,
   "schema_version": "rv.best-setups.shared-core.snapshot.v3",
-  "generated_at": "2026-04-15T07:15:53.981Z",
+  "generated_at": "2026-04-19T06:15:51.161Z",
   "meta": {
-    "generated_at": "2026-04-15T07:15:53.981Z",
-    "source": "shared_decision_core_quantlab_forecast_snapshot",
-    "decision_path": "assembleDecisionInputs + buildStockInsightsV4Evaluation",
-    "quantlab_generated_at": "2026-04-15T07:10:55.154Z",
-    "quantlab_generated_at_by_class": {
-      "stocks": "2026-04-15T07:10:55.154Z",
-      "etfs": "2026-04-15T07:10:55.154Z"
-    },
-    "quantlab_asof": "2026-04-10",
-    "quantlab_asof_by_class": {
-      "stocks": "2026-04-10",
-      "etfs": "2026-04-10"
-    },
-    "forecast_asof": "2026-04-14",
-    "data_asof": "2026-04-14",
-    "source_dependencies": {
-      "quantlab_publish_dirs": {
-        "stock": "public/data/quantlab/stock-insights/stocks",
-        "etf": "public/data/quantlab/stock-insights/etfs"
-      },
-      "forecast_path": "public/data/forecast/latest.json"
+    "generated_at": "2026-04-19T06:15:51.162Z",
+    "source": "decision_bundle_consumer",
+    "decision_path": "public/data/decisions/latest.json",
+    "data_asof": "2026-04-17",
+    "decision_bundle": {
+      "status": "DEGRADED",
+      "snapshot_id": "dec-20260417-fc1ae1563352",
+      "target_market_date": "2026-04-17"
     },
     "candidate_counts": {
-      "quantlab_rows_total": 100,
-      "quantlab_rows_stocks": 23,
-      "quantlab_rows_etfs": 77,
-      "analyzable_tickers": 592,
-      "quantlab_ranked": 5,
-      "quantlab_ranked_stocks": 0,
-      "quantlab_ranked_etfs": 5,
-      "forecast_short": 239,
-      "forecast_medium": 237,
-      "forecast_long": 215,
-      "unique_tickers": 592,
-      "shard_count": {
-        "stocks": 2,
-        "etfs": 9
-      }
+      "decision_bundle_buy_rows": 0,
+      "unique_tickers": 0
     },
     "verified_counts": {
       "stocks": {
@@ -52,82 +26,6 @@
         "short": 0,
         "medium": 0,
         "long": 0
-      }
-    },
-    "setup_phase_counts": {
-      "early": 0,
-      "mid": 0,
-      "late": 0
-    },
-    "rejection_counts": {
-      "short": {
-        "rejected_non_buy_total": 243,
-        "rejected_non_high_total": 0,
-        "rejected_gated_total": 0,
-        "rejected_non_uptrend_total": 0,
-        "missing_doc_total": 0,
-        "by_asset_class": {
-          "stock": {
-            "rejected_non_buy_total": 238,
-            "rejected_non_high_total": 0,
-            "rejected_gated_total": 0,
-            "rejected_non_uptrend_total": 0,
-            "missing_doc_total": 0
-          },
-          "etf": {
-            "rejected_non_buy_total": 5,
-            "rejected_non_high_total": 0,
-            "rejected_gated_total": 0,
-            "rejected_non_uptrend_total": 0,
-            "missing_doc_total": 0
-          }
-        }
-      },
-      "medium": {
-        "rejected_non_buy_total": 241,
-        "rejected_non_high_total": 0,
-        "rejected_gated_total": 0,
-        "rejected_non_uptrend_total": 0,
-        "missing_doc_total": 0,
-        "by_asset_class": {
-          "stock": {
-            "rejected_non_buy_total": 237,
-            "rejected_non_high_total": 0,
-            "rejected_gated_total": 0,
-            "rejected_non_uptrend_total": 0,
-            "missing_doc_total": 0
-          },
-          "etf": {
-            "rejected_non_buy_total": 4,
-            "rejected_non_high_total": 0,
-            "rejected_gated_total": 0,
-            "rejected_non_uptrend_total": 0,
-            "missing_doc_total": 0
-          }
-        }
-      },
-      "long": {
-        "rejected_non_buy_total": 208,
-        "rejected_non_high_total": 6,
-        "rejected_gated_total": 0,
-        "rejected_non_uptrend_total": 0,
-        "missing_doc_total": 0,
-        "by_asset_class": {
-          "stock": {
-            "rejected_non_buy_total": 204,
-            "rejected_non_high_total": 6,
-            "rejected_gated_total": 0,
-            "rejected_non_uptrend_total": 0,
-            "missing_doc_total": 0
-          },
-          "etf": {
-            "rejected_non_buy_total": 4,
-            "rejected_non_high_total": 0,
-            "rejected_gated_total": 0,
-            "rejected_non_uptrend_total": 0,
-            "missing_doc_total": 0
-          }
-        }
       }
     },
     "rows_emitted": {
@@ -143,104 +41,11 @@
       },
       "total": 0
     },
-    "rows_rejected": {
-      "short": {
-        "rejected_non_buy_total": 243,
-        "rejected_non_high_total": 0,
-        "rejected_gated_total": 0,
-        "rejected_non_uptrend_total": 0,
-        "missing_doc_total": 0,
-        "by_asset_class": {
-          "stock": {
-            "rejected_non_buy_total": 238,
-            "rejected_non_high_total": 0,
-            "rejected_gated_total": 0,
-            "rejected_non_uptrend_total": 0,
-            "missing_doc_total": 0
-          },
-          "etf": {
-            "rejected_non_buy_total": 5,
-            "rejected_non_high_total": 0,
-            "rejected_gated_total": 0,
-            "rejected_non_uptrend_total": 0,
-            "missing_doc_total": 0
-          }
-        }
-      },
-      "medium": {
-        "rejected_non_buy_total": 241,
-        "rejected_non_high_total": 0,
-        "rejected_gated_total": 0,
-        "rejected_non_uptrend_total": 0,
-        "missing_doc_total": 0,
-        "by_asset_class": {
-          "stock": {
-            "rejected_non_buy_total": 237,
-            "rejected_non_high_total": 0,
-            "rejected_gated_total": 0,
-            "rejected_non_uptrend_total": 0,
-            "missing_doc_total": 0
-          },
-          "etf": {
-            "rejected_non_buy_total": 4,
-            "rejected_non_high_total": 0,
-            "rejected_gated_total": 0,
-            "rejected_non_uptrend_total": 0,
-            "missing_doc_total": 0
-          }
-        }
-      },
-      "long": {
-        "rejected_non_buy_total": 208,
-        "rejected_non_high_total": 6,
-        "rejected_gated_total": 0,
-        "rejected_non_uptrend_total": 0,
-        "missing_doc_total": 0,
-        "by_asset_class": {
-          "stock": {
-            "rejected_non_buy_total": 204,
-            "rejected_non_high_total": 6,
-            "rejected_gated_total": 0,
-            "rejected_non_uptrend_total": 0,
-            "missing_doc_total": 0
-          },
-          "etf": {
-            "rejected_non_buy_total": 4,
-            "rejected_non_high_total": 0,
-            "rejected_gated_total": 0,
-            "rejected_non_uptrend_total": 0,
-            "missing_doc_total": 0
-          }
-        }
-      }
-    },
     "reason_summary": {
       "snapshot_empty": true,
-      "dominant_rejection": [
-        {
-          "horizon": "short",
-          "rejected_non_buy_total": 243,
-          "rejected_non_high_total": 0,
-          "rejected_gated_total": 0,
-          "rejected_non_uptrend_total": 0
-        },
-        {
-          "horizon": "medium",
-          "rejected_non_buy_total": 241,
-          "rejected_non_high_total": 0,
-          "rejected_gated_total": 0,
-          "rejected_non_uptrend_total": 0
-        },
-        {
-          "horizon": "long",
-          "rejected_non_buy_total": 208,
-          "rejected_non_high_total": 6,
-          "rejected_gated_total": 0,
-          "rejected_non_uptrend_total": 0
-        }
-      ]
+      "source": null
     },
-    "duration_ms": 53501
+    "duration_ms": 244
   },
   "data": {
     "stocks": {

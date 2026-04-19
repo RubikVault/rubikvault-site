@@ -42,6 +42,7 @@ CODE_FILES=(
   "scripts/ops/run-stock-analyzer-publish-chain.mjs"
   "scripts/ops/runtime-preflight.mjs"
   "scripts/ops/verify-ui-completeness.mjs"
+  "scripts/ops/nas-setup-fd-limit.sh"
 )
 
 STATE_FILES=(

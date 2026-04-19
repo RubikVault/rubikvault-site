@@ -1,36 +1,37 @@
 {
   "schema": "rv.stock_analyzer_control.v1",
-  "run_id": "learning-2026-04-14",
-  "target_market_date": "2026-04-14",
-  "generated_at": "2026-04-15T08:31:53.270Z",
+  "run_id": "learning-2026-04-17",
+  "target_market_date": "2026-04-17",
+  "generated_at": "2026-04-19T07:05:49.423Z",
   "producer": "scripts/learning/run-daily-learning-cycle.mjs",
   "upstream_run_ids": [],
-  "report_date": "2026-04-14",
-  "source_report_generated_at": "2026-04-15T08:31:53.270Z",
-  "learning_status": "ACTIVE",
+  "report_date": "2026-04-17",
+  "source_report_generated_at": "2026-04-19T07:05:49.423Z",
+  "learning_status": "SAFE_MODE",
   "safety_switch": {
-    "level": "BOOTSTRAP",
+    "level": "RED",
     "actions": [
-      "log_only"
+      "freeze_promotions",
+      "reduce_confidence"
     ],
-    "trigger": "minimum_n_not_met",
+    "trigger": "precision_red",
     "minimum_n_status": {
       "global_per_horizon_threshold": 200,
       "asset_class_horizon_threshold": 100,
       "regime_horizon_threshold": 75,
-      "satisfied_horizons": 1,
-      "ready_for_safety": false,
+      "satisfied_horizons": 2,
+      "ready_for_safety": true,
       "by_horizon": {
         "1d": {
           "outcomes_resolved": 5,
           "satisfied": false
         },
         "5d": {
-          "outcomes_resolved": 29,
-          "satisfied": false
+          "outcomes_resolved": 612,
+          "satisfied": true
         },
         "20d": {
-          "outcomes_resolved": 602,
+          "outcomes_resolved": 8159,
           "satisfied": true
         }
       }
@@ -40,51 +41,52 @@
     "global_per_horizon_threshold": 200,
     "asset_class_horizon_threshold": 100,
     "regime_horizon_threshold": 75,
-    "satisfied_horizons": 1,
-    "ready_for_safety": false,
+    "satisfied_horizons": 2,
+    "ready_for_safety": true,
     "by_horizon": {
       "1d": {
         "outcomes_resolved": 5,
         "satisfied": false
       },
       "5d": {
-        "outcomes_resolved": 29,
-        "satisfied": false
+        "outcomes_resolved": 612,
+        "satisfied": true
       },
       "20d": {
-        "outcomes_resolved": 602,
+        "outcomes_resolved": 8159,
         "satisfied": true
       }
     }
   },
   "learning_gate": {
-    "status": "BLOCKED",
-    "learning_status": "ACTIVE",
+    "status": "SAFE_MODE",
+    "learning_status": "SAFE_MODE",
     "learning_status_default": "BOOTSTRAP",
-    "safety_level": "BOOTSTRAP",
+    "safety_level": "RED",
     "safety_switch": {
-      "level": "BOOTSTRAP",
+      "level": "RED",
       "actions": [
-        "log_only"
+        "freeze_promotions",
+        "reduce_confidence"
       ],
-      "trigger": "minimum_n_not_met",
+      "trigger": "precision_red",
       "minimum_n_status": {
         "global_per_horizon_threshold": 200,
         "asset_class_horizon_threshold": 100,
         "regime_horizon_threshold": 75,
-        "satisfied_horizons": 1,
-        "ready_for_safety": false,
+        "satisfied_horizons": 2,
+        "ready_for_safety": true,
         "by_horizon": {
           "1d": {
             "outcomes_resolved": 5,
             "satisfied": false
           },
           "5d": {
-            "outcomes_resolved": 29,
-            "satisfied": false
+            "outcomes_resolved": 612,
+            "satisfied": true
           },
           "20d": {
-            "outcomes_resolved": 602,
+            "outcomes_resolved": 8159,
             "satisfied": true
           }
         }
@@ -94,30 +96,30 @@
       "global_per_horizon_threshold": 200,
       "asset_class_horizon_threshold": 100,
       "regime_horizon_threshold": 75,
-      "satisfied_horizons": 1,
-      "ready_for_safety": false,
+      "satisfied_horizons": 2,
+      "ready_for_safety": true,
       "by_horizon": {
         "1d": {
           "outcomes_resolved": 5,
           "satisfied": false
         },
         "5d": {
-          "outcomes_resolved": 29,
-          "satisfied": false
+          "outcomes_resolved": 612,
+          "satisfied": true
         },
         "20d": {
-          "outcomes_resolved": 602,
+          "outcomes_resolved": 8159,
           "satisfied": true
         }
       }
     },
     "minimum_n_not_met": true,
     "blocked_reason": "minimum_n_not_met",
-    "ready_for_safety": false,
+    "ready_for_safety": true,
     "ready_for_release": false
   },
   "false_positive_classes_30d": {
-    "weak_consensus": 88
+    "weak_consensus": 233
   },
   "policy": {
     "schema_version": "best_setups_policy_v1",
