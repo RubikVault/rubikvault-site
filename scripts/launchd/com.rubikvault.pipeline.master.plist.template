@@ -35,6 +35,12 @@
   <key>ThrottleInterval</key>
   <integer>60</integer>
 
+  <key>SoftResourceLimits</key>
+  <dict>
+    <key>NumberOfFiles</key>
+    <integer>65536</integer>
+  </dict>
+
   <key>StandardOutPath</key>
   <string>/Users/michaelpuchowezki/Dev/rubikvault-site/logs/pipeline-master-supervisor.log</string>
   <key>StandardErrorPath</key>
