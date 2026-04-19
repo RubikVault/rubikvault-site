@@ -6,6 +6,8 @@ import { createHash } from 'node:crypto';
 const CACHE_TTL_MS = 60_000;
 const PART_CACHE_TTL_MS = 120_000;
 const LOCAL_ROOT = (() => {
+  const envRoot = String(process.env?.RV_REPO_ROOT || '').trim();
+  if (envRoot) return envRoot;
   try {
     return process.cwd();
   } catch {
@@ -100,6 +102,20 @@ function localPathFor(publicPath, rootDir = LOCAL_ROOT) {
   return path.join(rootDir, 'public', clean.slice(1));
 }
 
+function isLocalDevRequest(request) {
+  try {
+    const { hostname } = new URL(request?.url || '');
+    return hostname === '127.0.0.1' || hostname === 'localhost';
+  } catch {
+    return false;
+  }
+}
+
+function resolveRootDir(options = {}) {
+  if (options.rootDir) return options.rootDir;
+  return isLocalDevRequest(options.request) ? LOCAL_ROOT : null;
+}
+
 async function readLocalAsset(publicPath, rootDir) {
   const filePath = localPathFor(publicPath, rootDir);
   if (!filePath) return null;
@@ -109,7 +125,8 @@ async function readLocalAsset(publicPath, rootDir) {
 }
 
 async function fetchAssetText(publicPath, { request, env, fetchImpl = fetch, rootDir = null } = {}) {
-  if (rootDir) return readLocalAsset(publicPath, rootDir);
+  const localRoot = rootDir || resolveRootDir({ request, rootDir });
+  if (localRoot) return readLocalAsset(publicPath, localRoot);
   const origin = request?.url ? new URL(request.url).origin : 'http://localhost';
   const url = new URL(publicPath, origin);
   const assetFetcher = env?.ASSETS || null;

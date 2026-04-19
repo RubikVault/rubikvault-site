@@ -35,6 +35,8 @@ import { buildHistProbsCandidatePaths } from './hist-probs-paths.js';
 import { readDecisionForTicker } from './decision-bundle-reader.js';
 
 const REPO_ROOT = (() => {
+  const envRoot = typeof process !== 'undefined' ? String(process.env?.RV_REPO_ROOT || '').trim() : '';
+  if (envRoot) return envRoot;
   try {
     const currentUrl = String(import.meta.url || '');
     if (currentUrl.startsWith('file:')) {

@@ -52,14 +52,19 @@ test('recovery and supervisor treat runtime_preflight as a first-class blocker',
   assert.match(supervisor, /runtimePreflight/);
   assert.match(runtimePreflight, /runtime_owner_node_mismatch/);
   assert.match(runtimePreflight, /runtime_owner_wrangler_mismatch/);
+  assert.match(runtimePreflight, /runtime_owner_stale_processes/);
   assert.match(runtimePreflight, /resolveApprovedNodeBin/);
+  assert.match(runtimePreflight, /RV_REPO_ROOT: ROOT/);
   assert.match(runtimePreflight, /!command\.startsWith\(expectedNodeBin\)/);
   assert.match(runtimePreflight, /node_modules', 'wrangler', 'wrangler-dist', 'cli\.js'/);
+  assert.match(runtimePreflight, /pid=,ppid=,command=/);
+  assert.match(runtimePreflight, /workerd-linux-64', 'bin', 'workerd'/);
   assert.match(runtimePreflight, /\/bin\/sh/);
   assert.match(uiAudit, /resolveApprovedNodeBin/);
   assert.match(publishChain, /const node = resolveApprovedNodeBin\(\)/);
   assert.match(resolveNode20, /\/usr\/local\/bin\/node/);
   assert.match(resolveNode20, /Node\.js_v20\/usr\/local\/bin\/node/);
+  assert.match(recovery, /RV_REPO_ROOT: ROOT/);
 });
 
 test('ui field truth keeps runtime failures separate from endpoint contract failures', () => {
@@ -75,4 +80,31 @@ test('ui field truth keeps runtime failures separate from endpoint contract fail
   assert.match(detailAudit, /process\.execPath/);
   assert.match(detailAudit, /node_modules', '.bin', 'wrangler'/);
   assert.doesNotMatch(detailAudit, /spawn\('npm', \['run', 'dev:pages:port'\]/);
+});
+
+test('nas deploy wrapper syncs runtime history-store fixes', () => {
+  const deployWrapper = fs.readFileSync(path.join(ROOT, 'scripts/ops/deploy-pipeline-master-to-nas.sh'), 'utf8');
+  assert.match(deployWrapper, /functions\/api\/_shared\/history-store\.mjs/);
+});
+
+test('runtime canary history sync tool ships manifests and mirror packs to NAS', () => {
+  const syncTool = fs.readFileSync(path.join(ROOT, 'scripts/ops/sync-runtime-canary-history-to-nas.sh'), 'utf8');
+  assert.match(syncTool, /pack-manifest\.us-eu\.json/);
+  assert.match(syncTool, /pack-manifest\.us-eu\.lookup\.json/);
+  assert.match(syncTool, /mirrors\/universe-v7\/history/);
+  assert.match(syncTool, /wrangler\|workerd/);
+});
+
+test('decision bundle reader avoids internal HTTP fetches for local Pages requests', () => {
+  const reader = fs.readFileSync(path.join(ROOT, 'functions/api/_shared/decision-bundle-reader.js'), 'utf8');
+  const dataInterface = fs.readFileSync(path.join(ROOT, 'functions/api/_shared/data-interface.js'), 'utf8');
+  const historyStore = fs.readFileSync(path.join(ROOT, 'functions/api/_shared/history-store.mjs'), 'utf8');
+  const deployWrapper = fs.readFileSync(path.join(ROOT, 'scripts/ops/deploy-pipeline-master-to-nas.sh'), 'utf8');
+  assert.match(reader, /hostname === '127\.0\.0\.1' \|\| hostname === 'localhost'/);
+  assert.match(reader, /return isLocalDevRequest\(options\.request\) \? LOCAL_ROOT : null/);
+  assert.match(reader, /const localRoot = rootDir \|\| resolveRootDir\(\{ request, rootDir \}\)/);
+  assert.match(reader, /process\.env\?\.RV_REPO_ROOT/);
+  assert.match(dataInterface, /process\.env\?\.RV_REPO_ROOT/);
+  assert.match(historyStore, /process\.env\?\.RV_REPO_ROOT/);
+  assert.match(deployWrapper, /functions\/api\/_shared\/data-interface\.js/);
 });

@@ -26,6 +26,9 @@ while [[ $# -gt 0 ]]; do
 done
 
 CODE_FILES=(
+  "functions/api/_shared/data-interface.js"
+  "functions/api/_shared/decision-bundle-reader.js"
+  "functions/api/_shared/history-store.mjs"
   "public/stock.html"
   "scripts/generate_meta_dashboard_data.mjs"
   "scripts/lib/pipeline_authority/gates/readiness-contracts.json"

@@ -4,6 +4,8 @@ import { fileURLToPath } from 'node:url';
 import { gunzipSync } from 'node:zlib';
 
 const REPO_ROOT = (() => {
+    const envRoot = typeof process !== 'undefined' ? String(process.env?.RV_REPO_ROOT || '').trim() : '';
+    if (envRoot) return envRoot;
     try {
         const currentUrl = String(import.meta.url || '');
         if (currentUrl.startsWith('file:')) {
@@ -55,23 +57,33 @@ function isLocalOrigin(baseUrl) {
     }
 }
 
-function toLocalAssetPath(relPath) {
+export function resolveLocalAssetPaths(relPath) {
     const relative = String(relPath || '').startsWith('/') ? String(relPath).slice(1) : String(relPath || '');
-    if (!relative.startsWith('data/')) return null;
-    return path.join(REPO_ROOT, 'public', relative);
+    if (!relative.startsWith('data/')) return [];
+    const candidates = [path.join(REPO_ROOT, 'public', relative)];
+    const historyPackPrefix = 'data/eod/history/packs/';
+    if (relative.startsWith(historyPackPrefix)) {
+        const packRelative = relative.slice(historyPackPrefix.length);
+        if (packRelative) {
+            candidates.push(path.join(REPO_ROOT, 'mirrors', 'universe-v7', 'history', packRelative));
+        }
+    }
+    return candidates;
 }
 
 async function readLocalTextMaybe(relPath) {
-    const filePath = toLocalAssetPath(relPath);
-    if (!filePath) return null;
-    try {
-        const buffer = await fs.readFile(filePath);
-        return filePath.endsWith('.gz')
-            ? gunzipSync(buffer).toString('utf8')
-            : buffer.toString('utf8');
-    } catch {
-        return null;
+    const localPaths = resolveLocalAssetPaths(relPath);
+    for (const filePath of localPaths) {
+        try {
+            const buffer = await fs.readFile(filePath);
+            return filePath.endsWith('.gz')
+                ? gunzipSync(buffer).toString('utf8')
+                : buffer.toString('utf8');
+        } catch {
+            continue;
+        }
     }
+    return null;
 }
 
 async function readLocalJsonMaybe(relPath) {

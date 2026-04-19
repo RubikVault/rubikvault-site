@@ -310,9 +310,26 @@ async function checkCanaries(baseUrl, timeoutMs, canaries) {
   return results;
 }
 
-function findRuntimeProcesses() {
+function isRepoWorkerdCommand(command) {
+  const normalized = String(command || '');
+  return normalized.includes(path.join(ROOT, 'node_modules', '@cloudflare', 'workerd-linux-64', 'bin', 'workerd'));
+}
+
+function isRepoWranglerCommand(command, wranglerBin = null) {
+  const normalized = String(command || '');
+  return Boolean(
+    (wranglerBin && normalized.includes(wranglerBin))
+    || normalized.includes(path.join(ROOT, 'node_modules', 'wrangler', 'wrangler-dist', 'cli.js'))
+  );
+}
+
+function isRepoRuntimeCommand(command, wranglerBin = null) {
+  return isRepoWorkerdCommand(command) || isRepoWranglerCommand(command, wranglerBin);
+}
+
+function findRuntimeProcesses(wranglerBin = null) {
   try {
-    const raw = execFileSync('ps', ['-axo', 'pid=,command='], {
+    const raw = execFileSync('ps', ['-axo', 'pid=,ppid=,command='], {
       cwd: ROOT,
       encoding: 'utf8',
       stdio: ['ignore', 'pipe', 'pipe'],
@@ -323,20 +340,12 @@ function findRuntimeProcesses() {
       .map((line) => line.trim())
       .filter(Boolean)
       .map((line) => {
-        const match = line.match(/^(\d+)\s+(.*)$/);
+        const match = line.match(/^(\d+)\s+(\d+)\s+(.*)$/);
         if (!match) return null;
-        return { pid: Number(match[1]), command: match[2] };
+        return { pid: Number(match[1]), ppid: Number(match[2]), command: match[3] };
       })
       .filter(Boolean)
-      .filter(({ command }) => {
-        const normalized = String(command || '');
-        return (
-          normalized.includes(path.join(ROOT, 'node_modules', '.bin', 'wrangler'))
-          || normalized.includes('--port 8788')
-          || normalized.includes('socket-addr=entry=localhost:8788')
-          || normalized.includes('socket-addr=entry=127.0.0.1:8788')
-        ) && (normalized.includes('wrangler') || normalized.includes('workerd'));
-      })
+      .filter(({ command }) => isRepoRuntimeCommand(command, wranglerBin))
       .slice(0, 25);
   } catch {
     return [];
@@ -345,7 +354,17 @@ function findRuntimeProcesses() {
 
 function assessRuntimeOwner(processes, wranglerBin, expectedNodeBin) {
   const runtimeProcesses = Array.isArray(processes) ? processes : [];
-  const wranglerProcess = runtimeProcesses.find((entry) => String(entry?.command || '').includes('wrangler'));
+  const wranglerProcesses = runtimeProcesses.filter((entry) => isRepoWranglerCommand(entry?.command, wranglerBin));
+  const wranglerProcess = wranglerProcesses.find((entry) => {
+    const command = String(entry?.command || '');
+    return !expectedNodeBin || command.startsWith(expectedNodeBin);
+  }) || wranglerProcesses[0] || null;
+  const wranglerPids = new Set(wranglerProcesses.map((entry) => Number(entry?.pid || 0)).filter((pid) => pid > 0));
+  const staleProcesses = runtimeProcesses.filter((entry) => {
+    if (!isRepoWorkerdCommand(entry?.command)) return false;
+    const parentPid = Number(entry?.ppid || 0);
+    return parentPid <= 1 || !wranglerPids.has(parentPid);
+  });
   const reasons = [];
   if (!wranglerProcess) {
     reasons.push('runtime_owner_missing');
@@ -358,22 +377,27 @@ function assessRuntimeOwner(processes, wranglerBin, expectedNodeBin) {
       reasons.push('runtime_owner_node_mismatch');
     }
   }
+  if (staleProcesses.length > 0) {
+    reasons.push('runtime_owner_stale_processes');
+  }
   return {
     ok: reasons.length === 0,
     reasons,
     wrangler_pid: wranglerProcess?.pid || null,
     wrangler_command: wranglerProcess?.command || null,
     process_count: runtimeProcesses.length,
+    stale_process_count: staleProcesses.length,
+    stale_processes: staleProcesses,
     processes: runtimeProcesses,
   };
 }
 
 async function waitForRuntimeExit(deadlineMs = 8000) {
   const deadline = Date.now() + deadlineMs;
-  let remaining = findRuntimeProcesses();
+  let remaining = findRuntimeProcesses(findRepoWrangler());
   while (remaining.length > 0 && Date.now() < deadline) {
     await new Promise((resolve) => setTimeout(resolve, 500));
-    remaining = findRuntimeProcesses();
+    remaining = findRuntimeProcesses(findRepoWrangler());
   }
   return remaining;
 }
@@ -417,7 +441,7 @@ async function waitForHealthyDiag(baseUrl, timeoutMs, maxWaitMs = 30000) {
 async function ensureRuntime(baseUrl, timeoutMs, approvedNodeBin) {
   const wranglerBin = findRepoWrangler();
   const initialDiag = await checkDiag(baseUrl, timeoutMs);
-  const existingProcesses = findRuntimeProcesses();
+  const existingProcesses = findRuntimeProcesses(wranglerBin);
   const owner = assessRuntimeOwner(existingProcesses, wranglerBin, approvedNodeBin);
   if (initialDiag.ok) {
     if (owner.ok) {
@@ -437,7 +461,7 @@ async function ensureRuntime(baseUrl, timeoutMs, approvedNodeBin) {
         started: false,
         outcome: 'existing_unapproved_unstoppable',
         detail: initialDiag,
-        process_count: findRuntimeProcesses().length,
+        process_count: findRuntimeProcesses(wranglerBin).length,
         runtime_owner: owner,
         stop_result: stopResult,
       };
@@ -451,7 +475,7 @@ async function ensureRuntime(baseUrl, timeoutMs, approvedNodeBin) {
         started: false,
         outcome: owner.ok ? 'existing_unhealthy' : 'existing_unapproved',
         detail: initialDiag,
-        process_count: findRuntimeProcesses().length,
+        process_count: findRuntimeProcesses(wranglerBin).length,
         processes: existingProcesses,
         runtime_owner: owner,
         stop_result: stopResult,
@@ -460,11 +484,11 @@ async function ensureRuntime(baseUrl, timeoutMs, approvedNodeBin) {
   }
   if (!wranglerBin) {
     return {
-      attempted: false,
-      started: false,
-      outcome: 'repo_wrangler_missing',
-      detail: initialDiag,
-      process_count: findRuntimeProcesses().length,
+        attempted: false,
+        started: false,
+        outcome: 'repo_wrangler_missing',
+        detail: initialDiag,
+      process_count: findRuntimeProcesses(wranglerBin).length,
       runtime_owner: owner,
     };
   }
@@ -474,6 +498,7 @@ async function ensureRuntime(baseUrl, timeoutMs, approvedNodeBin) {
   const err = fs.openSync(path.join(logDir, 'runtime-preflight.err.log'), 'a');
   const child = spawn(approvedNodeBin, buildWranglerDevArgs(wranglerBin), {
     cwd: ROOT,
+    env: { ...process.env, RV_REPO_ROOT: ROOT },
     detached: true,
     stdio: ['ignore', out, err],
   });
@@ -487,8 +512,8 @@ async function ensureRuntime(baseUrl, timeoutMs, approvedNodeBin) {
     outcome: waited.ok ? 'started' : 'start_failed',
     pid: child.pid,
     detail: waited.detail,
-    process_count: findRuntimeProcesses().length,
-    runtime_owner: assessRuntimeOwner(findRuntimeProcesses(), wranglerBin, approvedNodeBin),
+    process_count: findRuntimeProcesses(wranglerBin).length,
+    runtime_owner: assessRuntimeOwner(findRuntimeProcesses(wranglerBin), wranglerBin, approvedNodeBin),
   };
 }
 
@@ -509,7 +534,7 @@ export async function buildRuntimePreflight(options = {}) {
   const resourceForkFiles = await findResourceForkFiles(path.join(ROOT, 'functions'));
   const resourceForkOk = resourceForkFiles.length === 0;
   const ensureResult = options.ensureRuntime ? await ensureRuntime(baseUrl, options.timeoutMs || 8000, approvedNodeBin || process.execPath) : null;
-  const runtimeProcesses = findRuntimeProcesses();
+  const runtimeProcesses = findRuntimeProcesses(wranglerBin);
   const runtimeOwner = assessRuntimeOwner(runtimeProcesses, wranglerBin, approvedNodeBin || process.execPath);
   const diag = ensureResult?.detail?.ok ? ensureResult.detail : await checkDiag(baseUrl, options.timeoutMs || 8000);
   const portOk = diag.ok;

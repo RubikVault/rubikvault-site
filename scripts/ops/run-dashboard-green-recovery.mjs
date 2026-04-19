@@ -145,6 +145,7 @@ function startDetachedProcess(command, args, logFile) {
   fs.appendFileSync(logFile, `\n[${new Date().toISOString()}] START ${rendered}\n`, 'utf8');
   const child = spawn(command, args || [], {
     cwd: ROOT,
+    env: { ...process.env, RV_REPO_ROOT: ROOT },
     detached: true,
     stdio: ['ignore', out, out],
   });
