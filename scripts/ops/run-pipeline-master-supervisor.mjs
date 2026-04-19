@@ -439,6 +439,14 @@ function ensureStorageReport() {
   return readJson(PATHS.storage);
 }
 
+export function syncSealPhase(seal, phase) {
+  if (!seal || typeof seal !== 'object') return seal;
+  return {
+    ...seal,
+    phase: phase || seal.phase || null,
+  };
+}
+
 function computePhase({
   targetMarketDate,
   runId = null,
@@ -494,10 +502,10 @@ function computePhase({
         hasBudgetExhausted: false,
         blockers: [],
         consistency,
-        seal,
+        seal: syncSealPhase(seal, 'VERIFY'),
       };
     }
-    return { phase: 'RELEASE_READY', blockers: [], consistency, seal };
+    return { phase: 'RELEASE_READY', blockers: [], consistency, seal: syncSealPhase(seal, 'RELEASE_READY') };
   }
 
   const blockers = [...(seal.blocking_reasons || [])];
@@ -540,7 +548,7 @@ function computePhase({
   const slaAffected = new Set(['UPSTREAM_REFRESH', 'PUBLISH', 'VERIFY']);
   const phase = (slaState && slaAffected.has(functionalPhase)) ? slaState : functionalPhase;
 
-  return { phase, functionalPhase, hasBudgetExhausted, blockers, consistency, seal };
+  return { phase, functionalPhase, hasBudgetExhausted, blockers, consistency, seal: syncSealPhase(seal, phase) };
 }
 
 function writeReleaseState({ state, phase, blockers, consistency, system, runtime, epoch, seal }) {
