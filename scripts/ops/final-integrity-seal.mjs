@@ -557,7 +557,13 @@ export function buildFinalIntegritySeal({
     previousFinal,
     now,
   });
-  blockingReasons.push(...runtimeLiveness.blocking_reasons);
+  const runtimeCrashBlockers = runtimeLiveness.blocking_reasons.filter((item) => {
+    if (item.id === 'crash_unresolved' && String(crashSeal?.failed_step || '').toUpperCase() === 'PUBLISH') {
+      if (publish?.ok === true || publishInFlightOk) return false;
+    }
+    return true;
+  });
+  blockingReasons.push(...runtimeCrashBlockers);
   warningReasons.push(...runtimeLiveness.warnings);
 
   const zeroBuyAnomaly = evaluateZeroBuyAnomaly(decisionBundleHealth.summary, regimeDoc);

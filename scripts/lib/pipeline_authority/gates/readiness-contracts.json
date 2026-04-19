@@ -1,6 +1,11 @@
 {
   "schema": "rv.pipeline_authority.readiness_contracts.v1",
   "profiles": {
+    "nas_runtime_smoke": [
+      "local_pages_diag",
+      "local_universe_aapl",
+      "local_universe_spy"
+    ],
     "stock_analyzer_audit": [
       "local_pages_diag",
       "local_stock_summary",
@@ -16,6 +21,20 @@
       "path": "/api/diag",
       "timeout_ms": 5000,
       "required_substrings": ["summary"]
+    },
+    {
+      "id": "local_universe_aapl",
+      "method": "GET",
+      "path": "/api/universe?q=AAPL&limit=1",
+      "timeout_ms": 8000,
+      "required_substrings": ["canonical_id"]
+    },
+    {
+      "id": "local_universe_spy",
+      "method": "GET",
+      "path": "/api/universe?q=SPY&limit=1",
+      "timeout_ms": 8000,
+      "required_substrings": ["canonical_id"]
     },
     {
       "id": "local_stock_summary",

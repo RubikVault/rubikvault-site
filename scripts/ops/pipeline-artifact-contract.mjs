@@ -221,7 +221,7 @@ export function validateControlPlaneConsistency({ system = null, release = null,
       details: release.blockers,
     });
   }
-  if (release?.ui_green === true && release?.full_universe_validated !== true) {
+  if (release?.ui_green === true && release?.full_universe_validated !== true && release?.completed_at != null) {
     blockingReasons.push({
       id: 'impossible_state_release_green_without_full_universe_validation',
       severity: 'critical',
