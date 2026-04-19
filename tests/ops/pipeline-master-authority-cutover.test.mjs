@@ -11,3 +11,9 @@ test('pipeline master enforces readiness preflight and full-universe audit', () 
   assert.match(content, /--full-universe-audit/);
   assert.match(content, /RV_FULL_UNIVERSE_AUDIT: '1'/);
 });
+
+test('pipeline master launchd template uses the node20 wrapper', () => {
+  const plist = fs.readFileSync(path.join(ROOT, 'scripts/launchd/com.rubikvault.pipeline.master.plist.template'), 'utf8');
+  assert.match(plist, /run-pipeline-master-supervisor-node20\.sh/);
+  assert.doesNotMatch(plist, /\/opt\/homebrew\/bin\/node/);
+});

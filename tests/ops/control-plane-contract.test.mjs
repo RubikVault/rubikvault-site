@@ -40,6 +40,24 @@ test('control-plane consistency fails when run ids diverge', () => {
   assert.equal(result.blocking_reasons.some((item) => item.id === 'run_id_mismatch'), true);
 });
 
+test('control-plane consistency allows verify-stage ui_green without completed release validation', () => {
+  const result = validateControlPlaneConsistency({
+    release: {
+      run_id: 'r1',
+      target_date: '2026-04-17',
+      ui_green: true,
+      full_universe_validated: false,
+      completed_at: null,
+    },
+    runtime: { run_id: 'r1', target_market_date: '2026-04-17' },
+    epoch: { run_id: 'r1', target_market_date: '2026-04-17', pipeline_ok: true, modules: {}, blocking_gaps: [] },
+  });
+  assert.equal(
+    result.blocking_reasons.some((item) => item.id === 'impossible_state_release_green_without_full_universe_validation'),
+    false,
+  );
+});
+
 test('final seal marks stale runtime and epoch observers against the active target chain', () => {
   const seal = buildFinalIntegritySeal({
     runId: 'r1',
@@ -245,4 +263,77 @@ test('final seal degrades policy-neutral structural gaps without reintroducing a
   assert.equal(seal.ui_green, true);
   assert.equal(seal.warnings.some((item) => item.id === 'policy_neutral_structural_gap'), false);
   assert.equal(seal.advisories.some((item) => item.id === 'policy_neutral_structural_gap'), true);
+});
+
+test('final seal ignores stale publish crash blockers once publish is green again', () => {
+  const targetMarketDate = '2026-04-17';
+  const seal = buildFinalIntegritySeal({
+    runId: 'r1',
+    targetMarketDate,
+    phase: 'VERIFY',
+    system: {
+      run_id: 'r1',
+      summary: { target_market_date: targetMarketDate, local_data_green: true },
+      steps: {},
+    },
+    runtime: {
+      run_id: 'r1',
+      generated_at: '2026-04-17T20:10:00Z',
+      target_market_date: targetMarketDate,
+    },
+    epoch: {
+      run_id: 'r1',
+      generated_at: '2026-04-17T20:10:00Z',
+      target_market_date: targetMarketDate,
+      pipeline_ok: true,
+      modules: {},
+      blocking_gaps: [],
+    },
+    recovery: {
+      generated_at: '2026-04-17T20:15:00Z',
+      target_market_date: targetMarketDate,
+      next_step: 'dashboard_meta',
+    },
+    release: {
+      run_id: 'r1',
+      target_date: targetMarketDate,
+      phase: 'VERIFY',
+    },
+    publish: { ok: true, steps: [] },
+    runtimePreflight: {
+      ok: true,
+      generated_at: '2026-04-17T20:16:00Z',
+      failure_reasons: [],
+      diag_ok: true,
+      canary_ok: true,
+    },
+    stockAnalyzerAudit: {
+      summary: {
+        full_universe: true,
+        artifact_release_ready: true,
+        artifact_critical_issue_count: 0,
+        critical_failure_family_count: 0,
+        live_endpoint_mode: 'full',
+      },
+    },
+    uiFieldTruth: {
+      target_market_date: targetMarketDate,
+      summary: { ui_field_truth_ok: true },
+    },
+    launchd: { allowed_launchd_only: true },
+    storage: { disk: { heavy_jobs_allowed: true }, nas: { reachable: true } },
+    decisionBundle: validDecisionBundle(targetMarketDate),
+    crashSeal: {
+      status: 'FAILED',
+      run_id: 'r1',
+      failed_step: 'PUBLISH',
+      failure_class: 'step_failed',
+    },
+    heartbeat: { last_seen: '2026-04-17T20:55:00Z' },
+    previousFinal: { generated_at: '2026-04-17T20:30:00Z' },
+    requiredLeafFailed: false,
+    now: new Date('2026-04-17T21:00:00Z'),
+  });
+  assert.equal(seal.blocking_reasons.some((item) => item.id === 'crash_unresolved'), false);
+  assert.equal(seal.status, 'OK');
 });

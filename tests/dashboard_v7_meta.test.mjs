@@ -66,6 +66,7 @@ describe('dashboard_v7 meta contract', () => {
     assert.ok(Object.prototype.hasOwnProperty.call(v7Status.system, 'advisory_severity'));
     assert.ok(generator.includes('runtime_preflight_ok'));
     assert.ok(generator.includes('runtime_preflight_ref'));
+    assert.ok(generator.includes("? (quantlabPublishAsof || quantlabMarketAsof)"));
   });
 
   it('dashboard truth banner uses seal and realtime freshness sources', () => {

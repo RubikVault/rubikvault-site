@@ -3,9 +3,11 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
+import { resolveApprovedNodeBin } from './approved-node.mjs';
 
 const ROOT = path.resolve(new URL('..', import.meta.url).pathname, '..');
 const REPORT_PATH = path.join(ROOT, 'public/data/reports/ui-audit-latest.json');
+const NODE_BIN = resolveApprovedNodeBin();
 
 function writeJson(filePath, payload) {
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
@@ -21,7 +23,7 @@ function readJson(filePath) {
 }
 
 function runStep(args) {
-  const result = spawnSync(process.execPath, args, {
+  const result = spawnSync(NODE_BIN, args, {
     cwd: ROOT,
     env: process.env,
     stdio: 'inherit',

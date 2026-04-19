@@ -551,24 +551,16 @@
       let _rvDataSource = 'v2';
       let _rvResolution = { mode: 'full', source: 'v2', notice: null, missingModules: [] };
       try {
-        if (isV4View) {
-          const { fetchWithFallback } = await import('/js/rv-v2-client.js');
-          const resolved = await fetchWithFallback(ticker);
-          payload = resolved.payload;
-          _rvDataSource = resolved.source === 'v2' ? 'v2' : 'v1';
-          _rvResolution = {
-            mode: resolved.mode || 'full',
-            source: resolved.source || _rvDataSource,
-            notice: resolved.notice || null,
-            missingModules: Array.isArray(resolved.missingModules) ? resolved.missingModules : [],
-          };
-        } else {
-          // Legacy V1 fallback (if needed for non-analyzer routes)
-          const res = await fetch('/api/stock?ticker=' + encodeURIComponent(ticker));
-          if (!res.ok) throw new Error(`HTTP ${res.status}`);
-          payload = await res.json();
-          _rvDataSource = 'v1';
-        }
+        const { fetchWithFallback } = await import('/js/rv-v2-client.js');
+        const resolved = await fetchWithFallback(ticker);
+        payload = resolved.payload;
+        _rvDataSource = resolved.source === 'v2' ? 'v2' : 'v1';
+        _rvResolution = {
+          mode: resolved.mode || 'full',
+          source: resolved.source || _rvDataSource,
+          notice: resolved.notice || null,
+          missingModules: Array.isArray(resolved.missingModules) ? resolved.missingModules : [],
+        };
       } catch (e) {
         console.error('[RV] API fetch failed:', e);
         document.getElementById('sc-content').innerHTML = '<div style="color:var(--red);text-align:center;padding:2rem">Unable to load data. Please try again.</div>'; return;
@@ -678,6 +670,8 @@
       const _finalSealStatus = String(_rvFinalSeal?.status || '').toUpperCase();
       const _finalSealOperational = Boolean(_rvFinalSeal && _rvFinalSeal.ui_green === true && _finalSealStatus === 'OK');
       const _bundleStatus = String(_analysisReadiness?.decision_bundle_status || '').toUpperCase();
+      const _bundleBlockingReasons = Array.isArray(_analysisReadiness?.blocking_reasons) ? _analysisReadiness.blocking_reasons : [];
+      const _bundleOperational = _bundleStatus === 'OK' || _bundleStatus === '' || (_bundleStatus === 'DEGRADED' && _bundleBlockingReasons.length === 0);
       const _assetPipelineStatus = String(_dailyDecision?.pipeline_status || '').toUpperCase();
       const _assetVerdict = String(_dailyDecision?.verdict || '').toUpperCase();
       const _assetRiskLevel = String(_dailyDecision?.risk_assessment?.level || '').toUpperCase();
@@ -685,7 +679,7 @@
       const _assetDecisionOperational = Boolean(
         _dailyDecision?.schema === 'rv.asset_daily_decision.v1'
         && _assetPipelineStatus === 'OK'
-        && (_bundleStatus === 'OK' || _bundleStatus === '')
+        && _bundleOperational
         && (_assetVerdict === 'BUY' || _assetVerdict === 'WAIT')
         && _assetBlockingReasons.length === 0
         && _assetRiskLevel !== 'UNKNOWN'
@@ -698,7 +692,7 @@
       if (!_dailyDecision?.schema) {
         _integrityItems.push({ text: 'Daily decision unavailable', color: 'var(--red)' });
       } else if (!_assetDecisionOperational) {
-        const _reason = _assetBlockingReasons[0] || _dailyDecision.reason_codes?.[0] || _analysisReadiness.blocking_reasons?.[0] || 'incomplete';
+        const _reason = _assetBlockingReasons[0] || _dailyDecision.reason_codes?.[0] || _bundleBlockingReasons[0] || 'incomplete';
         const _isCriticalDecision = _assetPipelineStatus === 'FAILED' || _assetVerdict === 'WAIT_PIPELINE_INCOMPLETE' || _assetRiskLevel === 'UNKNOWN';
         _integrityItems.push({ text: _isCriticalDecision ? 'Analysis incomplete' : 'Analysis degraded', color: _isCriticalDecision ? 'var(--red)' : 'var(--yellow)', reason: _reason });
       }

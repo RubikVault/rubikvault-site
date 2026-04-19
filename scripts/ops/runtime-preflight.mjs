@@ -5,6 +5,7 @@ import fsp from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { execFileSync, spawn } from 'node:child_process';
+import { readNodeVersion, resolveApprovedNodeBin } from './approved-node.mjs';
 
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..', '..');
 const OPS_DIR = path.join(ROOT, 'public', 'data', 'ops');
@@ -116,11 +117,12 @@ function findWranglerCli(wranglerBin) {
   return wranglerBin;
 }
 
-function readWranglerVersion(wranglerBin) {
+function readWranglerVersion(wranglerBin, nodeBin) {
   if (!wranglerBin) return { ok: false, reason: 'repo_wrangler_missing', version: null, raw: null };
+  if (!nodeBin) return { ok: false, reason: 'approved_node_missing', version: null, raw: null };
   try {
     const wranglerCli = findWranglerCli(wranglerBin);
-    const raw = execFileSync(process.execPath, [wranglerCli, '--version'], {
+    const raw = execFileSync(nodeBin, [wranglerCli, '--version'], {
       cwd: ROOT,
       encoding: 'utf8',
       stdio: ['ignore', 'pipe', 'pipe'],
@@ -341,7 +343,7 @@ function findRuntimeProcesses() {
   }
 }
 
-function assessRuntimeOwner(processes, wranglerBin) {
+function assessRuntimeOwner(processes, wranglerBin, expectedNodeBin) {
   const runtimeProcesses = Array.isArray(processes) ? processes : [];
   const wranglerProcess = runtimeProcesses.find((entry) => String(entry?.command || '').includes('wrangler'));
   const reasons = [];
@@ -352,7 +354,7 @@ function assessRuntimeOwner(processes, wranglerBin) {
     if (wranglerBin && !command.includes(wranglerBin)) {
       reasons.push('runtime_owner_wrangler_mismatch');
     }
-    if (!command.startsWith(process.execPath)) {
+    if (expectedNodeBin && !command.startsWith(expectedNodeBin)) {
       reasons.push('runtime_owner_node_mismatch');
     }
   }
@@ -412,11 +414,11 @@ async function waitForHealthyDiag(baseUrl, timeoutMs, maxWaitMs = 30000) {
   return { ok: false, detail: last };
 }
 
-async function ensureRuntime(baseUrl, timeoutMs) {
+async function ensureRuntime(baseUrl, timeoutMs, approvedNodeBin) {
   const wranglerBin = findRepoWrangler();
   const initialDiag = await checkDiag(baseUrl, timeoutMs);
   const existingProcesses = findRuntimeProcesses();
-  const owner = assessRuntimeOwner(existingProcesses, wranglerBin);
+  const owner = assessRuntimeOwner(existingProcesses, wranglerBin, approvedNodeBin);
   if (initialDiag.ok) {
     if (owner.ok) {
       return {
@@ -470,7 +472,7 @@ async function ensureRuntime(baseUrl, timeoutMs) {
   ensureDirSync(logDir);
   const out = fs.openSync(path.join(logDir, 'runtime-preflight.out.log'), 'a');
   const err = fs.openSync(path.join(logDir, 'runtime-preflight.err.log'), 'a');
-  const child = spawn(process.execPath, buildWranglerDevArgs(wranglerBin), {
+  const child = spawn(approvedNodeBin, buildWranglerDevArgs(wranglerBin), {
     cwd: ROOT,
     detached: true,
     stdio: ['ignore', out, err],
@@ -486,24 +488,29 @@ async function ensureRuntime(baseUrl, timeoutMs) {
     pid: child.pid,
     detail: waited.detail,
     process_count: findRuntimeProcesses().length,
-    runtime_owner: assessRuntimeOwner(findRuntimeProcesses(), wranglerBin),
+    runtime_owner: assessRuntimeOwner(findRuntimeProcesses(), wranglerBin, approvedNodeBin),
   };
 }
 
 export async function buildRuntimePreflight(options = {}) {
   const generatedAt = new Date().toISOString();
   const baseUrl = options.baseUrl || DEFAULT_BASE_URL;
-  const nodeVersion = parseSemver(process.versions.node);
+  let approvedNodeBin = null;
+  try {
+    approvedNodeBin = resolveApprovedNodeBin({ fallbackCurrent: true });
+  } catch {}
+  const nodeVersionRaw = readNodeVersion(approvedNodeBin) || process.versions.node;
+  const nodeVersion = parseSemver(nodeVersionRaw);
   const nodeOk = Boolean(nodeVersion && nodeVersion.major === EXPECTED_NODE_MAJOR);
-  const nodeReason = nodeOk ? null : 'node_major_mismatch';
+  const nodeReason = approvedNodeBin ? (nodeOk ? null : 'node_major_mismatch') : 'approved_node_missing';
   const wranglerBin = findRepoWrangler();
-  const wrangler = readWranglerVersion(wranglerBin);
+  const wrangler = readWranglerVersion(wranglerBin, approvedNodeBin || process.execPath);
   const fdLimit = readFdLimit();
   const resourceForkFiles = await findResourceForkFiles(path.join(ROOT, 'functions'));
   const resourceForkOk = resourceForkFiles.length === 0;
-  const ensureResult = options.ensureRuntime ? await ensureRuntime(baseUrl, options.timeoutMs || 8000) : null;
+  const ensureResult = options.ensureRuntime ? await ensureRuntime(baseUrl, options.timeoutMs || 8000, approvedNodeBin || process.execPath) : null;
   const runtimeProcesses = findRuntimeProcesses();
-  const runtimeOwner = assessRuntimeOwner(runtimeProcesses, wranglerBin);
+  const runtimeOwner = assessRuntimeOwner(runtimeProcesses, wranglerBin, approvedNodeBin || process.execPath);
   const diag = ensureResult?.detail?.ok ? ensureResult.detail : await checkDiag(baseUrl, options.timeoutMs || 8000);
   const portOk = diag.ok;
   const canaries = await checkCanaries(baseUrl, options.timeoutMs || 8000, options.canaries || DEFAULT_CANARIES);
@@ -539,8 +546,9 @@ export async function buildRuntimePreflight(options = {}) {
       processes: runtimeProcesses,
       ensure_result: ensureResult,
     },
-    node_version: process.versions.node,
+    node_version: nodeVersionRaw,
     node_ok: nodeOk,
+    node_bin: approvedNodeBin,
     wrangler_version: wrangler.version?.raw || wrangler.raw || null,
     wrangler_ok: wrangler.ok,
     wrangler_bin: wranglerBin ? path.relative(ROOT, wranglerBin) : null,

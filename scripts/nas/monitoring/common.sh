@@ -15,6 +15,7 @@ VOLUME_PATH="${VOLUME_PATH:-/volume1}"
 WEB_ROOT="${WEB_ROOT:-/volume1/web/monitoring}"
 HTTP_ENDPOINT_ENABLED="${HTTP_ENDPOINT_ENABLED:-1}"
 HTTP_ENDPOINT_HOST="${HTTP_ENDPOINT_HOST:-192.168.188.21}"
+HTTP_ENDPOINT_EXTRA_SERVER_NAMES="${HTTP_ENDPOINT_EXTRA_SERVER_NAMES:-100.98.90.69 neonas.taila2701e.ts.net}"
 HTTP_ENDPOINT_SITE_NAME="${HTTP_ENDPOINT_SITE_NAME:-zz-monitoring.conf}"
 EMAIL_TO="${EMAIL_TO:-}"
 EMAIL_REPORTS_ENABLED="${EMAIL_REPORTS_ENABLED:-1}"
@@ -289,7 +290,7 @@ ensure_http_endpoint() {
 server {
     listen 80;
     listen [::]:80;
-    server_name ${HTTP_ENDPOINT_HOST};
+    server_name ${HTTP_ENDPOINT_HOST} ${HTTP_ENDPOINT_EXTRA_SERVER_NAMES};
 
     location = /monitoring {
         return 301 /monitoring/;

@@ -43,15 +43,20 @@ test('recovery and supervisor treat runtime_preflight as a first-class blocker',
   const recovery = fs.readFileSync(path.join(ROOT, 'scripts/ops/run-dashboard-green-recovery.mjs'), 'utf8');
   const supervisor = fs.readFileSync(path.join(ROOT, 'scripts/ops/run-pipeline-master-supervisor.mjs'), 'utf8');
   const runtimePreflight = fs.readFileSync(path.join(ROOT, 'scripts/ops/runtime-preflight.mjs'), 'utf8');
+  const uiAudit = fs.readFileSync(path.join(ROOT, 'scripts/ops/verify-ui-completeness.mjs'), 'utf8');
+  const publishChain = fs.readFileSync(path.join(ROOT, 'scripts/ops/run-stock-analyzer-publish-chain.mjs'), 'utf8');
   assert.match(recovery, /id: 'runtime_preflight'/);
   assert.match(recovery, /summary\?\.runtime_preflight_ok === true/);
   assert.match(supervisor, /runtime_preflight_ok === false/);
   assert.match(supervisor, /runtimePreflight/);
   assert.match(runtimePreflight, /runtime_owner_node_mismatch/);
   assert.match(runtimePreflight, /runtime_owner_wrangler_mismatch/);
-  assert.match(runtimePreflight, /!command\.startsWith\(process\.execPath\)/);
+  assert.match(runtimePreflight, /resolveApprovedNodeBin/);
+  assert.match(runtimePreflight, /!command\.startsWith\(expectedNodeBin\)/);
   assert.match(runtimePreflight, /node_modules', 'wrangler', 'wrangler-dist', 'cli\.js'/);
   assert.match(runtimePreflight, /\/bin\/sh/);
+  assert.match(uiAudit, /resolveApprovedNodeBin/);
+  assert.match(publishChain, /const node = resolveApprovedNodeBin\(\)/);
 });
 
 test('ui field truth keeps runtime failures separate from endpoint contract failures', () => {

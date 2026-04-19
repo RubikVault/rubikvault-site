@@ -1108,7 +1108,7 @@ async function main() {
       || rawFreshness.latest_required_ingest_date
       || null;
     const quantlabDataAsof = summaryFreshness?.severity === 'ok'
-      ? (quantlabMarketAsof || quantlabPublishAsof)
+      ? (quantlabPublishAsof || quantlabMarketAsof)
       : (quantlabPublishAsof || quantlabMarketAsof);
     const staleDays = summaryFreshness?.severity === 'ok'
       ? daysSince(quantlabDataAsof)

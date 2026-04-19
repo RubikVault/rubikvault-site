@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 import { execFileSync, spawn } from 'node:child_process';
+import { resolveApprovedNodeBin } from './approved-node.mjs';
 import { normalizeQ1DeltaLatestSuccess } from '../lib/q1-delta-success.mjs';
 
 const ROOT = path.resolve(new URL('.', import.meta.url).pathname, '../..');
@@ -65,6 +66,9 @@ function appendLog(filePath, line) {
 function shQuote(value) {
   return `'${String(value).replace(/'/g, `'\\''`)}'`;
 }
+
+const NODE_BIN = resolveApprovedNodeBin();
+const NODE = shQuote(NODE_BIN);
 
 function statMtimeMs(filePath) {
   try {
@@ -374,7 +378,7 @@ const steps = [
     id: 'market_data_refresh',
     label: 'Market Data Refresh',
     pattern: 'scripts/quantlab/refresh_v7_history_from_eodhd.py',
-    command: `node scripts/universe-v7/build-us-eu-scope.mjs && QUANT_ROOT=${shQuote(_QUANT_ROOT)} ${shQuote(PYTHON_BIN)} scripts/quantlab/refresh_v7_history_from_eodhd.py --allowlist-path public/data/universe/v7/ssot/stocks_etfs.us_eu.canonical.ids.json --from-date ${marketRefreshFromDate} --to-date ${targetMarketDate} --concurrency 12 --progress-every 500`,
+    command: `${NODE} scripts/universe-v7/build-us-eu-scope.mjs && QUANT_ROOT=${shQuote(_QUANT_ROOT)} ${shQuote(PYTHON_BIN)} scripts/quantlab/refresh_v7_history_from_eodhd.py --allowlist-path public/data/universe/v7/ssot/stocks_etfs.us_eu.canonical.ids.json --from-date ${marketRefreshFromDate} --to-date ${targetMarketDate} --concurrency 12 --progress-every 500`,
     logFile: path.join(LOG_DIR, 'step-00-market-refresh.log'),
     stallMinutes: 180,
     dependsOn: [],
@@ -428,7 +432,7 @@ const steps = [
     id: 'quantlab_daily_report',
     label: 'QuantLab Daily Report',
     pattern: 'scripts/quantlab/build_quantlab_v4_daily_report.mjs',
-    command: 'node scripts/quantlab/build_quantlab_v4_daily_report.mjs',
+    command: `${NODE} scripts/quantlab/build_quantlab_v4_daily_report.mjs`,
     logFile: path.join(LOG_DIR, 'step-02-quantlab-daily.log'),
     dependsOn: ['market_data_refresh', 'q1_delta_ingest'],
     isComplete: () => {
@@ -451,7 +455,7 @@ const steps = [
     id: 'scientific_summary',
     label: 'Scientific Summary',
     pattern: 'scripts/build-scientific-summary.mjs',
-    command: 'node scripts/build-scientific-summary.mjs',
+    command: `${NODE} scripts/build-scientific-summary.mjs`,
     logFile: path.join(LOG_DIR, 'step-03-scientific.log'),
     dependsOn: ['q1_delta_ingest'],
     isComplete: () => fileUpdatedSince(path.join(ROOT, 'public', 'data', 'supermodules', 'scientific-summary.json'), campaignStartMs),
@@ -460,7 +464,7 @@ const steps = [
     id: 'forecast_daily',
     label: 'Forecast Daily',
     pattern: 'scripts/forecast/run_daily.mjs',
-    command: 'FORECAST_RSS_BUDGET_MB=4096 NODE_OPTIONS=--max-old-space-size=6144 node scripts/forecast/run_daily.mjs',
+    command: `FORECAST_RSS_BUDGET_MB=4096 NODE_OPTIONS=--max-old-space-size=6144 ${NODE} scripts/forecast/run_daily.mjs`,
     logFile: path.join(LOG_DIR, 'step-04-forecast.log'),
     stallMinutes: 60,
     dependsOn: ['q1_delta_ingest'],
@@ -480,7 +484,7 @@ const steps = [
     id: 'fundamentals',
     label: 'Fundamentals Refresh',
     pattern: 'scripts/build-fundamentals.mjs --published-subset --force',
-    command: 'node scripts/build-fundamentals.mjs --published-subset --force',
+    command: `${NODE} scripts/build-fundamentals.mjs --published-subset --force`,
     logFile: path.join(LOG_DIR, 'step-05-fundamentals.log'),
     stallMinutes: 60,
     dependsOn: ['q1_delta_ingest'],
@@ -490,7 +494,7 @@ const steps = [
     id: 'hist_probs',
     label: 'Hist Probs Full (Turbo)',
     pattern: 'run-hist-probs-turbo.mjs',
-    command: 'NODE_OPTIONS=--max-old-space-size=4096 node run-hist-probs-turbo.mjs',
+    command: `NODE_OPTIONS=--max-old-space-size=4096 ${NODE} run-hist-probs-turbo.mjs`,
     logFile: path.join(LOG_DIR, 'step-06-hist-probs.log'),
     stallMinutes: 360,
     dependsOn: ['q1_delta_ingest'],
@@ -529,7 +533,7 @@ const steps = [
     id: 'snapshot',
     label: 'Best Setups Snapshot',
     pattern: 'scripts/build-best-setups-v4.mjs',
-    command: `NODE_OPTIONS=--max-old-space-size=${process.platform === 'linux' ? 4096 : 8192} node scripts/build-best-setups-v4.mjs`,
+    command: `NODE_OPTIONS=--max-old-space-size=${process.platform === 'linux' ? 4096 : 8192} ${NODE} scripts/build-best-setups-v4.mjs`,
     logFile: path.join(LOG_DIR, 'step-07-snapshot.log'),
     dependsOn: ['quantlab_daily_report', 'forecast_daily'],
     isComplete: () => fileUpdatedSince(path.join(ROOT, 'public', 'data', 'snapshots', 'best-setups-v4.json'), campaignStartMs),
@@ -538,7 +542,7 @@ const steps = [
     id: 'us_eu_truth_gate',
     label: 'US+EU Truth Gate',
     pattern: 'scripts/ops/build-data-freshness-report.mjs',
-    command: 'node scripts/universe-v7/build-us-eu-scope.mjs && node scripts/ops/build-us-eu-history-pack-manifest.mjs && node scripts/ops/build-data-freshness-report.mjs',
+    command: `${NODE} scripts/universe-v7/build-us-eu-scope.mjs && ${NODE} scripts/ops/build-us-eu-history-pack-manifest.mjs && ${NODE} scripts/ops/build-data-freshness-report.mjs`,
     logFile: path.join(LOG_DIR, 'step-08-truth-gate.log'),
     dependsOn: ['quantlab_daily_report', 'fundamentals', 'hist_probs', 'forecast_daily', 'scientific_summary', 'snapshot'],
     isComplete: () => {
@@ -553,7 +557,7 @@ const steps = [
     id: 'runtime_preflight',
     label: 'Runtime Preflight',
     pattern: 'scripts/ops/runtime-preflight.mjs',
-    command: 'node scripts/ops/runtime-preflight.mjs --ensure-runtime --mode=hard',
+    command: `${NODE} scripts/ops/runtime-preflight.mjs --ensure-runtime --mode=hard`,
     logFile: path.join(LOG_DIR, 'step-09-runtime-preflight.log'),
     dependsOn: ['hist_probs', 'snapshot'],
     isComplete: () => runtimePreflightFresh(campaignStartMs),
@@ -562,7 +566,7 @@ const steps = [
     id: 'stock_analyzer_universe_audit',
     label: 'Universe Audit',
     pattern: 'scripts/ops/build-stock-analyzer-universe-audit.mjs',
-    command: 'node scripts/universe-v7/build-us-eu-scope.mjs && node scripts/ops/build-us-eu-history-pack-manifest.mjs && node scripts/ops/build-stock-analyzer-universe-audit.mjs --base-url http://127.0.0.1:8788 --registry-path public/data/universe/v7/registry/registry.ndjson.gz --allowlist-path public/data/universe/v7/ssot/stocks_etfs.us_eu.canonical.ids.json --asset-classes STOCK,ETF --max-tickers 0 --concurrency 12 --timeout-ms 30000',
+    command: `${NODE} scripts/universe-v7/build-us-eu-scope.mjs && ${NODE} scripts/ops/build-us-eu-history-pack-manifest.mjs && ${NODE} scripts/ops/build-stock-analyzer-universe-audit.mjs --base-url http://127.0.0.1:8788 --registry-path public/data/universe/v7/registry/registry.ndjson.gz --allowlist-path public/data/universe/v7/ssot/stocks_etfs.us_eu.canonical.ids.json --asset-classes STOCK,ETF --max-tickers 0 --concurrency 12 --timeout-ms 30000`,
     logFile: path.join(LOG_DIR, 'step-10-universe-audit.log'),
     dependsOn: ['hist_probs', 'snapshot', 'runtime_preflight'],
     isComplete: () => {
@@ -576,7 +580,7 @@ const steps = [
     id: 'system_status',
     label: 'System Status Refresh',
     pattern: 'scripts/ops/build-system-status-report.mjs',
-    command: 'node scripts/ops/build-system-status-report.mjs',
+    command: `${NODE} scripts/ops/build-system-status-report.mjs`,
     logFile: path.join(LOG_DIR, 'step-11-system-status.log'),
     dependsOn: ['us_eu_truth_gate', 'stock_analyzer_universe_audit'],
     isComplete: () => {
@@ -608,7 +612,7 @@ const steps = [
     id: 'dashboard_meta',
     label: 'Dashboard Meta Refresh',
     pattern: 'scripts/generate_meta_dashboard_data.mjs',
-    command: 'node scripts/generate_meta_dashboard_data.mjs',
+    command: `${NODE} scripts/generate_meta_dashboard_data.mjs`,
     logFile: path.join(LOG_DIR, 'step-12-dashboard-meta.log'),
     dependsOn: ['system_status'],
     isComplete: () => {
@@ -637,7 +641,7 @@ function ensureRuntime() {
   }
   const wranglerBin = findRepoWrangler();
   if (!wranglerBin) throw new Error('runtime_wrangler_missing');
-  const pid = startDetachedProcess(process.execPath, buildWranglerDevArgs(wranglerBin), path.join(LOG_DIR, 'runtime-wrangler.log'));
+  const pid = startDetachedProcess(NODE_BIN, buildWranglerDevArgs(wranglerBin), path.join(LOG_DIR, 'runtime-wrangler.log'));
   appendLog(ACTION_LOG, `[${new Date().toISOString()}] started runtime wrangler pid=${pid}`);
   waitForRuntime();
   return pid;

@@ -3,6 +3,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
+import { resolveApprovedNodeBin } from './approved-node.mjs';
 import {
   buildArtifactEnvelope,
   collectUpstreamRunIds,
@@ -154,7 +155,7 @@ function readLedgerDetail(step) {
 }
 
 function defineSteps(options, context) {
-  const node = process.execPath;
+  const node = resolveApprovedNodeBin();
   return [
     {
       id: 'learning',
