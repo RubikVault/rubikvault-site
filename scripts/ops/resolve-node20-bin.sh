@@ -17,14 +17,33 @@ print_if_node20() {
   return 0
 }
 
-if print_if_node20 "${NODE_BIN:-}"; then
-  exit 0
-fi
+EXPLICIT_CANDIDATES=(
+  "${NODE_BIN:-}"
+  "/usr/local/bin/node"
+  "/volume1/@appstore/Node.js_v20/usr/local/bin/node"
+)
+
+for candidate in "${EXPLICIT_CANDIDATES[@]}"; do
+  if print_if_node20 "$candidate"; then
+    exit 0
+  fi
+done
 
 if command -v node >/dev/null 2>&1; then
-  NODE_CANDIDATE="$(command -v node)"
-  if print_if_node20 "$NODE_CANDIDATE"; then
+  if print_if_node20 "$(command -v node)"; then
     exit 0
+  fi
+fi
+
+if [ -s "$HOME/.nvm/nvm.sh" ]; then
+  # Synology task shells often start with /bin/sh and a minimal PATH.
+  # Sourcing nvm recovers the interactive Node.js toolchain when present.
+  # shellcheck source=/dev/null
+  . "$HOME/.nvm/nvm.sh" >/dev/null 2>&1 || true
+  if command -v node >/dev/null 2>&1; then
+    if print_if_node20 "$(command -v node)"; then
+      exit 0
+    fi
   fi
 fi
 

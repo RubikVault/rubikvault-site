@@ -45,6 +45,7 @@ test('recovery and supervisor treat runtime_preflight as a first-class blocker',
   const runtimePreflight = fs.readFileSync(path.join(ROOT, 'scripts/ops/runtime-preflight.mjs'), 'utf8');
   const uiAudit = fs.readFileSync(path.join(ROOT, 'scripts/ops/verify-ui-completeness.mjs'), 'utf8');
   const publishChain = fs.readFileSync(path.join(ROOT, 'scripts/ops/run-stock-analyzer-publish-chain.mjs'), 'utf8');
+  const resolveNode20 = fs.readFileSync(path.join(ROOT, 'scripts/ops/resolve-node20-bin.sh'), 'utf8');
   assert.match(recovery, /id: 'runtime_preflight'/);
   assert.match(recovery, /summary\?\.runtime_preflight_ok === true/);
   assert.match(supervisor, /runtime_preflight_ok === false/);
@@ -57,6 +58,8 @@ test('recovery and supervisor treat runtime_preflight as a first-class blocker',
   assert.match(runtimePreflight, /\/bin\/sh/);
   assert.match(uiAudit, /resolveApprovedNodeBin/);
   assert.match(publishChain, /const node = resolveApprovedNodeBin\(\)/);
+  assert.match(resolveNode20, /\/usr\/local\/bin\/node/);
+  assert.match(resolveNode20, /Node\.js_v20\/usr\/local\/bin\/node/);
 });
 
 test('ui field truth keeps runtime failures separate from endpoint contract failures', () => {
