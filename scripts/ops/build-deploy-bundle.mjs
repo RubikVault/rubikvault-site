@@ -53,6 +53,10 @@ const RSYNC_EXCLUDES = [
   // only the ~1K git-tracked buckets should be deployed. We exclude all here and
   // then explicitly copy git-tracked bucket files below.
   'data/universe/v7/search/buckets/',
+  // Too large for Cloudflare Pages (25 MiB per-file limit)
+  'data/ops/stock-analyzer-operability-latest.json', // full universe audit — 50–60 MB, not served by Pages
+  'data/eod/history/pack-manifest.global.json',      // global pack manifest — 40 MB, build-only; runtime uses us-eu
+  'data/eod/history/pack-manifest.global.lookup.json', // global lookup — also build-only
   // Build artifacts that must not be deployed
   'data/ops/build-bundle-meta.json', // written by this script, added after rsync
 ];

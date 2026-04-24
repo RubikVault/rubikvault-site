@@ -1,34 +1,29 @@
 {
   "schema": "rv_release_state_v3",
-  "run_id": "pipeline-master-2026-04-17",
-  "target_market_date": "2026-04-17",
-  "generated_at": "2026-04-19T08:44:46.852Z",
-  "producer": "scripts/ops/run-pipeline-master-supervisor.mjs",
+  "run_id": "pipeline-master-2026-04-21",
+  "target_market_date": "2026-04-23",
+  "generated_at": "2026-04-24T14:05:26.986Z",
+  "producer": "scripts/ops/sync-release-state-from-final-seal.mjs",
   "upstream_run_ids": [
-    "run-stock-analyzer-audit-2026-04-10",
-    "learning-2026-04-13",
+    "dashboard-green-2026-04-21",
+    "pipeline-master-2026-04-21",
+    "pipeline-master-2026-04-17",
+    "dashboard-green-2026-04-17",
     "pipeline-master-2026-04-16",
-    "run-stock-analyzer-audit-2026-04-14",
-    "learning-2026-04-14",
-    "run-stock-analyzer-audit-2026-04-15",
-    "run-stock-analyzer-audit-2026-04-17",
+    "dashboard-green-2026-04-16",
+    "run-stock-analyzer-audit-2026-04-16",
     "run-stock-analyzer-audit-2026-04-18",
+    "learning-2026-04-07",
     "learning-2026-04-17",
-    "pipeline-master-2026-04-14",
-    "dashboard-green-2026-04-13",
-    "pipeline-master-2026-04-13",
-    "manual-green-2026-04-10",
-    "run-20260413T053223Z-289e1d54993a198a",
-    "run-20260413T071500Z-4a1f0e2b9c7d6a5f",
-    "pipeline-master-2026-04-10",
-    "dashboard-green-2026-04-10",
-    "publish_chain_20260412T134556_23723",
-    "mac_publish_20260417",
-    "dashboard-green-2026-04-17"
+    "run-stock-analyzer-audit-2026-04-17",
+    "pipeline-master-2026-04-20",
+    "run-stock-analyzer-audit-2026-04-22",
+    "run-stock-analyzer-audit-2026-04-23",
+    "pipeline-master-2026-04-23"
   ],
-  "target_date": "2026-04-17",
-  "started_at": "2026-04-17T20:17:43.036Z",
-  "completed_at": "2026-04-18T15:23:30.270Z",
+  "target_date": "2026-04-23",
+  "started_at": "2026-04-22T16:30:39.885Z",
+  "completed_at": "2026-04-24T13:46:52.463Z",
   "phase": "RELEASE_READY",
   "blocker": null,
   "lead_blocker_step": null,
@@ -43,26 +38,66 @@
   "nas_ok": true,
   "calendar_ok": true,
   "observer_stale": false,
-  "observer_generated_at": "2026-04-19T08:39:34.585Z",
-  "runtime_preflight_ok": true,
+  "observer_generated_at": "2026-04-24T14:05:14.289Z",
+  "runtime_preflight_ok": false,
   "runtime_preflight_ref": "public/data/ops/runtime-preflight-latest.json",
   "control_plane": {
-    "ok": true,
-    "run_id": "pipeline-master-2026-04-17",
-    "target_market_date": "2026-04-17",
+    "ok": false,
+    "run_id": "dashboard-green-2026-04-21",
+    "target_market_date": "2026-04-23",
     "target_mismatches": [],
-    "run_id_mismatches": [],
+    "run_id_mismatches": [
+      {
+        "source": "system",
+        "run_id": "dashboard-green-2026-04-21"
+      },
+      {
+        "source": "release",
+        "run_id": "pipeline-master-2026-04-21"
+      },
+      {
+        "source": "runtime",
+        "run_id": "dashboard-green-2026-04-21"
+      },
+      {
+        "source": "epoch",
+        "run_id": "dashboard-green-2026-04-21"
+      }
+    ],
     "observational_sources": {
       "recovery": {
-        "run_id": "dashboard-green-2026-04-17",
-        "target_market_date": "2026-04-17"
+        "run_id": "dashboard-green-2026-04-21",
+        "target_market_date": "2026-04-21"
       }
     },
-    "blocking_reasons": []
+    "blocking_reasons": [
+      {
+        "id": "run_id_mismatch",
+        "severity": "critical",
+        "details": [
+          {
+            "source": "system",
+            "run_id": "dashboard-green-2026-04-21"
+          },
+          {
+            "source": "release",
+            "run_id": "pipeline-master-2026-04-21"
+          },
+          {
+            "source": "runtime",
+            "run_id": "dashboard-green-2026-04-21"
+          },
+          {
+            "source": "epoch",
+            "run_id": "dashboard-green-2026-04-21"
+          }
+        ]
+      }
+    ]
   },
-  "data_pipeline_phase": "interrupted",
+  "data_pipeline_phase": "unexpected_exit",
   "runtime_phase": "completed",
   "epoch_pipeline_ok": true,
-  "system_release_ready": false,
-  "last_updated": "2026-04-19T08:44:46.852Z"
+  "system_release_ready": true,
+  "last_updated": "2026-04-24T14:05:26.985Z"
 }
