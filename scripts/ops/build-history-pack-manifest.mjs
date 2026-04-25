@@ -40,8 +40,8 @@ function parseArgs(argv) {
       : 'public/data/universe/v7/ssot/stocks_etfs.us_eu.canonical.ids.json';
   }
   if (!out.output) {
-    // RV_GLOBAL_MANIFEST_DIR: NAS sets this to $NAS_OPS_ROOT/manifests/ to keep the
-    // 40 MB global manifest out of public/ and away from the Pages deploy bundle.
+    // RV_GLOBAL_MANIFEST_DIR: NAS sets this to $NAS_OPS_ROOT/pipeline-artifacts/manifests/
+    // to keep the 40 MB global manifest out of public/ and away from the Pages deploy bundle.
     // us-eu manifest always stays in public/ — it is served at runtime.
     const globalManifestDir = process.env.RV_GLOBAL_MANIFEST_DIR;
     out.output = out.scope === 'global'

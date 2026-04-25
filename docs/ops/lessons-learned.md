@@ -45,15 +45,15 @@
 
 ---
 
-### 2026-04-24 · Deploy · Cloudflare Pages rejects files > 25 MiB — global pack manifest and operability report must be excluded from bundle
+### 2026-04-24 · Deploy · Cloudflare Pages rejects files > 25 MiB — excludes are only mitigation
 
 **What:** `wrangler pages deploy` failed with `"Pages only supports files up to 25 MiB in size"`. Two files exceeded the limit: `data/ops/stock-analyzer-operability-latest.json` (57 MB) and `data/eod/history/pack-manifest.global.json` (40 MB). Both had grown past the limit as the universe expanded.
 
 **Why:** The global pack manifest was not in the rsync exclude list in `build-deploy-bundle.mjs`. The stock-analyzer operability report writes the full per-asset audit (85k rows). Neither file is served by the Pages runtime — the runtime uses only `pack-manifest.us-eu.json`.
 
-**Fix:** Added both files to `RSYNC_EXCLUDES` in `scripts/ops/build-deploy-bundle.mjs`. The global manifests are build-only artifacts; the runtime uses the US/EU-scoped manifests. The operability report is internal ops data.
+**Fix:** The initial mitigation added both files to `RSYNC_EXCLUDES`. The current structural fix is documented in `docs/ops/deploy-bundle-policy.md`: global manifests and deep summaries are redirected to `NAS_OPS_ROOT/pipeline-artifacts/`, the operability step publishes only a small summary, and the deploy bundle has a hard 25 MiB per-file guard.
 
-**Prevention:** If a new large file causes a deploy failure, check `scripts/ops/build-deploy-bundle.mjs` → `RSYNC_EXCLUDES`. Add the file there if it is not needed at runtime. Cloudflare Pages hard limit is 25 MiB per file; the Pages per-project file count limit is 20,000.
+**Prevention:** Do not rely on excludes as the primary design. New large outputs must define whether they are public runtime data or internal pipeline artifacts before they are written, then use env-var redirects plus bundle excludes and the size guard as enforcement.
 
 ---
 
@@ -612,30 +612,31 @@ spawnSync(tnPath, [...args], { timeout: 5000, killSignal: 'SIGKILL', stdio: 'ign
 
 ---
 
-### 2026-04-24 · Deploy · Cloudflare Pages 25 MiB Limit und große Pipeline-Artefakte in public/
+### 2026-04-24 · Deploy · Static Deploys brauchen harte Einzeldatei-Size-Gates
 
 **Was:** `wrangler pages deploy` schlug mit `Pages only supports files up to 25 MiB` fehl. Drei Pipeline-Artefakte überschritten das Limit: `stock-analyzer-operability-latest.json` (~60 MB), `pack-manifest.global.json` (~40 MB), `marketphase_deep_summary.json` (~35 MB).
 
-**Warum:** Die NAS-Pipeline schrieb diese großen Build-State-Dateien in `public/data/` statt in `NAS_OPS_ROOT/pipeline-artifacts/`. `build-deploy-bundle.mjs` nahm alles mit, was in `public/` lag.
+**Warum:** Interne Pipeline-, Audit- und Analyse-Artefakte lagen im Public-/Deploy-Pfad. `public/data/` war dadurch ein gemischter Ablageort fuer Runtime-Daten und Build-State, obwohl diese Dateien keine Runtime-CDN-Artefakte sind.
 
-**Fix:** Dreistufig:
-1. **RSYNC_EXCLUDES** — bekannte große Pfade aus dem Bundle ausschließen (Sicherheitsnetz).
-2. **Env-Var-Redirect** — `RV_GLOBAL_MANIFEST_DIR` und `RV_MARKETPHASE_DEEP_SUMMARY_PATH` in `nas-env.sh` lenken die Ausgabe direkt in `NAS_OPS_ROOT/pipeline-artifacts/`. Supervisor übergibt `--summary-only` an `build-stock-analyzer-operability.mjs`.
-3. **Size-Guard** — `build-deploy-bundle.mjs` scannt nach dem Rsync alle Dateien im Bundle; jede Datei >25 MiB bricht mit Exit 3 und expliziter Fehlerliste ab, bevor wrangler läuft.
+**Fix:** Vier Schichten:
+1. **Output-Pfad-Trennung**: `RV_GLOBAL_MANIFEST_DIR` und `RV_MARKETPHASE_DEEP_SUMMARY_PATH` in `nas-env.sh` lenken grosse globale Manifeste und Deep-Summaries direkt in `NAS_OPS_ROOT/pipeline-artifacts/`.
+2. **Summary-only Public Output**: Der Supervisor uebergibt `--summary-only` an `build-stock-analyzer-operability.mjs`, sodass nur die kleine Dashboard-Summary in `public/` aktualisiert wird.
+3. **Deploy-Bundle-Excludes**: Bekannte grosse interne Pfade bleiben als Sicherheitsnetz in `RSYNC_EXCLUDES`.
+4. **Harter Size-Guard**: `build-deploy-bundle.mjs` scannt nach dem Rsync alle Dateien im Bundle; jede Datei >25 MiB bricht mit Exit 3 und expliziter Fehlerliste ab, bevor Wrangler laeuft.
 
-**Prävention:** Pipeline-interne Artefakte gehören in `NAS_OPS_ROOT/pipeline-artifacts/`, nicht in `public/`. Neue große Ausgaben über Env-Var umleiten + in `RSYNC_EXCLUDES` eintragen + in [`deploy-bundle-policy.md`](deploy-bundle-policy.md) dokumentieren.
+**Prävention:** `public/data/` ist ein kontrollierter Runtime-Vertrag und darf keine Full-Dumps enthalten. Jeder neue grosse Generator muss vorab Artefaktklasse, Output-Ziel und Public-Runtime-Vertrag definieren. Interne Pipeline-Artefakte gehoeren in `NAS_OPS_ROOT/pipeline-artifacts/`; `RSYNC_EXCLUDES` und der 25-MiB-Guard sind zusaetzliche Schutzschichten, nicht die Primaerloesung.
 
 ---
 
-### 2026-04-24 · NAS · npx nicht im PATH — wrangler über node_modules aufrufen
+### 2026-04-24 · NAS · NAS-/Server-Deploys duerfen nicht von globalem npx abhaengen
 
-**Was:** `release-gate-check.mjs` rief `spawnSync('npx', ...)` auf. Auf der NAS (Synology DSM) ist `npx` nicht als Symlink in `/usr/local/bin` verfügbar; nur `node` und `npm` sind verlinkt.
+**Was:** Der Release-Deploy konnte auf Server-/NAS-Umgebungen scheitern, weil `npx` fehlen oder in der non-interaktiven Deploy-Shell nicht im `PATH` liegen kann.
 
-**Warum:** `node-env.sh` setzt `PATH` auf `$(dirname $NODE_BIN)` = `/usr/local/bin`, wo `node` liegt — aber `npx` liegt in `/volume1/@appstore/Node.js_v20/usr/local/bin/npx` und ist nicht gesymlinkt.
+**Warum:** Das Deploy-Script nutzte einen globalen Tool-Aufruf statt das projektlokale Binary. Node und das lokal installierte Wrangler-Binary koennen vorhanden sein, waehrend der globale `npx`-Shim nicht erreichbar ist.
 
-**Fix:** `release-gate-check.mjs` prüft zuerst ob `node_modules/.bin/wrangler` existiert und nutzt ihn direkt; `npx` nur als Fallback.
+**Fix:** `release-gate-check.mjs` verwendet fuer `wrangler pages deploy` ausschliesslich `node_modules/.bin/wrangler` aus dem Repository. Wenn das lokale Binary fehlt, bricht der Deploy vor dem Hosting-Aufruf mit einer klaren Fehlermeldung ab.
 
-**Prävention:** Auf NAS/Synology nie auf globale Node-Shims vertrauen. Immer lokales `node_modules/.bin/` bevorzugen. Bei neuen CLI-Aufrufen prüfen: existiert das Binary wirklich im `PATH` der non-interaktiven DSM-Shell?
+**Prävention:** Deployment-Tools im Projektkontext aufloesen. Keine impliziten globalen CLI-Abhaengigkeiten fuer Release-Pfade einfuehren; neue Tool-Aufrufe muessen aus `node_modules/.bin/` oder einem explizit versionierten lokalen Pfad kommen.
 
 ## Verwandte Dokumente
 

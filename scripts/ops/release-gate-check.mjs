@@ -2,7 +2,7 @@
 /**
  * Release Gate Check
  *
- * Authoritative MacBook-side release coordinator.
+ * Authoritative release coordinator.
  * Reads public/data/ops/release-state-latest.json, checks all gates,
  * builds dist/pages-prod/, runs wrangler pages deploy, performs smoke tests,
  * and writes public/data/ops/deploy-proof-latest.json.
@@ -267,12 +267,12 @@ function buildDeployBundle() {
 
 function runWranglerDeploy() {
   log('Running wrangler pages deploy dist/pages-prod/...');
-  // Prefer local node_modules/.bin/wrangler — avoids needing npx in PATH (required on NAS/Synology).
+  // Use the project-local Wrangler binary so deploys do not depend on host CLI PATH setup.
   const localWrangler = path.join(REPO_ROOT, 'node_modules/.bin/wrangler');
-  const [cmd, cmdArgs] = fs.existsSync(localWrangler)
-    ? [localWrangler, ['pages', 'deploy', 'dist/pages-prod/', '--project-name', 'rubikvault-site']]
-    : ['npx',         ['wrangler', 'pages', 'deploy', 'dist/pages-prod/', '--project-name', 'rubikvault-site']];
-  const r = spawnSync(cmd, cmdArgs, {
+  if (!fs.existsSync(localWrangler)) {
+    fail(`local wrangler binary missing at ${path.relative(REPO_ROOT, localWrangler)}; run npm install/npm ci in the repo before release deploy.`);
+  }
+  const r = spawnSync(localWrangler, ['pages', 'deploy', 'dist/pages-prod/', '--project-name', 'rubikvault-site'], {
     cwd: REPO_ROOT,
     encoding: 'utf8',
     timeout: 300_000,
