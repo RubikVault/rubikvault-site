@@ -21,6 +21,30 @@
 
 ---
 
+### 2026-04-24 · Deploy · NAS Wrangler credentials need both a token secret and the real account ID
+
+**What:** The NAS deploy lane had `CLOUDFLARE_API_TOKEN` set, but `wrangler pages deploy` still failed because `CLOUDFLARE_ACCOUNT_ID` was also set to a `cfut_...` token value. Wrangler then routed Pages calls to `/accounts/cfut_...`, which Cloudflare rejected as an invalid object identifier.
+
+**Why:** Cloudflare shows several token-related identifiers in the UI. A token secret can verify successfully while the separately configured account ID is still wrong. Token IDs, token names, copied UI metadata, and account IDs are different values.
+
+**Fix:** Treat deploy credentials as invalid until both parts validate from the same NAS environment that runs the supervisor: `CLOUDFLARE_API_TOKEN` must verify, and `CLOUDFLARE_ACCOUNT_ID` must be the 32-character account ID for the Pages project. Secrets must not be committed or printed in logs.
+
+**Prevention:** After changing Cloudflare credentials, run a non-printing validation before the release lane: source `scripts/nas/nas-env.sh`, confirm only presence/length/prefix, verify the token, and verify the Pages project under the configured account ID. Do not proceed if the account ID looks like a `cfut_...` token value.
+
+---
+
+### 2026-04-24 · NAS · Synology scheduling is DSM Task Scheduler, not user crontab
+
+**What:** Installing the nightly NAS pipeline through `crontab` failed because the Synology user shell had no `crontab` binary. The NAS schedules DSM tasks through `/usr/syno/bin/synoschedtask` and `/usr/syno/etc/synoschedule.d/root/*.task`, which then sync into `/etc/crontab`.
+
+**Why:** Synology DSM does not behave like a generic Linux host for user cron management. A repo-level automation wrapper can be correct but still never run unless DSM Task Scheduler owns the durable trigger.
+
+**Fix:** Added `scripts/nas/run-nightly-full-pipeline.sh` as the stable entrypoint and installed DSM task `30` to run it at `03:10` local time with a Tuesday-Saturday guard, after the expected EODHD daily budget reset.
+
+**Prevention:** For NAS production scheduling, verify both the task file and `/etc/crontab` after `synoschedtask --sync`. Do not assume `crontab -l` is available or authoritative on DSM.
+
+---
+
 ### 2026-04-24 · Deploy · Cloudflare Pages rejects files > 25 MiB — global pack manifest and operability report must be excluded from bundle
 
 **What:** `wrangler pages deploy` failed with `"Pages only supports files up to 25 MiB in size"`. Two files exceeded the limit: `data/ops/stock-analyzer-operability-latest.json` (57 MB) and `data/eod/history/pack-manifest.global.json` (40 MB). Both had grown past the limit as the universe expanded.
@@ -53,18 +77,43 @@
 
 ---
 
-### 2026-04-24 · Data Provider · refresh_v7_history_from_eodhd.py writes to disk only at the END — killed processes lose all fetched data
+### 2026-04-24 · Data Provider · refresh_v7_history_from_eodhd.py must flush incrementally
 
-**What:** The refresh script uses a batch-write pattern: it accumulates all API results in memory via `pack_updates` dict, then writes all packs to disk only after every asset has been fetched. When killed mid-run (by API limit → 402, by `kill`, or by timeout), **all fetched data is lost** — zero files are written.
+**What:** The refresh script originally used a batch-write pattern: it accumulated all API results in memory via `pack_updates` dict, then wrote all packs to disk only after every asset had been fetched. When killed mid-run (by API limit → 402, by `kill`, or by timeout), fetched data could be lost even though EODHD calls had already been spent.
 
 **Why:** This is an intentional design for pack integrity (atomic pack updates). But it means 8,000 assets' worth of EODHD calls (= 8,000 API quota units burned) produced nothing on disk when the Mac run was killed.
 
-**Fix:** Run the script to completion without killing it. With `--max-retries 0`, the 402 errors after budget exhaustion are recorded as fetch_errors and the script still completes normally, writing all successfully fetched data to disk.
+**Fix:** `refresh_v7_history_from_eodhd.py` now supports `--flush-every` and writes successful pack updates periodically, writes progress/report JSON, handles stop signals, and can create missing pack files from fetched rows instead of dropping them as `pack_missing`.
 
 **Prevention:**
 - Always use `--max-retries 0` when budget is constrained and 402 errors are expected.
-- Never kill a refresh run with `kill -9` mid-flight — it will waste all API calls made so far.
+- Keep `--flush-every` small enough for long full-history runs (100-250 assets on the NAS).
+- Never kill a refresh run with `kill -9` mid-flight; use SIGTERM so the script can flush and write state.
 - The NAS supervisor runs with `--max-retries 1` by default; tune to `0` on budget-sensitive days.
+
+---
+
+### 2026-04-24 · Data Provider · Global EODHD locking must use one lock primitive
+
+**What:** The NAS supervisor uses shell `flock` for provider-sensitive steps, while the Python history refresh used a JSON create/unlink lock at the same path. Those are not equivalent: a shell `flock` can acquire a file that already exists, while a JSON lock can unlink the file and break coordination with processes holding the old inode.
+
+**Why:** A lock path is not a lock protocol. Mixing `flock` and ad hoc `O_EXCL` file creation lets separate runners believe they both own the same provider budget.
+
+**Fix:** `refresh_v7_history_from_eodhd.py` now acquires the global EODHD lock with advisory `flock` and keeps the file descriptor open for the full run. The per-job lock remains a separate JSON lock under the state root.
+
+**Prevention:** Every EODHD consumer on the NAS must use the same `$NAS_LOCK_ROOT/eodhd.lock` `flock` protocol. If a new script needs provider access, wrap it in the same lock instead of inventing another lock file format.
+
+---
+
+### 2026-04-24 · Universe · Missing history packs may still have registry rows without pack pointers
+
+**What:** The global SSOT contained 86k assets, but the refresh runner initially only selected the 84k registry rows that already had `pointers.history_pack`. The 1,927 missing-pack assets were real SSOT/registry assets, not necessarily absent symbols, but they had no pack pointer and therefore could not be fetched by the normal pack update path.
+
+**Why:** The backfill code assumed every refreshable registry row already had a history pack path. That is false for first-time pack creation and makes missing packs structurally unrecoverable.
+
+**Fix:** `refresh_v7_history_from_eodhd.py` now synthesizes deterministic `history/<exchange>/<bucket>/backfill_missing_<hash>.ndjson.gz` pack paths when a registry row has no pack pointer. A successful fetch creates the pack file, and the history touch apply step writes the real pointer/hash back into the registry.
+
+**Prevention:** Backfill allowlists must be generated from the SSOT scope, not only from the existing pack manifest. Missing-pack assets must be first-class refresh targets until the manifest count matches the SSOT count or the provider returns a documented no-data reason.
 
 ---
 
@@ -549,9 +598,49 @@ spawnSync(tnPath, [...args], { timeout: 5000, killSignal: 'SIGKILL', stdio: 'ign
 
 **Prävention:** NAS-Deploys benötigen einen expliziten Cloudflare API Token als Secret in der NAS-Env. Ohne Token darf der Deploy nicht als grün markiert werden.
 
+---
+
+### 2026-04-24 · Universe · Stock-Analyzer-Green-Rate darf Zero-Bar-Ghosts nicht als Nenner nutzen
+
+**Was:** Die Stock-Analyzer-Operability-Quote konnte optisch wie ~0,8% wirken, weil Registry-Ghost-Einträge ohne Kursdaten im Nenner landeten. Diese Einträge haben `registry_bars_count` 0 oder keinen Wert und können strukturell nie `All systems operational` werden.
+
+**Warum:** `targetable_assets` wurde aus dem operability state nicht streng genug aus der Registry-Historie abgeleitet. Pack-/actual-Fallbacks und strukturelle Ausnahmefamilien konnten den Nenner verwischen.
+
+**Fix:** `scripts/ops/build-stock-analyzer-operability.mjs` berechnet den Release-Nenner jetzt explizit als Assets mit `registry_bars_count >= 200`. Zero-/unknown-bars und `<200` Bars bleiben als strukturelle bzw. Warm-up-Ausnahmen sichtbar, zählen aber nicht gegen die 90%-Green-Policy. Dashboard-NAS-Telemetrie zeigt die targetable rate und die ausgeschlossenen Zero-/Warm-up-Zähler separat.
+
+**Prävention:** Universe-Coverage-Reports müssen immer zwei Zahlen trennen: `total_registry_assets` als Beobachtung und `targetable_assets` als Release-Nenner. Eine UI-/Seal-Quote darf nie Ghost-/Warm-up-Assets ohne ausreichende Bars als operability failure zählen.
+
+---
+
+### 2026-04-24 · Deploy · Cloudflare Pages 25 MiB Limit und große Pipeline-Artefakte in public/
+
+**Was:** `wrangler pages deploy` schlug mit `Pages only supports files up to 25 MiB` fehl. Drei Pipeline-Artefakte überschritten das Limit: `stock-analyzer-operability-latest.json` (~60 MB), `pack-manifest.global.json` (~40 MB), `marketphase_deep_summary.json` (~35 MB).
+
+**Warum:** Die NAS-Pipeline schrieb diese großen Build-State-Dateien in `public/data/` statt in `NAS_OPS_ROOT/pipeline-artifacts/`. `build-deploy-bundle.mjs` nahm alles mit, was in `public/` lag.
+
+**Fix:** Dreistufig:
+1. **RSYNC_EXCLUDES** — bekannte große Pfade aus dem Bundle ausschließen (Sicherheitsnetz).
+2. **Env-Var-Redirect** — `RV_GLOBAL_MANIFEST_DIR` und `RV_MARKETPHASE_DEEP_SUMMARY_PATH` in `nas-env.sh` lenken die Ausgabe direkt in `NAS_OPS_ROOT/pipeline-artifacts/`. Supervisor übergibt `--summary-only` an `build-stock-analyzer-operability.mjs`.
+3. **Size-Guard** — `build-deploy-bundle.mjs` scannt nach dem Rsync alle Dateien im Bundle; jede Datei >25 MiB bricht mit Exit 3 und expliziter Fehlerliste ab, bevor wrangler läuft.
+
+**Prävention:** Pipeline-interne Artefakte gehören in `NAS_OPS_ROOT/pipeline-artifacts/`, nicht in `public/`. Neue große Ausgaben über Env-Var umleiten + in `RSYNC_EXCLUDES` eintragen + in [`deploy-bundle-policy.md`](deploy-bundle-policy.md) dokumentieren.
+
+---
+
+### 2026-04-24 · NAS · npx nicht im PATH — wrangler über node_modules aufrufen
+
+**Was:** `release-gate-check.mjs` rief `spawnSync('npx', ...)` auf. Auf der NAS (Synology DSM) ist `npx` nicht als Symlink in `/usr/local/bin` verfügbar; nur `node` und `npm` sind verlinkt.
+
+**Warum:** `node-env.sh` setzt `PATH` auf `$(dirname $NODE_BIN)` = `/usr/local/bin`, wo `node` liegt — aber `npx` liegt in `/volume1/@appstore/Node.js_v20/usr/local/bin/npx` und ist nicht gesymlinkt.
+
+**Fix:** `release-gate-check.mjs` prüft zuerst ob `node_modules/.bin/wrangler` existiert und nutzt ihn direkt; `npx` nur als Fallback.
+
+**Prävention:** Auf NAS/Synology nie auf globale Node-Shims vertrauen. Immer lokales `node_modules/.bin/` bevorzugen. Bei neuen CLI-Aufrufen prüfen: existiert das Binary wirklich im `PATH` der non-interaktiven DSM-Shell?
+
 ## Verwandte Dokumente
 
 - [decisions.md](decisions.md) — Architektur-Entscheidungen (Was und Warum)
 - [nas-migration-journal.md](nas-migration-journal.md) — NAS-spezifische Incidents und Fortschritt
 - [nas-runbook.md](nas-runbook.md) — NAS-Betrieb und Troubleshooting
 - [contract.md](contract.md) — Systeminvarianten die nie verletzt werden dürfen
+- [deploy-bundle-policy.md](deploy-bundle-policy.md) — Was in public/ liegt und was nicht; Enforcement-Schichten

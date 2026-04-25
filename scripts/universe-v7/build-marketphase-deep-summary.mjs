@@ -11,7 +11,11 @@ const REPO_ROOT = process.cwd();
 const REGISTRY_GZ = path.join(REPO_ROOT, 'public/data/universe/v7/registry/registry.ndjson.gz');
 const BY_FEATURE_PATH = path.join(REPO_ROOT, 'public/data/universe/v7/ssot/stocks.by_feature.json');
 const HISTORY_ROOT = path.join(REPO_ROOT, 'mirrors/universe-v7');
-const OUT_SUMMARY = path.join(REPO_ROOT, 'public/data/universe/v7/read_models/marketphase_deep_summary.json');
+// RV_MARKETPHASE_DEEP_SUMMARY_PATH: NAS sets this to $NAS_OPS_ROOT/pipeline-artifacts/
+// to keep the 35 MB deep-summary out of public/ and away from the Pages deploy bundle.
+const OUT_SUMMARY = process.env.RV_MARKETPHASE_DEEP_SUMMARY_PATH
+  ? path.resolve(process.env.RV_MARKETPHASE_DEEP_SUMMARY_PATH)
+  : path.join(REPO_ROOT, 'public/data/universe/v7/read_models/marketphase_deep_summary.json');
 const OUT_REPORT = path.join(REPO_ROOT, 'public/data/universe/v7/reports/marketphase_deep_report.json');
 const OUT_SUMMARY_CANONICAL = path.join(REPO_ROOT, 'public/data/universe/v7/read_models/marketphase_deep_canonical_summary.json');
 const OUT_REPORT_CANONICAL = path.join(REPO_ROOT, 'public/data/universe/v7/reports/marketphase_deep_canonical_report.json');

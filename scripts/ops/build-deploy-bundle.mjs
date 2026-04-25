@@ -55,8 +55,10 @@ const RSYNC_EXCLUDES = [
   'data/universe/v7/search/buckets/',
   // Too large for Cloudflare Pages (25 MiB per-file limit)
   'data/ops/stock-analyzer-operability-latest.json', // full universe audit — 50–60 MB, not served by Pages
+  'data/ops/mac-history-rescue-all-latest.json',     // rescue audit snapshot — build-only
   'data/eod/history/pack-manifest.global.json',      // global pack manifest — 40 MB, build-only; runtime uses us-eu
   'data/eod/history/pack-manifest.global.lookup.json', // global lookup — also build-only
+  'data/universe/v7/read_models/marketphase_deep_summary.json', // 35 MB NAS-generated deep summary — build-only
   // Build artifacts that must not be deployed
   'data/ops/build-bundle-meta.json', // written by this script, added after rsync
 ];
@@ -202,6 +204,38 @@ if (overBudget) {
   if (isStrict) process.exit(2);
 } else {
   log(`Budget OK: ${bundleFileCount} files (${BUNDLE_FILE_LIMIT - bundleFileCount} headroom)`);
+}
+
+// ── Cloudflare Pages 25 MiB per-file size guard ────────────────────────────
+// Scan the bundle for files exceeding Cloudflare's hard 25 MiB limit.
+// This catches regressions early (before wrangler fails mid-deploy) and gives
+// a clear list of violators so the fix is obvious. Add violators to RSYNC_EXCLUDES
+// or redirect their pipeline output to NAS_OPS_ROOT/pipeline-artifacts/.
+if (!isDryRun && fs.existsSync(DIST_DIR)) {
+  const CF_MAX_BYTES = 25 * 1024 * 1024; // 25 MiB
+  const violators = [];
+  function scanSizes(dir) {
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) scanSizes(full);
+      else {
+        const { size } = fs.statSync(full);
+        if (size > CF_MAX_BYTES) {
+          violators.push({ file: path.relative(DIST_DIR, full), size_mb: (size / 1024 / 1024).toFixed(1) });
+        }
+      }
+    }
+  }
+  scanSizes(DIST_DIR);
+  if (violators.length > 0) {
+    log('');
+    log('FATAL: Cloudflare Pages 25 MiB per-file limit violated:');
+    for (const v of violators) log(`  ${v.size_mb} MiB  ${v.file}`);
+    log('Fix: add to RSYNC_EXCLUDES or redirect output to NAS_OPS_ROOT/pipeline-artifacts/');
+    process.exit(3);
+  } else {
+    log('Size guard OK: no file exceeds 25 MiB.');
+  }
 }
 
 // Write bundle meta proof artifact

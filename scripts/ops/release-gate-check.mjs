@@ -267,7 +267,12 @@ function buildDeployBundle() {
 
 function runWranglerDeploy() {
   log('Running wrangler pages deploy dist/pages-prod/...');
-  const r = spawnSync('npx', ['wrangler', 'pages', 'deploy', 'dist/pages-prod/', '--project-name', 'rubikvault-site'], {
+  // Prefer local node_modules/.bin/wrangler — avoids needing npx in PATH (required on NAS/Synology).
+  const localWrangler = path.join(REPO_ROOT, 'node_modules/.bin/wrangler');
+  const [cmd, cmdArgs] = fs.existsSync(localWrangler)
+    ? [localWrangler, ['pages', 'deploy', 'dist/pages-prod/', '--project-name', 'rubikvault-site']]
+    : ['npx',         ['wrangler', 'pages', 'deploy', 'dist/pages-prod/', '--project-name', 'rubikvault-site']];
+  const r = spawnSync(cmd, cmdArgs, {
     cwd: REPO_ROOT,
     encoding: 'utf8',
     timeout: 300_000,

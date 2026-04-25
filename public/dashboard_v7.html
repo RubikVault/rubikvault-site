@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Unified System Dashboard V7 | RubikVault</title>
+    <title>Pipeline Command Center | RubikVault</title>
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%230b0f19'/%3E%3Cpath d='M18 46V18h11c10 0 17 5 17 14 0 8-5 14-16 14h-6v-8h5c5 0 8-2 8-6 0-4-3-6-8-6h-2v20H18z' fill='%233b82f6'/%3E%3C/svg%3E">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
@@ -58,6 +58,12 @@
         /* Global Banner */
         .gov-banner { padding:.75rem 1.25rem; border-radius:10px; margin-bottom:1.25rem; display:flex; align-items:center; gap:.75rem; font-weight:600; font-size:.9rem; }
         .gov-banner i { font-size:1.1rem; }
+        .section-subtitle { font-size:.76rem; color:var(--text-dim); font-weight:400; margin-top:.15rem; line-height:1.35; }
+        .section-title-wrap { margin-bottom:1rem; }
+        .section-title-wrap .section-title { margin-bottom:.15rem; }
+        .scope-bar { display:flex; gap:.5rem; flex-wrap:wrap; margin-bottom:1.25rem; }
+        .scope-chip { display:inline-flex; align-items:center; gap:.3rem; padding:.3rem .7rem; border-radius:8px; font-size:.72rem; font-weight:600; background:rgba(59,130,246,0.08); border:1px solid rgba(59,130,246,0.15); color:var(--blue); }
+        .scope-chip i { font-size:.65rem; }
 
         /* Header */
         header { display:flex; justify-content:space-between; align-items:center; margin-bottom:1.25rem; padding-bottom:1rem; border-bottom:1px solid var(--card-border); flex-wrap:wrap; gap:.75rem; }
@@ -183,6 +189,70 @@
         .regime-pill { background:var(--card-bg); border:1px solid var(--card-border); border-radius:10px; padding:.6rem .8rem; text-align:center; }
         .regime-pill .label { font-size:.7rem; color:var(--text-muted); text-transform:uppercase; font-weight:600; }
         .regime-pill .value { font-size:1rem; font-weight:800; margin-top:.2rem; }
+
+        /* Footer */
+        footer.dash-footer { margin-top:2rem; padding:1.25rem; border-top:1px solid var(--card-border); text-align:center; }
+        footer.dash-footer .footer-row { display:flex; justify-content:center; align-items:center; gap:1.5rem; flex-wrap:wrap; font-size:.74rem; color:var(--text-dim); }
+        footer.dash-footer .footer-row i { margin-right:.3rem; }
+        #autoRefreshTimer { color:var(--blue); font-weight:600; }
+
+        /* Live NAS Monitor */
+        .nas-live-panel { background:linear-gradient(135deg, rgba(59,130,246,0.06) 0%, rgba(16,185,129,0.04) 100%); border:1px solid rgba(59,130,246,0.2); border-radius:14px; padding:1.25rem; margin-bottom:1.25rem; position:relative; }
+        .nas-live-panel.severity-ok { border-color:rgba(16,185,129,0.3); }
+        .nas-live-panel.severity-warning { border-color:rgba(245,158,11,0.4); background:linear-gradient(135deg, rgba(245,158,11,0.06) 0%, rgba(245,158,11,0.02) 100%); }
+        .nas-live-panel.severity-critical { border-color:rgba(239,68,68,0.4); background:linear-gradient(135deg, rgba(239,68,68,0.06) 0%, rgba(239,68,68,0.02) 100%); }
+        .nas-live-panel.severity-offline { border-color:rgba(100,116,139,0.3); background:rgba(100,116,139,0.04); }
+        .nas-live-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:.85rem; flex-wrap:wrap; gap:.5rem; }
+        .nas-live-header h3 { font-size:1rem; font-weight:700; margin:0; display:flex; align-items:center; gap:.5rem; }
+        .nas-live-header h3 .pulse { display:inline-block; width:8px; height:8px; border-radius:50%; animation:pulse-glow 2s infinite; }
+        .nas-live-header h3 .pulse.green { background:var(--green); box-shadow:0 0 6px var(--green); }
+        .nas-live-header h3 .pulse.yellow { background:var(--yellow); box-shadow:0 0 6px var(--yellow); }
+        .nas-live-header h3 .pulse.red { background:var(--red); box-shadow:0 0 6px var(--red); }
+        .nas-live-header h3 .pulse.gray { background:#64748b; box-shadow:none; animation:none; }
+        @keyframes pulse-glow { 0%,100%{opacity:1} 50%{opacity:.4} }
+        .nas-refresh-btn { background:rgba(59,130,246,0.12); border:1px solid rgba(59,130,246,0.25); color:var(--blue); padding:.35rem .8rem; border-radius:8px; font-size:.75rem; font-weight:600; cursor:pointer; transition:all .2s; display:flex; align-items:center; gap:.35rem; }
+        .nas-refresh-btn:hover { background:rgba(59,130,246,0.22); transform:translateY(-1px); }
+        .nas-refresh-btn:active { transform:translateY(0); }
+        .nas-refresh-btn.loading i { animation:spin .8s linear infinite; }
+        @keyframes spin { to{transform:rotate(360deg)} }
+        .nas-metrics-row { display:grid; grid-template-columns:repeat(auto-fit, minmax(140px, 1fr)); gap:.6rem; margin-bottom:.85rem; }
+        .nas-metric { background:rgba(0,0,0,0.15); border-radius:10px; padding:.55rem .7rem; text-align:center; }
+        .nas-metric .nm-label { font-size:.62rem; color:var(--text-dim); text-transform:uppercase; font-weight:600; letter-spacing:.5px; }
+        .nas-metric .nm-value { font-size:1.05rem; font-weight:800; margin-top:.15rem; color:var(--text); }
+        .nas-metric .nm-value.green { color:var(--green); }
+        .nas-metric .nm-value.yellow { color:var(--yellow); }
+        .nas-metric .nm-value.red { color:var(--red); }
+        .nas-progress-wrap { margin-bottom:.6rem; }
+        .nas-progress-bar { height:22px; background:rgba(0,0,0,0.25); border-radius:11px; overflow:hidden; position:relative; }
+        .nas-progress-fill { height:100%; border-radius:11px; transition:width .6s ease; background:linear-gradient(90deg, #3b82f6, #10b981); position:relative; }
+        .nas-progress-fill.failed { background:linear-gradient(90deg, #ef4444, #f97316); }
+        .nas-progress-text { position:absolute; right:8px; top:50%; transform:translateY(-50%); font-size:.7rem; font-weight:700; color:white; text-shadow:0 1px 2px rgba(0,0,0,.5); }
+        .nas-steps-track { display:flex; gap:3px; flex-wrap:wrap; }
+        .nas-step-dot { height:24px; flex:1; min-width:28px; border-radius:6px; display:flex; align-items:center; justify-content:center; font-size:.55rem; font-weight:700; color:rgba(255,255,255,.7); transition:all .3s; position:relative; cursor:default; }
+        .nas-step-dot.done { background:rgba(16,185,129,0.35); border:1px solid rgba(16,185,129,0.5); }
+        .nas-step-dot.active { background:rgba(59,130,246,0.35); border:1px solid rgba(59,130,246,0.6); animation:pulse-glow 2s infinite; }
+        .nas-step-dot.failed { background:rgba(239,68,68,0.35); border:1px solid rgba(239,68,68,0.5); }
+        .nas-step-dot.pending { background:rgba(100,116,139,0.15); border:1px solid rgba(100,116,139,0.2); color:rgba(255,255,255,.3); }
+        .nas-step-dot:hover { transform:translateY(-2px); z-index:1; }
+        .nas-step-dot .tooltip { display:none; position:absolute; bottom:calc(100% + 6px); left:50%; transform:translateX(-50%); background:var(--card-bg); border:1px solid var(--card-border); border-radius:6px; padding:.3rem .5rem; font-size:.68rem; white-space:nowrap; z-index:10; color:var(--text); box-shadow:0 4px 12px rgba(0,0,0,.3); }
+        .nas-step-dot:hover .tooltip { display:block; }
+        .nas-live-meta { display:flex; gap:1rem; flex-wrap:wrap; font-size:.7rem; color:var(--text-dim); margin-top:.6rem; }
+        .nas-subgrid { display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:.85rem; margin-top:.95rem; }
+        .nas-subpanel { background:rgba(0,0,0,0.16); border:1px solid rgba(255,255,255,0.07); border-radius:12px; padding:.85rem .95rem; }
+        .nas-subtitle { font-size:.78rem; font-weight:700; margin-bottom:.6rem; display:flex; align-items:center; gap:.4rem; }
+        .nas-kv-list { display:grid; gap:.42rem; }
+        .nas-kv { display:flex; justify-content:space-between; gap:.8rem; font-size:.76rem; color:var(--text-muted); }
+        .nas-kv b { color:var(--text); font-weight:700; text-align:right; }
+        .nas-mini-table { width:100%; border-collapse:collapse; font-size:.74rem; }
+        .nas-mini-table th { text-align:left; color:var(--text-dim); font-weight:700; padding:.3rem .2rem .45rem; border-bottom:1px solid rgba(255,255,255,.08); }
+        .nas-mini-table td { padding:.35rem .2rem; border-bottom:1px solid rgba(255,255,255,.04); color:var(--text-muted); vertical-align:top; }
+        .nas-mini-table td strong { color:var(--text); font-weight:700; }
+        .nas-note { margin-top:.55rem; font-size:.72rem; color:var(--text-dim); line-height:1.45; }
+        .nas-inline-pills { display:flex; flex-wrap:wrap; gap:.35rem; margin-top:.55rem; }
+        .nas-live-alert { margin-top:.8rem; padding:.75rem .9rem; border-radius:10px; border:1px solid rgba(255,255,255,.08); font-size:.78rem; line-height:1.5; }
+        .nas-live-alert.warning { background:rgba(245,158,11,0.08); border-color:rgba(245,158,11,0.18); }
+        .nas-live-alert.error { background:rgba(239,68,68,0.08); border-color:rgba(239,68,68,0.18); }
+        .nas-live-alert.ok { background:rgba(16,185,129,0.08); border-color:rgba(16,185,129,0.18); }
     </style>
 </head>
 <body>
@@ -194,7 +264,7 @@
 
     <header>
         <div>
-            <h1>Unified Dashboard V7</h1>
+            <h1>Pipeline Command Center</h1>
             <p style="color:var(--text-muted);font-size:.8rem" id="genTimestamp">Dashboard generated: Loading...</p>
         </div>
         <div class="header-right">
@@ -204,7 +274,29 @@
         </div>
     </header>
 
+    <div class="scope-bar">
+        <span class="scope-chip"><i class="fas fa-globe"></i> US · EU · Asia</span>
+        <span class="scope-chip"><i class="fas fa-layer-group"></i> STOCK · ETF · INDEX</span>
+        <span class="scope-chip"><i class="fas fa-server"></i> NAS Pipeline</span>
+        <span class="scope-chip"><i class="fas fa-database"></i> EODHD Provider</span>
+    </div>
+
     <div class="trust-grid" id="trustGrid"></div>
+
+    <!-- Live NAS Pipeline Monitor -->
+    <div class="nas-live-panel severity-offline" id="nasLivePanel">
+        <div class="nas-live-header">
+            <h3><span class="pulse gray" id="nasPulse"></span> NAS Pipeline Monitor</h3>
+            <button class="nas-refresh-btn" id="nasRefreshBtn" onclick="refreshNasLive()">
+                <i class="fas fa-sync-alt"></i> Refresh NAS
+            </button>
+        </div>
+        <div id="nasLiveContent">
+            <div style="color:var(--text-dim);font-size:.82rem;text-align:center;padding:1rem 0">
+                <i class="fas fa-satellite-dish"></i> Lade NAS-Status...
+            </div>
+        </div>
+    </div>
 
     <!-- Tab Navigation -->
     <div class="tab-bar">
@@ -218,34 +310,57 @@
     <div class="tab-panel active" id="tab-health">
         <div class="sections-grid">
             <div class="section-box">
-                <div class="section-title"><i class="fas fa-clipboard-list"></i> Executive Summary</div>
+                <div class="section-title-wrap">
+                    <div class="section-title"><i class="fas fa-clipboard-list"></i> Executive Summary</div>
+                    <div class="section-subtitle">Gesamtzustand des Systems auf einen Blick — was läuft, was blockiert, was als nächstes passieren muss.</div>
+                </div>
                 <div id="executiveSummaryContent"></div>
             </div>
             <div class="section-box">
-                <div class="section-title"><i class="fas fa-traffic-light"></i> Operational Readiness</div>
+                <div class="section-title-wrap">
+                    <div class="section-title"><i class="fas fa-traffic-light"></i> Operational Readiness</div>
+                    <div class="section-subtitle">Ist das System bereit für den Live-Betrieb? Prüft Signalqualität, Gewichtung und Audit-Status.</div>
+                </div>
                 <div id="operationalReadinessContent"></div>
             </div>
         </div>
         <div class="sections-grid">
             <div class="section-box" style="grid-column: span 2">
-                <div class="section-title"><i class="fas fa-triangle-exclamation"></i> Critical Issues & Actions</div>
+                <div class="section-title-wrap">
+                    <div class="section-title"><i class="fas fa-triangle-exclamation"></i> Issues & Actions</div>
+                    <div class="section-subtitle">Aktive Probleme mit konkreten Lösungsvorschlägen — was ist kaputt und wie wird es repariert.</div>
+                </div>
                 <div id="criticalIssuesActionsContent"></div>
             </div>
         </div>
         <div class="health-row" id="healthRow"></div>
+
+        <div class="section-title-wrap" style="margin-bottom:.5rem">
+            <div class="section-title" style="font-size:1.1rem"><i class="fas fa-cubes"></i> Data Sources & Models</div>
+            <div class="section-subtitle">Jede Datenquelle einzeln: Alter, Genauigkeit, Pipeline-Status und Freshness. Klicke auf eine Karte für Details.</div>
+        </div>
         <div class="model-grid" id="modelGrid"></div>
         <div class="sections-grid">
             <div class="section-box">
-                <div class="section-title"><i class="fas fa-stethoscope"></i> Technical Pipeline Diagnostic</div>
+                <div class="section-title-wrap">
+                    <div class="section-title"><i class="fas fa-stethoscope"></i> Technical Pipeline Diagnostic</div>
+                    <div class="section-subtitle">Wie viele Assets durchlaufen den Entscheidungs-Trichter? Registry → Opinions → Publish → Snapshot.</div>
+                </div>
                 <div id="diagContentV2"></div>
             </div>
             <div class="section-box">
-                <div class="section-title"><i class="fas fa-rotate"></i> What Changed Since Last Refresh</div>
+                <div class="section-title-wrap">
+                    <div class="section-title"><i class="fas fa-rotate"></i> What Changed Since Last Refresh</div>
+                    <div class="section-subtitle">Vergleich mit dem letzten Dashboard-Load in diesem Browser — neue oder gelöste Probleme.</div>
+                </div>
                 <div id="refreshDeltaContent"><span style="color:var(--text-muted);font-size:.82rem">No prior refresh available</span></div>
             </div>
         </div>
         <div class="section-box">
-            <div class="section-title"><i class="fas fa-terminal"></i> Diagnostic Mode</div>
+            <div class="section-title-wrap">
+                <div class="section-title"><i class="fas fa-terminal"></i> Diagnostic Mode</div>
+                <div class="section-subtitle">Rohdaten für Entwickler: Fetch-Status, Truth-Contract und Pipeline-Felder pro Datenquelle.</div>
+            </div>
             <div id="diagnosticModeContent"></div>
         </div>
     </div>
@@ -253,15 +368,24 @@
     <!-- Tab 2: Performance -->
     <div class="tab-panel" id="tab-performance">
         <div class="chart-box">
-            <div class="chart-title"><i class="fas fa-chart-line"></i> Accuracy History (7-day Rolling)</div>
+            <div class="section-title-wrap">
+                <div class="chart-title" style="margin-bottom:.15rem"><i class="fas fa-chart-line"></i> Accuracy History (7-day Rolling)</div>
+                <div class="section-subtitle">Trefferquote von Forecast und Scientific über die letzten Wochen. 50%-Baseline = Münzwurf.</div>
+            </div>
             <div style="height:320px"><canvas id="accuracyChart"></canvas></div>
         </div>
         <div class="section-box" style="margin-bottom:1.5rem" id="weeklyCompBox">
-            <div class="section-title"><i class="fas fa-calendar-week"></i> Week-over-Week Comparison</div>
+            <div class="section-title-wrap">
+                <div class="section-title"><i class="fas fa-calendar-week"></i> Week-over-Week Comparison</div>
+                <div class="section-subtitle">Direkt-Vergleich: Diese Woche vs. letzte Woche. Zeigt Trend-Richtung pro Feature.</div>
+            </div>
             <div id="weeklyCompContent"><span style="color:var(--text-muted);font-size:.82rem">No comparison data</span></div>
         </div>
         <div class="section-box" style="margin-bottom:1.5rem">
-            <div class="section-title"><i class="fas fa-search-plus"></i> Deep Diagnosis & Concrete Fixes</div>
+            <div class="section-title-wrap">
+                <div class="section-title"><i class="fas fa-search-plus"></i> Deep Diagnosis & Concrete Fixes</div>
+                <div class="section-subtitle">Detailanalyse pro Feature mit Ursache, Schweregrad und konkreten Fix-Befehlen.</div>
+            </div>
             <div id="deepDiagContent"><span style="color:var(--text-muted);font-size:.82rem">No diagnosis data available</span></div>
         </div>
     </div>
@@ -270,35 +394,56 @@
     <div class="tab-panel" id="tab-strategy">
         <div class="sections-grid">
             <div class="section-box" id="v1WeightsBox">
-                <div class="section-title"><i class="fas fa-balance-scale"></i> V1 Fusion Source Weights</div>
+                <div class="section-title-wrap">
+                    <div class="section-title"><i class="fas fa-balance-scale"></i> V1 Fusion Source Weights</div>
+                    <div class="section-subtitle">Wie stark jede Datenquelle das finale Signal beeinflusst. Learned = aus echten Ergebnissen gelernt.</div>
+                </div>
                 <div id="v1WeightsContent"></div>
             </div>
             <div class="section-box" id="verdictBox">
-                <div class="section-title"><i class="fas fa-gavel"></i> Verdict Distribution</div>
+                <div class="section-title-wrap">
+                    <div class="section-title"><i class="fas fa-gavel"></i> Verdict Distribution</div>
+                    <div class="section-subtitle">Verteilung der finalen Entscheidungen: BUY / WAIT / SELL über alle geprüften Assets.</div>
+                </div>
                 <div id="verdictContent"><span style="color:var(--text-muted);font-size:.82rem">No V1 report data</span></div>
             </div>
         </div>
         <div class="sections-grid">
             <div class="section-box" id="govBox">
-                <div class="section-title"><i class="fas fa-shield-alt"></i> Governance & Quality</div>
+                <div class="section-title-wrap">
+                    <div class="section-title"><i class="fas fa-shield-alt"></i> Governance & Quality</div>
+                    <div class="section-subtitle">Lernstatus, Betriebsmodi und Regime-Übergänge — der Qualitäts-Steckbrief des Systems.</div>
+                </div>
                 <div id="govContent"><span style="color:var(--text-muted);font-size:.82rem">No governance data</span></div>
             </div>
             <div class="section-box">
-                <div class="section-title"><i class="fas fa-layer-group"></i> Legacy Horizon Weights</div>
+                <div class="section-title-wrap">
+                    <div class="section-title"><i class="fas fa-layer-group"></i> Legacy Horizon Weights</div>
+                    <div class="section-subtitle">Gewichtung der alten Horizonte (Short/Medium/Long): Trend, Entry, Risk, Context.</div>
+                </div>
                 <div id="legacyWeightsContent"></div>
             </div>
         </div>
         <div class="chart-box" id="weightHistoryBox" style="display:none">
-            <div class="chart-title"><i class="fas fa-history"></i> V1 Weight Evolution</div>
+            <div class="section-title-wrap">
+                <div class="chart-title" style="margin-bottom:.15rem"><i class="fas fa-history"></i> V1 Weight Evolution</div>
+                <div class="section-subtitle">Wie sich die Quell-Gewichtungen über die Zeit entwickelt haben.</div>
+            </div>
             <div style="height:280px"><canvas id="weightHistoryChart"></canvas></div>
         </div>
         <div class="sections-grid">
             <div class="section-box" id="cutoverBox">
-                <div class="section-title"><i class="fas fa-rocket"></i> Cutover Readiness</div>
+                <div class="section-title-wrap">
+                    <div class="section-title"><i class="fas fa-rocket"></i> Cutover Readiness</div>
+                    <div class="section-subtitle">Kann V1 das Live-System übernehmen? Prüft alle harten Blocker für Produktionsreife.</div>
+                </div>
                 <div id="cutoverContent"><span style="color:var(--text-muted);font-size:.82rem">Awaiting V1 audit data</span></div>
             </div>
             <div class="section-box" id="improvementsBox">
-                <div class="section-title"><i class="fas fa-lightbulb"></i> Active Improvements</div>
+                <div class="section-title-wrap">
+                    <div class="section-title"><i class="fas fa-lightbulb"></i> Active Improvements</div>
+                    <div class="section-subtitle">Aktuell laufende Optimierungen und ihre Fortschritte.</div>
+                </div>
                 <div id="improvementsContent"><span style="color:var(--text-muted);font-size:.82rem">No improvement data</span></div>
             </div>
         </div>
@@ -307,82 +452,139 @@
     <!-- Tab 4: Operations -->
     <div class="tab-panel" id="tab-operations">
         <div class="section-box" style="margin-bottom:1.5rem">
-            <div class="section-title"><i class="fas fa-water"></i> Pipeline Waterfall</div>
+            <div class="section-title-wrap">
+                <div class="section-title"><i class="fas fa-water"></i> Pipeline Waterfall — 19 Steps</div>
+                <div class="section-subtitle">Jeder Schritt der nächtlichen NAS-Pipeline mit Status, Alter und Repair-Befehlen. Läuft automatisch von oben nach unten.</div>
+            </div>
             <div id="pipelineWaterfallContent"><span style="color:var(--text-muted);font-size:.82rem">No pipeline step data</span></div>
         </div>
         <div class="section-box" style="margin-bottom:1.5rem">
-            <div class="section-title"><i class="fas fa-file-circle-check"></i> Green Contract</div>
+            <div class="section-title-wrap">
+                <div class="section-title"><i class="fas fa-file-circle-check"></i> Green Contract</div>
+                <div class="section-subtitle">Die Bedingungen, die ALLE erfüllt sein müssen, damit das Dashboard "All Systems Operational" zeigt.</div>
+            </div>
             <div id="greenContractContent"><span style="color:var(--text-muted);font-size:.82rem">No green-contract data</span></div>
         </div>
         <div class="sections-grid">
             <div class="section-box">
-                <div class="section-title"><i class="fas fa-sitemap"></i> Dependency Chain</div>
+                <div class="section-title-wrap">
+                    <div class="section-title"><i class="fas fa-sitemap"></i> Dependency Chain</div>
+                    <div class="section-subtitle">Welche Pipeline-Schritte voneinander abhängen — zeigt Blockaden und Degradierungen.</div>
+                </div>
                 <div id="dependencyChainContent"><span style="color:var(--text-muted);font-size:.82rem">No dependency data</span></div>
             </div>
             <div class="section-box">
-                <div class="section-title"><i class="fas fa-wave-square"></i> Automation Health</div>
+                <div class="section-title-wrap">
+                    <div class="section-title"><i class="fas fa-wave-square"></i> Automation Health</div>
+                    <div class="section-subtitle">Zustand der automatischen Pipeline: letzter Refresh, aktive Fehler und geblockte Schritte.</div>
+                </div>
                 <div id="automationHealthContent"><span style="color:var(--text-muted);font-size:.82rem">No automation summary</span></div>
             </div>
         </div>
         <div class="sections-grid">
             <div class="section-box">
-                <div class="section-title"><i class="fas fa-bug"></i> Recent Failures</div>
+                <div class="section-title-wrap">
+                    <div class="section-title"><i class="fas fa-bug"></i> Recent Failures</div>
+                    <div class="section-subtitle">Zuletzt gescheiterte Pipeline-Jobs mit Fehlergrund und Befehl zur Reproduktion.</div>
+                </div>
                 <div id="recentFailuresContent"><span style="color:var(--text-muted);font-size:.82rem">No failure data</span></div>
             </div>
             <div class="section-box">
-                <div class="section-title"><i class="fas fa-check-double"></i> Last Successful Jobs</div>
+                <div class="section-title-wrap">
+                    <div class="section-title"><i class="fas fa-check-double"></i> Last Successful Jobs</div>
+                    <div class="section-subtitle">Zuletzt erfolgreich abgeschlossene Jobs — zeigt, dass die Pipeline grundsätzlich funktioniert.</div>
+                </div>
                 <div id="lastSuccessfulJobsContent"><span style="color:var(--text-muted);font-size:.82rem">No success data</span></div>
             </div>
         </div>
         <div class="section-box" style="margin-bottom:1.5rem">
-            <div class="section-title"><i class="fas fa-globe"></i> Market Regime</div>
+            <div class="section-title-wrap">
+                <div class="section-title"><i class="fas fa-globe"></i> Market Regime</div>
+                <div class="section-subtitle">Aktuelle Marktlage: Bull/Bear, Volatilität und Marktbreite — beeinflusst die Signalqualität.</div>
+            </div>
             <div id="regimeContent"><span style="color:var(--text-muted);font-size:.82rem">No regime data</span></div>
         </div>
         <div class="sections-grid">
             <div class="section-box">
-                <div class="section-title"><i class="fas fa-filter"></i> Candidate Funnel</div>
+                <div class="section-title-wrap">
+                    <div class="section-title"><i class="fas fa-filter"></i> Candidate Funnel</div>
+                    <div class="section-subtitle">Wie viele Assets durch den Auswahl-Trichter fließen: Total → Stocks/ETFs → Ranked → Unique.</div>
+                </div>
                 <div id="candidateContent"><span style="color:var(--text-muted);font-size:.82rem">No candidate data</span></div>
             </div>
             <div class="section-box">
-                <div class="section-title"><i class="fas fa-info-circle"></i> Data Sources</div>
+                <div class="section-title-wrap">
+                    <div class="section-title"><i class="fas fa-info-circle"></i> Data Sources</div>
+                    <div class="section-subtitle">Alle Eingabedateien mit Alter und Existenz-Check — zeigt ob die Pipeline frische Daten hat.</div>
+                </div>
                 <div id="sourcesContent"><span style="color:var(--text-muted);font-size:.82rem">Loading...</span></div>
             </div>
         </div>
         <div class="section-box" style="margin-bottom:1.5rem;border:1px solid rgba(239,68,68,0.3)">
-            <div class="section-title"><i class="fas fa-triangle-exclamation"></i> SSOT Violations</div>
-            <div class="soft-note" style="margin-bottom:.75rem">Detects broken invariants — cases where the system is not honoring its own single-source-of-truth rules. Each violation shows why it broke and the exact command to fix it.</div>
+            <div class="section-title-wrap">
+                <div class="section-title"><i class="fas fa-triangle-exclamation"></i> SSOT Violations</div>
+                <div class="section-subtitle">Regelbrüche im System: Wenn Daten nicht mit der Single-Source-of-Truth übereinstimmen. Jeder Eintrag zeigt den Befehl zur Reparatur.</div>
+            </div>
             <div id="ssotViolationsContent"><span style="color:var(--text-muted);font-size:.82rem">Checking violations...</span></div>
         </div>
         <div class="section-box" style="margin-bottom:1.5rem">
-            <div class="section-title"><i class="fas fa-clock-rotate-left"></i> Step Error History</div>
+            <div class="section-title-wrap">
+                <div class="section-title"><i class="fas fa-clock-rotate-left"></i> Step Error History</div>
+                <div class="section-subtitle">Fehlerraten der letzten 30 Tage pro Pipeline-Schritt — zeigt chronische Probleme.</div>
+            </div>
             <div id="stepErrorHistoryContent"><span style="color:var(--text-muted);font-size:.82rem">No step error history</span></div>
         </div>
         <div class="section-box" style="margin-bottom:1.5rem">
-            <div class="section-title"><i class="fas fa-life-ring"></i> Recovery Metrics</div>
-            <div class="soft-note" style="margin-bottom:.75rem">Tracks the recovery worker itself: current campaign progress, noisy steps, restart storms, and recurring blockers that do not show up in the publish-chain ledger.</div>
+            <div class="section-title-wrap">
+                <div class="section-title"><i class="fas fa-life-ring"></i> Recovery Metrics</div>
+                <div class="section-subtitle">Wie oft musste die Pipeline Schritte wiederholen? Zeigt Neustarts, Blockaden und die lautesten Schritte der letzten 7 Tage.</div>
+            </div>
             <div id="recoveryMetricsContent"><span style="color:var(--text-muted);font-size:.82rem">No recovery metrics</span></div>
         </div>
         <div class="sections-grid">
             <div class="section-box">
-                <div class="section-title"><i class="fas fa-shield-heart"></i> Stock Analyzer Universe Audit</div>
+                <div class="section-title-wrap">
+                    <div class="section-title"><i class="fas fa-shield-heart"></i> Stock Analyzer Universe Audit</div>
+                    <div class="section-subtitle">Prüft jedes Asset im Universe: Hat es alle nötigen Felder? Wie viele sind "All Systems Operational"?</div>
+                </div>
                 <div id="stockAnalyzerAuditContent"><span style="color:var(--text-muted);font-size:.82rem">No universe audit data</span></div>
             </div>
             <div class="section-box">
-                <div class="section-title"><i class="fas fa-list-ol"></i> Ordered Recovery Plan</div>
+                <div class="section-title-wrap">
+                    <div class="section-title"><i class="fas fa-list-ol"></i> Ordered Recovery Plan</div>
+                    <div class="section-subtitle">Priorisierte Reparatur-Reihenfolge: Welcher Schritt repariert die meisten betroffenen Assets?</div>
+                </div>
                 <div id="stockAnalyzerRecoveryContent"><span style="color:var(--text-muted);font-size:.82rem">No ordered recovery data</span></div>
             </div>
         </div>
         <div class="section-box" style="margin-bottom:1.5rem">
-            <div class="section-title"><i class="fas fa-table-cells-large"></i> Universe Field Quality</div>
-            <div class="soft-note" style="margin-bottom:.75rem">Per-field problem distribution across the audited universe. Shows which UI fields are empty, stale, or wrong, plus the repair command linked to the underlying pipeline step.</div>
+            <div class="section-title-wrap">
+                <div class="section-title"><i class="fas fa-table-cells-large"></i> Universe Field Quality</div>
+                <div class="section-subtitle">Welche UI-Felder bei wie vielen Assets fehlen oder veraltet sind — mit dem Befehl zur Reparatur.</div>
+            </div>
             <div id="universeFieldQualityContent"><span style="color:var(--text-muted);font-size:.82rem">No field quality data</span></div>
         </div>
         <div class="section-box">
-            <div class="section-title"><i class="fas fa-route"></i> Web Validation Chain</div>
+            <div class="section-title-wrap">
+                <div class="section-title"><i class="fas fa-route"></i> Web Validation Chain</div>
+                <div class="section-subtitle">End-to-End Prüfkette: Vom API-Endpoint bis zur fertigen UI — jeder Schritt mit Check- und Fix-Befehl.</div>
+            </div>
             <div id="validationChainContent"><span style="color:var(--text-muted);font-size:.82rem">No validation chain data</span></div>
         </div>
     </div>
 </div>
+
+<footer class="dash-footer">
+    <div class="footer-row">
+        <span><i class="fas fa-server"></i> Synology NAS · rv-nas-night-supervisor.sh</span>
+        <span><i class="fas fa-code-branch"></i> Branch: main</span>
+        <span><i class="fas fa-clock"></i> Auto-Refresh: <span id="autoRefreshTimer">5:00</span></span>
+        <span><i class="fas fa-cloud"></i> Cloudflare Pages · Free Tier</span>
+    </div>
+    <div style="margin-top:.5rem;font-size:.68rem;color:var(--text-dim)">
+        RubikVault Pipeline Command Center · Data-Driven Dashboard · Daten werden automatisch alle 5 Minuten aktualisiert
+    </div>
+</footer>
 
 <script>
 const STALE_ICONS = { fresh:'', acceptable:'', stale:' \u26A0', critical:' \u26A0\u26A0', unknown:' ?' };
@@ -425,6 +627,41 @@ function num(v) { return v != null ? v.toFixed(3) : '\u2014'; }
 function hc(label, value, color) { return `<div class="health-cell"><div class="health-label">${label}</div><div class="health-value" style="color:${color}">${value}</div></div>`; }
 function fmtAgeHours(v) { return v == null || v < 0 ? 'n/a' : (v < 24 ? `${v.toFixed(1)}h` : `${(v / 24).toFixed(1)}d`); }
 function fmtShortDate(v) { if (!v) return 'Not reported'; const d = new Date(v); return Number.isNaN(d.getTime()) ? String(v) : d.toLocaleString(); }
+function fmtDurationCompact(sec) {
+    if (sec == null || !Number.isFinite(Number(sec)) || Number(sec) < 0) return '—';
+    const value = Number(sec);
+    if (value < 90) return `${Math.round(value)}s`;
+    const mins = value / 60;
+    if (mins < 90) return `${Math.round(mins)} min`;
+    const hours = mins / 60;
+    if (hours < 36) return `${hours.toFixed(hours < 10 ? 1 : 0)} h`;
+    return `${(hours / 24).toFixed(1)} d`;
+}
+function fmtCount(v) { return v == null || Number.isNaN(Number(v)) ? '—' : Number(v).toLocaleString(); }
+function fmtRatioPercent(v) { return v == null || Number.isNaN(Number(v)) ? '—' : `${(Number(v) * 100).toFixed(1)}%`; }
+function fmtAgeFromIso(v) {
+    if (!v) return '—';
+    const d = new Date(v);
+    if (Number.isNaN(d.getTime())) return '—';
+    const sec = Math.max(0, (Date.now() - d.getTime()) / 1000);
+    return fmtDurationCompact(sec);
+}
+function formatNasScope(scope) {
+    if (!scope || scope.total == null) return 'Scope n/a';
+    let text = `${fmtCount(scope.total)} ${scope.unit || 'items'} · ${scope.label || 'scope'}`;
+    if (scope.asset_scope_total != null) {
+        text += ` · ${fmtCount(scope.asset_scope_total)} ${scope.asset_scope_unit || 'assets'} ${scope.asset_scope_label || 'asset scope'}`;
+    }
+    return text;
+}
+function formatNasTooltip(label, hist, scope) {
+    const parts = [label];
+    if (scope && scope.total != null) parts.push(formatNasScope(scope));
+    if (hist?.median_duration_sec != null) parts.push(`Median ${fmtDurationCompact(hist.median_duration_sec)}`);
+    if (hist?.success_count) parts.push(`Success ${fmtCount(hist.success_count)}`);
+    if (hist?.failure_count) parts.push(`Fail ${fmtCount(hist.failure_count)}`);
+    return parts.join(' · ');
+}
 function stalenessText(m) {
     const days = m.stale_days_now ?? m.stale_days;
     return days == null ? 'unknown' : `${days}d (${m.staleness_level || 'unknown'})`;
@@ -874,8 +1111,9 @@ function renderOperationalReadiness(data) {
 
 function renderCriticalIssuesActions(data) {
     const causes = data.system?.root_causes || [];
-    const title = document.querySelector('#criticalIssuesActionsContent')?.previousElementSibling;
-    if (title) title.innerHTML = `<i class="fas fa-triangle-exclamation"></i> ${causes.length ? 'Issues & Actions' : 'Health & Actions'}`;
+    const titleWrap = document.querySelector('#criticalIssuesActionsContent')?.previousElementSibling;
+    const titleEl = titleWrap?.querySelector('.section-title');
+    if (titleEl) titleEl.innerHTML = `<i class="fas fa-triangle-exclamation"></i> ${causes.length ? 'Issues & Actions' : 'Health & Actions'}`;
     if (!causes.length) {
         document.getElementById('criticalIssuesActionsContent').innerHTML = '<div class="rec-item rec-ok">No issues detected.</div>';
         return;
@@ -1001,6 +1239,13 @@ async function loadDashboard() {
         const statusFileStaleReason = runtime.status_file_stale_reason || null;
         // Cross-check: integrity seal says the real truth
         const sealOverride = seal && seal.ui_green === false;
+        // Seal is authoritative: if seal.ui_green+release_ready+global_green all true,
+        // show green regardless of missing system.status_severity (NAS pipeline may not set it).
+        const sealGreen = seal
+            && seal.ui_green === true
+            && seal.release_ready === true
+            && seal.global_green === true
+            && (data.system?.status_severity === 'ok' || data.system?.status_severity == null);
         const sealPhase = seal?.phase || null;
         const sealAffected = seal?.full_universe_validated === false ? (seal?.blocking_reasons?.length || 0) : 0;
         const sealFetchFailed = runtime.seal_fetch_status === 'failed';
@@ -1025,6 +1270,9 @@ async function loadDashboard() {
                     ? 'status file is missing generated_at'
                 : `status data is ${Math.round(statusFileAge)}h old`;
             banner.innerHTML = `<i class="fas fa-clock"></i> STALE DASHBOARD: ${escapeHtml(staleReason)} — dashboard snapshot is not live truth`;
+        } else if (sealGreen) {
+            banner.style.background = 'rgba(16,185,129,0.08)'; banner.style.borderColor = 'rgba(16,185,129,0.2)'; banner.style.color = 'var(--green)';
+            banner.innerHTML = '<i class="fas fa-check-circle"></i> All systems operational';
         } else if (data.system?.status_severity === 'critical' || worstStale > 7) {
             banner.style.background = 'rgba(239,68,68,0.1)'; banner.style.borderColor = 'rgba(239,68,68,0.3)'; banner.style.color = 'var(--red)';
             banner.innerHTML = `<i class="fas fa-exclamation-triangle"></i> CRITICAL: ${escapeHtml(data.system?.root_causes?.[0]?.title || `Data ${worstStale}d stale`)}`;
@@ -1136,7 +1384,8 @@ async function loadDashboard() {
             if (pd.rejection_breakdown) {
                  dhtml += `<div class="soft-note" style="margin-bottom:.35rem">Rejection Reasons (ETF)</div>`;
                  for (const [horizon, counts] of Object.entries(pd.rejection_breakdown)) {
-                    dhtml += `<div class="info-row"><span>${horizon.toUpperCase()} rejection</span><strong>Non-Buy: ${counts.rejected_non_buy_total||0} | Gated: ${counts.rejected_gated_total||0}</strong></div>`;
+                    const safeCounts = counts || {};
+                    dhtml += `<div class="info-row"><span>${horizon.toUpperCase()} rejection</span><strong>Non-Buy: ${safeCounts.rejected_non_buy_total||0} | Gated: ${safeCounts.rejected_gated_total||0}</strong></div>`;
                  }
             }
             dhtml += `</div>`;
@@ -1575,7 +1824,540 @@ async function loadDashboard() {
 }
 
 window.onload = loadDashboard;
-setInterval(loadDashboard, 300000);
+
+// Auto-refresh with visible countdown
+const REFRESH_INTERVAL = 300; // seconds
+let _refreshCountdown = REFRESH_INTERVAL;
+function updateCountdown() {
+    _refreshCountdown--;
+    if (_refreshCountdown <= 0) {
+        _refreshCountdown = REFRESH_INTERVAL;
+        loadDashboard();
+    }
+    const mins = Math.floor(_refreshCountdown / 60);
+    const secs = _refreshCountdown % 60;
+    const timerEl = document.getElementById('autoRefreshTimer');
+    if (timerEl) timerEl.textContent = `${mins}:${String(secs).padStart(2, '0')}`;
+}
+setInterval(updateCountdown, 1000);
+
+// ──── Live NAS Pipeline Monitor ────
+const NAS_STEPS = [
+    'safe_code_sync','build_global_scope','market_data_refresh','q1_delta_ingest',
+    'build_fundamentals','quantlab_daily_report','scientific_summary','forecast_daily',
+    'hist_probs','snapshot','etf_diagnostic','learning_daily','v1_audit',
+    'cutover_readiness','stage1_ops_pack','system_status_report','data_freshness_report',
+    'pipeline_epoch','generate_meta_dashboard_data'
+];
+const NAS_STEP_LABELS = {
+    safe_code_sync:'Code Sync', build_global_scope:'Global Scope', market_data_refresh:'Market Data',
+    q1_delta_ingest:'Q1 Ingest', build_fundamentals:'Fundamentals', quantlab_daily_report:'QuantLab',
+    scientific_summary:'Scientific', forecast_daily:'Forecast', hist_probs:'Hist Probs',
+    snapshot:'Snapshot', etf_diagnostic:'ETF Diag', learning_daily:'Learning',
+    v1_audit:'V1 Audit', cutover_readiness:'Cutover', stage1_ops_pack:'Ops Pack',
+    system_status_report:'Sys Status', data_freshness_report:'Freshness',
+    pipeline_epoch:'Epoch', generate_meta_dashboard_data:'Dashboard Data'
+};
+
+async function refreshNasLive() {
+    const btn = document.getElementById('nasRefreshBtn');
+    btn.classList.add('loading');
+    btn.innerHTML = '<i class="fas fa-sync-alt"></i> Loading...';
+    try {
+        const [dashRes, supRes, wdRes] = await Promise.allSettled([
+            fetch('/data/ui/nas-pipeline-dashboard.json?t=' + Date.now()),
+            fetch('/data/ui/nas-supervisor-state.json?t=' + Date.now()),
+            fetch('/data/ui/nas-pipeline-live.json?t=' + Date.now())
+        ]);
+        const dash = dashRes.status === 'fulfilled' && dashRes.value.ok ? await dashRes.value.json() : null;
+        const sup = supRes.status === 'fulfilled' && supRes.value.ok ? await supRes.value.json() : null;
+        const wd = wdRes.status === 'fulfilled' && wdRes.value.ok ? await wdRes.value.json() : null;
+        renderNasLive(dash, sup, wd);
+    } catch(e) {
+        renderNasLive(null, null, null);
+    } finally {
+        btn.classList.remove('loading');
+        btn.innerHTML = '<i class="fas fa-sync-alt"></i> Refresh NAS';
+    }
+}
+
+function renderNasLive(dashboard, sup, wd) {
+    if (!dashboard) return renderNasLiveLegacy(sup, wd);
+    const panel = document.getElementById('nasLivePanel');
+    const pulse = document.getElementById('nasPulse');
+    const content = document.getElementById('nasLiveContent');
+    const current = dashboard.current_run || {};
+    const history = dashboard.historical?.steps || {};
+    const universe = dashboard.universe || {};
+    const currentProgress = current.current_progress || null;
+    const currentScope = current.current_scope || null;
+    const syncAge = dashboard.local_sync?.synced_at || dashboard.generated_at;
+    const syncAgeText = fmtAgeFromIso(syncAge);
+    const runtimeState = current.runtime_state || current.status || 'unknown';
+    const currentStep = current.current_step || '';
+    const currentLabel = current.current_step_label || NAS_STEP_LABELS[currentStep] || currentStep || '—';
+    const completedSteps = current.completed_steps || [];
+    const carryForwardSteps = current.carry_forward_completed_steps || [];
+    const allCompletedSet = new Set([...completedSteps, ...carryForwardSteps]);
+    const totalSteps = current.total_steps || NAS_STEPS.length;
+
+    // Derive effective pipeline position from the current step's index in NAS_STEPS.
+    // When a run starts mid-pipeline (--start-step), steps before the current one
+    // are not in completed_steps but are positionally "past". We treat them as done
+    // so the progress counter, bar, and step dots stay consistent.
+    const currentStepIndex = currentStep ? NAS_STEPS.indexOf(currentStep) : -1;
+    const failedStepIndex = current.failed_step ? NAS_STEPS.indexOf(current.failed_step) : -1;
+    const effectivePositionIndex = failedStepIndex >= 0 ? failedStepIndex : currentStepIndex;
+    let effectiveCompleted = 0;
+    NAS_STEPS.forEach((stepId, idx) => {
+        if (allCompletedSet.has(stepId)) {
+            effectiveCompleted++;
+        } else if (effectivePositionIndex >= 0 && idx < effectivePositionIndex) {
+            effectiveCompleted++; // positionally past (skipped / previous run)
+        }
+    });
+    const effectivePct = totalSteps > 0 ? Math.round((effectiveCompleted / totalSteps) * 100) : 0;
+
+    const currentHist = current.step_history || history[currentStep] || {};
+    const bestCaseRemaining = current.best_case_remaining_sec;
+    const bestCaseFinishAt = current.best_case_finish_at;
+    const currentEta = currentProgress?.eta_sec;
+    const pendingSteps = Array.isArray(current.remaining_steps) ? current.remaining_steps : [];
+    const currentError = dashboard.current_error || null;
+    const failureProtocol = Array.isArray(dashboard.failure_protocol) ? dashboard.failure_protocol : [];
+    const lessonsLearned = Array.isArray(dashboard.lessons_learned?.entries) ? dashboard.lessons_learned.entries : [];
+    const uiRatio = universe.ui_all_systems_operational_ratio;
+    const uiAuditScope = universe.ui_report_scope || 'missing';
+    const uiAuditIsFull = universe.ui_selected_is_full_universe === true;
+    const uiMetricBasis = universe.ui_metric_basis || 'stock_analyzer_universe_audit_total_assets';
+    const uiUsesTargetableDenominator = uiMetricBasis === 'targetable_assets_min_registry_bars'
+        || uiMetricBasis === 'targetable_assets_min_200_registry_bars'
+        || uiMetricBasis === 'targetable_assets_min_bars';
+    const uiMetricLabel = uiUsesTargetableDenominator
+        ? 'UI green (targetable universe)'
+        : uiAuditScope === 'full_universe'
+        ? 'UI green (full audit)'
+        : uiAuditScope === 'subset_only'
+            ? 'UI green (subset audit)'
+            : 'UI green audit';
+    const uiMetricValue = universe.ui_total_assets != null && universe.ui_all_systems_operational_assets != null
+        ? `${fmtCount(universe.ui_all_systems_operational_assets)} / ${fmtCount(universe.ui_total_assets)} (${escapeHtml(fmtRatioPercent(uiRatio))})`
+        : 'pending';
+    const uiAuditScopeValue = uiAuditScope === 'full_universe'
+        ? 'full universe'
+        : uiAuditScope === 'subset_only'
+            ? 'subset only'
+            : 'missing';
+    const uiAuditNote = uiAuditScope === 'full_universe'
+        ? 'This is the latest full-universe stock-analyzer audit artifact on NAS.'
+        : uiAuditScope === 'subset_only'
+            ? `Only a subset audit is currently present on NAS${universe.ui_report_max_tickers ? ` (${fmtCount(universe.ui_report_max_tickers)} tickers)` : ''}. Final "All Systems Operational" coverage stays pending until v1_audit/release-full writes a full-universe artifact.`
+            : 'No stock-analyzer audit artifact is currently available on NAS.';
+    const uiDenominatorNote = uiUsesTargetableDenominator
+        ? `The displayed green rate uses the targetable denominator: assets with at least ${fmtCount(universe.ui_targetable_min_bars || 200)} registry bars. Zero-bar and warm-up assets remain tracked as structural exceptions, not release blockers.`
+        : uiAuditNote;
+    const q1RunStatus = current.q1_run_status || null;
+    const q1StageLabel = q1RunStatus?.stage ? String(q1RunStatus.stage).replaceAll('_', ' ') : null;
+    const isRunning = runtimeState === 'running';
+    const isFailed = runtimeState === 'failed';
+    const isStalled = runtimeState === 'stalled';
+    // Distinguish "run completed" (supervisor finished) from "pipeline fully done" (all steps)
+    const isRunCompleted = runtimeState === 'completed';
+    const isFullyCompleted = isRunCompleted && effectiveCompleted >= totalSteps;
+    const isIdle = isRunCompleted && effectiveCompleted < totalSteps;
+    // Keep isCompleted for backwards compat in alert rendering below
+    const isCompleted = isFullyCompleted;
+
+    let sev = 'ok';
+    if (isFailed) sev = 'critical';
+    else if (isStalled) sev = 'warning';
+    else if (isIdle) sev = 'warning';
+    else if (!isRunning && !isCompleted) sev = 'offline';
+    panel.className = `nas-live-panel severity-${sev}`;
+    pulse.className = `pulse ${sev === 'critical' ? 'red' : sev === 'warning' ? 'yellow' : sev === 'offline' ? 'gray' : 'green'}`;
+
+    let statusLabel;
+    if (isFullyCompleted) {
+        statusLabel = 'COMPLETED';
+    } else if (isIdle) {
+        statusLabel = 'IDLE';
+    } else {
+        const statusLabelMap = {
+            running: 'RUNNING',
+            stalled: 'STALLED',
+            failed: 'FAILED',
+            unknown: 'UNKNOWN',
+        };
+        statusLabel = statusLabelMap[runtimeState] || String(runtimeState || current.status || 'unknown').toUpperCase();
+    }
+    const statusColor = isFailed ? 'red' : isStalled ? 'yellow' : isIdle ? 'yellow' : isFullyCompleted || isRunning ? 'green' : 'yellow';
+
+    let html = '';
+    html += '<div class="nas-metrics-row">';
+    html += `<div class="nas-metric"><div class="nm-label">Runtime State</div><div class="nm-value ${statusColor}">${statusLabel}</div></div>`;
+    html += `<div class="nas-metric"><div class="nm-label">Pipeline Progress</div><div class="nm-value">${fmtCount(effectiveCompleted)} / ${fmtCount(totalSteps)} (${effectivePct}%)</div></div>`;
+    html += `<div class="nas-metric"><div class="nm-label">Current Step</div><div class="nm-value">${escapeHtml(currentLabel)}</div></div>`;
+    html += `<div class="nas-metric"><div class="nm-label">Current Scope</div><div class="nm-value">${currentScope?.total != null ? fmtCount(currentScope.total) : '—'} ${escapeHtml(currentScope?.unit || '')}</div></div>`;
+    html += `<div class="nas-metric"><div class="nm-label">Current ETA</div><div class="nm-value">${fmtDurationCompact(currentEta)}</div></div>`;
+    html += `<div class="nas-metric"><div class="nm-label">Best-Case Finish</div><div class="nm-value">${bestCaseFinishAt ? fmtShortDate(bestCaseFinishAt) : '—'}</div></div>`;
+    html += `<div class="nas-metric"><div class="nm-label">Sync Age</div><div class="nm-value">${escapeHtml(syncAgeText)}</div></div>`;
+    html += '</div>';
+
+    if (currentProgress && currentProgress.total > 0) {
+        const stepPct = currentProgress.percent != null ? Math.round(Number(currentProgress.percent) * 100) : null;
+        const stepText = `${fmtCount(currentProgress.completed)} / ${fmtCount(currentProgress.total)} ${currentProgress.unit || ''}`.trim();
+        html += `<div class="nas-progress-wrap">
+            <div style="font-size:.7rem;color:var(--text-dim);margin-bottom:.3rem">Current step progress: ${escapeHtml(currentLabel)} — ${escapeHtml(stepText)}${currentProgress.rate_per_min != null ? ` · ${fmtCount(Math.round(currentProgress.rate_per_min))}/${escapeHtml(currentProgress.unit || 'min')}` : ''}</div>
+            <div class="nas-progress-bar">
+                <div class="nas-progress-fill" style="width:${stepPct != null ? stepPct : 0}%"><span class="nas-progress-text">${stepPct != null ? stepPct + '%' : '—'}</span></div>
+            </div>
+        </div>`;
+    } else if (isRunning) {
+        html += `<div class="nas-live-alert warning"><strong>No live unit counter yet.</strong> Current step runs, but no per-unit progress has been persisted yet. ETA currently falls back to historical duration where available.</div>`;
+    }
+
+    html += `<div class="nas-progress-wrap">
+        <div style="font-size:.7rem;color:var(--text-dim);margin-bottom:.3rem">Overall pipeline progress — skipped and carry-forward steps from a resumed run are included</div>
+        <div class="nas-progress-bar">
+            <div class="nas-progress-fill${current.failed_step ? ' failed' : ''}" style="width:${effectivePct}%"><span class="nas-progress-text">${effectivePct}%</span></div>
+        </div>
+    </div>`;
+
+    html += '<div class="nas-steps-track">';
+    NAS_STEPS.forEach((stepId, idx) => {
+        const hist = history[stepId] || {};
+        const scope = dashboard.step_scope?.[stepId] || null;
+        let cls = 'pending';
+        if (allCompletedSet.has(stepId)) cls = 'done';
+        else if (current.failed_step === stepId && isFailed) cls = 'failed';
+        else if (stepId === currentStep && isRunning) cls = 'active';
+        else if (effectivePositionIndex >= 0 && idx < effectivePositionIndex) cls = 'done';
+        const tooltip = formatNasTooltip(NAS_STEP_LABELS[stepId] || stepId, hist, scope);
+        html += `<div class="nas-step-dot ${cls}"><span>${idx + 1}</span><span class="tooltip">${escapeHtml(tooltip)}</span></div>`;
+    });
+    html += '</div>';
+
+    html += '<div class="nas-subgrid">';
+    html += `<div class="nas-subpanel">
+        <div class="nas-subtitle"><i class="fas fa-stopwatch"></i> Current Step Intelligence</div>
+        <div class="nas-kv-list">
+            <div class="nas-kv"><span>Step</span><b>${escapeHtml(currentLabel)}</b></div>
+            <div class="nas-kv"><span>Scope</span><b>${escapeHtml(formatNasScope(currentScope))}</b></div>
+            ${q1StageLabel ? `<div class="nas-kv"><span>Q1 sub-stage</span><b>${escapeHtml(q1StageLabel)}</b></div>` : ''}
+            <div class="nas-kv"><span>Started</span><b>${escapeHtml(fmtShortDate(current.started_at))}</b></div>
+            <div class="nas-kv"><span>Elapsed</span><b>${escapeHtml(fmtDurationCompact(current.elapsed_sec))}</b></div>
+            <div class="nas-kv"><span>Current ETA</span><b>${escapeHtml(fmtDurationCompact(currentEta))}</b></div>
+            <div class="nas-kv"><span>Historical median</span><b>${escapeHtml(fmtDurationCompact(currentHist.median_duration_sec))}</b></div>
+            <div class="nas-kv"><span>Historical average</span><b>${escapeHtml(fmtDurationCompact(currentHist.avg_duration_sec))}</b></div>
+            <div class="nas-kv"><span>Success / failure</span><b>${fmtCount(currentHist.success_count)} / ${fmtCount(currentHist.failure_count)}</b></div>
+        </div>
+        <div class="nas-note">
+            Best-case total remaining: <strong style="color:var(--text)">${escapeHtml(fmtDurationCompact(bestCaseRemaining))}</strong>
+            ${bestCaseFinishAt ? ` · target finish <strong style="color:var(--text)">${escapeHtml(fmtShortDate(bestCaseFinishAt))}</strong>` : ''}
+            ${current.unknown_remaining_steps ? ` · ${fmtCount(current.unknown_remaining_steps)} pending step(s) without historical median` : ''}
+        </div>
+        ${q1RunStatus && currentStep === 'q1_delta_ingest' && (!currentProgress || !currentProgress.completed) ? `
+            <div class="nas-live-alert warning">
+                <strong>Q1 has not started pack commits yet.</strong>
+                Latest Q1 status artifact: <strong>${escapeHtml(q1StageLabel || 'unknown')}</strong> at <strong>${escapeHtml(fmtShortDate(q1RunStatus.generated_at))}</strong>.
+                The process can still be legitimately busy in pre-pack work such as registry selection and latest-date index building before the first pack increments the counter.
+            </div>
+        ` : ''}
+        ${pendingSteps.length ? `
+            <table class="nas-mini-table" style="margin-top:.7rem">
+                <thead><tr><th>Next Steps</th><th>Median</th><th>Scope</th></tr></thead>
+                <tbody>
+                    ${pendingSteps.slice(0, 8).map(step => `
+                        <tr>
+                            <td><strong>${escapeHtml(step.label || step.step_id)}</strong></td>
+                            <td>${escapeHtml(fmtDurationCompact(step.median_duration_sec))}</td>
+                            <td>${escapeHtml(formatNasScope(step.scope))}</td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+        ` : '<div class="nas-note">No downstream steps remain in this lane.</div>'}
+    </div>`;
+
+    html += `<div class="nas-subpanel">
+        <div class="nas-subtitle"><i class="fas fa-globe"></i> Universe & UI Outcome</div>
+        <div class="nas-kv-list">
+            <div class="nas-kv"><span>Global allowlist</span><b>${fmtCount(universe.global_allowlist_assets || universe.allowlist_assets)} assets</b></div>
+            <div class="nas-kv"><span>Regions</span><b>US ${fmtCount(universe.global_us_assets)} · EU ${fmtCount(universe.global_eu_assets)} · Asia ${fmtCount(universe.global_asia_assets)}</b></div>
+            <div class="nas-kv"><span>Asset classes</span><b>STOCK ${fmtCount(universe.global_stock_assets)} · ETF ${fmtCount(universe.global_etf_assets)} · INDEX ${fmtCount(universe.global_index_assets)}</b></div>
+            <div class="nas-kv"><span>Assets with history pack</span><b>${fmtCount(universe.history_pack_assets)} assets</b></div>
+            <div class="nas-kv"><span>Missing history pack</span><b>${fmtCount(universe.missing_history_pack_assets)} assets</b></div>
+            <div class="nas-kv"><span>Q1 selected packs</span><b>${fmtCount(current.q1_state?.selected_packs_total || universe.q1_selected_packs_total)} packs</b></div>
+            <div class="nas-kv"><span>Fundamentals priority scope</span><b>${fmtCount(universe.fundamentals_expected_total)} assets</b></div>
+            <div class="nas-kv"><span>${escapeHtml(uiMetricLabel)}</span><b>${uiMetricValue}</b></div>
+        </div>
+        <div class="nas-inline-pills">
+            <span class="tiny-pill">Audit scope ${escapeHtml(uiAuditScopeValue)}</span>
+            <span class="tiny-pill">Audit snapshot ${escapeHtml(fmtShortDate(universe.ui_summary_generated_at || universe.ui_latest_any_generated_at))}</span>
+            <span class="tiny-pill">Target market date ${escapeHtml(universe.ui_summary_target_market_date || universe.ui_latest_any_target_market_date || 'n/a')}</span>
+            <span class="tiny-pill">Failure families ${fmtCount(universe.ui_failure_family_count)}</span>
+            <span class="tiny-pill">Affected assets ${fmtCount(universe.ui_affected_assets)}</span>
+            ${uiUsesTargetableDenominator ? `<span class="tiny-pill">Zero/unknown bars ${fmtCount(universe.ui_registry_zero_or_unknown_bar_assets)}</span>` : ''}
+            ${uiUsesTargetableDenominator ? `<span class="tiny-pill">Warm-up &lt;${fmtCount(universe.ui_targetable_min_bars || 200)} bars ${fmtCount(universe.ui_warming_up_assets)}</span>` : ''}
+        </div>
+        <div class="nas-note">
+            ${escapeHtml(uiDenominatorNote)}
+            ${uiAuditScope !== 'missing' ? ' The count is observational, not a promise for the still-running lane. It becomes current only after the lane finishes and the audit/report chain is rebuilt.' : ''}
+        </div>
+    </div>`;
+    html += '</div>';
+
+    if (currentError) {
+        html += `<div class="nas-live-alert error">
+            <strong>${escapeHtml(currentError.label || currentError.step_id)} failed:</strong> ${escapeHtml(currentError.message || currentError.signature || 'Unknown error')}
+            <div class="nas-note" style="margin-top:.45rem">
+                Error signature: <strong style="color:var(--text)">${escapeHtml(currentError.signature || 'unknown')}</strong>
+                · step failures seen: <strong style="color:var(--text)">${fmtCount(currentError.step_failure_count)}</strong>
+                · same signature seen: <strong style="color:var(--text)">${fmtCount(currentError.occurrence_count)}</strong>
+                ${currentError.fix_suggestion ? ` · suggested fix: <strong style="color:var(--text)">${escapeHtml(currentError.fix_suggestion)}</strong>` : ''}
+            </div>
+            ${Array.isArray(currentError.related_lessons) && currentError.related_lessons.length ? `
+                <div class="nas-note" style="margin-top:.45rem">
+                    Related lessons:
+                    ${currentError.related_lessons.map(lesson => `<strong style="color:var(--text)">${escapeHtml([lesson.date, lesson.category, lesson.title].filter(Boolean).join(' · '))}</strong>`).join(' · ')}
+                </div>
+            ` : ''}
+        </div>`;
+    } else if (isStalled) {
+        html += `<div class="nas-live-alert warning">
+            <strong>The lane is marked running but no active supervisor process is visible.</strong>
+            Check the latest run logs and refresh the NAS snapshot before attempting a restart.
+        </div>`;
+    } else if (isIdle) {
+        html += `<div class="nas-live-alert warning">
+            <strong>Last run finished, but ${totalSteps - effectiveCompleted} of ${totalSteps} pipeline steps are still pending.</strong>
+            The supervisor completed its scope but did not cover all steps. A new run is needed to finish the remaining steps.
+        </div>`;
+    } else if (isCompleted) {
+        html += `<div class="nas-live-alert ok"><strong>Pipeline fully completed.</strong> All ${totalSteps} steps done. Latest finish time: ${escapeHtml(fmtShortDate(current.completed_at))}.</div>`;
+    }
+
+    html += '<div class="nas-subgrid">';
+    html += `<div class="nas-subpanel">
+        <div class="nas-subtitle"><i class="fas fa-triangle-exclamation"></i> Failure Protocol</div>
+        ${renderNasFailureProtocol(failureProtocol, dashboard.historical?.runs_scanned)}
+    </div>`;
+    html += `<div class="nas-subpanel">
+        <div class="nas-subtitle"><i class="fas fa-book-open"></i> Lessons Learned</div>
+        ${renderNasLessonsLearned(lessonsLearned, dashboard.lessons_learned?.updated_at)}
+    </div>`;
+    html += '</div>';
+
+    html += '<div class="nas-live-meta">';
+    html += `<span><i class="fas fa-tag"></i> Campaign: ${escapeHtml(current.campaign_stamp || '—')}</span>`;
+    html += `<span><i class="fas fa-road"></i> Lane: ${escapeHtml(current.lane || '—')}</span>`;
+    html += `<span><i class="fas fa-calendar"></i> Target: ${escapeHtml(current.target_market_date || '—')}</span>`;
+    html += `<span><i class="fas fa-clock"></i> Last pipeline update: ${escapeHtml(fmtShortDate(current.updated_at))}</span>`;
+    html += `<span><i class="fas fa-satellite-dish"></i> Snapshot synced: ${escapeHtml(fmtShortDate(syncAge))} (${escapeHtml(syncAgeText)} old)</span>`;
+    html += `<span><i class="fas fa-network-wired"></i> Source: ${escapeHtml(dashboard.local_sync?.ssh_target || 'unknown')}</span>`;
+    html += '</div>';
+
+    content.innerHTML = html;
+}
+
+function renderNasFailureProtocol(rows, runsScanned) {
+    if (!rows.length) {
+        return '<div class="nas-note">No recurring pipeline error families recorded in the scanned run history.</div>';
+    }
+    const items = rows.slice(0, 6).map((row, idx) => {
+        const topSteps = Array.isArray(row.top_steps) ? row.top_steps : [];
+        const topStepText = topSteps.length
+            ? topSteps.map(step => `${NAS_STEP_LABELS[step.step_id] || step.step_id} (${fmtCount(step.count)})`).join(' · ')
+            : 'No step distribution';
+        const relatedLessons = Array.isArray(row.related_lessons) && row.related_lessons.length
+            ? `<div class="cause-text"><strong>Related lessons:</strong> ${row.related_lessons.map(lesson => escapeHtml([lesson.date, lesson.category, lesson.title].filter(Boolean).join(' · '))).join(' · ')}</div>`
+            : '';
+        return `
+            <div class="cause-item ${idx === 0 ? 'sev-warning' : ''}">
+                <div class="cause-head">
+                    <div class="cause-title">${escapeHtml(row.signature || 'unknown_error')}</div>
+                    <div class="cause-meta">${fmtCount(row.count)}x</div>
+                </div>
+                <div class="cause-text"><strong>Seen in:</strong> ${escapeHtml(topStepText)}</div>
+                <div class="cause-text"><strong>Last seen:</strong> ${escapeHtml(fmtShortDate(row.last_seen_at))}</div>
+                <div class="cause-text"><strong>Example:</strong> ${escapeHtml(row.last_message || 'No message recorded')}</div>
+                ${row.fix_suggestion ? `<div class="cause-text"><strong>Best known fix:</strong> ${escapeHtml(row.fix_suggestion)}</div>` : ''}
+                ${row.median_duration_sec != null ? `<div class="cause-text"><strong>Typical failed runtime:</strong> ${escapeHtml(fmtDurationCompact(row.median_duration_sec))}</div>` : ''}
+                ${relatedLessons}
+            </div>
+        `;
+    }).join('');
+    return `
+        <div class="nas-note" style="margin-bottom:.6rem">
+            Aggregated recurring failures from the last ${fmtCount(runsScanned)} scanned pipeline runs. Fix suggestions are derived from real failure signatures plus curated runbook rules.
+        </div>
+        ${items}
+    `;
+}
+
+function renderNasLessonsLearned(entries, updatedAt) {
+    if (!entries.length) {
+        return '<div class="nas-note">No curated lessons-learned entries available in docs/ops/lessons-learned.md.</div>';
+    }
+    const items = entries.slice(0, 5).map(entry => `
+        <div class="action-item">
+            <div class="action-head">
+                <div class="action-title">${escapeHtml(entry.title || 'Untitled lesson')}</div>
+                <div class="action-meta">${escapeHtml([entry.date, entry.category].filter(Boolean).join(' · ') || 'lesson')}</div>
+            </div>
+            ${entry.what ? `<div class="action-text"><strong>What:</strong> ${escapeHtml(entry.what)}</div>` : ''}
+            ${entry.fix ? `<div class="action-text"><strong>Fix:</strong> ${escapeHtml(entry.fix)}</div>` : ''}
+            ${entry.prevention ? `<div class="action-text"><strong>Prevention:</strong> ${escapeHtml(entry.prevention)}</div>` : ''}
+        </div>
+    `).join('');
+    return `
+        <div class="nas-note" style="margin-bottom:.6rem">
+            Curated repo knowledge from <strong style="color:var(--text)">docs/ops/lessons-learned.md</strong>${updatedAt ? ` · last updated ${escapeHtml(fmtShortDate(updatedAt))}` : ''}.
+        </div>
+        ${items}
+    `;
+}
+
+function renderNasLiveLegacy(sup, wd) {
+    const panel = document.getElementById('nasLivePanel');
+    const pulse = document.getElementById('nasPulse');
+    const content = document.getElementById('nasLiveContent');
+
+    if (!sup && !wd) {
+        panel.className = 'nas-live-panel severity-offline';
+        pulse.className = 'pulse gray';
+        content.innerHTML = `<div style="text-align:center;padding:.8rem;color:var(--text-dim);font-size:.82rem">
+            <i class="fas fa-plug-circle-xmark" style="font-size:1.2rem;margin-bottom:.4rem;display:block"></i>
+            NAS-Daten nicht verfügbar. Führe aus: <code style="background:rgba(0,0,0,.3);padding:.2rem .4rem;border-radius:4px;font-size:.72rem">bash scripts/nas/fetch-nas-live-status.sh</code>
+        </div>`;
+        return;
+    }
+
+    const status = sup?.last_status || 'unknown';
+    const step = sup?.current_step || '';
+    const completed = sup?.completed_steps || [];
+    const failedStep = sup?.failed_step || null;
+    const campaign = sup?.campaign_stamp || '—';
+    const lane = sup?.evaluation_lane || '—';
+    const targetDate = sup?.target_market_date || '—';
+    const startedAt = sup?.started_at || '';
+    const updatedAt = sup?.updated_at || '';
+
+    // Watchdog extras
+    const wdCurrent = wd?.current || {};
+    const progress = wdCurrent.last_progress || null;
+    const rate = wdCurrent.rate_assets_per_min;
+    const etaMin = wdCurrent.eta_min;
+    const wdSeverity = wd?.severity || 'unknown';
+    const processes = wd?.processes || [];
+
+    // Severity
+    let sev = 'ok';
+    if (status === 'failed') sev = 'critical';
+    else if (status === 'completed') sev = 'ok';
+    else if (wdSeverity === 'critical') sev = 'critical';
+    else if (wdSeverity === 'warning') sev = 'warning';
+    panel.className = `nas-live-panel severity-${sev}`;
+    pulse.className = `pulse ${sev === 'critical' ? 'red' : sev === 'warning' ? 'yellow' : 'green'}`;
+
+    // Progress calculation — derive effective position from current step, not just completed.length
+    const completedSet = new Set(completed);
+    const totalSteps = NAS_STEPS.length;
+    const currentStepIndex = step ? NAS_STEPS.indexOf(step) : -1;
+    const failedStepIndex = failedStep ? NAS_STEPS.indexOf(failedStep) : -1;
+    const effectivePositionIndex = failedStepIndex >= 0 ? failedStepIndex : currentStepIndex;
+    let effectiveCompleted = 0;
+    NAS_STEPS.forEach((s, idx) => {
+        if (completedSet.has(s)) effectiveCompleted++;
+        else if (effectivePositionIndex >= 0 && idx < effectivePositionIndex) effectiveCompleted++;
+    });
+    const effectivePct = totalSteps > 0 ? Math.round((effectiveCompleted / totalSteps) * 100) : 0;
+
+    // Step progress (for market_data_refresh etc.)
+    let stepPct = null;
+    let stepProgressText = '';
+    if (progress && progress.total > 0) {
+        stepPct = Math.round((progress.completed / progress.total) * 100);
+        stepProgressText = `${progress.completed.toLocaleString()} / ${progress.total.toLocaleString()}`;
+    }
+
+    // Time calculations
+    const startedDate = startedAt ? new Date(startedAt) : null;
+    const updatedDate = updatedAt ? new Date(updatedAt) : null;
+    const elapsed = startedDate ? Math.round((Date.now() - startedDate.getTime()) / 60000) : null;
+    const updatedAgo = updatedDate ? Math.round((Date.now() - updatedDate.getTime()) / 60000) : null;
+
+    // Status label
+    const statusLabels = { running:'LÄUFT', completed:'ABGESCHLOSSEN ✅', failed:'FEHLGESCHLAGEN ❌', guard_blocked:'BLOCKIERT ⏸️' };
+    const statusLabel = statusLabels[status] || status.toUpperCase();
+    const statusColor = status === 'completed' ? 'green' : status === 'failed' ? 'red' : status === 'running' ? 'green' : 'yellow';
+
+    let html = '';
+
+    // Metrics row
+    html += '<div class="nas-metrics-row">';
+    html += `<div class="nas-metric"><div class="nm-label">Status</div><div class="nm-value ${statusColor}">${statusLabel}</div></div>`;
+    html += `<div class="nas-metric"><div class="nm-label">Pipeline-Fortschritt</div><div class="nm-value">${effectiveCompleted} / ${totalSteps} Steps (${effectivePct}%)</div></div>`;
+    html += `<div class="nas-metric"><div class="nm-label">Aktueller Step</div><div class="nm-value">${NAS_STEP_LABELS[step] || step || '—'}</div></div>`;
+    if (rate != null) html += `<div class="nas-metric"><div class="nm-label">Rate</div><div class="nm-value">${Math.round(rate)} Assets/Min</div></div>`;
+    if (etaMin != null) html += `<div class="nas-metric"><div class="nm-label">ETA</div><div class="nm-value">${etaMin < 60 ? Math.round(etaMin) + ' Min' : (etaMin/60).toFixed(1) + ' Std'}</div></div>`;
+    if (elapsed != null) html += `<div class="nas-metric"><div class="nm-label">Laufzeit</div><div class="nm-value">${elapsed < 60 ? elapsed + ' Min' : (elapsed/60).toFixed(1) + ' Std'}</div></div>`;
+    html += '</div>';
+
+    // Step progress bar (if available)
+    if (stepPct != null && status === 'running') {
+        html += `<div class="nas-progress-wrap">
+            <div style="font-size:.7rem;color:var(--text-dim);margin-bottom:.3rem">Step-Fortschritt: ${NAS_STEP_LABELS[step] || step} — ${stepProgressText}</div>
+            <div class="nas-progress-bar">
+                <div class="nas-progress-fill" style="width:${stepPct}%"><span class="nas-progress-text">${stepPct}%</span></div>
+            </div>
+        </div>`;
+    }
+
+    // Pipeline progress bar
+    html += `<div class="nas-progress-wrap">
+        <div style="font-size:.7rem;color:var(--text-dim);margin-bottom:.3rem">Pipeline gesamt: ${effectiveCompleted} von ${totalSteps} Steps abgeschlossen</div>
+        <div class="nas-progress-bar">
+            <div class="nas-progress-fill${failedStep ? ' failed' : ''}" style="width:${effectivePct}%"><span class="nas-progress-text">${effectivePct}%</span></div>
+        </div>
+    </div>`;
+
+    // Step dots — mark steps before current position as done (even if skipped)
+    html += '<div class="nas-steps-track">';
+    NAS_STEPS.forEach((s, i) => {
+        let cls = 'pending';
+        if (completedSet.has(s)) cls = 'done';
+        else if (s === failedStep) cls = 'failed';
+        else if (s === step && status === 'running') cls = 'active';
+        else if (effectivePositionIndex >= 0 && i < effectivePositionIndex) cls = 'done';
+        const label = NAS_STEP_LABELS[s] || s;
+        html += `<div class="nas-step-dot ${cls}"><span>${i+1}</span><span class="tooltip">${label}${cls === 'done' ? ' ✅' : cls === 'failed' ? ' ❌' : cls === 'active' ? ' ⏳' : ''}</span></div>`;
+    });
+    html += '</div>';
+
+    // Meta row
+    html += '<div class="nas-live-meta">';
+    html += `<span><i class="fas fa-tag"></i> Campaign: ${campaign}</span>`;
+    html += `<span><i class="fas fa-road"></i> Lane: ${lane}</span>`;
+    html += `<span><i class="fas fa-calendar"></i> Target: ${targetDate}</span>`;
+    if (updatedAgo != null) html += `<span><i class="fas fa-clock"></i> Letztes Update: vor ${updatedAgo} Min</span>`;
+    if (wdSeverity && wdSeverity !== 'unknown') html += `<span><i class="fas fa-shield"></i> Watchdog: ${wdSeverity}</span>`;
+    html += '</div>';
+
+    // Failed step detail
+    if (failedStep) {
+        html += `<div style="margin-top:.7rem;padding:.6rem;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);border-radius:8px;font-size:.78rem">
+            <strong style="color:var(--red)"><i class="fas fa-circle-xmark"></i> Step fehlgeschlagen: ${NAS_STEP_LABELS[failedStep] || failedStep}</strong>
+            <div style="color:var(--text-dim);margin-top:.3rem">Prüfe Logs: <code style="background:rgba(0,0,0,.3);padding:.15rem .35rem;border-radius:4px;font-size:.7rem">ssh neonas "tail -50 .../${campaign}/${failedStep}/stderr.log"</code></div>
+        </div>`;
+    }
+
+    content.innerHTML = html;
+}
+
+// Load NAS data on startup
+refreshNasLive();
+setInterval(refreshNasLive, 30000);
 </script>
 </body>
 </html>
