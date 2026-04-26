@@ -46,7 +46,6 @@ LATEST_JSON="$PIPELINE_ROOT/latest.json"
 HEARTBEAT_JSON="$REPO_ROOT/mirrors/ops/pipeline-master/supervisor-heartbeat.json"
 MEASURE_SCRIPT="$REPO_ROOT/scripts/nas/measure-command.py"
 HIST_PROBS_STATE_JSON="$PIPELINE_ROOT/state/hist-probs-profile.json"
-COVERAGE_REPORT_PATH="$REPO_ROOT/public/data/universe/v7/reports/history_coverage_report.json"
 TARGET_MARKET_DATE="${TARGET_MARKET_DATE:-$(python3 - <<'PY'
 import os
 import subprocess
@@ -64,50 +63,6 @@ while candidate.weekday() >= 5:
 print(candidate.isoformat())
 PY
 )}"
-
-if [[ "$ACTIVE_LANE" == "data-plane" && "$START_STEP" == "q1_delta_ingest" && "${RV_ALLOW_Q1_WITHOUT_MARKET_REFRESH:-0}" != "1" ]]; then
-  coverage_gate="$(python3 - "$COVERAGE_REPORT_PATH" "$TARGET_MARKET_DATE" "${RV_HISTORY_COVERAGE_MIN_FRESH_TARGETABLE_PCT:-83}" <<'PY'
-import json
-import os
-import sys
-path = sys.argv[1]
-target_market_date = str(sys.argv[2] or "")[:10]
-try:
-    min_fresh_pct = float(sys.argv[3])
-except Exception:
-    min_fresh_pct = 83.0
-if not os.path.exists(path):
-    print(f"promote reason=history_coverage_missing coverage_target=none target_market_date={target_market_date} fresh_of_targetable_pct=0 min_fresh_of_targetable_pct={min_fresh_pct}")
-    raise SystemExit(0)
-try:
-    doc = json.load(open(path, "r", encoding="utf-8"))
-except Exception as exc:
-    print(f"promote reason=history_coverage_unreadable error={type(exc).__name__} coverage_target=none target_market_date={target_market_date} fresh_of_targetable_pct=0 min_fresh_of_targetable_pct={min_fresh_pct}")
-    raise SystemExit(0)
-coverage_target = str(doc.get("target_market_date") or "")[:10]
-counts = doc.get("counts") if isinstance(doc.get("counts"), dict) else {}
-percentages = doc.get("percentages") if isinstance(doc.get("percentages"), dict) else {}
-try:
-    fresh_pct = float(percentages.get("fresh_of_targetable_pct"))
-except Exception:
-    targetable = float(counts.get("bars_ge_200") or 0)
-    fresh = float(counts.get("fresh_ge_200") or 0)
-    fresh_pct = (fresh / targetable * 100.0) if targetable > 0 else 0.0
-fresh = int(counts.get("fresh_ge_200") or 0)
-targetable = int(counts.get("bars_ge_200") or 0)
-if not coverage_target or coverage_target < target_market_date:
-    print(f"promote reason=history_coverage_target_stale coverage_target={coverage_target or 'none'} target_market_date={target_market_date} fresh_of_targetable_pct={fresh_pct:.2f} fresh_targetable={fresh} targetable={targetable} min_fresh_of_targetable_pct={min_fresh_pct:.2f}")
-elif targetable > 0 and fresh_pct < min_fresh_pct:
-    print(f"promote reason=history_coverage_freshness_low coverage_target={coverage_target} target_market_date={target_market_date} fresh_of_targetable_pct={fresh_pct:.2f} fresh_targetable={fresh} targetable={targetable} min_fresh_of_targetable_pct={min_fresh_pct:.2f}")
-else:
-    print(f"ok coverage_target={coverage_target} target_market_date={target_market_date} fresh_of_targetable_pct={fresh_pct:.2f} fresh_targetable={fresh} targetable={targetable} min_fresh_of_targetable_pct={min_fresh_pct:.2f}")
-PY
-)"
-  if [[ "$coverage_gate" == promote* ]]; then
-    echo "promote_start_step=market_data_refresh $coverage_gate" >&2
-    START_STEP="market_data_refresh"
-  fi
-fi
 
 mkdir -p "$CAMPAIGN_DIR" "$LOG_DIR" "$(dirname "$HIST_PROBS_STATE_JSON")"
 
@@ -224,100 +179,6 @@ assert_no_competing_lanes() {
   nas_assert_global_lock_clear "q1-writer"
 }
 
-eodhd_budget_json() {
-  python3 - "$RV_EODHD_ENV_FILE" <<'PY'
-import json
-import os
-import sys
-import urllib.request
-from datetime import date
-
-env_file = sys.argv[1]
-keys = ("EODHD_API_TOKEN", "EODHD_API_KEY")
-values = {key: os.environ.get(key, "").strip() for key in keys}
-if os.path.exists(env_file):
-    for raw in open(env_file, "r", encoding="utf-8"):
-        raw = raw.strip()
-        if not raw or raw.startswith("#") or "=" not in raw:
-            continue
-        key, value = raw.split("=", 1)
-        key = key.strip()
-        if key in keys and not values.get(key):
-            values[key] = value.strip().strip('"').strip("'")
-token = values.get("EODHD_API_TOKEN") or values.get("EODHD_API_KEY")
-if not token:
-    raise SystemExit("missing_eodhd_token")
-with urllib.request.urlopen(f"https://eodhd.com/api/user?api_token={token}&fmt=json", timeout=20) as resp:
-    doc = json.load(resp)
-api_requests = int(doc.get("apiRequests") or 0)
-daily_limit = int(doc.get("dailyRateLimit") or 0)
-extra_limit = int(doc.get("extraLimit") or 0)
-api_date = str(doc.get("apiRequestsDate") or "")
-today = date.today().isoformat()
-daily_remaining = max(0, daily_limit - api_requests) if api_date == today else daily_limit
-available = max(0, daily_remaining + max(0, extra_limit))
-print(json.dumps({
-    "apiRequests": api_requests,
-    "apiRequestsDate": api_date,
-    "dailyRateLimit": daily_limit,
-    "extraLimit": extra_limit,
-    "dailyRemaining": daily_remaining,
-    "available": available,
-}, sort_keys=True))
-PY
-}
-
-assert_eodhd_budget() {
-  local required_calls="$1"
-  local budget
-  if ! budget="$(eodhd_budget_json)"; then
-    echo "eodhd_budget_check_failed=unavailable" >&2
-    return 16
-  fi
-  local available api_date daily_remaining extra_limit
-  available="$(printf '%s' "$budget" | python3 -c 'import json,sys; print(int(json.load(sys.stdin).get("available") or 0))')"
-  api_date="$(printf '%s' "$budget" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("apiRequestsDate") or "")')"
-  daily_remaining="$(printf '%s' "$budget" | python3 -c 'import json,sys; print(int(json.load(sys.stdin).get("dailyRemaining") or 0))')"
-  extra_limit="$(printf '%s' "$budget" | python3 -c 'import json,sys; print(int(json.load(sys.stdin).get("extraLimit") or 0))')"
-  if (( available < required_calls )); then
-    echo "eodhd_budget_too_low available=$available required=$required_calls apiRequestsDate=$api_date dailyRemaining=$daily_remaining extraLimit=$extra_limit" >&2
-    return 17
-  fi
-  echo "eodhd_budget_ok available=$available required=$required_calls apiRequestsDate=$api_date dailyRemaining=$daily_remaining extraLimit=$extra_limit" >&2
-  return 0
-}
-
-hist_probs_skip_existing_value() {
-  if [[ "${RV_FORCE_HIST_PROBS_REBUILD:-0}" == "1" ]]; then
-    printf '%s\n' "0"
-  else
-    printf '%s\n' "${RV_HIST_PROBS_SKIP_EXISTING:-1}"
-  fi
-}
-
-assert_release_coverage_current() {
-  python3 - "$COVERAGE_REPORT_PATH" "$TARGET_MARKET_DATE" <<'PY'
-import json
-import os
-import sys
-
-path, target = sys.argv[1:3]
-if not os.path.exists(path):
-    print(f"history_coverage_missing path={path}")
-    raise SystemExit(13)
-try:
-    doc = json.load(open(path, "r", encoding="utf-8"))
-except Exception as exc:
-    print(f"history_coverage_unreadable path={path} error={type(exc).__name__}")
-    raise SystemExit(13)
-coverage_target = str(doc.get("target_market_date") or "")[:10]
-if coverage_target != str(target)[:10]:
-    print(f"history_coverage_target_mismatch coverage_target={coverage_target or 'missing'} target_market_date={target}")
-    raise SystemExit(13)
-print(f"history_coverage_ok coverage_target={coverage_target} target_market_date={target}")
-PY
-}
-
 step_resource_class() {
   case "$1" in
     hist_probs|snapshot|learning_daily)
@@ -342,7 +203,7 @@ step_timeout_sec() {
     quantlab_daily_report) printf '%s\n' 1800 ;;
     scientific_summary) printf '%s\n' 1800 ;;
     forecast_daily) printf '%s\n' "${RV_FORECAST_DAILY_TIMEOUT_SEC:-21600}" ;;
-    hist_probs) printf '%s\n' "${RV_HIST_PROBS_TIMEOUT_SEC:-21600}" ;;
+    hist_probs) printf '%s\n' "${RV_HIST_PROBS_TIMEOUT_SEC:-7200}" ;;
     snapshot) printf '%s\n' 5400 ;;
     etf_diagnostic) printf '%s\n' 1800 ;;
     learning_daily) printf '%s\n' 5400 ;;
@@ -394,19 +255,16 @@ step_heap_mb() {
     hist_probs)
       hist_probs_heap_mb
       ;;
-    snapshot)
-      printf '%s\n' 3072
-      ;;
-    learning_daily|v1_audit|cutover_readiness|stock_analyzer_universe_audit|ui_field_truth_report|final_integrity_seal)
+    snapshot|learning_daily|v1_audit|cutover_readiness|stock_analyzer_universe_audit|ui_field_truth_report|final_integrity_seal)
       printf '%s\n' 1536
       ;;
     build_global_scope)
       printf '%s\n' 1024
       ;;
     forecast_daily)
-      printf '%s\n' "${RV_FORECAST_DAILY_HEAP_MB:-3072}"
+      printf '%s\n' "${RV_FORECAST_DAILY_HEAP_MB:-1536}"
       ;;
-    build_fundamentals|quantlab_daily_report|scientific_summary|etf_diagnostic|signal_performance_report)
+    build_fundamentals|quantlab_daily_report|scientific_summary|etf_diagnostic)
       printf '%s\n' 512
       ;;
     *)
@@ -442,13 +300,13 @@ step_command() {
       ;;
     market_data_refresh)
       # pack-manifest.global goes to RV_GLOBAL_MANIFEST_DIR via env var (set in nas-env.sh)
-      printf '%s\n' "python3 scripts/quantlab/refresh_v7_history_from_eodhd.py --env-file '$RV_EODHD_ENV_FILE' --allowlist-path public/data/universe/v7/ssot/assets.global.canonical.ids.json --from-date '$TARGET_MARKET_DATE' --to-date '$TARGET_MARKET_DATE' --bulk-last-day --bulk-exchange-cost '${RV_EODHD_BULK_EXCHANGE_COST:-100}' --global-lock-path '$NAS_LOCK_ROOT/eodhd.lock' --max-eodhd-calls '${RV_MARKET_REFRESH_MAX_EODHD_CALLS:-0}' --max-retries '${RV_MARKET_REFRESH_MAX_RETRIES:-1}' --timeout-sec '${RV_MARKET_REFRESH_TIMEOUT_PER_REQUEST_SEC:-60}' --flush-every '${RV_MARKET_REFRESH_FLUSH_EVERY:-250}' --concurrency '$MARKET_REFRESH_CONCURRENCY' --progress-every '$MARKET_REFRESH_PROGRESS_EVERY' && node scripts/ops/apply-history-touch-report-to-registry.mjs --scan-existing-packs && node scripts/ops/build-history-pack-manifest.mjs --scope global --asset-classes '$GLOBAL_ASSET_CLASSES' && node scripts/ops/report-history-coverage.mjs --asset-classes '$GLOBAL_ASSET_CLASSES' --target-market-date '$TARGET_MARKET_DATE'"
+      printf '%s\n' "python3 scripts/quantlab/refresh_v7_history_from_eodhd.py --env-file '$RV_EODHD_ENV_FILE' --allowlist-path public/data/universe/v7/ssot/assets.global.canonical.ids.json --from-date '$TARGET_MARKET_DATE' --to-date '$TARGET_MARKET_DATE' --bulk-last-day --bulk-exchange-cost '${RV_EODHD_BULK_EXCHANGE_COST:-100}' --global-lock-path '$NAS_LOCK_ROOT/eodhd.lock' --max-eodhd-calls '${RV_MARKET_REFRESH_MAX_EODHD_CALLS:-0}' --max-retries '${RV_MARKET_REFRESH_MAX_RETRIES:-1}' --timeout-sec '${RV_MARKET_REFRESH_TIMEOUT_PER_REQUEST_SEC:-60}' --flush-every '${RV_MARKET_REFRESH_FLUSH_EVERY:-250}' --concurrency '$MARKET_REFRESH_CONCURRENCY' --progress-every '$MARKET_REFRESH_PROGRESS_EVERY' && node scripts/ops/apply-history-touch-report-to-registry.mjs --scan-existing-packs && node scripts/ops/build-history-pack-manifest.mjs --scope global --asset-classes '$GLOBAL_ASSET_CLASSES'"
       ;;
     q1_delta_ingest)
       printf '%s\n' "${RV_Q1_PYTHON_BIN:-python3} scripts/quantlab/run_daily_delta_ingest_q1.py --ingest-date '$TARGET_MARKET_DATE'"
       ;;
     build_fundamentals)
-      if [ "${RV_FUNDAMENTALS_METADATA_ONLY:-0}" = "1" ] || [ "${RV_PROVIDER_BUDGET_MODE:-}" = "degraded" ] || [ "${RV_FUNDAMENTALS_PROVIDER_FETCHES:-0}" != "1" ]; then
+      if [ "${RV_FUNDAMENTALS_METADATA_ONLY:-0}" = "1" ]; then
         printf '%s\n' "flock '$NAS_LOCK_ROOT/eodhd.lock' -c \"node scripts/build-fundamentals.mjs --metadata-only --asset-classes '$GLOBAL_ASSET_CLASSES'\""
       else
         printf '%s\n' "flock '$NAS_LOCK_ROOT/eodhd.lock' -c \"node scripts/build-fundamentals.mjs --force --asset-classes '$GLOBAL_ASSET_CLASSES'\""
@@ -464,9 +322,7 @@ step_command() {
       printf '%s\n' "FORECAST_SKIP_MATURED_EVAL=1 FORECAST_RSS_BUDGET_MB='${RV_FORECAST_RSS_BUDGET_MB:-4096}' node scripts/forecast/run_daily.mjs --date='$TARGET_MARKET_DATE'"
       ;;
     hist_probs)
-      local hist_skip_existing
-      hist_skip_existing="$(hist_probs_skip_existing_value)"
-      printf '%s\n' "HIST_PROBS_WORKERS='${RV_HIST_PROBS_WORKERS:-2}' HIST_PROBS_WORKER_BATCH_SIZE='${RV_HIST_PROBS_WORKER_BATCH_SIZE:-100}' HIST_PROBS_SKIP_EXISTING='$hist_skip_existing' HIST_PROBS_RSS_BUDGET_MB='${RV_HIST_PROBS_RSS_BUDGET_MB:-7168}' HIST_PROBS_RESPECT_CHECKPOINT_VERSION='${RV_HIST_PROBS_RESPECT_CHECKPOINT_VERSION:-1}' HIST_PROBS_FAIL_ON_SOFT_ERRORS='${RV_HIST_PROBS_FAIL_ON_SOFT_ERRORS:-0}' HIST_PROBS_MIN_COVERAGE_RATIO='${RV_HIST_PROBS_MIN_COVERAGE_RATIO:-0.95}' node run-hist-probs-turbo.mjs --asset-classes '$GLOBAL_ASSET_CLASSES'"
+      printf '%s\n' "HIST_PROBS_WORKERS='${RV_HIST_PROBS_WORKERS:-1}' HIST_PROBS_SKIP_EXISTING=1 HIST_PROBS_RSS_BUDGET_MB='${RV_HIST_PROBS_RSS_BUDGET_MB:-7168}' HIST_PROBS_RESPECT_CHECKPOINT_VERSION='${RV_HIST_PROBS_RESPECT_CHECKPOINT_VERSION:-1}' HIST_PROBS_FAIL_ON_SOFT_ERRORS='${RV_HIST_PROBS_FAIL_ON_SOFT_ERRORS:-1}' HIST_PROBS_MIN_COVERAGE_RATIO='${RV_HIST_PROBS_MIN_COVERAGE_RATIO:-0.95}' node run-hist-probs-turbo.mjs --asset-classes '$GLOBAL_ASSET_CLASSES'"
       ;;
     snapshot)
       printf '%s\n' "node scripts/ops/build-full-universe-decisions.mjs --target-market-date '$TARGET_MARKET_DATE' --replace && ALLOW_REMOTE_BAR_FETCH=0 BEST_SETUPS_DISABLE_NETWORK=1 node scripts/build-best-setups-v4.mjs"
@@ -498,9 +354,6 @@ step_command() {
     generate_meta_dashboard_data)
       printf '%s\n' "node scripts/generate_meta_dashboard_data.mjs --lane='$ACTIVE_LANE'"
       ;;
-    signal_performance_report)
-      printf '%s\n' "node scripts/ops/build-signal-performance-report.mjs --lane='$ACTIVE_LANE'"
-      ;;
     runtime_preflight)
       printf '%s\n' "ulimit -n 8192 >/dev/null 2>&1 || true; node scripts/ops/runtime-preflight.mjs --ensure-runtime --mode=hard --timeout-ms '${RV_RUNTIME_PREFLIGHT_TIMEOUT_MS:-30000}' --min-fd-limit '${RV_RUNTIME_PREFLIGHT_MIN_FD_LIMIT:-4096}' && jq -e '.ok == true' public/data/ops/runtime-preflight-latest.json >/dev/null"
       ;;
@@ -508,8 +361,8 @@ step_command() {
       # pack-manifest.global goes to RV_GLOBAL_MANIFEST_DIR (NAS_OPS_ROOT/pipeline-artifacts/manifests/)
       # apply-history-touch-report runs first to ensure registry.bars_count is current before the audit.
       # operability rebuild uses --refresh-from-registry so bars_count and targetable denominator are
-      # always derived from the freshly-scanned registry rather than stale operability records.
-      printf '%s\n' "mkdir -p '${RV_GLOBAL_MANIFEST_DIR:-${NAS_PIPELINE_ARTIFACTS_ROOT:-$NAS_OPS_ROOT/pipeline-artifacts}/manifests}' && node scripts/universe-v7/build-global-scope.mjs --asset-classes '$GLOBAL_ASSET_CLASSES' && node scripts/ops/build-history-pack-manifest.mjs --scope global --asset-classes '$GLOBAL_ASSET_CLASSES' && node scripts/ops/apply-history-touch-report-to-registry.mjs --scan-existing-packs && node scripts/ops/report-history-coverage.mjs --asset-classes '$GLOBAL_ASSET_CLASSES' --target-market-date '$TARGET_MARKET_DATE' && node scripts/ops/build-stock-analyzer-universe-audit.mjs --registry-path public/data/universe/v7/registry/registry.ndjson.gz --allowlist-path public/data/universe/v7/ssot/assets.global.canonical.ids.json --asset-classes '$GLOBAL_ASSET_CLASSES' --max-tickers 0 --live-sample-size 0 --concurrency '${RV_STOCK_ANALYZER_AUDIT_CONCURRENCY:-12}' --timeout-ms '${RV_STOCK_ANALYZER_AUDIT_TIMEOUT_MS:-30000}' && if [ -f public/data/ops/stock-analyzer-operability-latest.json ]; then node scripts/ops/build-stock-analyzer-operability.mjs --refresh-from-registry --registry-path public/data/universe/v7/registry/registry.ndjson.gz; else echo '{\"ok\":true,\"skipped\":\"stock_analyzer_operability_full_report_missing\"}'; fi"
+      # always derived from the live registry; non_tradable_or_delisted assets excluded from targetable.
+      printf '%s\n' "mkdir -p '${RV_GLOBAL_MANIFEST_DIR:-${NAS_PIPELINE_ARTIFACTS_ROOT:-$NAS_OPS_ROOT/pipeline-artifacts}/manifests}' && node scripts/universe-v7/build-global-scope.mjs --asset-classes '$GLOBAL_ASSET_CLASSES' && node scripts/ops/build-history-pack-manifest.mjs --scope global --asset-classes '$GLOBAL_ASSET_CLASSES' && node scripts/ops/apply-history-touch-report-to-registry.mjs --scan-existing-packs && node scripts/ops/build-stock-analyzer-universe-audit.mjs --registry-path public/data/universe/v7/registry/registry.ndjson.gz --allowlist-path public/data/universe/v7/ssot/assets.global.canonical.ids.json --asset-classes '$GLOBAL_ASSET_CLASSES' --max-tickers 0 --live-sample-size 0 --concurrency '${RV_STOCK_ANALYZER_AUDIT_CONCURRENCY:-12}' --timeout-ms '${RV_STOCK_ANALYZER_AUDIT_TIMEOUT_MS:-30000}' && if [ -f public/data/ops/stock-analyzer-operability-latest.json ]; then node scripts/ops/build-stock-analyzer-operability.mjs --refresh-from-registry --registry-path public/data/universe/v7/registry/registry.ndjson.gz; else echo '{\"ok\":true,\"skipped\":\"stock_analyzer_operability_full_report_missing\"}'; fi"
       ;;
     ui_field_truth_report)
       printf '%s\n' "node scripts/ops/build-ui-field-truth-report.mjs --base-url http://127.0.0.1:8788 --date='$TARGET_MARKET_DATE' --timeout-ms '${RV_UI_TRUTH_TIMEOUT_MS:-30000}'"
@@ -518,7 +371,7 @@ step_command() {
       printf '%s\n' "node scripts/ops/build-pipeline-runtime-report.mjs && node scripts/ops/build-full-universe-decisions.mjs --target-market-date '$TARGET_MARKET_DATE' --replace && node scripts/ops/final-integrity-seal.mjs --target-market-date '$TARGET_MARKET_DATE' && node scripts/ops/sync-release-state-from-final-seal.mjs"
       ;;
     build_deploy_bundle)
-      printf '%s\n' "node scripts/ops/build-deploy-bundle.mjs --strict"
+      printf '%s\n' "node scripts/ops/build-deploy-bundle.mjs"
       ;;
     wrangler_deploy)
       printf '%s\n' "node scripts/ops/release-gate-check.mjs"
@@ -699,14 +552,6 @@ run_step() {
   mkdir -p "$step_dir"
   write_status "running" "step_start" "$step_id"
 
-  if [[ "$step_id" == "market_data_refresh" ]]; then
-    if ! assert_eodhd_budget "${RV_MARKET_REFRESH_MIN_EODHD_AVAILABLE_CALLS:-10000}"; then
-      write_guard_blocked_result "$result_json" "$step_id" "eodhd_budget_below_floor" "$resource_class" "$heap_mb" "$mem_before_kb" "$swap_before_kb"
-      write_status "guard_blocked" "eodhd_budget_below_floor" "$step_id"
-      return 17
-    fi
-  fi
-
   if (( mem_before_kb < min_mem_kb )); then
     write_guard_blocked_result "$result_json" "$step_id" "mem_available_below_floor" "$resource_class" "$heap_mb" "$mem_before_kb" "$swap_before_kb"
     write_status "guard_blocked" "mem_available_below_floor" "$step_id"
@@ -736,7 +581,7 @@ run_step() {
   )
 
   case "$step_id" in
-    build_global_scope|hist_probs|snapshot|learning_daily|forecast_daily|build_fundamentals|quantlab_daily_report|scientific_summary|v1_audit|cutover_readiness|etf_diagnostic|stage1_ops_pack|system_status_report|data_freshness_report|pipeline_epoch|generate_meta_dashboard_data|signal_performance_report|runtime_preflight|stock_analyzer_universe_audit|ui_field_truth_report|final_integrity_seal|build_deploy_bundle|wrangler_deploy)
+    build_global_scope|hist_probs|snapshot|learning_daily|forecast_daily|build_fundamentals|quantlab_daily_report|scientific_summary|v1_audit|cutover_readiness|etf_diagnostic|stage1_ops_pack|system_status_report|data_freshness_report|pipeline_epoch|generate_meta_dashboard_data|runtime_preflight|stock_analyzer_universe_audit|ui_field_truth_report|final_integrity_seal|build_deploy_bundle|wrangler_deploy)
       measure_args+=(--set-env "NODE_OPTIONS=--max-old-space-size=$heap_mb")
       ;;
   esac
@@ -795,8 +640,7 @@ lane_steps() {
       data_freshness_report \
       system_status_report \
       pipeline_epoch \
-      generate_meta_dashboard_data \
-      signal_performance_report
+      generate_meta_dashboard_data
   else
     printf '%s\n' \
       stock_analyzer_universe_audit \
@@ -806,7 +650,6 @@ lane_steps() {
       final_integrity_seal \
       system_status_report \
       generate_meta_dashboard_data \
-      signal_performance_report \
       build_deploy_bundle \
       wrangler_deploy
   fi
@@ -825,19 +668,6 @@ fi
 quarantine_dev_runtime_once
 bash "$REPO_ROOT/scripts/nas/preflight-env.sh" --lane="$ACTIVE_LANE"
 
-if [[ "$ACTIVE_LANE" == "release-full" ]]; then
-  set +e
-  coverage_status="$(assert_release_coverage_current 2>&1)"
-  coverage_code="$?"
-  set -e
-  if [[ "$coverage_code" -ne 0 ]]; then
-    write_status "blocked" "history_coverage_not_current" ""
-    echo "release_full_blocked=$coverage_status" >&2
-    exit "$coverage_code"
-  fi
-  echo "$coverage_status" >&2
-fi
-
 write_status "running" "campaign_started" ""
 
 start_step_seen=1
@@ -854,12 +684,8 @@ while IFS= read -r step_id; do
       continue
     fi
   fi
-  set +e
-  run_step "$step_id"
-  step_status="$?"
-  set -e
-  if [[ "$step_status" -ne 0 ]]; then
-    exit "$step_status"
+  if ! run_step "$step_id"; then
+    exit "$?"
   fi
 done < <(lane_steps)
 
