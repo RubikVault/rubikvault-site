@@ -4,9 +4,12 @@ import { createHash } from 'node:crypto';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { PIPELINE_STEP_ORDER } from './ops/system-status-ssot.mjs';
+import { isDataPlaneLane, parsePipelineLane } from './ops/pipeline-lanes.mjs';
 
 const REPO_ROOT = path.resolve(new URL('.', import.meta.url).pathname, '..');
-const LEARNING_REPORT_PATH = path.join(REPO_ROOT, 'mirrors/learning/reports/latest.json');
+const EVALUATION_LANE = parsePipelineLane(process.argv.slice(2));
+const RELEASE_SCOPE_EVALUATED = !isDataPlaneLane(EVALUATION_LANE);
+const LEARNING_REPORT_PATH = path.join(REPO_ROOT, 'public/data/reports/learning-report-latest.json');
 const QUANTLAB_REPORT_PATH = path.join(REPO_ROOT, 'mirrors/quantlab/reports/v4-daily/latest.json');
 const QUANTLAB_OPERATIONAL_STATUS_PATH = path.join(REPO_ROOT, 'public/data/quantlab/status/operational-status.json');
 const FORECAST_LATEST_PATH = path.join(REPO_ROOT, 'public/data/forecast/latest.json');
@@ -29,6 +32,11 @@ const SYSTEM_STATUS_PATH = path.join(REPO_ROOT, 'public/data/reports/system-stat
 const DATA_FRESHNESS_PATH = path.join(REPO_ROOT, 'public/data/reports/data-freshness-latest.json');
 const BEST_SETUPS_PATH = path.join(REPO_ROOT, 'public/data/snapshots/best-setups-v4.json');
 const PIPELINE_LEDGER_PATH = path.join(REPO_ROOT, 'public/data/ops/pipeline-run-ledger.ndjson');
+const OPERABILITY_SUMMARY_PATH = path.join(REPO_ROOT, 'public/data/ops/stock-analyzer-operability-summary-latest.json');
+const SCIENTIFIC_SUMMARY_PATH = path.join(REPO_ROOT, 'public/data/supermodules/scientific-summary.json');
+const DECISION_BUNDLE_LATEST_PATH = path.join(REPO_ROOT, 'public/data/decisions/latest.json');
+const QUANTLAB_STOCKS_DIR = path.join(REPO_ROOT, 'public/data/quantlab/stock-insights/stocks');
+const QUANTLAB_ETFS_DIR = path.join(REPO_ROOT, 'public/data/quantlab/stock-insights/etfs');
 const OUTPUT_PATH = path.join(REPO_ROOT, 'public/dashboard_v6_meta_data.json');
 const V7_STATUS_OUTPUT_PATH = path.join(REPO_ROOT, 'public/data/ui/dashboard-v7-status.json');
 
@@ -825,13 +833,201 @@ function normalizeSealReason(reason) {
   };
 }
 
-function buildDashboardV7Document({ output, systemStatusReport, finalIntegritySeal }) {
+async function buildSignalIntelligenceSection() {
+  const [opSummary, scientificSummary, forecastDoc, bestSetups, decisionBundle] = await Promise.all([
+    readJsonSafely(OPERABILITY_SUMMARY_PATH),
+    readJsonSafely(SCIENTIFIC_SUMMARY_PATH),
+    readJsonSafely(FORECAST_LATEST_PATH),
+    readJsonSafely(BEST_SETUPS_PATH),
+    readJsonSafely(DECISION_BUNDLE_LATEST_PATH),
+  ]);
+
+  // Forecast: count direction=bullish per horizon (p_up > 0.53 per run_daily.mjs:301)
+  const forecasts = Array.isArray(forecastDoc?.data?.forecasts) ? forecastDoc.data.forecasts : [];
+  const forecastBullish = { '1d': 0, '5d': 0, '20d': 0 };
+  for (const row of forecasts) {
+    const horizons = row?.horizons && typeof row.horizons === 'object' ? row.horizons : {};
+    for (const hk of ['1d', '5d', '20d']) {
+      if (String(horizons[hk]?.direction || '').toLowerCase() === 'bullish') forecastBullish[hk] += 1;
+    }
+  }
+
+  // QuantLab: count state.label='Top Buy Opportunity' across stocks + etfs shards
+  let qlTopBuy = 0;
+  let qlInteresting = 0;
+  let qlTotal = 0;
+  let qlAsof = null;
+  let qlGeneratedAt = null;
+  for (const dir of [QUANTLAB_STOCKS_DIR, QUANTLAB_ETFS_DIR]) {
+    let files;
+    try { files = fsSync.readdirSync(dir).filter((f) => f.endsWith('.json')); } catch { continue; }
+    for (const file of files) {
+      const shard = await readJsonSafely(path.join(dir, file));
+      if (!shard?.byTicker) continue;
+      if (!qlAsof) qlAsof = shard.asOfDate || shard.generatedAt || shard.generated_at || null;
+      if (!qlGeneratedAt) qlGeneratedAt = shard.generatedAt || shard.generated_at || null;
+      for (const row of Object.values(shard.byTicker)) {
+        qlTotal += 1;
+        const label = row?.state?.label || '';
+        if (label === 'Top Buy Opportunity') qlTopBuy += 1;
+        if (label === 'Interesting for Watchlist') qlInteresting += 1;
+      }
+    }
+  }
+
+  const opTotal = Number(opSummary?.summary?.total_assets) || 0;
+  const opOk = Number(opSummary?.summary?.ui_title_counts?.['All systems operational']) || 0;
+
+  return {
+    generated_at: new Date().toISOString(),
+    universe: {
+      decision_bundle_scope: {
+        description: 'STOCK+ETF assets processed by Decision Bundle (US+EU+Asia)',
+        total: Number(decisionBundle?.summary?.assets_total_universe) || opTotal || null,
+      },
+      all_systems_operational: {
+        count: opOk,
+        total: opTotal,
+        pct: opTotal > 0 ? Number((opOk / opTotal).toFixed(6)) : null,
+        note: 'no per-class breakdown until build-stock-analyzer-operability.mjs extended',
+        source_file: 'stock-analyzer-operability-summary-latest.json',
+        source_as_of: opSummary?.generated_at || null,
+      },
+    },
+    buy_signals: {
+      scientific: {
+        strong_signals_count: Array.isArray(scientificSummary?.strong_signals)
+          ? scientificSummary.strong_signals.length
+          : (scientificSummary?.universe_stats?.strong_signals ?? null),
+        best_setups_count: Array.isArray(scientificSummary?.best_setups) ? scientificSummary.best_setups.length : null,
+        note: 'no short/mid/long breakdown — by_timeframe not in scientific-summary.json',
+        source_file: 'supermodules/scientific-summary.json',
+        source_as_of: scientificSummary?.generated_at || null,
+      },
+      forecast: {
+        note: 'raw bullish count (direction=bullish, p_up > 0.53) — NOT best-setup candidates (thresholds 0.60/0.62/0.68)',
+        bullish_1d: forecastBullish['1d'],
+        bullish_5d: forecastBullish['5d'],
+        bullish_20d: forecastBullish['20d'],
+        total_forecasts: forecasts.length,
+        source_file: 'forecast/latest.json',
+        source_as_of: forecastDoc?.data?.asof || null,
+      },
+      quantlab: {
+        top_buy: qlTopBuy,
+        interesting: qlInteresting,
+        total_evaluated: qlTotal,
+        note: 'state.label=Top Buy Opportunity; rank alone insufficient (rank<=500 can be No Buy Currently)',
+        source_file: 'quantlab/stock-insights/stocks + etfs',
+        source_as_of: qlAsof,
+        generated_at: qlGeneratedAt,
+      },
+      decision_bundle: {
+        buy_count: decisionBundle?.summary?.buy_count ?? null,
+        status: decisionBundle?.status || null,
+        target_market_date: decisionBundle?.target_market_date || null,
+        source_file: 'decisions/latest.json',
+        source_as_of: decisionBundle?.generated_at || null,
+      },
+      frontpage: {
+        short: (bestSetups?.meta?.rows_emitted?.stocks?.short || 0) + (bestSetups?.meta?.rows_emitted?.etfs?.short || 0),
+        medium: (bestSetups?.meta?.rows_emitted?.stocks?.medium || 0) + (bestSetups?.meta?.rows_emitted?.etfs?.medium || 0),
+        long: (bestSetups?.meta?.rows_emitted?.stocks?.long || 0) + (bestSetups?.meta?.rows_emitted?.etfs?.long || 0),
+        source: bestSetups?.meta?.source || null,
+        total: bestSetups?.meta?.rows_emitted?.total || 0,
+        source_as_of: bestSetups?.generated_at || null,
+      },
+    },
+  };
+}
+
+function buildDashboardV7Document({ output, systemStatusReport, finalIntegritySeal, lane }) {
   const sealBlockers = (finalIntegritySeal?.blocking_reasons || [])
     .map(normalizeSealReason)
     .filter(Boolean);
   const sourceRootCauses = Array.isArray(output.system?.root_causes) ? output.system.root_causes : [];
   const sourcePrimaryActions = Array.isArray(output.system?.primary_actions) ? output.system.primary_actions : [];
   const fallbackBlockingRootCauses = sourceRootCauses.filter((cause) => String(cause?.severity || '').toLowerCase() === 'critical');
+  if (isDataPlaneLane(lane)) {
+    const advisorySeverity = String(
+      systemStatusReport?.summary?.advisory_severity
+      || systemStatusReport?.summary?.severity
+      || output.system?.status_severity
+      || 'ok'
+    ).toLowerCase();
+    const primaryBlocker = sourceRootCauses[0]?.title || null;
+    const primaryActions = sourcePrimaryActions.length > 0
+      ? sourcePrimaryActions
+      : buildPrimaryActions(sourceRootCauses);
+    const dataPlaneSeverity = String(
+      systemStatusReport?.summary?.severity
+      || output.system?.status_severity
+      || 'ok'
+    ).toLowerCase();
+    const overallStatus = dataPlaneSeverity === 'critical'
+      ? 'CRITICAL'
+      : dataPlaneSeverity === 'warning'
+        ? 'WARNING'
+        : 'OK';
+    const liveStatus = dataPlaneSeverity === 'critical'
+      ? 'failed'
+      : dataPlaneSeverity === 'warning'
+        ? 'degraded'
+        : 'ok';
+    const system = {
+      ...output.system,
+      overall_status: overallStatus,
+      status_severity: dataPlaneSeverity,
+      live_status: liveStatus,
+      production_ready: null,
+      cutover_ready: null,
+      ui_green: null,
+      global_green: null,
+      release_status_label: 'UNKNOWN_DATA_PLANE_ONLY',
+      blocking_severity: 'ok',
+      advisory_severity: advisorySeverity,
+      primary_blocker: primaryBlocker,
+      lead_blocker_step: null,
+      next_step: null,
+      observer_stale: null,
+      observer_generated_at: null,
+      runtime_preflight_ok: null,
+      runtime_preflight_ref: null,
+      root_causes: sourceRootCauses,
+      blocking_reasons: [],
+      advisory_reasons: sourceRootCauses,
+      primary_actions: primaryActions,
+      advisory_actions: sourceRootCauses.length > 0 ? buildPrimaryActions(sourceRootCauses) : [],
+      evaluation_lane: lane,
+      release_scope_evaluated: false,
+    };
+    return {
+      ...output,
+      schema_version: 'rv.dashboard_v7_status.v1',
+      generator_id: 'scripts/generate_meta_dashboard_data.mjs',
+      generated_at: output.generated_at,
+      run_id: systemStatusReport?.run_id || output.operations?.release_state?.run_id || null,
+      target_market_date: systemStatusReport?.summary?.target_market_date || output.operations?.release_state?.target_market_date || null,
+      evaluation_lane: lane,
+      release_scope_evaluated: false,
+      ui_green: null,
+      release_ready: null,
+      release_status_label: 'UNKNOWN_DATA_PLANE_ONLY',
+      blocking_severity: 'ok',
+      advisory_severity: advisorySeverity,
+      primary_blocker: primaryBlocker,
+      lead_blocker_step: null,
+      next_step: null,
+      observer_stale: null,
+      observer_generated_at: null,
+      runtime_preflight_ok: null,
+      runtime_preflight_ref: null,
+      blocking_reasons: [],
+      advisory_reasons: sourceRootCauses,
+      legacy_meta_ref: 'public/dashboard_v6_meta_data.json',
+      system,
+    };
+  }
   const releaseReady = finalIntegritySeal?.release_ready === true;
   const blockingReasons = sealBlockers.length > 0
     ? sealBlockers
@@ -868,7 +1064,8 @@ function buildDashboardV7Document({ output, systemStatusReport, finalIntegritySe
     : statusSeverity === 'warning'
       ? 'degraded'
       : 'ok';
-  const primaryBlocker = blockingReasons[0]?.title || advisoryReasons[0]?.title || null;
+  const primaryBlocker = blockingReasons[0]?.title || null;
+  const primaryAdvisory = advisoryReasons[0]?.title || null;
   const primaryActions = blockingReasons.length > 0
     ? buildPrimaryActions(blockingReasons)
     : sourcePrimaryActions;
@@ -907,6 +1104,7 @@ function buildDashboardV7Document({ output, systemStatusReport, finalIntegritySe
     blocking_severity: blockingSeverity,
     advisory_severity: advisorySeverity,
     primary_blocker: primaryBlocker,
+    primary_advisory: primaryAdvisory,
     lead_blocker_step: leadBlockerStep,
     next_step: nextStep,
     observer_stale: finalIntegritySeal?.observer_stale ?? null,
@@ -932,6 +1130,7 @@ function buildDashboardV7Document({ output, systemStatusReport, finalIntegritySe
     blocking_severity: blockingSeverity,
     advisory_severity: advisorySeverity,
     primary_blocker: primaryBlocker,
+    primary_advisory: primaryAdvisory,
     lead_blocker_step: leadBlockerStep,
     next_step: nextStep,
     observer_stale: finalIntegritySeal?.observer_stale ?? null,
@@ -964,7 +1163,9 @@ async function main() {
     readJsonSafely(DATA_FRESHNESS_PATH),
     readJsonSafely(BEST_SETUPS_PATH),
   ]);
-  const finalIntegritySeal = finalIntegritySealDoc || systemStatusReport?.final_integrity_seal || null;
+  const finalIntegritySeal = isDataPlaneLane(EVALUATION_LANE)
+    ? null
+    : (finalIntegritySealDoc || systemStatusReport?.final_integrity_seal || null);
   const systemStatusView = systemStatusReport
     ? { ...systemStatusReport, final_integrity_seal: finalIntegritySeal }
     : { final_integrity_seal: finalIntegritySeal };
@@ -1002,6 +1203,8 @@ async function main() {
 
   const output = {
     generated_at: new Date().toISOString(),
+    evaluation_lane: EVALUATION_LANE,
+    release_scope_evaluated: RELEASE_SCOPE_EVALUATED,
     models: {},
     legacy_weights: legacyWeights || {},
     v1_weights: null,
@@ -1398,8 +1601,9 @@ async function main() {
     root_causes: rootCauses,
     primary_actions: primaryActions,
     operating_modes: operatingModes,
-    production_ready: finalIntegritySeal?.release_ready === true,
-    cutover_ready: finalIntegritySeal?.release_ready === true,
+    production_ready: isDataPlaneLane(EVALUATION_LANE) ? null : (finalIntegritySeal?.release_ready === true),
+    cutover_ready: isDataPlaneLane(EVALUATION_LANE) ? null : (finalIntegritySeal?.release_ready === true),
+    release_status_label: isDataPlaneLane(EVALUATION_LANE) ? 'UNKNOWN_DATA_PLANE_ONLY' : null,
     v1_mode: v1AuditReport?.mode || 'shadow_v1',
     quantlab_readiness: quantlab?.progress?.readiness?.pct ?? null,
     quantlab_implementation: quantlab?.progress?.implementation?.pct ?? null,
@@ -1423,6 +1627,8 @@ async function main() {
     })(),
     final_integrity_seal: finalIntegritySeal,
     data_truth_gate: dataFreshnessReport || systemStatusReport?.data_truth_gate || null,
+    evaluation_lane: EVALUATION_LANE,
+    release_scope_evaluated: RELEASE_SCOPE_EVALUATED,
     web_validation_chain: systemStatusReport?.ssot?.web_validation_chain || [],
     ssot_doc_ref: systemStatusReport?.ssot?.doc_ref || null,
     recovery_script: systemStatusReport?.ssot?.recovery_script || null,
@@ -1449,10 +1655,13 @@ async function main() {
     } : null,
   };
 
+  output.signal_intelligence = await buildSignalIntelligenceSection();
+
   const dashboardV7Status = buildDashboardV7Document({
     output,
     systemStatusReport,
     finalIntegritySeal,
+    lane: EVALUATION_LANE,
   });
 
   await fs.writeFile(OUTPUT_PATH, JSON.stringify(output, null, 2), 'utf-8');

@@ -2989,6 +2989,11 @@
       return forecastLatestPromise;
     }
 
+    // Minimum p_up thresholds per horizon for "Bullish Candidate" label
+    const FORECAST_CANDIDATE_MIN = { short: 0.60, medium: 0.62, long: 0.55 };
+    // Threshold for "confirmed bullish" label on long horizon
+    const FORECAST_LONG_CONFIRMED_MIN = 0.68;
+
     function buildForecastHorizonFallback() {
       const out = { short: [], medium: [], long: [] };
       const rows = Array.isArray(forecastLatestDoc?.data?.forecasts) ? forecastLatestDoc.data.forecasts : [];
@@ -3003,7 +3008,11 @@
         if (direction !== 'bullish') return;
         const bullishProb = rawProb;
         if (!Number.isFinite(bullishProb) || bullishProb <= 0) return;
+        // Enforce horizon-specific minimum threshold
+        if (bullishProb < (FORECAST_CANDIDATE_MIN[horizon] || 0.60)) return;
         seen[horizon].add(ticker);
+        // Long horizon: only "Watchlist / Early Bullish" if below confirmed threshold
+        const isConfirmedBullish = horizon !== 'long' || bullishProb >= FORECAST_LONG_CONFIRMED_MIN;
         out[horizon].push({
           ticker,
           name: tickerDisplayName(ticker, rowName),
@@ -3011,11 +3020,13 @@
           score: bullishProb,
           probability: bullishProb,
           setup_score: Math.round(bullishProb * 100),
-          trigger_score: bullishProb >= 0.55 ? 75 : 50,
-          trigger_fulfilled: bullishProb >= 0.55,
+          trigger_score: isConfirmedBullish ? 80 : 55,
+          trigger_fulfilled: isConfirmedBullish,
           expected_return: null,
           price: null,
-          source: `forecast_latest_${horizonKey}`
+          source: `forecast_latest_${horizonKey}`,
+          signal_class: isConfirmedBullish ? 'bullish_candidate' : 'watchlist',
+          signal_label: isConfirmedBullish ? 'Bullish Candidate' : 'Watchlist / Early Bullish'
         });
       };
 
@@ -3151,6 +3162,10 @@
       const totalRows = ['short', 'medium', 'long'].reduce((sum, h) => sum + (horizonRows[h]?.length || 0), 0);
       bestSetupsMeta.textContent = `Rows=${totalRows} • source=${source} • asOf=${generatedAt}`;
 
+      const isVerifiedMode = verifiedDocHasRows;
+      const signalClassBanner = isVerifiedMode
+        ? '<div style="margin-bottom:0.6rem; padding:0.35rem 0.6rem; background:rgba(34,197,94,0.12); border:1px solid rgba(34,197,94,0.3); border-radius:6px; font-size:0.78rem; color:#22c55e; font-weight:600;">✓ Verified BUY — Decision Bundle validated</div>'
+        : '<div style="margin-bottom:0.6rem; padding:0.35rem 0.6rem; background:rgba(59,130,246,0.10); border:1px solid rgba(59,130,246,0.3); border-radius:6px; font-size:0.78rem; color:#60a5fa;">⚡ High-Probability Bullish Candidates — not verified BUY decisions. Thresholds: Short ≥60%, Mid ≥62%, Long ≥55% (≥68% = confirmed).</div>';
       const titles = {
         short: 'Short (1-5d) Top 10',
         medium: 'Mid (5-20d) Top 10',
@@ -3170,16 +3185,23 @@
                 </tr>
               </thead>
               <tbody>
-                ${rows.map((row) => `
+                ${rows.map((row) => {
+                  const signalLabel = row.verdict
+                    ? `${escapeHtml(row.verdict)} / ${escapeHtml(row.confidence || '—')}`
+                    : (row.signal_label ? escapeHtml(row.signal_label) : (row.trigger_fulfilled ? 'Setup+Trigger' : 'Setup'));
+                  const signalColor = row.verdict === 'BUY' ? '#22c55e'
+                    : row.signal_class === 'watchlist' ? '#f59e0b'
+                    : row.trigger_fulfilled ? '#22c55e' : '#94a3b8';
+                  return `
                   <tr>
                     <td style="padding:0.35rem 0.25rem; border-top:1px solid rgba(100,116,139,0.18);">
                       <a class="best-setup-link" href="/analyze/${encodeURIComponent(row.ticker)}" data-open-ticker="${escapeHtml(row.ticker)}" data-canonical-id="${escapeHtml(row.canonical_id || '')}" title="${escapeHtml(row.canonical_id || 'canonical_id: n/a')}">${escapeHtml(row.ticker)}</a>
                     </td>
                     <td style="padding:0.35rem 0.25rem; border-top:1px solid rgba(100,116,139,0.18); color:#cbd5e1;">${escapeHtml(row.name || '—')}</td>
                     <td style="padding:0.35rem 0.25rem; border-top:1px solid rgba(100,116,139,0.18); text-align:right; color:#e5e7eb;">${formatBestSetupMetric(row, source)}</td>
-                    <td style="padding:0.35rem 0.25rem; border-top:1px solid rgba(100,116,139,0.18); text-align:right; color:${row.verdict === 'BUY' ? '#22c55e' : (row.trigger_fulfilled ? '#22c55e' : '#94a3b8')};">${row.verdict ? `${escapeHtml(row.verdict)} / ${escapeHtml(row.confidence || '—')}` : (row.trigger_fulfilled ? 'Setup+Trigger' : 'Setup')}</td>
-                  </tr>
-                `).join('')}
+                    <td style="padding:0.35rem 0.25rem; border-top:1px solid rgba(100,116,139,0.18); text-align:right; color:${signalColor};">${signalLabel}</td>
+                  </tr>`;
+                }).join('')}
               </tbody>
             </table>`
           : '<div style="padding:0.6rem; color:#64748b;">N/A — no valid rows in current snapshot.</div>';
@@ -3193,8 +3215,10 @@
           </article>
         `;
       }).join('');
+      // Prepend banner after blocks are built
+      const fullContent = signalClassBanner + blocks;
 
-      bestSetupsByHorizonWrap.innerHTML = blocks;
+      bestSetupsByHorizonWrap.innerHTML = fullContent;
 
       document.querySelectorAll('[data-open-ticker]').forEach((link) => {
         link.addEventListener('click', async (ev) => {

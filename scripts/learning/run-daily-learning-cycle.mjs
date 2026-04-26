@@ -789,37 +789,41 @@ function extractElliottPredictions(date, eodPrices, candidateTickers = []) {
 
 // ─── 4. QUANTLAB: Extract Setup Boni Predictions ────────────────────────────
 function extractQuantLabPredictions(date, eodPrices) {
-    const quantlabPath = path.join(ROOT, 'public/data/quantlab/stock-insights/stocks');
-    if (!fs.existsSync(quantlabPath)) return { predictions: [], source_meta: null };
-    
-    const files = fs.readdirSync(quantlabPath).filter(f => f.endsWith('.json'));
+    const qlDirs = [
+        path.join(ROOT, 'public/data/quantlab/stock-insights/stocks'),
+        path.join(ROOT, 'public/data/quantlab/stock-insights/etfs'),
+    ];
+
     let allPreds = [];
     let asof = null;
 
-    for (const file of files) {
-        const payload = readJson(path.join(quantlabPath, file));
-        if (!payload || !payload.byTicker) continue;
-        
-        if (!asof) asof = normalizeDate(payload.asOfDate || payload.generatedAt || payload.generated_at);
-        
-        for (const [tickerKey, row] of Object.entries(payload.byTicker)) {
-            const ticker = String(row?.ticker || tickerKey).toUpperCase();
-            const price = eodPrices[ticker]?.close ?? null;
-            
-            const state = row.state || {};
-            const globalRank = state.ranking?.globalTop10Rank;
-            
-            // We only take the top 500 strongest QuantLab signals as implicit "bullish" predictions
-            if (state.consensusLabel === 'STRONG_BUY' || state.consensusLabel === 'BUY' || (globalRank && globalRank <= 500)) {
-                const confidence = state.consensusLabel === 'STRONG_BUY' ? 0.75 : (state.consensusLabel === 'BUY' ? 0.60 : 0.55);
+    for (const quantlabPath of qlDirs) {
+        if (!fs.existsSync(quantlabPath)) continue;
+        const files = fs.readdirSync(quantlabPath).filter(f => f.endsWith('.json'));
+
+        for (const file of files) {
+            const payload = readJson(path.join(quantlabPath, file));
+            if (!payload || !payload.byTicker) continue;
+
+            if (!asof) asof = normalizeDate(payload.asOfDate || payload.generatedAt || payload.generated_at);
+
+            for (const [tickerKey, row] of Object.entries(payload.byTicker)) {
+                const ticker = String(row?.ticker || tickerKey).toUpperCase();
+                const price = eodPrices[ticker]?.close ?? null;
+
+                const state = row.state || {};
+                // BUY proxy: state.label === 'Top Buy Opportunity'
+                // globalTop10Rank is a top-level field on row, not under state.ranking
+                if (state.label !== 'Top Buy Opportunity') continue;
+
                 allPreds.push({
                     feature: 'quantlab',
                     ticker,
                     date,
-                    horizon: 'medium', // Default horizon for QuantLab trend following
+                    horizon: 'medium',
                     direction: 'bullish',
-                    probability: confidence,
-                    confidence,
+                    probability: 0.65,
+                    confidence: 0.65,
                     price_at_prediction: price,
                     source: 'quantlab_agent_ensemble'
                 });
@@ -827,9 +831,9 @@ function extractQuantLabPredictions(date, eodPrices) {
         }
     }
 
-    allPreds.sort((a,b) => b.probability - a.probability);
-    const qualityPreds = allPreds.slice(0, 1000); // Max 1000 best
-    
+    allPreds.sort((a, b) => b.probability - a.probability);
+    const qualityPreds = allPreds.slice(0, 1000);
+
     console.log(`[learning] QuantLab: ${allPreds.length} total → ${qualityPreds.length} quality predictions`);
     return {
         predictions: qualityPreds,
@@ -1332,7 +1336,7 @@ function printReport(report) {
 
 // ─── Cross-Feature Conviction Score ─────────────────────────────────────────
 // IMPROVEMENT: Combines signals from all features for consensus scoring
-function computeConvictionScores(forecastPreds, scientificPreds, stockPreds) {
+function computeConvictionScores(forecastPreds, scientificPreds, stockPreds, qlPreds = []) {
     const tickerSignals = {}; // ticker -> { perFeature: { feature: { direction, confidence } } }
 
     function addSignal(ticker, feature, direction, confidence) {
@@ -1349,6 +1353,7 @@ function computeConvictionScores(forecastPreds, scientificPreds, stockPreds) {
 
     for (const p of forecastPreds) addSignal(p.ticker, 'forecast', p.direction, p.probability);
     for (const p of scientificPreds) addSignal(p.ticker, 'scientific', p.direction, p.probability);
+    for (const p of qlPreds) addSignal(p.ticker, 'quantlab', p.direction, p.probability);
     // Stock analyzer doesn't have directional signal, skip
 
     const convictions = [];
@@ -1452,7 +1457,7 @@ async function main() {
 
     // 4. Cross-feature conviction scoring
     console.log('[learning] Computing cross-feature conviction scores...');
-    const convictionScores = computeConvictionScores(forecastPreds, scientificPreds, stockPreds);
+    const convictionScores = computeConvictionScores(forecastPreds, scientificPreds, stockPreds, quantlabPreds);
     console.log(`[learning] Top conviction tickers: ${convictionScores.slice(0, 5).map(c => `${c.ticker}(${c.conviction_score})`).join(', ')}`);
 
     // 5. Resolve outcomes for past predictions

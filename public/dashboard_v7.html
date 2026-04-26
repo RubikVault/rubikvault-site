@@ -304,6 +304,8 @@
         <button class="tab-btn" data-tab="performance"><i class="fas fa-chart-line"></i> Performance</button>
         <button class="tab-btn" data-tab="strategy"><i class="fas fa-balance-scale"></i> Strategy</button>
         <button class="tab-btn" data-tab="operations"><i class="fas fa-cogs"></i> Operations</button>
+        <button class="tab-btn" data-tab="signals"><i class="fas fa-signal"></i> Signals</button>
+        <button class="tab-btn" data-tab="buy-performance"><i class="fas fa-trophy"></i> BUY Performance</button>
     </div>
 
     <!-- Tab 1: System Health -->
@@ -571,6 +573,52 @@
             </div>
             <div id="validationChainContent"><span style="color:var(--text-muted);font-size:.82rem">No validation chain data</span></div>
         </div>
+    </div>
+</div>
+
+<!-- Tab 5: Signals -->
+<div class="tab-panel" id="tab-signals">
+    <div class="sections-grid">
+        <div class="section-box">
+            <div class="section-title-wrap">
+                <div class="section-title"><i class="fas fa-globe"></i> Universe &amp; Operability</div>
+                <div class="section-subtitle">Decision Bundle scope (STOCK+ETF, US+EU+Asia). All Systems Operational = all modules fresh and green.</div>
+            </div>
+            <div id="signalsUniverseContent"><span style="color:var(--text-muted);font-size:.82rem">Loading...</span></div>
+        </div>
+        <div class="section-box">
+            <div class="section-title-wrap">
+                <div class="section-title"><i class="fas fa-signal"></i> BUY Signals by Model</div>
+                <div class="section-subtitle">Raw signal counts per model and horizon. Forecast = direction=bullish (p_up &gt; 0.53), not best-setup candidates.</div>
+            </div>
+            <div id="signalsByModelContent"><span style="color:var(--text-muted);font-size:.82rem">Loading...</span></div>
+        </div>
+    </div>
+</div>
+
+<!-- Tab 6: BUY Performance -->
+<div class="tab-panel" id="tab-buy-performance">
+    <div class="sections-grid">
+        <div class="section-box">
+            <div class="section-title-wrap">
+                <div class="section-title"><i class="fas fa-chart-bar"></i> BUY Signal Accuracy (30d)</div>
+                <div class="section-subtitle">Directional accuracy for buy signals per model and horizon. Forecast/Scientific/Elliott: direction=bullish. Stock Analyzer: buy_eligible=true.</div>
+            </div>
+            <div id="buyAccuracyContent"><span style="color:var(--text-muted);font-size:.82rem">Loading...</span></div>
+        </div>
+        <div class="section-box">
+            <div class="section-title-wrap">
+                <div class="section-title"><i class="fas fa-exclamation-triangle"></i> Recent False Positives</div>
+                <div class="section-subtitle">BUY signals where the predicted direction was wrong.</div>
+            </div>
+            <div id="falseBuysContent"><span style="color:var(--text-muted);font-size:.82rem">Loading...</span></div>
+        </div>
+    </div>
+    <div class="section-box" style="margin-top:1.5rem">
+        <div class="section-title-wrap">
+            <div class="section-title"><i class="fas fa-lightbulb"></i> Improvement Notes</div>
+        </div>
+        <div id="improvementNotesContent"><span style="color:var(--text-muted);font-size:.82rem">Loading...</span></div>
     </div>
 </div>
 
@@ -1813,6 +1861,11 @@ async function loadDashboard() {
             `).join('');
         }
 
+        // ═══════════════════════════════════════════
+        // TAB: SIGNALS
+        // ═══════════════════════════════════════════
+        renderSignalsTab(data);
+
     } catch (err) {
         document.getElementById('govBanner').style.background = 'rgba(239,68,68,0.1)';
         document.getElementById('govBanner').style.borderColor = 'rgba(239,68,68,0.3)';
@@ -1842,21 +1895,34 @@ function updateCountdown() {
 setInterval(updateCountdown, 1000);
 
 // ──── Live NAS Pipeline Monitor ────
+// data-plane: 19 steps — order matches rv-nas-night-supervisor.sh lane_steps()
 const NAS_STEPS = [
     'safe_code_sync','build_global_scope','market_data_refresh','q1_delta_ingest',
     'build_fundamentals','quantlab_daily_report','scientific_summary','forecast_daily',
     'hist_probs','snapshot','etf_diagnostic','learning_daily','v1_audit',
-    'cutover_readiness','stage1_ops_pack','system_status_report','data_freshness_report',
-    'pipeline_epoch','generate_meta_dashboard_data'
+    'cutover_readiness','stage1_ops_pack','data_freshness_report','system_status_report',
+    'pipeline_epoch','generate_meta_dashboard_data','signal_performance_report'
 ];
+// release-full: 8 unique steps — matches supervisor's else-branch (deduped)
+const NAS_STEPS_RELEASE_FULL = [
+    'stock_analyzer_universe_audit','data_freshness_report','system_status_report',
+    'pipeline_epoch','final_integrity_seal','generate_meta_dashboard_data',
+    'signal_performance_report','build_deploy_bundle','wrangler_deploy'
+];
+function nasStepsForLane(lane) {
+    return lane === 'release-full' ? NAS_STEPS_RELEASE_FULL : NAS_STEPS;
+}
 const NAS_STEP_LABELS = {
     safe_code_sync:'Code Sync', build_global_scope:'Global Scope', market_data_refresh:'Market Data',
     q1_delta_ingest:'Q1 Ingest', build_fundamentals:'Fundamentals', quantlab_daily_report:'QuantLab',
     scientific_summary:'Scientific', forecast_daily:'Forecast', hist_probs:'Hist Probs',
     snapshot:'Snapshot', etf_diagnostic:'ETF Diag', learning_daily:'Learning',
     v1_audit:'V1 Audit', cutover_readiness:'Cutover', stage1_ops_pack:'Ops Pack',
-    system_status_report:'Sys Status', data_freshness_report:'Freshness',
-    pipeline_epoch:'Epoch', generate_meta_dashboard_data:'Dashboard Data'
+    data_freshness_report:'Freshness', system_status_report:'Sys Status',
+    pipeline_epoch:'Epoch', generate_meta_dashboard_data:'Dashboard Data',
+    signal_performance_report:'Signal Perf',
+    stock_analyzer_universe_audit:'Universe Audit', final_integrity_seal:'Final Seal',
+    build_deploy_bundle:'Build Bundle', wrangler_deploy:'CF Deploy'
 };
 
 async function refreshNasLive() {
@@ -1887,6 +1953,8 @@ function renderNasLive(dashboard, sup, wd) {
     const pulse = document.getElementById('nasPulse');
     const content = document.getElementById('nasLiveContent');
     const current = dashboard.current_run || {};
+    const lane = current.lane || 'data-plane';
+    const steps = nasStepsForLane(lane);
     const history = dashboard.historical?.steps || {};
     const universe = dashboard.universe || {};
     const currentProgress = current.current_progress || null;
@@ -1899,17 +1967,18 @@ function renderNasLive(dashboard, sup, wd) {
     const completedSteps = current.completed_steps || [];
     const carryForwardSteps = current.carry_forward_completed_steps || [];
     const allCompletedSet = new Set([...completedSteps, ...carryForwardSteps]);
-    const totalSteps = current.total_steps || NAS_STEPS.length;
+    // Use lane-specific step count — backend total_steps is always 19 regardless of lane
+    const totalSteps = steps.length;
 
-    // Derive effective pipeline position from the current step's index in NAS_STEPS.
+    // Derive effective pipeline position from the current step's index in the lane's step list.
     // When a run starts mid-pipeline (--start-step), steps before the current one
     // are not in completed_steps but are positionally "past". We treat them as done
     // so the progress counter, bar, and step dots stay consistent.
-    const currentStepIndex = currentStep ? NAS_STEPS.indexOf(currentStep) : -1;
-    const failedStepIndex = current.failed_step ? NAS_STEPS.indexOf(current.failed_step) : -1;
+    const currentStepIndex = currentStep ? steps.indexOf(currentStep) : -1;
+    const failedStepIndex = current.failed_step ? steps.indexOf(current.failed_step) : -1;
     const effectivePositionIndex = failedStepIndex >= 0 ? failedStepIndex : currentStepIndex;
     let effectiveCompleted = 0;
-    NAS_STEPS.forEach((stepId, idx) => {
+    steps.forEach((stepId, idx) => {
         if (allCompletedSet.has(stepId)) {
             effectiveCompleted++;
         } else if (effectivePositionIndex >= 0 && idx < effectivePositionIndex) {
@@ -1996,6 +2065,7 @@ function renderNasLive(dashboard, sup, wd) {
     html += '<div class="nas-metrics-row">';
     html += `<div class="nas-metric"><div class="nm-label">Runtime State</div><div class="nm-value ${statusColor}">${statusLabel}</div></div>`;
     html += `<div class="nas-metric"><div class="nm-label">Pipeline Progress</div><div class="nm-value">${fmtCount(effectiveCompleted)} / ${fmtCount(totalSteps)} (${effectivePct}%)</div></div>`;
+    html += `<div class="nas-metric"><div class="nm-label">Lane</div><div class="nm-value" style="font-size:.7rem">${escapeHtml(lane)}</div></div>`;
     html += `<div class="nas-metric"><div class="nm-label">Current Step</div><div class="nm-value">${escapeHtml(currentLabel)}</div></div>`;
     html += `<div class="nas-metric"><div class="nm-label">Current Scope</div><div class="nm-value">${currentScope?.total != null ? fmtCount(currentScope.total) : '—'} ${escapeHtml(currentScope?.unit || '')}</div></div>`;
     html += `<div class="nas-metric"><div class="nm-label">Current ETA</div><div class="nm-value">${fmtDurationCompact(currentEta)}</div></div>`;
@@ -2024,7 +2094,7 @@ function renderNasLive(dashboard, sup, wd) {
     </div>`;
 
     html += '<div class="nas-steps-track">';
-    NAS_STEPS.forEach((stepId, idx) => {
+    steps.forEach((stepId, idx) => {
         const hist = history[stepId] || {};
         const scope = dashboard.step_scope?.[stepId] || null;
         let cls = 'pending';
@@ -2239,6 +2309,7 @@ function renderNasLiveLegacy(sup, wd) {
     const failedStep = sup?.failed_step || null;
     const campaign = sup?.campaign_stamp || '—';
     const lane = sup?.evaluation_lane || '—';
+    const steps = nasStepsForLane(lane);
     const targetDate = sup?.target_market_date || '—';
     const startedAt = sup?.started_at || '';
     const updatedAt = sup?.updated_at || '';
@@ -2262,12 +2333,12 @@ function renderNasLiveLegacy(sup, wd) {
 
     // Progress calculation — derive effective position from current step, not just completed.length
     const completedSet = new Set(completed);
-    const totalSteps = NAS_STEPS.length;
-    const currentStepIndex = step ? NAS_STEPS.indexOf(step) : -1;
-    const failedStepIndex = failedStep ? NAS_STEPS.indexOf(failedStep) : -1;
+    const totalSteps = steps.length;
+    const currentStepIndex = step ? steps.indexOf(step) : -1;
+    const failedStepIndex = failedStep ? steps.indexOf(failedStep) : -1;
     const effectivePositionIndex = failedStepIndex >= 0 ? failedStepIndex : currentStepIndex;
     let effectiveCompleted = 0;
-    NAS_STEPS.forEach((s, idx) => {
+    steps.forEach((s, idx) => {
         if (completedSet.has(s)) effectiveCompleted++;
         else if (effectivePositionIndex >= 0 && idx < effectivePositionIndex) effectiveCompleted++;
     });
@@ -2324,7 +2395,7 @@ function renderNasLiveLegacy(sup, wd) {
 
     // Step dots — mark steps before current position as done (even if skipped)
     html += '<div class="nas-steps-track">';
-    NAS_STEPS.forEach((s, i) => {
+    steps.forEach((s, i) => {
         let cls = 'pending';
         if (completedSet.has(s)) cls = 'done';
         else if (s === failedStep) cls = 'failed';
@@ -2358,6 +2429,116 @@ function renderNasLiveLegacy(sup, wd) {
 // Load NAS data on startup
 refreshNasLive();
 setInterval(refreshNasLive, 30000);
+
+// ─── Signals Tab ────────────────────────────────────────────────────────────
+function renderSignalsTab(d) {
+    const si = d?.signal_intelligence;
+    if (!si) {
+        document.getElementById('signalsUniverseContent').innerHTML = '<span style="color:var(--text-muted);font-size:.82rem">No signal_intelligence data — run generate_meta_dashboard_data.mjs</span>';
+        document.getElementById('signalsByModelContent').innerHTML = '<span style="color:var(--text-muted);font-size:.82rem">No data</span>';
+        return;
+    }
+
+    const uni = si.universe || {};
+    const scope = uni.decision_bundle_scope || {};
+    const opOk = uni.all_systems_operational || {};
+    const pct = opOk.pct != null ? (opOk.pct * 100).toFixed(2) + '%' : '—';
+    document.getElementById('signalsUniverseContent').innerHTML = `
+        <table style="width:100%;border-collapse:collapse;font-size:.82rem">
+            <tr><td style="padding:.4rem .6rem;color:var(--text-muted)">Decision Bundle Scope (STOCK+ETF)</td><td style="padding:.4rem .6rem;font-weight:600">${(scope.total || 0).toLocaleString()}</td></tr>
+            <tr><td style="padding:.4rem .6rem;color:var(--text-muted)">All Systems Operational</td><td style="padding:.4rem .6rem;font-weight:600">${(opOk.count || 0).toLocaleString()} / ${(opOk.total || 0).toLocaleString()} <span style="color:var(--text-muted)">(${pct})</span></td></tr>
+            <tr><td style="padding:.4rem .6rem;color:var(--text-muted)">By asset class</td><td style="padding:.4rem .6rem;color:var(--text-muted)">n/a — pending operability summary extension</td></tr>
+        </table>
+        <div style="font-size:.75rem;color:var(--text-dim);margin-top:.5rem">Source: ${opOk.source_file || '—'} · as of ${opOk.source_as_of ? new Date(opOk.source_as_of).toLocaleString() : '—'}</div>
+    `;
+
+    const bs = si.buy_signals || {};
+    const fc = bs.forecast || {};
+    const ql = bs.quantlab || {};
+    const sci = bs.scientific || {};
+    const fp = bs.frontpage || {};
+    const db = bs.decision_bundle || {};
+
+    const dbNote = db.status === 'DEGRADED'
+        ? `<span style="color:var(--orange)">Decision Bundle: ${db.status} · target ${db.target_market_date || '—'} · buy_count=${db.buy_count ?? 'null'}</span>`
+        : `Decision Bundle: ${db.status || '—'}`;
+
+    document.getElementById('signalsByModelContent').innerHTML = `
+        <table style="width:100%;border-collapse:collapse;font-size:.82rem">
+            <thead><tr style="color:var(--text-muted);border-bottom:1px solid var(--border)">
+                <th style="padding:.4rem .6rem;text-align:left">Model</th>
+                <th style="padding:.4rem .6rem;text-align:right">Short</th>
+                <th style="padding:.4rem .6rem;text-align:right">Mid</th>
+                <th style="padding:.4rem .6rem;text-align:right">Long</th>
+                <th style="padding:.4rem .6rem;text-align:left">As of</th>
+            </tr></thead>
+            <tbody>
+                <tr><td style="padding:.4rem .6rem">Scientific</td><td style="padding:.4rem .6rem;text-align:right">${sci.strong_signals_count ?? '—'}</td><td style="padding:.4rem .6rem;text-align:right;color:var(--text-muted)">n/a</td><td style="padding:.4rem .6rem;text-align:right;color:var(--text-muted)">n/a</td><td style="padding:.4rem .6rem;font-size:.75rem;color:var(--text-muted)">${sci.source_as_of ? new Date(sci.source_as_of).toLocaleDateString() : '—'}</td></tr>
+                <tr><td style="padding:.4rem .6rem">Forecast*</td><td style="padding:.4rem .6rem;text-align:right">${fc.bullish_1d ?? '—'}</td><td style="padding:.4rem .6rem;text-align:right">${fc.bullish_5d ?? '—'}</td><td style="padding:.4rem .6rem;text-align:right">${fc.bullish_20d ?? '—'}</td><td style="padding:.4rem .6rem;font-size:.75rem;color:var(--text-muted)">${fc.source_as_of || '—'}</td></tr>
+                <tr><td style="padding:.4rem .6rem">QuantLab</td><td style="padding:.4rem .6rem;text-align:right">${ql.top_buy ?? '—'} <span style="font-size:.75rem;color:var(--text-muted)">(Top Buy)</span></td><td style="padding:.4rem .6rem;text-align:right;color:var(--text-muted)">—</td><td style="padding:.4rem .6rem;text-align:right;color:var(--text-muted)">—</td><td style="padding:.4rem .6rem;font-size:.75rem;color:var(--text-muted)">${ql.source_as_of ? new Date(ql.source_as_of).toLocaleDateString() : '—'}</td></tr>
+                <tr><td style="padding:.4rem .6rem">Frontpage</td><td style="padding:.4rem .6rem;text-align:right">${fp.short ?? '—'}</td><td style="padding:.4rem .6rem;text-align:right">${fp.medium ?? '—'}</td><td style="padding:.4rem .6rem;text-align:right">${fp.long ?? '—'}</td><td style="padding:.4rem .6rem;font-size:.75rem;color:var(--text-muted)">${fp.source || '—'}</td></tr>
+            </tbody>
+        </table>
+        <div style="font-size:.75rem;color:var(--text-dim);margin-top:.5rem">* Raw bullish count (direction=bullish, p_up &gt; 0.53). Best-setup thresholds (0.60/0.62/0.68) and US-ticker normalization reduce frontpage candidates.</div>
+        <div style="margin-top:.5rem;font-size:.82rem">${dbNote}</div>
+    `;
+}
+
+// ─── BUY Performance Tab ─────────────────────────────────────────────────────
+async function loadAndRenderBuyPerformanceTab() {
+    let perf = null;
+    try {
+        const resp = await fetch('data/reports/signal-performance-latest.json?_=' + Date.now());
+        if (resp.ok) perf = await resp.json();
+    } catch { /* file may not exist yet */ }
+
+    if (!perf) {
+        document.getElementById('buyAccuracyContent').innerHTML = '<span style="color:var(--text-muted);font-size:.82rem">No signal-performance-latest.json — run build-signal-performance-report.mjs</span>';
+        document.getElementById('falseBuysContent').innerHTML = '<span style="color:var(--text-muted);font-size:.82rem">No data</span>';
+        document.getElementById('improvementNotesContent').innerHTML = '<span style="color:var(--text-muted);font-size:.82rem">No data</span>';
+        return;
+    }
+
+    const ba = perf.buy_accuracy || perf.accuracy_by_feature_horizon || {};
+    const features = Object.keys(ba);
+    let accRows = '';
+    for (const feat of features) {
+        const horizons = ba[feat] || {};
+        for (const [h, stats] of Object.entries(horizons)) {
+            if (!stats || typeof stats !== 'object') continue;
+            const acc = stats.accuracy != null ? (stats.accuracy * 100).toFixed(1) + '%' : '—';
+            accRows += `<tr><td style="padding:.4rem .6rem">${feat}</td><td style="padding:.4rem .6rem">${h}</td><td style="padding:.4rem .6rem;text-align:right;font-weight:600">${acc}</td><td style="padding:.4rem .6rem;text-align:right;color:var(--text-muted)">${stats.correct ?? '—'} / ${stats.total ?? '—'}</td></tr>`;
+        }
+    }
+    document.getElementById('buyAccuracyContent').innerHTML = accRows
+        ? `<table style="width:100%;border-collapse:collapse;font-size:.82rem"><thead><tr style="color:var(--text-muted);border-bottom:1px solid var(--border)"><th style="padding:.4rem .6rem;text-align:left">Model</th><th style="padding:.4rem .6rem;text-align:left">Horizon</th><th style="padding:.4rem .6rem;text-align:right">Accuracy</th><th style="padding:.4rem .6rem;text-align:right">Correct/Total</th></tr></thead><tbody>${accRows}</tbody></table><div style="font-size:.75rem;color:var(--text-dim);margin-top:.5rem">Period: ${perf.period?.start || '—'} → ${perf.period?.end || '—'}</div>`
+        : '<span style="color:var(--text-muted);font-size:.82rem">No accuracy data</span>';
+
+    const fb = Array.isArray(perf.false_buys_recent)
+        ? perf.false_buys_recent
+        : (Array.isArray(perf.false_positives_recent) ? perf.false_positives_recent : []);
+    document.getElementById('falseBuysContent').innerHTML = fb.length
+        ? `<table style="width:100%;border-collapse:collapse;font-size:.82rem"><thead><tr style="color:var(--text-muted);border-bottom:1px solid var(--border)"><th style="padding:.4rem .6rem;text-align:left">Symbol</th><th style="padding:.4rem .6rem;text-align:left">Horizon</th><th style="padding:.4rem .6rem;text-align:left">Date</th><th style="padding:.4rem .6rem;text-align:left">Feature</th></tr></thead><tbody>${fb.slice(0,10).map(r=>`<tr><td style="padding:.4rem .6rem;font-weight:600">${r.ticker||'—'}</td><td style="padding:.4rem .6rem">${r.horizon||'—'}</td><td style="padding:.4rem .6rem">${r.date||'—'}</td><td style="padding:.4rem .6rem;color:var(--text-muted)">${r.feature||'—'}</td></tr>`).join('')}</tbody></table>`
+        : '<span style="color:var(--text-muted);font-size:.82rem">No false positives found</span>';
+
+    const notes = Array.isArray(perf.improvement_notes) ? perf.improvement_notes : [];
+    document.getElementById('improvementNotesContent').innerHTML = notes.length
+        ? `<ul style="margin:0;padding-left:1.2rem;font-size:.82rem">${notes.map(n=>`<li style="margin:.3rem 0">${n}</li>`).join('')}</ul>`
+        : '<span style="color:var(--text-muted);font-size:.82rem">No improvement notes</span>';
+}
+
+// Lazy-load BUY Performance tab on first click
+let _buyPerfLoaded = false;
+document.querySelectorAll('.tab-btn').forEach(btn => {
+    if (btn.dataset.tab === 'buy-performance') {
+        btn.addEventListener('click', () => {
+            if (!_buyPerfLoaded) {
+                _buyPerfLoaded = true;
+                loadAndRenderBuyPerformanceTab();
+            }
+        });
+    }
+});
 </script>
 </body>
 </html>
