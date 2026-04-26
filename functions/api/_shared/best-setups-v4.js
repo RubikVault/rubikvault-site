@@ -51,7 +51,6 @@ export function bullishProbability(horizonDoc) {
   const raw = toNumber(horizonDoc.probability);
   if (raw == null || raw < 0 || raw > 1) return null;
   const direction = String(horizonDoc.direction || '').trim().toLowerCase();
-  if (direction === 'bearish') return 1 - raw;
   if (direction === 'bullish') return raw;
   return null;
 }

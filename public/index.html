@@ -2993,14 +2993,15 @@
       const out = { short: [], medium: [], long: [] };
       const rows = Array.isArray(forecastLatestDoc?.data?.forecasts) ? forecastLatestDoc.data.forecasts : [];
       if (!rows.length) return out;
-      const seen = { short: new Set(), long: new Set() };
+      const seen = { short: new Set(), medium: new Set(), long: new Set() };
 
       const pushForecast = (horizon, ticker, rowName, horizonDoc, horizonKey) => {
         if (!horizonDoc || seen[horizon].has(ticker)) return;
         const rawProb = numberOrNull(horizonDoc?.probability);
         if (rawProb == null || rawProb < 0 || rawProb > 1) return;
         const direction = String(horizonDoc?.direction || '').toLowerCase();
-        const bullishProb = direction === 'bearish' ? (1 - rawProb) : rawProb;
+        if (direction !== 'bullish') return;
+        const bullishProb = rawProb;
         if (!Number.isFinite(bullishProb) || bullishProb <= 0) return;
         seen[horizon].add(ticker);
         out[horizon].push({
@@ -3023,12 +3024,15 @@
         if (!ticker) continue;
         const horizons = row?.horizons && typeof row.horizons === 'object' ? row.horizons : {};
         const shortDoc = horizons['5d'] || horizons['1d'] || null;
+        const mediumDoc = horizons['5d'] || horizons['20d'] || null;
         const longDoc = horizons['20d'] || horizons['5d'] || null;
         pushForecast('short', ticker, row?.name, shortDoc, shortDoc === horizons['5d'] ? '5d' : '1d');
+        pushForecast('medium', ticker, row?.name, mediumDoc, mediumDoc === horizons['5d'] ? '5d' : '20d');
         pushForecast('long', ticker, row?.name, longDoc, longDoc === horizons['20d'] ? '20d' : '5d');
       }
 
       out.short = takeTop(out.short, 10);
+      out.medium = takeTop(out.medium, 10);
       out.long = takeTop(out.long, 10);
       return out;
     }
@@ -3131,8 +3135,10 @@
     async function renderBestSetups() {
       if (!bestSetupsByHorizonWrap || !bestSetupsMeta) return;
       const verifiedDoc = await loadVerifiedBestSetupsDoc();
+      const verifiedDocHasRows = verifiedDoc && ['short', 'medium', 'long'].some((h) =>
+        (verifiedDoc?.data?.stocks?.[h]?.length || 0) + (verifiedDoc?.data?.etfs?.[h]?.length || 0) > 0);
       let horizonRows;
-      if (verifiedDoc) {
+      if (verifiedDocHasRows) {
         horizonRows = buildVerifiedBestSetupsByHorizon(verifiedDoc);
       } else {
         await loadForecastLatestDoc();

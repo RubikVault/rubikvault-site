@@ -99,9 +99,18 @@ async function writeJson(relPath, payload) {
   writeJsonDurableAtomicSync(absPath, payload);
 }
 
-async function readDecisionBundleBuyRows() {
+function decisionBundleStillValid(latest, targetMarketDate = null) {
+  if (!latest || latest.schema !== 'rv.decision_bundle_latest.v1') return false;
+  const latestTargetDate = normalizeDateId(latest?.target_market_date);
+  if (targetMarketDate && latestTargetDate && latestTargetDate !== targetMarketDate) return false;
+  const validUntilMs = Date.parse(String(latest?.valid_until || ''));
+  if (Number.isFinite(validUntilMs) && validUntilMs < Date.now()) return false;
+  return true;
+}
+
+async function readDecisionBundleBuyRows(targetMarketDate = null) {
   const latest = await readJsonAbs(path.join(REPO_ROOT, DECISION_BUNDLE_LATEST_PATH));
-  if (!latest || latest.schema !== 'rv.decision_bundle_latest.v1') return null;
+  if (!decisionBundleStillValid(latest, targetMarketDate)) return null;
   const snapshotPath = String(latest.snapshot_path || '').replace(/^\/+/, 'public/').replace(/\/+$/, '');
   const manifest = await readJsonAbs(path.join(REPO_ROOT, snapshotPath, 'manifest.json'));
   if (!manifest || manifest.status === 'FAILED') return { latest, rows: [], manifest };
@@ -486,9 +495,9 @@ async function main() {
 
   const startedAt = Date.now();
   const decisionBundleMode = process.env.BEST_SETUPS_USE_DECISION_BUNDLE !== '0'
-    ? await readDecisionBundleBuyRows()
+    ? await readDecisionBundleBuyRows(requestedTargetDate)
     : null;
-  if (decisionBundleMode) {
+  if (decisionBundleMode && (decisionBundleMode.rows || []).length > 0) {
     const buyRows = decisionBundleMode.rows || [];
     const horizonsByClass = { stocks: {}, etfs: {} };
     for (const horizon of ['short', 'medium', 'long']) {
@@ -562,6 +571,10 @@ async function main() {
     });
     console.log(`[best-setups-v4] decision-bundle consumer mode snapshot=${decisionBundleMode.latest?.snapshot_id || 'unknown'} buys=${buyRows.length}`);
     return;
+  }
+
+  if (decisionBundleMode) {
+    console.log(`[best-setups-v4] decision-bundle has 0 BUY rows (status=${decisionBundleMode.latest?.status || 'unknown'}), falling through to QuantLab/forecast path`);
   }
 
   const [quantlabResult, forecastDoc] = await Promise.all([
