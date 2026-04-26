@@ -2990,7 +2990,7 @@
     }
 
     // Minimum p_up thresholds per horizon for "Bullish Candidate" label
-    const FORECAST_CANDIDATE_MIN = { short: 0.60, medium: 0.62, long: 0.55 };
+    const FORECAST_CANDIDATE_MIN = { short: 0.60, medium: 0.62, long: 0.53 };
     // Threshold for "confirmed bullish" label on long horizon
     const FORECAST_LONG_CONFIRMED_MIN = 0.68;
 
@@ -3013,6 +3013,7 @@
         seen[horizon].add(ticker);
         // Long horizon: only "Watchlist / Early Bullish" if below confirmed threshold
         const isConfirmedBullish = horizon !== 'long' || bullishProb >= FORECAST_LONG_CONFIRMED_MIN;
+        const exchangeRaw = row?.exchange || row?.market || null;
         out[horizon].push({
           ticker,
           name: tickerDisplayName(ticker, rowName),
@@ -3024,6 +3025,7 @@
           trigger_fulfilled: isConfirmedBullish,
           expected_return: null,
           price: null,
+          exchange: exchangeRaw,
           source: `forecast_latest_${horizonKey}`,
           signal_class: isConfirmedBullish ? 'bullish_candidate' : 'watchlist',
           signal_label: isConfirmedBullish ? 'Bullish Candidate' : 'Watchlist / Early Bullish'
@@ -3034,12 +3036,13 @@
         const ticker = normalizeTicker(row?.symbol || row?.ticker || '');
         if (!ticker) continue;
         const horizons = row?.horizons && typeof row.horizons === 'object' ? row.horizons : {};
-        const shortDoc = horizons['5d'] || horizons['1d'] || null;
-        const mediumDoc = horizons['5d'] || horizons['20d'] || null;
-        const longDoc = horizons['20d'] || horizons['5d'] || null;
-        pushForecast('short', ticker, row?.name, shortDoc, shortDoc === horizons['5d'] ? '5d' : '1d');
-        pushForecast('medium', ticker, row?.name, mediumDoc, mediumDoc === horizons['5d'] ? '5d' : '20d');
-        pushForecast('long', ticker, row?.name, longDoc, longDoc === horizons['20d'] ? '20d' : '5d');
+        // Fix: Short=1d first, Mid=5d first, Long=20d only (no 5d fallback for long)
+        const shortDoc  = horizons['1d']  || horizons['5d']  || null;
+        const mediumDoc = horizons['5d']  || horizons['20d'] || null;
+        const longDoc   = horizons['20d'] || null;
+        pushForecast('short',  ticker, row?.name, shortDoc,  shortDoc  === horizons['1d']  ? '1d' : '5d');
+        pushForecast('medium', ticker, row?.name, mediumDoc, mediumDoc === horizons['5d']  ? '5d' : '20d');
+        pushForecast('long',   ticker, row?.name, longDoc,   '20d');
       }
 
       out.short = takeTop(out.short, 10);
@@ -3195,7 +3198,7 @@
                   return `
                   <tr>
                     <td style="padding:0.35rem 0.25rem; border-top:1px solid rgba(100,116,139,0.18);">
-                      <a class="best-setup-link" href="/analyze/${encodeURIComponent(row.ticker)}" data-open-ticker="${escapeHtml(row.ticker)}" data-canonical-id="${escapeHtml(row.canonical_id || '')}" title="${escapeHtml(row.canonical_id || 'canonical_id: n/a')}">${escapeHtml(row.ticker)}</a>
+                      <a class="best-setup-link" href="/analyze/${encodeURIComponent(row.ticker)}" data-open-ticker="${escapeHtml(row.ticker)}" data-canonical-id="${escapeHtml(row.canonical_id || '')}" title="${escapeHtml(row.canonical_id || 'canonical_id: n/a')}">${escapeHtml(row.ticker)}</a>${row.exchange && row.exchange !== 'US' ? `<span style="font-size:0.7rem;color:#f59e0b;margin-left:3px" title="Non-US exchange — analysis data may be limited">${escapeHtml(row.exchange)}</span>` : ''}
                     </td>
                     <td style="padding:0.35rem 0.25rem; border-top:1px solid rgba(100,116,139,0.18); color:#cbd5e1;">${escapeHtml(row.name || '—')}</td>
                     <td style="padding:0.35rem 0.25rem; border-top:1px solid rgba(100,116,139,0.18); text-align:right; color:#e5e7eb;">${formatBestSetupMetric(row, source)}</td>

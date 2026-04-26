@@ -306,6 +306,7 @@
         <button class="tab-btn" data-tab="operations"><i class="fas fa-cogs"></i> Operations</button>
         <button class="tab-btn" data-tab="signals"><i class="fas fa-signal"></i> Signals</button>
         <button class="tab-btn" data-tab="buy-performance"><i class="fas fa-trophy"></i> BUY Performance</button>
+        <button class="tab-btn" data-tab="operability"><i class="fas fa-database"></i> Operability</button>
     </div>
 
     <!-- Tab 1: System Health -->
@@ -619,6 +620,45 @@
             <div class="section-title"><i class="fas fa-lightbulb"></i> Improvement Notes</div>
         </div>
         <div id="improvementNotesContent"><span style="color:var(--text-muted);font-size:.82rem">Loading...</span></div>
+    </div>
+</div>
+
+<!-- Tab: Operability -->
+<div class="tab-panel" id="tab-operability">
+    <div class="section-box">
+        <div class="section-title-wrap">
+            <div class="section-title"><i class="fas fa-globe"></i> Universe Overview</div>
+            <div class="section-subtitle">Stock Analyzer coverage across full global universe vs targetable assets</div>
+        </div>
+        <div id="operabilityOverviewContent"><span style="color:var(--text-muted);font-size:.82rem">Click tab to load…</span></div>
+    </div>
+    <div class="section-box" style="margin-top:1rem">
+        <div class="section-title-wrap">
+            <div class="section-title"><i class="fas fa-list-check"></i> UI States</div>
+            <div class="section-subtitle">All possible states shown in the Stock Analyzer "Analyze" page</div>
+        </div>
+        <div id="operabilityStatesContent"><span style="color:var(--text-muted);font-size:.82rem">Loading…</span></div>
+    </div>
+    <div class="section-box" style="margin-top:1rem">
+        <div class="section-title-wrap">
+            <div class="section-title"><i class="fas fa-triangle-exclamation"></i> Reason Families</div>
+            <div class="section-subtitle">Why assets are not operational — with actionability and fix tips</div>
+        </div>
+        <div id="operabilityReasonsContent"><span style="color:var(--text-muted);font-size:.82rem">Loading…</span></div>
+    </div>
+    <div class="section-box" style="margin-top:1rem">
+        <div class="section-title-wrap">
+            <div class="section-title"><i class="fas fa-wrench"></i> Targetable Non-Operational (fixable)</div>
+            <div class="section-subtitle">Assets with ≥200 bars that are NOT operational — these should be fixed</div>
+        </div>
+        <div id="operabilityFixableContent"><span style="color:var(--text-muted);font-size:.82rem">Loading…</span></div>
+    </div>
+    <div class="section-box" style="margin-top:1rem">
+        <div class="section-title-wrap">
+            <div class="section-title"><i class="fas fa-chart-bar"></i> Bar Count Distribution</div>
+            <div class="section-subtitle">How many assets have how much history (bars = trading days with data)</div>
+        </div>
+        <div id="operabilityBarsContent"><span style="color:var(--text-muted);font-size:.82rem">Loading…</span></div>
     </div>
 </div>
 
@@ -2535,6 +2575,132 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
             if (!_buyPerfLoaded) {
                 _buyPerfLoaded = true;
                 loadAndRenderBuyPerformanceTab();
+            }
+        });
+    }
+});
+
+// ──── Operability Tab ────────────────────────────────────────────────────────
+const OPERABILITY_FIX_TIPS = {
+    non_tradable_or_delisted_exception: { icon: '❌', action: 'none', tip: 'Provider-side: asset delisted or no longer trading. Expected state — no action needed.' },
+    verified_insufficient_history_exception: { icon: '⏳', action: 'wait', tip: 'Need ≥200 bars of history. Nightly pipeline adds bars automatically.' },
+    true_short_history: { icon: '⏳', action: 'wait', tip: 'Asset has genuinely short trading history. Bars accumulate over weeks — no manual fix.' },
+    verified_sparse_trading_exception: { icon: '⚠', action: 'investigate', tip: '19 of 29 are targetable (should work). Investigate EODHD provider data quality for these specific tickers. Run: node scripts/ops/build-stock-analyzer-operability.mjs --full' },
+    module_mixed_dates: { icon: '⚠', action: 'fix', tip: 'Some data modules are stale. Fix: trigger NAS release-full pipeline run. Clears automatically after next full run.' },
+};
+
+function pctFmt(n, d) { return d > 0 ? (n / d * 100).toFixed(2) + '%' : '—'; }
+
+async function loadAndRenderOperabilityTab() {
+    const setContent = (id, html) => { const el = document.getElementById(id); if (el) el.innerHTML = html; };
+    const loading = '<span style="color:var(--text-muted);font-size:.82rem">Loading…</span>';
+    ['operabilityOverviewContent','operabilityStatesContent','operabilityReasonsContent','operabilityFixableContent','operabilityBarsContent'].forEach(id => setContent(id, loading));
+    try {
+        const res = await fetch('/data/ops/stock-analyzer-operability-summary-latest.json', { cache: 'no-store' });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const doc = await res.json();
+        const s = doc.summary || {};
+        const total = s.total_assets || 0;
+        const operational = s.operational_assets || 0;
+        const targetable = s.targetable_assets || 0;
+        const targetableOp = s.targetable_operational_assets || 0;
+        const targetableGreen = s.targetable_green_ratio != null ? (s.targetable_green_ratio * 100).toFixed(2) + '%' : '—';
+        const gatePass = s.release_blocked === false;
+        const asof = doc.generated_at ? new Date(doc.generated_at).toLocaleString() : 'unknown';
+
+        // Section 1: Overview
+        setContent('operabilityOverviewContent', `
+            <div style="margin-bottom:.6rem;padding:.4rem .7rem;background:${gatePass ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)'};border:1px solid ${gatePass ? 'rgba(34,197,94,0.3)' : 'rgba(239,68,68,0.3)'};border-radius:6px;font-size:.8rem;color:${gatePass ? '#22c55e' : '#ef4444'};font-weight:600">
+                ${gatePass ? '✅ Release gate: PASS' : '❌ Release gate: BLOCKED'} — Targetable green ratio: ${targetableGreen} (threshold: 90%)
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:.5rem;margin-bottom:.75rem">
+                <div class="ops-cell"><div style="font-size:.72rem;color:var(--text-muted)">Total Assets (global universe)</div><div style="font-size:1.4rem;font-weight:700">${total.toLocaleString()}</div></div>
+                <div class="ops-cell"><div style="font-size:.72rem;color:var(--text-muted)">All Systems Operational (global)</div><div style="font-size:1.4rem;font-weight:700;color:#22c55e">${operational.toLocaleString()}</div><div style="font-size:.75rem;color:var(--text-muted)">${pctFmt(operational,total)} of global universe</div></div>
+                <div class="ops-cell"><div style="font-size:.72rem;color:var(--text-muted)">Targetable Assets (≥200 bars)</div><div style="font-size:1.4rem;font-weight:700;color:#3b82f6">${targetable.toLocaleString()}</div><div style="font-size:.75rem;color:var(--text-muted)">${pctFmt(targetable,total)} of global universe</div></div>
+                <div class="ops-cell"><div style="font-size:.72rem;color:var(--text-muted)">Targetable Operational</div><div style="font-size:1.4rem;font-weight:700;color:#22c55e">${targetableOp.toLocaleString()} / ${targetable.toLocaleString()}</div><div style="font-size:.75rem;color:var(--text-muted)">${targetableGreen} — release gate basis</div></div>
+            </div>
+            <div class="soft-note">41,462 non-tradable/delisted assets remain in the global denominator. The 90% release gate applies to <em>targetable</em> assets only — ${targetableGreen} currently (gate: ${gatePass ? 'PASS ✅' : 'FAIL ❌'}).</div>
+            <div class="soft-note" style="margin-top:.3rem">Data as-of: ${asof} &nbsp;<button onclick="loadAndRenderOperabilityTab()" style="background:rgba(59,130,246,0.2);border:1px solid rgba(59,130,246,0.4);color:#60a5fa;border-radius:4px;padding:.2rem .5rem;cursor:pointer;font-size:.78rem">🔄 Refresh</button></div>
+        `);
+
+        // Section 2: UI States
+        const uiTitles = s.ui_title_counts || {};
+        const uiStatesMeta = {
+            'All systems operational': { sev: 'ok', fix: '—' },
+            'Modules have mixed as-of dates': { sev: 'warning', fix: 'Trigger NAS release-full pipeline run. Clears after next full run.' },
+            'Analysis incomplete': { sev: 'critical', fix: 'See Reason Families below.' },
+            'Data currently unavailable': { sev: 'info', fix: 'UI-layer only (V2 contract missing). Asset has no API data — non-US OTC, delisted, or no history bundle.' },
+        };
+        let statesHtml = '<table style="width:100%;border-collapse:collapse;font-size:.82rem"><thead><tr style="color:var(--text-muted);border-bottom:1px solid var(--border)"><th style="padding:.4rem .6rem;text-align:left">UI State</th><th style="padding:.4rem .6rem;text-align:right">Count</th><th style="padding:.4rem .6rem;text-align:right">% Global</th><th style="padding:.4rem .6rem">Status</th><th style="padding:.4rem .6rem;text-align:left">Fix</th></tr></thead><tbody>';
+        for (const [title, count] of Object.entries(uiTitles)) {
+            const m = uiStatesMeta[title] || { sev: 'warning', fix: '—' };
+            const badge = m.sev === 'ok' ? '<span style="color:#22c55e">✅</span>' : m.sev === 'warning' ? '<span style="color:#f59e0b">⚠</span>' : '<span style="color:#ef4444">⚠</span>';
+            statesHtml += `<tr style="border-top:1px solid rgba(100,116,139,0.15)"><td style="padding:.4rem .6rem;font-weight:600">${escapeHtml(title)}</td><td style="padding:.4rem .6rem;text-align:right">${count.toLocaleString()}</td><td style="padding:.4rem .6rem;text-align:right;color:var(--text-muted)">${pctFmt(count,total)}</td><td style="padding:.4rem .6rem;text-align:center">${badge}</td><td style="padding:.4rem .6rem;color:var(--text-muted);font-size:.78rem">${escapeHtml(m.fix)}</td></tr>`;
+        }
+        // Add the UI-layer "Data currently unavailable" note (not in operability summary)
+        statesHtml += `<tr style="border-top:1px solid rgba(100,116,139,0.15);opacity:.7"><td style="padding:.4rem .6rem;font-style:italic">Data currently unavailable*</td><td style="padding:.4rem .6rem;text-align:right;color:var(--text-muted)">—</td><td style="padding:.4rem .6rem;text-align:right;color:var(--text-muted)">—</td><td style="padding:.4rem .6rem;text-align:center"><span style="color:#94a3b8">ℹ</span></td><td style="padding:.4rem .6rem;color:var(--text-muted);font-size:.78rem">UI-layer: V2 contract missing. Non-US OTC/delisted assets may show this when clicked.</td></tr>`;
+        statesHtml += '</tbody></table>';
+        setContent('operabilityStatesContent', statesHtml);
+
+        // Section 3: Reason Families
+        const families = s.primary_reason_family_counts || {};
+        let reasonsHtml = '<table style="width:100%;border-collapse:collapse;font-size:.82rem"><thead><tr style="color:var(--text-muted);border-bottom:1px solid var(--border)"><th style="padding:.4rem .6rem;text-align:left">Reason Family</th><th style="padding:.4rem .6rem;text-align:right">Count</th><th style="padding:.4rem .6rem">Actionable</th><th style="padding:.4rem .6rem;text-align:left">Fix Tip</th></tr></thead><tbody>';
+        for (const [family, count] of Object.entries(families)) {
+            const tip = OPERABILITY_FIX_TIPS[family] || { icon: '?', action: 'unknown', tip: 'No fix tip available.' };
+            const actionColor = tip.action === 'none' ? '#94a3b8' : tip.action === 'wait' ? '#3b82f6' : tip.action === 'investigate' ? '#f59e0b' : '#22c55e';
+            reasonsHtml += `<tr style="border-top:1px solid rgba(100,116,139,0.15)"><td style="padding:.4rem .6rem;font-weight:600;font-size:.78rem;font-family:monospace">${escapeHtml(family)}</td><td style="padding:.4rem .6rem;text-align:right">${count.toLocaleString()}</td><td style="padding:.4rem .6rem;text-align:center;color:${actionColor}">${tip.icon} ${escapeHtml(tip.action)}</td><td style="padding:.4rem .6rem;color:var(--text-muted);font-size:.78rem">${escapeHtml(tip.tip)}</td></tr>`;
+        }
+        reasonsHtml += '</tbody></table>';
+        setContent('operabilityReasonsContent', reasonsHtml);
+
+        // Section 4: Targetable Non-Operational
+        const fixable = s.targetable_non_operational_reason_counts || {};
+        const fixableTotal = s.targetable_non_operational_assets || 0;
+        if (fixableTotal === 0) {
+            setContent('operabilityFixableContent', '<div class="rec-item rec-ok">All targetable assets are operational. Nothing to fix here.</div>');
+        } else {
+            let fixableHtml = `<div style="margin-bottom:.5rem;padding:.35rem .6rem;background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.3);border-radius:6px;font-size:.8rem;color:#f59e0b;font-weight:600">⚠ ${fixableTotal} targetable assets (≥200 bars) are NOT operational — these should be investigated</div>`;
+            fixableHtml += '<table style="width:100%;border-collapse:collapse;font-size:.82rem"><thead><tr style="color:var(--text-muted);border-bottom:1px solid var(--border)"><th style="padding:.4rem .6rem;text-align:left">Reason</th><th style="padding:.4rem .6rem;text-align:right">Count</th><th style="padding:.4rem .6rem;text-align:left">Action</th></tr></thead><tbody>';
+            for (const [reason, count] of Object.entries(fixable)) {
+                const tip = OPERABILITY_FIX_TIPS[reason] || { icon: '?', tip: 'Investigate this reason.' };
+                fixableHtml += `<tr style="border-top:1px solid rgba(100,116,139,0.15)"><td style="padding:.4rem .6rem;font-family:monospace;font-size:.78rem">${escapeHtml(reason)}</td><td style="padding:.4rem .6rem;text-align:right;font-weight:700;color:#f59e0b">${count}</td><td style="padding:.4rem .6rem;font-size:.78rem;color:var(--text-muted)">${tip.icon} ${escapeHtml(tip.tip)}</td></tr>`;
+            }
+            fixableHtml += '</tbody></table>';
+            fixableHtml += '<div class="soft-note" style="margin-top:.5rem">Run full operability check: <code>node scripts/ops/build-stock-analyzer-operability.mjs --full</code> to identify specific tickers.</div>';
+            setContent('operabilityFixableContent', fixableHtml);
+        }
+
+        // Section 5: Bar Count Distribution
+        const bins = s.bar_count_bins || {};
+        const binLabels = { zero_or_unknown: '0 / unknown', one_to_199: '1–199 (warming up)', two_hundred_to_499: '200–499', five_hundred_to_999: '500–999', one_thousand_plus: '1000+' };
+        let barsHtml = '<table style="width:100%;border-collapse:collapse;font-size:.82rem"><thead><tr style="color:var(--text-muted);border-bottom:1px solid var(--border)"><th style="padding:.4rem .6rem;text-align:left">Bars Range</th><th style="padding:.4rem .6rem;text-align:right">Assets</th><th style="padding:.4rem .6rem;text-align:right">Operational</th><th style="padding:.4rem .6rem;text-align:right">Green %</th></tr></thead><tbody>';
+        for (const [key, bin] of Object.entries(bins)) {
+            const label = binLabels[key] || key;
+            const assets = bin.assets || 0;
+            const opAssets = bin.operational_assets || 0;
+            const isTargetable = key !== 'zero_or_unknown' && key !== 'one_to_199';
+            const rowColor = isTargetable && opAssets < assets ? 'rgba(245,158,11,0.05)' : '';
+            barsHtml += `<tr style="border-top:1px solid rgba(100,116,139,0.15);background:${rowColor}"><td style="padding:.4rem .6rem">${escapeHtml(label)}</td><td style="padding:.4rem .6rem;text-align:right">${assets.toLocaleString()}</td><td style="padding:.4rem .6rem;text-align:right;color:${opAssets > 0 ? '#22c55e' : 'var(--text-muted)'}">${opAssets.toLocaleString()}</td><td style="padding:.4rem .6rem;text-align:right;color:var(--text-muted)">${pctFmt(opAssets,assets)}</td></tr>`;
+        }
+        barsHtml += '</tbody></table>';
+        barsHtml += '<div class="soft-note" style="margin-top:.4rem">Assets need ≥200 bars to be "targetable". Non-targetable assets (0–199 bars) cannot be operational by definition.</div>';
+        setContent('operabilityBarsContent', barsHtml);
+
+    } catch (err) {
+        ['operabilityOverviewContent','operabilityStatesContent','operabilityReasonsContent','operabilityFixableContent','operabilityBarsContent'].forEach(id =>
+            setContent(id, `<span style="color:var(--red);font-size:.82rem">Failed to load: ${escapeHtml(err.message)}</span>`)
+        );
+    }
+}
+
+// Lazy-load Operability tab on first click
+let _operabilityLoaded = false;
+document.querySelectorAll('.tab-btn').forEach(btn => {
+    if (btn.dataset.tab === 'operability') {
+        btn.addEventListener('click', () => {
+            if (!_operabilityLoaded) {
+                _operabilityLoaded = true;
+                loadAndRenderOperabilityTab();
             }
         });
     }
