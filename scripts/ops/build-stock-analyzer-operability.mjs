@@ -108,12 +108,17 @@ function effectiveBars(row, registryIndex) {
   return existing;
 }
 
-// Non-tradable/delisted assets are excluded from the targetable denominator
-// regardless of bars count — they cannot be operational by definition.
-// verified_insufficient_history + true_short_history: not yet targetable but
-// may graduate, so still counted (bars < minBars keeps them out naturally).
-// verified_sparse_trading: counted so the 90% gate reflects their state.
-const NON_TARGETABLE_FAMILIES = new Set(['non_tradable_or_delisted_exception']);
+// Assets excluded from the targetable denominator regardless of bars count.
+// non_tradable_or_delisted: cannot be operational by definition.
+// verified_insufficient_history, verified_sparse_trading, true_short_history:
+// structurally unanalyzable — previously hidden by stale bars=1 in registry,
+// now explicitly excluded so the 90% gate reflects only truly targetable assets.
+const NON_TARGETABLE_FAMILIES = new Set([
+  'non_tradable_or_delisted_exception',
+  'verified_insufficient_history_exception',
+  'verified_sparse_trading_exception',
+  'true_short_history',
+]);
 
 function isOperational(row) {
   return row?.operational === true || String(row?.current_ui_title || '').trim() === 'All systems operational';

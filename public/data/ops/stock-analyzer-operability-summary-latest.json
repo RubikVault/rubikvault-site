@@ -6,7 +6,7 @@
   "run_id": "pipeline-master-2026-04-17",
   "cycle_id": "pipeline-master-2026-04-17",
   "target_market_date": "2026-04-24",
-  "generated_at": "2026-04-26T22:03:22.672Z",
+  "generated_at": "2026-04-26T22:12:38.942Z",
   "producer": "scripts/ops/build-stock-analyzer-operability.mjs",
   "code_commit": null,
   "input_artifact_times": {
@@ -70,15 +70,15 @@
     "coverage_denominator": "targetable_assets_min_registry_bars",
     "required_min_bars": 200,
     "targetable_min_bars": 200,
-    "targetable_assets": 372,
+    "targetable_assets": 345,
     "operational_assets": 351,
     "targetable_operational_assets": 345,
-    "targetable_non_operational_assets": 27,
-    "non_targetable_assets": 41846,
-    "verified_exception_count": 41846,
-    "registry_zero_or_unknown_bar_assets": 54,
+    "targetable_non_operational_assets": 0,
+    "non_targetable_assets": 41873,
+    "verified_exception_count": 41873,
+    "registry_zero_or_unknown_bar_assets": 2,
     "registry_bars_unknown_assets": 0,
-    "warming_up_assets": 14087,
+    "warming_up_assets": 2878,
     "bugs_remaining": 0,
     "global_blockers_remaining": 0,
     "unclassified_assets": 0,
@@ -99,29 +99,26 @@
       "true_short_history": 162,
       "verified_sparse_trading_exception": 29
     },
-    "targetable_non_operational_reason_counts": {
-      "verified_insufficient_history_exception": 10,
-      "verified_sparse_trading_exception": 17
-    },
+    "targetable_non_operational_reason_counts": {},
     "bar_count_bins": {
       "zero_or_unknown": {
-        "assets": 54,
+        "assets": 2,
         "operational_assets": 0
       },
       "one_to_199": {
-        "assets": 14087,
+        "assets": 2878,
         "operational_assets": 6
       },
       "two_hundred_to_499": {
-        "assets": 1884,
+        "assets": 3791,
         "operational_assets": 103
       },
       "five_hundred_to_999": {
-        "assets": 2372,
+        "assets": 4966,
         "operational_assets": 106
       },
       "one_thousand_plus": {
-        "assets": 23821,
+        "assets": 30581,
         "operational_assets": 136
       }
     },
@@ -129,13 +126,13 @@
       "non_tradable_or_delisted_exception": [
         {
           "canonical_id": "AS:ACOMO",
-          "registry_bars_count": 9181,
+          "registry_bars_count": 10475,
           "pack_bars_count": null,
           "actual_adjusted_bars_count": 0
         },
         {
           "canonical_id": "AS:H2OA",
-          "registry_bars_count": 1117,
+          "registry_bars_count": 1147,
           "pack_bars_count": null,
           "actual_adjusted_bars_count": 0
         },
@@ -149,19 +146,19 @@
       "verified_insufficient_history_exception": [
         {
           "canonical_id": "US:MPZAF",
-          "registry_bars_count": 1,
+          "registry_bars_count": 37,
           "pack_bars_count": 27,
           "actual_adjusted_bars_count": 27
         },
         {
           "canonical_id": "US:RMSYF",
-          "registry_bars_count": 1,
+          "registry_bars_count": 576,
           "pack_bars_count": 145,
           "actual_adjusted_bars_count": 145
         },
         {
           "canonical_id": "US:AYYLF",
-          "registry_bars_count": 1,
+          "registry_bars_count": 365,
           "pack_bars_count": 80,
           "actual_adjusted_bars_count": 80
         }
@@ -169,19 +166,19 @@
       "true_short_history": [
         {
           "canonical_id": "LSE:YGLX",
-          "registry_bars_count": 1,
+          "registry_bars_count": 22,
           "pack_bars_count": 17,
           "actual_adjusted_bars_count": 17
         },
         {
           "canonical_id": "LSE:YSMC",
-          "registry_bars_count": 1,
+          "registry_bars_count": 23,
           "pack_bars_count": 18,
           "actual_adjusted_bars_count": 18
         },
         {
           "canonical_id": "US:VEFA",
-          "registry_bars_count": 1,
+          "registry_bars_count": 16,
           "pack_bars_count": 11,
           "actual_adjusted_bars_count": 11
         }
@@ -189,13 +186,13 @@
       "verified_sparse_trading_exception": [
         {
           "canonical_id": "US:HCICR",
-          "registry_bars_count": 1,
+          "registry_bars_count": 11,
           "pack_bars_count": 7,
           "actual_adjusted_bars_count": 7
         },
         {
           "canonical_id": "US:SRXIF",
-          "registry_bars_count": 1,
+          "registry_bars_count": 1015,
           "pack_bars_count": null,
           "actual_adjusted_bars_count": null
         },
@@ -207,152 +204,11 @@
         }
       ]
     },
-    "targetable_non_operational_examples": [
-      {
-        "canonical_id": "US:GRGSF",
-        "symbol": "GRGSF",
-        "registry_bars_count": 218,
-        "current_ui_title": "Analysis incomplete",
-        "primary_reason_family": "verified_insufficient_history_exception"
-      },
-      {
-        "canonical_id": "US:BTEUF",
-        "symbol": "BTEUF",
-        "registry_bars_count": 626,
-        "current_ui_title": "Modules have mixed as-of dates",
-        "primary_reason_family": "verified_sparse_trading_exception"
-      },
-      {
-        "canonical_id": "US:PSGFF",
-        "symbol": "PSGFF",
-        "registry_bars_count": 500,
-        "current_ui_title": "Analysis incomplete",
-        "primary_reason_family": "verified_insufficient_history_exception"
-      },
-      {
-        "canonical_id": "US:SKXJF",
-        "symbol": "SKXJF",
-        "registry_bars_count": 368,
-        "current_ui_title": "Analysis incomplete",
-        "primary_reason_family": "verified_insufficient_history_exception"
-      },
-      {
-        "canonical_id": "US:ZJLMF",
-        "symbol": "ZJLMF",
-        "registry_bars_count": 334,
-        "current_ui_title": "Modules have mixed as-of dates",
-        "primary_reason_family": "verified_sparse_trading_exception"
-      },
-      {
-        "canonical_id": "US:DGTLF",
-        "symbol": "DGTLF",
-        "registry_bars_count": 250,
-        "current_ui_title": "Analysis incomplete",
-        "primary_reason_family": "verified_insufficient_history_exception"
-      },
-      {
-        "canonical_id": "US:SREDF",
-        "symbol": "SREDF",
-        "registry_bars_count": 239,
-        "current_ui_title": "Analysis incomplete",
-        "primary_reason_family": "verified_insufficient_history_exception"
-      },
-      {
-        "canonical_id": "US:SGSEF",
-        "symbol": "SGSEF",
-        "registry_bars_count": 249,
-        "current_ui_title": "Modules have mixed as-of dates",
-        "primary_reason_family": "verified_sparse_trading_exception"
-      },
-      {
-        "canonical_id": "US:QETHF",
-        "symbol": "QETHF",
-        "registry_bars_count": 251,
-        "current_ui_title": "Modules have mixed as-of dates",
-        "primary_reason_family": "verified_sparse_trading_exception"
-      },
-      {
-        "canonical_id": "US:SSEHF",
-        "symbol": "SSEHF",
-        "registry_bars_count": 815,
-        "current_ui_title": "Modules have mixed as-of dates",
-        "primary_reason_family": "verified_sparse_trading_exception"
-      },
-      {
-        "canonical_id": "US:AWAEF",
-        "symbol": "AWAEF",
-        "registry_bars_count": 260,
-        "current_ui_title": "Analysis incomplete",
-        "primary_reason_family": "verified_insufficient_history_exception"
-      },
-      {
-        "canonical_id": "US:INUMD",
-        "symbol": "INUMD",
-        "registry_bars_count": 1009,
-        "current_ui_title": "Modules have mixed as-of dates",
-        "primary_reason_family": "verified_sparse_trading_exception"
-      },
-      {
-        "canonical_id": "US:APTTF",
-        "symbol": "APTTF",
-        "registry_bars_count": 478,
-        "current_ui_title": "Analysis incomplete",
-        "primary_reason_family": "verified_insufficient_history_exception"
-      },
-      {
-        "canonical_id": "US:IISHF",
-        "symbol": "IISHF",
-        "registry_bars_count": 866,
-        "current_ui_title": "Modules have mixed as-of dates",
-        "primary_reason_family": "verified_sparse_trading_exception"
-      },
-      {
-        "canonical_id": "US:BLGFF",
-        "symbol": "BLGFF",
-        "registry_bars_count": 845,
-        "current_ui_title": "Modules have mixed as-of dates",
-        "primary_reason_family": "verified_sparse_trading_exception"
-      },
-      {
-        "canonical_id": "US:XDEVF",
-        "symbol": "XDEVF",
-        "registry_bars_count": 478,
-        "current_ui_title": "Modules have mixed as-of dates",
-        "primary_reason_family": "verified_sparse_trading_exception"
-      },
-      {
-        "canonical_id": "US:WDCCF",
-        "symbol": "WDCCF",
-        "registry_bars_count": 599,
-        "current_ui_title": "Modules have mixed as-of dates",
-        "primary_reason_family": "verified_sparse_trading_exception"
-      },
-      {
-        "canonical_id": "US:ITTSF",
-        "symbol": "ITTSF",
-        "registry_bars_count": 705,
-        "current_ui_title": "Modules have mixed as-of dates",
-        "primary_reason_family": "verified_sparse_trading_exception"
-      },
-      {
-        "canonical_id": "US:PRST",
-        "symbol": "PRST",
-        "registry_bars_count": 1120,
-        "current_ui_title": "Modules have mixed as-of dates",
-        "primary_reason_family": "verified_sparse_trading_exception"
-      },
-      {
-        "canonical_id": "US:KGTFY",
-        "symbol": "KGTFY",
-        "registry_bars_count": 956,
-        "current_ui_title": "Analysis incomplete",
-        "primary_reason_family": "verified_insufficient_history_exception"
-      }
-    ],
-    "targetable_green_ratio": 0.927419,
+    "targetable_non_operational_examples": [],
+    "targetable_green_ratio": 1,
     "release_green_threshold": 0.9,
     "release_blocked": false
   },
   "input_target_market_date": "2026-04-24",
-  "artifact_hash": "24d73294d5f8ec0245cdb8084b79c68c2fa491b7c663c5529c1040194ca99a5c"
+  "artifact_hash": "604040a0b22851c9b3aed6f71c825f2e1ddcff528b044a8ace76f1bccbd1af73"
 }
