@@ -272,16 +272,66 @@ function buildSummary(records, { minBars = DEFAULT_MIN_BARS, registryIndex = nul
   };
 }
 
+// Stale exception families that should be cleared when registry confirms healthy data.
+// non_tradable_or_delisted: stale tag if registry now has ≥minBars from real pack scan.
+// verified_insufficient_history: graduates once registry shows ≥minBars.
+// true_short_history: same — graduates once history catches up.
+// verified_sparse_trading is INTENTIONALLY excluded — sparse trading is a quality issue
+// independent of bar count and must be re-validated by EODHD provider check, not registry alone.
+const RECONCILABLE_FAMILIES = new Set([
+  'non_tradable_or_delisted_exception',
+  'verified_insufficient_history_exception',
+  'true_short_history',
+]);
+
+function modulesAllClean(row) {
+  const flags = row?.module_stale_flags;
+  if (!flags || typeof flags !== 'object') return true;
+  return !Object.values(flags).some((v) => v === true);
+}
+
+function reconcileFromRegistry(row, bars, minBars) {
+  const family = String(row?.primary_reason_family || '').trim();
+  if (!family || !RECONCILABLE_FAMILIES.has(family)) return row;
+  if (bars == null || bars < minBars) return row;
+  if (!modulesAllClean(row)) return row;
+  return {
+    ...row,
+    primary_reason_family: null,
+    structural_exception_class: null,
+    blocking_stack: [],
+    blocking_step: null,
+    severity: 'ok',
+    current_ui_title: 'All systems operational',
+    operational: true,
+    required_action: 'none',
+    auto_fixable: false,
+    exception_expires_at: null,
+    reason_codes: Array.isArray(row?.reason_codes)
+      ? row.reason_codes.filter((c) => c !== 'bars_missing' && c !== 'provider_no_data')
+      : [],
+    reconciliation: {
+      reconciled_from_family: family,
+      reconciled_at: new Date().toISOString(),
+      reconciliation_basis: 'registry_bars_count_confirms_healthy',
+      registry_bars_count_at_reconciliation: bars,
+    },
+  };
+}
+
 export function rebuildOperabilityDocument(inputDoc, { minBars = DEFAULT_MIN_BARS, targetMarketDate = null, registryIndex = null } = {}) {
   const records = Array.isArray(inputDoc?.records) ? inputDoc.records : [];
   if (!records.length) throw new Error('stock_analyzer_operability_records_missing');
   const updatedRecords = records.map((row) => {
     const bars = effectiveBars(row, registryIndex);
-    const family = String(row?.primary_reason_family || '').trim();
-    const targetable = bars != null && bars >= minBars && !NON_TARGETABLE_FAMILIES.has(family);
-    const updatedRow = registryIndex != null
+    let updatedRow = registryIndex != null
       ? { ...row, registry_bars_count: bars ?? row.registry_bars_count ?? null }
       : { ...row };
+    if (registryIndex != null) {
+      updatedRow = reconcileFromRegistry(updatedRow, bars, minBars);
+    }
+    const family = String(updatedRow?.primary_reason_family || '').trim();
+    const targetable = bars != null && bars >= minBars && !NON_TARGETABLE_FAMILIES.has(family);
     return {
       ...updatedRow,
       targetable,

@@ -6,7 +6,7 @@
   "run_id": "pipeline-master-2026-04-17",
   "cycle_id": "pipeline-master-2026-04-17",
   "target_market_date": "2026-04-24",
-  "generated_at": "2026-04-26T22:12:38.942Z",
+  "generated_at": "2026-04-27T07:37:31.898Z",
   "producer": "scripts/ops/build-stock-analyzer-operability.mjs",
   "code_commit": null,
   "input_artifact_times": {
@@ -70,12 +70,12 @@
     "coverage_denominator": "targetable_assets_min_registry_bars",
     "required_min_bars": 200,
     "targetable_min_bars": 200,
-    "targetable_assets": 345,
-    "operational_assets": 351,
-    "targetable_operational_assets": 345,
+    "targetable_assets": 39311,
+    "operational_assets": 39317,
+    "targetable_operational_assets": 39311,
     "targetable_non_operational_assets": 0,
-    "non_targetable_assets": 41873,
-    "verified_exception_count": 41873,
+    "non_targetable_assets": 2907,
+    "verified_exception_count": 2907,
     "registry_zero_or_unknown_bar_assets": 2,
     "registry_bars_unknown_assets": 0,
     "warming_up_assets": 2878,
@@ -83,20 +83,20 @@
     "global_blockers_remaining": 0,
     "unclassified_assets": 0,
     "ui_title_counts": {
-      "Analysis incomplete": 41848,
-      "All systems operational": 351,
+      "All systems operational": 39317,
+      "Analysis incomplete": 2882,
       "Modules have mixed as-of dates": 19
     },
     "primary_reason_family_counts": {
-      "non_tradable_or_delisted_exception": 41462,
-      "verified_insufficient_history_exception": 214,
-      "true_short_history": 162,
+      "non_tradable_or_delisted_exception": 2628,
+      "verified_insufficient_history_exception": 83,
+      "true_short_history": 161,
       "verified_sparse_trading_exception": 29
     },
     "structural_exception_counts": {
-      "non_tradable_or_delisted_exception": 41462,
-      "verified_insufficient_history_exception": 214,
-      "true_short_history": 162,
+      "non_tradable_or_delisted_exception": 2628,
+      "verified_insufficient_history_exception": 83,
+      "true_short_history": 161,
       "verified_sparse_trading_exception": 29
     },
     "targetable_non_operational_reason_counts": {},
@@ -111,34 +111,34 @@
       },
       "two_hundred_to_499": {
         "assets": 3791,
-        "operational_assets": 103
+        "operational_assets": 3775
       },
       "five_hundred_to_999": {
         "assets": 4966,
-        "operational_assets": 106
+        "operational_assets": 4959
       },
       "one_thousand_plus": {
         "assets": 30581,
-        "operational_assets": 136
+        "operational_assets": 30577
       }
     },
     "examples": {
       "non_tradable_or_delisted_exception": [
         {
-          "canonical_id": "AS:ACOMO",
-          "registry_bars_count": 10475,
+          "canonical_id": "CO:IAIKGA",
+          "registry_bars_count": 37,
           "pack_bars_count": null,
           "actual_adjusted_bars_count": 0
         },
         {
-          "canonical_id": "AS:H2OA",
-          "registry_bars_count": 1147,
+          "canonical_id": "F:E28",
+          "registry_bars_count": 98,
           "pack_bars_count": null,
           "actual_adjusted_bars_count": 0
         },
         {
-          "canonical_id": "AS:IJPN",
-          "registry_bars_count": 5352,
+          "canonical_id": "F:FZ70",
+          "registry_bars_count": 98,
           "pack_bars_count": null,
           "actual_adjusted_bars_count": 0
         }
@@ -151,16 +151,16 @@
           "actual_adjusted_bars_count": 27
         },
         {
-          "canonical_id": "US:RMSYF",
-          "registry_bars_count": 576,
-          "pack_bars_count": 145,
-          "actual_adjusted_bars_count": 145
+          "canonical_id": "US:TNPGY",
+          "registry_bars_count": 68,
+          "pack_bars_count": 62,
+          "actual_adjusted_bars_count": 62
         },
         {
-          "canonical_id": "US:AYYLF",
-          "registry_bars_count": 365,
-          "pack_bars_count": 80,
-          "actual_adjusted_bars_count": 80
+          "canonical_id": "US:IACYF",
+          "registry_bars_count": 39,
+          "pack_bars_count": 18,
+          "actual_adjusted_bars_count": 18
         }
       ],
       "true_short_history": [
@@ -210,5 +210,5 @@
     "release_blocked": false
   },
   "input_target_market_date": "2026-04-24",
-  "artifact_hash": "604040a0b22851c9b3aed6f71c825f2e1ddcff528b044a8ace76f1bccbd1af73"
+  "artifact_hash": "cc9d3c206c90fd3ced5ec77ec1ad3a6cac2d68962c8069df31887ab297d80ee9"
 }
