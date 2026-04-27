@@ -1,0 +1,43 @@
+#!/usr/bin/env bash
+# pre-push: ensure deploy bundle would build cleanly before allowing push to remote.
+#
+# Why: Cloudflare Pages auto-deploy from GitHub runs `echo "no build"` and then looks
+# for dist/pages-prod/. If that directory cannot be built (missing files, exceeds
+# bundle budget), the deploy fails AFTER the push — leaving main with a broken deploy.
+# This hook catches it BEFORE push so deploy state stays clean.
+#
+# Bypass with: git push --no-verify  (use only when you know the bundle is intentionally
+# incomplete, e.g. mid-cleanup commit).
+#
+# Install: handled automatically by `npm run prepare` which sets core.hooksPath.
+
+set -e
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+cd "$REPO_ROOT"
+
+remote="$1"
+url="$2"
+
+# Only enforce when pushing to the canonical remote main branch.
+push_targets_main=0
+while read -r local_ref local_sha remote_ref remote_sha; do
+  if [ "$remote_ref" = "refs/heads/main" ]; then
+    push_targets_main=1
+  fi
+done
+
+if [ "$push_targets_main" -eq 0 ]; then
+  exit 0
+fi
+
+echo "[pre-push] verifying deploy bundle builds cleanly (dist/pages-prod/)..."
+if ! node scripts/ops/build-deploy-bundle.mjs --strict --dry-run >/dev/null 2>&1; then
+  echo "[pre-push] FAIL: build-deploy-bundle.mjs --strict --dry-run failed."
+  echo "[pre-push] Run \`node scripts/ops/build-deploy-bundle.mjs --strict --dry-run\` for details."
+  echo "[pre-push] Bypass with --no-verify only if you understand the risk."
+  exit 1
+fi
+
+echo "[pre-push] bundle ok — push allowed."
+exit 0

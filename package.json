@@ -6,6 +6,7 @@
   },
   "type": "module",
   "scripts": {
+    "prepare": "git config core.hooksPath scripts/git-hooks 2>/dev/null || true",
     "prepare:data": "node scripts/copy-feature-registry.mjs && node scripts/ops/build-build-info.mjs",
     "dev": "npm run prepare:data && npm run dev:pages",
     "build": "npm run prepare:data",

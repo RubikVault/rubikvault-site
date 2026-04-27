@@ -5,8 +5,16 @@ compatibility_flags = ["nodejs_compat"]
 # Cloudflare Pages deploy output folder.
 # Built locally by: npm run build:deploy  (scripts/ops/build-deploy-bundle.mjs)
 # Deployed by:      node scripts/ops/release-gate-check.mjs  (MacBook supervisor only)
-# GitHub integration should be DISABLED in the Cloudflare Pages dashboard — deploy
-# is triggered exclusively via explicit wrangler CLI from the MacBook supervisor.
+#
+# CRITICAL: Cloudflare Pages "Connect to Git" MUST stay DISCONNECTED in the dashboard.
+# When connected, Cloudflare runs `echo "no build"` (no real build step), then looks
+# for this directory in the cloned repo. dist/pages-prod is gitignored, so the
+# auto-deploy fails on every push to main with "Output directory not found".
+# Verify in: Cloudflare → Workers & Pages → rubikvault-site → Settings →
+# Builds & deployments → "Connect to Git" must show DISCONNECTED.
+# The local pre-push hook (scripts/git-hooks/pre-push) verifies the bundle would
+# build, but cannot stop a still-connected dashboard integration from running its
+# own broken build on every push.
 pages_build_output_dir = "dist/pages-prod"
 
 # KV binding for Pages Functions + local dev
