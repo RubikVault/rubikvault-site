@@ -314,7 +314,9 @@ function main() {
   const targetDate = normalizeDate(touchReport?.meta?.to_date || touchReport?.to_date || null);
   const touchIndex = buildTouchIndex(touchReport);
   const appliedAt = new Date().toISOString();
-  if (!touchIndex.size) throw new Error(`history_touch_report_has_no_entries:${args.touchReport}`);
+  if (!touchIndex.size && !args.scanExistingPacks) {
+    throw new Error(`history_touch_report_has_no_entries:${args.touchReport}`);
+  }
 
   const registryRows = readNdjsonGz(args.registry);
   const snapshot = fs.existsSync(args.snapshot) ? readJsonGz(args.snapshot) : null;

@@ -111,7 +111,7 @@ status = str(report.get("status") or "")
 changed = int(report.get("assets_changed") or 0)
 fetched = int(report.get("assets_fetched_with_data") or 0)
 allowed = {"ok", "budget_stopped_partial", "provider_blocked_partial"}
-if status in allowed and (changed > 0 or fetched > 0):
+if status == "ok" or (status in allowed and (changed > 0 or fetched > 0)):
     print(json.dumps({"status": status, "assets_changed": changed, "assets_fetched_with_data": fetched}))
     sys.exit(0)
 print(json.dumps({"status": status, "assets_changed": changed, "assets_fetched_with_data": fetched}))
