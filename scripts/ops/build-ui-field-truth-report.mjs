@@ -458,8 +458,9 @@ async function checkPageCoreSmokes(baseUrl, timeoutMs, options = {}) {
     const randomRows = selectDeterministicPageCoreSamples(rows, latest, PAGE_CORE_RANDOM_SAMPLE_SIZE);
     randomSampleCount = randomRows.length;
     for (const row of randomRows) {
+      const requestTicker = row.canonical_asset_id;
       const started = Date.now();
-      const response = readPageCoreSmokeLocal(latest, row.ticker);
+      const response = readPageCoreSmokeLocal(latest, requestTicker);
       const latencyMs = Date.now() - started;
       const payload = response.payload;
       const ok = response.http_ok
@@ -469,6 +470,7 @@ async function checkPageCoreSmokes(baseUrl, timeoutMs, options = {}) {
       const sample = {
         sample_type: 'random',
         ticker: row.ticker,
+        request_ticker: requestTicker,
         ok,
         http_status: response.status,
         latency_ms: latencyMs,
