@@ -141,7 +141,8 @@ def profile_rows(path: Path, profile: dict[str, Any]) -> list[dict[str, Any]]:
         for horizon_key, metrics in sorted(horizons.items()):
             if not isinstance(metrics, dict):
                 continue
-            horizon = str(horizon_key).removeprefix("h")
+            horizon_text = str(horizon_key)
+            horizon = horizon_text[1:] if horizon_text.startswith("h") else horizon_text
             row: dict[str, Any] = {
                 "ticker": ticker,
                 "symbol_prefix": shard_prefix(ticker),
