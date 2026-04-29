@@ -122,6 +122,24 @@ function writeJsonAtomic(p, obj) {
   fs.renameSync(tmp, p);
 }
 
+function removeAppleDoubleArtifacts(dir) {
+  if (!fs.existsSync(dir)) return 0;
+  let removed = 0;
+  function walk(current) {
+    for (const entry of fs.readdirSync(current, { withFileTypes: true })) {
+      const full = path.join(current, entry.name);
+      if (entry.name === '__MACOSX' || entry.name.startsWith('._')) {
+        fs.rmSync(full, { recursive: true, force: true });
+        removed += 1;
+        continue;
+      }
+      if (entry.isDirectory()) walk(full);
+    }
+  }
+  walk(dir);
+  return removed;
+}
+
 function hasPageCoreCandidate() {
   return Boolean(readJson(PAGE_CORE_CANDIDATE_LATEST_PATH)?.snapshot_id);
 }
@@ -489,6 +507,9 @@ function runWranglerDeploy(branch = PAGES_DEPLOY_BRANCH) {
   if (!fs.existsSync(localWrangler)) {
     fail(`local wrangler binary missing at ${path.relative(REPO_ROOT, localWrangler)}; run npm install/npm ci in the repo before release deploy.`);
   }
+  const removedAppleDouble = removeAppleDoubleArtifacts(path.join(REPO_ROOT, 'functions'))
+    + removeAppleDoubleArtifacts(DIST_DIR);
+  if (removedAppleDouble > 0) log(`Removed ${removedAppleDouble} AppleDouble metadata artifacts before wrangler deploy.`);
   const deployArgs = ['pages', 'deploy', 'dist/pages-prod/', '--project-name', 'rubikvault-site', '--branch', branch];
   if (WRANGLER_SKIP_CACHING) deployArgs.push('--skip-caching');
   const r = spawnSync(localWrangler, deployArgs, {
