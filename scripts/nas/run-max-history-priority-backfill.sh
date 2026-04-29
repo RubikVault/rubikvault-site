@@ -44,6 +44,7 @@ POLL_SEC="${RV_HISTORY_BACKFILL_POLL_SEC:-300}"
 RUN_PIPELINE_WHEN_DONE="${RV_HISTORY_BACKFILL_RUN_PIPELINE_WHEN_DONE:-1}"
 JOB_PREFIX="${RV_HISTORY_BACKFILL_JOB_PREFIX:-max_history_priority}"
 INTEGRATED_AFTER_REFRESH=0
+export RV_HISTORY_BACKFILL_PID="$$"
 
 STATE_DIR="$NAS_RUNTIME_ROOT/history-backfill"
 STATE_JSON="$STATE_DIR/max-history-latest.json"
@@ -76,11 +77,15 @@ doc.update({
     "status": status,
     "note": note or None,
     "exit_code": int(exit_code),
+    "pid": int(os.environ.get("RV_HISTORY_BACKFILL_PID") or 0),
     "asset_classes": asset_classes,
     "target_market_date": target_date,
     "from_date": from_date,
     "completed_ids_path": completed_path,
 })
+report_path = os.environ.get("RV_HISTORY_BACKFILL_REPORT_PATH")
+if report_path:
+    doc["report_path"] = report_path
 if not doc.get("started_at") or (status == "running" and previous_status in {"completed", "failed", "skipped"}):
     doc["started_at"] = now
 if status in {"completed", "failed", "skipped"}:
@@ -461,6 +466,8 @@ PY
   job_name="${JOB_PREFIX}_${stamp}"
   log_path="$STATE_DIR/${job_name}.log"
   report_path="mirrors/universe-v7/state/${job_name}.report.json"
+  full_report_path="$REPO_ROOT/$report_path"
+  export RV_HISTORY_BACKFILL_REPORT_PATH="$full_report_path"
   INTEGRATED_AFTER_REFRESH=0
   write_state "running" "refresh:$job_name selected=$selected cap=$cap" 0
   echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] refresh_start job=$job_name selected=$selected cap=$cap budget=$budget allowlist=$allowlist"
@@ -484,7 +491,6 @@ PY
   set -e
   echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] refresh_finished job=$job_name exit=$exit_code log=$log_path"
 
-  full_report_path="$REPO_ROOT/$report_path"
   if [[ -f "$full_report_path" ]]; then
     merge_completed_ids "$full_report_path" || true
     integrate_history
