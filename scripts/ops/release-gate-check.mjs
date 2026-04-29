@@ -480,8 +480,36 @@ function buildDeployBundle() {
   log('Deploy bundle built.');
 }
 
+function removeAppleDoubleFiles(rootDir) {
+  if (!rootDir || !fs.existsSync(rootDir)) return 0;
+  let removed = 0;
+  for (const entry of fs.readdirSync(rootDir, { withFileTypes: true })) {
+    const fullPath = path.join(rootDir, entry.name);
+    if (entry.name.startsWith('._')) {
+      fs.rmSync(fullPath, { recursive: true, force: true });
+      removed += 1;
+      continue;
+    }
+    if (entry.isDirectory()) {
+      removed += removeAppleDoubleFiles(fullPath);
+    }
+  }
+  return removed;
+}
+
+function cleanDeployMetadataArtifacts() {
+  const removed = [
+    path.join(REPO_ROOT, 'functions'),
+    DIST_DIR,
+  ].reduce((count, dir) => count + removeAppleDoubleFiles(dir), 0);
+  if (removed > 0) {
+    warn(`Removed ${removed} AppleDouble metadata file(s) before Wrangler deploy.`);
+  }
+}
+
 function runWranglerDeploy(branch = PAGES_DEPLOY_BRANCH) {
   log(`Running wrangler pages deploy dist/pages-prod/ (branch=${branch})...`);
+  cleanDeployMetadataArtifacts();
   loadSecretEnvFile();
   if (!process.env.CLOUDFLARE_API_TOKEN) {
     fail(`CLOUDFLARE_API_TOKEN missing; store it in ${DEFAULT_CLOUDFLARE_ENV_PATH} or export it before deploy.`);
