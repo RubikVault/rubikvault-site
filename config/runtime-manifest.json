@@ -47,7 +47,7 @@
 
     { "pattern": "data/public-status.json", "maxFileSizeBytes": 16384, "class": "public-status" },
     { "pattern": "data/runtime/hist-probs-status-summary.json", "maxFileSizeBytes": 65536, "class": "hist-probs-public-status" },
-    { "pattern": "data/runtime/stock-analyzer-ui-delivery.json", "maxFileSizeBytes": 65536, "class": "stock-analyzer-public-delivery-status" },
+    { "pattern": "data/runtime/stock-analyzer-ui-delivery.json", "maxFileSizeBytes": 262144, "class": "stock-analyzer-public-delivery-status" },
     { "pattern": "data/eod/history/pack-manifest.us-eu.json", "maxFileSizeBytes": 20971520, "class": "eod-pack-manifest" },
     { "pattern": "data/eod/history/pack-manifest.us-eu.lookup.json", "maxFileSizeBytes": 10485760, "class": "eod-pack-manifest-lookup" },
     { "pattern": "data/eod/history/shards/*.json", "maxFileSizeBytes": 1048576, "class": "eod-shard" },
