@@ -4,15 +4,25 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
+import { gunzipSync } from 'node:zlib';
 import {
   normalizeDate,
   readJson,
   resolveReleaseTargetMarketDate,
 } from './pipeline-artifact-contract.mjs';
 import { classifyRuntimeFailure } from './runtime-preflight.mjs';
+import {
+  PAGE_CORE_SCHEMA,
+  aliasShardIndex,
+  aliasShardName,
+  normalizePageCoreAlias,
+  pageShardIndex,
+  pageShardName,
+} from '../../functions/api/_shared/page-core-contract.js';
 
 const ROOT = path.resolve(new URL('..', import.meta.url).pathname, '..');
 const OUTPUT_PATH = path.join(ROOT, 'public/data/reports/ui-field-truth-report-latest.json');
+const DELIVERY_OUTPUT_PATH = path.join(ROOT, 'public/data/runtime/stock-analyzer-ui-delivery.json');
 const PATHS = {
   release: path.join(ROOT, 'public/data/ops/release-state-latest.json'),
   runtime: path.join(ROOT, 'public/data/pipeline/runtime/latest.json'),
@@ -27,6 +37,7 @@ const DEFAULT_CANARIES = [
   { ticker: 'AAPL', asset_class: 'STOCK' },
   { ticker: 'SPY', asset_class: 'ETF' },
 ];
+const PAGE_CORE_CANARIES = ['AAPL', 'BRK-B', 'BRK.B', 'BF-B', 'BF.B', 'SPY', 'QQQ'];
 
 function parseArgs(argv) {
   const options = {
@@ -36,13 +47,17 @@ function parseArgs(argv) {
     targetMarketDate: normalizeDate(process.env.TARGET_MARKET_DATE || process.env.RV_TARGET_MARKET_DATE || null),
     canaries: DEFAULT_CANARIES,
     timeoutMs: Math.max(1000, Number(process.env.RV_UI_TRUTH_TIMEOUT_MS || 12000)),
+    pageCoreOnly: process.env.RV_UI_TRUTH_PAGE_CORE_ONLY === '1',
+    pageCoreLatestPath: process.env.RV_PAGE_CORE_LATEST_PATH || null,
   };
   for (let i = 2; i < argv.length; i += 1) {
     const arg = argv[i];
     const next = argv[i + 1];
-    if (arg === '--base-url' && next) {
+    if ((arg === '--base-url' || arg === '--target') && next) {
       options.baseUrl = next;
       i += 1;
+    } else if (arg.startsWith('--target=')) {
+      options.baseUrl = arg.split('=').slice(1).join('=');
     } else if (arg === '--output' && next) {
       options.outputPath = path.resolve(ROOT, next);
       i += 1;
@@ -61,6 +76,13 @@ function parseArgs(argv) {
       i += 1;
     } else if (arg.startsWith('--timeout-ms=')) {
       options.timeoutMs = Math.max(1000, Number(arg.split('=')[1]) || options.timeoutMs);
+    } else if (arg === '--page-core-only') {
+      options.pageCoreOnly = true;
+    } else if (arg === '--page-core-latest-path' && next) {
+      options.pageCoreLatestPath = next;
+      i += 1;
+    } else if (arg.startsWith('--page-core-latest-path=')) {
+      options.pageCoreLatestPath = arg.split('=').slice(1).join('=');
     }
   }
   return options;
@@ -96,6 +118,32 @@ function payloadHasData(payload, endpoint) {
     return Boolean(payload?.data?.ticker || payload?.data?.companyName || payload?.meta?.fallback_used || payload?.metadata?.fallback_used);
   }
   return false;
+}
+
+function payloadHasPageCoreData(payload) {
+  return Boolean(
+    payload?.ok === true
+    && payload?.data?.schema_version === PAGE_CORE_SCHEMA
+    && payload?.data?.canonical_asset_id
+    && payload?.data?.summary_min
+    && payload?.data?.governance_summary
+  );
+}
+
+function readPageCoreAssetJson(publicPath) {
+  const cleanPath = String(publicPath || '').replace(/^\/+/, '');
+  if (!cleanPath.startsWith('data/page-core/')) throw new Error(`PAGE_CORE_PATH_OUT_OF_SCOPE:${publicPath}`);
+  const filePath = path.join(ROOT, 'public', cleanPath);
+  const body = fs.readFileSync(filePath);
+  const text = filePath.endsWith('.gz') ? gunzipSync(body).toString('utf8') : body.toString('utf8');
+  return JSON.parse(text);
+}
+
+function readPageCoreLatestPath(latestPath) {
+  const filePath = path.resolve(ROOT, latestPath);
+  const rel = path.relative(ROOT, filePath);
+  if (rel.startsWith('..') || path.isAbsolute(rel)) throw new Error(`PAGE_CORE_LATEST_PATH_OUT_OF_SCOPE:${latestPath}`);
+  return JSON.parse(fs.readFileSync(filePath, 'utf8'));
 }
 
 function endpointCurrentEnough(endpoint, payload, targetMarketDate) {
@@ -282,6 +330,105 @@ async function checkCanary(baseUrl, targetMarketDate, canary, timeoutMs) {
   };
 }
 
+function readPageCoreSmokeLocal(latest, ticker) {
+  const query = normalizePageCoreAlias(ticker);
+  const aliasShard = readPageCoreAssetJson(`${latest.snapshot_path}/alias-shards/${aliasShardName(aliasShardIndex(query))}`);
+  const canonical = normalizePageCoreAlias(aliasShard?.[query]);
+  if (!canonical) {
+    return {
+      http_ok: true,
+      status: 200,
+      payload: { ok: false, error: { code: 'INVALID_OR_UNMAPPED_TICKER' } },
+      error: null,
+    };
+  }
+  const pageShard = readPageCoreAssetJson(`${latest.snapshot_path}/page-shards/${pageShardName(pageShardIndex(canonical))}`);
+  const row = pageShard?.[canonical] || null;
+  return {
+    http_ok: true,
+    status: 200,
+    payload: row ? {
+      ok: true,
+      data: row,
+      meta: {
+        canonical_asset_id: canonical,
+        status: row?.freshness?.status || null,
+      },
+    } : {
+      ok: false,
+      meta: { canonical_asset_id: canonical },
+      error: { code: 'PAGE_CORE_NOT_FOUND' },
+    },
+    error: null,
+  };
+}
+
+async function checkPageCoreSmokes(baseUrl, timeoutMs, options = {}) {
+  const latestResponse = options.latestPath
+    ? (() => {
+      try {
+        return { http_ok: true, status: 200, payload: readPageCoreLatestPath(options.latestPath), error: null };
+      } catch (error) {
+        return { http_ok: false, status: 0, payload: null, error: error?.message || String(error) };
+      }
+    })()
+    : await fetchJson(baseUrl, '/data/page-core/latest.json', timeoutMs);
+  const latest = latestResponse.payload || null;
+  if (!latestResponse.http_ok || !latest?.snapshot_id) {
+    return {
+      enabled: false,
+      ok: true,
+      release_eligible: true,
+      reason: 'page_core_latest_missing',
+      latest_status: latestResponse.status,
+      samples: [],
+      sample_5xx_rate: 0,
+      schema_valid_rate: 0,
+      missing_rate: 0,
+      expired_count: 0,
+    };
+  }
+  const samples = [];
+  for (const ticker of PAGE_CORE_CANARIES) {
+    const endpointPath = `/api/v2/page/${encodeURIComponent(ticker)}?v=${encodeURIComponent(latest.snapshot_id)}`;
+    const started = Date.now();
+    const response = options.latestPath
+      ? readPageCoreSmokeLocal(latest, ticker)
+      : await fetchJson(baseUrl, endpointPath, timeoutMs);
+    const latencyMs = Date.now() - started;
+    const payload = response.payload;
+    const ok = response.http_ok && payloadHasPageCoreData(payload);
+    samples.push({
+      ticker,
+      ok,
+      http_status: response.status,
+      latency_ms: latencyMs,
+      canonical_asset_id: payload?.data?.canonical_asset_id || payload?.meta?.canonical_asset_id || null,
+      freshness_status: payload?.meta?.status || payload?.data?.freshness?.status || null,
+      error: ok ? null : (response.error || payload?.error?.message || payload?.error?.code || 'page_core_contract_failed'),
+    });
+  }
+  const failures = samples.filter((sample) => !sample.ok);
+  const http5xx = samples.filter((sample) => sample.http_status >= 500).length;
+  const expiredCount = samples.filter((sample) => sample.freshness_status === 'expired').length;
+  const latencies = samples.map((sample) => sample.latency_ms).sort((a, b) => a - b);
+  const p95 = latencies.length ? latencies[Math.min(latencies.length - 1, Math.ceil(latencies.length * 0.95) - 1)] : null;
+  return {
+    enabled: true,
+    ok: failures.length === 0 && http5xx === 0,
+    release_eligible: failures.length === 0 && http5xx === 0,
+    snapshot_id: latest.snapshot_id,
+    run_id: latest.run_id || null,
+    sample_count: samples.length,
+    sample_5xx_rate: samples.length ? http5xx / samples.length : 0,
+    schema_valid_rate: samples.length ? (samples.length - failures.length) / samples.length : 0,
+    missing_rate: samples.length ? failures.length / samples.length : 0,
+    expired_count: expiredCount,
+    p95_latency_ms: p95,
+    samples,
+  };
+}
+
 async function main() {
   const options = parseArgs(process.argv);
   const release = readJson(PATHS.release) || null;
@@ -303,14 +450,19 @@ async function main() {
     || `run-ui-field-truth-${targetMarketDate || new Date().toISOString().slice(0, 10)}`;
 
   const canaries = [];
-  for (const canary of options.canaries) {
-    canaries.push(await checkCanary(
-      options.baseUrl,
-      targetMarketDate,
-      canary,
-      options.timeoutMs,
-    ));
+  if (!options.pageCoreOnly) {
+    for (const canary of options.canaries) {
+      canaries.push(await checkCanary(
+        options.baseUrl,
+        targetMarketDate,
+        canary,
+        options.timeoutMs,
+      ));
+    }
   }
+  const pageCoreSmokes = await checkPageCoreSmokes(options.baseUrl, options.timeoutMs, {
+    latestPath: options.pageCoreLatestPath,
+  });
   const auditSummary = stockAudit?.summary || null;
   const auditGreen = (auditSummary?.artifact_release_ready === true
       || (auditSummary?.artifact_full_validated === true || auditSummary?.full_universe_validated === true)
@@ -349,9 +501,15 @@ async function main() {
   const runtimeFailureClass = runtimeFailures.some((entry) => entry.failure_class === 'runtime_unstable')
     ? 'runtime_unstable'
     : (runtimeFailures.length > 0 ? 'runtime_unavailable' : null);
-  if (runtimePreflight?.ok === false && !advisory.includes('runtime_preflight_failed')) {
+  if (!options.pageCoreOnly && runtimePreflight?.ok === false && !advisory.includes('runtime_preflight_failed')) {
     advisory.push('runtime_preflight_failed');
   }
+  const uiFieldTruthOk = options.pageCoreOnly
+    ? pageCoreSmokes.ok
+    : auditGreen && failures.length === 0;
+  const gateMode = options.pageCoreOnly
+    ? 'filesystem_candidate_smoke'
+    : 'local_runtime_smoke';
 
   const payload = {
     schema: 'rv.ui_field_truth_report.v1',
@@ -361,40 +519,55 @@ async function main() {
     target_market_date: targetMarketDate,
     generated_at: new Date().toISOString(),
     artifact_hash: null,
+    gate_mode: gateMode,
     contract: {
       required_endpoints: CRITICAL_ENDPOINTS,
       optional_endpoints: OPTIONAL_ENDPOINTS,
       target_date_endpoints: ['summary', 'historical', 'historical-profile'],
       canaries: options.canaries,
+      page_core_canaries: PAGE_CORE_CANARIES,
     },
     summary: {
-      ui_field_truth_ok: auditGreen && failures.length === 0,
-      full_universe_source_ok: auditGreen,
+      ui_field_truth_ok: uiFieldTruthOk,
+      full_universe_source_ok: options.pageCoreOnly ? true : auditGreen,
       audit_provenance_complete: auditProvenanceComplete,
       canary_ok: failures.length === 0,
-      runtime_ok: runtimePreflight?.ok !== false && runtimeFailures.length === 0,
+      runtime_ok: options.pageCoreOnly ? null : runtimePreflight?.ok !== false && runtimeFailures.length === 0,
       runtime_failure_class: runtimeFailureClass,
       runtime_failure_count: runtimeFailures.length,
       endpoint_contract_failure_count: endpointFailures.length,
       checked_canaries: canaries.length,
       failed_checks: failures.length,
       optional_advisory_count: optionalAdvisories.length,
+      page_core_smoke_ok: pageCoreSmokes.ok,
+      page_core_enabled: pageCoreSmokes.enabled,
       advisory_reasons: advisory,
     },
     full_universe_audit_ref: 'public/data/reports/stock-analyzer-universe-audit-latest.json',
     runtime_preflight_ref: 'public/data/ops/runtime-preflight-latest.json',
-    runtime_preflight_ok: runtimePreflight?.ok === true,
+    runtime_preflight_ok: options.pageCoreOnly ? null : runtimePreflight?.ok === true,
     runtime_preflight: runtimePreflight ? {
       ok: runtimePreflight.ok === true,
       generated_at: runtimePreflight.generated_at || null,
       failure_reasons: Array.isArray(runtimePreflight.failure_reasons) ? runtimePreflight.failure_reasons : [],
     } : null,
     canaries,
+    page_core_smokes: pageCoreSmokes,
     failures,
     optional_advisories: optionalAdvisories,
   };
   payload.artifact_hash = buildArtifactHash(payload);
   writeJsonAtomic(options.outputPath, payload);
+  writeJsonAtomic(DELIVERY_OUTPUT_PATH, {
+    schema: 'rv.ui_delivery_report.v1',
+    schema_version: 'rv.ui_delivery_report.v1',
+    generated_at: payload.generated_at,
+    run_id: payload.run_id,
+    target_market_date: payload.target_market_date,
+    gate_mode: gateMode,
+    page_core_smokes: pageCoreSmokes,
+    release_eligible: pageCoreSmokes.release_eligible,
+  });
   process.stdout.write(`${JSON.stringify({
     ok: payload.summary.ui_field_truth_ok,
     target_market_date: payload.target_market_date,

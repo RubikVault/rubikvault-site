@@ -89,7 +89,7 @@ function createKv() {
 }
 
 function makeEnv(extra = {}) {
-  return { RV_KV: createKv(), TIINGO_API_KEY: 'test', RV_ALLOW_WRITE_ON_VIEW: '1', ...extra };
+  return { RV_KV: createKv(), EODHD_API_KEY: 'test', RV_ALLOW_WRITE_ON_VIEW: '1', ...extra };
 }
 
 function stubFetch({ overrides = {}, tiingo, twelvedata } = {}) {
@@ -113,7 +113,7 @@ function stubFetch({ overrides = {}, tiingo, twelvedata } = {}) {
       if (u.pathname.includes('/ZZZZ') || u.searchParams.get('s') === 'ZZZZ') {
         return { ok: false, status: 404, json: async () => ({}) };
       }
-      return { ok: true, status: 200, json: async () => tiingoPayload(makeBars()) };
+      return tiingo ? tiingo(u) : { ok: true, status: 200, json: async () => tiingoPayload(makeBars()) };
     }
 
     const mapping = {
@@ -196,15 +196,15 @@ async function testMissingStats() {
   });
   try {
     const result = await requestTicker('SPY', makeEnv({ TIINGO_API_KEY: '' }));
-    assert(result.error?.code === 'DATA_NOT_READY', 'expected data not ready');
-    assert(result.error?.details?.missing?.includes('market_stats'), 'missing stats noted');
+    assert(!result.error, 'expected public response to degrade without hard error');
+    assert(result.metadata?.reasons?.includes('DATA_NOT_READY'), 'missing DATA_NOT_READY reason');
     assert(result.data.market_prices, 'prices still present');
-    assert(result.data.market_stats === null, 'stats null');
+    assert(result.data.market_stats, 'stats synthesized from EOD bars');
     assertHasMetaStatus(result);
   } finally {
     restore();
   }
-  console.log('✅ missing stats triggers DATA_NOT_READY');
+  console.log('✅ missing stats degrades without hard DATA_NOT_READY error');
 }
 
 async function testProviderFailReturnsStaleCache() {
@@ -212,7 +212,14 @@ async function testProviderFailReturnsStaleCache() {
   const env = makeEnv({ RV_KV: kv, PROVIDER_MODE: 'PRIMARY_ONLY' });
   const cache = createCache(env);
   const bars = makeBars({ startOffset: -30, count: 3 });
-  await cache.writeCached('SPY', { bars }, 3600, { provider: 'tiingo', data_date: bars[bars.length - 1].date });
+  await Promise.all([
+    kv.put('eod:SPY', JSON.stringify({ bars })),
+    kv.put('eodmeta:SPY', JSON.stringify({
+      provider: 'eodhd',
+      data_date: bars[bars.length - 1].date,
+      generated_at: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
+    })),
+  ]);
 
   const restore = stubFetch({
     tiingo: () => ({ ok: false, status: 500, json: async () => ({}) })
@@ -278,22 +285,26 @@ async function testSoftWarnFlags() {
   console.log('✅ soft warn flags appear in meta');
 }
 
-async function testFailoverProvider() {
+async function testLegacyFailoverDisabled() {
   const kv = createKv();
   const env = makeEnv({ RV_KV: kv, PROVIDER_MODE: 'FAILOVER_ALLOWED', TWELVEDATA_API_KEY: 'test' });
-  const secondaryBars = makeBars({ base: 200 });
+  let twelvedataCalls = 0;
   const restore = stubFetch({
     tiingo: () => ({ ok: false, status: 500, json: async () => ({}) }),
-    twelvedata: () => ({ ok: true, status: 200, json: async () => twelveDataPayload(secondaryBars) })
+    twelvedata: () => {
+      twelvedataCalls += 1;
+      return { ok: true, status: 200, json: async () => twelveDataPayload(makeBars({ base: 200 })) };
+    }
   });
   try {
     const result = await requestTicker('SPY', env);
-    assert(result.meta.provider === 'twelvedata', 'expected provider twelvedata');
-    assert(result.data.bars[0].close === secondaryBars[0].close, 'expected twelvedata bars only');
+    assert(result.error?.code === 'EOD_FETCH_FAILED', 'expected EOD_FETCH_FAILED');
+    assert(result.meta?.provider !== 'twelvedata', 'legacy provider must not be selected');
+    assert(twelvedataCalls === 0, 'twelvedata must not be called');
   } finally {
     restore();
   }
-  console.log('✅ failover provider selected without mixing');
+  console.log('✅ legacy failover providers disabled for stock EOD');
 }
 
 async function testCircuitOpenReturnsError() {
@@ -304,7 +315,7 @@ async function testCircuitOpenReturnsError() {
     opened_at: Date.now(),
     last_failure_at: Date.now()
   };
-  await kv.put('cb:tiingo', JSON.stringify(circuitState));
+  await kv.put('cb:eodhd', JSON.stringify(circuitState));
 
   const env = makeEnv({ RV_KV: kv, PROVIDER_MODE: 'PRIMARY_ONLY' });
   const restore = stubFetch({
@@ -320,7 +331,7 @@ async function testCircuitOpenReturnsError() {
   console.log('✅ circuit open returns error with circuit state in meta');
 }
 
-async function testQualityRejectRecordsCircuitFailure() {
+async function testQualityRejectDoesNotPersistCircuitFailureWithReadOnlyKv() {
   const kv = createKv();
   const env = makeEnv({ RV_KV: kv });
   const badBars = makeBars({ invalid: true });
@@ -328,14 +339,14 @@ async function testQualityRejectRecordsCircuitFailure() {
     tiingo: () => ({ ok: true, status: 200, json: async () => tiingoPayload(badBars) })
   });
   try {
-    await requestTicker('SPY', env);
-    const circuitRaw = await kv.get('cb:tiingo', 'json');
-    assert(circuitRaw?.failures >= 1, 'expected circuit failure recorded');
-    assert(circuitRaw?.last_error_code === 'QUALITY_REJECT', 'expected QUALITY_REJECT error code');
+    const result = await requestTicker('SPY', env);
+    assert(result.error?.code === 'QUALITY_REJECT', 'expected QUALITY_REJECT');
+    const circuitRaw = await kv.get('cb:eodhd', 'json');
+    assert(circuitRaw == null, 'KV circuit writes are disabled in functions');
   } finally {
     restore();
   }
-  console.log('✅ quality reject records circuit failure');
+  console.log('✅ quality reject stays read-only for circuit KV');
 }
 
 async function main() {
@@ -346,9 +357,9 @@ async function main() {
   await testNoCacheProviderFailure();
   await testHardRejectBlocksInvalidData();
   await testSoftWarnFlags();
-  await testFailoverProvider();
+  await testLegacyFailoverDisabled();
   await testCircuitOpenReturnsError();
-  await testQualityRejectRecordsCircuitFailure();
+  await testQualityRejectDoesNotPersistCircuitFailureWithReadOnlyKv();
   console.log('✅ stock endpoint smoke tests passed');
 }
 

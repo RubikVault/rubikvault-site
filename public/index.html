@@ -759,7 +759,7 @@
 
           async function loadStockAnalysisDoc() {
             if (ideasRuntime.stockAnalysisDoc) return ideasRuntime.stockAnalysisDoc;
-            ideasRuntime.stockAnalysisDoc = await fetchJson('/data/snapshots/stock-analysis.json');
+            ideasRuntime.stockAnalysisDoc = await fetchJson('/data/supermodules/scientific-summary.json');
             return ideasRuntime.stockAnalysisDoc;
           }
 
@@ -1266,7 +1266,7 @@
               renderUnavailablePanel(
                 panel,
                 { tab: 'truth', source: 'truth_supermodule', status: 'unavailable', asOf: new Date().toISOString().slice(0, 10), reason: reason || 'no_truth_rows' },
-                'No fundamental data available' + (reason ? ': ' + reason : '') + '. Set EODHD_API_KEY and run <code>npm run build:supermodules:truth</code>.'
+                'No fundamental data available' + (reason ? ': ' + reason : '') + '.'
               );
               return;
             }
@@ -1682,9 +1682,15 @@
       if (scientificLoadPromise) return scientificLoadPromise;
       scientificLoadPromise = (async () => {
         try {
-          const res = await fetch('/data/snapshots/stock-analysis.json');
+          const res = await fetch('/data/supermodules/scientific-summary.json');
           if (!res.ok) return null;
           scientificAnalysisData = await res.json();
+          if (scientificAnalysisData && !scientificAnalysisData._meta) {
+            scientificAnalysisData._meta = {
+              generated_at: scientificAnalysisData.generated_at || null,
+              symbols_processed: scientificAnalysisData.universe_stats?.total || null
+            };
+          }
           buildScientificMaps();
           await renderBestSetups();
           if (!topSetupsDoc || topSetupsDoc?.meta?.source === 'fallback_scientific_rankings') {
@@ -3000,7 +3006,7 @@
       if (!rows.length) return out;
       const seen = { short: new Set(), medium: new Set(), long: new Set() };
 
-      const pushForecast = (horizon, ticker, rowName, horizonDoc, horizonKey) => {
+      const pushForecast = (horizon, ticker, rowName, horizonDoc, horizonKey, row) => {
         if (!horizonDoc || seen[horizon].has(ticker)) return;
         const rawProb = numberOrNull(horizonDoc?.probability);
         if (rawProb == null || rawProb < 0 || rawProb > 1) return;
@@ -3040,9 +3046,9 @@
         const shortDoc  = horizons['1d']  || horizons['5d']  || null;
         const mediumDoc = horizons['5d']  || horizons['20d'] || null;
         const longDoc   = horizons['20d'] || null;
-        pushForecast('short',  ticker, row?.name, shortDoc,  shortDoc  === horizons['1d']  ? '1d' : '5d');
-        pushForecast('medium', ticker, row?.name, mediumDoc, mediumDoc === horizons['5d']  ? '5d' : '20d');
-        pushForecast('long',   ticker, row?.name, longDoc,   '20d');
+        pushForecast('short',  ticker, row?.name, shortDoc,  shortDoc  === horizons['1d']  ? '1d' : '5d', row);
+        pushForecast('medium', ticker, row?.name, mediumDoc, mediumDoc === horizons['5d']  ? '5d' : '20d', row);
+        pushForecast('long',   ticker, row?.name, longDoc,   '20d', row);
       }
 
       out.short = takeTop(out.short, 10);

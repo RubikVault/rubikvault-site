@@ -42,6 +42,7 @@ import {
   parseIsoDay,
 } from './_shared/market-calendar.js';
 import { readDecisionForTicker } from './_shared/decision-bundle-reader.js';
+import { readPageCoreForTicker } from './_shared/page-core-reader.js';
 
 const MODULE_NAME = 'stock';
 const TICKER_MAX_LENGTH = 12;
@@ -59,6 +60,14 @@ const DEFAULT_PENDING_WINDOW_MINUTES = 120;
 const V7_STOCK_SSOT_TTL_MS = 10 * 60 * 1000;
 const V7_SEARCH_EXACT_TTL_MS = 10 * 60 * 1000;
 const LOCAL_DEV_HISTORY_DAYS = 90;
+const PRIVATE_DECISION_BLOCKERS = new Set([
+  'bundle_missing',
+  'bundle_stale',
+  'index_missing',
+  'part_missing',
+  'part_fetch_failed',
+  'decision_missing',
+]);
 
 let v7StockSetCache = null;
 let v7StockSetCachedAt = 0;
@@ -74,6 +83,82 @@ function normalizeTicker(raw) {
   const normalized = trimmed.toUpperCase();
   if (!VALID_TICKER_REGEX.test(normalized)) return null;
   return normalized;
+}
+
+function normalizeStatusUpper(value, fallback = 'DEGRADED') {
+  const normalized = String(value || '').trim().toUpperCase();
+  return normalized || fallback;
+}
+
+function decisionBundleBlocksPublicReadiness(decisionBundle) {
+  const readiness = decisionBundle?.analysis_readiness || {};
+  const reasons = [
+    ...(Array.isArray(readiness.blocking_reasons) ? readiness.blocking_reasons : []),
+    ...(Array.isArray(decisionBundle?.decision?.blocking_reasons) ? decisionBundle.decision.blocking_reasons : []),
+  ].map((item) => String(item?.id || item || '').trim());
+  return decisionBundle?.ok === false
+    || reasons.some((reason) => PRIVATE_DECISION_BLOCKERS.has(reason))
+    || normalizeStatusUpper(readiness.decision_bundle_status || readiness.status, 'FAILED') === 'FAILED';
+}
+
+function buildPublicDecisionFromPageCore(pageCoreResult, privateDecisionBundle = null) {
+  if (!pageCoreResult?.ok || !pageCoreResult.pageCore) return null;
+  const row = pageCoreResult.pageCore;
+  const summary = row.summary_min || {};
+  const governance = row.governance_summary || {};
+  const freshness = row.freshness || {};
+  const govBlocking = Array.isArray(governance.blocking_reasons) ? governance.blocking_reasons : [];
+  const govWarnings = Array.isArray(governance.warnings) ? governance.warnings : [];
+  const qualityStatus = normalizeStatusUpper(summary.quality_status || governance.status, 'DEGRADED');
+  const freshnessStatus = String(pageCoreResult.freshness_status || freshness.status || '').toLowerCase();
+  const pageCoreGreen = qualityStatus === 'OK'
+    && govBlocking.length === 0
+    && !['expired', 'error', 'missing'].includes(freshnessStatus);
+  const privateBlocked = decisionBundleBlocksPublicReadiness(privateDecisionBundle);
+  const signalQuality = pageCoreGreen && !privateBlocked ? 'fresh' : (pageCoreGreen ? 'degraded' : 'suppressed');
+  const privateReadiness = privateDecisionBundle?.analysis_readiness || {};
+  const publicWarnings = [
+    ...govWarnings,
+    ...(privateBlocked ? ['private_decision_bundle_unavailable_or_stale'] : []),
+    ...(signalQuality === 'suppressed' ? ['page_core_public_projection_not_green'] : []),
+  ];
+  const riskLevel = String(summary.risk_level || governance.risk_level || governance.risk_bucket || 'DEGRADED').toUpperCase();
+  const decision = {
+    schema: 'rv.asset_daily_decision.v1',
+    source: 'page_core_public_projection',
+    run_id: pageCoreResult.run_id || row.run_id || null,
+    snapshot_id: pageCoreResult.snapshot_id || row.snapshot_id || null,
+    target_market_date: freshness.as_of || row.target_market_date || null,
+    canonical_id: row.canonical_asset_id || pageCoreResult.canonical_id || null,
+    symbol: row.display_ticker || row.provider_ticker || null,
+    pipeline_status: pageCoreGreen ? 'OK' : 'DEGRADED',
+    verdict: summary.decision_verdict || 'WAIT',
+    confidence_bucket: summary.decision_confidence_bucket || null,
+    blocking_reasons: pageCoreGreen ? [] : (govBlocking.length ? govBlocking : ['page_core_public_projection_degraded']),
+    warnings: publicWarnings,
+    risk_assessment: {
+      level: riskLevel === 'UNKNOWN' ? 'DEGRADED' : riskLevel,
+    },
+    signal_quality: signalQuality,
+  };
+  const analysisReadiness = {
+    status: pageCoreGreen ? 'OK' : 'DEGRADED',
+    source: 'page_core_public_projection',
+    decision_bundle_status: pageCoreGreen ? 'OK' : 'DEGRADED',
+    decision_internal_green: !privateBlocked,
+    decision_public_green: pageCoreGreen,
+    operability_green: pageCoreGreen,
+    signal_quality: signalQuality,
+    blocking_reasons: [],
+    warnings: publicWarnings,
+    private_decision_status: normalizeStatusUpper(privateReadiness.decision_bundle_status || privateReadiness.status || privateDecisionBundle?.decision?.pipeline_status, privateDecisionBundle ? 'DEGRADED' : 'MISSING'),
+    private_decision_available: !privateBlocked,
+    page_core: {
+      snapshot_id: pageCoreResult.snapshot_id || null,
+      freshness_status: pageCoreResult.freshness_status || null,
+    },
+  };
+  return { decision, analysisReadiness };
 }
 
 function buildSourceChainMetadata(chain) {
@@ -330,6 +415,7 @@ async function fetchV7SearchExactEntry(request, symbol) {
   return {
     canonical_id: canonical,
     symbol: typeof row.symbol === 'string' && row.symbol.trim() ? row.symbol.trim().toUpperCase() : normalizeTicker(symbol),
+    provider_symbol: typeof row.provider_symbol === 'string' && row.provider_symbol.trim() ? row.provider_symbol.trim().toUpperCase() : null,
     name: typeof row.name === 'string' && row.name.trim() ? row.name.trim() : null,
     exchange: typeof row.exchange === 'string' && row.exchange.trim() ? row.exchange : (canonicalExchange || null),
     country: typeof row.country === 'string' && row.country.trim() ? row.country : null
@@ -1685,13 +1771,23 @@ export async function onRequestGet(context) {
       env,
       targetMarketDate: envelopeDataDate,
     });
-    payload.data.daily_decision = decisionBundle.decision || null;
-    payload.data.analysis_readiness = decisionBundle.analysis_readiness || {
+    let dailyDecision = decisionBundle.decision || null;
+    let analysisReadiness = decisionBundle.analysis_readiness || {
       status: 'FAILED',
       source: 'decision_bundle',
       blocking_reasons: ['bundle_missing'],
       warnings: [],
     };
+    if (decisionBundleBlocksPublicReadiness(decisionBundle)) {
+      const pageCoreResult = await readPageCoreForTicker(effectiveTicker || resolvedCanonicalId || normalizedTicker, { request, env });
+      const publicDecision = buildPublicDecisionFromPageCore(pageCoreResult, decisionBundle);
+      if (publicDecision) {
+        dailyDecision = publicDecision.decision;
+        analysisReadiness = publicDecision.analysisReadiness;
+      }
+    }
+    payload.data.daily_decision = dailyDecision;
+    payload.data.analysis_readiness = analysisReadiness;
     payload.daily_decision = payload.data.daily_decision;
     payload.analysis_readiness = payload.data.analysis_readiness;
   }
@@ -1718,7 +1814,11 @@ export async function onRequestGet(context) {
     } else {
       // Layer 1: Live API (EODHD primary → FMP fallback)
       try {
-        const r = await fetchEodhdFundamentals(effectiveTicker, env);
+        const r = await fetchEodhdFundamentals(effectiveTicker, env, {
+          exchange: resolvedExchange,
+          providerSymbol: v7ExactMeta?.provider_symbol,
+          canonicalId: resolvedCanonicalId,
+        });
         if (r.ok && r.data) _fundData = r.data;
       } catch {}
       try {

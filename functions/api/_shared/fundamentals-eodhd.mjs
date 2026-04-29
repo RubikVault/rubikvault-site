@@ -1,9 +1,11 @@
+import { resolveEodhdFundamentalsSymbol } from './eodhd-symbols.mjs';
+
 function toNumber(value) {
   const n = Number(value);
   return Number.isFinite(n) ? n : null;
 }
 
-export async function fetchEodhdFundamentals(ticker, env) {
+export async function fetchEodhdFundamentals(ticker, env, options = {}) {
   const processEnv = typeof process !== 'undefined' && process?.env ? process.env : {};
   const apiKey = env?.EODHD_API_KEY || env?.EODHD_API_TOKEN || processEnv.EODHD_API_KEY || processEnv.EODHD_API_TOKEN;
   if (!apiKey) {
@@ -18,13 +20,12 @@ export async function fetchEodhdFundamentals(ticker, env) {
     };
   }
 
-  let querySymbol = String(ticker || '').trim().toUpperCase();
-  const classShare = querySymbol.match(/^([A-Z0-9]+)\.([A-Z])$/);
-  if (classShare) {
-    querySymbol = `${classShare[1]}-${classShare[2]}.US`;
-  } else if (!querySymbol.includes('.')) {
-    querySymbol = `${querySymbol}.US`;
-  }
+  const querySymbol = resolveEodhdFundamentalsSymbol({
+    symbol: ticker,
+    exchange: options.exchange,
+    providerSymbol: options.providerSymbol,
+    canonicalId: options.canonicalId,
+  });
 
   const url = new URL(`https://eodhd.com/api/fundamentals/${encodeURIComponent(querySymbol)}`);
   url.searchParams.set('api_token', apiKey);

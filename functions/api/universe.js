@@ -106,6 +106,60 @@ export async function onRequestGet(context) {
     return v === "1" || v === "true" || v === "yes";
   }
 
+  const PROTECTED_SEARCH_ALIASES = new Map([
+    ["ford", ["F"]],
+    ["visa", ["V"]],
+    ["tesl", ["TSLA"]],
+    ["tesla", ["TSLA"]],
+  ]);
+
+  function normalizeSearchText(raw) {
+    return String(raw || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+  }
+
+  function canonicalKey(it) {
+    return String(it?.canonical_id || "").trim().toUpperCase()
+      || `${String(it?.exchange || "").trim().toUpperCase()}:${String(it?.symbol || it?.ticker || "").trim().toUpperCase()}`;
+  }
+
+  function protectedSymbolsForQuery(normalizedQuery, symbolQuery) {
+    const out = [];
+    for (const [alias, symbols] of PROTECTED_SEARCH_ALIASES.entries()) {
+      if (alias === normalizedQuery || alias.startsWith(normalizedQuery) || normalizedQuery.startsWith(alias)) {
+        out.push(...symbols);
+      }
+    }
+    if (symbolQuery) out.push(symbolQuery);
+    return [...new Set(out.map((value) => normalizeSymbol(value)).filter(Boolean))];
+  }
+
+  function scanExactIndexByName(exactBySymbol, normalizedQuery, maxItems = 750) {
+    if (!exactBySymbol || normalizedQuery.length < 3) return [];
+    const hits = [];
+    for (const item of Object.values(exactBySymbol)) {
+      const symbolText = normalizeSearchText(item?.symbol || item?.ticker || "");
+      const nameText = normalizeSearchText(item?.name || "");
+      if (
+        (symbolText && (symbolText.startsWith(normalizedQuery) || symbolText.includes(normalizedQuery))) ||
+        (nameText && nameText.includes(normalizedQuery))
+      ) {
+        hits.push(item);
+        if (hits.length >= maxItems) break;
+      }
+    }
+    return hits;
+  }
+
+  function appendUniqueCandidates(target, source, seen) {
+    if (!Array.isArray(source)) return;
+    for (const item of source) {
+      const key = canonicalKey(item);
+      if (!key || seen.has(key)) continue;
+      seen.add(key);
+      target.push(item);
+    }
+  }
+
   function isNonEmptySymbols(list) {
     return Array.isArray(list) && list.length > 0;
   }
@@ -283,9 +337,16 @@ export async function onRequestGet(context) {
       }
     }
 
+    const exactIndexDoc = await getExactIndexDoc();
+    const exactBySymbol = exactIndexDoc?.by_symbol && typeof exactIndexDoc.by_symbol === "object"
+      ? exactIndexDoc.by_symbol
+      : null;
+    const protectedItems = protectedSymbolsForQuery(normalized, qSymbol)
+      .map((symbol) => exactBySymbol?.[symbol])
+      .filter(Boolean);
+
     const manifest = await fetchJson("/data/universe/v7/search/search_index_manifest.json");
     const buckets = manifest?.buckets;
-    if (!buckets || typeof buckets !== "object") return null;
 
     const prefixes = [];
     for (let depth = 1; depth <= 3; depth += 1) {
@@ -293,34 +354,38 @@ export async function onRequestGet(context) {
     }
 
     let bucketPayload = null;
-    for (let i = prefixes.length - 1; i >= 0; i -= 1) {
-      const prefix = prefixes[i];
-      if (!buckets[prefix]) continue;
-      bucketPayload = await fetchJson(`/data/universe/v7/search/buckets/${prefix}.json.gz`);
-      if (bucketPayload?.items && Array.isArray(bucketPayload.items)) break;
+    if (buckets && typeof buckets === "object") {
+      for (let i = prefixes.length - 1; i >= 0; i -= 1) {
+        const prefix = prefixes[i];
+        if (!buckets[prefix]) continue;
+        bucketPayload = await fetchJson(`/data/universe/v7/search/buckets/${prefix}.json.gz`);
+        if (bucketPayload?.items && Array.isArray(bucketPayload.items)) break;
+      }
     }
     let source = "v7_search_buckets";
-    let sourceItems = bucketPayload?.items;
+    let sourceItems = Array.isArray(bucketPayload?.items) ? bucketPayload.items : [];
 
     // Always merge global top 2000 so name-based searches (e.g. "Apple") find the primary
     // stock (AAPL) even if it lives in a different symbol-prefix bucket.
-    const globalTop = await fetchJson("/data/universe/v7/search/search_global_top_2000.json.gz");
+    const globalTop = await fetchJson("/data/universe/v7/search/search_global_top_30000.json.gz")
+      || await fetchJson("/data/universe/v7/search/search_global_top_2000.json.gz");
     const globalItems = Array.isArray(globalTop?.items) ? globalTop.items : [];
-    if (Array.isArray(sourceItems) && sourceItems.length > 0) {
-      // Merge: bucket items first, then global top (dedup handled downstream)
-      const bucketSyms = new Set(sourceItems.map((it) => String(it?.symbol || "").toUpperCase()));
-      const extra = globalItems.filter((it) => !bucketSyms.has(String(it?.symbol || "").toUpperCase()));
-      sourceItems = sourceItems.concat(extra);
-      source = "v7_search_buckets+global";
-    } else {
-      sourceItems = null;
-    }
+    const exactNameItems = scanExactIndexByName(exactBySymbol, normalized);
+    const mergedSourceItems = [];
+    const mergedSeen = new Set();
+    appendUniqueCandidates(mergedSourceItems, protectedItems, mergedSeen);
+    appendUniqueCandidates(mergedSourceItems, sourceItems, mergedSeen);
+    appendUniqueCandidates(mergedSourceItems, globalItems, mergedSeen);
+    appendUniqueCandidates(mergedSourceItems, exactNameItems, mergedSeen);
+    sourceItems = mergedSourceItems;
+    source = [
+      protectedItems.length ? "protected" : null,
+      Array.isArray(bucketPayload?.items) ? "buckets" : null,
+      globalItems.length ? "global" : null,
+      exactNameItems.length ? "exact_index" : null,
+    ].filter(Boolean).join("+") || "v7_search_empty";
 
     if (!Array.isArray(sourceItems) || sourceItems.length === 0) {
-      const exactIndexDoc = await getExactIndexDoc();
-      const exactBySymbol = exactIndexDoc?.by_symbol && typeof exactIndexDoc.by_symbol === "object"
-        ? exactIndexDoc.by_symbol
-        : null;
       const exactByPrefix1 = exactIndexDoc?.by_prefix_1 && typeof exactIndexDoc.by_prefix_1 === "object"
         ? exactIndexDoc.by_prefix_1
         : null;
@@ -361,6 +426,14 @@ export async function onRequestGet(context) {
       return "";
     }
 
+    function getProtectedRank(it) {
+      const sym = normalizeSymbol(it?.symbol || it?.ticker || it?.canonical_id?.split(":")?.[1]);
+      if (!sym) return 100;
+      const protectedSymbols = protectedSymbolsForQuery(normalized, qSymbol);
+      const idx = protectedSymbols.indexOf(sym);
+      return idx === -1 ? 100 : idx;
+    }
+
     const seenCanonicalIds = new Set();
     const seenSymbols = new Set();
 
@@ -375,6 +448,9 @@ export async function onRequestGet(context) {
         return (sym && (sym.startsWith(q) || sym.includes(q))) || (name && name.includes(q));
       })
       .sort((a, b) => {
+        const aProtected = getProtectedRank(a);
+        const bProtected = getProtectedRank(b);
+        if (aProtected !== bProtected) return aProtected - bProtected;
         const searchRank = compareUniverseSearchCandidates(b, a, { query: q, symbolQuery: qSymbol || q });
         if (searchRank !== 0) return searchRank;
         const aSym = String(a?.symbol || a?.ticker || "").toUpperCase();
@@ -384,6 +460,9 @@ export async function onRequestGet(context) {
         const aRank = aSym === qSymbol ? 0 : aSym.startsWith(qSymbol || "") ? 1 : aName.startsWith(q) ? 2 : 3;
         const bRank = bSym === qSymbol ? 0 : bSym.startsWith(qSymbol || "") ? 1 : bName.startsWith(q) ? 2 : 3;
         if (aRank !== bRank) return aRank - bRank;
+        const aLayer = String(a?.layer || "").toUpperCase() === "L0_LEGACY_CORE" ? 0 : 1;
+        const bLayer = String(b?.layer || "").toUpperCase() === "L0_LEGACY_CORE" ? 0 : 1;
+        if (aLayer !== bLayer) return aLayer - bLayer;
         const aExch = getItemExchange(a);
         const bExch = getItemExchange(b);
         const aUs = aExch === "US" ? 0 : 1;

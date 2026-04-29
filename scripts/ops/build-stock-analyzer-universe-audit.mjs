@@ -7,6 +7,7 @@ import zlib from 'node:zlib';
 
 import { buildHistProbsCandidatePaths } from '../../functions/api/_shared/hist-probs-paths.js';
 import { resolveFundamentalsScopeMember } from '../../functions/api/_shared/fundamentals-scope.mjs';
+import { parseGlobalAssetClasses } from '../../functions/api/_shared/global-asset-classes.mjs';
 import { tradingDaysBetween } from '../../functions/api/_shared/market-calendar.js';
 import { normalizeTicker } from '../../functions/api/_shared/stock-helpers.js';
 import { transformV2ToStockShape } from '../../public/js/rv-v2-client.js';
@@ -31,7 +32,8 @@ import { SYSTEM_STATUS_STEP_CONTRACTS } from './system-status-ssot.mjs';
 const ROOT = process.cwd();
 const DEFAULT_BASE_URL = 'http://127.0.0.1:8788';
 const DEFAULT_REGISTRY_PATH = path.join(ROOT, 'public/data/universe/v7/registry/registry.ndjson.gz');
-const DEFAULT_ALLOWLIST_PATH = path.join(ROOT, 'public/data/universe/v7/ssot/stocks_etfs.us_eu.canonical.ids.json');
+const DEFAULT_ALLOWLIST_PATH = path.join(ROOT, 'public/data/universe/v7/ssot/assets.global.canonical.ids.json');
+const LEGACY_ALLOWLIST_PATH = path.join(ROOT, 'public/data/universe/v7/ssot/stocks_etfs.us_eu.canonical.ids.json');
 const DEFAULT_PROVIDER_NO_DATA_MANIFEST_PATH = path.join(ROOT, 'public/data/universe/v7/ssot/provider-no-data-exclusions.json');
 const HIST_PROBS_CHECKPOINTS_PATH = path.join(ROOT, 'public/data/hist-probs/checkpoints.json');
 const HIST_PROBS_NO_DATA_PATH = path.join(ROOT, 'public/data/hist-probs/no-data-tickers.json');
@@ -49,6 +51,17 @@ const POLICY_NEUTRAL_STRUCTURAL_FAMILIES = new Set([
   'key_levels_unavailable',
   'artifact_provider_no_data_excluded',
 ]);
+const POLICY_NEUTRAL_HIST_PROBS_STALE_RATIO = 0.001;
+function isPolicyNeutralFailureFamily(family) {
+  if (POLICY_NEUTRAL_STRUCTURAL_FAMILIES.has(family?.family_id)) return true;
+  if (
+    family?.family_id === 'artifact_hist_probs_stale'
+    && Number(family?.affected_ratio || 0) <= POLICY_NEUTRAL_HIST_PROBS_STALE_RATIO
+  ) {
+    return true;
+  }
+  return false;
+}
 const CANONICAL_RECOVERY_ORDER = [
   'market_data_refresh',
   'q1_delta_ingest',
@@ -87,7 +100,7 @@ const CUSTOM_RECOVERY_TASKS = {
     subsystem: 'stock_analyzer_ui',
     run_command: 'No script can fix this automatically. Repair the UI/API contract, then rerun the universe audit.',
     verify_commands: [
-      'node scripts/ops/build-stock-analyzer-universe-audit.mjs --base-url http://127.0.0.1:8788 --registry-path public/data/universe/v7/registry/registry.ndjson.gz --allowlist-path public/data/universe/v7/ssot/stocks_etfs.us_eu.canonical.ids.json --asset-classes STOCK,ETF --max-tickers 0',
+      'RV_GLOBAL_ASSET_CLASSES="${RV_GLOBAL_ASSET_CLASSES:-STOCK,ETF}"; node scripts/universe-v7/build-global-scope.mjs --asset-classes "$RV_GLOBAL_ASSET_CLASSES" && node scripts/ops/build-stock-analyzer-universe-audit.mjs --base-url http://127.0.0.1:8788 --registry-path public/data/universe/v7/registry/registry.ndjson.gz --allowlist-path public/data/universe/v7/ssot/assets.global.canonical.ids.json --asset-classes "$RV_GLOBAL_ASSET_CLASSES" --max-tickers 0',
       'node scripts/ops/build-system-status-report.mjs',
       'node scripts/generate_meta_dashboard_data.mjs',
     ],
@@ -187,7 +200,7 @@ export const ISSUE_FAMILY_CATALOG = {
     recovery_ids: ['hist_probs'],
   },
   artifact_hist_probs_stale: {
-    severity: 'critical',
+    severity: 'warning',
     label: 'Hist-Probs artifact stale',
     description: 'The hist-probs artifact is behind the active target market date for this asset.',
     recovery_ids: ['hist_probs'],
@@ -243,12 +256,15 @@ function clampLocalAuditConcurrency(options, selectedCount) {
 }
 
 function parseArgs(argv) {
+  const defaultAllowlistPath = fs.existsSync(DEFAULT_ALLOWLIST_PATH)
+    ? DEFAULT_ALLOWLIST_PATH
+    : (fs.existsSync(LEGACY_ALLOWLIST_PATH) ? LEGACY_ALLOWLIST_PATH : null);
   const options = {
     baseUrl: DEFAULT_BASE_URL,
     registryPath: DEFAULT_REGISTRY_PATH,
-    allowlistPath: fs.existsSync(DEFAULT_ALLOWLIST_PATH) ? DEFAULT_ALLOWLIST_PATH : null,
+    allowlistPath: defaultAllowlistPath,
     providerNoDataManifestPath: fs.existsSync(DEFAULT_PROVIDER_NO_DATA_MANIFEST_PATH) ? DEFAULT_PROVIDER_NO_DATA_MANIFEST_PATH : null,
-    assetClasses: ['STOCK', 'ETF'],
+    assetClasses: parseGlobalAssetClasses(process.env.RV_GLOBAL_ASSET_CLASSES || ''),
     maxTickers: 0,
     liveSampleSize: Math.max(0, Number(process.env.RV_STOCK_ANALYZER_LIVE_SAMPLE_SIZE || DEFAULT_LIVE_CANARY_SIZE)),
     concurrency: 6,
@@ -274,8 +290,10 @@ function parseArgs(argv) {
       options.providerNoDataManifestPath = path.resolve(ROOT, next);
       i += 1;
     } else if (arg === '--asset-classes' && next) {
-      options.assetClasses = next.split(',').map((value) => String(value || '').trim().toUpperCase()).filter(Boolean);
+      options.assetClasses = parseGlobalAssetClasses(next);
       i += 1;
+    } else if (arg.startsWith('--asset-classes=')) {
+      options.assetClasses = parseGlobalAssetClasses(arg.slice(arg.indexOf('=') + 1));
     } else if (arg === '--max-tickers' && next) {
       options.maxTickers = Math.max(0, Number(next) || 0);
       i += 1;
@@ -354,7 +372,7 @@ function readAllowlist(filePath) {
   }
 }
 
-function readRegistryEntries(filePath, assetClasses = ['STOCK', 'ETF']) {
+function readRegistryEntries(filePath, assetClasses = parseGlobalAssetClasses('')) {
   const buf = fs.readFileSync(filePath);
   const text = zlib.gunzipSync(buf).toString('utf8');
   const allowed = new Set(assetClasses.map((value) => String(value || '').toUpperCase()));
@@ -459,7 +477,8 @@ function readHistProbsStatusIndex() {
   return index;
 }
 
-function histProbsStatusIsNeutral(statusDoc = null) {
+function histProbsStatusIsNeutral(statusDoc = null, entry = null) {
+  if (String(entry?.assetClass || '').toUpperCase() === 'INDEX') return true;
   const status = String(statusDoc?.status || '').trim().toLowerCase();
   return ['no_data', 'insufficient_history', 'provider_no_data_excluded', 'inactive'].includes(status)
     || statusDoc?.no_data_manifest === true;
@@ -592,7 +611,7 @@ function auditArtifactEntry(entry, targetMarketDate, fundamentalsScopeDoc = null
   const histProbsArtifact = readFirstJsonArtifact(buildHistProbsPublicPaths(entry.ticker));
   const histProbsDate = normalizeDate(histProbsArtifact?.doc?.latest_date);
   const histProbsStatus = histProbsStatusIndex?.get(entry.ticker) || null;
-  const histProbsNeutral = histProbsStatusIsNeutral(histProbsStatus);
+  const histProbsNeutral = histProbsStatusIsNeutral(histProbsStatus, entry);
   const expectedHistProbsDate = resolveHistProbsExpectedDate(entry, targetMarketDate);
   if (!histProbsArtifact && !histProbsNeutral) {
     records.push({
@@ -649,7 +668,7 @@ function auditArtifactEntry(entry, targetMarketDate, fundamentalsScopeDoc = null
     fundamentals_available: fundamentalsCount >= 2,
     fundamentals_expected: fundamentalsExpected,
     fundamentals_scope_neutral: fundamentalsScopeNeutral,
-    fundamentals_typed_optional: entry.assetClass === 'ETF' || fundamentalsScopeNeutral,
+    fundamentals_typed_optional: ['ETF', 'INDEX'].includes(entry.assetClass) || fundamentalsScopeNeutral,
     records,
   };
 }
@@ -865,7 +884,7 @@ const FIELD_PROBLEM_MAP = [
   { key: 'historical_endpoint_failure|*', uiField: 'Historical API Endpoint', severity: 'critical', rootCause: 'API endpoint down or bars missing', repairStep: 'market_data_refresh' },
   { key: 'governance_endpoint_failure|*', uiField: 'Governance API Endpoint', severity: 'critical', rootCause: 'Decision/model evidence unavailable', repairStep: 'forecast_daily' },
   { key: 'historical_profile_unavailable|*', uiField: 'Historical Performance Profile', severity: 'warning', rootCause: 'Hist-probs artifact stale or missing', repairStep: 'hist_probs' },
-  { key: 'artifact_hist_probs_stale|*', uiField: 'Historical Probabilities (stale)', severity: 'critical', rootCause: 'Hist-probs artifact behind target_market_date', repairStep: 'hist_probs' },
+  { key: 'artifact_hist_probs_stale|*', uiField: 'Historical Probabilities (stale)', severity: 'warning', rootCause: 'Hist-probs artifact behind target_market_date', repairStep: 'hist_probs' },
   { key: 'artifact_hist_probs_missing|*', uiField: 'Historical Probabilities (missing)', severity: 'critical', rootCause: 'Hist-probs artifact file does not exist', repairStep: 'hist_probs' },
   { key: 'artifact_fundamentals_missing|*', uiField: 'Fundamentals Data', severity: 'warning', rootCause: 'Provider returned no fundamentals', repairStep: 'fundamentals_refresh' },
   { key: 'ui_contract_incomplete|identity_missing', uiField: 'Asset Identity (Name/Price/Date)', severity: 'critical', rootCause: 'Page contract missing name or price', repairStep: 'market_data_refresh' },
@@ -1138,8 +1157,8 @@ export function buildPayload({
   const artifactRecords = artifactChecks.flatMap((entry) => entry.records);
   const artifactCriticalIssueCount = artifactRecords.filter((record) => String(record?.severity || '').toLowerCase() === 'critical').length;
   const liveCanaryOk = canaryIssueRecords.length === 0;
-  const policyNeutralFailureFamilies = summarized.failureFamilies.filter((family) => POLICY_NEUTRAL_STRUCTURAL_FAMILIES.has(family.family_id));
-  const policyBlockingFailureFamilies = summarized.failureFamilies.filter((family) => !POLICY_NEUTRAL_STRUCTURAL_FAMILIES.has(family.family_id));
+  const policyNeutralFailureFamilies = summarized.failureFamilies.filter((family) => isPolicyNeutralFailureFamily(family));
+  const policyBlockingFailureFamilies = summarized.failureFamilies.filter((family) => !isPolicyNeutralFailureFamily(family));
   const artifactReleaseReady = processedFullUniverse && policyBlockingFailureFamilies.length === 0;
   summarized.summary.artifact_issue_count = artifactRecords.length;
   summarized.summary.artifact_critical_issue_count = artifactCriticalIssueCount;

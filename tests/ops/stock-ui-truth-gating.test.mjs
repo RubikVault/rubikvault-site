@@ -7,7 +7,7 @@ const ROOT = path.resolve(new URL('../..', import.meta.url).pathname);
 
 test('stock analyzer operational banner is gated by final seal and daily decision', () => {
   const html = fs.readFileSync(path.join(ROOT, 'public/stock.html'), 'utf8');
-  assert.match(html, /final-integrity-seal-latest\.json/);
+  assert.match(html, /public-status\.json/);
   assert.match(html, /fetchWithFallback\(ticker\)/);
   assert.match(html, /_assetDecisionOperational/);
   assert.match(html, /_bundleOperational/);
