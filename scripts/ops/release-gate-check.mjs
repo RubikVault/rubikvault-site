@@ -576,6 +576,7 @@ function runUiFieldTruthReport(baseUrl, targetDate = null, options = {}) {
     baseUrl,
   ];
   if (options.pageCoreOnly) args.push('--page-core-only');
+  if (options.pageCoreLatestPath) args.push('--page-core-latest-path', options.pageCoreLatestPath);
   if (targetDate) args.push('--date', targetDate);
   const r = spawnSync(process.execPath, args, {
     cwd: REPO_ROOT,
@@ -657,7 +658,10 @@ if (pageCoreCandidatePresent) {
     if (!previewContracts.ok) {
       fail(`page-core candidate preview contract smoke failed: ${previewContracts.failures.join('; ')}; production latest.json left unchanged.`);
     }
-    runUiFieldTruthReport(previewDeploy.deployment_url, proofTargetDate, { pageCoreOnly: true });
+    runUiFieldTruthReport(previewDeploy.deployment_url, proofTargetDate, {
+      pageCoreOnly: true,
+      pageCoreLatestPath: 'public/data/page-core/candidates/latest.candidate.json',
+    });
   }
   promotePageCoreCandidate();
   buildDeployBundle();
