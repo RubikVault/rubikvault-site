@@ -42,4 +42,5 @@ test('page-core builder protects canonical major aliases', () => {
   ]) {
     assert.ok(content.includes(`['${alias}', '${canonicalId}']`), `${alias} must map to ${canonicalId}`);
   }
+  assert.match(content, /protected_authoritative_kept/);
 });

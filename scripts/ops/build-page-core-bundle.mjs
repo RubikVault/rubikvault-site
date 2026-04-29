@@ -179,6 +179,11 @@ function addAlias(aliasMap, collisions, alias, canonical, { authoritative = fals
   if (!key || !value) return;
   const protectedTarget = PROTECTED_ALIASES.get(key);
   if (protectedTarget && protectedTarget !== value) {
+    const existing = aliasMap.get(key);
+    if (existing?.canonical === protectedTarget && existing.authoritative) {
+      collisions.push({ alias: key, previous: existing.canonical, next: value, resolution: 'protected_authoritative_kept' });
+      return;
+    }
     throw new Error(`PROTECTED_ALIAS_COLLISION:${key}:${value}:expected:${protectedTarget}`);
   }
   const existing = aliasMap.get(key);
@@ -206,6 +211,11 @@ function addAlias(aliasMap, collisions, alias, canonical, { authoritative = fals
 function buildAliasMap({ lookupExact, searchExact, registryRows, scopeIds }) {
   const aliasMap = new Map();
   const collisions = [];
+
+  for (const [alias, expected] of PROTECTED_ALIASES.entries()) {
+    scopeIds.add(expected);
+    addAlias(aliasMap, collisions, alias, expected, { authoritative: true });
+  }
 
   for (const [alias, value] of Object.entries(lookupExact)) {
     const canonical = maybeCanonicalFromLookup(value);
