@@ -1052,19 +1052,21 @@ function main() {
   const stockAuditFamilies = Array.isArray(stockAnalyzerAudit?.failure_families) ? stockAnalyzerAudit.failure_families : [];
   const stockAuditCriticalFamilies = stockAuditFamilies.filter((family) => String(family?.severity || '').toLowerCase() === 'critical');
   const stockAuditWarningFamilies = stockAuditFamilies.filter((family) => String(family?.severity || '').toLowerCase() === 'warning');
+  const stockAuditCriticalIssueCount = Number(stockAuditSummary?.artifact_critical_issue_count ?? stockAuditSummary?.critical_issue_count ?? 0);
   const stockAuditSmokeMode = String(stockAnalyzerAudit?.run?.source_mode || '').toLowerCase().includes('smoke')
     || String(stockAuditSummary?.live_endpoint_mode || '').toLowerCase() === 'sampled_smoke';
-  // Use release_eligible as the severity gate — live canary critical families are
-  // not artifact-blocking and should not prevent local_data_green.
-  const stockAuditReleaseEligible = stockAuditSummary?.release_eligible === true;
+  // Critical artifact failures block the control plane. Warning families remain
+  // visible here but release truth is owned by Page-Core/public decision gates.
+  const stockAuditNoCriticalFailures = stockAuditCriticalFamilies.length === 0 && stockAuditCriticalIssueCount === 0;
+  const stockAuditOperationalEligible = stockAuditSummary?.full_universe === true && stockAuditNoCriticalFailures;
   const stockAuditSeverity = !stockAnalyzerAudit
     ? 'warning'
     : !stockAuditSummary?.full_universe
       ? 'warning'
-      : !stockAuditReleaseEligible
+      : !stockAuditOperationalEligible
         ? (stockAuditSmokeMode ? 'warning' : 'critical')
-        : stockAuditWarningFamilies.length > 0
-          ? 'warning'
+      : stockAuditWarningFamilies.length > 0
+          ? 'ok'
           : 'ok';
   const stockAuditProcessed = Number(stockAnalyzerAudit?.run?.processed_assets || stockAuditSummary?.processed_assets || 0);
   const stockAuditTotal = Number(stockAnalyzerAudit?.run?.total_universe_assets || stockAuditSummary?.total_assets || 0);
@@ -1081,7 +1083,7 @@ function main() {
         ? 'Stock Analyzer universe audit has not yet covered the full stock+ETF universe'
         : stockAuditSeverity === 'ok'
           ? (stockAuditWarningFamilies.length
-              ? 'Stock Analyzer universe audit has no critical failures'
+              ? 'Stock Analyzer universe audit has no critical failures; warning families are advisory'
               : 'Stock Analyzer universe audit is green')
           : stockAuditSmokeMode
             ? 'Stock Analyzer sampled smoke audit found issues'
@@ -1101,6 +1103,9 @@ function main() {
     blocked_by: [],
     status_detail: {
       audit_summary: stockAuditSummary,
+      legacy_release_eligible: stockAuditSummary?.release_eligible === true,
+      public_release_gate_policy: 'critical_artifact_failures_block_warning_families_advisory',
+      artifact_critical_issue_count: stockAuditCriticalIssueCount,
       ordered_recovery: stockAnalyzerAudit?.ordered_recovery || [],
       failure_families: stockAuditFamilies,
       critical_failure_families: stockAuditCriticalFamilies,

@@ -128,6 +128,11 @@ test('page core smoke validates candidate artifacts without localhost runtime', 
   assert.match(releaseGate, /pageCoreOnly: true/);
   assert.match(releaseGate, /preview deploy did not return a deployment URL/);
 
+  const systemStatus = fs.readFileSync(path.join(ROOT, 'scripts/ops/build-system-status-report.mjs'), 'utf8');
+  assert.match(systemStatus, /stockAuditNoCriticalFailures/);
+  assert.match(systemStatus, /critical_artifact_failures_block_warning_families_advisory/);
+  assert.match(systemStatus, /warning families are advisory/);
+
   const envelope = fs.readFileSync(path.join(ROOT, 'functions/api/_shared/envelope.js'), 'utf8');
   assert.match(envelope, /"expired"/);
 
