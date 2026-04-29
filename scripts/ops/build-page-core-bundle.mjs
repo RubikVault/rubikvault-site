@@ -179,7 +179,8 @@ function addAlias(aliasMap, collisions, alias, canonical, { authoritative = fals
   if (!key || !value) return;
   const protectedTarget = PROTECTED_ALIASES.get(key);
   if (protectedTarget && protectedTarget !== value) {
-    throw new Error(`PROTECTED_ALIAS_COLLISION:${key}:${value}:expected:${protectedTarget}`);
+    collisions.push({ alias: key, previous: value, next: protectedTarget, resolution: 'protected_rejected' });
+    return;
   }
   const existing = aliasMap.get(key);
   if (!existing) {
@@ -222,13 +223,17 @@ function buildAliasMap({ lookupExact, searchExact, registryRows, scopeIds }) {
   }
 
   const symbolOwners = new Map();
+  const registryIds = new Set();
   for (const row of registryRows) {
     const canonical = normalizePageCoreAlias(row?.canonical_id);
     const symbol = normalizePageCoreAlias(row?.symbol);
+    if (canonical) registryIds.add(canonical);
     if (!canonical || !symbol) continue;
-    const prev = symbolOwners.get(symbol);
-    if (!prev) symbolOwners.set(symbol, canonical);
-    else if (prev !== canonical) symbolOwners.set(symbol, null);
+    if (!symbolOwners.has(symbol)) symbolOwners.set(symbol, canonical);
+    else {
+      const prev = symbolOwners.get(symbol);
+      if (prev !== canonical) symbolOwners.set(symbol, null);
+    }
   }
   for (const [symbol, canonical] of symbolOwners.entries()) {
     if (canonical) addAlias(aliasMap, collisions, symbol, canonical);
@@ -239,8 +244,12 @@ function buildAliasMap({ lookupExact, searchExact, registryRows, scopeIds }) {
   }
 
   for (const [alias, expected] of PROTECTED_ALIASES.entries()) {
+    if (!registryIds.has(expected) && !scopeIds.has(expected)) {
+      throw new Error(`PROTECTED_ALIAS_TARGET_MISSING:${alias}:expected:${expected}`);
+    }
+    addAlias(aliasMap, collisions, alias, expected, { authoritative: true });
     const actual = aliasMap.get(alias)?.canonical || null;
-    if (actual && actual !== expected) throw new Error(`PROTECTED_ALIAS_MISMATCH:${alias}:${actual}:expected:${expected}`);
+    if (actual !== expected) throw new Error(`PROTECTED_ALIAS_MISMATCH:${alias}:${actual}:expected:${expected}`);
   }
 
   return {
