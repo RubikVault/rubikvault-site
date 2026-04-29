@@ -467,6 +467,21 @@ if (!isDryRun) {
     }
     log(`Copied ${bucketFiles.length} git-tracked search bucket files to dist/`);
   }
+
+  const publicRuntimeFiles = [
+    'data/runtime/hist-probs-status-summary.json',
+    'data/runtime/stock-analyzer-ui-delivery.json',
+  ];
+  let copiedRuntimeFiles = 0;
+  for (const relPath of publicRuntimeFiles) {
+    const src = path.join(PUBLIC_DIR, relPath);
+    if (!fs.existsSync(src)) continue;
+    const dest = path.join(DIST_DIR, relPath);
+    fs.mkdirSync(path.dirname(dest), { recursive: true });
+    fs.copyFileSync(src, dest);
+    copiedRuntimeFiles += 1;
+  }
+  if (copiedRuntimeFiles > 0) log(`Copied ${copiedRuntimeFiles} public runtime status files to dist/`);
 }
 
 // Count bundle files: in dry-run parse rsync --stats output; otherwise count actual files
