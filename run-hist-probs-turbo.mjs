@@ -63,7 +63,7 @@ const HIST_PROBS_TIER_A_TOP_STOCKS = Math.max(0, Number(
     || process.env.RV_HIST_PROBS_TIER_A_TOP_STOCKS
     || 3000,
 ) || 0);
-const HIST_PROBS_PROTECTED_TICKERS = new Set(['AAPL', 'SPY', 'QQQ', 'BRK-B', 'BRK.B', 'BF-B', 'BF.B']);
+const HIST_PROBS_PROTECTED_TICKERS = new Set(['AAPL', 'MSFT', 'F', 'V', 'TSLA', 'SPY', 'QQQ', 'BRK-B', 'BRK.B', 'BF-B', 'BF.B']);
 
 function readJsonSync(filePath) {
   try {

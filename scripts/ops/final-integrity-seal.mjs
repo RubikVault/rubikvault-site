@@ -19,8 +19,11 @@ import { resolveRuntimeConfig } from '../lib/pipeline_authority/config/runtime-c
 import { evaluateCoveragePolicy } from '../lib/decision-bundle-contract.mjs';
 import { assertMayWriteProductionTruth } from './prod-runtime-guard.mjs';
 import { readLeafSeal, REQUIRED_LEAF_SEAL_STEP_IDS } from '../lib/write-leaf-seal.mjs';
+import { readOrDeriveHistProbsStatus } from './build-hist-probs-status-summary.mjs';
 
 const ROOT = path.resolve(new URL('.', import.meta.url).pathname, '../..');
+const DECISION_PUBLIC_MIN_COVERAGE_RATIO = 0.90;
+const SIGNAL_FRESH_MIN_COVERAGE_RATIO = 0.95;
 export const FINAL_INTEGRITY_SEAL_PATH = path.join(ROOT, 'public/data/ops/final-integrity-seal-latest.json');
 export const PIPELINE_INCIDENTS_PATH = path.join(ROOT, 'public/data/reports/pipeline-incidents-latest.json');
 const PATHS = {
@@ -133,6 +136,8 @@ function deriveLeadBlockerStep(blockingReasons = [], recovery = null) {
   if (top.id === 'target_market_date_mismatch') return recoveryLead || 'pipeline_runtime';
   if (top.id === 'module_target_date_mismatch') return top.details?.[0]?.id || recoveryLead || 'pipeline_epoch';
   if (top.id === 'data_plane_not_green') return recoveryLead || 'pipeline_epoch';
+  if (top.id === 'hist_probs_catchup_not_release_eligible') return 'hist_probs';
+  if (top.id === 'decision_public_coverage_below_90pct') return 'decision_bundle';
   if (top.id === 'publish_chain_not_ok') return 'publish';
   if (top.id === 'full_universe_ui_field_truth_missing' || top.id === 'ui_field_truth_failures') return 'stock_analyzer_universe_audit';
   if (String(top.id || '').startsWith('ui_field_truth_report_')) return 'ui_field_truth_report';
@@ -306,6 +311,7 @@ export function buildFinalIntegritySeal({
   launchd = null,
   storage = null,
   decisionBundle = null,
+  histProbsStatus = null,
   heartbeat = null,
   crashSeal = null,
   previousFinal = null,
@@ -328,6 +334,7 @@ export function buildFinalIntegritySeal({
   const pageCoreGateRequired = process.env.RV_PAGE_CORE_RELEASE_GATE_REQUIRED === '1'
     || pageCoreSmokes?.enabled === true;
   const pageCoreGateOk = !pageCoreGateRequired || pageCoreSmokes?.release_eligible === true;
+  const histStatusPresent = histProbsStatus && typeof histProbsStatus === 'object';
   const uiFieldTruthDateMatch = !uiFieldTruth
     || !expectedTargetDate
     || normalizeDate(uiFieldTruth.target_market_date) === expectedTargetDate;
@@ -487,6 +494,18 @@ export function buildFinalIntegritySeal({
       },
     });
   }
+  if (histStatusPresent && histProbsStatus.release_eligible !== true) {
+    blockingReasons.push({
+      id: 'hist_probs_catchup_not_release_eligible',
+      severity: 'critical',
+      details: {
+        hist_probs_mode: histProbsStatus.hist_probs_mode || null,
+        catchup_status: histProbsStatus.catchup_status || null,
+        coverage_ratio: histProbsStatus.coverage_ratio ?? null,
+        retry_remaining: histProbsStatus.retry_remaining ?? null,
+      },
+    });
+  }
   if (!summary) {
     blockingReasons.push({
       id: 'stock_analyzer_audit_missing',
@@ -604,8 +623,20 @@ export function buildFinalIntegritySeal({
     now,
     requiredLeafFailed,
   });
+  const decisionCoverageRatio = Number(decisionBundleHealth.summary?.strict_full_coverage_ratio ?? 0);
   const publicDecisionFallbackEnabled = process.env.RV_PUBLIC_DECISION_ALLOW_PAGE_CORE_FALLBACK !== '0';
-  const decisionPublicGreen = publicDecisionFallbackEnabled && pageCoreGateOk && (pageCoreGateRequired || pageCoreSmokes?.enabled === true);
+  const decisionCoveragePublicOk = Number.isFinite(decisionCoverageRatio)
+    && decisionCoverageRatio >= DECISION_PUBLIC_MIN_COVERAGE_RATIO;
+  const decisionPublicGreen = publicDecisionFallbackEnabled
+    && pageCoreGateOk
+    && dataPlaneGreen
+    && decisionCoveragePublicOk;
+  if (!decisionPublicGreen && publicDecisionFallbackEnabled && pageCoreGateOk && dataPlaneGreen) {
+    blockingReasons.push(reason('decision_public_coverage_below_90pct', 'critical', {
+      strict_full_coverage_ratio: Number.isFinite(decisionCoverageRatio) ? decisionCoverageRatio : null,
+      minimum: DECISION_PUBLIC_MIN_COVERAGE_RATIO,
+    }));
+  }
   if (decisionBundleHealth.blocking_reasons.length > 0 && decisionPublicGreen) {
     warningReasons.push(reason('decision_internal_not_green', 'warning', {
       status: decisionBundleHealth.status,
@@ -664,6 +695,11 @@ export function buildFinalIntegritySeal({
 
   const status = uniqueBlockingReasons.length > 0 ? 'FAILED' : uniqueWarningReasons.length > 0 ? 'DEGRADED' : 'OK';
   const uiGreen = status === 'OK';
+  const signalQuality = decisionCoverageRatio >= SIGNAL_FRESH_MIN_COVERAGE_RATIO
+    ? 'fresh'
+    : decisionCoverageRatio >= DECISION_PUBLIC_MIN_COVERAGE_RATIO
+      ? 'degraded'
+      : 'suppressed';
   const leadBlockerStep = deriveLeadBlockerStep(uniqueBlockingReasons, recovery);
   const nextStep = deriveNextStep({
     leadBlockerStep,
@@ -700,7 +736,15 @@ export function buildFinalIntegritySeal({
     data_plane_green: dataPlaneGreen,
     decision_internal_green: decisionBundleHealth.status === 'OK',
     decision_public_green: decisionPublicGreen,
-    signal_quality: decisionBundleHealth.status === 'OK' ? 'fresh' : (decisionPublicGreen ? 'degraded' : 'suppressed'),
+    decision_public_min_coverage_ratio: DECISION_PUBLIC_MIN_COVERAGE_RATIO,
+    decision_strict_full_coverage_ratio: Number.isFinite(decisionCoverageRatio) ? decisionCoverageRatio : null,
+    signal_quality: signalQuality,
+    hist_probs_mode: histProbsStatus?.hist_probs_mode || null,
+    catchup_status: histProbsStatus?.catchup_status || null,
+    retry_remaining: histProbsStatus?.retry_remaining ?? null,
+    tier_b_pending: histProbsStatus?.tier_b_pending ?? null,
+    freshness_budget_days: histProbsStatus?.freshness_budget_days ?? null,
+    hist_probs_status: histProbsStatus || null,
     observer_stale: observerFreshness.stale,
     observer_generated_at: observerFreshness.generated_at,
     observer_inputs: observerFreshness.inputs,
@@ -855,6 +899,7 @@ async function main() {
   const launchd = readJson(PATHS.launchd) || null;
   const storage = readJson(PATHS.storage) || null;
   const decisionBundle = readJson(PATHS.decisionBundle) || readJson(PATHS.decisionBundleOps) || null;
+  const histProbsStatus = readOrDeriveHistProbsStatus({ root: ROOT });
   const heartbeat = readJson(PATHS.heartbeat) || null;
   const crashSeal = readJson(PATHS.crashSeal) || null;
   const previousFinal = readJson(FINAL_INTEGRITY_SEAL_PATH) || null;
@@ -901,6 +946,7 @@ async function main() {
     launchd,
     storage,
     decisionBundle,
+    histProbsStatus,
     heartbeat,
     crashSeal,
     previousFinal,

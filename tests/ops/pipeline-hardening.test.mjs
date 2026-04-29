@@ -82,12 +82,15 @@ test('hist probs rescue flags support freshness budget and tiered catchup', () =
   assert.match(runner, /HIST_PROBS_FRESHNESS_BUDGET_TRADING_DAYS/);
   assert.match(runner, /HIST_PROBS_MAX_TICKERS/);
   assert.match(runner, /HIST_PROBS_TIER/);
-  assert.match(runner, /HIST_PROBS_PROTECTED_TICKERS = new Set\(\['AAPL', 'SPY', 'QQQ', 'BRK-B', 'BRK\.B', 'BF-B', 'BF\.B'\]\)/);
+  assert.match(runner, /HIST_PROBS_PROTECTED_TICKERS = new Set\(\['AAPL', 'MSFT', 'F', 'V', 'TSLA', 'SPY', 'QQQ', 'BRK-B', 'BRK\.B', 'BF-B', 'BF\.B'\]\)/);
   assert.match(runner, /budget_fresh_existing_files/);
 
   const supervisor = fs.readFileSync(path.join(ROOT, 'scripts/nas/rv-nas-night-supervisor.sh'), 'utf8');
   assert.match(supervisor, /HIST_PROBS_FRESHNESS_BUDGET_TRADING_DAYS='\$\{RV_HIST_PROBS_FRESHNESS_BUDGET_TRADING_DAYS:-0\}'/);
   assert.match(supervisor, /HIST_PROBS_TIER='\$\{RV_HIST_PROBS_TIER:-all\}'/);
+  assert.match(supervisor, /nas-hist-probs-worker-guard\.mjs/);
+  assert.match(supervisor, /--default-workers='\$\{RV_HIST_PROBS_WORKERS:-3\}'/);
+  assert.match(supervisor, /build-hist-probs-status-summary\.mjs/);
 
   const freshness = fs.readFileSync(path.join(ROOT, 'scripts/ops/build-data-freshness-report.mjs'), 'utf8');
   assert.match(freshness, /histProbsReadCandidates/);
@@ -105,6 +108,8 @@ test('page core smoke validates candidate artifacts without localhost runtime', 
   assert.match(truth, /pageCoreOnly/);
   assert.match(truth, /readPageCoreSmokeLocal/);
   assert.match(truth, /PAGE_CORE_SCHEMA/);
+  assert.match(truth, /PAGE_CORE_CANARIES = \['AAPL', 'MSFT', 'F', 'V', 'TSLA', 'SPY', 'QQQ', 'BRK-B', 'BRK\.B', 'BF-B', 'BF\.B'\]/);
+  assert.match(truth, /PAGE_CORE_RANDOM_SAMPLE_SIZE/);
 
   const releaseGate = fs.readFileSync(path.join(ROOT, 'scripts/ops/release-gate-check.mjs'), 'utf8');
   assert.match(releaseGate, /DEFAULT_CLOUDFLARE_ENV_PATH/);

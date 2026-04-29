@@ -37,7 +37,22 @@ const DEFAULT_CANARIES = [
   { ticker: 'AAPL', asset_class: 'STOCK' },
   { ticker: 'SPY', asset_class: 'ETF' },
 ];
-const PAGE_CORE_CANARIES = ['AAPL', 'BRK-B', 'BRK.B', 'BF-B', 'BF.B', 'SPY', 'QQQ'];
+const PAGE_CORE_CANARIES = ['AAPL', 'MSFT', 'F', 'V', 'TSLA', 'SPY', 'QQQ', 'BRK-B', 'BRK.B', 'BF-B', 'BF.B'];
+const PAGE_CORE_EXPECTED_CANONICAL = {
+  AAPL: 'US:AAPL',
+  MSFT: 'US:MSFT',
+  F: 'US:F',
+  V: 'US:V',
+  TSLA: 'US:TSLA',
+  SPY: 'US:SPY',
+  QQQ: 'US:QQQ',
+  'BRK-B': 'US:BRK-B',
+  'BRK.B': 'US:BRK.B',
+  'BF-B': 'US:BF-B',
+  'BF.B': 'US:BF.B',
+};
+const PAGE_CORE_RANDOM_SAMPLE_SIZE = Math.max(0, Number(process.env.RV_PAGE_CORE_RANDOM_SAMPLE_SIZE || 200) || 0);
+const PAGE_CORE_RANDOM_MIN_OK_RATE = Math.max(0, Math.min(1, Number(process.env.RV_PAGE_CORE_RANDOM_MIN_OK_RATE || 0.995) || 0.995));
 
 function parseArgs(argv) {
   const options = {
@@ -144,6 +159,48 @@ function readPageCoreLatestPath(latestPath) {
   const rel = path.relative(ROOT, filePath);
   if (rel.startsWith('..') || path.isAbsolute(rel)) throw new Error(`PAGE_CORE_LATEST_PATH_OUT_OF_SCOPE:${latestPath}`);
   return JSON.parse(fs.readFileSync(filePath, 'utf8'));
+}
+
+function pageCoreRowBasicSchemaOk(row) {
+  return Boolean(
+    row
+    && row.ok === true
+    && row.schema_version === PAGE_CORE_SCHEMA
+    && row.run_id
+    && row.snapshot_id
+    && row.canonical_asset_id
+    && row.display_ticker
+    && row.freshness
+    && row.identity
+    && row.summary_min
+    && row.governance_summary
+    && row.coverage
+    && row.module_links
+    && row.meta
+  );
+}
+
+function readAllPageCoreRows(latest) {
+  const rows = [];
+  const count = Number(latest?.page_shard_count || 256);
+  for (let index = 0; index < count; index += 1) {
+    const shard = readPageCoreAssetJson(`${latest.snapshot_path}/page-shards/${pageShardName(index)}`);
+    for (const [canonical_asset_id, row] of Object.entries(shard || {})) {
+      rows.push({ canonical_asset_id, row });
+    }
+  }
+  return rows;
+}
+
+function deterministicPageCoreSample(latest, rows, size = PAGE_CORE_RANDOM_SAMPLE_SIZE) {
+  const snapshotId = String(latest?.snapshot_id || 'snapshot');
+  return rows
+    .map((item) => ({
+      ...item,
+      sample_hash: createHash('sha256').update(`${snapshotId}:${item.canonical_asset_id}`).digest('hex'),
+    }))
+    .sort((a, b) => a.sample_hash.localeCompare(b.sample_hash))
+    .slice(0, Math.max(0, size));
 }
 
 function endpointCurrentEnough(endpoint, payload, targetMarketDate) {
@@ -397,17 +454,51 @@ async function checkPageCoreSmokes(baseUrl, timeoutMs, options = {}) {
       : await fetchJson(baseUrl, endpointPath, timeoutMs);
     const latencyMs = Date.now() - started;
     const payload = response.payload;
-    const ok = response.http_ok && payloadHasPageCoreData(payload);
+    const expectedCanonical = PAGE_CORE_EXPECTED_CANONICAL[ticker] || null;
+    const canonicalAssetId = payload?.data?.canonical_asset_id || payload?.meta?.canonical_asset_id || null;
+    const canonicalOk = !expectedCanonical || canonicalAssetId === expectedCanonical;
+    const ok = response.http_ok && payloadHasPageCoreData(payload) && canonicalOk;
     samples.push({
       ticker,
       ok,
       http_status: response.status,
       latency_ms: latencyMs,
-      canonical_asset_id: payload?.data?.canonical_asset_id || payload?.meta?.canonical_asset_id || null,
+      canonical_asset_id: canonicalAssetId,
+      expected_canonical_asset_id: expectedCanonical,
+      canonical_match: canonicalOk,
       freshness_status: payload?.meta?.status || payload?.data?.freshness?.status || null,
-      error: ok ? null : (response.error || payload?.error?.message || payload?.error?.code || 'page_core_contract_failed'),
+      error: ok ? null : (canonicalOk ? (response.error || payload?.error?.message || payload?.error?.code || 'page_core_contract_failed') : 'page_core_canonical_mismatch'),
     });
   }
+  let randomSamples = [];
+  let randomOkCount = 0;
+  let randomSchemaValidCount = 0;
+  let randomEmptyStateCount = 0;
+  let randomSampleMode = 'skipped_remote';
+  if (options.latestPath && PAGE_CORE_RANDOM_SAMPLE_SIZE > 0) {
+    randomSampleMode = 'latest_path_filesystem';
+    const allRows = readAllPageCoreRows(latest);
+    randomSamples = deterministicPageCoreSample(latest, allRows).map(({ canonical_asset_id, row, sample_hash }) => {
+      const schemaOk = pageCoreRowBasicSchemaOk(row);
+      const uiRenderable = row?.coverage?.ui_renderable === true;
+      const ok = schemaOk && uiRenderable;
+      return {
+        canonical_asset_id,
+        ticker: row?.display_ticker || null,
+        ok,
+        schema_ok: schemaOk,
+        ui_renderable: uiRenderable,
+        sample_hash,
+        error: ok ? null : schemaOk ? 'page_core_not_ui_renderable' : 'page_core_schema_invalid',
+      };
+    });
+    randomOkCount = randomSamples.filter((sample) => sample.ok).length;
+    randomSchemaValidCount = randomSamples.filter((sample) => sample.schema_ok).length;
+    randomEmptyStateCount = randomSamples.filter((sample) => sample.ui_renderable !== true).length;
+  }
+  const randomOkRate = randomSamples.length ? randomOkCount / randomSamples.length : null;
+  const randomSchemaValidRate = randomSamples.length ? randomSchemaValidCount / randomSamples.length : null;
+  const randomReleaseEligible = randomSamples.length === 0 || randomOkRate >= PAGE_CORE_RANDOM_MIN_OK_RATE;
   const failures = samples.filter((sample) => !sample.ok);
   const http5xx = samples.filter((sample) => sample.http_status >= 500).length;
   const expiredCount = samples.filter((sample) => sample.freshness_status === 'expired').length;
@@ -415,14 +506,22 @@ async function checkPageCoreSmokes(baseUrl, timeoutMs, options = {}) {
   const p95 = latencies.length ? latencies[Math.min(latencies.length - 1, Math.ceil(latencies.length * 0.95) - 1)] : null;
   return {
     enabled: true,
-    ok: failures.length === 0 && http5xx === 0,
-    release_eligible: failures.length === 0 && http5xx === 0,
+    ok: failures.length === 0 && http5xx === 0 && randomReleaseEligible,
+    release_eligible: failures.length === 0 && http5xx === 0 && randomReleaseEligible,
     snapshot_id: latest.snapshot_id,
     run_id: latest.run_id || null,
     sample_count: samples.length,
     sample_5xx_rate: samples.length ? http5xx / samples.length : 0,
     schema_valid_rate: samples.length ? (samples.length - failures.length) / samples.length : 0,
     missing_rate: samples.length ? failures.length / samples.length : 0,
+    random_sample_mode: randomSampleMode,
+    random_sample_count: randomSamples.length,
+    random_ok_count: randomOkCount,
+    random_ok_rate: randomOkRate,
+    random_schema_valid_rate: randomSchemaValidRate,
+    random_empty_state_count: randomEmptyStateCount,
+    random_min_ok_rate: PAGE_CORE_RANDOM_MIN_OK_RATE,
+    random_samples: randomSamples,
     expired_count: expiredCount,
     p95_latency_ms: p95,
     samples,

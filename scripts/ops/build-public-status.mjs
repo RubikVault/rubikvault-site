@@ -9,6 +9,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { readOrDeriveHistProbsStatus } from './build-hist-probs-status-summary.mjs';
 
 const REPO_ROOT = path.resolve(fileURLToPath(new URL('.', import.meta.url)), '../..');
 const FINAL_SEAL_PATH = path.join(REPO_ROOT, 'public/data/ops/final-integrity-seal-latest.json');
@@ -30,6 +31,7 @@ function writeJsonAtomic(filePath, doc) {
 const seal = readJson(FINAL_SEAL_PATH);
 const releaseState = readJson(RELEASE_STATE_PATH);
 const pageCoreLatest = readJson(PAGE_CORE_LATEST_PATH);
+const histProbsStatus = readOrDeriveHistProbsStatus({ root: REPO_ROOT });
 const ready = seal?.release_ready === true || releaseState?.phase === 'RELEASE_READY';
 const targetDate = seal?.target_market_date || seal?.target_date || releaseState?.target_market_date || releaseState?.target_date || null;
 const pageCoreManifestPath = pageCoreLatest?.snapshot_path
@@ -44,16 +46,19 @@ const pageCoreGreen = Boolean(
   && fs.existsSync(pageCoreManifestPath)
 );
 const dataPlaneGreen = seal?.data_plane_green !== false;
-const decisionPublicGreen = seal?.decision_public_green === true
-  || (ready && pageCoreGreen && dataPlaneGreen);
-const histProbsMode = seal?.hist_probs_mode
+const decisionPublicGreen = seal?.decision_public_green === true;
+const histProbsMode = histProbsStatus?.hist_probs_mode
+  || seal?.hist_probs_mode
   || releaseState?.hist_probs_mode
   || seal?.page_core_smokes?.hist_probs_mode
   || 'unknown';
-const catchupStatus = seal?.catchup_status
+const catchupStatus = histProbsStatus?.catchup_status
+  || seal?.catchup_status
   || releaseState?.catchup_status
   || 'unknown';
-const uiGreen = Boolean(ready && pageCoreGreen && decisionPublicGreen && dataPlaneGreen);
+const histKnown = histProbsMode !== 'unknown' && catchupStatus !== 'unknown';
+const histReleaseEligible = histProbsStatus?.release_eligible !== false;
+const uiGreen = Boolean(ready && pageCoreGreen && decisionPublicGreen && dataPlaneGreen && histKnown && histReleaseEligible);
 
 const doc = {
   schema: 'rv_public_status_v1',
@@ -67,7 +72,12 @@ const doc = {
   data_plane_green: dataPlaneGreen,
   hist_probs_mode: histProbsMode,
   catchup_status: catchupStatus,
-  signal_quality: decisionPublicGreen ? (seal?.signal_quality || 'fresh') : 'degraded',
+  retry_remaining: histProbsStatus?.retry_remaining ?? seal?.retry_remaining ?? null,
+  tier_b_pending: histProbsStatus?.tier_b_pending ?? seal?.tier_b_pending ?? null,
+  freshness_budget_days: histProbsStatus?.freshness_budget_days ?? seal?.freshness_budget_days ?? null,
+  hist_probs_coverage_ratio: histProbsStatus?.coverage_ratio ?? null,
+  signal_quality: seal?.signal_quality || (decisionPublicGreen ? 'degraded' : 'suppressed'),
+  hist_probs: histProbsStatus,
   stock_analyzer: {
     available: uiGreen,
     page_core_snapshot_id: pageCoreLatest?.snapshot_id || null,

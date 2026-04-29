@@ -322,7 +322,7 @@ step_command() {
       printf '%s\n' "FORECAST_SKIP_MATURED_EVAL=1 FORECAST_RSS_BUDGET_MB='${RV_FORECAST_RSS_BUDGET_MB:-4096}' node scripts/forecast/run_daily.mjs --date='$TARGET_MARKET_DATE'"
       ;;
     hist_probs)
-      printf '%s\n' "HIST_PROBS_WORKERS='${RV_HIST_PROBS_WORKERS:-1}' HIST_PROBS_SKIP_EXISTING=1 HIST_PROBS_WRITE_MODE='${RV_HIST_PROBS_WRITE_MODE:-bucket_only}' HIST_PROBS_RSS_BUDGET_MB='${RV_HIST_PROBS_RSS_BUDGET_MB:-7168}' HIST_PROBS_RESPECT_CHECKPOINT_VERSION='${RV_HIST_PROBS_RESPECT_CHECKPOINT_VERSION:-1}' HIST_PROBS_FAIL_ON_SOFT_ERRORS='${RV_HIST_PROBS_FAIL_ON_SOFT_ERRORS:-1}' HIST_PROBS_MIN_COVERAGE_RATIO='${RV_HIST_PROBS_MIN_COVERAGE_RATIO:-0.95}' node run-hist-probs-turbo.mjs --asset-classes '$GLOBAL_ASSET_CLASSES'"
+      printf '%s\n' "HIST_PROBS_SKIP_EXISTING=1 HIST_PROBS_WRITE_MODE='${RV_HIST_PROBS_WRITE_MODE:-bucket_only}' HIST_PROBS_RSS_BUDGET_MB='${RV_HIST_PROBS_RSS_BUDGET_MB:-7168}' HIST_PROBS_RESPECT_CHECKPOINT_VERSION='${RV_HIST_PROBS_RESPECT_CHECKPOINT_VERSION:-1}' HIST_PROBS_FAIL_ON_SOFT_ERRORS='${RV_HIST_PROBS_FAIL_ON_SOFT_ERRORS:-1}' HIST_PROBS_MIN_COVERAGE_RATIO='${RV_HIST_PROBS_MIN_COVERAGE_RATIO:-0.95}' node scripts/ops/nas-hist-probs-worker-guard.mjs --mode=all --default-workers='${RV_HIST_PROBS_WORKERS:-3}' --max-workers=4 --batch-size='${RV_HIST_PROBS_WORKER_BATCH_SIZE:-50}' -- node run-hist-probs-turbo.mjs --asset-classes '$GLOBAL_ASSET_CLASSES' && node scripts/ops/build-hist-probs-status-summary.mjs"
       ;;
     snapshot)
       printf '%s\n' "node scripts/ops/build-full-universe-decisions.mjs --target-market-date '$TARGET_MARKET_DATE' --replace && ALLOW_REMOTE_BAR_FETCH=0 BEST_SETUPS_DISABLE_NETWORK=1 node scripts/build-best-setups-v4.mjs"
