@@ -379,7 +379,7 @@ const steps = [
     id: 'market_data_refresh',
     label: 'Market Data Refresh',
     pattern: 'scripts/quantlab/refresh_v7_history_from_eodhd.py',
-    command: `${NODE} scripts/universe-v7/build-us-eu-scope.mjs && QUANT_ROOT=${shQuote(_QUANT_ROOT)} ${shQuote(PYTHON_BIN)} scripts/quantlab/refresh_v7_history_from_eodhd.py --allowlist-path public/data/universe/v7/ssot/stocks_etfs.us_eu.canonical.ids.json --from-date ${marketRefreshFromDate} --to-date ${targetMarketDate} --concurrency 12 --progress-every 500`,
+    command: `RV_GLOBAL_ASSET_CLASSES="\${RV_GLOBAL_ASSET_CLASSES:-STOCK,ETF,INDEX}"; RV_EODHD_ENV_FILE="\${RV_EODHD_ENV_FILE:-.env.local}"; RV_EODHD_GLOBAL_LOCK_PATH="\${RV_EODHD_GLOBAL_LOCK_PATH:-mirrors/universe-v7/state/eodhd-global.lock}"; ${NODE} scripts/universe-v7/build-global-scope.mjs --asset-classes "$RV_GLOBAL_ASSET_CLASSES" && ${NODE} scripts/ops/build-history-pack-manifest.mjs --scope global --asset-classes "$RV_GLOBAL_ASSET_CLASSES" && QUANT_ROOT=${shQuote(_QUANT_ROOT)} ${shQuote(PYTHON_BIN)} scripts/quantlab/refresh_v7_history_from_eodhd.py --env-file "$RV_EODHD_ENV_FILE" --allowlist-path public/data/universe/v7/ssot/assets.global.canonical.ids.json --from-date ${marketRefreshFromDate} --to-date ${targetMarketDate} --bulk-last-day --bulk-exchange-cost "\${RV_EODHD_BULK_EXCHANGE_COST:-100}" --global-lock-path "$RV_EODHD_GLOBAL_LOCK_PATH" --max-eodhd-calls "\${RV_MARKET_REFRESH_MAX_EODHD_CALLS:-0}" --max-retries "\${RV_MARKET_REFRESH_MAX_RETRIES:-1}" --timeout-sec "\${RV_MARKET_REFRESH_TIMEOUT_PER_REQUEST_SEC:-60}" --flush-every "\${RV_MARKET_REFRESH_FLUSH_EVERY:-250}" --concurrency "\${RV_MARKET_REFRESH_CONCURRENCY:-12}" --progress-every "\${RV_MARKET_REFRESH_PROGRESS_EVERY:-500}"`,
     logFile: path.join(LOG_DIR, 'step-00-market-refresh.log'),
     stallMinutes: 180,
     dependsOn: [],
@@ -540,10 +540,10 @@ const steps = [
     isComplete: () => fileUpdatedSince(path.join(ROOT, 'public', 'data', 'snapshots', 'best-setups-v4.json'), campaignStartMs),
   },
   {
-    id: 'us_eu_truth_gate',
-    label: 'US+EU Truth Gate',
+    id: 'global_truth_gate',
+    label: 'Global Truth Gate',
     pattern: 'scripts/ops/build-data-freshness-report.mjs',
-    command: `${NODE} scripts/universe-v7/build-us-eu-scope.mjs && ${NODE} scripts/ops/build-us-eu-history-pack-manifest.mjs && ${NODE} scripts/ops/build-data-freshness-report.mjs`,
+    command: `RV_GLOBAL_ASSET_CLASSES="\${RV_GLOBAL_ASSET_CLASSES:-STOCK,ETF,INDEX}"; ${NODE} scripts/universe-v7/build-global-scope.mjs --asset-classes "$RV_GLOBAL_ASSET_CLASSES" && ${NODE} scripts/ops/build-history-pack-manifest.mjs --scope global --asset-classes "$RV_GLOBAL_ASSET_CLASSES" && ${NODE} scripts/ops/build-data-freshness-report.mjs`,
     logFile: path.join(LOG_DIR, 'step-08-truth-gate.log'),
     dependsOn: ['quantlab_daily_report', 'fundamentals', 'hist_probs', 'forecast_daily', 'scientific_summary', 'snapshot'],
     isComplete: () => {
@@ -567,7 +567,7 @@ const steps = [
     id: 'stock_analyzer_universe_audit',
     label: 'Universe Audit',
     pattern: 'scripts/ops/build-stock-analyzer-universe-audit.mjs',
-    command: `${NODE} scripts/universe-v7/build-us-eu-scope.mjs && ${NODE} scripts/ops/build-us-eu-history-pack-manifest.mjs && ${NODE} scripts/ops/build-stock-analyzer-universe-audit.mjs --base-url http://127.0.0.1:8788 --registry-path public/data/universe/v7/registry/registry.ndjson.gz --allowlist-path public/data/universe/v7/ssot/stocks_etfs.us_eu.canonical.ids.json --asset-classes STOCK,ETF --max-tickers 0 --concurrency 12 --timeout-ms 30000`,
+    command: `RV_GLOBAL_ASSET_CLASSES="\${RV_GLOBAL_ASSET_CLASSES:-STOCK,ETF,INDEX}"; ${NODE} scripts/universe-v7/build-global-scope.mjs --asset-classes "$RV_GLOBAL_ASSET_CLASSES" && ${NODE} scripts/ops/build-history-pack-manifest.mjs --scope global --asset-classes "$RV_GLOBAL_ASSET_CLASSES" && ${NODE} scripts/ops/build-stock-analyzer-universe-audit.mjs --base-url http://127.0.0.1:8788 --registry-path public/data/universe/v7/registry/registry.ndjson.gz --allowlist-path public/data/universe/v7/ssot/assets.global.canonical.ids.json --asset-classes "$RV_GLOBAL_ASSET_CLASSES" --max-tickers 0 --concurrency 12 --timeout-ms 30000`,
     logFile: path.join(LOG_DIR, 'step-10-universe-audit.log'),
     dependsOn: ['hist_probs', 'snapshot', 'runtime_preflight'],
     isComplete: () => {
@@ -583,7 +583,7 @@ const steps = [
     pattern: 'scripts/ops/build-system-status-report.mjs',
     command: `${NODE} scripts/ops/build-system-status-report.mjs`,
     logFile: path.join(LOG_DIR, 'step-11-system-status.log'),
-    dependsOn: ['us_eu_truth_gate', 'stock_analyzer_universe_audit'],
+    dependsOn: ['global_truth_gate', 'stock_analyzer_universe_audit'],
     isComplete: () => {
       if (!fileUpdatedSince(SYSTEM_STATUS, campaignStartMs)) return false;
       const systemDoc = readJson(SYSTEM_STATUS);

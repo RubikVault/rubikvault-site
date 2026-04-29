@@ -1,11 +1,13 @@
 #!/usr/bin/env node
 
-export const PIPELINE_STEPS = [
+import { toCanonicalStepId } from '../ops/canonical-step-ids.mjs';
+
+const RAW_PIPELINE_STEPS = [
   {
     order: 1,
     id: 'refresh_v7_history_from_eodhd',
     label: 'Refresh V7 History From EODHD',
-    command: 'python3 scripts/quantlab/refresh_v7_history_from_eodhd.py --allowlist-path public/data/universe/v7/ssot/stocks.max.canonical.ids.json --from-date <YYYY-MM-DD>',
+    command: 'python3 scripts/quantlab/refresh_v7_history_from_eodhd.py --env-file "$NAS_DEV_ROOT/.env.local" --allowlist-path public/data/universe/v7/ssot/assets.global.canonical.ids.json --from-date <YYYY-MM-DD> --to-date <YYYY-MM-DD> --concurrency "${RV_MARKET_REFRESH_CONCURRENCY:-12}" --progress-every "${RV_MARKET_REFRESH_PROGRESS_EVERY:-500}"',
     job_type: 'internet_fetch',
     benchmark_method: 'mac_profile_only',
     benchmark_stage: null,
@@ -107,7 +109,7 @@ export const PIPELINE_STEPS = [
     order: 7,
     id: 'run_hist_probs',
     label: 'Run Hist Probs Full Universe',
-    command: 'node scripts/lib/hist-probs/run-hist-probs.mjs --registry-path public/data/universe/v7/registry/registry.ndjson.gz --asset-classes STOCK,ETF --max-tickers 0',
+    command: 'RV_GLOBAL_ASSET_CLASSES="${RV_GLOBAL_ASSET_CLASSES:-STOCK,ETF}"; node run-hist-probs-turbo.mjs --asset-classes "$RV_GLOBAL_ASSET_CLASSES"',
     job_type: 'cpu_bound',
     benchmark_method: 'mac_profile_only',
     benchmark_stage: null,
@@ -206,7 +208,7 @@ export const PIPELINE_STEPS = [
     order: 13,
     id: 'build_stock_analyzer_universe_audit',
     label: 'Build Stock Analyzer Universe Audit',
-    command: 'node scripts/ops/build-stock-analyzer-universe-audit.mjs --base-url http://127.0.0.1:8788 --registry-path public/data/universe/v7/registry/registry.ndjson.gz --asset-classes STOCK,ETF --max-tickers 0',
+    command: 'RV_GLOBAL_ASSET_CLASSES="${RV_GLOBAL_ASSET_CLASSES:-STOCK,ETF}"; node scripts/universe-v7/build-global-scope.mjs --asset-classes "$RV_GLOBAL_ASSET_CLASSES" && node scripts/ops/build-history-pack-manifest.mjs --scope global --asset-classes "$RV_GLOBAL_ASSET_CLASSES" && node scripts/ops/build-stock-analyzer-universe-audit.mjs --registry-path public/data/universe/v7/registry/registry.ndjson.gz --allowlist-path public/data/universe/v7/ssot/assets.global.canonical.ids.json --asset-classes "$RV_GLOBAL_ASSET_CLASSES" --max-tickers 0 --live-sample-size 0',
     job_type: 'ui_gate_local_only',
     benchmark_method: 'architecture_only',
     benchmark_stage: null,
@@ -251,6 +253,11 @@ export const PIPELINE_STEPS = [
     default_classification: 'insufficient_evidence_today',
   }
 ];
+
+export const PIPELINE_STEPS = RAW_PIPELINE_STEPS.map((step) => ({
+  ...step,
+  canonical_step_id: step.canonical_step_id || toCanonicalStepId(step.id),
+}));
 
 export const GREEN_GATES = [
   {

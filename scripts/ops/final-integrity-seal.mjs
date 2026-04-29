@@ -32,11 +32,13 @@ const PATHS = {
   publish: path.join(ROOT, 'public/data/ops/publish-chain-latest.json'),
   runtimePreflight: path.join(ROOT, 'public/data/ops/runtime-preflight-latest.json'),
   stockAudit: path.join(ROOT, 'public/data/reports/stock-analyzer-universe-audit-latest.json'),
+  stockOperability: path.join(ROOT, 'public/data/ops/stock-analyzer-operability-summary-latest.json'),
   uiFieldTruth: path.join(ROOT, 'public/data/reports/ui-field-truth-report-latest.json'),
   launchd: path.join(ROOT, 'public/data/ops/launchd-reconcile-latest.json'),
   storage: path.join(ROOT, 'public/data/reports/storage-budget-latest.json'),
   decisionBundle: path.join(ROOT, 'public/data/decisions/latest.json'),
   decisionBundleOps: path.join(ROOT, 'public/data/ops/decision-bundle-latest.json'),
+  histProbsStatus: path.join(ROOT, 'public/data/hist-probs/status-summary.json'),
   heartbeat: path.join(ROOT, 'mirrors/ops/pipeline-master/supervisor-heartbeat.json'),
   crashSeal: path.join(ROOT, 'public/data/ops/crash-seal-latest.json'),
 };
@@ -156,6 +158,7 @@ const ADVISORY_ONLY_WARNING_IDS = new Set([
   'eligible_wait_pipeline_incomplete',
   'risk_unknown',
   'strict_full_coverage_below_95pct',
+  'decision_internal_not_green',
 ]);
 
 export function evaluateDecisionBundleHealth(decisionBundle, {
@@ -286,9 +289,44 @@ function evaluateZeroBuyAnomaly(decisionBundleSummary, regimeDoc) {
   return riskOff ? 'OK' : 'DEGRADED';
 }
 
+function strictDecisionCoverageRatio(summary = null) {
+  const direct = Number(summary?.strict_full_coverage_ratio);
+  if (Number.isFinite(direct)) return Math.max(0, Math.min(1, direct));
+  const count = Number(summary?.strict_full_coverage_count);
+  const denominator = Number(summary?.assets_expected_for_decision || summary?.assets_eligible || summary?.assets_processed);
+  if (!Number.isFinite(count) || !Number.isFinite(denominator) || denominator <= 0) return 0;
+  return Math.max(0, Math.min(1, count / denominator));
+}
+
+function signalQualityForCoverage(ratio) {
+  if (ratio >= 0.95) return 'fresh';
+  if (ratio >= 0.90) return 'degraded';
+  return 'suppressed';
+}
+
+function histProbsStatusSummary(histProbsStatus = null) {
+  const mode = String(histProbsStatus?.hist_probs_mode || 'unknown').toLowerCase();
+  const catchup = String(histProbsStatus?.catchup_status || 'unknown').toLowerCase();
+  const coverage = Number(histProbsStatus?.coverage_ratio ?? histProbsStatus?.artifact_coverage_ratio ?? histProbsStatus?.run_coverage_ratio ?? 0);
+  const known = Boolean(mode && catchup && mode !== 'unknown' && catchup !== 'unknown');
+  const green = known && Number.isFinite(coverage) && coverage >= 0.90 && catchup !== 'failed';
+  return {
+    green,
+    known,
+    mode,
+    catchup_status: catchup,
+    coverage_ratio: Number.isFinite(coverage) ? coverage : 0,
+    retry_remaining: Number.isFinite(Number(histProbsStatus?.retry_remaining)) ? Number(histProbsStatus.retry_remaining) : null,
+    tier_a_count: Number.isFinite(Number(histProbsStatus?.tier_a_count)) ? Number(histProbsStatus.tier_a_count) : null,
+    tier_b_pending: Number.isFinite(Number(histProbsStatus?.tier_b_pending)) ? Number(histProbsStatus.tier_b_pending) : null,
+    freshness_budget_days: Number.isFinite(Number(histProbsStatus?.freshness_budget_days)) ? Number(histProbsStatus.freshness_budget_days) : null,
+  };
+}
+
 export function buildFinalIntegritySeal({
   runId = null,
   targetMarketDate = null,
+  enforceCalendarTarget = true,
   phase = null,
   system = null,
   runtime = null,
@@ -298,10 +336,12 @@ export function buildFinalIntegritySeal({
   publish = null,
   runtimePreflight = null,
   stockAnalyzerAudit = null,
+  stockAnalyzerOperability = null,
   uiFieldTruth = null,
   launchd = null,
   storage = null,
   decisionBundle = null,
+  histProbsStatus = null,
   heartbeat = null,
   crashSeal = null,
   previousFinal = null,
@@ -318,13 +358,19 @@ export function buildFinalIntegritySeal({
     .filter(([id, asOf]) => asOf && expectedTargetDate && !isModuleTargetCompatible(id, asOf, expectedTargetDate))
     .map(([id, as_of]) => ({ id, as_of, expected_target_market_date: expectedTargetDate }));
   const summary = stockAuditSummary(stockAnalyzerAudit, system);
+  const operabilitySummary = stockAnalyzerOperability?.summary || system?.stock_analyzer_operability?.summary || null;
   const uiFieldTruthSummary = uiFieldTruth?.summary || null;
+  const pageCoreSmokes = uiFieldTruth?.page_core_smokes || null;
+  const pageCoreGateRequired = process.env.RV_PAGE_CORE_RELEASE_GATE_REQUIRED === '1'
+    || pageCoreSmokes?.enabled === true;
+  const pageCoreGateOk = !pageCoreGateRequired || pageCoreSmokes?.release_eligible === true;
   const uiFieldTruthDateMatch = !uiFieldTruth
     || !expectedTargetDate
     || normalizeDate(uiFieldTruth.target_market_date) === expectedTargetDate;
   const uiFieldTruthReadable = Boolean(uiFieldTruth && typeof uiFieldTruth === 'object' && uiFieldTruthSummary);
   const sampledMode = summary?.sampled_mode === true
     || String(summary?.live_endpoint_mode || '').toLowerCase() === 'sampled_smoke';
+  const artifactOnlyAudit = String(summary?.live_endpoint_mode || '').toLowerCase() === 'artifact_only';
   const artifactFullValidated = summary?.artifact_full_validated === true
     || summary?.full_universe_validated === true
     || (
@@ -337,9 +383,9 @@ export function buildFinalIntegritySeal({
   const policyNeutralStructuralGapsOnly = summary?.policy_neutral_structural_gaps_only === true;
   const auditCriticalIssueCount = Number(summary?.artifact_critical_issue_count ?? summary?.critical_issue_count ?? 0);
   const uiFieldTruthOk = artifactReleaseReady === true
-    && uiFieldTruthSummary?.ui_field_truth_ok === true;
+    && (artifactOnlyAudit ? pageCoreGateOk : uiFieldTruthSummary?.ui_field_truth_ok === true && pageCoreGateOk);
   const calendarTarget = latestUsMarketSessionIso(now);
-  const calendarOk = !expectedTargetDate || calendarTarget === expectedTargetDate;
+  const calendarOk = !enforceCalendarTarget || !expectedTargetDate || calendarTarget === expectedTargetDate;
   const launchdOk = launchd?.allowed_launchd_only === true;
   const storageOk = storage?.disk?.heavy_jobs_allowed === true;
   const nasReachable = storage?.nas?.reachable === true;
@@ -365,6 +411,20 @@ export function buildFinalIntegritySeal({
   // run_id_mismatch is expected during recovery (system uses recovery run_id, release uses master run_id)
   // and is intentionally tolerated here (same rationale as in build-pipeline-epoch.mjs).
   const consistencyNonCircularReasons = (consistency?.blocking_reasons || [])
+    .map((entry) => {
+      if (entry?.id === 'target_market_date_mismatch' && Array.isArray(entry?.details) && expectedTargetDate) {
+        const filtered = entry.details.filter((item) => !['release', 'recovery'].includes(item?.source));
+        const distinctTargets = new Set(filtered.map((item) => normalizeDate(item?.target_market_date || null)).filter(Boolean));
+        return distinctTargets.size > 1 ? { ...entry, details: filtered } : null;
+      }
+      if (entry?.id === 'run_id_mismatch' && Array.isArray(entry?.details)) {
+        const filtered = entry.details.filter((item) => !['release', 'recovery'].includes(item?.source));
+        const distinctRunIds = new Set(filtered.map((item) => String(item?.run_id || '').trim()).filter(Boolean));
+        return distinctRunIds.size > 1 ? { ...entry, details: filtered } : null;
+      }
+      return entry;
+    })
+    .filter(Boolean)
     .filter((r) => r.id !== 'run_id_mismatch' && r.id !== 'runtime_pipeline_consistency_failed');
   const runtimeConsistencyOk = consistencyNonCircularReasons.length === 0;
   const dataPlaneGreen = epoch?.pipeline_ok === true && runtimeConsistencyOk && observerFreshness.stale !== true;
@@ -426,15 +486,11 @@ export function buildFinalIntegritySeal({
       },
     });
   }
-  for (const reason of consistency?.blocking_reasons || []) {
+  for (const reason of consistencyNonCircularReasons) {
     if (reason.id === 'nas_unreachable' && !nasRequiredForRelease) continue;
-    if (reason.id === 'runtime_pipeline_consistency_failed') continue;
     // Skip epoch-related reasons from stale runtime consistency when the current epoch is clean.
     // These are artifacts of a stale runtime snapshot and would create a false blocker.
     if (epochNowClean && (reason.id === 'epoch_blocking_gaps' || reason.id === 'epoch_module_target_mismatch')) continue;
-    // run_id_mismatch is expected during recovery (system uses recovery run_id, release uses master run_id).
-    // The publish chain reconciles run_ids when it runs. Same rationale as in build-pipeline-epoch.mjs.
-    if (reason.id === 'run_id_mismatch') continue;
     blockingReasons.push(reason);
   }
   if (moduleDateMismatches.length > 0) {
@@ -506,7 +562,27 @@ export function buildFinalIntegritySeal({
       });
     }
   }
-  if (runtimePreflight?.ok === false) {
+  if (operabilitySummary) {
+    const targetableGreenRatio = Number(operabilitySummary.targetable_green_ratio ?? 0);
+    const targetableAssets = Number(operabilitySummary.targetable_assets ?? 0);
+    const releaseBlocked = operabilitySummary.release_blocked === true
+      || targetableAssets <= 0
+      || targetableGreenRatio < Number(operabilitySummary.release_green_threshold ?? 0.90);
+    if (releaseBlocked) {
+      blockingReasons.push({
+        id: 'targetable_universe_operability_below_policy',
+        severity: 'critical',
+        details: {
+          coverage_denominator: operabilitySummary.coverage_denominator || null,
+          targetable_assets: operabilitySummary.targetable_assets ?? null,
+          targetable_operational_assets: operabilitySummary.targetable_operational_assets ?? null,
+          targetable_green_ratio: operabilitySummary.targetable_green_ratio ?? null,
+          release_green_threshold: operabilitySummary.release_green_threshold ?? 0.90,
+        },
+      });
+    }
+  }
+  if (!artifactOnlyAudit && runtimePreflight?.ok === false) {
     blockingReasons.push({
       id: 'runtime_preflight_failed',
       severity: 'critical',
@@ -518,29 +594,44 @@ export function buildFinalIntegritySeal({
       },
     });
   }
-  if (!uiFieldTruth) {
+  if (!artifactOnlyAudit) {
+    if (!uiFieldTruth) {
+      blockingReasons.push({
+        id: 'ui_field_truth_report_missing',
+        severity: 'critical',
+        details: null,
+      });
+    } else if (!uiFieldTruthReadable) {
+      blockingReasons.push({
+        id: 'ui_field_truth_report_unreadable',
+        severity: 'critical',
+        details: { summary_null: true },
+      });
+    } else if (!uiFieldTruthDateMatch) {
+      blockingReasons.push({
+        id: 'ui_field_truth_report_stale',
+        severity: 'critical',
+        details: { expected: expectedTargetDate, actual: normalizeDate(uiFieldTruth.target_market_date) },
+      });
+    } else if (uiFieldTruthSummary.ui_field_truth_ok !== true) {
+      blockingReasons.push({
+        id: 'ui_field_truth_report_failed',
+        severity: 'critical',
+        details: uiFieldTruthSummary,
+      });
+    }
+  }
+  if (pageCoreGateRequired && !pageCoreSmokes) {
     blockingReasons.push({
-      id: 'ui_field_truth_report_missing',
+      id: 'page_core_smoke_missing',
       severity: 'critical',
       details: null,
     });
-  } else if (!uiFieldTruthReadable) {
+  } else if (pageCoreGateRequired && pageCoreSmokes?.release_eligible !== true) {
     blockingReasons.push({
-      id: 'ui_field_truth_report_unreadable',
+      id: 'page_core_smoke_failed',
       severity: 'critical',
-      details: { summary_null: true },
-    });
-  } else if (!uiFieldTruthDateMatch) {
-    blockingReasons.push({
-      id: 'ui_field_truth_report_stale',
-      severity: 'critical',
-      details: { expected: expectedTargetDate, actual: normalizeDate(uiFieldTruth.target_market_date) },
-    });
-  } else if (uiFieldTruthSummary.ui_field_truth_ok !== true) {
-    blockingReasons.push({
-      id: 'ui_field_truth_report_failed',
-      severity: 'critical',
-      details: uiFieldTruthSummary,
+      details: pageCoreSmokes,
     });
   }
 
@@ -549,8 +640,34 @@ export function buildFinalIntegritySeal({
     now,
     requiredLeafFailed,
   });
-  blockingReasons.push(...decisionBundleHealth.blocking_reasons);
+  const strictFullCoverageRatio = strictDecisionCoverageRatio(decisionBundleHealth.summary);
+  const decisionPublicGreen = pageCoreGateOk && dataPlaneGreen && strictFullCoverageRatio >= 0.90;
+  const signalQuality = signalQualityForCoverage(strictFullCoverageRatio);
+  if (strictFullCoverageRatio < 0.90) {
+    blockingReasons.push(reason('decision_public_coverage_below_90pct', 'critical', {
+      strict_full_coverage_ratio: strictFullCoverageRatio,
+      required: 0.90,
+    }));
+  }
+  if (decisionBundleHealth.blocking_reasons.length > 0 && decisionPublicGreen) {
+    warningReasons.push(reason('decision_internal_not_green', 'warning', {
+      status: decisionBundleHealth.status,
+      blocking_reasons: decisionBundleHealth.blocking_reasons,
+    }));
+  } else {
+    blockingReasons.push(...decisionBundleHealth.blocking_reasons);
+  }
   warningReasons.push(...decisionBundleHealth.warnings);
+  const histStatus = histProbsStatusSummary(histProbsStatus);
+  if (!histStatus.known) {
+    blockingReasons.push(reason('hist_probs_status_unknown', 'critical', null));
+  } else if (!histStatus.green) {
+    blockingReasons.push(reason('hist_probs_not_release_green', 'critical', {
+      hist_probs_mode: histStatus.mode,
+      catchup_status: histStatus.catchup_status,
+      coverage_ratio: histStatus.coverage_ratio,
+    }));
+  }
   const runtimeLiveness = evaluateCrashAndHeartbeat({
     crashSeal,
     heartbeat,
@@ -622,7 +739,10 @@ export function buildFinalIntegritySeal({
     full_universe_validated: artifactFullValidated,
     policy_neutral_structural_gaps_only: policyNeutralStructuralGapsOnly,
     ui_field_truth_ok: uiFieldTruthOk,
+    page_core_gate_required: pageCoreGateRequired,
+    page_core_gate_ok: pageCoreGateOk,
     sampled_mode: sampledMode,
+    stock_analyzer_operability: operabilitySummary,
     allowed_launchd_only: launchdOk,
     lock_integrity_ok: lockIntegrityOk,
     storage_ok: storageOk,
@@ -631,12 +751,24 @@ export function buildFinalIntegritySeal({
     nas_required_for_release: nasRequiredForRelease,
     calendar_ok: calendarOk,
     data_plane_green: dataPlaneGreen,
+    decision_internal_green: decisionBundleHealth.status === 'OK',
+    decision_public_green: decisionPublicGreen,
+    decision_public_coverage_ratio: strictFullCoverageRatio,
+    signal_quality: signalQuality,
+    hist_probs_green: histStatus.green,
+    hist_probs_mode: histStatus.mode,
+    catchup_status: histStatus.catchup_status,
+    retry_remaining: histStatus.retry_remaining,
+    tier_a_count: histStatus.tier_a_count,
+    tier_b_pending: histStatus.tier_b_pending,
+    freshness_budget_days: histStatus.freshness_budget_days,
+    hist_probs_coverage_ratio: histStatus.coverage_ratio,
     observer_stale: observerFreshness.stale,
     observer_generated_at: observerFreshness.generated_at,
     observer_inputs: observerFreshness.inputs,
     lead_blocker_step: leadBlockerStep,
     next_step: nextStep,
-    runtime_preflight_ok: runtimePreflight?.ok === true,
+    runtime_preflight_ok: artifactOnlyAudit ? null : runtimePreflight?.ok === true,
     runtime_preflight_ref: 'public/data/ops/runtime-preflight-latest.json',
     control_plane: consistency,
     pipeline_consistency: consistency,
@@ -662,6 +794,7 @@ export function buildFinalIntegritySeal({
         }
       : null,
     ui_field_truth_report: uiFieldTruthSummary,
+    page_core_smokes: pageCoreSmokes,
     launchd,
     storage,
   };
@@ -779,10 +912,12 @@ async function main() {
   const publish = readJson(PATHS.publish) || null;
   const runtimePreflight = readJson(PATHS.runtimePreflight) || null;
   const stockAnalyzerAudit = readJson(PATHS.stockAudit) || null;
+  const stockAnalyzerOperability = readJson(PATHS.stockOperability) || null;
   const uiFieldTruth = readJson(PATHS.uiFieldTruth) || null;
   const launchd = readJson(PATHS.launchd) || null;
   const storage = readJson(PATHS.storage) || null;
   const decisionBundle = readJson(PATHS.decisionBundle) || readJson(PATHS.decisionBundleOps) || null;
+  const histProbsStatus = readJson(PATHS.histProbsStatus) || null;
   const heartbeat = readJson(PATHS.heartbeat) || null;
   const crashSeal = readJson(PATHS.crashSeal) || null;
   const previousFinal = readJson(FINAL_INTEGRITY_SEAL_PATH) || null;
@@ -791,17 +926,30 @@ async function main() {
     readerId: 'scripts/ops/final-integrity-seal.mjs',
   });
   const forcedTargetMarketDate = normalizeDate(process.env.TARGET_MARKET_DATE || process.env.RV_TARGET_MARKET_DATE || null);
+  const runtimeTargetMarketDate = normalizeDate(runtime?.target_market_date);
+  const epochTargetMarketDate = normalizeDate(epoch?.target_market_date);
+  const systemTargetMarketDate = normalizeDate(system?.summary?.target_market_date);
+  const calendarFallbackTarget = latestUsMarketSessionIso(new Date());
   const targetMarketDate = options.targetMarketDate
     || forcedTargetMarketDate
     || normalizeDate(releaseTargetMarketDate)
-    || normalizeDate(runtime?.target_market_date)
-    || normalizeDate(epoch?.target_market_date)
-    || normalizeDate(system?.summary?.target_market_date)
-    || latestUsMarketSessionIso(new Date());
+    || runtimeTargetMarketDate
+    || epochTargetMarketDate
+    || systemTargetMarketDate
+    || calendarFallbackTarget;
+  const enforceCalendarTarget = !(
+    options.targetMarketDate
+    || forcedTargetMarketDate
+    || normalizeDate(releaseTargetMarketDate)
+    || runtimeTargetMarketDate
+    || epochTargetMarketDate
+    || systemTargetMarketDate
+  );
 
   const unsignedSeal = buildFinalIntegritySeal({
     runId: options.runId || release?.run_id || runtime?.run_id || system?.run_id || null,
     targetMarketDate,
+    enforceCalendarTarget,
     phase: resolvePhase(release, runtime, system, options.phase),
     system,
     runtime,
@@ -811,10 +959,12 @@ async function main() {
     publish,
     runtimePreflight,
     stockAnalyzerAudit,
+    stockAnalyzerOperability,
     uiFieldTruth,
     launchd,
     storage,
     decisionBundle,
+    histProbsStatus,
     heartbeat,
     crashSeal,
     previousFinal,

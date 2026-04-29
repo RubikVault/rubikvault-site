@@ -1,0 +1,22 @@
+schema_version: breakout_features.v1.2
+engine_version: breakout_feature_engine_v1.2
+description: Deterministic continuous breakout feature set for static-first publishing.
+
+input:
+  lookback_calendar_days: 520
+  feature_history_days: 252
+  resistance_window_days: 63
+  range_window_days: 20
+  relative_strength_days: 63
+  recent_signal_window_days: 20
+  atr_period_days: 14
+  rvol_period_days: 20
+
+point_in_time:
+  signal_after_close: true
+  earliest_executable_session: next_open
+  allow_forward_columns_in_features: false
+
+outputs:
+  feature_store_version: breakout_v1_2
+  compression: zstd

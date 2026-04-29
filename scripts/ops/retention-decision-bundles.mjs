@@ -50,14 +50,16 @@ function removeTmpDirsOlderThan(cutoffMs) {
 
 function archiveAndDeleteSnapshot(date, snapshotId) {
   const sourceDir = path.join(SNAPSHOTS_ROOT, date, snapshotId);
-  const archiveDir = path.join(ARCHIVE_ROOT, date, snapshotId);
-  fs.mkdirSync(archiveDir, { recursive: true });
+  let archiveDir = path.join(ARCHIVE_ROOT, date, snapshotId);
+  fs.mkdirSync(path.dirname(archiveDir), { recursive: true });
+  if (fs.existsSync(archiveDir)) {
+    archiveDir = `${archiveDir}.${Date.now()}`;
+  }
+  fs.renameSync(sourceDir, archiveDir);
   const archived = [];
   for (const name of ['manifest.json', 'summary.json']) {
-    const source = path.join(sourceDir, name);
-    if (!fs.existsSync(source)) continue;
     const target = path.join(archiveDir, name);
-    fs.copyFileSync(source, target);
+    if (!fs.existsSync(target)) continue;
     archived.push({ file: name, hash: fileHash(target) });
   }
   writeJsonDurableAtomicSync(path.join(archiveDir, 'archive-metadata.json'), {
@@ -66,7 +68,6 @@ function archiveAndDeleteSnapshot(date, snapshotId) {
     source_snapshot: path.relative(ROOT, sourceDir),
     archived,
   });
-  fs.rmSync(sourceDir, { recursive: true, force: true });
   return { source: path.relative(ROOT, sourceDir), archive: path.relative(ROOT, archiveDir), archived };
 }
 
@@ -86,6 +87,7 @@ function pruneCrashSeals(cutoffMs) {
 
 export function runDecisionBundleRetention({
   keepMarketDays = 7,
+  keepLatestOnly = false,
   now = Date.now(),
 } = {}) {
   const latest = readJson(path.join(DECISIONS_ROOT, 'latest.json'));
@@ -94,14 +96,16 @@ export function runDecisionBundleRetention({
     keep.add(`${latest.target_market_date}/${latest.snapshot_id}`);
   }
   const dates = listDirs(SNAPSHOTS_ROOT).sort().reverse();
-  for (const date of dates.slice(0, keepMarketDays)) {
-    for (const snapshotId of listDirs(path.join(SNAPSHOTS_ROOT, date))) {
-      keep.add(`${date}/${snapshotId}`);
+  if (!keepLatestOnly || keep.size === 0) {
+    for (const date of dates.slice(0, keepMarketDays)) {
+      for (const snapshotId of listDirs(path.join(SNAPSHOTS_ROOT, date))) {
+        keep.add(`${date}/${snapshotId}`);
+      }
     }
   }
 
   const archivedSnapshots = [];
-  for (const date of dates.slice(keepMarketDays)) {
+  for (const date of dates) {
     for (const snapshotId of listDirs(path.join(SNAPSHOTS_ROOT, date))) {
       if (keep.has(`${date}/${snapshotId}`)) continue;
       archivedSnapshots.push(archiveAndDeleteSnapshot(date, snapshotId));
@@ -115,6 +119,7 @@ export function runDecisionBundleRetention({
     ok: true,
     generated_at: new Date(now).toISOString(),
     keep_market_days: keepMarketDays,
+    keep_latest_only: keepLatestOnly,
     latest_kept: latest?.snapshot_id || null,
     archived_snapshots: archivedSnapshots,
     tmp_removed: tmpRemoved,
@@ -123,7 +128,14 @@ export function runDecisionBundleRetention({
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
-  const report = runDecisionBundleRetention();
+  const argv = process.argv.slice(2);
+  const keepDaysArg = argv.find((arg) => arg.startsWith('--keep-market-days='));
+  const keepMarketDays = keepDaysArg ? Number(keepDaysArg.split('=', 2)[1]) : Number(process.env.RV_DECISION_BUNDLE_KEEP_MARKET_DAYS || 7);
+  const keepLatestOnly = argv.includes('--keep-latest-only') || process.env.RV_DECISION_BUNDLE_KEEP_LATEST_ONLY === '1';
+  const report = runDecisionBundleRetention({
+    keepMarketDays: Number.isFinite(keepMarketDays) ? keepMarketDays : 7,
+    keepLatestOnly,
+  });
   const reportPath = path.join(ROOT, 'public/data/reports/decision-bundle-retention-latest.json');
   writeJsonDurableAtomicSync(reportPath, report);
   process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);

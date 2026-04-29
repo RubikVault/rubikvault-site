@@ -1,0 +1,59 @@
+schema_version: breakout_tradable_universe.v1
+description: Breakout V1.2 eligible universe rules. Versioned, deterministic, no provider fetches.
+
+asset_classes:
+  - stock
+  - etf
+  - index
+
+signal_asset_classes:
+  - stock
+  - etf
+
+benchmark_asset_classes:
+  - index
+
+minimums:
+  min_history_bars: 252
+  min_data_completeness_252d: 0.85
+  max_stale_calendar_days: 7
+  require_positive_close: true
+  require_volume_for_signals: true
+
+liquidity_rules:
+  stock_us:
+    min_median_dollar_volume_20d: 1000000
+    min_price: 2.0
+  stock_eu:
+    min_median_dollar_volume_20d: 500000
+    min_price: 1.0
+  stock_asia:
+    min_median_dollar_volume_20d: 300000
+    min_price: 0.5
+  stock_other:
+    min_median_dollar_volume_20d: 300000
+    min_price: 0.5
+  etf_us:
+    min_median_dollar_volume_20d: 1000000
+    min_price: 2.0
+  etf_eu:
+    min_median_dollar_volume_20d: 500000
+    min_price: 1.0
+  etf_asia:
+    min_median_dollar_volume_20d: 300000
+    min_price: 0.5
+  etf_other:
+    min_median_dollar_volume_20d: 300000
+    min_price: 0.5
+
+exclusion_reasons:
+  - no_ohlcv
+  - short_history
+  - incomplete_history
+  - stale_price
+  - invalid_price
+  - missing_volume
+  - low_liquidity
+  - non_signal_asset_type
+  - benchmark_only
+  - unsupported_asset_class

@@ -2,11 +2,10 @@
 set -euo pipefail
 
 REPO_ROOT="${REPO_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)}"
-OPS_ROOT="${OPS_ROOT:-/volume1/homes/neoboy/RepoOps/rubikvault-site}"
-if [[ -f "$OPS_ROOT/tooling/env.sh" ]]; then
-  # shellcheck disable=SC1090
-  . "$OPS_ROOT/tooling/env.sh"
-fi
+# shellcheck source=scripts/nas/nas-env.sh
+. "$REPO_ROOT/scripts/nas/nas-env.sh"
+# shellcheck source=scripts/nas/node-env.sh
+. "$REPO_ROOT/scripts/nas/node-env.sh"
 
 CAMPAIGN_STAMP="${CAMPAIGN_STAMP:-$(date -u +%Y%m%dT%H%M%SZ)}"
 CAMPAIGN_DIR="$OPS_ROOT/runtime/native-matrix/campaigns/$CAMPAIGN_STAMP"
@@ -26,11 +25,21 @@ PROBE_STAGES=(best_setups_v4 daily_audit_report cutover_readiness_report etf_dia
 
 mkdir -p "$CAMPAIGN_DIR" "$(dirname "$LOCK_DIR")"
 : > "$CAMPAIGN_LOG"
+nas_ensure_runtime_roots
+nas_assert_global_lock_clear "night-pipeline"
+nas_assert_global_lock_clear "open-probe"
+if [[ -n "$(nas_detect_q1_writer_conflict)" ]]; then
+  echo "native_matrix_campaign_blocked=q1_writer_conflict" >&2
+  exit 91
+fi
+if [[ "${NAS_NATIVE_MATRIX_GLOBAL_LOCK_HELD:-0}" != "1" ]]; then
+  nas_acquire_global_lock "native-matrix"
+fi
 if ! mkdir "$LOCK_DIR" 2>/dev/null; then
   echo "native_campaign_lock_busy=$LOCK_DIR" >&2
   exit 90
 fi
-trap 'rm -rf "$LOCK_DIR"' EXIT
+trap 'rm -rf "$LOCK_DIR"; if [[ "${NAS_NATIVE_MATRIX_GLOBAL_LOCK_HELD:-0}" != "1" ]]; then nas_release_global_lock "native-matrix"; fi' EXIT
 
 target_end_iso() {
   python3 - "$END_LOCAL_DATE" "$END_LOCAL_HOUR" "$END_LOCAL_MINUTE" <<'PY'
@@ -178,12 +187,12 @@ while [[ "$(should_continue)" == "yes" ]]; do
 
   bash "$REPO_ROOT/scripts/nas/capture-native-system-audit.sh" "${CAMPAIGN_STAMP}-cycle${cycle}-after" >> "$CAMPAIGN_LOG" 2>&1 || true
   bash "$REPO_ROOT/scripts/nas/capture-native-service-census.sh" "${CAMPAIGN_STAMP}-cycle${cycle}-after" >> "$CAMPAIGN_LOG" 2>&1 || true
-  node "$REPO_ROOT/scripts/nas/build-native-matrix-report.mjs" >> "$CAMPAIGN_LOG" 2>&1 || true
+  "$NODE_BIN" "$REPO_ROOT/scripts/nas/build-native-matrix-report.mjs" >> "$CAMPAIGN_LOG" 2>&1 || true
   advance_cycle "$cycle"
   sleep "$SLEEP_BETWEEN_CYCLES_SEC"
 done
 
-node "$REPO_ROOT/scripts/nas/build-native-matrix-report.mjs" >> "$CAMPAIGN_LOG" 2>&1 || true
+"$NODE_BIN" "$REPO_ROOT/scripts/nas/build-native-matrix-report.mjs" >> "$CAMPAIGN_LOG" 2>&1 || true
 
 python3 - "$STATUS_JSON" "$CAMPAIGN_PID" <<'PY'
 import json

@@ -1,0 +1,28 @@
+schema_version: breakout_scoring.v1.2
+score_version: breakout_scoring_v1.2
+description: Deterministic ranking score. Not a probability. No ML gate.
+
+weights:
+  structure: 0.30
+  volume: 0.25
+  compression: 0.15
+  relative_strength: 0.15
+  liquidity: 0.10
+  regime: 0.05
+
+thresholds:
+  top_list_min_score: 0.65
+  ui_candidate_min_score: 0.55
+  max_top_items: 500
+  max_shard_items_per_region: 750
+
+clamps:
+  regime_multiplier_min: 0.70
+  regime_multiplier_max: 1.15
+
+reason_thresholds:
+  near_resistance_atr: 0.35
+  high_volume_percentile: 0.80
+  compressed_atr_percentile_max: 0.35
+  relative_strength_min: 0.65
+  liquidity_min: 0.60

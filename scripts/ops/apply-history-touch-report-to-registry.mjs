@@ -171,6 +171,7 @@ function buildTouchIndex(touchReport) {
         canonical_id: canonicalId,
         history_pack: String(entry?.history_pack || '').trim(),
         pack_sha256: String(entry?.pack_sha256 || '').trim(),
+        history_effective_sha256: String(entry?.history_effective_sha256 || entry?.pack_sha256 || '').trim(),
         last_date_before: normalizeDate(entry?.last_date_before),
         last_date_after: lastDateAfter,
       });
@@ -207,6 +208,9 @@ function applyToRows(rows, touchIndex, { targetDate, appliedAt }) {
       if (touch.pack_sha256 && row.pointers.pack_sha256 !== touch.pack_sha256) {
         row.pointers.pack_sha256 = touch.pack_sha256;
         packHashesUpdated += 1;
+      }
+      if (touch.history_effective_sha256 && row.pointers.history_effective_sha256 !== touch.history_effective_sha256) {
+        row.pointers.history_effective_sha256 = touch.history_effective_sha256;
       }
     }
 

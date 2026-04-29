@@ -176,16 +176,16 @@ async function buildMacroOS(runContext) {
 async function buildFundamentalTruth(tickers, runContext) {
     const apiKey = String(process.env.EODHD_API_KEY || '').trim();
     if (!apiKey) {
-        log('Fundamental Truth: ⚠️ EODHD_API_KEY not set, skipping');
+        log('Fundamental Truth: provider credentials not set, skipping');
         return {
             module: 'fundamental_truth',
             schema_version: SCHEMA,
             generated_at: runContext.generatedAt,
             run_id: runContext.runId,
             commit: runContext.commit,
-            universe_stats: { reason: 'MISSING_SECRET:EODHD_API_KEY' },
+            universe_stats: { reason: 'DATA_UNAVAILABLE' },
             rows: [],
-            _status: 'MISSING_API_KEY',
+            _status: 'DATA_UNAVAILABLE',
         };
     }
 

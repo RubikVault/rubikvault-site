@@ -46,13 +46,15 @@ const release = readJson(PATHS.release) || {};
 const seal = readJson(PATHS.seal) || {};
 const runtimePreflight = readJson(PATHS.runtimePreflight) || {};
 const epoch = readJson(PATHS.epoch) || {};
-const consistency = validateControlPlaneConsistency({ system, release, epoch, recovery });
+const forcedTargetMarketDate = normalizeDate(process.env.TARGET_MARKET_DATE || process.env.RV_TARGET_MARKET_DATE || null);
+const forcedRunId = String(process.env.RUN_ID || process.env.RV_RUN_ID || '').trim() || null;
+const consistency = validateControlPlaneConsistency(
+  forcedTargetMarketDate ? { system, epoch } : { system, release, epoch, recovery },
+);
 const releaseTargetMarketDate = resolveReleaseTargetMarketDate(release, {
   trackLegacyRead: true,
   readerId: 'scripts/ops/build-pipeline-runtime-report.mjs',
 });
-const forcedTargetMarketDate = normalizeDate(process.env.TARGET_MARKET_DATE || process.env.RV_TARGET_MARKET_DATE || null);
-const forcedRunId = String(process.env.RUN_ID || process.env.RV_RUN_ID || '').trim() || null;
 const targetMarketDate = forcedTargetMarketDate
   || consistency.target_market_date
   || normalizeDate(recovery.target_market_date || releaseTargetMarketDate)

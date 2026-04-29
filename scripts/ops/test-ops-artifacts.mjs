@@ -4,7 +4,7 @@ import { fetchWithContext } from './fetch-with-context.mjs';
 const base = getOpsBase();
 const assets = [
   { name: 'universe', url: `${base}/data/universe/nasdaq100.json`, check: (doc) => Array.isArray(doc) && doc.length > 0 },
-  { name: 'stock-analysis', url: `${base}/data/snapshots/stock-analysis.json`, check: (doc) => Boolean(doc?._meta) },
+  { name: 'scientific-summary', url: `${base}/data/supermodules/scientific-summary.json`, check: (doc) => Boolean(doc?.generated_at || doc?.source_meta) },
   { name: 'eod-batch', url: `${base}/data/eod/batches/eod.latest.000.json`, check: (doc) => Array.isArray(doc?.symbols) && doc.symbols.length > 0 },
   { name: 'marketphase-index', url: `${base}/data/marketphase/index.json`, check: (doc) => Array.isArray(doc?.data?.symbols) },
   { name: 'market-prices', url: `${base}/data/snapshots/market-prices/latest.json`, check: (doc) => Array.isArray(doc?.data) }

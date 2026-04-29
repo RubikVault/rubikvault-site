@@ -3,9 +3,9 @@
  * Release Gate Check
  *
  * Authoritative release coordinator.
- * Reads public/data/ops/release-state-latest.json, checks all gates,
+ * Reads local/NAS release evidence, checks all gates,
  * builds dist/pages-prod/, runs wrangler pages deploy, performs smoke tests,
- * and writes public/data/ops/deploy-proof-latest.json.
+ * and writes var/private/ops/deploy-proof-latest.json.
  *
  * Usage:
  *   node scripts/ops/release-gate-check.mjs [--dry-run] [--force] [--skip-smokes]
@@ -20,7 +20,7 @@
  *   Manual operator intervention
  *
  * Outputs:
- *   public/data/ops/deploy-proof-latest.json  — deploy proof artifact
+ *   var/private/ops/deploy-proof-latest.json  — local deploy proof artifact
  *   dist/pages-prod/                           — deploy bundle (via build:deploy)
  */
 
@@ -36,20 +36,37 @@ const REPO_ROOT = path.resolve(fileURLToPath(new URL('.', import.meta.url)), '..
 // ─── Paths ─────────────────────────────────────────────────────────────────────
 const RELEASE_STATE_PATH = path.join(REPO_ROOT, 'public/data/ops/release-state-latest.json');
 const FINAL_INTEGRITY_SEAL_PATH = path.join(REPO_ROOT, 'public/data/ops/final-integrity-seal-latest.json');
-const DEPLOY_PROOF_PATH  = path.join(REPO_ROOT, 'public/data/ops/deploy-proof-latest.json');
-const BUNDLE_META_PATH   = path.join(REPO_ROOT, 'dist/pages-prod/data/ops/build-bundle-meta.json');
+const DEPLOY_PROOF_PATH  = path.join(REPO_ROOT, 'var/private/ops/deploy-proof-latest.json');
+const BUNDLE_META_PATH   = path.join(REPO_ROOT, 'var/private/ops/build-bundle-meta.json');
 const BUILD_META_PATH    = path.join(REPO_ROOT, 'public/data/ops/build-meta.json');
-const PUBLIC_DIR         = path.join(REPO_ROOT, 'public');
+const PAGE_CORE_ACTIVE_LATEST_PATH = path.join(REPO_ROOT, 'public/data/page-core/latest.json');
+const PAGE_CORE_CANDIDATE_LATEST_PATH = path.join(REPO_ROOT, 'public/data/page-core/candidates/latest.candidate.json');
 const DIST_DIR           = path.join(REPO_ROOT, 'dist/pages-prod');
+const DEFAULT_CLOUDFLARE_ENV_PATH = process.env.RV_CLOUDFLARE_ENV_FILE
+  || path.join(process.env.NAS_OPS_ROOT || process.env.OPS_ROOT || path.join(REPO_ROOT, 'var/private'), 'secrets/cloudflare.env');
 
 // ─── Config ────────────────────────────────────────────────────────────────────
 // Smoke test URLs (production endpoints)
 const PROD_BASE = 'https://rubikvault.com';
-const SMOKE_ENDPOINTS = {
-  dashboard_v7:    `${PROD_BASE}/dashboard_v7`,
-  api_diag:        `${PROD_BASE}/api/diag`,
-  api_stock_sample:`${PROD_BASE}/api/stock?ticker=AAPL`,
-  ops_pulse:       `${PROD_BASE}/api/ops-pulse`,
+const PAGES_DEPLOY_BRANCH = process.env.CLOUDFLARE_PAGES_BRANCH || process.env.CF_PAGES_BRANCH || 'main';
+const PAGE_CORE_STAGING_BRANCH = process.env.RV_PAGE_CORE_STAGING_BRANCH || 'page-core-staging';
+const WRANGLER_SKIP_CACHING = process.env.RV_WRANGLER_SKIP_CACHING !== '0';
+const WRANGLER_DEPLOY_TIMEOUT_MS = Number(process.env.RV_WRANGLER_DEPLOY_TIMEOUT_MS || 2_700_000);
+const PRODUCTION_ARTIFACT_SMOKE_ATTEMPTS = Number(process.env.RV_PRODUCTION_ARTIFACT_SMOKE_ATTEMPTS || 3);
+const PRODUCTION_ARTIFACT_SMOKE_BACKOFF_SEC = Number(process.env.RV_PRODUCTION_ARTIFACT_SMOKE_BACKOFF_SEC || 20);
+const STOCK_ANALYZER_GREEN_MINIMUM = Number(process.env.RV_STOCK_ANALYZER_GREEN_MINIMUM || 0.90);
+const STOCK_ANALYZER_GREEN_TARGET = Number(process.env.RV_STOCK_ANALYZER_GREEN_TARGET || 0.95);
+const SMOKE_ENDPOINT_PATHS = {
+  homepage: '/',
+  stock: '/stock',
+  analyze: '/analyze',
+  api_stock_sample: '/api/stock?ticker=AAPL',
+  api_page_core_aapl: '/api/v2/page/AAPL',
+  api_page_core_brkb: '/api/v2/page/BRK-B',
+  api_page_core_brkdotb: '/api/v2/page/BRK.B',
+  api_universe_ford: '/api/universe?q=ford&limit=5',
+  api_universe_visa: '/api/universe?q=visa&limit=5',
+  api_universe_tesla: '/api/universe?q=tesl&limit=5',
 };
 
 // ─── Args ──────────────────────────────────────────────────────────────────────
@@ -69,6 +86,35 @@ function readJson(p) {
   try { return JSON.parse(fs.readFileSync(p, 'utf8')); } catch { return null; }
 }
 
+function loadSecretEnvFile(filePath = DEFAULT_CLOUDFLARE_ENV_PATH) {
+  if (!filePath || !fs.existsSync(filePath)) return false;
+  const allowed = new Set([
+    'CLOUDFLARE_API_TOKEN',
+    'CF_API_TOKEN',
+    'CLOUDFLARE_ACCOUNT_ID',
+    'CF_ACCOUNT_ID',
+    'CLOUDFLARE_PROJECT_NAME',
+    'CF_PAGES_PROJECT_NAME',
+  ]);
+  const body = fs.readFileSync(filePath, 'utf8');
+  for (const rawLine of body.split(/\r?\n/)) {
+    const line = rawLine.trim();
+    if (!line || line.startsWith('#') || !line.includes('=')) continue;
+    const key = line.slice(0, line.indexOf('=')).trim();
+    if (!allowed.has(key) || process.env[key]) continue;
+    let value = line.slice(line.indexOf('=') + 1).trim();
+    value = value.replace(/^['"]|['"]$/g, '');
+    if (value) process.env[key] = value;
+  }
+  if (!process.env.CLOUDFLARE_API_TOKEN && process.env.CF_API_TOKEN) {
+    process.env.CLOUDFLARE_API_TOKEN = process.env.CF_API_TOKEN;
+  }
+  if (!process.env.CLOUDFLARE_ACCOUNT_ID && process.env.CF_ACCOUNT_ID) {
+    process.env.CLOUDFLARE_ACCOUNT_ID = process.env.CF_ACCOUNT_ID;
+  }
+  return Boolean(process.env.CLOUDFLARE_API_TOKEN);
+}
+
 function writeJsonAtomic(p, obj) {
   fs.mkdirSync(path.dirname(p), { recursive: true });
   const tmp = `${p}.${process.pid}.${Date.now()}.tmp`;
@@ -76,15 +122,28 @@ function writeJsonAtomic(p, obj) {
   fs.renameSync(tmp, p);
 }
 
-function syncPublicFileIntoBundle(publicPath) {
-  if (!fs.existsSync(publicPath)) return false;
-  const rel = path.relative(PUBLIC_DIR, publicPath);
-  if (!rel || rel.startsWith('..')) {
-    throw new Error(`Cannot sync non-public file into bundle: ${publicPath}`);
-  }
-  const distPath = path.join(DIST_DIR, rel);
+function hasPageCoreCandidate() {
+  return Boolean(readJson(PAGE_CORE_CANDIDATE_LATEST_PATH)?.snapshot_id);
+}
+
+function overlayPageCoreCandidateIntoBundle() {
+  if (!hasPageCoreCandidate()) return false;
+  const distPath = path.join(DIST_DIR, 'data/page-core/latest.json');
   fs.mkdirSync(path.dirname(distPath), { recursive: true });
-  fs.copyFileSync(publicPath, distPath);
+  fs.copyFileSync(PAGE_CORE_CANDIDATE_LATEST_PATH, distPath);
+  log('Overlayed page-core candidate latest.json into deploy bundle.');
+  return true;
+}
+
+function promotePageCoreCandidate() {
+  const candidate = readJson(PAGE_CORE_CANDIDATE_LATEST_PATH);
+  if (!candidate?.snapshot_id) return false;
+  writeJsonAtomic(PAGE_CORE_ACTIVE_LATEST_PATH, {
+    ...candidate,
+    status: 'ACTIVE',
+    promoted_at: utcNow(),
+  });
+  log(`Promoted page-core candidate snapshot=${candidate.snapshot_id}`);
   return true;
 }
 
@@ -176,6 +235,135 @@ function smokeTest(url) {
   } catch { return null; }
 }
 
+function fetchJsonSmoke(url) {
+  try {
+    const r = spawnSync('curl', [
+      '-fsS',
+      '--max-time', '20',
+      '--connect-timeout', '10',
+      url,
+    ], { encoding: 'utf8', timeout: 30000 });
+    if (r.status !== 0) {
+      return { ok: false, status: r.status ?? -1, error: (r.stderr || '').trim() || 'curl_failed' };
+    }
+    return { ok: true, json: JSON.parse(r.stdout || '{}') };
+  } catch (error) {
+    return { ok: false, status: -1, error: error?.message || String(error) };
+  }
+}
+
+function sleepSeconds(seconds) {
+  spawnSync('sleep', [String(seconds)]);
+}
+
+function targetDateOf(doc) {
+  return doc?.target_market_date || doc?.target_date || null;
+}
+
+function verifyProductionArtifactsOnce(targetDate) {
+  const cacheBust = `rv=${Date.now()}`;
+  const checks = {
+    public_status: fetchJsonSmoke(`${PROD_BASE}/data/public-status.json?${cacheBust}`),
+  };
+  const failures = [];
+  const publicStatus = checks.public_status.json || {};
+  const publicStatusOk = String(publicStatus.status || '').toUpperCase() === 'OK';
+  if (!checks.public_status.ok || targetDateOf(publicStatus) !== targetDate || !publicStatusOk || publicStatus.release_ready !== true || publicStatus.ui_green !== true) {
+    failures.push(`public_status target=${targetDateOf(publicStatus) || 'missing'} status=${publicStatus.status || 'missing'} release_ready=${publicStatus.release_ready} ui_green=${publicStatus.ui_green}`);
+  }
+  return { ok: failures.length === 0, failures, checks };
+}
+
+function universeHasCanonical(payload, canonicalId) {
+  const rows = Array.isArray(payload?.data?.symbols) ? payload.data.symbols : [];
+  return rows.some((row) => String(row?.canonical_id || '').toUpperCase() === canonicalId);
+}
+
+function stockHasNoPublicBundleBlocker(payload) {
+  const readiness = payload?.analysis_readiness || payload?.data?.analysis_readiness || {};
+  const daily = payload?.daily_decision || payload?.data?.daily_decision || {};
+  const reasons = [
+    ...(Array.isArray(readiness.blocking_reasons) ? readiness.blocking_reasons : []),
+    ...(Array.isArray(daily.blocking_reasons) ? daily.blocking_reasons : []),
+  ].map((item) => String(item?.id || item || '').toLowerCase());
+  return !reasons.includes('bundle_missing') && !reasons.includes('bundle_stale');
+}
+
+function verifyRuntimeContracts(baseUrl, targetDate = null, { requirePublicStatus = false } = {}) {
+  const clean = String(baseUrl || PROD_BASE).replace(/\/+$/, '');
+  const cacheBust = `rv=${Date.now()}`;
+  const checks = {
+    universe_ford: fetchJsonSmoke(`${clean}/api/universe?q=ford&limit=5&${cacheBust}`),
+    universe_visa: fetchJsonSmoke(`${clean}/api/universe?q=visa&limit=5&${cacheBust}`),
+    universe_tesla: fetchJsonSmoke(`${clean}/api/universe?q=tesl&limit=5&${cacheBust}`),
+    page_aapl: fetchJsonSmoke(`${clean}/api/v2/page/AAPL?${cacheBust}`),
+    page_brkb: fetchJsonSmoke(`${clean}/api/v2/page/BRK-B?${cacheBust}`),
+    page_brkdotb: fetchJsonSmoke(`${clean}/api/v2/page/BRK.B?${cacheBust}`),
+    stock_f: fetchJsonSmoke(`${clean}/api/stock?ticker=F&${cacheBust}`),
+  };
+  if (requirePublicStatus) {
+    checks.public_status = fetchJsonSmoke(`${clean}/data/public-status.json?${cacheBust}`);
+  }
+  const failures = [];
+  if (!checks.universe_ford.ok || !universeHasCanonical(checks.universe_ford.json, 'US:F')) failures.push('universe_ford_missing_US:F');
+  if (!checks.universe_visa.ok || !universeHasCanonical(checks.universe_visa.json, 'US:V')) failures.push('universe_visa_missing_US:V');
+  if (!checks.universe_tesla.ok || !universeHasCanonical(checks.universe_tesla.json, 'US:TSLA')) failures.push('universe_tesla_missing_US:TSLA');
+  for (const key of ['page_aapl', 'page_brkb', 'page_brkdotb']) {
+    if (!checks[key].ok || checks[key].json?.ok !== true || !checks[key].json?.data?.canonical_asset_id) failures.push(`${key}_page_core_failed`);
+  }
+  if (!checks.stock_f.ok || checks.stock_f.json?.ok !== true || !stockHasNoPublicBundleBlocker(checks.stock_f.json)) {
+    failures.push('api_stock_f_public_bundle_blocker');
+  }
+  if (requirePublicStatus) {
+    const publicStatus = checks.public_status?.json || {};
+    const publicStatusOk = String(publicStatus.status || '').toUpperCase() === 'OK';
+    if (!checks.public_status?.ok || publicStatusOk !== true || publicStatus.ui_green !== true || (targetDate && targetDateOf(publicStatus) !== targetDate)) {
+      failures.push('public_status_contract_failed');
+    }
+  }
+  return { ok: failures.length === 0, failures, checks };
+}
+
+function verifyProductionArtifacts(targetDate) {
+  let latest = null;
+  for (let attempt = 1; attempt <= PRODUCTION_ARTIFACT_SMOKE_ATTEMPTS; attempt += 1) {
+    latest = verifyProductionArtifactsOnce(targetDate);
+    if (latest.ok) {
+      if (attempt > 1) log(`Production artifact smoke OK on attempt ${attempt}.`);
+      return latest;
+    }
+    if (attempt < PRODUCTION_ARTIFACT_SMOKE_ATTEMPTS) {
+      warn(`Production artifact smoke attempt ${attempt}/${PRODUCTION_ARTIFACT_SMOKE_ATTEMPTS} failed: ${latest.failures.join('; ')}. Retrying in ${PRODUCTION_ARTIFACT_SMOKE_BACKOFF_SEC}s.`);
+      sleepSeconds(PRODUCTION_ARTIFACT_SMOKE_BACKOFF_SEC);
+    }
+  }
+  return latest || { ok: false, failures: ['production_artifact_smoke_not_run'], checks: {} };
+}
+
+function checkStockAnalyzerTargets(seal) {
+  const operability = seal?.stock_analyzer_operability || {};
+  const ratio = Number(operability.targetable_green_ratio ?? operability.targetable_operational_ratio ?? NaN);
+  if (!Number.isFinite(ratio)) {
+    warn('Stock Analyzer targetable_green_ratio missing from final seal.');
+    return;
+  }
+  const targetable = Number(operability.targetable_assets ?? 0);
+  const operational = Number(operability.targetable_operational_assets ?? operability.operational_assets ?? 0);
+  if (ratio < STOCK_ANALYZER_GREEN_MINIMUM && !isForce) {
+    fail(`Stock Analyzer targetable green ratio ${(ratio * 100).toFixed(2)}% is below minimum ${(STOCK_ANALYZER_GREEN_MINIMUM * 100).toFixed(0)}% (${operational}/${targetable}).`);
+  }
+  const unclassified = Number(operability.unclassified_assets ?? 0);
+  const bugsRemaining = Number(operability.bugs_remaining ?? 0);
+  const globalBlockers = Number(operability.global_blockers_remaining ?? 0);
+  if (ratio < STOCK_ANALYZER_GREEN_TARGET) {
+    const message = `Stock Analyzer targetable green ratio ${(ratio * 100).toFixed(2)}% is below target ${(STOCK_ANALYZER_GREEN_TARGET * 100).toFixed(0)}% (${operational}/${targetable}).`;
+    if ((unclassified > 0 || bugsRemaining > 0 || globalBlockers > 0) && !isForce) {
+      fail(`${message} Remaining unclassified/internal issues: unclassified=${unclassified}, bugs=${bugsRemaining}, global_blockers=${globalBlockers}.`);
+    }
+    warn(`${message} Remaining non-green targetable assets must be provider/short-history/delisted exceptions.`);
+  }
+}
+
 // ─── Gate Checks ───────────────────────────────────────────────────────────────
 
 function checkReleaseState() {
@@ -203,6 +391,7 @@ function checkReleaseState() {
   if (!isForce && seal?.release_ready !== true) {
     fail(`Final integrity seal is not green. Top blocker: ${seal?.blocking_reasons?.[0]?.id || 'unknown'}`);
   }
+  checkStockAnalyzerTargets(seal);
 
   return state
     ? { ...state, final_integrity_seal: seal || null, final_integrity_seal_verification: sealVerification }
@@ -217,6 +406,25 @@ function checkBuildMeta() {
   return meta;
 }
 
+function checkManifestContract(bundleMeta) {
+  if (!bundleMeta) return null;
+  const check = bundleMeta.manifest_check;
+  if (!check || check === 'skipped') {
+    warn('manifest_check is missing from build-bundle-meta — runtime-manifest.json may not have been present during build.');
+    return 'skipped';
+  }
+  if (check === 'failed') {
+    const violations = bundleMeta.manifest_violations ?? '?';
+    const missing    = bundleMeta.manifest_missing ?? '?';
+    if (!isForce) {
+      fail(`Bundle failed runtime manifest contract: ${violations} violations, ${missing} missing required files. Run build with --strict-manifest to see details. Use --force to override.`);
+    }
+    warn(`Manifest contract failed but --force active: violations=${violations} missing=${missing}`);
+  }
+  log(`Manifest contract: ${check} (violations: ${bundleMeta.manifest_violations ?? 0}, unmatched: ${bundleMeta.manifest_unmatched ?? 0})`);
+  return check;
+}
+
 function writeDeployProof({
   deployedCommit,
   deploymentId = null,
@@ -228,6 +436,7 @@ function writeDeployProof({
   bundleMeta = null,
   releaseStatePhase = null,
   targetDate = null,
+  contractCheck = null,
 }) {
   const proof = {
     schema: 'rv_deploy_proof_v1',
@@ -240,7 +449,10 @@ function writeDeployProof({
     verified_at: verifiedAt,
     bundle_file_count: bundleMeta?.bundle_file_count ?? null,
     bundle_size_mb: bundleMeta?.bundle_size_mb ?? null,
+    bundle_max_file_bytes: bundleMeta?.bundle_max_file_bytes ?? null,
+    contract_check: contractCheck ?? bundleMeta?.manifest_check ?? null,
     release_state_phase: releaseStatePhase,
+    target_market_date: targetDate,
     target_date: targetDate,
   };
   writeJsonAtomic(DEPLOY_PROOF_PATH, proof);
@@ -254,6 +466,7 @@ function buildDeployBundle() {
   const r = spawnSync(process.execPath, [
     path.join(REPO_ROOT, 'scripts/ops/build-deploy-bundle.mjs'),
     '--strict',
+    '--strict-manifest',
   ], {
     cwd: REPO_ROOT,
     stdio: 'inherit',
@@ -265,17 +478,23 @@ function buildDeployBundle() {
   log('Deploy bundle built.');
 }
 
-function runWranglerDeploy() {
-  log('Running wrangler pages deploy dist/pages-prod/...');
+function runWranglerDeploy(branch = PAGES_DEPLOY_BRANCH) {
+  log(`Running wrangler pages deploy dist/pages-prod/ (branch=${branch})...`);
+  loadSecretEnvFile();
+  if (!process.env.CLOUDFLARE_API_TOKEN) {
+    fail(`CLOUDFLARE_API_TOKEN missing; store it in ${DEFAULT_CLOUDFLARE_ENV_PATH} or export it before deploy.`);
+  }
   // Use the project-local Wrangler binary so deploys do not depend on host CLI PATH setup.
   const localWrangler = path.join(REPO_ROOT, 'node_modules/.bin/wrangler');
   if (!fs.existsSync(localWrangler)) {
     fail(`local wrangler binary missing at ${path.relative(REPO_ROOT, localWrangler)}; run npm install/npm ci in the repo before release deploy.`);
   }
-  const r = spawnSync(localWrangler, ['pages', 'deploy', 'dist/pages-prod/', '--project-name', 'rubikvault-site'], {
+  const deployArgs = ['pages', 'deploy', 'dist/pages-prod/', '--project-name', 'rubikvault-site', '--branch', branch];
+  if (WRANGLER_SKIP_CACHING) deployArgs.push('--skip-caching');
+  const r = spawnSync(localWrangler, deployArgs, {
     cwd: REPO_ROOT,
     encoding: 'utf8',
-    timeout: 300_000,
+    timeout: WRANGLER_DEPLOY_TIMEOUT_MS,
     stdio: ['ignore', 'pipe', 'pipe'],
   });
   const output = (r.stdout || '') + (r.stderr || '');
@@ -285,7 +504,7 @@ function runWranglerDeploy() {
     fail('wrangler pages deploy failed.');
   }
   // Extract deployment URL and ID from wrangler output
-  const urlMatch = output.match(/https:\/\/[a-z0-9-]+\.rubikvault\.pages\.dev/);
+  const urlMatch = output.match(/https:\/\/[a-z0-9-]+(?:\.[a-z0-9-]+)*\.pages\.dev/i);
   const idMatch  = output.match(/Deployment ID[:\s]+([a-f0-9-]+)/i);
   return {
     deployment_url: urlMatch?.[0] || null,
@@ -294,10 +513,15 @@ function runWranglerDeploy() {
   };
 }
 
-function runSmokes() {
-  log('Running smoke tests...');
+function smokeEndpoints(baseUrl = PROD_BASE) {
+  const clean = String(baseUrl || PROD_BASE).replace(/\/+$/, '');
+  return Object.fromEntries(Object.entries(SMOKE_ENDPOINT_PATHS).map(([name, endpointPath]) => [name, `${clean}${endpointPath}`]));
+}
+
+function runSmokes(baseUrl = PROD_BASE) {
+  log(`Running smoke tests against ${baseUrl}...`);
   const results = {};
-  for (const [name, url] of Object.entries(SMOKE_ENDPOINTS)) {
+  for (const [name, url] of Object.entries(smokeEndpoints(baseUrl))) {
     const status = smokeTest(url);
     results[name] = status;
     const ok = status === 200 || status === 304;
@@ -305,6 +529,28 @@ function runSmokes() {
   }
   const allOk = Object.values(results).every(s => s === 200 || s === 304);
   return { smokes: results, smokes_ok: allOk };
+}
+
+function runUiFieldTruthReport(baseUrl, targetDate = null, options = {}) {
+  log(`Running UI field truth report against ${baseUrl}...`);
+  const args = [
+    path.join(REPO_ROOT, 'scripts/ops/build-ui-field-truth-report.mjs'),
+    '--target',
+    baseUrl,
+  ];
+  if (options.pageCoreOnly) args.push('--page-core-only');
+  if (targetDate) args.push('--date', targetDate);
+  const r = spawnSync(process.execPath, args, {
+    cwd: REPO_ROOT,
+    encoding: 'utf8',
+    timeout: 300_000,
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
+  if (r.stdout) log(r.stdout.trim());
+  if (r.status !== 0) {
+    if (r.stderr) console.error(r.stderr);
+    fail(`UI field truth report failed against ${baseUrl}`);
+  }
 }
 
 // ─── Main ──────────────────────────────────────────────────────────────────────
@@ -333,18 +579,22 @@ writeDeployProof({
 
 // 2. Build deploy bundle
 buildDeployBundle();
+const pageCoreCandidatePresent = hasPageCoreCandidate();
+if (pageCoreCandidatePresent) {
+  overlayPageCoreCandidateIntoBundle();
+}
 
-const bundleMeta = readJson(BUNDLE_META_PATH);
-log(`Bundle: ${bundleMeta?.bundle_file_count ?? '?'} files, ${bundleMeta?.bundle_size_mb ?? '?'} MB`);
+let bundleMeta = readJson(BUNDLE_META_PATH);
+log(`Bundle: ${bundleMeta?.bundle_file_count ?? '?'} files, ${bundleMeta?.bundle_size_mb ?? '?'} MB, max file: ${bundleMeta?.bundle_max_file_bytes ? (bundleMeta.bundle_max_file_bytes / 1024 / 1024).toFixed(2) + ' MiB' : '?'}`);
+const contractCheck = checkManifestContract(bundleMeta);
 writeDeployProof({
   deployedCommit: currentGitSha,
   requestedAt,
   bundleMeta,
+  contractCheck,
   releaseStatePhase: proofReleasePhase,
   targetDate: proofTargetDate,
 });
-syncPublicFileIntoBundle(RELEASE_STATE_PATH);
-syncPublicFileIntoBundle(DEPLOY_PROOF_PATH);
 
 if (isDryRun) {
   log('Dry run: stopping before deploy.');
@@ -352,7 +602,32 @@ if (isDryRun) {
 }
 
 // 3. Deploy
-const deployResult = runWranglerDeploy();
+let deployResult = null;
+if (pageCoreCandidatePresent) {
+  const previewDeploy = runWranglerDeploy(PAGE_CORE_STAGING_BRANCH);
+  log(`Preview deployed: url=${previewDeploy.deployment_url} id=${previewDeploy.deployment_id}`);
+  if (!previewDeploy.deployment_url) {
+    fail('page-core candidate preview deploy did not return a deployment URL; production latest.json left unchanged.');
+  }
+  if (!skipSmokes) {
+    log('Waiting 15s for preview deploy propagation...');
+    spawnSync('sleep', ['15']);
+    const previewSmokes = runSmokes(previewDeploy.deployment_url);
+    if (!previewSmokes.smokes_ok) {
+      fail('page-core candidate preview smoke failed; production latest.json left unchanged.');
+    }
+    const previewContracts = verifyRuntimeContracts(previewDeploy.deployment_url, proofTargetDate);
+    if (!previewContracts.ok) {
+      fail(`page-core candidate preview contract smoke failed: ${previewContracts.failures.join('; ')}; production latest.json left unchanged.`);
+    }
+    runUiFieldTruthReport(previewDeploy.deployment_url, proofTargetDate, { pageCoreOnly: true });
+  }
+  promotePageCoreCandidate();
+  buildDeployBundle();
+  bundleMeta = readJson(BUNDLE_META_PATH);
+}
+
+deployResult = runWranglerDeploy(PAGES_DEPLOY_BRANCH);
 log(`Deployed: url=${deployResult.deployment_url} id=${deployResult.deployment_id}`);
 
 // 4. Smokes
@@ -361,9 +636,13 @@ if (!skipSmokes) {
   // Wait a moment for the deploy to propagate
   log('Waiting 15s for deploy propagation...');
   spawnSync('sleep', ['15']);
-  smokeResults = runSmokes();
+  smokeResults = runSmokes(deployResult.deployment_url || PROD_BASE);
   if (!smokeResults.smokes_ok) {
     warn('Some smoke tests failed — deploy proof will reflect this. Review manually.');
+  }
+  const runtimeContracts = verifyRuntimeContracts(deployResult.deployment_url || PROD_BASE, proofTargetDate);
+  if (!runtimeContracts.ok) {
+    fail(`Production runtime contract smoke failed: ${runtimeContracts.failures.join('; ')}`);
   }
 }
 
@@ -378,17 +657,18 @@ writeDeployProof({
   requestedAt,
   verifiedAt: smokeResults.smokes_ok ? verifiedAt : null,
   bundleMeta,
+  contractCheck,
   releaseStatePhase: proofReleasePhase,
   targetDate: proofTargetDate,
 });
 log(`Deploy proof written: ${DEPLOY_PROOF_PATH}`);
 
-// 6. Publish final proof/state artifacts so production serves the same machine
-// evidence that was just written locally.
-syncPublicFileIntoBundle(RELEASE_STATE_PATH);
-syncPublicFileIntoBundle(DEPLOY_PROOF_PATH);
-log('Publishing final release artifacts...');
-runWranglerDeploy();
+// 6. Verify production serves the sanitized visitor status, not private proofs.
+const productionArtifacts = verifyProductionArtifacts(proofTargetDate);
+if (!productionArtifacts.ok) {
+  fail(`Production artifact smoke failed: ${productionArtifacts.failures.join('; ')}`);
+}
+log('Production artifact smoke OK.');
 
 log('');
 log('═══ Release Gate Summary ═══');

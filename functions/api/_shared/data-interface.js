@@ -45,6 +45,8 @@ const REPO_ROOT = (() => {
   } catch {
     // fall through
   }
+  // Wrangler Pages dev: import.meta.url is not file://, use process.cwd()
+  // which is the repo root (same approach as decision-bundle-reader.js).
   if (typeof process !== 'undefined' && typeof process.cwd === 'function') {
     return process.cwd();
   }
@@ -201,15 +203,21 @@ function isLocalDevRequest(request) {
   }
 }
 
-function shouldSkipSummaryEvaluation(request) {
-  const mode = String(process?.env?.RV_V2_SUMMARY_DECISION_MODE || '').trim().toLowerCase();
+function readRuntimeMode(env, key) {
+  const fromEnv = env && typeof env === 'object' ? env[key] : null;
+  const fromProcess = typeof process !== 'undefined' ? process?.env?.[key] : null;
+  return String(fromEnv || fromProcess || '').trim().toLowerCase();
+}
+
+function shouldSkipSummaryEvaluation(request, env) {
+  const mode = readRuntimeMode(env, 'RV_V2_SUMMARY_DECISION_MODE');
   if (mode === 'full') return false;
   if (mode === 'skip') return true;
   return isLocalDevRequest(request);
 }
 
-function shouldSkipSummarySnapshotJoins(request) {
-  const mode = String(process?.env?.RV_V2_SUMMARY_SNAPSHOT_MODE || '').trim().toLowerCase();
+function shouldSkipSummarySnapshotJoins(request, env) {
+  const mode = readRuntimeMode(env, 'RV_V2_SUMMARY_SNAPSHOT_MODE');
   if (mode === 'full') return false;
   if (mode === 'skip') return true;
   return isLocalDevRequest(request);
@@ -579,7 +587,7 @@ export async function fetchStockSummary(ticker, env, request) {
   let decision = null;
   let explanation = null;
   let assembledFundamentals = null;
-  if (!shouldSkipSummaryEvaluation(request)) {
+  if (!shouldSkipSummaryEvaluation(request, env)) {
     try {
       const { assembleDecisionInputs, loadRequestCoreInputs } = await import('./decision-input-assembly.js');
       const { buildStockInsightsV4Evaluation } = await import('./stock-insights-v4.js');
@@ -634,7 +642,7 @@ export async function fetchStockSummary(ticker, env, request) {
   let universe = null;
   let snapshotMarketPrices = null;
   let snapshotMarketStats = null;
-  if (!shouldSkipSummarySnapshotJoins(request)) {
+  if (!shouldSkipSummarySnapshotJoins(request, env)) {
     try {
       const [uSnap, mpSnap, msSnap] = await Promise.all([
         fetchSnapshotJson('universe', request, env),
@@ -673,7 +681,7 @@ export async function fetchStockSummary(ticker, env, request) {
     scopeDoc: fundamentalsScope,
   });
 
-  if (!shouldSkipSummarySnapshotJoins(request) && !firstMeaningfulIdentityName(effectiveTicker, ctx.name, fundamentals?.companyName, universe?.name)) {
+  if (!shouldSkipSummarySnapshotJoins(request, env) && !firstMeaningfulIdentityName(effectiveTicker, ctx.name, fundamentals?.companyName, universe?.name)) {
     fallbackName = await fetchStaticFallbackIdentityName(effectiveTicker, request, env);
   }
 

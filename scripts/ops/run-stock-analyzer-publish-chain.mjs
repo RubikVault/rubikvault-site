@@ -92,6 +92,7 @@ function stepEnv(context, overrides = {}) {
     RV_RUN_ID: context.runId,
     TARGET_MARKET_DATE: context.targetMarketDate,
     RV_TARGET_MARKET_DATE: context.targetMarketDate,
+    RV_GLOBAL_ASSET_CLASSES: process.env.RV_GLOBAL_ASSET_CLASSES || 'STOCK,ETF',
     ...overrides,
   };
 }
@@ -223,9 +224,8 @@ function defineSteps(options, context) {
       command: node,
       args: [
         'scripts/ops/build-stock-analyzer-universe-audit.mjs',
-        '--base-url', 'http://127.0.0.1:8788',
         '--registry-path', 'public/data/universe/v7/registry/registry.ndjson.gz',
-        '--asset-classes', 'STOCK,ETF',
+        '--asset-classes', process.env.RV_GLOBAL_ASSET_CLASSES || 'STOCK,ETF',
         '--max-tickers', '0',
         `--date=${context.targetMarketDate}`,
         '--run-id', context.runId,

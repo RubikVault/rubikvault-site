@@ -2,11 +2,10 @@
 set -euo pipefail
 
 REPO_ROOT="${REPO_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)}"
-OPS_ROOT="${OPS_ROOT:-/volume1/homes/neoboy/RepoOps/rubikvault-site}"
-if [[ -f "$OPS_ROOT/tooling/env.sh" ]]; then
-  # shellcheck disable=SC1090
-  . "$OPS_ROOT/tooling/env.sh"
-fi
+# shellcheck source=scripts/nas/nas-env.sh
+. "$REPO_ROOT/scripts/nas/nas-env.sh"
+# shellcheck source=scripts/nas/node-env.sh
+. "$REPO_ROOT/scripts/nas/node-env.sh"
 
 SUPERVISOR_STAMP="${SUPERVISOR_STAMP:-$(date -u +%Y%m%dT%H%M%SZ)}"
 SUPERVISOR_DIR="$OPS_ROOT/runtime/native-matrix/supervisors/$SUPERVISOR_STAMP"
@@ -25,6 +24,14 @@ WATCHDOG_SCRIPT="${WATCHDOG_SCRIPT:-$REPO_ROOT/scripts/nas/rv-nas-watchdog.sh}"
 
 mkdir -p "$SUPERVISOR_DIR" "$(dirname "$LOCK_DIR")"
 : > "$SUPERVISOR_LOG"
+nas_ensure_runtime_roots
+nas_assert_global_lock_clear "night-pipeline"
+nas_assert_global_lock_clear "open-probe"
+if [[ -n "$(nas_detect_q1_writer_conflict)" ]]; then
+  echo "native_matrix_blocked=q1_writer_conflict" >&2
+  exit 91
+fi
+nas_acquire_global_lock "native-matrix"
 
 acquire_lock() {
   if mkdir "$LOCK_DIR" 2>/dev/null; then
@@ -56,7 +63,7 @@ refresh_lock() {
 }
 
 acquire_lock
-trap 'rm -rf "$LOCK_DIR"' EXIT
+trap 'rm -rf "$LOCK_DIR"; nas_release_global_lock "native-matrix"' EXIT
 
 target_end_iso() {
   python3 - "$END_LOCAL_DATE" "$END_LOCAL_HOUR" "$END_LOCAL_MINUTE" <<'PY'
@@ -201,6 +208,7 @@ start_campaign() {
   (
     cd "$REPO_ROOT"
     exec env \
+      NAS_NATIVE_MATRIX_GLOBAL_LOCK_HELD=1 \
       CAMPAIGN_STAMP="$campaign_stamp" \
       END_LOCAL_DATE="${END_LOCAL_DATE:-}" \
       END_LOCAL_HOUR="$END_LOCAL_HOUR" \
@@ -222,7 +230,7 @@ while [[ "$(should_continue)" == "yes" ]]; do
     new_campaign="$(start_campaign)"
     write_status "monitoring" "campaign_started" "$new_campaign"
   elif [[ "$(campaign_is_healthy "$current_campaign")" == "yes" ]]; then
-    node "$REPO_ROOT/scripts/nas/build-native-matrix-report.mjs" >> "$SUPERVISOR_LOG" 2>&1 || true
+    "$NODE_BIN" "$REPO_ROOT/scripts/nas/build-native-matrix-report.mjs" >> "$SUPERVISOR_LOG" 2>&1 || true
     write_status "monitoring" "campaign_healthy" "$current_campaign"
   else
     new_campaign="$(start_campaign)"
@@ -232,5 +240,5 @@ while [[ "$(should_continue)" == "yes" ]]; do
 done
 
 run_watchdog
-node "$REPO_ROOT/scripts/nas/build-native-matrix-report.mjs" >> "$SUPERVISOR_LOG" 2>&1 || true
+"$NODE_BIN" "$REPO_ROOT/scripts/nas/build-native-matrix-report.mjs" >> "$SUPERVISOR_LOG" 2>&1 || true
 write_status "completed" "target_window_reached" "$(latest_campaign_status)"

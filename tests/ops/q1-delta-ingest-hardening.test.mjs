@@ -74,3 +74,21 @@ test('q1 runner does not publish success before completion and protects full-sca
   assert.match(content, /if exit_code == 0:\n\s+if args\.full_scan_packs:/);
   assert.doesNotMatch(content, /latest_success\.json"\)\n\s+atomic_write_json\(latest_ptr[\s\S]*exit_code = 0/);
 });
+
+test('q1 direct rescue supports restart-safe resume flags and bounded dedupe state', () => {
+  const content = fs.readFileSync(path.join(ROOT, 'scripts/quantlab/materialize_history_touch_delta_q1.py'), 'utf8');
+  assert.match(content, /--resume-completed-packs/);
+  assert.match(content, /--ignore-latest-date-cache/);
+  assert.match(content, /def _merge_latest_dates_from_completed_outputs/);
+  assert.match(content, /pack_emitted_keys_seen: set\[tuple\[str, str\]\] = set\(\)/);
+  assert.match(content, /dedupe_scope": "pack_local_plus_latest_date_by_asset"/);
+  assert.doesNotMatch(content, /^\s*emitted_keys_seen: set\[tuple\[str, str\]\] = set\(\)/m);
+});
+
+test('q1 daily ingest keeps emitted key dedupe pack-local', () => {
+  const content = fs.readFileSync(path.join(ROOT, 'scripts/quantlab/run_daily_delta_ingest_q1.py'), 'utf8');
+  assert.match(content, /pack_emitted_keys_seen: set\[tuple\[str, str\]\] = set\(\)/);
+  assert.match(content, /emitted_delta_keys_total \+= rows_out_total/);
+  assert.match(content, /process_memory_before_kb/);
+  assert.doesNotMatch(content, /^\s*emitted_keys_seen: set\[tuple\[str, str\]\] = set\(\)/m);
+});

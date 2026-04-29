@@ -1,0 +1,22 @@
+schema_version: breakout_outcome_labels.v1
+label_version: breakout_outcome_labels_v1
+
+entry_policy: next_open
+horizons: [10, 20]
+target_atr: 2.0
+stop_atr: 1.0
+time_stop: true
+first_touch_rule: true
+slippage_bps: 10
+
+gap_handling:
+  gap_event_threshold_atr: 2.0
+  flag_gap_events: true
+
+overlap:
+  suppress_multiple_signals_within_days: 10
+  keep_first_signal: true
+
+benchmark:
+  use_sector_benchmark: true
+  use_market_benchmark: true

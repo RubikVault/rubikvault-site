@@ -569,7 +569,7 @@
       window._rvResolution = _rvResolution;
       let _rvFinalSeal = null;
       try {
-        const _sealRes = await fetch('/data/ops/final-integrity-seal-latest.json?rv=' + Date.now(), { cache: 'no-store' });
+        const _sealRes = await fetch('/data/public-status.json?rv=' + Date.now(), { cache: 'no-store' });
         if (_sealRes.ok) _rvFinalSeal = await _sealRes.json();
       } catch (e) {
         _rvFinalSeal = null;
@@ -696,9 +696,15 @@
         const _isCriticalDecision = _assetPipelineStatus === 'FAILED' || _assetVerdict === 'WAIT_PIPELINE_INCOMPLETE' || _assetRiskLevel === 'UNKNOWN';
         _integrityItems.push({ text: _isCriticalDecision ? 'Analysis incomplete' : 'Analysis degraded', color: _isCriticalDecision ? 'var(--red)' : 'var(--yellow)', reason: _reason });
       }
+      const _signalQuality = String(_analysisReadiness?.signal_quality || _dailyDecision?.signal_quality || 'fresh').toLowerCase();
+      if (_signalQuality === 'suppressed') {
+        _integrityItems.push({ text: 'Signals suppressed', color: 'var(--red)' });
+      } else if (_signalQuality === 'degraded') {
+        _integrityItems.push({ text: 'Signal quality degraded', color: 'var(--yellow)' });
+      }
       const _learningGate = _decision.learning_gate || payload.evaluation_v4?.decision?.learning_gate || null;
       if (_decision.regime_transition_active) _integrityItems.push({ text: 'Regime transition active', color: 'var(--red)' });
-      if (fundamentalsView.status === 'unavailable' || fundamentalsView.status === 'degraded') _integrityItems.push({ text: 'Fundamentals limited · Technisches Modell unabhängig davon', color: 'var(--yellow)' });
+      if (fundamentalsView.status === 'unavailable' || fundamentalsView.status === 'degraded') _integrityItems.push({ text: 'Fundamentals limited; technical model remains independent', color: 'var(--yellow)' });
       if ((_learningGate?.learning_status || _decision.learning_status || payload.evaluation_v4?.decision?.learning_status) === 'BOOTSTRAP') _integrityItems.push({ text: 'Learning bootstrap active', color: 'var(--yellow)' });
       { const _minNNotMet = _learningGate?.minimum_n_not_met || _decision.minimum_n_not_met || payload.evaluation_v4?.decision?.minimum_n_not_met || payload.evaluation_v4?.decision?.safety_switch?.trigger === 'minimum_n_not_met'; const _perAssetGateEnabled = _learningGate?.per_asset_gate_enabled === true || _decision.per_asset_gate_enabled === true || payload.evaluation_v4?.decision?.per_asset_gate_enabled === true; if (_minNNotMet && !_perAssetGateEnabled) _integrityItems.push({ text: 'Minimum sample gate not met', color: 'var(--yellow)' }); }
       if (moduleFreshness.some(item => item.state === 'stale')) _integrityItems.push({ text: 'Modules have mixed as-of dates', color: 'var(--yellow)' });
@@ -1472,7 +1478,7 @@
         : _statusSeverity === 'critical'
           ? 'Decision quality is limited until the active blocker clears.'
           : (fundamentalsView.status === 'unavailable' || fundamentalsView.status === 'degraded')
-            ? 'Fundamentals limited · Technisches Modell unabhängig von Fundamentaldaten'
+            ? 'Fundamentals limited; technical model remains independent of fundamentals.'
             : ((_decision.learning_status || payload.evaluation_v4?.decision?.learning_status) === 'BOOTSTRAP')
               ? (() => { const _mnS = payload.evaluation_v4?.decision?.safety_switch?.minimum_n_status; const _resolved = _mnS?.by_horizon?.['20d']?.outcomes_resolved ?? _mnS?.by_horizon?.['5d']?.outcomes_resolved ?? null; const _needed = _mnS?.global_per_horizon_threshold || 200; return _resolved != null ? `Signal learning is building up — ${_resolved}/${_needed} confirmed trades collected. Signals are live but confidence is reduced until the threshold is reached.` : 'Learning model is accumulating historical trade outcomes. Signals are live but confidence is reduced until enough data is collected.'; })()
               : (moduleFreshness.some(item => item.state === 'stale'))

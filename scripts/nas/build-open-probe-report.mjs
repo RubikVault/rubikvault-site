@@ -1,11 +1,15 @@
 #!/usr/bin/env node
 
+import fsSync from 'node:fs';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { PIPELINE_STEPS } from './pipeline-registry.mjs';
 
 const ROOT = process.cwd();
-const remoteRoot = process.env.OPS_ROOT || '/volume1/homes/neoboy/RepoOps/rubikvault-site';
+const defaultRemoteRoot = fsSync.existsSync(path.join(ROOT, 'runtime', 'open-probes'))
+  ? ROOT
+  : ROOT;
+const remoteRoot = process.env.OPS_ROOT || process.env.NAS_OPS_ROOT || defaultRemoteRoot;
 const remoteCampaignsRoot = path.join(remoteRoot, 'runtime', 'open-probes', 'campaigns');
 const remoteRunsRoot = path.join(remoteRoot, 'runtime', 'open-probes', 'runs');
 const remoteReportsRoot = path.join(remoteRoot, 'runtime', 'reports', 'open-probes');
@@ -33,7 +37,7 @@ async function readJson(filePath) {
 
 async function listResultFiles(root) {
   const out = [];
-  async function walk(current) {
+  async function walk(current, depth = 0) {
     let entries = [];
     try {
       entries = await fs.readdir(current, { withFileTypes: true });
@@ -42,8 +46,8 @@ async function listResultFiles(root) {
     }
     for (const entry of entries) {
       const next = path.join(current, entry.name);
-      if (entry.isDirectory()) {
-        await walk(next);
+      if (entry.isDirectory() && depth < 2) {
+        await walk(next, depth + 1);
       } else if (entry.isFile() && entry.name === 'result.json') {
         out.push(next);
       }
@@ -85,6 +89,10 @@ const probeMeta = {
   q1_delta_ingest_smoke: {
     pipeline_id: 'run_daily_delta_ingest_q1',
     label: 'Q1 Delta Ingest Smoke',
+  },
+  q1_delta_cache_health: {
+    pipeline_id: 'run_daily_delta_ingest_q1',
+    label: 'Q1 Delta Cache Health',
   },
   fundamentals_sample: {
     pipeline_id: 'build_fundamentals',
@@ -153,6 +161,7 @@ const probeMeta = {
 };
 
 const stepById = new Map(PIPELINE_STEPS.map((step) => [step.id, step]));
+const deprecatedProbes = new Set(['q1_delta_ingest_smoke']);
 
 const writableRoot = await exists(remoteRoot);
 const campaignsRoot = writableRoot ? remoteCampaignsRoot : localCampaignsRoot;
@@ -165,6 +174,7 @@ for (const filePath of resultFiles) {
   const result = await readJson(filePath);
   if (!result) continue;
   const key = result.probe_id;
+  if (deprecatedProbes.has(key) && process.env.INCLUDE_DEPRECATED_PROBES !== '1') continue;
   if (!grouped.has(key)) {
     const meta = probeMeta[key] || {};
     const step = stepById.get(meta.pipeline_id);

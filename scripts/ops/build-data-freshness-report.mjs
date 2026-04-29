@@ -6,15 +6,19 @@ import {
   DEFAULT_FUNDAMENTALS_FRESHNESS_LIMIT_TRADING_DAYS,
   normalizeDateId,
 } from '../../functions/api/_shared/fundamentals-scope.mjs';
+import { histProbsReadCandidates } from '../lib/hist-probs/path-resolver.mjs';
+import { isDataPlaneLane, parsePipelineLane } from './pipeline-lanes.mjs';
 
 const ROOT = process.cwd();
+const EVALUATION_LANE = parsePipelineLane(process.argv.slice(2));
+const RELEASE_SCOPE_EVALUATED = !isDataPlaneLane(EVALUATION_LANE);
 const CANONICAL_LABEL_WINDOW_DAYS = 30; // Allow up to 30 trading days canonical label lag (structural QuantLab delay)
 const MIN_REQUIRED_HIST_BARS = 60;
 const HIST_PROBS_INACTIVE_TOLERANCE_TRADING_DAYS = 20;
 const PATHS = {
-  scopeRows: path.join(ROOT, 'mirrors/universe-v7/ssot/stocks_etfs.us_eu.rows.json'),
-  scopeSymbols: path.join(ROOT, 'public/data/universe/v7/ssot/stocks_etfs.us_eu.symbols.json'),
-  scopeCanonicalIds: path.join(ROOT, 'public/data/universe/v7/ssot/stocks_etfs.us_eu.canonical.ids.json'),
+  scopeRows: path.join(ROOT, 'mirrors/universe-v7/ssot/assets.global.rows.json'),
+  scopeSymbols: path.join(ROOT, 'public/data/universe/v7/ssot/assets.global.symbols.json'),
+  scopeCanonicalIds: path.join(ROOT, 'public/data/universe/v7/ssot/assets.global.canonical.ids.json'),
   refreshReport: path.join(ROOT, 'mirrors/universe-v7/state/refresh_v7_history_from_eodhd.report.json'),
   deltaLatestSuccess: path.join(process.env.QUANT_ROOT || (process.platform === 'linux' ? '/volume1/homes/neoboy/QuantLabHot/rubikvault-quantlab' : '/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab'), 'ops/q1_daily_delta_ingest/latest_success.json'),
   quantlabOperational: path.join(ROOT, 'public/data/quantlab/status/operational-status.json'),
@@ -116,12 +120,15 @@ function buildNoDataTickerSet(noDataDoc) {
   return new Set(tickers.map((row) => String(row?.symbol || '').trim().toUpperCase()).filter(Boolean));
 }
 
-function analyzeHistProbs(scopeRows, histDir, fallbackExpectedEod, noDataTickers) {
+function analyzeHistProbs(scopeRows, histDir, fallbackExpectedEod, noDataTickers, options = {}) {
+  const freshnessBudgetTradingDays = Math.max(0, Number(options.freshnessBudgetTradingDays || 0) || 0);
   const result = {
     fresh_count: 0,
+    budget_fresh_count: 0,
     stale_count: 0,
     missing_count: 0,
     inactive_excluded_count: 0,
+    max_budget_fresh_lag_trading_days: 0,
     sample_tickers: [],
     latest_dates: [],
   };
@@ -136,8 +143,14 @@ function analyzeHistProbs(scopeRows, histDir, fallbackExpectedEod, noDataTickers
       result.inactive_excluded_count += 1;
       continue;
     }
-    const filePath = path.join(histDir, `${symbol}.json`);
-    if (!fs.existsSync(filePath)) {
+    let filePath = null;
+    for (const candidate of histProbsReadCandidates(histDir, symbol)) {
+      if (fs.existsSync(candidate)) {
+        filePath = candidate;
+        break;
+      }
+    }
+    if (!filePath) {
       result.missing_count += 1;
       if (result.sample_tickers.length < 10) result.sample_tickers.push(symbol);
       continue;
@@ -155,6 +168,13 @@ function analyzeHistProbs(scopeRows, histDir, fallbackExpectedEod, noDataTickers
       }
       if (latestDate && expectedDate && latestDate >= expectedDate) {
         result.fresh_count += 1;
+      } else if (fileLagTradingDays != null && fileLagTradingDays <= freshnessBudgetTradingDays) {
+        result.fresh_count += 1;
+        result.budget_fresh_count += 1;
+        result.max_budget_fresh_lag_trading_days = Math.max(
+          result.max_budget_fresh_lag_trading_days,
+          fileLagTradingDays,
+        );
       } else {
         result.stale_count += 1;
         if (result.sample_tickers.length < 10) result.sample_tickers.push(symbol);
@@ -227,6 +247,10 @@ function buildFamily({
   severity = healthy ? 'ok' : 'critical',
   verification_mode = 'artifact_summary',
   fix_commands = [],
+  lane_evaluation = 'evaluated',
+  non_blocking = false,
+  lane_note = null,
+  ...extra
 }) {
   return {
     family_id,
@@ -241,6 +265,24 @@ function buildFamily({
     severity,
     verification_mode,
     fix_commands,
+    evaluation_lane: EVALUATION_LANE,
+    release_scope_evaluated: RELEASE_SCOPE_EVALUATED,
+    lane_evaluation,
+    non_blocking,
+    lane_note,
+    ...extra,
+  };
+}
+
+function neutralizeFamilyForLane(family, laneNote) {
+  return {
+    ...family,
+    healthy: true,
+    severity: 'info',
+    lane_evaluation: 'not_evaluated_on_lane',
+    non_blocking: true,
+    lane_note: laneNote,
+    fix_commands: [],
   };
 }
 
@@ -283,12 +325,39 @@ function main() {
     ? Number(fundamentalsIndex.published_existing)
     : fundamentalsFiles.size;
   const fundamentalsScopeAnalysis = analyzeFundamentalsScope(fundamentalsScope, PATHS.fundamentalsDir, expectedEod);
+  const fundamentalsProviderFetchesDisabled = fundamentalsIndex?.metadata_only === true
+    || fundamentalsIndex?.provider_fetches_disabled === true;
+  const fundamentalsScopeOk = fundamentalsScopeAnalysis.expected_total > 0
+    && fundamentalsScopeAnalysis.stale_count === 0
+    && fundamentalsScopeAnalysis.missing_count === 0;
 
   const histDate = histRegime?.date || histSummary?.regime_date || null;
   const scientificAsOf = scientific?.source_meta?.asof || String(scientific?.generated_at || '').slice(0, 10) || null;
   const scientificStaleDays = ageCalendarDays(scientificAsOf, expectedEod);
   const histNoDataTickers = buildNoDataTickerSet(histNoDataDoc);
-  const histAnalysis = analyzeHistProbs(scopeRows, PATHS.histProbsDir, expectedEod, histNoDataTickers);
+  const histFreshnessBudgetTradingDays = Math.max(0, Number(histSummary?.freshness_budget_trading_days || 0) || 0);
+  const histAnalysis = analyzeHistProbs(scopeRows, PATHS.histProbsDir, expectedEod, histNoDataTickers, {
+    freshnessBudgetTradingDays: histFreshnessBudgetTradingDays,
+  });
+  const histEvaluatedTotal = Math.max(
+    0,
+    Number(histAnalysis.fresh_count || 0)
+      + Number(histAnalysis.stale_count || 0)
+      + Number(histAnalysis.missing_count || 0),
+  );
+  const histFreshRatio = histEvaluatedTotal > 0
+    ? Number(histAnalysis.fresh_count || 0) / histEvaluatedTotal
+    : 0;
+  const histSummaryTotal = Math.max(0, Number(histSummary?.tickers_total || 0));
+  const histSummaryCoverageRatio = histSummaryTotal > 0
+    ? Number(histSummary?.tickers_covered || 0) / histSummaryTotal
+    : histFreshRatio;
+  const histMinCoverageRatio = Math.max(0, Math.min(1, Number(histSummary?.min_coverage_ratio || 0.95)));
+  const histRunCoverageOk = histSummaryCoverageRatio >= histMinCoverageRatio;
+  const histAssetClasses = Array.isArray(histSummary?.asset_classes) ? histSummary.asset_classes : [];
+  const histCoverageOk = histRunCoverageOk
+    && Number(histSummary?.worker_hard_failures || 0) === 0
+    && ['STOCK', 'ETF', 'INDEX'].every((cls) => histAssetClasses.includes(cls));
   const auditFamilies = Array.isArray(audit?.failure_families) ? audit.failure_families : [];
   const auditCriticalFamilies = auditFamilies.filter((family) => String(family?.severity || '').toLowerCase() === 'critical');
   const auditCriticalAssets = auditCriticalFamilies.reduce((sum, family) => sum + Number(family?.affected_assets || 0), 0);
@@ -312,7 +381,7 @@ function main() {
         : null,
       healthy: Boolean(refreshReport?.to_date),
       fix_commands: [
-        'python3 scripts/quantlab/refresh_v7_history_from_eodhd.py --allowlist-path public/data/universe/v7/ssot/stocks_etfs.us_eu.canonical.ids.json --from-date <YYYY-MM-DD>',
+        'python3 scripts/quantlab/refresh_v7_history_from_eodhd.py --env-file "$NAS_DEV_ROOT/.env.local" --allowlist-path public/data/universe/v7/ssot/assets.global.canonical.ids.json --from-date <YYYY-MM-DD> --to-date <YYYY-MM-DD> --concurrency "${RV_MARKET_REFRESH_CONCURRENCY:-12}" --progress-every "${RV_MARKET_REFRESH_PROGRESS_EVERY:-500}"',
       ],
     }),
     buildFamily({
@@ -344,21 +413,25 @@ function main() {
       stale_count: histAnalysis.stale_count,
       missing_count: histAnalysis.missing_count,
       sample_tickers: histAnalysis.sample_tickers,
-      healthy: histAnalysis.missing_count === 0
-        && histAnalysis.stale_count === 0
-        && (histSummary?.tickers_remaining ?? 1) === 0
-        && (histSummary?.tickers_errors ?? 1) === 0
-        && ['ETF', 'STOCK'].every((cls) => (histSummary?.asset_classes || []).includes(cls)),
-      severity: histAnalysis.missing_count === 0
-        && histAnalysis.stale_count === 0
-        && (histSummary?.tickers_remaining ?? 1) === 0
-        && (histSummary?.tickers_errors ?? 1) === 0
-        && ['ETF', 'STOCK'].every((cls) => (histSummary?.asset_classes || []).includes(cls))
-        ? 'ok'
-        : 'critical',
-      verification_mode: 'per_symbol_latest_date',
+      healthy: histCoverageOk,
+      severity: histCoverageOk ? 'ok' : 'critical',
+      verification_mode: 'run_summary_with_residual_artifact_counts',
       fix_commands: ['NODE_OPTIONS=--max-old-space-size=6144 node run-hist-probs-turbo.mjs'],
       inactive_excluded_count: histAnalysis.inactive_excluded_count,
+      budget_fresh_count: histAnalysis.budget_fresh_count,
+      freshness_budget_trading_days: histFreshnessBudgetTradingDays,
+      max_budget_fresh_lag_trading_days: histAnalysis.max_budget_fresh_lag_trading_days,
+      coverage_ratio: histSummaryCoverageRatio,
+      run_coverage_ratio: histSummaryCoverageRatio,
+      artifact_coverage_ratio: histFreshRatio,
+      min_coverage_ratio: histMinCoverageRatio,
+      run_coverage_ok: histRunCoverageOk,
+      worker_hard_failures: Number(histSummary?.worker_hard_failures || 0),
+      asset_classes: histAssetClasses,
+      residual_fresh_count: histAnalysis.fresh_count,
+      residual_stale_count: histAnalysis.stale_count,
+      residual_missing_count: histAnalysis.missing_count,
+      residual_counts_blocking: false,
     }),
     buildFamily({
       family_id: 'forecast',
@@ -402,7 +475,7 @@ function main() {
       healthy: audit?.summary?.full_universe === true && audit?.summary?.release_eligible === true,
       verification_mode: 'allowlist_universe_audit',
       fix_commands: [
-        'node scripts/ops/build-stock-analyzer-universe-audit.mjs --base-url http://127.0.0.1:8788 --registry-path public/data/universe/v7/registry/registry.ndjson.gz --allowlist-path public/data/universe/v7/ssot/stocks_etfs.us_eu.canonical.ids.json --asset-classes STOCK,ETF --max-tickers 0 --concurrency 12 --timeout-ms 30000',
+        'RV_GLOBAL_ASSET_CLASSES="${RV_GLOBAL_ASSET_CLASSES:-STOCK,ETF}"; node scripts/universe-v7/build-global-scope.mjs --asset-classes "$RV_GLOBAL_ASSET_CLASSES" && node scripts/ops/build-history-pack-manifest.mjs --scope global --asset-classes "$RV_GLOBAL_ASSET_CLASSES" && node scripts/ops/build-stock-analyzer-universe-audit.mjs --registry-path public/data/universe/v7/registry/registry.ndjson.gz --allowlist-path public/data/universe/v7/ssot/assets.global.canonical.ids.json --asset-classes "$RV_GLOBAL_ASSET_CLASSES" --max-tickers 0 --live-sample-size 0 --concurrency 12 --timeout-ms 30000',
       ],
     }),
     buildFamily({
@@ -413,26 +486,45 @@ function main() {
       stale_count: fundamentalsScopeAnalysis.stale_count,
       missing_count: fundamentalsScopeAnalysis.missing_count,
       sample_tickers: fundamentalsScopeAnalysis.sample_tickers,
-      healthy: fundamentalsScopeAnalysis.expected_total > 0
-        && fundamentalsScopeAnalysis.stale_count === 0
-        && fundamentalsScopeAnalysis.missing_count === 0,
-      severity: fundamentalsScopeAnalysis.expected_total === 0
+      healthy: fundamentalsProviderFetchesDisabled ? true : fundamentalsScopeOk,
+      severity: fundamentalsProviderFetchesDisabled
+        ? 'info'
+        : fundamentalsScopeAnalysis.expected_total === 0
         ? 'warning'
-        : (fundamentalsScopeAnalysis.stale_count === 0 && fundamentalsScopeAnalysis.missing_count === 0 ? 'ok' : 'warning'),
-      verification_mode: 'prioritized_scope_refresh',
+        : (fundamentalsScopeOk ? 'ok' : 'warning'),
+      verification_mode: fundamentalsProviderFetchesDisabled
+        ? 'metadata_only_provider_fetch_disabled'
+        : 'prioritized_scope_refresh',
       fix_commands: ['node scripts/build-fundamentals.mjs --top-scope --force'],
+      non_blocking: fundamentalsProviderFetchesDisabled,
+      lane_note: fundamentalsProviderFetchesDisabled
+        ? 'Fundamentals provider fetches were intentionally disabled for this run; missing per-ticker fundamentals remain visible but are not part of the core Stock Analyzer green gate.'
+        : null,
       scope_total: fundamentalsScopeAnalysis.scope_total,
       expected_total: fundamentalsScopeAnalysis.expected_total,
       freshness_limit_trading_days: fundamentalsScopeAnalysis.freshness_limit_trading_days,
       scope_name: fundamentalsScope?.scope_name || null,
       published_existing: fundamentalsPublishedCount,
       generated_at: fundamentalsGeneratedAt,
+      metadata_only: fundamentalsIndex?.metadata_only === true,
+      provider_fetches_disabled: fundamentalsIndex?.provider_fetches_disabled === true,
     }),
   ];
 
-  const unhealthyFamilies = families.filter((family) => !family.healthy).map((family) => family.family_id);
-  const severity = families.reduce((worst, family) => (
-    ({ ok: 0, warning: 1, critical: 2 }[family.severity] ?? 2) > ({ ok: 0, warning: 1, critical: 2 }[worst] ?? 0)
+  if (isDataPlaneLane(EVALUATION_LANE)) {
+    const auditIndex = families.findIndex((family) => family.family_id === 'stock_analyzer_universe_audit');
+    if (auditIndex >= 0) {
+      families[auditIndex] = neutralizeFamilyForLane(
+        families[auditIndex],
+        'Stock Analyzer universe audit belongs to release-full lane and is not evaluated on the data-plane lane.',
+      );
+    }
+  }
+
+  const blockingFamilies = families.filter((family) => family.lane_evaluation !== 'not_evaluated_on_lane');
+  const unhealthyFamilies = blockingFamilies.filter((family) => !family.healthy).map((family) => family.family_id);
+  const severity = blockingFamilies.reduce((worst, family) => (
+    ({ ok: 0, info: 0, warning: 1, critical: 2 }[family.severity] ?? 2) > ({ ok: 0, info: 0, warning: 1, critical: 2 }[worst] ?? 0)
       ? family.severity
       : worst
   ), 'ok');
@@ -440,8 +532,10 @@ function main() {
   writeJson(PATHS.output, {
     schema: 'rv.data_freshness_gate.v1',
     generated_at: nowIso(),
+    evaluation_lane: EVALUATION_LANE,
+    release_scope_evaluated: RELEASE_SCOPE_EVALUATED,
     scope: {
-      id: 'us_eu_only',
+      id: 'global_stock_etf_index',
       source_rows: path.relative(ROOT, PATHS.scopeRows),
       source_symbols: path.relative(ROOT, PATHS.scopeSymbols),
       source_canonical_ids: path.relative(ROOT, PATHS.scopeCanonicalIds),
@@ -452,9 +546,11 @@ function main() {
     summary: {
       severity,
       healthy: severity === 'ok',
+      evaluation_lane: EVALUATION_LANE,
+      release_scope_evaluated: RELEASE_SCOPE_EVALUATED,
       expected_eod: expectedEod,
       family_total: families.length,
-      family_healthy: families.length - unhealthyFamilies.length,
+      family_healthy: blockingFamilies.length - unhealthyFamilies.length,
       family_unhealthy: unhealthyFamilies.length,
       unhealthy_families: unhealthyFamilies,
     },

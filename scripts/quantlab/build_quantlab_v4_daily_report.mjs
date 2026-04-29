@@ -96,12 +96,17 @@ function sha256(value) {
   return crypto.createHash('sha256').update(value).digest('hex');
 }
 
-function walkFind(rootDir, targetName) {
+function walkFind(rootDir, targetName, options = {}) {
+  const maxDepth = Number.isFinite(Number(options.maxDepth)) ? Number(options.maxDepth) : 8;
+  const maxEntries = Number.isFinite(Number(options.maxEntries)) ? Number(options.maxEntries) : 50000;
+  const skipDirs = new Set(options.skipDirs || ['.git', 'node_modules', '.venv', 'runtime', 'repo']);
   const out = [];
   if (!fs.existsSync(rootDir)) return out;
-  const stack = [rootDir];
-  while (stack.length) {
-    const current = stack.pop();
+  const stack = [{ dir: rootDir, depth: 0 }];
+  let visited = 0;
+  while (stack.length && visited < maxEntries) {
+    const { dir: current, depth } = stack.pop();
+    visited += 1;
     let entries = [];
     try {
       entries = fs.readdirSync(current, { withFileTypes: true });
@@ -110,7 +115,9 @@ function walkFind(rootDir, targetName) {
     }
     for (const entry of entries) {
       const full = path.join(current, entry.name);
-      if (entry.isDirectory()) stack.push(full);
+      if (entry.isDirectory() && depth < maxDepth && !skipDirs.has(entry.name)) {
+        stack.push({ dir: full, depth: depth + 1 });
+      }
       else if (entry.isFile() && entry.name === targetName) out.push(full);
     }
   }
@@ -227,7 +234,10 @@ function toStatus(value, good = 80, warn = 55) {
 
 function readDirSizeGb(targetPath) {
   try {
-    const raw = execSync(`du -sk "${targetPath}"`, { encoding: 'utf8' }).trim().split(/\s+/)[0];
+    const raw = execFileSync('du', ['-sk', targetPath], {
+      encoding: 'utf8',
+      timeout: Number(process.env.QUANTLAB_DU_TIMEOUT_MS || 10000),
+    }).trim().split(/\s+/)[0];
     return round(Number(raw || 0) / 1024 / 1024, 2);
   } catch {
     return null;
@@ -365,6 +375,7 @@ function buildRawBarsFreshnessSummary(quantRoot, reportDate, assetTypes = ['stoc
       {
         cwd: REPO_ROOT,
         encoding: 'utf8',
+        timeout: Number(process.env.QUANTLAB_RAW_BARS_TRUTH_TIMEOUT_MS || 30000),
       },
     );
     const parsed = JSON.parse(String(stdout || '').trim() || '{}');

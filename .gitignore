@@ -105,12 +105,38 @@ functions/api/_debug-trace.js
 functions/api/_bak/
 functions/api/_bak/**
 debug/
-!public/debug/
-!public/debug/**
 internal/
-!public/internal/
 rubikvault-site/
 .github/workflows/*.bak.*
+
+# Private public/ artifacts: local/NAS only, never deploy or newly track
+var/private/
+public/debug/
+public/internal/
+public/ops/
+public/mission-control*/
+public/internal-dashboard*
+public/dashboard*.html
+public/dashboard_v*/
+public/dashboard_v6_meta_data*.json
+public/learning.html
+public/proof.html
+public/diagnose.js
+public/runblock-v3-local-check.html
+public/quantlab-v4-daily*
+public/data/reports/
+public/data/ops/
+public/data/pipeline/
+public/data/ui/
+public/data/runtime/
+public/data/runblock/
+public/data/decisions/
+public/data/quantlab/
+public/data/v3/audit/
+public/data/universe/v7/reports/
+public/data/universe/v7/ssot/*report*.json
+public/mirrors/
+public/mirror/
 
 # Noise: workstation-only helpers
 check_dom_ids.py

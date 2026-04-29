@@ -1,10 +1,16 @@
 # ============================================================
 # CURSOR RULES — RUBIKVAULT (V3.2 FINAL - MISSION CONTROL ED.)
-# Goal: 0€ long-term operation (Cloudflare Free Tier), maximum robustness.
+# Goal: Cloudflare + GitHub Free Tier infrastructure, existing provider keys only, maximum robustness.
 # Context: "Mission Control v3.0" Architecture implementation.
 # I am a NON-CODER Product Owner. You are Senior Web Developer + System Architect.
 # Language policy: ENGLISH ONLY for website/UI/dashboard/logs/errors/news.
 # ============================================================
+
+# CURRENT SSOT
+- Read `PROJECT.md` first. It overrides stale wording in older root docs.
+- For NAS operations, read `docs/ops/nas-runbook.md` and `docs/ops/nas-night-supervisor.md`.
+- The current production executor is `scripts/nas/rv-nas-night-supervisor.sh`; do not revive the old `pipeline-master`.
+- Codex/LLM heartbeats are not production automation. Durable scheduling must run on the NAS.
 
 
 # ============================================================
@@ -20,11 +26,17 @@
 # ============================================================
 # 1) NON-NEGOTIABLE PRODUCT CONSTRAINTS (HARD RULES)
 # ============================================================
-- The website must remain 0€ to operate long-term (Cloudflare Free Tier).
+- The website infrastructure must remain free-tier long-term (Cloudflare Free Tier). Existing provider keys such as EODHD are allowed.
+- GitHub must remain free-tier long-term. Do not require paid Actions minutes, paid runners, paid artifact/package storage, or paid GitHub features.
 - Never design solutions that can exceed Cloudflare or API provider limits due to visitor traffic.
 - Visitors MUST NOT trigger external API fetches.
 - FETCH ONCE, READ MANY is mandatory.
 - All external fetching must be centrally deduplicated via "Mission Control" logic.
+- Cloudflare deployments must always be verified. If the build fails, debug and fix it instead of ignoring the deploy.
+- GitHub workflows must not remain failing on `main`; fix them or remove only when proven obsolete.
+- Never commit private personal data, secrets, private account details, or local identity leaks to `main`.
+- MAIN is user-facing ENGLISH ONLY: website, dashboard, public metadata, errors, and content must not contain German text.
+- Keep static/public deployment artifacts compact for the ~90k-asset Stock Analyzer and future iOS/Android apps. Avoid huge duplicated JSON and oversized bundles.
 - I do not know code well → default to safe choices and explain everything.
 
 
@@ -42,7 +54,8 @@
 # 3) BUDGETS & LIMITS
 # ============================================================
 - Limits defined in `registry/limits.json` or `config/rv-budgets.json`.
-- GitHub Actions are the ONLY place where external APIs are called.
+- Check public/deploy artifact size before release. Prefer compact static shards, compression, and CDN-friendly layouts over monolithic per-asset payloads.
+- External provider calls must run only in controlled pipeline jobs (currently NAS Night Supervisor; legacy GitHub Actions only where still explicitly documented). Visitor traffic must not scale provider calls.
 - KV Writes are strictly limited (max 1000/day). Dedup writes in the Finalizer job only.
 
 
@@ -106,10 +119,14 @@
 
 - **VERIFICATION (After building):**
   - Run syntax checks or `npm run test` if applicable.
+  - Verify Cloudflare build/deploy health when release-facing files changed.
+  - Verify GitHub workflows are not left red on `main`.
+  - Verify no private data leaks and no German user-facing text are introduced.
+  - Verify public/static artifact size stays reasonable for Cloudflare Free Tier and mobile performance.
   - If valid: Move to the next task in the plan immediately.
 
 - **INCIDENT MODE:**
-  - Only ask questions if the instruction is physically impossible or violates the "0€/No R2" rule.
+  - Only ask questions if the instruction is physically impossible or violates the "Cloudflare Free Tier / No R2 / No D1" rule.
 
 
 # ============================================================

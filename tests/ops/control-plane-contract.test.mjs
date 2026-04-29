@@ -21,6 +21,16 @@ function validDecisionBundle(targetMarketDate) {
   };
 }
 
+function validHistStatus() {
+  return {
+    schema: 'rv.hist_probs.status_summary.v1',
+    hist_probs_mode: 'all',
+    catchup_status: 'complete',
+    retry_remaining: 0,
+    coverage_ratio: 1,
+  };
+}
+
 test('control-plane consistency fails when target dates diverge', () => {
   const result = validateControlPlaneConsistency({
     release: { run_id: 'r1', target_date: '2026-04-10' },
@@ -112,6 +122,7 @@ test('final seal marks stale runtime and epoch observers against the active targ
     },
     launchd: { allowed_launchd_only: true },
     storage: { disk: { heavy_jobs_allowed: true }, nas: { reachable: true } },
+    histProbsStatus: validHistStatus(),
     requiredLeafFailed: false,
     now: new Date('2026-04-18T09:20:00Z'),
   });
@@ -180,6 +191,7 @@ test('final seal exposes runtime_preflight as the leading blocker', () => {
     launchd: { allowed_launchd_only: true },
     storage: { disk: { heavy_jobs_allowed: true }, nas: { reachable: true } },
     decisionBundle: validDecisionBundle(targetMarketDate),
+    histProbsStatus: validHistStatus(),
     heartbeat: { last_seen: '2026-04-17T20:55:00Z' },
     previousFinal: { generated_at: '2026-04-17T20:30:00Z' },
     requiredLeafFailed: false,
@@ -252,6 +264,7 @@ test('final seal degrades policy-neutral structural gaps without reintroducing a
     launchd: { allowed_launchd_only: true },
     storage: { disk: { heavy_jobs_allowed: true }, nas: { reachable: true } },
     decisionBundle: validDecisionBundle(targetMarketDate),
+    histProbsStatus: validHistStatus(),
     heartbeat: { last_seen: '2026-04-17T20:55:00Z' },
     previousFinal: { generated_at: '2026-04-17T20:30:00Z' },
     requiredLeafFailed: false,
@@ -323,6 +336,7 @@ test('final seal ignores stale publish crash blockers once publish is green agai
     launchd: { allowed_launchd_only: true },
     storage: { disk: { heavy_jobs_allowed: true }, nas: { reachable: true } },
     decisionBundle: validDecisionBundle(targetMarketDate),
+    histProbsStatus: validHistStatus(),
     crashSeal: {
       status: 'FAILED',
       run_id: 'r1',
@@ -416,6 +430,7 @@ test('final seal keeps decision bundle coverage warnings advisory-only', () => {
         buy_count: 0,
       },
     },
+    histProbsStatus: validHistStatus(),
     heartbeat: { last_seen: '2026-04-17T20:55:00Z' },
     previousFinal: { generated_at: '2026-04-17T20:30:00Z' },
     requiredLeafFailed: false,
@@ -423,7 +438,8 @@ test('final seal keeps decision bundle coverage warnings advisory-only', () => {
   });
   assert.equal(seal.blocking_reasons.some((item) => item.id === 'eligible_wait_pipeline_incomplete'), false);
   assert.equal(seal.blocking_reasons.some((item) => item.id === 'risk_unknown'), false);
-  assert.equal(seal.status, 'OK');
+  assert.equal(seal.blocking_reasons.some((item) => item.id === 'decision_public_coverage_below_90pct'), true);
+  assert.equal(seal.status, 'FAILED');
   assert.equal(seal.advisories.some((item) => item.id === 'eligible_wait_pipeline_incomplete'), true);
   assert.equal(seal.advisories.some((item) => item.id === 'risk_unknown'), true);
 });

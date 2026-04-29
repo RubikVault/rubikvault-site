@@ -1459,7 +1459,7 @@ async function computeEligibilityAndReports({ registryRows, coreSet, cfg, runId,
 function rankScore(rec) {
   const elig = toSafeNum(rec.computed?.score_0_100, 0) / 100;
   const layer = String(rec.computed?.layer || '').toUpperCase();
-  const layerBoost = layer === 'L1_FULL' ? 0.15 : layer === 'L2_PARTIAL' ? 0.07 : 0;
+  const layerBoost = layer === 'L0_LEGACY_CORE' ? 0.18 : layer === 'L1_FULL' ? 0.15 : layer === 'L2_PARTIAL' ? 0.07 : 0;
   
   const avg30 = Math.max(1, toSafeNum(rec.avg_volume_30d, 1));
   const price = toSafeNum(rec._tmp_recent_closes?.[0], 1); 

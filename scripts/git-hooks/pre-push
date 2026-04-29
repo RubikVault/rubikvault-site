@@ -21,9 +21,13 @@ url="$2"
 
 # Only enforce when pushing to the canonical remote main branch.
 push_targets_main=0
+main_local_sha=""
+main_remote_sha=""
 while read -r local_ref local_sha remote_ref remote_sha; do
   if [ "$remote_ref" = "refs/heads/main" ]; then
     push_targets_main=1
+    main_local_sha="$local_sha"
+    main_remote_sha="$remote_sha"
   fi
 done
 
@@ -32,9 +36,25 @@ if [ "$push_targets_main" -eq 0 ]; then
 fi
 
 echo "[pre-push] verifying deploy bundle builds cleanly (dist/pages-prod/)..."
-if ! node scripts/ops/build-deploy-bundle.mjs --strict --dry-run >/dev/null 2>&1; then
-  echo "[pre-push] FAIL: build-deploy-bundle.mjs --strict --dry-run failed."
-  echo "[pre-push] Run \`node scripts/ops/build-deploy-bundle.mjs --strict --dry-run\` for details."
+if ! node scripts/ops/build-deploy-bundle.mjs --strict --strict-manifest >/dev/null 2>&1; then
+  echo "[pre-push] FAIL: build-deploy-bundle.mjs --strict --strict-manifest failed."
+  echo "[pre-push] Run \`node scripts/ops/build-deploy-bundle.mjs --strict --strict-manifest\` for details."
+  echo "[pre-push] Bypass with --no-verify only if you understand the risk."
+  exit 1
+fi
+
+echo "[pre-push] verifying deploy bundle has no private artifacts..."
+if ! node scripts/ops/privacy-gate.mjs --dist dist/pages-prod >/dev/null 2>&1; then
+  echo "[pre-push] FAIL: privacy-gate found private artifacts in dist/pages-prod."
+  echo "[pre-push] Run \`node scripts/ops/privacy-gate.mjs --dist dist/pages-prod\` for details."
+  echo "[pre-push] Bypass with --no-verify only if you understand the risk."
+  exit 1
+fi
+
+echo "[pre-push] verifying changed paths contain no private artifacts..."
+if ! node scripts/ops/privacy-gate.mjs --changed "$main_remote_sha" "$main_local_sha" >/dev/null 2>&1; then
+  echo "[pre-push] FAIL: privacy-gate found private changed paths for main."
+  echo "[pre-push] Run \`node scripts/ops/privacy-gate.mjs --changed $main_remote_sha $main_local_sha\` for details."
   echo "[pre-push] Bypass with --no-verify only if you understand the risk."
   exit 1
 fi

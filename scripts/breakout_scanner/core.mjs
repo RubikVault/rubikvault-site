@@ -1,5 +1,8 @@
 /**
- * BREAKOUT-SCANNER v1.0 — Core Utility Logic
+ * BREAKOUT-SCANNER legacy_v1 — Core Utility Logic
+ *
+ * Frozen comparison path for Breakout Engine V1.2. Do not build new product
+ * logic on these discrete states.
  */
 
 import { evaluateBreakoutState } from '../runblock/layers/02b-breakout-state.mjs';

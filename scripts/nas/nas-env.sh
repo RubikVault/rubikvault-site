@@ -25,6 +25,7 @@ export NAS_QUANT_ROOT="${NAS_QUANT_ROOT:-/volume1/homes/neoboy/QuantLabHot/rubik
 export OPS_ROOT="${OPS_ROOT:-$NAS_OPS_ROOT}"
 export QUANT_ROOT="${QUANT_ROOT:-$NAS_QUANT_ROOT}"
 export RV_EODHD_ENV_FILE="${RV_EODHD_ENV_FILE:-$NAS_DEV_ROOT/.env.local}"
+export RV_CLOUDFLARE_ENV_FILE="${RV_CLOUDFLARE_ENV_FILE:-$NAS_OPS_ROOT/secrets/cloudflare.env}"
 
 export NAS_RUNTIME_ROOT="${NAS_RUNTIME_ROOT:-$NAS_OPS_ROOT/runtime}"
 export NAS_LOCK_ROOT="${NAS_LOCK_ROOT:-$NAS_RUNTIME_ROOT/locks}"
@@ -153,6 +154,7 @@ nas_export_provider_secrets() {
   local env_file="${1:-$RV_EODHD_ENV_FILE}"
   export RV_EODHD_PROVIDER_KEY_STATUS="${RV_EODHD_PROVIDER_KEY_STATUS:-missing_provider_key}"
   local key_value token_value cloudflare_token_value cloudflare_account_value cloudflare_project_value
+  local cloudflare_env_file="${RV_CLOUDFLARE_ENV_FILE:-}"
 
   if nas_is_placeholder_secret "${EODHD_API_KEY:-}"; then
     unset EODHD_API_KEY
@@ -186,8 +188,14 @@ nas_export_provider_secrets() {
   fi
   if [[ -z "${CLOUDFLARE_API_TOKEN:-}" ]]; then
     cloudflare_token_value="$(nas_load_env_file_secret "$env_file" "CLOUDFLARE_API_TOKEN" || true)"
+    if [[ -z "$cloudflare_token_value" && -n "$cloudflare_env_file" && "$cloudflare_env_file" != "$env_file" ]]; then
+      cloudflare_token_value="$(nas_load_env_file_secret "$cloudflare_env_file" "CLOUDFLARE_API_TOKEN" || true)"
+    fi
     if [[ -z "$cloudflare_token_value" ]]; then
       cloudflare_token_value="$(nas_load_env_file_secret "$env_file" "CF_API_TOKEN" || true)"
+    fi
+    if [[ -z "$cloudflare_token_value" && -n "$cloudflare_env_file" && "$cloudflare_env_file" != "$env_file" ]]; then
+      cloudflare_token_value="$(nas_load_env_file_secret "$cloudflare_env_file" "CF_API_TOKEN" || true)"
     fi
     if [[ -n "$cloudflare_token_value" ]]; then
       export CLOUDFLARE_API_TOKEN="$cloudflare_token_value"
@@ -199,8 +207,14 @@ nas_export_provider_secrets() {
   fi
   if [[ -z "${CLOUDFLARE_ACCOUNT_ID:-}" ]]; then
     cloudflare_account_value="$(nas_load_env_file_secret "$env_file" "CLOUDFLARE_ACCOUNT_ID" || true)"
+    if [[ -z "$cloudflare_account_value" && -n "$cloudflare_env_file" && "$cloudflare_env_file" != "$env_file" ]]; then
+      cloudflare_account_value="$(nas_load_env_file_secret "$cloudflare_env_file" "CLOUDFLARE_ACCOUNT_ID" || true)"
+    fi
     if [[ -z "$cloudflare_account_value" ]]; then
       cloudflare_account_value="$(nas_load_env_file_secret "$env_file" "CF_ACCOUNT_ID" || true)"
+    fi
+    if [[ -z "$cloudflare_account_value" && -n "$cloudflare_env_file" && "$cloudflare_env_file" != "$env_file" ]]; then
+      cloudflare_account_value="$(nas_load_env_file_secret "$cloudflare_env_file" "CF_ACCOUNT_ID" || true)"
     fi
     if [[ -n "$cloudflare_account_value" ]]; then
       export CLOUDFLARE_ACCOUNT_ID="$cloudflare_account_value"
@@ -212,8 +226,14 @@ nas_export_provider_secrets() {
   fi
   if [[ -z "${CLOUDFLARE_PROJECT_NAME:-}" ]]; then
     cloudflare_project_value="$(nas_load_env_file_secret "$env_file" "CLOUDFLARE_PROJECT_NAME" || true)"
+    if [[ -z "$cloudflare_project_value" && -n "$cloudflare_env_file" && "$cloudflare_env_file" != "$env_file" ]]; then
+      cloudflare_project_value="$(nas_load_env_file_secret "$cloudflare_env_file" "CLOUDFLARE_PROJECT_NAME" || true)"
+    fi
     if [[ -z "$cloudflare_project_value" ]]; then
       cloudflare_project_value="$(nas_load_env_file_secret "$env_file" "CF_PAGES_PROJECT_NAME" || true)"
+    fi
+    if [[ -z "$cloudflare_project_value" && -n "$cloudflare_env_file" && "$cloudflare_env_file" != "$env_file" ]]; then
+      cloudflare_project_value="$(nas_load_env_file_secret "$cloudflare_env_file" "CF_PAGES_PROJECT_NAME" || true)"
     fi
     if [[ -n "$cloudflare_project_value" ]]; then
       export CLOUDFLARE_PROJECT_NAME="$cloudflare_project_value"

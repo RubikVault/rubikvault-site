@@ -1,0 +1,24 @@
+schema_version: breakout_health_guards.v1
+
+hard_fail:
+  require_manifest: true
+  require_top500: true
+  require_coverage: true
+  require_health: true
+  require_shard_success_markers: true
+  require_hashes: true
+  min_scores_computed: 1
+  max_error_ratio_on_tradable: 0.02
+
+alert:
+  coverage_zscore_window_days: 30
+  coverage_zscore_warn_below: -3.0
+  score_distribution_zscore_warn_abs: 3.0
+  last_good_max_age_days: 5
+
+known_non_hard_fail_context:
+  - holiday
+  - half_day
+  - regional_exchange_closed
+  - provider_partial_outage
+  - trading_halts

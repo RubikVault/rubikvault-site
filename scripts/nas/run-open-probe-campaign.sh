@@ -2,11 +2,10 @@
 set -euo pipefail
 
 REPO_ROOT="${REPO_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)}"
-OPS_ROOT="${OPS_ROOT:-/volume1/homes/neoboy/RepoOps/rubikvault-site}"
-if [[ -f "$OPS_ROOT/tooling/env.sh" ]]; then
-  # shellcheck disable=SC1090
-  . "$OPS_ROOT/tooling/env.sh"
-fi
+# shellcheck source=scripts/nas/nas-env.sh
+. "$REPO_ROOT/scripts/nas/nas-env.sh"
+# shellcheck source=scripts/nas/node-env.sh
+. "$REPO_ROOT/scripts/nas/node-env.sh"
 
 CAMPAIGN_STAMP="${CAMPAIGN_STAMP:-$(date -u +%Y%m%dT%H%M%SZ)}"
 OPEN_ROOT="$OPS_ROOT/runtime/open-probes"
@@ -24,20 +23,46 @@ END_LOCAL_MINUTE="${END_LOCAL_MINUTE:-0}"
 MAX_CYCLES="${MAX_CYCLES:-480}"
 SLEEP_BETWEEN_PROBES_SEC="${SLEEP_BETWEEN_PROBES_SEC:-15}"
 SLEEP_BETWEEN_CYCLES_SEC="${SLEEP_BETWEEN_CYCLES_SEC:-120}"
-PROBE_PLAN_VERSION="${PROBE_PLAN_VERSION:-2026-04-13a}"
+PROBE_PLAN_VERSION="${PROBE_PLAN_VERSION:-2026-04-22-node-date}"
+PROBE_MARKET_DATE="${PROBE_MARKET_DATE:-$(python3 - <<'PY'
+import os
+import subprocess
+from datetime import datetime, timedelta
+
+env = dict(os.environ)
+env["TZ"] = "America/New_York"
+raw = subprocess.check_output(["date", "+%Y-%m-%d %H"], env=env, text=True).strip()
+ny = datetime.strptime(raw, "%Y-%m-%d %H")
+candidate = ny.date()
+if ny.weekday() >= 5 or ny.hour < 18:
+    candidate -= timedelta(days=1)
+while candidate.weekday() >= 5:
+    candidate -= timedelta(days=1)
+print(candidate.isoformat())
+PY
+)}"
 
 mkdir -p "$CAMPAIGN_DIR" "$RUNS_DIR" "$REPORTS_DIR" "$(dirname "$LOCK_DIR")"
+nas_ensure_runtime_roots
 if [[ -L "$REPO_ROOT/mirrors/universe-v7/history" && ! -e "$REPO_ROOT/mirrors/universe-v7/history" ]]; then
   rm -f "$REPO_ROOT/mirrors/universe-v7/history"
 fi
 mkdir -p "$REPO_ROOT/mirrors/universe-v7/history" "$REPO_ROOT/mirrors/universe-v7/state" "$REPO_ROOT/public/data/eod/history"
 : > "$CAMPAIGN_LOG"
 
+nas_assert_global_lock_clear "night-pipeline"
+nas_assert_global_lock_clear "native-matrix"
+if [[ -n "$(nas_detect_q1_writer_conflict)" ]]; then
+  echo "open_probe_blocked=q1_writer_conflict" >&2
+  exit 91
+fi
+nas_acquire_global_lock "open-probe"
+
 if ! mkdir "$LOCK_DIR" 2>/dev/null; then
   echo "open_probe_lock_busy=$LOCK_DIR" >&2
   exit 90
 fi
-trap 'rm -rf "$LOCK_DIR"' EXIT
+trap 'rm -rf "$LOCK_DIR"; nas_release_global_lock "open-probe"' EXIT
 
 printf '%s\n' "$$" > "$LOCK_DIR/pid"
 
@@ -416,7 +441,6 @@ if status == "success":
         ("allowlist_empty", "empty_allowlist"),
         ("modulenotfounderror", "missing_dependency"),
         ("no module named", "missing_dependency"),
-        ("quantlabhot", "missing_quantlab_path"),
         ("no such file or directory", "missing_runtime_path"),
     ]
     for needle, reason in semantic_patterns:
@@ -444,7 +468,7 @@ PY
   else
     update_status "$probe_id" "running" "no"
   fi
-  node "$REPO_ROOT/scripts/nas/build-open-probe-report.mjs" >> "$CAMPAIGN_LOG" 2>&1 || true
+  "$NODE_BIN" "$REPO_ROOT/scripts/nas/build-open-probe-report.mjs" >> "$CAMPAIGN_LOG" 2>&1 || true
   sleep "$SLEEP_BETWEEN_PROBES_SEC"
 }
 
@@ -456,16 +480,16 @@ while [[ "$(should_continue)" == "yes" ]]; do
   slot=$((cycle % 8))
   if [[ "$slot" -eq 1 ]]; then
     run_probe "q1_delta_preflight" 120 "$REPO_ROOT" "node scripts/nas/probes/q1-delta-preflight.mjs"
-    run_probe "q1_delta_ingest_smoke" 1200 "$REPO_ROOT" "python3 scripts/quantlab/run_daily_delta_ingest_q1.py --ingest-date 2026-04-07 --limit-packs 1 --max-emitted-rows 500"
+    run_probe "q1_delta_cache_health" 120 "$REPO_ROOT" "node scripts/nas/probes/q1-delta-cache-health.mjs"
     run_probe "quantlab_v4_daily_report" 600 "$REPO_ROOT" "node scripts/quantlab/build_quantlab_v4_daily_report.mjs"
   elif [[ "$slot" -eq 2 ]]; then
     run_probe "quantlab_boundary_audit" 120 "$REPO_ROOT" "node scripts/nas/probes/quantlab-boundary-audit.mjs"
     run_probe "runtime_control_probe" 120 "$REPO_ROOT" "node scripts/nas/probes/runtime-control-probe.mjs"
-    run_probe "daily_learning_cycle" 2400 "$REPO_ROOT" "RUBIKVAULT_ROOT='$REPO_ROOT' NODE_OPTIONS='--max-old-space-size=1536' node scripts/learning/run-daily-learning-cycle.mjs --date=2026-04-07"
+    run_probe "daily_learning_cycle" 2400 "$REPO_ROOT" "RUBIKVAULT_ROOT='$REPO_ROOT' NODE_OPTIONS='--max-old-space-size=1536' node scripts/learning/run-daily-learning-cycle.mjs --date='$PROBE_MARKET_DATE'"
   elif [[ "$slot" -eq 3 ]]; then
     run_probe "ui_contract_probe" 120 "$REPO_ROOT" "node scripts/nas/probes/ui-contract-probe.mjs"
     run_probe "universe_audit_sample" 900 "$REPO_ROOT" "NODE_OPTIONS='--max-old-space-size=512' node scripts/ops/build-stock-analyzer-universe-audit.mjs --base-url http://127.0.0.1:8788 --tickers '$mixed_tickers' --max-tickers 8"
-    run_probe "forecast_daily" 2400 "$REPO_ROOT" "NODE_OPTIONS='--max-old-space-size=1536' FORECAST_SKIP_MATURED_EVAL=1 node scripts/forecast/run_daily.mjs --date=2026-04-07"
+    run_probe "forecast_daily" 2400 "$REPO_ROOT" "NODE_OPTIONS='--max-old-space-size=1536' FORECAST_SKIP_MATURED_EVAL=1 node scripts/forecast/run_daily.mjs --date='$PROBE_MARKET_DATE'"
   elif [[ "$slot" -eq 4 ]]; then
     run_probe "best_setups_v4_smoke" 2400 "$REPO_ROOT" "ALLOW_REMOTE_BAR_FETCH=0 BEST_SETUPS_DISABLE_NETWORK=1 NODE_OPTIONS='--max-old-space-size=1536' node scripts/build-best-setups-v4.mjs"
     run_probe "daily_audit_report_smoke" 1800 "$REPO_ROOT" "NODE_OPTIONS='--max-old-space-size=1024' node scripts/learning/quantlab-v1/daily-audit-report.mjs"
@@ -487,7 +511,7 @@ while [[ "$(should_continue)" == "yes" ]]; do
   sleep "$SLEEP_BETWEEN_CYCLES_SEC"
 done
 
-node "$REPO_ROOT/scripts/nas/build-open-probe-report.mjs" >> "$CAMPAIGN_LOG" 2>&1 || true
+"$NODE_BIN" "$REPO_ROOT/scripts/nas/build-open-probe-report.mjs" >> "$CAMPAIGN_LOG" 2>&1 || true
 
 python3 - "$STATUS_JSON" "$CAMPAIGN_PID" <<'PY'
 import json

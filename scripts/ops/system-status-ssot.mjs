@@ -3,7 +3,7 @@ export const SYSTEM_STATUS_RECOVERY_SCRIPT = 'scripts/ops/run-market-data-recove
 
 export const SYSTEM_STATUS_STEP_CONTRACTS = {
   market_data_refresh: {
-    run_command: 'node scripts/universe-v7/build-us-eu-scope.mjs && python3 scripts/quantlab/refresh_v7_history_from_eodhd.py --allowlist-path public/data/universe/v7/ssot/stocks_etfs.us_eu.canonical.ids.json --from-date <YYYY-MM-DD>',
+    run_command: 'RV_GLOBAL_ASSET_CLASSES="${RV_GLOBAL_ASSET_CLASSES:-STOCK,ETF,INDEX}"; node scripts/universe-v7/build-global-scope.mjs --asset-classes "$RV_GLOBAL_ASSET_CLASSES" && node scripts/ops/build-history-pack-manifest.mjs --scope global --asset-classes "$RV_GLOBAL_ASSET_CLASSES" && python3 scripts/quantlab/refresh_v7_history_from_eodhd.py --env-file "${RV_EODHD_ENV_FILE:-$NAS_DEV_ROOT/.env.local}" --allowlist-path public/data/universe/v7/ssot/assets.global.canonical.ids.json --from-date <YYYY-MM-DD> --to-date <YYYY-MM-DD> --bulk-last-day --bulk-exchange-cost "${RV_EODHD_BULK_EXCHANGE_COST:-100}" --global-lock-path "${RV_EODHD_GLOBAL_LOCK_PATH:-mirrors/universe-v7/state/eodhd-global.lock}" --max-eodhd-calls "${RV_MARKET_REFRESH_MAX_EODHD_CALLS:-0}" --max-retries "${RV_MARKET_REFRESH_MAX_RETRIES:-1}" --timeout-sec "${RV_MARKET_REFRESH_TIMEOUT_PER_REQUEST_SEC:-60}" --flush-every "${RV_MARKET_REFRESH_FLUSH_EVERY:-250}" --concurrency "${RV_MARKET_REFRESH_CONCURRENCY:-12}" --progress-every "${RV_MARKET_REFRESH_PROGRESS_EVERY:-500}"',
     verify_commands: [
       "jq '{generated_at,to_date,assets_requested,assets_fetched_with_data,fetch_errors_total}' mirrors/universe-v7/state/refresh_v7_history_from_eodhd.report.json",
       "jq '{schema,exit_code,reason,updated_at}' public/data/universe/v7/reports/run_status.json",
@@ -64,7 +64,7 @@ export const SYSTEM_STATUS_STEP_CONTRACTS = {
     lessons_learned: 'latestCanonicalRequiredDataDate lags latestAnyRequiredDataDate by the ML label window — structural, not a bug. Only excess lag beyond the window is a violation. Report freshness reflects publish asof, not raw-bar asof. latestCanonicalRequiredDataDate was 33 days stale (2026-03-11) due to missing auto-update — monitor this field.',
   },
   hist_probs: {
-    run_command: 'NODE_OPTIONS=--max-old-space-size=6144 node run-hist-probs-turbo.mjs',
+    run_command: 'RV_GLOBAL_ASSET_CLASSES="${RV_GLOBAL_ASSET_CLASSES:-STOCK,ETF,INDEX}"; NODE_OPTIONS=--max-old-space-size=6144 node run-hist-probs-turbo.mjs --asset-classes "$RV_GLOBAL_ASSET_CLASSES"',
     verify_commands: [
       "jq '{ran_at,tickers_total,tickers_processed,tickers_skipped,tickers_errors,tickers_covered,tickers_remaining,regime_date,source_mode,asset_classes,max_tickers}' public/data/hist-probs/run-summary.json",
       "jq '{date,market_regime,volatility_regime,breadth_regime}' public/data/hist-probs/regime-daily.json",
@@ -82,9 +82,9 @@ export const SYSTEM_STATUS_STEP_CONTRACTS = {
     failure_signals: [
       'regime_date stale',
       'run-summary processed count below universe target',
-      'ETF tickers not included in asset_classes',
+      'active RV_GLOBAL_ASSET_CLASSES not included in run-summary asset_classes',
     ],
-    lessons_learned: '45–90 min for full 42k universe. Always include --asset-classes STOCK,ETF — ETFs are silently omitted if flag is missing. INACTIVE_TOLERANCE=20 trading days (was 5, now fixed). Write-verification added after each file write. fresh_skipped checkpoint enables crash recovery and idempotency. 16,755 assets (39.7%) were stale as of 2026-04-10 — run catch-up before marking release ready.',
+    lessons_learned: '45–90 min for historical full universe under normal daily deltas; post-backfill runs can be much longer. Always pass the shared RV_GLOBAL_ASSET_CLASSES value into hist-probs; ETF/INDEX omissions are silent coverage gaps. INACTIVE_TOLERANCE=20 trading days (was 5, now fixed). Write-verification added after each file write. fresh_skipped checkpoint enables crash recovery and idempotency.',
   },
   forecast_daily: {
     run_command: 'node scripts/forecast/run_daily.mjs',
@@ -164,13 +164,15 @@ export const SYSTEM_STATUS_STEP_CONTRACTS = {
     lessons_learned: 'rows_emitted.total=0 almost always means quantlab_asof lags data_asof by more than the tolerated window. ETF count drops silently when ETF hist-probs run was omitted. diagnose-best-setups-etf-drop.mjs is the diagnostic tool — run it before re-running build-best-setups-v4. CRITICAL: Snapshot must run AFTER hist-probs is fresh. Assets with minimum_n_not_met=true and stale hist-probs are now gated out of BUY lists at row level.',
   },
   stock_analyzer_universe_audit: {
-    run_command: 'node scripts/universe-v7/build-us-eu-scope.mjs && node scripts/ops/build-stock-analyzer-universe-audit.mjs --base-url http://127.0.0.1:8788 --registry-path public/data/universe/v7/registry/registry.ndjson.gz --allowlist-path public/data/universe/v7/ssot/stocks_etfs.us_eu.canonical.ids.json --asset-classes STOCK,ETF --max-tickers 0',
+    run_command: 'RV_GLOBAL_ASSET_CLASSES="${RV_GLOBAL_ASSET_CLASSES:-STOCK,ETF,INDEX}"; node scripts/universe-v7/build-global-scope.mjs --asset-classes "$RV_GLOBAL_ASSET_CLASSES" && node scripts/ops/build-history-pack-manifest.mjs --scope global --asset-classes "$RV_GLOBAL_ASSET_CLASSES" && node scripts/ops/build-stock-analyzer-universe-audit.mjs --registry-path public/data/universe/v7/registry/registry.ndjson.gz --allowlist-path public/data/universe/v7/ssot/assets.global.canonical.ids.json --asset-classes "$RV_GLOBAL_ASSET_CLASSES" --max-tickers 0 --live-sample-size 0 && if [ -f public/data/ops/stock-analyzer-operability-latest.json ]; then node scripts/ops/build-stock-analyzer-operability.mjs; fi',
     verify_commands: [
       "jq '.summary | {severity,total_assets,processed_assets,healthy_assets,affected_assets,failure_family_count,field_checks_total,full_universe}' public/data/reports/stock-analyzer-universe-audit-latest.json",
       "jq '.ordered_recovery[] | {rank,step_id,affected_assets}' public/data/reports/stock-analyzer-universe-audit-latest.json",
+      "jq '.summary | {coverage_denominator,targetable_assets,targetable_operational_assets,targetable_green_ratio,release_blocked}' public/data/ops/stock-analyzer-operability-summary-latest.json",
     ],
     outputs: [
       'public/data/reports/stock-analyzer-universe-audit-latest.json',
+      'public/data/ops/stock-analyzer-operability-summary-latest.json',
     ],
     ui_surfaces: [
       'dashboard_v7 Stock Analyzer Universe Audit',
@@ -181,7 +183,7 @@ export const SYSTEM_STATUS_STEP_CONTRACTS = {
       'processed_assets below total_assets',
       'failure_family_count > 0',
     ],
-    lessons_learned: 'Full audit (--max-tickers 0) takes 60-90 min for 42k assets. artifact_only mode runs without wrangler and is the default for automated pipelines. artifact_hist_probs_stale is the most common critical family; run hist-probs catch-up first. sampled_mode=true means the audit result can never qualify as release_eligible.',
+    lessons_learned: 'Full audit (--max-tickers 0) is global and must use the active RV_GLOBAL_ASSET_CLASSES contract on assets.global scope. artifact_only mode runs without wrangler and is the default for automated pipelines. artifact_hist_probs_stale is the most common critical family; run hist-probs catch-up first. sampled_mode=true means the audit result can never qualify as release_eligible.',
   },
   etf_diagnostic: {
     run_command: 'node scripts/learning/diagnose-best-setups-etf-drop.mjs',
@@ -199,7 +201,7 @@ export const SYSTEM_STATUS_STEP_CONTRACTS = {
       'snapshot_etf_total = 0',
       'diagnosis code indicates rejection funnel collapse',
     ],
-    lessons_learned: 'ETF count in best-setups-v4 can silently drop to zero if hist-probs was run without --asset-classes STOCK,ETF. Runs fast (< 30 sec) and can be run standalone. diagnosis_code=ETF_HIST_PROBS_MISSING means ETF hist-probs artifact is absent.',
+    lessons_learned: 'ETF count in best-setups-v4 can silently drop to zero if hist-probs was run without the active RV_GLOBAL_ASSET_CLASSES contract. Runs fast (< 30 sec) and can be run standalone. diagnosis_code=ETF_HIST_PROBS_MISSING means ETF hist-probs artifact is absent.',
   },
   v1_audit: {
     run_command: 'node scripts/learning/quantlab-v1/daily-audit-report.mjs',
@@ -291,7 +293,7 @@ export const SYSTEM_STATUS_STEP_CONTRACTS = {
     lessons_learned: 'A fresh epoch without module run_ids is not a valid control-plane success. It is only a timestamped shell. Module coherence matters more than file recency.',
   },
   ui_field_truth_report: {
-    run_command: 'node scripts/ops/build-ui-field-truth-report.mjs --base-url http://127.0.0.1:8788 --date=<YYYY-MM-DD>',
+    run_command: 'node scripts/ops/build-ui-field-truth-report.mjs --page-core-only --page-core-latest-path public/data/page-core/candidates/latest.candidate.json --date=<YYYY-MM-DD>',
     verify_commands: [
       "jq '{ui_field_truth_ok,summary:{tickers_checked,failures,advisories},critical_endpoints,optional_endpoints}' public/data/reports/ui-field-truth-report-latest.json",
     ],
@@ -391,12 +393,12 @@ export const PIPELINE_STEP_ORDER = [
 export const SSOT_VIOLATION_CONTRACTS = [
   {
     id: 'hist_probs_missing_etf_class',
-    title: 'hist_probs ran without ETF asset class',
+    title: 'hist_probs ran without a required asset class',
     ssot_doc: 'scripts/ops/system-status-ssot.mjs (hist_probs.run_command)',
-    rule: 'run_command requires --asset-classes STOCK,ETF. If the last run omitted ETF, ETF historical profiles are missing from analyze-v4.',
+    rule: 'run_command requires --asset-classes "$RV_GLOBAL_ASSET_CLASSES" with STOCK, ETF, and INDEX unless the global contract is explicitly narrowed. If the last run omitted an active class, historical profiles are missing from analyze-v4.',
     severity_if_violated: 'critical',
-    fix_command: 'NODE_OPTIONS=--max-old-space-size=6144 node run-hist-probs-turbo.mjs',
-    success_signal: 'run-summary.json asset_classes includes both STOCK and ETF',
+    fix_command: 'RV_GLOBAL_ASSET_CLASSES="${RV_GLOBAL_ASSET_CLASSES:-STOCK,ETF,INDEX}"; NODE_OPTIONS=--max-old-space-size=6144 node run-hist-probs-turbo.mjs --asset-classes "$RV_GLOBAL_ASSET_CLASSES"',
+    success_signal: 'run-summary.json asset_classes includes STOCK, ETF, and INDEX',
   },
   {
     id: 'hist_probs_limited_runner',
@@ -404,7 +406,7 @@ export const SSOT_VIOLATION_CONTRACTS = [
     ssot_doc: 'scripts/ops/system-status-ssot.mjs (hist_probs.run_command)',
     rule: 'run_command specifies --max-tickers 0 (unlimited). If last run used source_mode=explicit_tickers with a capped list, coverage is incomplete.',
     severity_if_violated: 'warning',
-    fix_command: 'NODE_OPTIONS=--max-old-space-size=6144 node run-hist-probs-turbo.mjs',
+    fix_command: 'RV_GLOBAL_ASSET_CLASSES="${RV_GLOBAL_ASSET_CLASSES:-STOCK,ETF,INDEX}"; NODE_OPTIONS=--max-old-space-size=6144 node run-hist-probs-turbo.mjs --asset-classes "$RV_GLOBAL_ASSET_CLASSES"',
     success_signal: 'run-summary.json source_mode=registry and tickers_total matches universe size',
   },
   {
@@ -431,7 +433,7 @@ export const SSOT_VIOLATION_CONTRACTS = [
     ssot_doc: 'docs/ops/runbook.md (Step Contract: Market Data Refresh)',
     rule: 'A refresh run that completes without error must return data for at least 1 asset. Zero assets_fetched_with_data means no data can flow to any downstream step.',
     severity_if_violated: 'warning',
-    fix_command: 'python3 scripts/quantlab/refresh_v7_history_from_eodhd.py --allowlist-path public/data/universe/v7/ssot/stocks_etfs.us_eu.canonical.ids.json --from-date <YYYY-MM-DD>',
+    fix_command: 'RV_GLOBAL_ASSET_CLASSES="${RV_GLOBAL_ASSET_CLASSES:-STOCK,ETF,INDEX}"; node scripts/universe-v7/build-global-scope.mjs --asset-classes "$RV_GLOBAL_ASSET_CLASSES" && python3 scripts/quantlab/refresh_v7_history_from_eodhd.py --env-file "${RV_EODHD_ENV_FILE:-.env.local}" --allowlist-path public/data/universe/v7/ssot/assets.global.canonical.ids.json --from-date <YYYY-MM-DD> --to-date <YYYY-MM-DD> --bulk-last-day --bulk-exchange-cost "${RV_EODHD_BULK_EXCHANGE_COST:-100}" --global-lock-path "${RV_EODHD_GLOBAL_LOCK_PATH:-mirrors/universe-v7/state/eodhd-global.lock}" --max-eodhd-calls "${RV_MARKET_REFRESH_MAX_EODHD_CALLS:-0}" --max-retries "${RV_MARKET_REFRESH_MAX_RETRIES:-1}" --timeout-sec "${RV_MARKET_REFRESH_TIMEOUT_PER_REQUEST_SEC:-60}" --flush-every "${RV_MARKET_REFRESH_FLUSH_EVERY:-250}" --concurrency "${RV_MARKET_REFRESH_CONCURRENCY:-12}" --progress-every "${RV_MARKET_REFRESH_PROGRESS_EVERY:-500}"',
     success_signal: 'refresh report assets_fetched_with_data > 0 and output_asof is a valid market date',
   },
 ];

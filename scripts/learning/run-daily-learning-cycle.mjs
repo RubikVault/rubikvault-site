@@ -1183,7 +1183,7 @@ function computeFeatureMetrics(feature, date, lookbackDays = 30) {
 }
 
 // ─── Report Builder ─────────────────────────────────────────────────────────
-function buildReport(date, forecastMetrics, scientificMetrics, quantlabMetrics, stockMetrics, stockStability, predCounts, analyzerControl = {}) {
+function buildReport(date, forecastMetrics, scientificMetrics, quantlabMetrics, stockMetrics, stockStability, predCounts, analyzerControl = {}, histProbsV2Metrics = null) {
     // Build history from past reports (last 30 days)
     const history = [];
     for (let i = 29; i >= 0; i--) {
@@ -1238,8 +1238,8 @@ function buildReport(date, forecastMetrics, scientificMetrics, quantlabMetrics, 
         start_date: startDate,
         days_active: daysActive,
         summary: {
-            features_tracked: 4,
-            total_predictions_today: (predCounts.forecast || 0) + (predCounts.scientific || 0) + (predCounts.quantlab || 0) + (predCounts.stock || 0),
+            features_tracked: histProbsV2Metrics ? 5 : 4,
+            total_predictions_today: (predCounts.forecast || 0) + (predCounts.scientific || 0) + (predCounts.quantlab || 0) + (predCounts.stock || 0) + (predCounts.hist_probs_v2_shadow || 0),
             overall_status: determineOverallStatus(forecastMetrics, scientificMetrics, stockMetrics, quantlabMetrics)
         },
         features: {
@@ -1276,7 +1276,18 @@ function buildReport(date, forecastMetrics, scientificMetrics, quantlabMetrics, 
                 predictions_today: predCounts.stock || 0,
                 source_meta: predCounts.stock_source_meta || null,
                 gate_rejection_breakdown: predCounts.stock_source_meta?.gate_rejection_breakdown || null,
-            }
+            },
+            ...(histProbsV2Metrics ? {
+                hist_probs_v2_shadow: {
+                    name: 'Hist Probs v2 Shadow',
+                    type: 'shadow_historical_probability_baseline',
+                    ...histProbsV2Metrics,
+                    predictions_today: predCounts.hist_probs_v2_shadow || 0,
+                    source_meta: predCounts.hist_probs_v2_shadow_source_meta || null,
+                    shadow_only: true,
+                    affects_live_verdicts: false,
+                },
+            } : {})
         },
         weekly_comparison: weeklyComparison,
         history,
@@ -1446,6 +1457,7 @@ async function main() {
 
     const stockResult = extractStockRankings(date, eodPrices, bestSetupsPolicy);
     const stockPreds = stockResult.rankings || [];
+    const histProbsV2Preds = readNdjson(predPath(date, 'hist_probs_v2_shadow'));
 
     // 3. Save predictions to ledger
     if (forecastPreds.length) writeNdjson(predPath(date, 'forecast'), forecastPreds);
@@ -1453,7 +1465,7 @@ async function main() {
     if (quantlabPreds.length) writeNdjson(predPath(date, 'quantlab'), quantlabPreds);
     if (stockPreds.length) writeNdjson(predPath(date, 'stock_analyzer'), stockPreds);
 
-    console.log(`[learning] Predictions logged: forecast=${forecastPreds.length} scientific=${scientificPreds.length} quantlab=${quantlabPreds.length} stock=${stockPreds.length}`);
+    console.log(`[learning] Predictions logged: forecast=${forecastPreds.length} scientific=${scientificPreds.length} quantlab=${quantlabPreds.length} stock=${stockPreds.length} hist_probs_v2_shadow=${histProbsV2Preds.length}`);
 
     // 4. Cross-feature conviction scoring
     console.log('[learning] Computing cross-feature conviction scores...');
@@ -1466,8 +1478,9 @@ async function main() {
     const scientificOutcomes = resolveOutcomes(date, 'scientific', eodPrices);
     const quantlabOutcomes = resolveOutcomes(date, 'quantlab', eodPrices);
     const stockOutcomes = resolveOutcomes(date, 'stock_analyzer', eodPrices);
+    const histProbsV2Outcomes = resolveOutcomes(date, 'hist_probs_v2_shadow', eodPrices);
 
-    console.log(`[learning] Outcomes resolved: forecast=${forecastOutcomes.length} scientific=${scientificOutcomes.length} quantlab=${quantlabOutcomes.length} stock=${stockOutcomes.length}`);
+    console.log(`[learning] Outcomes resolved: forecast=${forecastOutcomes.length} scientific=${scientificOutcomes.length} quantlab=${quantlabOutcomes.length} stock=${stockOutcomes.length} hist_probs_v2_shadow=${histProbsV2Outcomes.length}`);
 
     // 6. Compute metrics (rolling 30d window)
     console.log('[learning] Computing metrics...');
@@ -1475,6 +1488,7 @@ async function main() {
     const scientificMetrics = computeFeatureMetrics('scientific', date);
     const quantlabMetrics = computeFeatureMetrics('quantlab', date);
     const stockMetrics = computeFeatureMetrics('stock_analyzer', date);
+    const histProbsV2Metrics = computeFeatureMetrics('hist_probs_v2_shadow', date);
     const stockStability = computeRankingStability(date);
     const forwardReturns = computeForwardReturns(date, eodPrices);
     stockMetrics.outcome_dates = Array.from(new Set(
@@ -1487,6 +1501,7 @@ async function main() {
         learning_status: applyLearningStatusSafety(deriveAnalyzerLearningStatus(stockMetrics, analyzerPolicy), analyzerSafety),
         safety_switch: analyzerSafety,
         minimum_n_status: analyzerSafety.minimum_n_status || computeMinimumNStatus(stockMetrics, analyzerPolicy),
+        hist_probs_v2_minimum_n_status: computeMinimumNStatus(histProbsV2Metrics, analyzerPolicy),
         false_positive_classes_30d: summarizeFalsePositives(
             Array.from({ length: 30 }, (_, i) => daysAgo(date, i))
                 .flatMap((d) => readNdjson(outcomePath(d, 'stock_analyzer')))
@@ -1511,8 +1526,16 @@ async function main() {
         quantlab: quantlabPreds.length,
         quantlab_source_meta: quantlabResult.source_meta,
         stock: stockPreds.length,
-        stock_source_meta: stockResult.source_meta
-    }, analyzerControl);
+        stock_source_meta: stockResult.source_meta,
+        hist_probs_v2_shadow: histProbsV2Preds.length,
+        hist_probs_v2_shadow_source_meta: {
+            source: 'mirrors/learning/predictions/hist_probs_v2_shadow',
+            asof: date,
+            fresh: histProbsV2Preds.length > 0,
+            shadow_only: true,
+            affects_live_verdicts: false,
+        },
+    }, analyzerControl, histProbsV2Metrics);
     report.generated_at = generatedAt;
     Object.assign(report, buildArtifactEnvelope({
         producer: 'scripts/learning/run-daily-learning-cycle.mjs',
@@ -1536,6 +1559,7 @@ async function main() {
         'cross_feature_conviction',
         'scientific_atr_breakout_threshold',
         'best_setups_policy_registry_fields',
+        'hist_probs_v2_shadow_outcome_maturation',
     ];
     report.best_setups_policy = bestSetupsPolicy ? {
         schema_version: bestSetupsPolicy.schema_version || null,
@@ -1560,6 +1584,13 @@ async function main() {
         learning_status: analyzerControl.learning_status || 'BOOTSTRAP',
         safety_switch: analyzerControl.safety_switch || null,
         minimum_n_status: analyzerControl.minimum_n_status || null,
+        hist_probs_source: process.env.STOCK_ANALYZER_HIST_PROBS_SOURCE || 'v1_primary',
+        hist_probs_v2_shadow: {
+            predictions_today: histProbsV2Preds.length,
+            outcomes_resolved_30d: histProbsV2Metrics.outcomes_resolved || 0,
+            minimum_n_status: analyzerControl.hist_probs_v2_minimum_n_status || null,
+            affects_live_verdicts: false,
+        },
         learning_gate: learningGate,
         false_positive_classes_30d: analyzerControl.false_positive_classes_30d || {},
         policy: bestSetupsPolicy ? {

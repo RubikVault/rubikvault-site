@@ -55,6 +55,35 @@ def load_json(path: Path, default):
         return default
 
 
+def read_process_status_kb() -> dict[str, int]:
+    status_path = Path(f"/proc/{os.getpid()}/status")
+    fields = {"VmRSS", "VmSwap", "VmSize"}
+    out: dict[str, int] = {}
+    try:
+        for line in status_path.read_text().splitlines():
+            key, _, value = line.partition(":")
+            if key not in fields:
+                continue
+            parts = value.strip().split()
+            if parts:
+                out[f"{key}_kb"] = int(parts[0])
+    except Exception:
+        pass
+    return out
+
+
+def update_process_peaks(stats: dict[str, Any], *samples: dict[str, int]) -> None:
+    for sample in samples:
+        for source_key, target_key in (
+            ("VmRSS_kb", "process_peak_vmrss_kb"),
+            ("VmSwap_kb", "process_peak_vmswap_kb"),
+            ("VmSize_kb", "process_peak_vmsize_kb"),
+        ):
+            value = int(sample.get(source_key) or 0)
+            if value > int(stats.get(target_key) or 0):
+                stats[target_key] = value
+
+
 def stable_hash_obj(obj: Any) -> str:
     payload = json.dumps(obj, sort_keys=True, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
     import hashlib
@@ -69,8 +98,9 @@ def parse_args(argv: Iterable[str]) -> argparse.Namespace:
         "--quant-root",
         default=os.environ.get(
             "QUANT_ROOT",
-            "/volume1/homes/neoboy/QuantLabHot/rubikvault-quantlab" if Path("/volume1/homes/neoboy").exists()
-            else "/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab",
+            os.environ.get("NAS_QUANT_ROOT")
+            or os.environ.get("RV_QUANT_ROOT")
+            or str(Path.home() / "QuantLabHot" / "rubikvault-quantlab"),
         ),
     )
     p.add_argument("--registry", default="public/data/universe/v7/registry/registry.ndjson.gz")
@@ -78,6 +108,12 @@ def parse_args(argv: Iterable[str]) -> argparse.Namespace:
     p.add_argument("--include-types", default="STOCK,ETF")
     p.add_argument("--compression", default="snappy")
     p.add_argument("--limit-packs", type=int, default=0)
+    p.add_argument(
+        "--workers",
+        type=int,
+        default=int(os.environ.get("RV_Q1_WORKERS", "1") or "1"),
+        help="Safe rollout flag; default 1 keeps parent-owned parquet/state writes deterministic.",
+    )
     p.add_argument("--force-pack", action="append", default=[])
     p.add_argument(
         "--force-pack-file",
@@ -100,6 +136,17 @@ def parse_args(argv: Iterable[str]) -> argparse.Namespace:
         "--history-touch-report",
         default="mirrors/universe-v7/reports/history_touch_report.json",
         help="Optional v7 report with touched canonical_ids/history packs from latest backfill run",
+    )
+    p.add_argument(
+        "--history-deltas-root",
+        default=os.environ.get("RV_HISTORY_DELTAS_ROOT", "mirrors/universe-v7/history-deltas"),
+        help="Repo-relative root for optional history delta sidecars.",
+    )
+    p.add_argument(
+        "--read-history-deltas",
+        action="store_true",
+        default=os.environ.get("RV_HISTORY_READ_DELTAS", "0") == "1",
+        help="Overlay history delta sidecars while reading packs. Default off.",
     )
     p.add_argument("--rebuild-latest-date-cache", action="store_true")
     p.add_argument("--full-scan-packs", action="store_true", help="Ignore pack mtime cache and scan all packs")
@@ -755,6 +802,47 @@ def filter_rows_newer_than_latest(
     }
 
 
+def _history_delta_paths(repo_root: Path, rel_pack: str, deltas_root: str) -> list[Path]:
+    rel = str(rel_pack or "").strip().replace("\\", "/").lstrip("/")
+    root = _resolve_repo_rel(repo_root, deltas_root)
+    candidate = root / rel
+    try:
+        return sorted(candidate.parent.glob(f"{candidate.name}.delta-*.ndjson.gz"))
+    except Exception:
+        return []
+
+
+def iter_history_pack_records(
+    pack_path: Path,
+    *,
+    repo_root: Path,
+    rel_pack: str,
+    read_history_deltas: bool,
+    history_deltas_root: str,
+):
+    with gzip.open(pack_path, "rt", encoding="utf-8") as fh:
+        for line in fh:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                yield json.loads(line)
+            except json.JSONDecodeError:
+                continue
+    if not read_history_deltas:
+        return
+    for delta_path in _history_delta_paths(repo_root, rel_pack, history_deltas_root):
+        with gzip.open(delta_path, "rt", encoding="utf-8") as fh:
+            for line in fh:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    yield json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+
+
 def flatten_delta_rows_for_pack(
     pack_path: Path,
     rel_pack: str,
@@ -765,6 +853,9 @@ def flatten_delta_rows_for_pack(
     *,
     max_allowed_date: str,
     exporter: Any,
+    repo_root: Path,
+    read_history_deltas: bool = False,
+    history_deltas_root: str = "mirrors/universe-v7/history-deltas",
 ) -> tuple[dict[str, dict[str, list[Any]]], dict[str, Any], dict[str, int], dict[str, str]]:
     rows_by_class: dict[str, dict[str, list[Any]]] = {}
     per_pack_stats = {
@@ -796,16 +887,14 @@ def flatten_delta_rows_for_pack(
         except Exception:
             return False
 
-    with gzip.open(pack_path, "rt", encoding="utf-8") as fh:
-        for line in fh:
-            line = line.strip()
-            if not line:
-                continue
+    for rec in iter_history_pack_records(
+        pack_path,
+        repo_root=repo_root,
+        rel_pack=rel_pack,
+        read_history_deltas=read_history_deltas,
+        history_deltas_root=history_deltas_root,
+    ):
             per_pack_stats["records_seen"] += 1
-            try:
-                rec = json.loads(line)
-            except json.JSONDecodeError:
-                continue
             cid = str(rec.get("canonical_id") or "").strip()
             if cid not in wanted_assets:
                 continue
@@ -927,6 +1016,8 @@ def write_parquet_rows(out_path: Path, rows: Dict[str, List], compression: str =
 
 def main(argv: Iterable[str]) -> int:
     args = parse_args(argv)
+    requested_workers = max(1, int(args.workers or 1))
+    effective_workers = 1
     repo_root = Path(args.repo_root).resolve()
     quant_root = Path(args.quant_root).resolve()
     registry_path = (repo_root / args.registry).resolve()
@@ -972,6 +1063,15 @@ def main(argv: Iterable[str]) -> int:
         "registry_path": str(registry_path),
         "ingest_date": args.ingest_date,
         "include_types": sorted(include_types),
+        "workers": {
+            "requested": requested_workers,
+            "effective": effective_workers,
+            "mode": "serial_parent_writes",
+        },
+        "history_deltas": {
+            "enabled": bool(args.read_history_deltas),
+            "root": str(args.history_deltas_root),
+        },
         "completed_packs": [],
         "failed_packs": {},
         "stats": {
@@ -990,10 +1090,28 @@ def main(argv: Iterable[str]) -> int:
             "rows_invalid_identity_or_date": 0,
             "rows_invalid_ohlc": 0,
             "rows_invalid_volume": 0,
+            "process_peak_vmrss_kb": 0,
+            "process_peak_vmswap_kb": 0,
+            "process_peak_vmsize_kb": 0,
         },
     })
     completed_packs = set(state.get("completed_packs") or [])
     failed_packs = dict(state.get("failed_packs") or {})
+    state["workers"] = {
+        "requested": requested_workers,
+        "effective": effective_workers,
+        "mode": "serial_parent_writes",
+    }
+    state["history_deltas"] = {
+        "enabled": bool(args.read_history_deltas),
+        "root": str(args.history_deltas_root),
+    }
+    if requested_workers != effective_workers:
+        print(
+            f"[q1-delta] workers_requested={requested_workers} effective_workers={effective_workers} "
+            "reason=parallel_read_shadow_not_enabled",
+            flush=True,
+        )
 
     def write_run_status(ok: bool | None = None, exit_code: int | None = None, reason: str | None = None, stage: str | None = None, extra: dict[str, Any] | None = None):
         payload = {
@@ -1121,6 +1239,10 @@ def main(argv: Iterable[str]) -> int:
             }
         state["history_touch_report"] = history_touch_meta
         selected_pack_set = set(selected_packs)
+        if failed_packs:
+            failed_packs = {rel_pack: meta for rel_pack, meta in failed_packs.items() if rel_pack in selected_pack_set}
+            state["failed_packs"] = failed_packs
+            state["stats"]["packs_failed"] = len(failed_packs)
         state["pack_selection"] = {
             "mode": "force" if force_packs else ("full_scan" if args.full_scan_packs else "changed_packs"),
             "force_pack_file": [str(Path(str(p)).expanduser().resolve()) for p in (args.force_pack_file or [])],
@@ -1129,6 +1251,7 @@ def main(argv: Iterable[str]) -> int:
             "selected_packs_done": len(selected_pack_set.intersection(completed_packs)),
             "selected_packs_remaining": max(0, len(selected_packs) - len(selected_pack_set.intersection(completed_packs))),
         }
+        state["stats"]["packs_done"] = len(selected_pack_set.intersection(completed_packs))
         if history_touch_report:
             state["history_touch_report_summary"] = {
                 "run_id": history_touch_report.get("run_id"),
@@ -1159,7 +1282,7 @@ def main(argv: Iterable[str]) -> int:
         atomic_write_json(state_path, state)
         write_run_status(stage="built_latest_date_index", extra={"latest_date_cache": latest_cache_meta, "raw_files_total": len(raw_files)})
 
-        emitted_keys_seen: set[tuple[str, str]] = set()
+        emitted_delta_keys_total = 0
         emitted_assets: set[str] = set()
         max_emitted_rows = int(args.max_emitted_rows or 0)
 
@@ -1180,6 +1303,7 @@ def main(argv: Iterable[str]) -> int:
                 continue
 
             started = time.time()
+            process_memory_before_kb = read_process_status_kb()
             state["current_pack"] = {
                 "rel_pack": rel_pack,
                 "index": idx,
@@ -1193,15 +1317,19 @@ def main(argv: Iterable[str]) -> int:
             write_run_status(stage="processing_pack", extra={"current_pack": state["current_pack"]})
             print(f"[q1-delta] [{idx}/{len(selected_packs)}] {rel_pack} targets={len(wanted_assets)}", flush=True)
             try:
+                pack_emitted_keys_seen: set[tuple[str, str]] = set()
                 rows_by_class, per_pack_stats, filter_stats_total, emitted_latest_dates = flatten_delta_rows_for_pack(
                     pack_abs,
                     rel_pack,
                     wanted_assets,
                     asset_meta,
                     latest_date_by_asset,
-                    emitted_keys_seen,
+                    pack_emitted_keys_seen,
                     max_allowed_date=str(args.ingest_date),
                     exporter=exporter,
+                    repo_root=repo_root,
+                    read_history_deltas=bool(args.read_history_deltas),
+                    history_deltas_root=str(args.history_deltas_root),
                 )
                 duration_sec = round(time.time() - started, 3)
                 state["stats"]["bars_rows_scanned_in_selected_packs"] += int(per_pack_stats.get("bars_written", 0))
@@ -1221,6 +1349,10 @@ def main(argv: Iterable[str]) -> int:
                     prev_latest = latest_date_by_asset.get(aid)
                     if prev_latest is None or latest_date > prev_latest:
                         latest_date_by_asset[aid] = latest_date
+                process_memory_after_kb = read_process_status_kb()
+                update_process_peaks(state["stats"], process_memory_before_kb, process_memory_after_kb)
+                rows_out_total = int(filter_stats_total.get("rows_out", 0))
+                emitted_delta_keys_total += rows_out_total
 
                 event = {
                     "ts": utc_now_iso(),
@@ -1231,6 +1363,10 @@ def main(argv: Iterable[str]) -> int:
                     "targets": len(wanted_assets),
                     "stats": per_pack_stats,
                     "filter_stats": dict(filter_stats_total),
+                    "dedupe_scope": "pack_local_plus_latest_date_by_asset",
+                    "emitted_delta_keys": rows_out_total,
+                    "process_memory_before_kb": process_memory_before_kb,
+                    "process_memory_after_kb": process_memory_after_kb,
                     "outputs": outputs,
                 }
                 with packs_manifest_path.open("a", encoding="utf-8") as outfh:
@@ -1246,9 +1382,12 @@ def main(argv: Iterable[str]) -> int:
                 state["stats"]["rows_invalid_ohlc"] += int(filter_stats_total.get("rows_invalid_ohlc", 0))
                 state["stats"]["rows_invalid_volume"] += int(filter_stats_total.get("rows_invalid_volume", 0))
                 state["stats"]["assets_emitted_delta"] = len(emitted_assets)
+                failed_packs.pop(rel_pack, None)
+                state["failed_packs"] = failed_packs
+                state["stats"]["packs_failed"] = len(failed_packs)
                 completed_packs.add(rel_pack)
                 state["completed_packs"] = sorted(completed_packs)
-                state["stats"]["packs_done"] = len(completed_packs)
+                state["stats"]["packs_done"] = len(selected_pack_set.intersection(completed_packs))
                 if state.get("pack_selection"):
                     selected_done = len(selected_pack_set.intersection(completed_packs))
                     state["pack_selection"]["selected_packs_done"] = selected_done
@@ -1323,9 +1462,10 @@ def main(argv: Iterable[str]) -> int:
             )
 
         reconciliation = {
-            "duplicate_keys_in_emitted_delta_detected": False,  # guarded by emitted_keys_seen set
-            "emitted_delta_keys_total": len(emitted_keys_seen),
-            "rows_emitted_matches_keys": rows_emitted_delta == len(emitted_keys_seen),
+            "duplicate_keys_in_emitted_delta_detected": False,
+            "dedupe_scope": "pack_local_plus_latest_date_by_asset",
+            "emitted_delta_keys_total": emitted_delta_keys_total,
+            "rows_emitted_matches_keys": rows_emitted_delta == emitted_delta_keys_total,
             "rows_filter_input_total": rows_filter_input_total,
             "rows_filter_accounted_total": rows_accounted_total,
             "rows_filter_accounting_balanced": rows_accounted_total == rows_filter_input_total,
@@ -1374,6 +1514,8 @@ def main(argv: Iterable[str]) -> int:
             "registry_stats": reg_stats,
             "pack_state_cache": state.get("pack_state_cache", {}),
             "latest_date_cache": state.get("latest_date_cache", {}),
+            "workers": state.get("workers", {}),
+            "history_deltas": state.get("history_deltas", {}),
             "stats": state.get("stats", {}),
             "pack_selection": state.get("pack_selection", {}),
             "reconciliation": reconciliation,

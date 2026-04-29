@@ -1,10 +1,14 @@
 #!/usr/bin/env node
 
+import fsSync from 'node:fs';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 
 const repoRoot = process.cwd();
-const opsRoot = process.env.OPS_ROOT || '/volume1/homes/neoboy/RepoOps/rubikvault-site';
+const defaultOpsRoot = fsSync.existsSync(path.join(repoRoot, 'runtime', 'native-matrix'))
+  ? repoRoot
+  : repoRoot;
+const opsRoot = process.env.OPS_ROOT || process.env.NAS_OPS_ROOT || defaultOpsRoot;
 const runtimeRoot = path.join(opsRoot, 'runtime', 'native-matrix');
 const runsRoot = path.join(runtimeRoot, 'runs');
 const reportsRoot = path.join(opsRoot, 'runtime', 'reports', 'native-matrix');
@@ -19,9 +23,9 @@ async function exists(filePath) {
   }
 }
 
-async function listFiles(root, suffix) {
+async function listFiles(root, suffix, maxDepth = 3) {
   const out = [];
-  async function walk(current) {
+  async function walk(current, depth = 0) {
     let entries;
     try {
       entries = await fs.readdir(current, { withFileTypes: true });
@@ -30,8 +34,8 @@ async function listFiles(root, suffix) {
     }
     for (const entry of entries) {
       const next = path.join(current, entry.name);
-      if (entry.isDirectory()) {
-        await walk(next);
+      if (entry.isDirectory() && depth < maxDepth) {
+        await walk(next, depth + 1);
       } else if (entry.isFile() && next.endsWith(suffix)) {
         out.push(next);
       }

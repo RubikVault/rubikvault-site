@@ -322,7 +322,7 @@ step_command() {
       printf '%s\n' "FORECAST_SKIP_MATURED_EVAL=1 FORECAST_RSS_BUDGET_MB='${RV_FORECAST_RSS_BUDGET_MB:-4096}' node scripts/forecast/run_daily.mjs --date='$TARGET_MARKET_DATE'"
       ;;
     hist_probs)
-      printf '%s\n' "HIST_PROBS_WORKERS='${RV_HIST_PROBS_WORKERS:-1}' HIST_PROBS_SKIP_EXISTING=1 HIST_PROBS_RSS_BUDGET_MB='${RV_HIST_PROBS_RSS_BUDGET_MB:-7168}' HIST_PROBS_RESPECT_CHECKPOINT_VERSION='${RV_HIST_PROBS_RESPECT_CHECKPOINT_VERSION:-1}' HIST_PROBS_FAIL_ON_SOFT_ERRORS='${RV_HIST_PROBS_FAIL_ON_SOFT_ERRORS:-1}' HIST_PROBS_MIN_COVERAGE_RATIO='${RV_HIST_PROBS_MIN_COVERAGE_RATIO:-0.95}' node run-hist-probs-turbo.mjs --asset-classes '$GLOBAL_ASSET_CLASSES'"
+      printf '%s\n' "HIST_PROBS_WORKERS='${RV_HIST_PROBS_WORKERS:-3}' HIST_PROBS_WORKER_BATCH_SIZE='${RV_HIST_PROBS_WORKER_BATCH_SIZE:-50}' HIST_PROBS_SKIP_EXISTING=1 HIST_PROBS_WRITE_MODE='${RV_HIST_PROBS_WRITE_MODE:-bucket_only}' HIST_PROBS_RSS_BUDGET_MB='${RV_HIST_PROBS_RSS_BUDGET_MB:-7168}' HIST_PROBS_RESPECT_CHECKPOINT_VERSION='${RV_HIST_PROBS_RESPECT_CHECKPOINT_VERSION:-1}' HIST_PROBS_FAIL_ON_SOFT_ERRORS='${RV_HIST_PROBS_FAIL_ON_SOFT_ERRORS:-1}' HIST_PROBS_MIN_COVERAGE_RATIO='${RV_HIST_PROBS_MIN_COVERAGE_RATIO:-0.95}' node scripts/ops/nas-hist-probs-worker-guard.mjs --mode '${RV_HIST_PROBS_TIER:-all}' -- node run-hist-probs-turbo.mjs --asset-classes '$GLOBAL_ASSET_CLASSES' && node scripts/ops/build-hist-probs-status-summary.mjs"
       ;;
     snapshot)
       printf '%s\n' "node scripts/ops/build-full-universe-decisions.mjs --target-market-date '$TARGET_MARKET_DATE' --replace && ALLOW_REMOTE_BAR_FETCH=0 BEST_SETUPS_DISABLE_NETWORK=1 node scripts/build-best-setups-v4.mjs"
@@ -365,10 +365,14 @@ step_command() {
       printf '%s\n' "mkdir -p '${RV_GLOBAL_MANIFEST_DIR:-${NAS_PIPELINE_ARTIFACTS_ROOT:-$NAS_OPS_ROOT/pipeline-artifacts}/manifests}' && node scripts/universe-v7/build-global-scope.mjs --asset-classes '$GLOBAL_ASSET_CLASSES' && node scripts/ops/build-history-pack-manifest.mjs --scope global --asset-classes '$GLOBAL_ASSET_CLASSES' && node scripts/ops/apply-history-touch-report-to-registry.mjs --scan-existing-packs && node scripts/ops/build-stock-analyzer-universe-audit.mjs --registry-path public/data/universe/v7/registry/registry.ndjson.gz --allowlist-path public/data/universe/v7/ssot/assets.global.canonical.ids.json --asset-classes '$GLOBAL_ASSET_CLASSES' --max-tickers 0 --live-sample-size 0 --concurrency '${RV_STOCK_ANALYZER_AUDIT_CONCURRENCY:-12}' --timeout-ms '${RV_STOCK_ANALYZER_AUDIT_TIMEOUT_MS:-30000}' && if [ -f public/data/ops/stock-analyzer-operability-latest.json ]; then node scripts/ops/build-stock-analyzer-operability.mjs --refresh-from-registry --registry-path public/data/universe/v7/registry/registry.ndjson.gz; else echo '{\"ok\":true,\"skipped\":\"stock_analyzer_operability_full_report_missing\"}'; fi"
       ;;
     ui_field_truth_report)
-      printf '%s\n' "node scripts/ops/build-ui-field-truth-report.mjs --base-url http://127.0.0.1:8788 --date='$TARGET_MARKET_DATE' --timeout-ms '${RV_UI_TRUTH_TIMEOUT_MS:-30000}'"
+      if [[ "${RV_ALLOW_LOCAL_RUNTIME_GATES:-0}" == "1" ]]; then
+        printf '%s\n' "node scripts/ops/build-ui-field-truth-report.mjs --base-url http://127.0.0.1:8788 --date='$TARGET_MARKET_DATE' --timeout-ms '${RV_UI_TRUTH_TIMEOUT_MS:-30000}'"
+      else
+        printf '%s\n' "node scripts/ops/build-ui-field-truth-report.mjs --page-core-only --page-core-latest-path public/data/page-core/candidates/latest.candidate.json --date='$TARGET_MARKET_DATE' --timeout-ms '${RV_UI_TRUTH_TIMEOUT_MS:-30000}'"
+      fi
       ;;
     final_integrity_seal)
-      printf '%s\n' "node scripts/ops/build-pipeline-runtime-report.mjs && node scripts/ops/build-full-universe-decisions.mjs --target-market-date '$TARGET_MARKET_DATE' --replace && node scripts/ops/final-integrity-seal.mjs --target-market-date '$TARGET_MARKET_DATE' && node scripts/ops/sync-release-state-from-final-seal.mjs"
+      printf '%s\n' "node scripts/ops/build-pipeline-runtime-report.mjs && node scripts/ops/build-full-universe-decisions.mjs --target-market-date '$TARGET_MARKET_DATE' --replace && node scripts/ops/build-hist-probs-status-summary.mjs && node scripts/ops/final-integrity-seal.mjs --target-market-date '$TARGET_MARKET_DATE' && node scripts/ops/sync-release-state-from-final-seal.mjs"
       ;;
     build_deploy_bundle)
       printf '%s\n' "node scripts/ops/build-deploy-bundle.mjs"

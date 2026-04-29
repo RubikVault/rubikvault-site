@@ -1,0 +1,40 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Breakout V1.2 Top Scores",
+  "type": "object",
+  "required": ["schema_version", "as_of", "score_version", "items"],
+  "additionalProperties": true,
+  "properties": {
+    "schema_version": { "const": "breakout_top_scores_v1" },
+    "as_of": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$" },
+    "generated_at": { "type": "string" },
+    "score_version": { "type": "string" },
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["event_id", "asset_id", "as_of", "scores", "ui", "reasons", "warnings"],
+        "additionalProperties": true,
+        "properties": {
+          "event_id": { "type": "string", "minLength": 1 },
+          "asset_id": { "type": "string", "minLength": 1 },
+          "as_of": { "type": "string" },
+          "asset_class": { "type": "string" },
+          "region": { "type": "string" },
+          "scores": {
+            "type": "object",
+            "required": ["final_signal_score"],
+            "additionalProperties": { "type": "number" }
+          },
+          "ui": {
+            "type": "object",
+            "required": ["label", "rank", "rank_percentile"],
+            "additionalProperties": true
+          },
+          "reasons": { "type": "array", "items": { "type": "string" } },
+          "warnings": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    }
+  }
+}

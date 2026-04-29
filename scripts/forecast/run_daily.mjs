@@ -33,6 +33,10 @@ const HORIZON_DAYS = { '1d': 1, '5d': 5, '20d': 20 };
 const SKIP_MATURED_EVAL = process.env.FORECAST_SKIP_MATURED_EVAL === '1';
 const FORECAST_RSS_BUDGET_MB = Math.max(128, Number(process.env.FORECAST_RSS_BUDGET_MB || 1024));
 
+function elapsedMsSince(startedAt) {
+    return Date.now() - startedAt;
+}
+
 async function loadExistingLedgerIds(repoRoot, ledgerType, startDate, endDate, idField) {
     const ids = new Set();
     for await (const row of iterateLedgerRangeAsync(repoRoot, ledgerType, startDate, endDate)) {
@@ -371,14 +375,17 @@ export async function runGeneratePhase(options = {}) {
         },
     });
     const phaseStartedAt = Date.now();
+    const timings = {};
 
     // 1. Load policy and champion
     console.log('[Step 1] Loading policy and champion spec...');
+    let stepStartedAt = Date.now();
     const policy = loadPolicy(repoRoot);
     const champion = loadChampion(repoRoot);
     const calibrationArtifacts = Object.fromEntries(HORIZONS.map((horizon) => [horizon, loadCalibrationArtifact(repoRoot, horizon)]));
     const policyHash = computePolicyHash(repoRoot);
     const codeHash = options.codeHash ?? 'local-dev';
+    timings.load_policy_ms = elapsedMsSince(stepStartedAt);
 
     console.log(`  Policy: ${policy.system.id} v${policy.system.version}`);
     console.log(`  Champion: ${champion.champion_id}`);
@@ -391,7 +398,9 @@ export async function runGeneratePhase(options = {}) {
 
     // 3. Ingest snapshots
     console.log('[Step 3] Ingesting snapshots...');
+    stepStartedAt = Date.now();
     const snapshot = await ingestSnapshots(repoRoot, tradingDate, policy);
+    timings.ingest_snapshots_ms = elapsedMsSince(stepStartedAt);
     console.log(`  Universe: ${snapshot.universe?.length ?? 0} tickers`);
     console.log(`  Missing price data: ${(snapshot.missing_price_pct ?? 0).toFixed(1)}%`);
     const rssAfterIngest = enforceRssBudget('generate_after_ingest');
@@ -441,7 +450,9 @@ export async function runGeneratePhase(options = {}) {
 
     // 5. Load price history
     console.log('[Step 5] Loading price history...');
+    stepStartedAt = Date.now();
     const priceHistory = await loadPriceHistory(repoRoot, snapshot.universe, tradingDate);
+    timings.load_price_history_ms = elapsedMsSince(stepStartedAt);
     // Multi-exchange benchmark: prefer SPY, fallback to broad equity ETFs
     const BENCHMARK_CANDIDATES = ['SPY', 'VT', 'ACWI', 'IWDA'];
     const spyPrices = BENCHMARK_CANDIDATES.reduce((found, sym) => found || priceHistory[sym] || null, null);
@@ -450,6 +461,7 @@ export async function runGeneratePhase(options = {}) {
 
     // 6. Generate forecasts
     console.log('[Step 6] Generating forecasts...');
+    stepStartedAt = Date.now();
     const forecasts = await generateAllForecasts({
         tradingDate,
         universe: snapshot.universe,
@@ -462,6 +474,7 @@ export async function runGeneratePhase(options = {}) {
         snapshotsManifest: snapshot.manifest,
         policy
     });
+    timings.generate_forecasts_ms = elapsedMsSince(stepStartedAt);
     console.log(`  Generated ${forecasts.length} forecasts`);
     const rssAfterForecasts = enforceRssBudget('generate_after_forecasts');
 
@@ -498,6 +511,7 @@ export async function runGeneratePhase(options = {}) {
 
     // 7. Write forecast records
     console.log('[Step 7] Writing forecast records to ledger...');
+    stepStartedAt = Date.now();
     const currentMonthStart = `${tradingDate.slice(0, 7)}-01`;
     const existingForecastIds = await loadExistingLedgerIds(
         repoRoot,
@@ -506,8 +520,11 @@ export async function runGeneratePhase(options = {}) {
         tradingDate,
         'forecast_id'
     );
+    timings.load_existing_forecast_ids_ms = elapsedMsSince(stepStartedAt);
+    stepStartedAt = Date.now();
     const newForecasts = forecasts.filter((forecast) => !existingForecastIds.has(String(forecast?.forecast_id || '').trim()));
     writeForecastRecords(repoRoot, newForecasts);
+    timings.write_forecast_records_ms = elapsedMsSince(stepStartedAt);
 
     if (options.writeLatest === true) {
         updateLatest(repoRoot, {
@@ -543,6 +560,7 @@ export async function runGeneratePhase(options = {}) {
             rss_start_mb: rssAtStart,
             rss_after_ingest_mb: rssAfterIngest,
             rss_after_history_mb: rssAfterHistory,
+            timings_ms: timings,
         },
     });
 

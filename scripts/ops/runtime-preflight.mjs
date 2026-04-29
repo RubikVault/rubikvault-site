@@ -12,7 +12,8 @@ const OPS_DIR = path.join(ROOT, 'public', 'data', 'ops');
 export const RUNTIME_PREFLIGHT_PATH = path.join(OPS_DIR, 'runtime-preflight-latest.json');
 const DEFAULT_BASE_URL = 'http://127.0.0.1:8788';
 const EXPECTED_NODE_MAJOR = 20;
-const MIN_FD_LIMIT = 8192;
+const DEFAULT_TIMEOUT_MS = 8000;
+const DEFAULT_MIN_FD_LIMIT = 8192;
 const MIN_WRANGLER_MAJOR = 4;
 const MIN_WRANGLER_MINOR = 71;
 const MIN_WRANGLER_PATCH = 0;
@@ -22,11 +23,14 @@ const DEFAULT_CANARIES = [
 ];
 
 function parseArgs(argv) {
+  const defaultTimeoutMs = Math.max(1000, Number(process.env.RV_RUNTIME_PREFLIGHT_TIMEOUT_MS || DEFAULT_TIMEOUT_MS) || DEFAULT_TIMEOUT_MS);
+  const defaultMinFdLimit = Math.max(0, Number(process.env.RV_RUNTIME_PREFLIGHT_MIN_FD_LIMIT || DEFAULT_MIN_FD_LIMIT) || DEFAULT_MIN_FD_LIMIT);
   const out = {
     baseUrl: DEFAULT_BASE_URL,
     mode: 'hard',
     ensureRuntime: false,
-    timeoutMs: 8000,
+    timeoutMs: defaultTimeoutMs,
+    minFdLimit: defaultMinFdLimit,
     canaries: DEFAULT_CANARIES,
   };
   for (let i = 0; i < argv.length; i += 1) {
@@ -40,6 +44,8 @@ function parseArgs(argv) {
     else if (arg.startsWith('--mode=')) out.mode = arg.slice('--mode='.length);
     else if (arg === '--timeout-ms' && argv[i + 1]) out.timeoutMs = Number(argv[++i]) || out.timeoutMs;
     else if (arg.startsWith('--timeout-ms=')) out.timeoutMs = Number(arg.slice('--timeout-ms='.length)) || out.timeoutMs;
+    else if (arg === '--min-fd-limit' && argv[i + 1]) out.minFdLimit = Number(argv[++i]) || out.minFdLimit;
+    else if (arg.startsWith('--min-fd-limit=')) out.minFdLimit = Number(arg.slice('--min-fd-limit='.length)) || out.minFdLimit;
   }
   return out;
 }
@@ -145,7 +151,7 @@ function readWranglerVersion(wranglerBin, nodeBin) {
   }
 }
 
-function readFdLimit() {
+function readFdLimit(minFdLimit = DEFAULT_MIN_FD_LIMIT) {
   const shells = [...new Set([
     process.env.SHELL,
     '/bin/zsh',
@@ -162,8 +168,8 @@ function readFdLimit() {
       const value = Number(raw);
       return {
         value,
-        ok: Number.isFinite(value) && value >= MIN_FD_LIMIT,
-        reason: Number.isFinite(value) && value >= MIN_FD_LIMIT ? null : 'fd_limit_too_low',
+        ok: Number.isFinite(value) && value >= minFdLimit,
+        reason: Number.isFinite(value) && value >= minFdLimit ? null : 'fd_limit_too_low',
       };
     } catch {
       // Try the next available shell.
@@ -520,6 +526,8 @@ async function ensureRuntime(baseUrl, timeoutMs, approvedNodeBin) {
 export async function buildRuntimePreflight(options = {}) {
   const generatedAt = new Date().toISOString();
   const baseUrl = options.baseUrl || DEFAULT_BASE_URL;
+  const timeoutMs = Math.max(1000, Number(options.timeoutMs || DEFAULT_TIMEOUT_MS) || DEFAULT_TIMEOUT_MS);
+  const minFdLimit = Math.max(0, Number(options.minFdLimit || DEFAULT_MIN_FD_LIMIT) || DEFAULT_MIN_FD_LIMIT);
   let approvedNodeBin = null;
   try {
     approvedNodeBin = resolveApprovedNodeBin({ fallbackCurrent: true });
@@ -530,15 +538,15 @@ export async function buildRuntimePreflight(options = {}) {
   const nodeReason = approvedNodeBin ? (nodeOk ? null : 'node_major_mismatch') : 'approved_node_missing';
   const wranglerBin = findRepoWrangler();
   const wrangler = readWranglerVersion(wranglerBin, approvedNodeBin || process.execPath);
-  const fdLimit = readFdLimit();
+  const fdLimit = readFdLimit(minFdLimit);
   const resourceForkFiles = await findResourceForkFiles(path.join(ROOT, 'functions'));
   const resourceForkOk = resourceForkFiles.length === 0;
-  const ensureResult = options.ensureRuntime ? await ensureRuntime(baseUrl, options.timeoutMs || 8000, approvedNodeBin || process.execPath) : null;
+  const ensureResult = options.ensureRuntime ? await ensureRuntime(baseUrl, timeoutMs, approvedNodeBin || process.execPath) : null;
   const runtimeProcesses = findRuntimeProcesses(wranglerBin);
   const runtimeOwner = assessRuntimeOwner(runtimeProcesses, wranglerBin, approvedNodeBin || process.execPath);
-  const diag = ensureResult?.detail?.ok ? ensureResult.detail : await checkDiag(baseUrl, options.timeoutMs || 8000);
+  const diag = ensureResult?.detail?.ok ? ensureResult.detail : await checkDiag(baseUrl, timeoutMs);
   const portOk = diag.ok;
-  const canaries = await checkCanaries(baseUrl, options.timeoutMs || 8000, options.canaries || DEFAULT_CANARIES);
+  const canaries = await checkCanaries(baseUrl, timeoutMs, options.canaries || DEFAULT_CANARIES);
   const canaryOk = canaries.every((entry) => entry.ok);
   const failureReasons = [];
   if (nodeReason) failureReasons.push(nodeReason);
@@ -560,6 +568,8 @@ export async function buildRuntimePreflight(options = {}) {
     host: os.hostname(),
     mode: options.mode || 'hard',
     base_url: baseUrl,
+    timeout_ms: timeoutMs,
+    min_fd_limit: minFdLimit,
     runtime_owner: {
       host: normalizeHost(baseUrl),
       ensure_runtime: Boolean(options.ensureRuntime),

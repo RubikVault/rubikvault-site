@@ -1,5 +1,5 @@
 ## Project DNA
-- Budget: 0€ (free-tier only).
+- Budget: no new paid infrastructure; Cloudflare and GitHub stay Free Tier. Existing provider keys such as EODHD are allowed.
 - Team: 1 person; AI writes code, user reviews and pushes (Git-native).
 - Stack: Cloudflare Pages + Pages Functions + KV; static output in `public/`.
 - Static-first: UI consumes `public/data/*.json` via CDN; `/api` is not required for initial page load.
@@ -7,10 +7,17 @@
 
 ## Hard Constraints
 - No paid services or new external dependencies.
+- Do not require paid GitHub runners, paid Actions minutes, paid artifact/storage usage, or paid GitHub features.
+- Cloudflare deployments must be verified; failed builds must be debugged and fixed.
+- GitHub workflows must not remain failing on `main`; fix them or remove only if they are proven obsolete.
+- Never commit private personal data, secrets, private account details, or local identity leaks to `main`.
+- Website, dashboard, public metadata, and all user-facing text on `main` must be English-only.
+- Keep public/static deploy artifacts compact and Cloudflare-friendly for the ~90k-asset Stock Analyzer and future iOS/Android apps.
 - Do not re-architect the product or change working endpoints.
 - Minimal diffs; keep patches small and safe.
 
 ## Read First
+- `PROJECT.md` ← **ZENTRALE PROJEKT-WAHRHEIT** — Ziele, NAS/Cloud/Mac-Rollen, Green-Definition und Hard Rules.
 - `docs/ops/lessons-learned.md` ← **ZUERST LESEN** — gebündelte Erkenntnisse aus echten Fehlern, von allen KIs und Entwicklern. Verhindert, dass Fehler wiederholt werden.
 - `docs/ops/contract.md`
 - `docs/ops/runbook.md`
@@ -22,13 +29,14 @@
 
 ## Non-Negotiables (Engineering Rules)
 - Before any change: run Reality Snapshot.
+- Before shipping to `main`: verify Cloudflare build, GitHub workflow status, privacy scan, English-only user-facing text, and public artifact size.
 - Envelope Contract: meta must never be null; all `/api/*` return `{ok, feature, data, error, meta}`.
 - KV truthiness: do not conflate missing debug token with missing KV binding.
 - Mirror Fallback required; Preview can be READONLY; do not fail hard if upstream missing.
 - Debugging must be deterministic and evidence-based; no hallucinated fixes.
 - Middleware is Content-Type gated only; never parse or wrap non-JSON responses.
 - NAS rule: no deletes, no Photos/QuickConnect/SMB disruption, and no heavy pipeline migration without explicit validation.
-- NAS migration rule: Mac stays primary until a NAS stage has 3 matching shadow runs, stable metrics, and a documented rollback.
+- NAS operation rule: NAS is the target orchestrator; Mac remains development/emergency fallback. Any Mac-to-NAS data transfer must be manifest-based and evidence-backed.
 - NAS benchmark rule: the Mac-built input manifest must be verified on the NAS before any shadow job starts, and overlapping benchmark runs are forbidden.
 - NAS dataset rule: `CONFIG` and `SAMSUNG` are bootstrap-only sources; overnight benchmarks must not depend on those drives remaining mounted on the Mac.
 - Current NAS benchmark verdict:

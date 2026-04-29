@@ -667,7 +667,7 @@
 
         async function loadData() {
             try {
-                const response = await fetch('/data/snapshots/stock-analysis.json');
+                const response = await fetch('/data/supermodules/scientific-summary.json');
                 analysisData = await response.json();
                 populateRankings();
                 populateSelector();

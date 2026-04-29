@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import importlib.util
 import json
+import os
 import sys
 import time
 from datetime import date, datetime, timezone
@@ -21,13 +22,29 @@ from scripts.quantlab.q1_common import atomic_write_json, utc_now_iso  # noqa: E
 def parse_args(argv: Iterable[str]) -> argparse.Namespace:
     p = argparse.ArgumentParser()
     p.add_argument("--repo-root", default=str(REPO_ROOT))
-    p.add_argument("--quant-root", default="/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab")
+    p.add_argument(
+        "--quant-root",
+        default=(
+            os.environ.get("QUANT_ROOT")
+            or os.environ.get("NAS_QUANT_ROOT")
+            or os.environ.get("RV_QUANT_ROOT")
+            or str(Path.home() / "QuantLabHot" / "rubikvault-quantlab")
+        ),
+    )
     p.add_argument("--ingest-date", default=date.today().isoformat())
     p.add_argument("--include-types", default="STOCK,ETF")
     p.add_argument("--history-touch-report", default="mirrors/universe-v7/reports/history_touch_report.json")
     p.add_argument("--latest-date-cache-path", default="ops/cache/q1_daily_delta_latest_date_index.stock_etf.json")
     p.add_argument("--job-name", default="")
     p.add_argument("--compression", default="snappy")
+    p.add_argument("--ignore-latest-date-cache", action="store_true")
+    p.add_argument("--resume-completed-packs", action="store_true")
+    p.add_argument(
+        "--latest-date-cache-flush-every",
+        type=int,
+        default=25,
+        help="Persist latest-date cache every N completed packs; 0 disables periodic flush.",
+    )
     return p.parse_args(list(argv))
 
 
@@ -51,12 +68,179 @@ def _load_module(path: Path, name: str):
     return mod
 
 
-def _load_latest_dates(cache_path: Path) -> tuple[dict[str, Any], dict[str, str]]:
+def _load_latest_dates(cache_path: Path, *, ignore_cache: bool = False) -> tuple[dict[str, Any], dict[str, str]]:
+    if ignore_cache:
+        return {}, {}
     if not cache_path.exists():
         return {}, {}
     payload = json.loads(cache_path.read_text())
     latest_dates = payload.get("latest_dates") or {}
     return payload, {str(k): str(v) for k, v in dict(latest_dates).items() if str(k) and str(v)}
+
+
+def _empty_stats(selected_packs_total: int) -> dict[str, int]:
+    return {
+        "candidate_packs_total": int(selected_packs_total),
+        "selected_packs_total": int(selected_packs_total),
+        "packs_done": 0,
+        "packs_failed": 0,
+        "bars_rows_scanned_in_selected_packs": 0,
+        "rows_filter_input_total": 0,
+        "bars_rows_emitted_delta": 0,
+        "assets_emitted_delta": 0,
+        "rows_skipped_old_or_known": 0,
+        "rows_skipped_duplicate_in_run": 0,
+        "rows_invalid": 0,
+        "rows_future_date": 0,
+        "rows_invalid_identity_or_date": 0,
+        "rows_invalid_ohlc": 0,
+        "rows_invalid_volume": 0,
+        "process_peak_vmrss_kb": 0,
+        "process_peak_vmswap_kb": 0,
+        "process_peak_vmsize_kb": 0,
+    }
+
+
+def _read_process_status_kb() -> dict[str, int]:
+    status_path = Path(f"/proc/{os.getpid()}/status")
+    fields = {"VmRSS", "VmSwap", "VmSize"}
+    out: dict[str, int] = {}
+    try:
+        for line in status_path.read_text().splitlines():
+            key, _, value = line.partition(":")
+            if key not in fields:
+                continue
+            parts = value.strip().split()
+            if parts:
+                out[f"{key}_kb"] = int(parts[0])
+    except Exception:
+        pass
+    return out
+
+
+def _update_process_peaks(stats: dict[str, Any], *samples: dict[str, int]) -> None:
+    for sample in samples:
+        for source_key, target_key in (
+            ("VmRSS_kb", "process_peak_vmrss_kb"),
+            ("VmSwap_kb", "process_peak_vmswap_kb"),
+            ("VmSize_kb", "process_peak_vmsize_kb"),
+        ):
+            value = int(sample.get(source_key) or 0)
+            if value > int(stats.get(target_key) or 0):
+                stats[target_key] = value
+
+
+def _iter_manifest_events(packs_manifest_path: Path) -> Iterable[dict[str, Any]]:
+    if not packs_manifest_path.exists():
+        return
+    with packs_manifest_path.open("r", encoding="utf-8") as fh:
+        for line in fh:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                event = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if isinstance(event, dict):
+                yield event
+
+
+def _completed_packs_from_manifest(packs_manifest_path: Path) -> list[str]:
+    completed: list[str] = []
+    seen: set[str] = set()
+    for event in _iter_manifest_events(packs_manifest_path):
+        rel_pack = str(event.get("rel_pack") or "").strip()
+        if rel_pack and rel_pack not in seen:
+            seen.add(rel_pack)
+            completed.append(rel_pack)
+    return completed
+
+
+def _stats_from_manifest(packs_manifest_path: Path, selected_packs_total: int) -> dict[str, int]:
+    stats = _empty_stats(selected_packs_total)
+    completed = 0
+    emitted_assets_total = 0
+    for event in _iter_manifest_events(packs_manifest_path):
+        completed += 1
+        per_pack_stats = event.get("stats") or {}
+        filter_stats = event.get("filter_stats") or {}
+        outputs = event.get("outputs") or []
+        stats["bars_rows_scanned_in_selected_packs"] += int(per_pack_stats.get("bars_written") or 0)
+        emitted_assets_total += int(per_pack_stats.get("assets_emitted") or 0)
+        stats["rows_filter_input_total"] += int(filter_stats.get("rows_in") or 0)
+        stats["rows_skipped_old_or_known"] += int(filter_stats.get("rows_skipped_old_or_known") or 0)
+        stats["rows_skipped_duplicate_in_run"] += int(filter_stats.get("rows_skipped_duplicate_in_run") or 0)
+        stats["rows_invalid"] += int(filter_stats.get("rows_invalid") or 0)
+        stats["rows_future_date"] += int(filter_stats.get("rows_future_date") or 0)
+        stats["rows_invalid_identity_or_date"] += int(filter_stats.get("rows_invalid_identity_or_date") or 0)
+        stats["rows_invalid_ohlc"] += int(filter_stats.get("rows_invalid_ohlc") or 0)
+        stats["rows_invalid_volume"] += int(filter_stats.get("rows_invalid_volume") or 0)
+        stats["bars_rows_emitted_delta"] += sum(int(item.get("rows") or 0) for item in outputs if isinstance(item, dict))
+    stats["packs_done"] = completed
+    stats["assets_emitted_delta"] = emitted_assets_total
+    return stats
+
+
+def _load_resume_state(state_path: Path, packs_manifest_path: Path, selected_packs_total: int) -> tuple[list[str], dict[str, Any], dict[str, int]]:
+    state: dict[str, Any] = {}
+    if state_path.exists():
+        try:
+            state = json.loads(state_path.read_text())
+        except Exception:
+            state = {}
+    completed = [str(item) for item in (state.get("completed_packs") or []) if str(item)]
+    if not completed:
+        completed = _completed_packs_from_manifest(packs_manifest_path)
+    failed_packs = dict(state.get("failed_packs") or {})
+    stats = _empty_stats(selected_packs_total)
+    if isinstance(state.get("stats"), dict):
+        stats.update({k: v for k, v in state["stats"].items() if k in stats})
+    elif completed:
+        stats.update(_stats_from_manifest(packs_manifest_path, selected_packs_total))
+    stats["candidate_packs_total"] = int(selected_packs_total)
+    stats["selected_packs_total"] = int(selected_packs_total)
+    stats["packs_done"] = len(completed)
+    stats["packs_failed"] = len(failed_packs)
+    return completed, failed_packs, stats
+
+
+def _merge_latest_dates_from_completed_outputs(packs_manifest_path: Path, latest_dates: dict[str, str]) -> dict[str, Any]:
+    try:
+        import pyarrow.parquet as pq
+    except Exception as exc:  # pragma: no cover - exporter already requires pyarrow at runtime
+        return {"enabled": False, "status": f"pyarrow_unavailable:{type(exc).__name__}"}
+
+    files_scanned = 0
+    rows_scanned = 0
+    missing_files = 0
+    for event in _iter_manifest_events(packs_manifest_path):
+        for item in event.get("outputs") or []:
+            output_path = Path(str((item or {}).get("path") or ""))
+            if not output_path.exists():
+                missing_files += 1
+                continue
+            files_scanned += 1
+            parquet_file = pq.ParquetFile(output_path)
+            for batch in parquet_file.iter_batches(columns=["asset_id", "date"], batch_size=65536):
+                data = batch.to_pydict()
+                for asset_id, row_date in zip(data.get("asset_id") or [], data.get("date") or []):
+                    if not asset_id or not row_date:
+                        continue
+                    rows_scanned += 1
+                    aid = str(asset_id)
+                    d = str(row_date)
+                    prev = latest_dates.get(aid, "")
+                    if d > prev:
+                        latest_dates[aid] = d
+    return {
+        "enabled": True,
+        "status": "rebuilt_from_completed_outputs",
+        "files_scanned": files_scanned,
+        "rows_scanned": rows_scanned,
+        "missing_files": missing_files,
+        "assets_total": len(latest_dates),
+    }
 
 
 def main(argv: Iterable[str]) -> int:
@@ -80,7 +264,10 @@ def main(argv: Iterable[str]) -> int:
     if not pack_to_assets:
         raise SystemExit(f"FATAL: no selected packs in history touch report: {history_touch_report_path}")
 
-    cache_payload, latest_dates = _load_latest_dates(latest_date_cache_path)
+    cache_payload, latest_dates = _load_latest_dates(
+        latest_date_cache_path,
+        ignore_cache=bool(args.ignore_latest_date_cache),
+    )
     asset_meta_exporter = {
         str(canonical_id): exporter.AssetMeta(
             asset_id=str(meta.get("asset_id") or canonical_id),
@@ -106,27 +293,27 @@ def main(argv: Iterable[str]) -> int:
     run_status_path = run_root / "q1_daily_delta_ingest_run_status.json"
     if not packs_manifest_path.exists():
         packs_manifest_path.write_text("")
+    elif not args.resume_completed_packs:
+        packs_manifest_path.write_text("")
 
-    stats = {
-        "candidate_packs_total": len(pack_to_assets),
-        "selected_packs_total": len(pack_to_assets),
-        "packs_done": 0,
-        "packs_failed": 0,
-        "bars_rows_scanned_in_selected_packs": 0,
-        "rows_filter_input_total": 0,
-        "bars_rows_emitted_delta": 0,
-        "assets_emitted_delta": 0,
-        "rows_skipped_old_or_known": 0,
-        "rows_skipped_duplicate_in_run": 0,
-        "rows_invalid": 0,
-        "rows_future_date": 0,
-        "rows_invalid_identity_or_date": 0,
-        "rows_invalid_ohlc": 0,
-        "rows_invalid_volume": 0,
-    }
+    selected_packs = sorted(pack_to_assets.keys())
+    if args.resume_completed_packs:
+        completed_packs, failed_packs, stats = _load_resume_state(state_path, packs_manifest_path, len(selected_packs))
+    else:
+        completed_packs = []
+        failed_packs = {}
+        stats = _empty_stats(len(selected_packs))
+    completed_pack_set = set(completed_packs)
+    if args.resume_completed_packs and completed_packs:
+        resume_latest_meta = _merge_latest_dates_from_completed_outputs(packs_manifest_path, latest_dates)
+        stats["assets_emitted_delta"] = max(
+            int(stats.get("assets_emitted_delta") or 0),
+            int(resume_latest_meta.get("assets_total") or 0),
+        )
+    else:
+        resume_latest_meta = {"enabled": False, "status": "not_requested"}
     emitted_assets: set[str] = set()
-    emitted_keys_seen: set[tuple[str, str]] = set()
-    failed_packs: dict[str, Any] = {}
+    emitted_delta_keys_total = int(stats.get("bars_rows_emitted_delta") or 0)
 
     atomic_write_json(
         state_path,
@@ -138,30 +325,38 @@ def main(argv: Iterable[str]) -> int:
             "quant_root": str(quant_root),
             "ingest_date": str(args.ingest_date),
             "include_types": sorted(include_types),
-            "completed_packs": [],
-            "failed_packs": {},
+            "completed_packs": completed_packs,
+            "failed_packs": failed_packs,
             "stats": stats,
             "history_touch_report": history_touch_meta,
+            "resume": {
+                "enabled": bool(args.resume_completed_packs),
+                "completed_packs_total": len(completed_packs),
+                "latest_date_rebuild": resume_latest_meta,
+            },
         },
     )
 
-    completed_packs: list[str] = []
-    for idx, rel_pack in enumerate(sorted(pack_to_assets.keys()), start=1):
+    for idx, rel_pack in enumerate(selected_packs, start=1):
+        if rel_pack in completed_pack_set:
+            continue
         wanted_assets = pack_to_assets[rel_pack]
         pack_abs = delta_mod._history_pack_path(repo_root, rel_pack)
         started = time.time()
+        process_memory_before_kb = _read_process_status_kb()
         try:
             rows_by_class, per_pack_stats = exporter.flatten_rows_for_pack(pack_abs, rel_pack, wanted_assets, asset_meta_exporter)
             stats["bars_rows_scanned_in_selected_packs"] += int(per_pack_stats.get("bars_written", 0))
             filter_stats_total: dict[str, int] = {}
             outputs: list[dict[str, Any]] = []
             pack_key = exporter.rel_to_pack_key(rel_pack)
+            pack_emitted_keys_seen: set[tuple[str, str]] = set()
 
             for asset_class, rows in rows_by_class.items():
                 filtered, fstats = delta_mod.filter_rows_newer_than_latest(
                     rows,
                     latest_dates,
-                    emitted_keys_seen,
+                    pack_emitted_keys_seen,
                     max_allowed_date=str(args.ingest_date),
                 )
                 for key, value in fstats.items():
@@ -181,6 +376,10 @@ def main(argv: Iterable[str]) -> int:
                     prev = latest_dates.get(str(asset_id), "")
                     latest_dates[str(asset_id)] = max(str(row_date), prev)
                     emitted_assets.add(str(asset_id))
+            process_memory_after_kb = _read_process_status_kb()
+            _update_process_peaks(stats, process_memory_before_kb, process_memory_after_kb)
+            rows_out_total = int(filter_stats_total.get("rows_out", 0))
+            emitted_delta_keys_total += rows_out_total
 
             event = {
                 "ts": utc_now_iso(),
@@ -190,6 +389,10 @@ def main(argv: Iterable[str]) -> int:
                 "targets": len(wanted_assets),
                 "stats": per_pack_stats,
                 "filter_stats": filter_stats_total,
+                "dedupe_scope": "pack_local_plus_latest_date_by_asset",
+                "emitted_delta_keys": rows_out_total,
+                "process_memory_before_kb": process_memory_before_kb,
+                "process_memory_after_kb": process_memory_after_kb,
                 "outputs": outputs,
             }
             with packs_manifest_path.open("a", encoding="utf-8") as outfh:
@@ -217,9 +420,10 @@ def main(argv: Iterable[str]) -> int:
                 }[key]
                 stats[target_key] += int(filter_stats_total.get(key, 0))
             stats["bars_rows_emitted_delta"] += sum(int(item["rows"]) for item in outputs)
-            stats["assets_emitted_delta"] = len(emitted_assets)
-            stats["packs_done"] = idx
+            stats["assets_emitted_delta"] = max(int(stats.get("assets_emitted_delta") or 0), len(emitted_assets))
             completed_packs.append(rel_pack)
+            completed_pack_set.add(rel_pack)
+            stats["packs_done"] = len(completed_packs)
             atomic_write_json(
                 state_path,
                 {
@@ -234,15 +438,49 @@ def main(argv: Iterable[str]) -> int:
                     "failed_packs": failed_packs,
                     "stats": stats,
                     "history_touch_report": history_touch_meta,
+                    "resume": {
+                        "enabled": bool(args.resume_completed_packs),
+                        "completed_packs_total": len(completed_packs),
+                        "latest_date_rebuild": resume_latest_meta,
+                    },
                 },
             )
+            flush_every = int(args.latest_date_cache_flush_every or 0)
+            if flush_every > 0 and len(completed_packs) % flush_every == 0:
+                cache_payload.setdefault("schema", "q1_daily_delta_latest_date_cache_v1")
+                cache_payload["generated_at"] = utc_now_iso()
+                cache_payload["latest_dates"] = latest_dates
+                cache_payload["files_total"] = max(int(cache_payload.get("files_total") or 0), int(stats["packs_done"]))
+                atomic_write_json(latest_date_cache_path, cache_payload)
         except Exception as exc:
             failed_packs[rel_pack] = {"error": f"{type(exc).__name__}:{exc}", "at": utc_now_iso()}
             stats["packs_failed"] = len(failed_packs)
+            atomic_write_json(
+                state_path,
+                {
+                    "schema": "q1_daily_delta_ingest_state_v1",
+                    "started_at": "",
+                    "updated_at": utc_now_iso(),
+                    "repo_root": str(repo_root),
+                    "quant_root": str(quant_root),
+                    "ingest_date": str(args.ingest_date),
+                    "include_types": sorted(include_types),
+                    "completed_packs": completed_packs,
+                    "failed_packs": failed_packs,
+                    "stats": stats,
+                    "history_touch_report": history_touch_meta,
+                    "resume": {
+                        "enabled": bool(args.resume_completed_packs),
+                        "completed_packs_total": len(completed_packs),
+                        "latest_date_rebuild": resume_latest_meta,
+                    },
+                },
+            )
 
+    cache_payload.setdefault("schema", "q1_daily_delta_latest_date_cache_v1")
     cache_payload["generated_at"] = utc_now_iso()
     cache_payload["latest_dates"] = latest_dates
-    cache_payload["files_total"] = int(cache_payload.get("files_total") or 0) + max(0, stats["packs_done"])
+    cache_payload["files_total"] = max(int(cache_payload.get("files_total") or 0), int(stats["packs_done"]))
     atomic_write_json(latest_date_cache_path, cache_payload)
 
     rows_emitted_delta = int(stats["bars_rows_emitted_delta"])
@@ -278,9 +516,10 @@ def main(argv: Iterable[str]) -> int:
         "latest_date_cache_path": str(latest_date_cache_path),
         "stats": stats,
         "reconciliation": {
-            "emitted_delta_keys_total": len(emitted_keys_seen),
+            "emitted_delta_keys_total": emitted_delta_keys_total,
             "duplicate_keys_in_emitted_delta_detected": False,
-            "rows_emitted_matches_keys": rows_emitted_delta == len(emitted_keys_seen),
+            "dedupe_scope": "pack_local_plus_latest_date_by_asset",
+            "rows_emitted_matches_keys": rows_emitted_delta == emitted_delta_keys_total,
             "rows_filter_input_total": rows_filter_input_total,
             "rows_filter_accounted_total": rows_filter_accounted_total,
             "rows_filter_accounting_balanced": rows_filter_accounted_total == rows_filter_input_total,

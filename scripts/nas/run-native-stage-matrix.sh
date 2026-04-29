@@ -11,11 +11,13 @@ if [[ -z "$STAGE_INPUT" ]]; then
 fi
 
 REPO_ROOT="${REPO_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)}"
-OPS_ROOT="${OPS_ROOT:-/volume1/homes/neoboy/RepoOps/rubikvault-site}"
-if [[ -f "$OPS_ROOT/tooling/env.sh" ]]; then
-  # shellcheck disable=SC1090
-  . "$OPS_ROOT/tooling/env.sh"
-fi
+# shellcheck source=scripts/nas/nas-env.sh
+. "$REPO_ROOT/scripts/nas/nas-env.sh"
+# shellcheck source=scripts/nas/node-env.sh
+. "$REPO_ROOT/scripts/nas/node-env.sh"
+PIPELINE_LANE="${RV_PIPELINE_LANE:-release-full}"
+nas_ensure_runtime_roots
+nas_assert_global_lock_clear "night-pipeline"
 
 RUNTIME_ROOT="$OPS_ROOT/runtime/native-matrix"
 RUNS_ROOT="$RUNTIME_ROOT/runs"
@@ -52,7 +54,7 @@ case "$STAGE_INPUT" in
   stage2)
     STAGE_ID="stage2"
     STAGE_KEY="stage2"
-    COMMAND="node scripts/generate_meta_dashboard_data.mjs"
+    COMMAND="node scripts/generate_meta_dashboard_data.mjs --lane='$PIPELINE_LANE'"
     PATH_MANIFEST_SOURCE="$REPO_ROOT/scripts/nas/inputs/stage-2.paths"
     WORK_PATH_MANIFEST_REL="scripts/nas/inputs/stage-2.paths"
     BASELINE_STAGE="stage2"
@@ -61,7 +63,7 @@ case "$STAGE_INPUT" in
   stage3)
     STAGE_ID="stage3"
     STAGE_KEY="stage3"
-    COMMAND="QUANT_ROOT='$RUNS_ROOT/$STAGE_KEY/$VARIANT_ID/$STAMP/quant-root' HIST_PROBS_PROFILE_INDEX='tmp/nas-benchmark/hist-probs-profile-index.json' node scripts/ops/build-system-status-report.mjs"
+    COMMAND="QUANT_ROOT='$RUNS_ROOT/$STAGE_KEY/$VARIANT_ID/$STAMP/quant-root' HIST_PROBS_PROFILE_INDEX='tmp/nas-benchmark/hist-probs-profile-index.json' node scripts/ops/build-system-status-report.mjs --lane='$PIPELINE_LANE'"
     PATH_MANIFEST_SOURCE="$REPO_ROOT/scripts/nas/inputs/stage-3.paths"
     WORK_PATH_MANIFEST_REL="scripts/nas/inputs/stage-3.paths"
     BASELINE_STAGE="stage3"
@@ -249,6 +251,7 @@ rsync -a \
   --exclude '.venv' \
   --exclude 'quantlab/.venv' \
   --exclude '.wrangler' \
+  --exclude 'runtime' \
   --exclude 'tmp' \
   --exclude 'mirrors' \
   --exclude 'public/data' \
@@ -304,7 +307,7 @@ done
 
 if [[ "$STAGE_ID" == "stage3" ]]; then
   mkdir -p "$WORK_REPO/tmp/nas-benchmark" "$WORK_QUANT_ROOT/ops/q1_daily_delta_ingest"
-  node "$PROFILE_SCRIPT" --dir "$WORK_REPO/public/data/hist-probs" --output "$WORK_REPO/tmp/nas-benchmark/hist-probs-profile-index.json" >/dev/null
+  "$NODE_BIN" "$PROFILE_SCRIPT" --dir "$WORK_REPO/public/data/hist-probs" --output "$WORK_REPO/tmp/nas-benchmark/hist-probs-profile-index.json" >/dev/null
   if [[ -f "$BASELINE_STAGE_ROOT/quant-root/ops/q1_daily_delta_ingest/latest_success.json" ]]; then
     rsync -a "$BASELINE_STAGE_ROOT/quant-root/ops/q1_daily_delta_ingest/latest_success.json" "$WORK_QUANT_ROOT/ops/q1_daily_delta_ingest/" >/dev/null
   fi
@@ -400,7 +403,7 @@ with open(sys.argv[1], "w", encoding="utf-8") as fh:
 PY
   else
     set +e
-    node "$COMPARE_SCRIPT" --left "$baseline_out" --right "$local_out" --report "$report_path" >> "$WORK_LOG" 2>&1
+    "$NODE_BIN" "$COMPARE_SCRIPT" --left "$baseline_out" --right "$local_out" --report "$report_path" >> "$WORK_LOG" 2>&1
     COMPARE_STATUS="$?"
     set -e
     if [[ "$COMPARE_STATUS" -ne 0 ]]; then

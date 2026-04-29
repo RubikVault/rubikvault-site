@@ -1,0 +1,41 @@
+{
+  "schema_version": "breakout_legacy_v1_golden_sample",
+  "source": "public/data/snapshots/breakout-all.json",
+  "generated_at": "2026-03-22T12:33:17.022Z",
+  "statistics": {
+    "total": 11005,
+    "setup": 3488,
+    "armed": 466,
+    "triggered": 91,
+    "confirmed": 337
+  },
+  "states": {
+    "SETUP": 3488,
+    "NONE": 5632,
+    "COOLDOWN": 935,
+    "FAILED": 56,
+    "TRIGGERED": 91,
+    "ARMED": 466,
+    "CONFIRMED": 337
+  },
+  "sample_items": [
+    {
+      "ticker": "AS:2BRK",
+      "state": "SETUP",
+      "max_level": 8.6063,
+      "latest_close": 7.6961,
+      "state_age": 11,
+      "total_score": 20,
+      "rvol20": 1.7564007295818416
+    },
+    {
+      "ticker": "AS:2HCA",
+      "state": "SETUP",
+      "max_level": 4.9571,
+      "latest_close": 4.5348,
+      "state_age": 59,
+      "total_score": 20,
+      "rvol20": 1.2546931507605665
+    }
+  ]
+}

@@ -6,6 +6,9 @@ import { spawnSync } from 'node:child_process';
 
 const REPO_ROOT = path.resolve(new URL('.', import.meta.url).pathname, '../..');
 const OUTPUT_PATH = path.join(REPO_ROOT, 'public/data/reports/system-recovery-latest.json');
+const GLOBAL_ASSET_CLASSES = process.env.RV_GLOBAL_ASSET_CLASSES || 'STOCK,ETF,INDEX';
+const EODHD_ENV_FILE = process.env.RV_EODHD_ENV_FILE || '.env.local';
+const EODHD_GLOBAL_LOCK_PATH = process.env.RV_EODHD_GLOBAL_LOCK_PATH || 'mirrors/universe-v7/state/eodhd-global.lock';
 const now = new Date();
 const startOfUtcDay = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
 const afterUsClose = now.getUTCHours() > 20 || (now.getUTCHours() === 20 && now.getUTCMinutes() >= 15);
@@ -24,8 +27,13 @@ const STEPS = [
     gate: (results) => true,
   },
   {
-    id: 'us_eu_scope',
-    command: ['node', 'scripts/universe-v7/build-us-eu-scope.mjs'],
+    id: 'global_scope',
+    command: ['node', 'scripts/universe-v7/build-global-scope.mjs', '--asset-classes', GLOBAL_ASSET_CLASSES],
+    gate: (results) => true,
+  },
+  {
+    id: 'global_history_pack_manifest',
+    command: ['node', 'scripts/ops/build-history-pack-manifest.mjs', '--scope', 'global', '--asset-classes', GLOBAL_ASSET_CLASSES],
     gate: (results) => true,
   },
   {
@@ -33,16 +41,31 @@ const STEPS = [
     command: [
       'python3',
       'scripts/quantlab/refresh_v7_history_from_eodhd.py',
+      '--env-file',
+      EODHD_ENV_FILE,
       '--allowlist-path',
-      'public/data/universe/v7/ssot/stocks_etfs.us_eu.canonical.ids.json',
+      'public/data/universe/v7/ssot/assets.global.canonical.ids.json',
       '--from-date',
       refreshFromDate.toISOString().slice(0, 10),
       '--to-date',
       targetMarketDate,
+      '--bulk-last-day',
+      '--bulk-exchange-cost',
+      process.env.RV_EODHD_BULK_EXCHANGE_COST || '100',
+      '--global-lock-path',
+      EODHD_GLOBAL_LOCK_PATH,
+      '--max-eodhd-calls',
+      process.env.RV_MARKET_REFRESH_MAX_EODHD_CALLS || '0',
+      '--max-retries',
+      process.env.RV_MARKET_REFRESH_MAX_RETRIES || '1',
+      '--timeout-sec',
+      process.env.RV_MARKET_REFRESH_TIMEOUT_PER_REQUEST_SEC || '60',
+      '--flush-every',
+      process.env.RV_MARKET_REFRESH_FLUSH_EVERY || '250',
       '--concurrency',
-      '12',
+      process.env.RV_MARKET_REFRESH_CONCURRENCY || '12',
       '--progress-every',
-      '500',
+      process.env.RV_MARKET_REFRESH_PROGRESS_EVERY || '500',
     ],
     gate: () => false,
     note: 'Run manually with valid provider env/token when upstream market data must be advanced.',
@@ -59,7 +82,7 @@ const STEPS = [
   },
   {
     id: 'hist_probs',
-    command: ['node', 'run-hist-probs-turbo.mjs'],
+    command: ['node', 'run-hist-probs-turbo.mjs', '--asset-classes', GLOBAL_ASSET_CLASSES],
     gate: (results) => ['completed', 'skipped'].includes(results.q1_delta_ingest?.status || ''),
   },
   {
@@ -69,7 +92,7 @@ const STEPS = [
   },
   {
     id: 'stock_analyzer_universe_audit',
-    command: ['node', 'scripts/ops/build-stock-analyzer-universe-audit.mjs', '--base-url', 'http://127.0.0.1:8788', '--registry-path', 'public/data/universe/v7/registry/registry.ndjson.gz', '--asset-classes', 'STOCK,ETF', '--max-tickers', '0'],
+    command: ['node', 'scripts/ops/build-stock-analyzer-universe-audit.mjs', '--registry-path', 'public/data/universe/v7/registry/registry.ndjson.gz', '--allowlist-path', 'public/data/universe/v7/ssot/assets.global.canonical.ids.json', '--asset-classes', GLOBAL_ASSET_CLASSES, '--max-tickers', '0', '--live-sample-size', '0'],
     gate: (results) => results.snapshot?.status === 'completed',
   },
   {

@@ -245,7 +245,7 @@
       "label": "Heavy Data and Training Jobs",
       "status": "blocked_on_capacity",
       "jobs": [
-        "node scripts/lib/hist-probs/run-hist-probs.mjs --registry-path public/data/universe/v7/registry/registry.ndjson.gz --asset-classes STOCK,ETF --max-tickers 0",
+        "RV_GLOBAL_ASSET_CLASSES=\"${RV_GLOBAL_ASSET_CLASSES:-STOCK,ETF}\"; node scripts/lib/hist-probs/run-hist-probs.mjs --registry-path public/data/universe/v7/registry/registry.ndjson.gz --asset-classes \"$RV_GLOBAL_ASSET_CLASSES\" --max-tickers 0",
         "node scripts/forecast/run_daily.mjs",
         "node scripts/learning/run-daily-learning-cycle.mjs"
       ],

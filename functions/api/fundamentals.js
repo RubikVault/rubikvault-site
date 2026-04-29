@@ -691,7 +691,11 @@ export async function onRequestGet(context) {
 
   if (shouldFallbackToFmp(primary)) {
     // Try EODHD before FMP
-    const eodhdResult = await fetchEodhdFundamentals(ticker, env);
+    const eodhdResult = await fetchEodhdFundamentals(ticker, env, {
+      exchange: scopeMember?.exchange,
+      providerSymbol: scopeMember?.provider_symbol,
+      canonicalId: scopeMember?.canonical_id,
+    });
     if (eodhdResult.ok && eodhdResult.data) {
       upstream = eodhdResult;
       fallbackUsed = true;

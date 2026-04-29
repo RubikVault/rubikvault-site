@@ -11,33 +11,39 @@ from pathlib import Path
 
 def read_meminfo():
     values = {}
-    with open("/proc/meminfo", "r", encoding="utf-8") as handle:
-        for line in handle:
-            key, raw = line.split(":", 1)
-            parts = raw.strip().split()
-            if parts:
-                try:
-                    values[key] = int(parts[0])
-                except ValueError:
-                    continue
+    try:
+        with open("/proc/meminfo", "r", encoding="utf-8") as handle:
+            for line in handle:
+                key, raw = line.split(":", 1)
+                parts = raw.strip().split()
+                if parts:
+                    try:
+                        values[key] = int(parts[0])
+                    except ValueError:
+                        continue
+    except FileNotFoundError:
+        pass
     return values
 
 
 def read_cpu_stat():
-    with open("/proc/stat", "r", encoding="utf-8") as handle:
-        for line in handle:
-            if line.startswith("cpu "):
-                parts = [int(value) for value in line.split()[1:]]
-                return {
-                    "user": parts[0],
-                    "nice": parts[1],
-                    "system": parts[2],
-                    "idle": parts[3],
-                    "iowait": parts[4],
-                    "irq": parts[5],
-                    "softirq": parts[6],
-                    "steal": parts[7] if len(parts) > 7 else 0,
-                }
+    try:
+        with open("/proc/stat", "r", encoding="utf-8") as handle:
+            for line in handle:
+                if line.startswith("cpu "):
+                    parts = [int(value) for value in line.split()[1:]]
+                    return {
+                        "user": parts[0],
+                        "nice": parts[1],
+                        "system": parts[2],
+                        "idle": parts[3],
+                        "iowait": parts[4],
+                        "irq": parts[5],
+                        "softirq": parts[6],
+                        "steal": parts[7] if len(parts) > 7 else 0,
+                    }
+    except FileNotFoundError:
+        pass
     return None
 
 
@@ -87,12 +93,51 @@ def cpu_window(before, after):
     }
 
 
+def read_loadavg():
+    try:
+        one, five, fifteen = os.getloadavg()
+        return {"load1": round(one, 3), "load5": round(five, 3), "load15": round(fifteen, 3)}
+    except Exception:
+        return {}
+
+
+def write_resource_sample(handle, *, started_at, pgid, label, stats=None):
+    if handle is None:
+        return
+    now = time.time()
+    process_stats = stats if stats is not None else read_process_group_stats(pgid)
+    mem = read_meminfo()
+    payload = {
+        "schema_version": "nas.step.resources.v1",
+        "ts_epoch_sec": round(now, 3),
+        "elapsed_sec": round(now - started_at, 3),
+        "label": label,
+        "process_group": {
+            "pgid": pgid,
+            "rss_kb": int(process_stats.get("rss_kb") or 0),
+            "rss_mb": round(int(process_stats.get("rss_kb") or 0) / 1024, 2),
+            "pcpu": round(float(process_stats.get("pcpu") or 0.0), 2),
+        },
+        "mem": {
+            "MemTotal_kb": mem.get("MemTotal"),
+            "MemAvailable_kb": mem.get("MemAvailable"),
+            "SwapTotal_kb": mem.get("SwapTotal"),
+            "SwapFree_kb": mem.get("SwapFree"),
+        },
+        "loadavg": read_loadavg(),
+    }
+    handle.write(json.dumps(payload, sort_keys=True) + "\n")
+    handle.flush()
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--cwd", required=True)
     parser.add_argument("--stdout", required=True)
     parser.add_argument("--stderr", required=True)
     parser.add_argument("--json", required=True)
+    parser.add_argument("--resources-ndjson", default="")
+    parser.add_argument("--sample-interval-sec", type=float, default=10.0)
     parser.add_argument("--timeout-sec", type=float, default=0)
     parser.add_argument("--set-env", action="append", default=[])
     parser.add_argument("--command", required=True)
@@ -108,15 +153,20 @@ def main():
     stdout_path = Path(args.stdout)
     stderr_path = Path(args.stderr)
     json_path = Path(args.json)
+    resources_path = Path(args.resources_ndjson) if args.resources_ndjson else None
     stdout_path.parent.mkdir(parents=True, exist_ok=True)
     stderr_path.parent.mkdir(parents=True, exist_ok=True)
     json_path.parent.mkdir(parents=True, exist_ok=True)
+    if resources_path is not None:
+        resources_path.parent.mkdir(parents=True, exist_ok=True)
 
     mem_before = read_meminfo()
     cpu_before = read_cpu_stat()
     started_at = time.time()
 
-    with open(stdout_path, "w", encoding="utf-8") as stdout_handle, open(stderr_path, "w", encoding="utf-8") as stderr_handle:
+    resources_handle = open(resources_path, "w", encoding="utf-8") if resources_path is not None else None
+    try:
+      with open(stdout_path, "w", encoding="utf-8") as stdout_handle, open(stderr_path, "w", encoding="utf-8") as stderr_handle:
         proc = subprocess.Popen(
             args.command,
             cwd=args.cwd,
@@ -131,13 +181,20 @@ def main():
         peak_pcpu = 0.0
         samples = []
         timed_out = False
+        last_resource_sample = 0.0
+        write_resource_sample(resources_handle, started_at=started_at, pgid=pgid, label="start", stats={"rss_kb": 0, "pcpu": 0.0})
         while proc.poll() is None:
             stats = read_process_group_stats(pgid)
             peak_rss_kb = max(peak_rss_kb, stats["rss_kb"])
             peak_pcpu = max(peak_pcpu, stats["pcpu"])
             samples.append(stats["rss_kb"])
+            now = time.time()
+            if resources_handle is not None and (now - last_resource_sample) >= max(1.0, args.sample_interval_sec):
+                write_resource_sample(resources_handle, started_at=started_at, pgid=pgid, label="running", stats=stats)
+                last_resource_sample = now
             if args.timeout_sec and (time.time() - started_at) > args.timeout_sec:
                 timed_out = True
+                write_resource_sample(resources_handle, started_at=started_at, pgid=pgid, label="timeout_sigterm", stats=stats)
                 try:
                     os.killpg(pgid, signal.SIGTERM)
                 except Exception:
@@ -156,9 +213,13 @@ def main():
         peak_rss_kb = max(peak_rss_kb, final_stats["rss_kb"])
         peak_pcpu = max(peak_pcpu, final_stats["pcpu"])
         samples.append(final_stats["rss_kb"])
+        write_resource_sample(resources_handle, started_at=started_at, pgid=pgid, label="finish", stats=final_stats)
         returncode = proc.returncode
         if timed_out and returncode == 0:
             returncode = 124
+    finally:
+        if resources_handle is not None:
+            resources_handle.close()
 
     finished_at = time.time()
     mem_after = read_meminfo()

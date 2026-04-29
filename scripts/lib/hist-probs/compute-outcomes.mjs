@@ -16,7 +16,7 @@ import path from 'node:path';
 import fs from 'node:fs/promises';
 import { REPO_ROOT, loadLocalBars, setLocalBarsRuntimeOverrides } from '../best-setups-local-loader.mjs';
 import { HistProbsRollingCore } from '../indicators/rolling-core.mjs';
-import { histProbsWriteTargets } from './path-resolver.mjs';
+import { histProbsWriteTargets, resolveHistProbsWriteMode } from './path-resolver.mjs';
 
 const OUTPUT_BASE = path.join(REPO_ROOT, 'public/data/hist-probs');
 const HORIZONS = [5, 10, 20, 60, 120, 250];
@@ -188,15 +188,19 @@ export async function computeOutcomes(ticker, options = {}) {
     }
   }
 
-  // Write output
-  const { flatPath: outPath, shardPath } = histProbsWriteTargets(OUTPUT_BASE, ticker);
-  const tmpPath = path.join(OUTPUT_BASE, `.${ticker.toUpperCase()}.${process.pid}.${Date.now()}.tmp`);
-  await fs.mkdir(OUTPUT_BASE, { recursive: true });
-  await fs.mkdir(path.dirname(shardPath), { recursive: true });
+  // Write output. Default is bucket_only after reader parity; dual stays opt-in.
+  const writeMode = resolveHistProbsWriteMode(options.writeMode);
+  const { flatPath: outPath, writePaths } = histProbsWriteTargets(OUTPUT_BASE, ticker, { mode: writeMode });
+  const primaryPath = writePaths[0] || outPath;
+  const tmpPath = path.join(path.dirname(primaryPath), `.${ticker.toUpperCase()}.${process.pid}.${Date.now()}.tmp`);
+  await fs.mkdir(path.dirname(primaryPath), { recursive: true });
   try {
     await fs.writeFile(tmpPath, JSON.stringify(result, null, 2), 'utf8');
-    await fs.rename(tmpPath, outPath);
-    await fs.copyFile(outPath, shardPath);
+    await fs.rename(tmpPath, primaryPath);
+    for (const writePath of writePaths.slice(1)) {
+      await fs.mkdir(path.dirname(writePath), { recursive: true });
+      await fs.copyFile(primaryPath, writePath);
+    }
   } finally {
     await fs.rm(tmpPath, { force: true }).catch(() => {});
   }

@@ -1,0 +1,45 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Breakout V1.2 Coverage",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "as_of",
+    "scope_total",
+    "tradable_eligible",
+    "features_computed",
+    "scores_computed",
+    "top_signals",
+    "excluded_reasons",
+    "health"
+  ],
+  "additionalProperties": true,
+  "properties": {
+    "schema_version": { "const": "breakout_coverage_v1" },
+    "as_of": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$" },
+    "scope_total": { "type": "integer", "minimum": 0 },
+    "ohlcv_available": { "type": "integer", "minimum": 0 },
+    "history_eligible": { "type": "integer", "minimum": 0 },
+    "indicator_eligible": { "type": "integer", "minimum": 0 },
+    "tradable_eligible": { "type": "integer", "minimum": 0 },
+    "features_computed": { "type": "integer", "minimum": 0 },
+    "scores_computed": { "type": "integer", "minimum": 0 },
+    "top_signals": { "type": "integer", "minimum": 0 },
+    "excluded_reasons": {
+      "type": "object",
+      "additionalProperties": { "type": "integer", "minimum": 0 }
+    },
+    "health": {
+      "type": "object",
+      "required": ["valid_outputs_ratio_on_tradable", "hard_fail", "alert"],
+      "properties": {
+        "valid_outputs_ratio_on_tradable": { "type": "number", "minimum": 0 },
+        "coverage_zscore_vs_30d": { "type": ["number", "null"] },
+        "trigger_count_zscore_vs_30d": { "type": ["number", "null"] },
+        "hard_fail": { "type": "boolean" },
+        "alert": { "type": "boolean" }
+      },
+      "additionalProperties": true
+    }
+  }
+}

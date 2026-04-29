@@ -1,0 +1,128 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://rubikvault.com/schemas/stock-analyzer/page-core.v1.schema.json",
+  "title": "RubikVault Stock Analyzer Page Core V1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "ok",
+    "schema_version",
+    "run_id",
+    "snapshot_id",
+    "canonical_asset_id",
+    "display_ticker",
+    "provider_ticker",
+    "freshness",
+    "identity",
+    "summary_min",
+    "governance_summary",
+    "coverage",
+    "module_links",
+    "meta"
+  ],
+  "properties": {
+    "ok": { "type": "boolean" },
+    "schema_version": { "const": "rv.page_core.v1" },
+    "run_id": { "type": "string", "minLength": 1 },
+    "snapshot_id": { "type": "string", "minLength": 1 },
+    "canonical_asset_id": { "type": "string", "pattern": "^[A-Z0-9_.-]+:[A-Z0-9_.-]+$" },
+    "display_ticker": { "type": "string", "minLength": 1 },
+    "provider_ticker": { "type": ["string", "null"] },
+    "freshness": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "as_of", "generated_at", "stale_after"],
+      "properties": {
+        "status": { "type": "string", "enum": ["fresh", "stale", "missing", "expired"] },
+        "as_of": { "type": ["string", "null"] },
+        "generated_at": { "type": "string" },
+        "stale_after": { "type": ["string", "null"] }
+      }
+    },
+    "identity": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["name", "country", "exchange", "sector", "industry", "asset_class"],
+      "properties": {
+        "name": { "type": ["string", "null"] },
+        "country": { "type": ["string", "null"] },
+        "exchange": { "type": ["string", "null"] },
+        "sector": { "type": ["string", "null"] },
+        "industry": { "type": ["string", "null"] },
+        "asset_class": { "type": ["string", "null"] }
+      }
+    },
+    "summary_min": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "last_close",
+        "daily_change_pct",
+        "daily_change_abs",
+        "market_cap",
+        "decision_verdict",
+        "decision_confidence_bucket",
+        "learning_status",
+        "quality_status",
+        "governance_status"
+      ],
+      "properties": {
+        "last_close": { "type": ["number", "null"] },
+        "daily_change_pct": { "type": ["number", "null"] },
+        "daily_change_abs": { "type": ["number", "null"] },
+        "market_cap": { "type": ["number", "null"] },
+        "decision_verdict": { "type": ["string", "null"] },
+        "decision_confidence_bucket": { "type": ["string", "null"] },
+        "learning_status": { "type": ["string", "null"] },
+        "quality_status": { "type": ["string", "null"] },
+        "governance_status": { "type": ["string", "null"] }
+      }
+    },
+    "governance_summary": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["status", "evaluation_role", "learning_gate_status", "blocking_reasons", "warnings"],
+      "properties": {
+        "status": { "type": "string" },
+        "evaluation_role": { "type": ["string", "null"] },
+        "learning_gate_status": { "type": ["string", "null"] },
+        "blocking_reasons": { "type": "array", "items": { "type": "string" } },
+        "warnings": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "coverage": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["bars", "derived_daily", "governance", "fundamentals", "forecast", "ui_renderable"],
+      "properties": {
+        "bars": { "type": ["number", "null"] },
+        "derived_daily": { "type": "boolean" },
+        "governance": { "type": "boolean" },
+        "fundamentals": { "type": "boolean" },
+        "forecast": { "type": "boolean" },
+        "ui_renderable": { "type": "boolean" }
+      }
+    },
+    "module_links": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["historical", "fundamentals", "forecast", "quote"],
+      "properties": {
+        "historical": { "type": ["string", "null"] },
+        "fundamentals": { "type": ["string", "null"] },
+        "forecast": { "type": ["string", "null"] },
+        "quote": { "type": ["string", "null"] }
+      }
+    },
+    "meta": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["source", "render_contract", "warnings"],
+      "properties": {
+        "source": { "type": "string" },
+        "render_contract": { "type": "string" },
+        "warnings": { "type": "array", "items": { "type": "string" } }
+      }
+    }
+  }
+}

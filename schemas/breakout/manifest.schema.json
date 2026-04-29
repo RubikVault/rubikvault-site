@@ -1,0 +1,57 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Breakout V1.2 Manifest",
+  "type": "object",
+  "required": [
+    "contract_version",
+    "run_id",
+    "as_of",
+    "generated_at",
+    "engine_version",
+    "score_version",
+    "content_hash",
+    "files",
+    "file_hashes",
+    "validation"
+  ],
+  "additionalProperties": true,
+  "properties": {
+    "contract_version": { "const": "breakout_manifest_v1" },
+    "run_id": { "type": "string", "minLength": 1 },
+    "as_of": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$" },
+    "generated_at": { "type": "string" },
+    "engine_version": { "type": "string" },
+    "score_version": { "type": "string" },
+    "input_manifest_hash": { "type": "string" },
+    "content_hash": { "type": "string", "minLength": 16 },
+    "files": {
+      "type": "object",
+      "required": ["coverage", "errors", "health", "top500", "shards"],
+      "properties": {
+        "coverage": { "type": "string" },
+        "errors": { "type": "string" },
+        "health": { "type": "string" },
+        "top500": { "type": "string" },
+        "metadata": { "type": "string" },
+        "shards": { "type": "array", "items": { "type": "string" } }
+      },
+      "additionalProperties": true
+    },
+    "file_hashes": {
+      "type": "object",
+      "additionalProperties": { "type": "string", "minLength": 16 }
+    },
+    "validation": {
+      "type": "object",
+      "required": ["schema_valid", "shards_complete", "coverage_valid", "hashes_valid", "publishable"],
+      "properties": {
+        "schema_valid": { "type": "boolean" },
+        "shards_complete": { "type": "boolean" },
+        "coverage_valid": { "type": "boolean" },
+        "hashes_valid": { "type": "boolean" },
+        "publishable": { "type": "boolean" }
+      },
+      "additionalProperties": true
+    }
+  }
+}

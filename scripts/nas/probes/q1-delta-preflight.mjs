@@ -39,10 +39,11 @@ function checkWritable(dirPath) {
 const scriptPath = path.join(ROOT, 'scripts', 'quantlab', 'run_daily_delta_ingest_q1.py');
 const allowlistPath = path.join(ROOT, 'public', 'data', 'universe', 'v7', 'ssot', 'stocks_etfs.us_eu.canonical.ids.json');
 const quantlabRoots = [
-  '/Users/michaelpuchowezki/QuantLabHot',
-  '/volume1/homes/neoboy/QuantLabHot',
+  process.env.QUANT_ROOT,
+  process.env.NAS_QUANT_ROOT,
+  process.env.RV_QUANT_ROOT,
   path.join(ROOT, 'mirrors', 'quantlab'),
-];
+].filter(Boolean);
 const writablePaths = [
   path.join(ROOT, 'tmp', 'nas-q1-preflight'),
   path.join(ROOT, 'tmp', 'nas-open-probes'),
@@ -50,6 +51,12 @@ const writablePaths = [
 
 const pythonCheck = checkPythonModule('pyarrow');
 const quantlabRoot = quantlabRoots.find((candidate) => exists(candidate)) || null;
+const latestDateCache = quantlabRoot
+  ? path.join(quantlabRoot, 'ops', 'cache', 'q1_daily_delta_latest_date_index.stock_etf.json')
+  : null;
+const packStateCache = quantlabRoot
+  ? path.join(quantlabRoot, 'ops', 'cache', 'q1_daily_delta_v7_pack_state.stock_etf.json')
+  : null;
 const writableChecks = writablePaths.map((candidate) => ({
   path: candidate,
   ...checkWritable(candidate),
@@ -64,6 +71,8 @@ const doc = {
     pyarrow_importable: pythonCheck.ok,
     quantlab_root_present: Boolean(quantlabRoot),
     quantlab_root: quantlabRoot,
+    latest_date_cache_exists: latestDateCache ? exists(latestDateCache) : false,
+    pack_state_cache_exists: packStateCache ? exists(packStateCache) : false,
     writable_paths: writableChecks,
   },
 };
@@ -75,6 +84,8 @@ const ok =
   doc.checks.allowlist_exists &&
   doc.checks.pyarrow_importable &&
   doc.checks.quantlab_root_present &&
+  doc.checks.latest_date_cache_exists &&
+  doc.checks.pack_state_cache_exists &&
   writableChecks.every((item) => item.ok);
 
 process.exit(ok ? 0 : 2);

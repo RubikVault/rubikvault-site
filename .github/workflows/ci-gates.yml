@@ -23,6 +23,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -40,11 +42,22 @@ jobs:
         run: npm run guard:authority-writes
 
       - name: Build deploy bundle (dist/pages-prod/)
-        run: node scripts/ops/build-deploy-bundle.mjs --strict
+        run: node scripts/ops/build-deploy-bundle.mjs --strict --strict-manifest
         # Builds dist/pages-prod/ via rsync with excludes — same bundle Cloudflare Pages deploys.
         # --strict exits non-zero if file count exceeds BUNDLE_FILE_LIMIT (18,000).
         # In CI, public/ only has git-tracked files (~2,500), so this accurately reflects
         # the committed bundle budget without local gitignored blobs.
+
+      - name: Privacy gate self-test
+        run: node scripts/ops/privacy-gate.mjs --self-test
+
+      - name: Privacy gate changed paths
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: node scripts/ops/privacy-gate.mjs --changed "$BASE_SHA"
+
+      - name: Privacy gate deploy bundle
+        run: node scripts/ops/privacy-gate.mjs --dist dist/pages-prod
 
       - name: Check Asset Budget
         run: |

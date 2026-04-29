@@ -1735,11 +1735,11 @@ export async function onRequestGet(context) {
   const ssotSampleTicker = opsPolicy?.sample_ticker || PRICE_TRACE_TICKERS[0] || 'UBER';
   const [
     universeDoc,
-    stockAnalysisDoc,
+    pageCoreLatestDoc,
     eodBatchDoc
   ] = await Promise.all([
     fetchAssetJson(request.url, '/data/universe/nasdaq100.json', null),
-    fetchAssetJson(request.url, '/data/snapshots/stock-analysis.json', null),
+    fetchAssetJson(request.url, '/data/page-core/latest.json', null),
     fetchAssetJson(request.url, '/data/eod/batches/eod.latest.000.json', null)
   ]);
 
@@ -1804,15 +1804,15 @@ export async function onRequestGet(context) {
       evidence: { count: Array.isArray(universeDoc) ? universeDoc.length : null }
     }),
     buildCheck({
-      id: 'ASSET_STOCK_ANALYSIS',
-      label: '/data/snapshots/stock-analysis.json',
+      id: 'ASSET_PAGE_CORE',
+      label: '/data/page-core/latest.json',
       required: true,
-      ok: stockAnalysisDoc && typeof stockAnalysisDoc === 'object' && Boolean(stockAnalysisDoc?._meta),
-      reason: 'STOCK_ANALYSIS_MISSING',
-      path: '/data/snapshots/stock-analysis.json',
+      ok: pageCoreLatestDoc && typeof pageCoreLatestDoc === 'object' && Boolean(pageCoreLatestDoc?.snapshot_id),
+      reason: 'PAGE_CORE_MISSING',
+      path: '/data/page-core/latest.json',
       evidence: {
-        has_meta: Boolean(stockAnalysisDoc?._meta),
-        symbols_processed: stockAnalysisDoc?._meta?.symbols_processed ?? null
+        snapshot_id: pageCoreLatestDoc?.snapshot_id ?? null,
+        asset_count: pageCoreLatestDoc?.asset_count ?? null
       }
     }),
     buildCheck({

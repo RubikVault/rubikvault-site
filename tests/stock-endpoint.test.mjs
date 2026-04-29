@@ -4,7 +4,6 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { onRequestGet } from '../functions/api/stock.js';
 import { onRequest as apiMiddleware } from '../functions/api/_middleware.js';
-import { createCache } from '../functions/api/_shared/cache-law.js';
 
 function assert(condition, message) {
   if (!condition) throw new Error(message || 'assertion_failed');
@@ -92,7 +91,7 @@ function makeEnv(extra = {}) {
   return { RV_KV: createKv(), TIINGO_API_KEY: 'test', RV_ALLOW_WRITE_ON_VIEW: '1', ...extra };
 }
 
-function stubFetch({ overrides = {}, tiingo, twelvedata } = {}) {
+function stubFetch({ overrides = {}, eodhd, tiingo, twelvedata } = {}) {
   const originalFetch = globalThis.fetch;
   globalThis.fetch = async (url) => {
     const u = new URL(url);
@@ -110,6 +109,7 @@ function stubFetch({ overrides = {}, tiingo, twelvedata } = {}) {
     }
 
     if (u.hostname.includes('eodhistoricaldata.com') || u.hostname.includes('eodhd.com')) {
+      if (eodhd) return eodhd(u);
       if (u.pathname.includes('/ZZZZ') || u.searchParams.get('s') === 'ZZZZ') {
         return { ok: false, status: 404, json: async () => ({}) };
       }
@@ -195,11 +195,12 @@ async function testMissingStats() {
     tiingo: () => ({ ok: true, status: 200, json: async () => tiingoPayload(makeBars()) })
   });
   try {
-    const result = await requestTicker('SPY', makeEnv({ TIINGO_API_KEY: '' }));
-    assert(result.error?.code === 'DATA_NOT_READY', 'expected data not ready');
-    assert(result.error?.details?.missing?.includes('market_stats'), 'missing stats noted');
+    const result = await requestTicker('SPY', makeEnv({ EODHD_API_KEY: 'test', TIINGO_API_KEY: '' }));
+    assert(!result.error, 'missing stats should degrade, not fail the public stock path');
+    assert(result.metadata?.status === 'PARTIAL', 'expected partial status');
+    assert(result.metadata?.reasons?.includes('DATA_NOT_READY'), 'missing stats noted');
     assert(result.data.market_prices, 'prices still present');
-    assert(result.data.market_stats === null, 'stats null');
+    assert(result.data.market_stats?.stats, 'stats placeholder present');
     assertHasMetaStatus(result);
   } finally {
     restore();
@@ -207,31 +208,30 @@ async function testMissingStats() {
   console.log('✅ missing stats triggers DATA_NOT_READY');
 }
 
-async function testProviderFailReturnsStaleCache() {
+async function testProviderFailReturnsStructuredError() {
   const kv = createKv();
-  const env = makeEnv({ RV_KV: kv, PROVIDER_MODE: 'PRIMARY_ONLY' });
-  const cache = createCache(env);
-  const bars = makeBars({ startOffset: -30, count: 3 });
-  await cache.writeCached('SPY', { bars }, 3600, { provider: 'tiingo', data_date: bars[bars.length - 1].date });
+  const env = makeEnv({ RV_KV: kv, PROVIDER_MODE: 'PRIMARY_ONLY', EODHD_API_KEY: 'test' });
 
   const restore = stubFetch({
+    eodhd: () => ({ ok: false, status: 500, json: async () => ({}) }),
     tiingo: () => ({ ok: false, status: 500, json: async () => ({}) })
   });
   try {
     const result = await requestTicker('SPY', env);
-    assert(result.meta.status === 'stale', 'expected stale when provider fails');
+    assert(result.error?.code === 'EOD_FETCH_FAILED', 'expected EOD_FETCH_FAILED');
+    assert(result.meta.status === 'error', 'expected error when provider fails');
     assert(Array.isArray(result.meta.quality_flags) && result.meta.quality_flags.includes('PROVIDER_FAIL'), 'missing PROVIDER_FAIL flag');
-    assert(result.data.bars.length === bars.length, 'expected cached bars');
   } finally {
     restore();
   }
-  console.log('✅ provider failure returns stale cache');
+  console.log('✅ provider failure returns structured error');
 }
 
 async function testNoCacheProviderFailure() {
   const kv = createKv();
-  const env = makeEnv({ RV_KV: kv, PROVIDER_MODE: 'PRIMARY_ONLY' });
+  const env = makeEnv({ RV_KV: kv, PROVIDER_MODE: 'PRIMARY_ONLY', EODHD_API_KEY: 'test' });
   const restore = stubFetch({
+    eodhd: () => ({ ok: false, status: 500, json: async () => ({}) }),
     tiingo: () => ({ ok: false, status: 500, json: async () => ({}) })
   });
   try {
@@ -246,10 +246,10 @@ async function testNoCacheProviderFailure() {
 
 async function testHardRejectBlocksInvalidData() {
   const kv = createKv();
-  const env = makeEnv({ RV_KV: kv });
+  const env = makeEnv({ RV_KV: kv, EODHD_API_KEY: 'test' });
   const badBars = makeBars({ invalid: true });
   const restore = stubFetch({
-    tiingo: () => ({ ok: true, status: 200, json: async () => tiingoPayload(badBars) })
+    eodhd: () => ({ ok: true, status: 200, json: async () => tiingoPayload(badBars) })
   });
   try {
     const result = await requestTicker('SPY', env);
@@ -263,10 +263,10 @@ async function testHardRejectBlocksInvalidData() {
 
 async function testSoftWarnFlags() {
   const kv = createKv();
-  const env = makeEnv({ RV_KV: kv, WARN_JUMP_PCT: '20' });
+  const env = makeEnv({ RV_KV: kv, WARN_JUMP_PCT: '20', EODHD_API_KEY: 'test' });
   const jumpBars = makeBars({ jumpPct: 50 });
   const restore = stubFetch({
-    tiingo: () => ({ ok: true, status: 200, json: async () => tiingoPayload(jumpBars) })
+    eodhd: () => ({ ok: true, status: 200, json: async () => tiingoPayload(jumpBars) })
   });
   try {
     const result = await requestTicker('SPY', env);
@@ -278,22 +278,23 @@ async function testSoftWarnFlags() {
   console.log('✅ soft warn flags appear in meta');
 }
 
-async function testFailoverProvider() {
+async function testObsoleteProvidersIgnored() {
   const kv = createKv();
-  const env = makeEnv({ RV_KV: kv, PROVIDER_MODE: 'FAILOVER_ALLOWED', TWELVEDATA_API_KEY: 'test' });
-  const secondaryBars = makeBars({ base: 200 });
+  const env = makeEnv({ RV_KV: kv, PROVIDER_MODE: 'FAILOVER_ALLOWED', EODHD_API_KEY: 'test', TWELVEDATA_API_KEY: 'test', TIINGO_API_KEY: 'test' });
+  const eodhdBars = makeBars({ base: 200 });
   const restore = stubFetch({
-    tiingo: () => ({ ok: false, status: 500, json: async () => ({}) }),
-    twelvedata: () => ({ ok: true, status: 200, json: async () => twelveDataPayload(secondaryBars) })
+    eodhd: () => ({ ok: true, status: 200, json: async () => tiingoPayload(eodhdBars) }),
+    tiingo: () => { throw new Error('obsolete tiingo provider should not be called'); },
+    twelvedata: () => { throw new Error('obsolete twelvedata provider should not be called'); }
   });
   try {
     const result = await requestTicker('SPY', env);
-    assert(result.meta.provider === 'twelvedata', 'expected provider twelvedata');
-    assert(result.data.bars[0].close === secondaryBars[0].close, 'expected twelvedata bars only');
+    assert(result.meta.provider === 'eodhd', 'expected provider eodhd');
+    assert(result.data.bars[0].close === eodhdBars[0].close, 'expected eodhd bars only');
   } finally {
     restore();
   }
-  console.log('✅ failover provider selected without mixing');
+  console.log('✅ obsolete fallback providers ignored');
 }
 
 async function testCircuitOpenReturnsError() {
@@ -304,11 +305,11 @@ async function testCircuitOpenReturnsError() {
     opened_at: Date.now(),
     last_failure_at: Date.now()
   };
-  await kv.put('cb:tiingo', JSON.stringify(circuitState));
+  await kv.put('cb:eodhd', JSON.stringify(circuitState));
 
-  const env = makeEnv({ RV_KV: kv, PROVIDER_MODE: 'PRIMARY_ONLY' });
+  const env = makeEnv({ RV_KV: kv, PROVIDER_MODE: 'PRIMARY_ONLY', EODHD_API_KEY: 'test' });
   const restore = stubFetch({
-    tiingo: () => ({ ok: false, status: 500, json: async () => ({}) })
+    eodhd: () => ({ ok: false, status: 500, json: async () => ({}) })
   });
   try {
     const result = await requestTicker('SPY', env);
@@ -320,35 +321,34 @@ async function testCircuitOpenReturnsError() {
   console.log('✅ circuit open returns error with circuit state in meta');
 }
 
-async function testQualityRejectRecordsCircuitFailure() {
+async function testQualityRejectDoesNotPersistCircuitState() {
   const kv = createKv();
-  const env = makeEnv({ RV_KV: kv });
+  const env = makeEnv({ RV_KV: kv, EODHD_API_KEY: 'test' });
   const badBars = makeBars({ invalid: true });
   const restore = stubFetch({
-    tiingo: () => ({ ok: true, status: 200, json: async () => tiingoPayload(badBars) })
+    eodhd: () => ({ ok: true, status: 200, json: async () => tiingoPayload(badBars) })
   });
   try {
     await requestTicker('SPY', env);
-    const circuitRaw = await kv.get('cb:tiingo', 'json');
-    assert(circuitRaw?.failures >= 1, 'expected circuit failure recorded');
-    assert(circuitRaw?.last_error_code === 'QUALITY_REJECT', 'expected QUALITY_REJECT error code');
+    const circuitRaw = await kv.get('cb:eodhd', 'json');
+    assert(circuitRaw === null, 'circuit writes should stay disabled in functions');
   } finally {
     restore();
   }
-  console.log('✅ quality reject records circuit failure');
+  console.log('✅ quality reject leaves circuit persistence disabled');
 }
 
 async function main() {
   await testKnownTicker();
   await testUnknownTicker();
   await testMissingStats();
-  await testProviderFailReturnsStaleCache();
+  await testProviderFailReturnsStructuredError();
   await testNoCacheProviderFailure();
   await testHardRejectBlocksInvalidData();
   await testSoftWarnFlags();
-  await testFailoverProvider();
+  await testObsoleteProvidersIgnored();
   await testCircuitOpenReturnsError();
-  await testQualityRejectRecordsCircuitFailure();
+  await testQualityRejectDoesNotPersistCircuitState();
   console.log('✅ stock endpoint smoke tests passed');
 }
 

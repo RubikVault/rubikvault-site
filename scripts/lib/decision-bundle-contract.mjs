@@ -177,21 +177,21 @@ export function buildAssetDecision(row, {
   const classified = classifyCoverage(row, { minHistoryBars, targetMarketDate });
   const score = Number.isFinite(Number(row?.computed?.score_0_100)) ? Number(row.computed.score_0_100) : null;
   const riskScore = score == null ? null : Math.max(0, Math.min(100, 100 - score));
-  const riskKnown = classified.coverageClass === 'eligible'
-    && classified.pipelineStatus !== 'FAILED'
-    && Number.isFinite(riskScore);
+  const operationalCoverageKnown = classified.coverageClass === 'eligible'
+    && classified.pipelineStatus !== 'FAILED';
+  const riskKnown = operationalCoverageKnown && Number.isFinite(riskScore);
   const blockingReasons = classified.pipelineStatus === 'FAILED'
     ? classified.reasonCodes.filter((code) => DECISION_REASON_CODES.has(code))
     : [];
   const reasonCodes = [...new Set([
     ...classified.reasonCodes,
-    ...(riskKnown ? ['risk_known'] : classified.coverageClass === 'eligible' ? ['risk_unknown'] : []),
+    ...(operationalCoverageKnown ? [riskKnown ? 'risk_known' : 'risk_unscored'] : classified.coverageClass === 'eligible' ? ['risk_unknown'] : []),
     ...(classified.coverageClass === 'eligible' && classified.pipelineStatus === 'OK' ? ['strict_full_coverage'] : []),
   ])];
 
   let pipelineStatus = classified.pipelineStatus;
   let verdict = classified.verdict;
-  if (classified.coverageClass === 'eligible' && !riskKnown) {
+  if (classified.coverageClass === 'eligible' && !operationalCoverageKnown) {
     pipelineStatus = 'FAILED';
     verdict = 'WAIT_PIPELINE_INCOMPLETE';
     blockingReasons.push('risk_unknown');
@@ -216,10 +216,12 @@ export function buildAssetDecision(row, {
     blocking_reasons: [...new Set(blockingReasons)],
     warnings: [...new Set(classified.warnings)],
     risk_assessment: {
-      level: riskKnown ? (riskScore >= 70 ? 'HIGH' : riskScore >= 40 ? 'MODERATE' : 'LOW') : 'UNKNOWN',
+      level: riskKnown ? (riskScore >= 70 ? 'HIGH' : riskScore >= 40 ? 'MODERATE' : 'LOW') : operationalCoverageKnown ? 'UNSCORED' : 'UNKNOWN',
       score: riskKnown ? Number(riskScore.toFixed(2)) : null,
       reasoning: riskKnown
         ? 'Registry-backed bar coverage is sufficient for the daily core risk estimate.'
+        : operationalCoverageKnown
+        ? 'Registry-backed bar coverage is complete; no ranking score was supplied for this optional v1 risk lane, so the daily decision remains WAIT.'
         : 'Risk is unavailable until required local bar coverage and receipts are complete.',
     },
     model_coverage: {

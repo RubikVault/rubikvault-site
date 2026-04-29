@@ -1,4 +1,4 @@
-const CORE_STATUS = new Set(["fresh", "stale", "closed", "pending", "error"]);
+const CORE_STATUS = new Set(["fresh", "stale", "expired", "closed", "pending", "error"]);
 const LEGACY_STATUS = new Set([
   "ok",
   "live",

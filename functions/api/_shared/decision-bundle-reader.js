@@ -70,17 +70,24 @@ function syntheticDecision(ticker, reasonCode, details = {}) {
 }
 
 function readinessFrom(decision, latest, source = 'decision_bundle') {
-  const blocking = [
-    ...(Array.isArray(latest?.blocking_reasons) ? latest.blocking_reasons : []),
+  // Bundle-level blocking reasons (e.g. strict_full_coverage_below_50pct) reflect
+  // aggregate coverage health and should NOT block individual assets whose own
+  // decision row is OK. Demote them to warnings at the per-asset level.
+  const bundleLevelBlocking = Array.isArray(latest?.blocking_reasons) ? latest.blocking_reasons : [];
+  const assetBlocking = [
     ...(Array.isArray(decision?.blocking_reasons) ? decision.blocking_reasons : []),
   ].filter(Boolean);
   const warnings = [
+    ...bundleLevelBlocking,
     ...(Array.isArray(latest?.warnings) ? latest.warnings : []),
     ...(Array.isArray(decision?.warnings) ? decision.warnings : []),
   ].filter(Boolean);
   const decisionStatus = String(decision?.pipeline_status || '').toUpperCase();
   const bundleStatus = String(latest?.status || '').toUpperCase();
-  const status = blocking.length > 0 || decisionStatus === 'FAILED' || bundleStatus === 'FAILED'
+  // Per-asset readiness is driven by the asset's own pipeline_status and blocking_reasons.
+  // Bundle-level status is reported in decision_bundle_status but does not force FAILED
+  // if the asset's own decision is clean.
+  const status = assetBlocking.length > 0 || decisionStatus === 'FAILED'
     ? 'FAILED'
     : decisionStatus === 'DEGRADED' || bundleStatus === 'DEGRADED' || warnings.length > 0
       ? 'DEGRADED'
@@ -91,7 +98,7 @@ function readinessFrom(decision, latest, source = 'decision_bundle') {
     decision_bundle_status: bundleStatus || null,
     snapshot_id: latest?.snapshot_id || null,
     target_market_date: latest?.target_market_date || decision?.target_market_date || null,
-    blocking_reasons: [...new Set(blocking)],
+    blocking_reasons: [...new Set(assetBlocking)],
     warnings: [...new Set(warnings)],
   };
 }
@@ -161,7 +168,11 @@ function resolvePartPath(latest, part) {
 
 function validateLatest(latest, now = new Date()) {
   if (!latest || latest.schema !== 'rv.decision_bundle_latest.v1') return 'bundle_missing';
-  if (latest.valid_until && Date.parse(latest.valid_until) < now.getTime()) return 'bundle_stale';
+  // Grace period: allow bundles up to 7 days past valid_until before treating as stale.
+  // This prevents synthetic FAILED decisions from masking valid per-asset rows
+  // when the pipeline hasn't regenerated the bundle yet.
+  const GRACE_PERIOD_MS = 7 * 24 * 60 * 60 * 1000;
+  if (latest.valid_until && (Date.parse(latest.valid_until) + GRACE_PERIOD_MS) < now.getTime()) return 'bundle_stale';
   if (!latest.index_path) return 'index_missing';
   return null;
 }

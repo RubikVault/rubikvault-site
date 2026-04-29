@@ -53,8 +53,8 @@ def parse_args(argv: Iterable[str]) -> argparse.Namespace:
     p.add_argument("--allowlist-path", default="")
     p.add_argument("--from-date", default="")
     p.add_argument("--to-date", default="")
-    p.add_argument("--stock-top-n", type=int, default=90000)
-    p.add_argument("--etf-top-n", type=int, default=30000)
+    p.add_argument("--stock-top-n", type=int, default=5000)
+    p.add_argument("--etf-top-n", type=int, default=1500)
     p.add_argument("--recent-lookback-calendar-days", type=int, default=28)
     p.add_argument("--stale-grace-calendar-days", type=int, default=1)
     p.add_argument("--min-adv-dollar", type=float, default=0.0)
@@ -331,6 +331,11 @@ def merge_worker_reports(worker_results: list[dict[str, Any]], final_reports_roo
 
 def main(argv: Iterable[str]) -> int:
     args = parse_args(argv)
+    requested_scope = int(args.stock_top_n or 0) + int(args.etf_top_n or 0)
+    if requested_scope > 90000 and os.environ.get("RV_ALLOW_OVERSIZED_EODHD_SCOPE") != "1":
+        raise RuntimeError(
+            f"oversized_eodhd_scope:{requested_scope}:set_RV_ALLOW_OVERSIZED_EODHD_SCOPE=1_to_override"
+        )
     repo_root = Path(args.repo_root).resolve()
     quant_root = Path(args.quant_root).resolve()
     registry_path = resolve_repo_rel(repo_root, args.registry_path)

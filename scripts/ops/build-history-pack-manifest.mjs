@@ -121,6 +121,8 @@ function main() {
       type_norm: normalize(row?.type_norm) || null,
       pack,
       last_trade_date: String(row?.last_trade_date || '').slice(0, 10) || null,
+      pack_sha256: String(row?.pointers?.pack_sha256 || '').trim() || null,
+      history_effective_sha256: String(row?.pointers?.history_effective_sha256 || row?.pointers?.pack_sha256 || '').trim() || null,
     };
     byCanonicalId[canonicalId] = entry;
     if (!bySymbol[symbol]) bySymbol[symbol] = [];
