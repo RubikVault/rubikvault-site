@@ -49,6 +49,28 @@ test('classified insufficient-history backlog degrades instead of failing by its
   assert.deepEqual(evaluateCoveragePolicy(summary).status, 'DEGRADED');
 });
 
+test('eligible scored assets produce BUY only when daily score clears threshold', () => {
+  const buy = buildAssetDecision(row('US:BUY', { computed: { score_0_100: 93 } }), {
+    runId: 'run',
+    snapshotId: 'snap',
+    targetMarketDate: '2026-04-16',
+  });
+  assert.equal(buy.pipeline_status, 'OK');
+  assert.equal(buy.verdict, 'BUY');
+  assert.equal(buy.buy_eligibility.eligible, true);
+  assert.equal(buy.buy_eligibility.threshold, 90);
+  assert.ok(buy.reason_codes.includes('score_buy_threshold_met'));
+
+  const wait = buildAssetDecision(row('US:WAIT', { computed: { score_0_100: 89 } }), {
+    runId: 'run',
+    snapshotId: 'snap',
+    targetMarketDate: '2026-04-16',
+  });
+  assert.equal(wait.pipeline_status, 'OK');
+  assert.equal(wait.verdict, 'WAIT');
+  assert.equal(wait.buy_eligibility.eligible, false);
+});
+
 test('unclassified missing fails, while eligible unknown risk degrades as a bounded structural gap', () => {
   const unclassified = buildAssetDecision({ symbol: 'BROKEN', type_norm: 'STOCK' }, {
     runId: 'run',
@@ -77,7 +99,8 @@ test('unclassified missing fails, while eligible unknown risk degrades as a boun
       targetMarketDate: '2026-04-16',
     }),
   ]);
-  assert.equal(summary.eligible_unknown_risk_count, 1);
+  assert.equal(unknownRisk.risk_assessment.level, 'UNSCORED');
+  assert.equal(summary.eligible_unknown_risk_count, 0);
   assert.equal(evaluateCoveragePolicy(summary).status, 'DEGRADED');
 });
 

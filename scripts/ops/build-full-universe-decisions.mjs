@@ -37,6 +37,9 @@ function parseArgs(argv) {
     runId: get('run-id') || process.env.RV_RUN_ID || process.env.RUN_ID || null,
     maxAssets: Number.isFinite(Number(get('max-assets'))) ? Number(get('max-assets')) : null,
     minHistoryBars: Number.isFinite(Number(get('min-history-bars'))) ? Number(get('min-history-bars')) : 200,
+    buyScoreThreshold: Number.isFinite(Number(get('buy-score-threshold') || process.env.RV_DECISION_BUY_SCORE_THRESHOLD))
+      ? Number(get('buy-score-threshold') || process.env.RV_DECISION_BUY_SCORE_THRESHOLD)
+      : undefined,
     manifestSeed: get('manifest-seed') || process.env.RV_MANIFEST_SEED || '',
     tmpOnly: argv.includes('--tmp-only') || argv.includes('--no-promote'),
     replace: argv.includes('--replace'),
@@ -122,6 +125,7 @@ export function buildDecisionBundlePayload(rows, {
   targetMarketDate,
   generatedAt,
   minHistoryBars = 200,
+  buyScoreThreshold,
 } = {}) {
   const decisions = rows
     .map((row) => buildAssetDecision(row, {
@@ -130,6 +134,7 @@ export function buildDecisionBundlePayload(rows, {
       targetMarketDate,
       generatedAt,
       minHistoryBars,
+      buyScoreThreshold,
     }))
     .sort((a, b) => a.canonical_id.localeCompare(b.canonical_id));
   const summary = computeDecisionSummary(decisions);

@@ -2,6 +2,7 @@ import crypto from 'node:crypto';
 
 export const DECISION_PARTITION_COUNT = 64;
 export const DEFAULT_MIN_HISTORY_BARS = 200;
+export const DEFAULT_BUY_SCORE_THRESHOLD = 90;
 export const DECISION_SCHEMA = 'rv.asset_daily_decision.v1';
 
 export const DECISION_REASON_CODES = new Set([
@@ -28,6 +29,7 @@ export const DECISION_REASON_CODES = new Set([
   'provider_no_data',
   'inactive_asset',
   'macro_index_only',
+  'score_buy_threshold_met',
   'zero_buy_anomaly',
   'crash_unresolved',
   'heartbeat_stale',
@@ -173,6 +175,7 @@ export function buildAssetDecision(row, {
   targetMarketDate,
   generatedAt,
   minHistoryBars = DEFAULT_MIN_HISTORY_BARS,
+  buyScoreThreshold = DEFAULT_BUY_SCORE_THRESHOLD,
 } = {}) {
   const classified = classifyCoverage(row, { minHistoryBars, targetMarketDate });
   const score = Number.isFinite(Number(row?.computed?.score_0_100)) ? Number(row.computed.score_0_100) : null;
@@ -186,7 +189,7 @@ export function buildAssetDecision(row, {
   const reasonCodes = [...new Set([
     ...classified.reasonCodes,
     ...(operationalCoverageKnown ? [riskKnown ? 'risk_known' : 'risk_unscored'] : classified.coverageClass === 'eligible' ? ['risk_unknown'] : []),
-    ...(classified.coverageClass === 'eligible' && classified.pipelineStatus === 'OK' ? ['strict_full_coverage'] : []),
+    ...(classified.coverageClass === 'eligible' && classified.pipelineStatus === 'OK' && riskKnown ? ['strict_full_coverage'] : []),
   ])];
 
   let pipelineStatus = classified.pipelineStatus;
@@ -195,6 +198,19 @@ export function buildAssetDecision(row, {
     pipelineStatus = 'FAILED';
     verdict = 'WAIT_PIPELINE_INCOMPLETE';
     blockingReasons.push('risk_unknown');
+  }
+
+  const normalizedBuyThreshold = Number.isFinite(Number(buyScoreThreshold))
+    ? Math.max(0, Math.min(100, Number(buyScoreThreshold)))
+    : DEFAULT_BUY_SCORE_THRESHOLD;
+  const buyEligible = classified.coverageClass === 'eligible'
+    && pipelineStatus === 'OK'
+    && riskKnown
+    && Number(score) >= normalizedBuyThreshold
+    && blockingReasons.length === 0;
+  if (buyEligible) {
+    verdict = 'BUY';
+    reasonCodes.push('score_buy_threshold_met');
   }
 
   const decision = {
@@ -244,6 +260,12 @@ export function buildAssetDecision(row, {
       bars_fingerprint: row?.pointers?.pack_sha256 || null,
       hist_probs_fingerprint: null,
       model_fingerprint: row?.meta?.run_id ? sha256Prefix(String(row.meta.run_id)) : null,
+    },
+    buy_eligibility: {
+      eligible: buyEligible,
+      score,
+      threshold: normalizedBuyThreshold,
+      reason: buyEligible ? 'score_buy_threshold_met' : null,
     },
   };
 
@@ -319,11 +341,13 @@ export function computeDecisionSummary(decisions) {
       summary.unknown_risk_count += 1;
       if (coverage === 'eligible') summary.eligible_unknown_risk_count += 1;
     }
+    const scoreKnown = Number.isFinite(Number(decision.scores?.composite));
     if (
       coverage === 'eligible'
       && decision.pipeline_status === 'OK'
       && ['BUY', 'WAIT'].includes(decision.verdict)
-      && riskLevel !== 'UNKNOWN'
+      && !['UNKNOWN', 'UNSCORED'].includes(riskLevel)
+      && scoreKnown
       && (!Array.isArray(decision.blocking_reasons) || decision.blocking_reasons.length === 0)
     ) {
       summary.strict_full_coverage_count += 1;
