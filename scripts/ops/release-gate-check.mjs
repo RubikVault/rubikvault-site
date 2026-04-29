@@ -54,6 +54,8 @@ const WRANGLER_SKIP_CACHING = process.env.RV_WRANGLER_SKIP_CACHING !== '0';
 const WRANGLER_DEPLOY_TIMEOUT_MS = Number(process.env.RV_WRANGLER_DEPLOY_TIMEOUT_MS || 2_700_000);
 const PRODUCTION_ARTIFACT_SMOKE_ATTEMPTS = Number(process.env.RV_PRODUCTION_ARTIFACT_SMOKE_ATTEMPTS || 3);
 const PRODUCTION_ARTIFACT_SMOKE_BACKOFF_SEC = Number(process.env.RV_PRODUCTION_ARTIFACT_SMOKE_BACKOFF_SEC || 20);
+const RUNTIME_CONTRACT_SMOKE_ATTEMPTS = Number(process.env.RV_RUNTIME_CONTRACT_SMOKE_ATTEMPTS || 3);
+const RUNTIME_CONTRACT_SMOKE_BACKOFF_SEC = Number(process.env.RV_RUNTIME_CONTRACT_SMOKE_BACKOFF_SEC || 15);
 const STOCK_ANALYZER_GREEN_MINIMUM = Number(process.env.RV_STOCK_ANALYZER_GREEN_MINIMUM || 0.90);
 const STOCK_ANALYZER_GREEN_TARGET = Number(process.env.RV_STOCK_ANALYZER_GREEN_TARGET || 0.95);
 const SMOKE_ENDPOINT_PATHS = {
@@ -340,6 +342,20 @@ function verifyRuntimeContracts(baseUrl, targetDate = null, { requirePublicStatu
     }
   }
   return { ok: failures.length === 0, failures, checks };
+}
+
+function verifyRuntimeContractsWithRetry(baseUrl, targetDate = null, options = {}) {
+  let last = null;
+  const attempts = Math.max(1, RUNTIME_CONTRACT_SMOKE_ATTEMPTS);
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    last = verifyRuntimeContracts(baseUrl, targetDate, options);
+    if (last.ok) return { ...last, attempts: attempt };
+    if (attempt < attempts) {
+      warn(`Runtime contract smoke attempt ${attempt}/${attempts} failed: ${last.failures.join('; ')}; retrying in ${RUNTIME_CONTRACT_SMOKE_BACKOFF_SEC}s`);
+      sleepSeconds(RUNTIME_CONTRACT_SMOKE_BACKOFF_SEC);
+    }
+  }
+  return { ...last, attempts };
 }
 
 function verifyProductionArtifacts(targetDate) {
@@ -637,7 +653,7 @@ if (pageCoreCandidatePresent) {
     if (!previewSmokes.smokes_ok) {
       fail('page-core candidate preview smoke failed; production latest.json left unchanged.');
     }
-    const previewContracts = verifyRuntimeContracts(previewDeploy.deployment_url, proofTargetDate);
+    const previewContracts = verifyRuntimeContractsWithRetry(previewDeploy.deployment_url, proofTargetDate);
     if (!previewContracts.ok) {
       fail(`page-core candidate preview contract smoke failed: ${previewContracts.failures.join('; ')}; production latest.json left unchanged.`);
     }
@@ -661,7 +677,7 @@ if (!skipSmokes) {
   if (!smokeResults.smokes_ok) {
     warn('Some smoke tests failed — deploy proof will reflect this. Review manually.');
   }
-  const runtimeContracts = verifyRuntimeContracts(deployResult.deployment_url || PROD_BASE, proofTargetDate);
+  const runtimeContracts = verifyRuntimeContractsWithRetry(deployResult.deployment_url || PROD_BASE, proofTargetDate);
   if (!runtimeContracts.ok) {
     fail(`Production runtime contract smoke failed: ${runtimeContracts.failures.join('; ')}`);
   }
