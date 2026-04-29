@@ -500,7 +500,7 @@ step_command() {
       printf '%s\n' "node scripts/quantlab/build_quantlab_v4_daily_report.mjs"
       ;;
     breakout_v12)
-      printf '%s\n' "node scripts/breakout/run-breakout-pipeline.mjs --as-of='$TARGET_MARKET_DATE' --max-assets='${RV_BREAKOUT_MAX_ASSETS:-0}'"
+      printf '%s\n' "node scripts/breakout/run-breakout-pipeline.mjs --as-of='$TARGET_MARKET_DATE' --max-assets='${RV_BREAKOUT_MAX_ASSETS:-5000}'"
       ;;
     scientific_summary)
       printf '%s\n' "node scripts/build-scientific-summary.mjs"
