@@ -2,10 +2,14 @@
 
 ## Known Good
 
-- Production deploy URL observed: `https://f97e31cf.rubikvault-site.pages.dev`
+- Release run observed green: `20260429T100746Z`
+- Preview deploy URL observed: `https://f3eb8d9c.rubikvault-site.pages.dev`
+- Production deploy URL observed: `https://497888bc.rubikvault-site.pages.dev`
 - Production Page-Core snapshot observed: `page-20260428-89921bb64f3e`
 - Production Page-Core active pointer: `/data/page-core/latest.json`
+- Production search canaries observed green: `ford -> US:F`, `visa -> US:V`, `tesl -> US:TSLA`
 - Production Page-Core canaries observed green: `AAPL`, `BRK-B`, `BRK.B`, `BF-B`, `BF.B`
+- Production stock endpoint canaries observed without public `bundle_missing|bundle_stale`: `F`, `V`, `MSFT`, `J`
 - Live quote remains disabled by default: `RV_LIVE_QUOTE_ENABLED=false`
 
 ## NAS Secret Location
