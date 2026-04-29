@@ -161,6 +161,144 @@ function buildPublicDecisionFromPageCore(pageCoreResult, privateDecisionBundle =
   return { decision, analysisReadiness };
 }
 
+function buildStockApiPayloadFromPageCore({
+  tickerParam,
+  normalizedTicker,
+  effectiveTicker,
+  pageCoreResult,
+  requestStart,
+  startedAt,
+}) {
+  if (!pageCoreResult?.ok || !pageCoreResult.pageCore) return null;
+  const row = pageCoreResult.pageCore;
+  const summary = row.summary_min || {};
+  const freshness = row.freshness || {};
+  const identity = row.identity || {};
+  const publicDecision = buildPublicDecisionFromPageCore(pageCoreResult, {
+    ok: true,
+    analysis_readiness: {
+      status: 'OK',
+      decision_bundle_status: 'OK',
+      blocking_reasons: [],
+      warnings: [],
+    },
+  });
+  if (!publicDecision) return null;
+  const dataDate = freshness.as_of || row.target_market_date || summary.as_of || null;
+  const generatedAt = nowUtcIso();
+  const payload = {
+    ok: true,
+    schema_version: '3.0',
+    meta: {
+      status: pageCoreResult.freshness_status === 'expired' ? 'stale' : 'fresh',
+      generated_at: generatedAt,
+      data_date: dataDate,
+      provider: 'page_core_public_projection',
+      quality_flags: [],
+      data_source: 'page_core',
+      mode: 'STATIC',
+      asOf: dataDate,
+      freshness: pageCoreResult.freshness_status || freshness.status || 'fresh',
+      circuit: null,
+      cache: { mode: 'page_core', hit: true, stale: false },
+      timings: {
+        t_total_ms: Date.now() - requestStart,
+        t_kv_ms: null,
+        t_origin_ms: null,
+        t_build_ms: 0,
+      },
+      degraded: publicDecision.analysisReadiness.signal_quality === 'degraded',
+      degraded_reason: publicDecision.analysisReadiness.signal_quality === 'degraded' ? 'public_signal_quality_degraded' : null,
+      page_core: {
+        run_id: pageCoreResult.run_id || null,
+        snapshot_id: pageCoreResult.snapshot_id || null,
+        canonical_id: row.canonical_asset_id || pageCoreResult.canonical_id || null,
+      },
+    },
+    metadata: {
+      module: MODULE_NAME,
+      tier: 'standard',
+      domain: 'stocks',
+      source: 'page-core-public-stock-api',
+      fetched_at: startedAt,
+      published_at: generatedAt,
+      digest: null,
+      status: row.coverage?.ui_renderable === true ? 'OK' : 'PARTIAL',
+      record_count: 1,
+      expected_count: 1,
+      validation: {
+        passed: true,
+        dropped_records: 0,
+        drop_ratio: 0,
+        drop_check_passed: true,
+        drop_threshold: null,
+        checks: ['page_core_public_projection'],
+        warnings: [],
+      },
+      served_from: 'PAGE_CORE',
+      request: {
+        ticker: tickerParam,
+        normalized_ticker: normalizedTicker,
+        effective_ticker: effectiveTicker,
+      },
+      as_of: dataDate,
+      source_chain: {
+        primary: 'page_core',
+        secondary: null,
+        forced: null,
+        selected: 'page_core_public_projection',
+        fallbackUsed: false,
+        failureReason: null,
+        primaryFailure: null,
+        circuit: null,
+      },
+      telemetry: {
+        provider: {
+          primary: 'page_core',
+          selected: 'page_core_public_projection',
+          forced: false,
+          fallbackUsed: false,
+          primaryFailure: null,
+        },
+        latencyMs: Date.now() - requestStart,
+        ok: true,
+        httpStatus: 200,
+      },
+      indicators: {
+        count: 0,
+        nullCount: 0,
+      },
+      reasons: [],
+      sources: {
+        page_core: {
+          served_from: 'ASSET',
+          path: pageCoreResult.latest?.snapshot_path || null,
+          status: 200,
+          error: null,
+          lookup_key: effectiveTicker,
+          record_found: true,
+        },
+      },
+    },
+    data: {
+      ticker: row.display_ticker || effectiveTicker || normalizedTicker,
+      canonical_id: row.canonical_asset_id || pageCoreResult.canonical_id || null,
+      name: identity.name || summary.name || row.display_name || null,
+      asset_class: identity.asset_class || row.asset_class || null,
+      summary_min: summary,
+      governance_summary: row.governance_summary || null,
+      coverage: row.coverage || null,
+      freshness,
+      daily_decision: publicDecision.decision,
+      analysis_readiness: publicDecision.analysisReadiness,
+    },
+    daily_decision: publicDecision.decision,
+    analysis_readiness: publicDecision.analysisReadiness,
+    error: null,
+  };
+  return payload;
+}
+
 function buildSourceChainMetadata(chain) {
   if (!chain || typeof chain !== 'object') {
     return {
@@ -708,6 +846,33 @@ export async function onRequestGet(context) {
   }
   const effectiveTicker = resolvedTicker || normalizedTicker || null;
   const providerSymbolMap = buildProviderSymbolMap(effectiveTicker, resolvedExchange);
+
+  if (effectiveTicker && url.searchParams.get('legacy') !== '1' && String(env?.RV_STOCK_API_PAGE_CORE_FAST_PATH ?? '1') !== '0') {
+    try {
+      const pageCoreResult = await readPageCoreForTicker(resolvedCanonicalId || effectiveTicker, { request, env });
+      const pageCorePayload = buildStockApiPayloadFromPageCore({
+        tickerParam,
+        normalizedTicker,
+        effectiveTicker,
+        pageCoreResult,
+        requestStart,
+        startedAt,
+      });
+      if (pageCorePayload) {
+        pageCorePayload.metadata.digest = await computeDigest(pageCorePayload);
+        return new Response(JSON.stringify(pageCorePayload) + '\n', {
+          headers: {
+            'Content-Type': 'application/json',
+            'Cache-Control': 'public, max-age=60, stale-while-revalidate=300',
+            'X-Run-Id': pageCoreResult.run_id || '',
+            'X-Canonical-Asset-Id': pageCoreResult.canonical_id || '',
+          },
+        });
+      }
+    } catch {
+      // Legacy path below remains fallback if page-core is unavailable.
+    }
+  }
 
   let eodBars = [];
   let eodError = null;
