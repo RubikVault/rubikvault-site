@@ -1,6 +1,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import zlib from 'node:zlib';
+import { readHistoryPackRows as readOverlayHistoryPackRows } from './history-pack-overlay.mjs';
 import { readGzipNdjson } from './io/gzip-ndjson.mjs';
 
 import { computeIndicators } from '../../functions/api/_shared/eod-indicators.mjs';
@@ -344,21 +345,17 @@ async function loadBarsFromHistoryPack(assetMeta) {
   ].filter(Boolean)));
   if (!packCandidates.length) return [];
   for (const historyPack of packCandidates) {
-    const candidates = [
-      path.join(REPO_ROOT, HISTORY_BASE, historyPack),
-      path.join(REPO_ROOT, HISTORY_BASE, 'history', historyPack),
-      path.join(REPO_ROOT, 'public/data/universe/v7', historyPack),
-    ];
-    for (const absPath of candidates) {
-      const rows = await readNdjsonGzAbs(absPath);
-      if (!rows.length) continue;
-      const hit = canonicalId
-        ? (rows.find((row) => normalizeCanonicalId(row?.canonical_id) === canonicalId) || null)
-        : (rows[0] || null);
-      if (!hit) continue;
-      const bars = normalizeRows(hit?.bars || []);
-      if (bars.length) return bars;
-    }
+    const rows = await readOverlayHistoryPackRows(REPO_ROOT, historyPack, {
+      includeDeltas: process.env.RV_HISTORY_READ_DELTAS === '1',
+      baseDir: HISTORY_BASE,
+    });
+    if (!rows.length) continue;
+    const hit = canonicalId
+      ? (rows.find((row) => normalizeCanonicalId(row?.canonical_id) === canonicalId) || null)
+      : (rows[0] || null);
+    if (!hit) continue;
+    const bars = normalizeRows(hit?.bars || []);
+    if (bars.length) return bars;
   }
   return [];
 }

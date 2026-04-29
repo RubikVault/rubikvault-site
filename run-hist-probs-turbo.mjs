@@ -7,7 +7,8 @@ import { appendError, cleanupLedger } from './scripts/lib/hist-probs/error-ledge
 import { loadCheckpoints, saveCheckpoints, getTickerState, setTickerState, needsColdRebuild } from './scripts/lib/hist-probs/checkpoint-store.mjs';
 import { buildStateSnapshot, writeStateSnapshot, cleanupSnapshots } from './scripts/lib/hist-probs/state-snapshot.mjs';
 import { iterateGzipNdjson } from './scripts/lib/io/gzip-ndjson.mjs';
-import { histProbsReadCandidates } from './scripts/lib/hist-probs/path-resolver.mjs';
+import { histProbsReadCandidates, resolveHistProbsWriteMode } from './scripts/lib/hist-probs/path-resolver.mjs';
+import { parseGlobalAssetClasses } from './functions/api/_shared/global-asset-classes.mjs';
 
 // Correct path found by find: scripts/lib/best-setups-local-loader.mjs
 import { REPO_ROOT } from './scripts/lib/best-setups-local-loader.mjs';
@@ -17,6 +18,7 @@ const HIST_PROBS_DIR = path.join(REPO_ROOT, 'public/data/hist-probs');
 const COMPUTE_AUDIT_PATH = path.join(REPO_ROOT, 'public/data/reports/pipeline-compute-audit-latest.json');
 const MONITORING_PATH = path.join(REPO_ROOT, 'public/data/reports/pipeline-monitoring-latest.json');
 const REGISTRY_PATH = path.join(REPO_ROOT, 'public/data/universe/v7/registry/registry.ndjson.gz');
+const GLOBAL_SCOPE_ROWS_PATH = path.join(REPO_ROOT, 'mirrors/universe-v7/ssot/assets.global.rows.json');
 const US_EU_SCOPE_ROWS_PATH = path.join(REPO_ROOT, 'mirrors/universe-v7/ssot/stocks_etfs.us_eu.rows.json');
 const NO_DATA_MANIFEST_PATH = path.join(HIST_PROBS_DIR, 'no-data-tickers.json');
 const RETRY_SUMMARY_PATH = path.join(HIST_PROBS_DIR, 'retry-summary-latest.json');
@@ -39,6 +41,29 @@ const DEFAULT_HIST_PROBS_RSS_BUDGET_MB = NODE_OLD_SPACE_LIMIT_MB
   ? Math.max(1536, NODE_OLD_SPACE_LIMIT_MB + 512)
   : 1536;
 const HIST_PROBS_RSS_BUDGET_MB = Math.max(128, Number(process.env.HIST_PROBS_RSS_BUDGET_MB || DEFAULT_HIST_PROBS_RSS_BUDGET_MB));
+const RESPECT_CHECKPOINT_VERSION = process.env.HIST_PROBS_RESPECT_CHECKPOINT_VERSION !== '0';
+const FAIL_ON_SOFT_ERRORS = process.env.HIST_PROBS_FAIL_ON_SOFT_ERRORS !== '0';
+const MIN_COVERAGE_RATIO = Math.max(0, Math.min(1, Number(process.env.HIST_PROBS_MIN_COVERAGE_RATIO || 0.95)));
+const HIST_PROBS_FRESHNESS_BUDGET_TRADING_DAYS = Math.max(0, Number(
+  process.env.HIST_PROBS_FRESHNESS_BUDGET_TRADING_DAYS
+    || process.env.RV_HIST_PROBS_FRESHNESS_BUDGET_TRADING_DAYS
+    || 0,
+) || 0);
+const HIST_PROBS_MAX_TICKERS = Math.max(0, Number(
+  process.env.HIST_PROBS_MAX_TICKERS
+    || process.env.RV_HIST_PROBS_MAX_TICKERS
+    || 0,
+) || 0);
+const HIST_PROBS_TIER = (() => {
+  const value = String(process.env.HIST_PROBS_TIER || process.env.RV_HIST_PROBS_TIER || 'all').trim().toLowerCase();
+  return ['a', 'b', 'all'].includes(value) ? value : 'all';
+})();
+const HIST_PROBS_TIER_A_TOP_STOCKS = Math.max(0, Number(
+  process.env.HIST_PROBS_TIER_A_TOP_STOCKS
+    || process.env.RV_HIST_PROBS_TIER_A_TOP_STOCKS
+    || 3000,
+) || 0);
+const HIST_PROBS_PROTECTED_TICKERS = new Set(['AAPL', 'SPY', 'QQQ', 'BRK-B', 'BRK.B', 'BF-B', 'BF.B']);
 
 function readJsonSync(filePath) {
   try {
@@ -100,6 +125,7 @@ const NUM_WORKERS = WORKER_GATE.workers;
 
 // Skip tickers that already have an output file (resume after crash/reboot)
 const SKIP_EXISTING = process.env.HIST_PROBS_SKIP_EXISTING !== '0';
+const HIST_PROBS_WRITE_MODE = resolveHistProbsWriteMode();
 
 function normalizeDateId(value) {
   const normalized = String(value || '').slice(0, 10).trim();
@@ -128,6 +154,39 @@ function parseBooleanFlag(value) {
   if (['1', 'true', 'yes', 'on'].includes(normalized)) return true;
   if (['0', 'false', 'no', 'off'].includes(normalized)) return false;
   return null;
+}
+
+function collectSnapshotTickers(value, out = new Set(), depth = 0) {
+  if (depth > 8 || value == null) return out;
+  if (Array.isArray(value)) {
+    for (const item of value) collectSnapshotTickers(item, out, depth + 1);
+    return out;
+  }
+  if (typeof value !== 'object') return out;
+  for (const key of ['ticker', 'symbol', 'display_ticker']) {
+    const ticker = normalizeTicker(value[key]);
+    if (ticker) out.add(ticker);
+  }
+  const canonical = String(value.canonical_id || value.canonicalAssetId || '').trim();
+  if (canonical) {
+    const last = normalizeTicker(canonical.split(':').pop());
+    if (last) out.add(last);
+  }
+  for (const child of Object.values(value)) collectSnapshotTickers(child, out, depth + 1);
+  return out;
+}
+
+function loadSnapshotTickerSet() {
+  const candidates = [
+    path.join(REPO_ROOT, 'public/data/snapshots/best-setups-v4.json'),
+    path.join(REPO_ROOT, 'public/data/decisions/latest.json'),
+  ];
+  const tickers = new Set();
+  for (const filePath of candidates) {
+    const doc = readJsonSync(filePath);
+    if (doc) collectSnapshotTickers(doc, tickers);
+  }
+  return tickers;
 }
 
 function readTickerListFile(filePath) {
@@ -162,6 +221,10 @@ function parseCliArgs(argv = process.argv.slice(2)) {
     || (argv.includes('--target-market-date') ? argv[argv.indexOf('--target-market-date') + 1] : null);
   const writeRunSummaryArg = argv.find((arg) => arg.startsWith('--write-run-summary='))?.split('=')[1]
     || (argv.includes('--write-run-summary') ? argv[argv.indexOf('--write-run-summary') + 1] : null);
+  const assetClassesArg = argv.find((arg) => arg.startsWith('--asset-classes='))?.split('=')[1]
+    || (argv.includes('--asset-classes') ? argv[argv.indexOf('--asset-classes') + 1] : null)
+    || process.env.RV_GLOBAL_ASSET_CLASSES
+    || '';
   const explicitTickers = new Set();
   if (tickerArg) explicitTickers.add(normalizeTicker(tickerArg));
   for (const ticker of String(tickersArg || '').split(',').map(normalizeTicker).filter(Boolean)) {
@@ -178,6 +241,7 @@ function parseCliArgs(argv = process.argv.slice(2)) {
     explicitTickers: [...explicitTickers],
     targetMarketDate: normalizeDateId(targetMarketDate),
     writeRunSummary: parseBooleanFlag(writeRunSummaryArg),
+    assetClasses: parseGlobalAssetClasses(assetClassesArg),
   };
 }
 
@@ -271,30 +335,36 @@ function mergeUniverseEntry(map, row) {
   map.set(symbol, current);
 }
 
-async function loadRequiredUniverse() {
+async function loadRequiredUniverse(assetClasses = ['STOCK', 'ETF']) {
   const merged = new Map();
+  const allowed = new Set(assetClasses.map((entry) => String(entry || '').trim().toUpperCase()));
 
-  try {
-    const scopeDoc = JSON.parse(await fs.readFile(US_EU_SCOPE_ROWS_PATH, 'utf8'));
-    const items = Array.isArray(scopeDoc?.items) ? scopeDoc.items : [];
-    for (const row of items) {
-      const typeNorm = String(row?.type_norm || '').trim().toUpperCase();
-      if (!['STOCK', 'ETF'].includes(typeNorm)) continue;
-      mergeUniverseEntry(merged, row);
-    }
-    if (merged.size > 0) {
-      return {
-        mode: 'us_eu_scope',
-        entries: [...merged.values()]
-          .sort((a, b) => a.symbol.localeCompare(b.symbol))
-          .map(({ _preferred_last_trade_date, _preferred_bars_count, ...entry }) => entry),
-      };
-    }
-  } catch {}
+  for (const candidate of [
+    { path: GLOBAL_SCOPE_ROWS_PATH, mode: 'global_scope' },
+    { path: US_EU_SCOPE_ROWS_PATH, mode: 'us_eu_scope' },
+  ]) {
+    try {
+      const scopeDoc = JSON.parse(await fs.readFile(candidate.path, 'utf8'));
+      const items = Array.isArray(scopeDoc?.items) ? scopeDoc.items : [];
+      for (const row of items) {
+        const typeNorm = String(row?.type_norm || '').trim().toUpperCase();
+        if (!allowed.has(typeNorm)) continue;
+        mergeUniverseEntry(merged, row);
+      }
+      if (merged.size > 0) {
+        return {
+          mode: candidate.mode,
+          entries: [...merged.values()]
+            .sort((a, b) => a.symbol.localeCompare(b.symbol))
+            .map(({ _preferred_last_trade_date, _preferred_bars_count, ...entry }) => entry),
+        };
+      }
+    } catch {}
+  }
 
   for await (const row of iterateGzipNdjson(REGISTRY_PATH)) {
     const typeNorm = String(row?.type_norm || '').trim().toUpperCase();
-    if (!['STOCK', 'ETF'].includes(typeNorm)) continue;
+    if (!allowed.has(typeNorm)) continue;
     mergeUniverseEntry(merged, row);
   }
   return {
@@ -324,9 +394,23 @@ async function inspectHistProbsOutput(filePath, expectedTicker, expectedDate = n
       return { status: 'invalid', latest_date: latestDate };
     }
     if (expectedDate && latestDate && latestDate < expectedDate) {
-      return { status: 'stale', latest_date: latestDate };
+      const lag = tradingDaysBetween(latestDate, expectedDate);
+      if (lag != null && lag <= HIST_PROBS_FRESHNESS_BUDGET_TRADING_DAYS) {
+        return {
+          status: 'fresh',
+          freshness_status: 'budget_fresh',
+          latest_date: latestDate,
+          freshness_lag_trading_days: lag,
+        };
+      }
+      return { status: 'stale', latest_date: latestDate, freshness_lag_trading_days: lag };
     }
-    return { status: 'fresh', latest_date: latestDate };
+    return {
+      status: 'fresh',
+      freshness_status: 'strict_fresh',
+      latest_date: latestDate,
+      freshness_lag_trading_days: 0,
+    };
   } catch {
     return { status: 'invalid', latest_date: null };
   }
@@ -335,6 +419,9 @@ async function inspectHistProbsOutput(filePath, expectedTicker, expectedDate = n
 async function collectExistingCoverage(entries, histDir) {
   const fresh = new Set();
   const freshDates = new Map();
+  let strictFresh = 0;
+  let budgetFresh = 0;
+  let maxBudgetFreshLag = 0;
   let missing = 0;
   let stale = 0;
   let invalid = 0;
@@ -356,17 +443,53 @@ async function collectExistingCoverage(entries, histDir) {
         missing += 1;
         return;
       }
-      const inspected = await inspectHistProbsOutput(filePath, ticker, entry.expected_date);
+      const inspected = await inspectHistProbsOutput(filePath, ticker, entry.required_date || entry.expected_date);
       if (inspected.status === 'fresh') {
         fresh.add(ticker);
         if (inspected.latest_date) freshDates.set(ticker, inspected.latest_date);
+        if (inspected.freshness_status === 'budget_fresh') {
+          budgetFresh += 1;
+          maxBudgetFreshLag = Math.max(maxBudgetFreshLag, Number(inspected.freshness_lag_trading_days || 0));
+        } else {
+          strictFresh += 1;
+        }
       }
       else if (inspected.status === 'stale') stale += 1;
       else invalid += 1;
     }));
   }
 
-  return { fresh, freshDates, missing, stale, invalid };
+  return { fresh, freshDates, missing, stale, invalid, strictFresh, budgetFresh, maxBudgetFreshLag };
+}
+
+function applyHistProbsTier(entries, tier = HIST_PROBS_TIER) {
+  if (tier === 'all') {
+    return { entries, tier, tier_a_count: entries.length, tier_b_count: 0 };
+  }
+  const snapshotTickers = loadSnapshotTickerSet();
+  const topStocks = [...entries]
+    .filter((entry) => String(entry.type_norm || '').toUpperCase() === 'STOCK')
+    .sort((a, b) => Number(b.bars_count || 0) - Number(a.bars_count || 0))
+    .slice(0, HIST_PROBS_TIER_A_TOP_STOCKS)
+    .map((entry) => entry.symbol);
+  const tierA = new Set([...HIST_PROBS_PROTECTED_TICKERS, ...snapshotTickers, ...topStocks]);
+  const tierAEntries = [];
+  const tierBEntries = [];
+  for (const entry of entries) {
+    const symbol = String(entry.symbol || '').toUpperCase();
+    const typeNorm = String(entry.type_norm || '').toUpperCase();
+    if (typeNorm === 'ETF' || typeNorm === 'INDEX' || tierA.has(symbol)) {
+      tierAEntries.push(entry);
+    } else {
+      tierBEntries.push(entry);
+    }
+  }
+  return {
+    entries: tier === 'a' ? tierAEntries : tierBEntries,
+    tier,
+    tier_a_count: tierAEntries.length,
+    tier_b_count: tierBEntries.length,
+  };
 }
 
 async function writeNoDataManifest(entries, { mode, totalInput }, outputPath = NO_DATA_MANIFEST_PATH) {
@@ -420,7 +543,7 @@ if (isMainThread) {
     const writeGlobalArtifacts = cli.writeRunSummary ?? (cli.explicitTickers.length === 0);
 
     console.log('\n[Turbo-Hist] ─── Loading required universe...');
-    const universe = await loadRequiredUniverse();
+    const universe = await loadRequiredUniverse(cli.assetClasses);
     let universeEntries = universe.entries;
     let universeMode = universe.mode;
     if (cli.explicitTickers.length > 0) {
@@ -483,7 +606,7 @@ if (isMainThread) {
       });
     }
     const excludedInactiveSet = new Set(excludedInactive.map((entry) => entry.symbol));
-    const requiredEntries = activeCandidates
+    let requiredEntries = activeCandidates
       .filter((entry) => !excludedInactiveSet.has(entry.symbol))
       .map((entry) => ({
         ...entry,
@@ -493,18 +616,28 @@ if (isMainThread) {
           fallbackDate: regime?.date || null,
         }),
       }));
+    const tierSelection = cli.explicitTickers.length > 0
+      ? { entries: requiredEntries, tier: 'explicit', tier_a_count: 0, tier_b_count: 0 }
+      : applyHistProbsTier(requiredEntries, HIST_PROBS_TIER);
+    requiredEntries = tierSelection.entries;
+    if (HIST_PROBS_MAX_TICKERS > 0 && requiredEntries.length > HIST_PROBS_MAX_TICKERS) {
+      requiredEntries = requiredEntries.slice(0, HIST_PROBS_MAX_TICKERS);
+    }
     if (writeGlobalArtifacts) {
       await writeNoDataManifest(excludedNoData, { mode: universeMode, totalInput: totalInputTickers });
     }
     let tickerList = requiredEntries.map((entry) => entry.symbol);
     const totalUniverse = requiredEntries.length;
-    console.log(`[Turbo-Hist] Universe: ${totalUniverse} required tickers (${excludedNoData.length} excluded with <${MIN_REQUIRED_BARS} bars, ${excludedInactive.length} inactive >${INACTIVE_TOLERANCE_TRADING_DAYS}T, mode=${universeMode})`);
+    console.log(`[Turbo-Hist] Universe: ${totalUniverse} required tickers (${excludedNoData.length} excluded with <${MIN_REQUIRED_BARS} bars, ${excludedInactive.length} inactive >${INACTIVE_TOLERANCE_TRADING_DAYS}T, mode=${universeMode}, tier=${tierSelection.tier}, max=${HIST_PROBS_MAX_TICKERS || 'none'})`);
 
     // Skip tickers that already have output files (resume support)
     let skippedCount = 0;
     let invalidExistingCount = 0;
     let staleExistingCount = 0;
     let missingExistingCount = 0;
+    let strictFreshExistingCount = 0;
+    let budgetFreshExistingCount = 0;
+    let maxBudgetFreshLagTradingDays = 0;
     let forcedRebuildCount = 0;
     const expectedDates = Object.fromEntries(requiredEntries.map((entry) => [entry.symbol, entry.required_date || null]));
     const entryOptionsByTicker = Object.fromEntries(requiredEntries.map((entry) => [entry.symbol, buildComputeOptions(entry)]));
@@ -525,14 +658,25 @@ if (isMainThread) {
     }
     if (SKIP_EXISTING) {
       await fs.mkdir(HIST_PROBS_DIR, { recursive: true });
-      const { fresh, freshDates, invalid, stale, missing } = await collectExistingCoverage(requiredEntries, HIST_PROBS_DIR);
-      for (const entry of requiredEntries) {
-        const ticker = entry.symbol;
-        if (!fresh.has(ticker.toUpperCase())) continue;
-        const rebuild = needsColdRebuild(checkpointStore, ticker, CURRENT_VERSIONS);
-        if (rebuild.needsRebuild) {
-          fresh.delete(ticker.toUpperCase());
-          forcedRebuildCount += 1;
+      const {
+        fresh,
+        freshDates,
+        invalid,
+        stale,
+        missing,
+        strictFresh,
+        budgetFresh,
+        maxBudgetFreshLag,
+      } = await collectExistingCoverage(requiredEntries, HIST_PROBS_DIR);
+      if (RESPECT_CHECKPOINT_VERSION) {
+        for (const entry of requiredEntries) {
+          const ticker = entry.symbol;
+          if (!fresh.has(ticker.toUpperCase())) continue;
+          const rebuild = needsColdRebuild(checkpointStore, ticker, CURRENT_VERSIONS);
+          if (rebuild.needsRebuild) {
+            fresh.delete(ticker.toUpperCase());
+            forcedRebuildCount += 1;
+          }
         }
       }
       const before = tickerList.length;
@@ -552,7 +696,10 @@ if (isMainThread) {
       invalidExistingCount = invalid;
       staleExistingCount = stale;
       missingExistingCount = missing;
-      console.log(`[Turbo-Hist] Skip-existing: ${skippedCount} fresh skipped, ${tickerList.length} remaining, ${staleExistingCount} stale, ${missingExistingCount} missing, ${invalidExistingCount} invalid, ${forcedRebuildCount} rebuild-forced`);
+      strictFreshExistingCount = strictFresh;
+      budgetFreshExistingCount = budgetFresh;
+      maxBudgetFreshLagTradingDays = maxBudgetFreshLag;
+      console.log(`[Turbo-Hist] Skip-existing: ${skippedCount} fresh skipped (${strictFreshExistingCount} strict, ${budgetFreshExistingCount} budget≤${HIST_PROBS_FRESHNESS_BUDGET_TRADING_DAYS}T), ${tickerList.length} remaining, ${staleExistingCount} stale, ${missingExistingCount} missing, ${invalidExistingCount} invalid, ${forcedRebuildCount} rebuild-forced`);
     }
 
     if (tickerList.length === 0) {
@@ -593,6 +740,7 @@ if (isMainThread) {
           chunk: batch,
           skipExisting: SKIP_EXISTING,
           histProbsDir: HIST_PROBS_DIR,
+          freshnessBudgetTradingDays: HIST_PROBS_FRESHNESS_BUDGET_TRADING_DAYS,
           expectedDates: Object.fromEntries(batch.map((ticker) => [ticker, expectedDates[ticker] || null])),
           entryOptionsByTicker: Object.fromEntries(batch.map((ticker) => [ticker, entryOptionsByTicker[ticker] || {}])),
         },
@@ -728,8 +876,7 @@ if (isMainThread) {
     const tickersRemaining = Math.max(0, effectiveTotal - tickersCovered);
     console.log(`\n[Turbo-Hist] ─── Done in ${elapsed}s (${totalDone} newly computed, ${totalSkippedAll} skipped, ${totalErrors} errors, ${totalNoData} runtime no-data, ${tickersRemaining} remaining)`);
 
-    // Final Summary to satisfy SSOT contract
-    // asset_classes must be sorted ('ETF,STOCK') for isComplete() check
+    // Final Summary to satisfy SSOT contract. Keep asset_classes sorted.
     let rssAtCompletion = null;
     try {
       rssAtCompletion = enforceRssBudget('workers_complete');
@@ -755,8 +902,16 @@ if (isMainThread) {
       invalid_existing_files: invalidExistingCount,
       stale_existing_files: staleExistingCount,
       missing_existing_files: missingExistingCount,
+      strict_fresh_existing_files: strictFreshExistingCount,
+      budget_fresh_existing_files: budgetFreshExistingCount,
+      max_budget_fresh_lag_trading_days: maxBudgetFreshLagTradingDays,
       worker_hard_failures: hardFailures,
       skip_existing: SKIP_EXISTING,
+      hist_probs_write_mode: HIST_PROBS_WRITE_MODE,
+      freshness_budget_trading_days: HIST_PROBS_FRESHNESS_BUDGET_TRADING_DAYS,
+      hist_probs_tier: tierSelection.tier,
+      hist_probs_tier_a_count: tierSelection.tier_a_count,
+      hist_probs_tier_b_count: tierSelection.tier_b_count,
       workers_requested: NUM_WORKERS,
       workers_cap_requested: WORKER_GATE.requestedWorkers,
       workers_cap_max_allowed: WORKER_GATE.maxAllowedWorkers,
@@ -764,9 +919,12 @@ if (isMainThread) {
       worker_scaling_gate_state: WORKER_GATE.gateState,
       worker_scaling_gate_source: WORKER_GATE.source,
       worker_scaling_cap_applied: WORKER_GATE.capApplied,
+      respect_checkpoint_version: RESPECT_CHECKPOINT_VERSION,
+      fail_on_soft_errors: FAIL_ON_SOFT_ERRORS,
+      min_coverage_ratio: MIN_COVERAGE_RATIO,
       source_mode: universeMode,
-      asset_classes: ['ETF', 'STOCK'],  // sorted: isComplete() checks 'ETF,STOCK'
-      max_tickers: cli.explicitTickers.length > 0 ? cli.explicitTickers.length : 0,
+      asset_classes: [...cli.assetClasses].sort(),
+      max_tickers: cli.explicitTickers.length > 0 ? cli.explicitTickers.length : HIST_PROBS_MAX_TICKERS,
       retry_mode: writeGlobalArtifacts !== true,
       requested_tickers: cli.explicitTickers.length > 0 ? cli.explicitTickers : null,
       regime_date: regime?.date ?? null,
@@ -789,7 +947,10 @@ if (isMainThread) {
     writeStateSnapshot(snapshot);
     const summaryPath = await writeSummaryAtomic(summaryPayload, writeGlobalArtifacts ? path.join(HIST_PROBS_DIR, 'run-summary.json') : RETRY_SUMMARY_PATH);
     console.log('[Turbo-Hist] Summary written to', summaryPath);
-    if (hardFailures > 0 || totalErrors > 0 || tickersRemaining > 0) {
+    const coverageRatio = effectiveTotal > 0 ? tickersCovered / effectiveTotal : 0;
+    const softErrorFailure = FAIL_ON_SOFT_ERRORS && (totalErrors > 0 || tickersRemaining > 0);
+    const coverageFailure = coverageRatio < MIN_COVERAGE_RATIO;
+    if (hardFailures > 0 || softErrorFailure || coverageFailure) {
       process.exit(1);
     }
   }
@@ -804,7 +965,14 @@ if (isMainThread) {
     localBarStaleDays: 9999,
     allowRemoteBarFetch: false,
   });
-  const { chunk, skipExisting, histProbsDir, expectedDates = {}, entryOptionsByTicker = {} } = workerData;
+  const {
+    chunk,
+    skipExisting,
+    histProbsDir,
+    freshnessBudgetTradingDays = HIST_PROBS_FRESHNESS_BUDGET_TRADING_DAYS,
+    expectedDates = {},
+    entryOptionsByTicker = {},
+  } = workerData;
   let processed = 0;
   let skipped = 0;
   let errors = 0;
@@ -849,6 +1017,21 @@ if (isMainThread) {
             continue;
           }
           if (requiredDate && result.latest_date && result.latest_date < requiredDate) {
+            if (freshnessLag != null && freshnessLag <= freshnessBudgetTradingDays) {
+              processed += 1;
+              parentPort.postMessage({
+                type: 'ticker_processed',
+                ticker,
+                latest_date: result.latest_date || null,
+                freshness_status: 'budget_fresh',
+                freshness_lag_trading_days: freshnessLag,
+              });
+              progressCount += 1;
+              if (progressCount % 10 === 0) {
+                parentPort.postMessage({ type: 'progress', count: 10 });
+              }
+              continue;
+            }
             errors += 1;
             parentPort.postMessage({
               type: 'ticker_error',

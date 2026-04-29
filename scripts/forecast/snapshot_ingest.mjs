@@ -11,6 +11,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import zlib from 'node:zlib';
 import { computeDigest } from '../lib/digest.js';
+import { readHistoryPackRows as readOverlayHistoryPackRows } from '../lib/history-pack-overlay.mjs';
 import { iterateGzipNdjson, readGzipNdjson } from '../lib/io/gzip-ndjson.mjs';
 import { stripExchangeSuffix } from '../utils/symbol-normalize.mjs';
 
@@ -499,11 +500,12 @@ function readHistoryPack(repoRoot, historyPackRel) {
 }
 
 async function readHistoryPackAsync(repoRoot, historyPackRel) {
-    const absPath = path.join(repoRoot, MIRRORS_UNIVERSE_V7_BASE, historyPackRel);
-    if (!fs.existsSync(absPath)) return new Map();
-
+    const rows = await readOverlayHistoryPackRows(repoRoot, historyPackRel, {
+        includeDeltas: process.env.RV_HISTORY_READ_DELTAS === '1',
+        baseDir: MIRRORS_UNIVERSE_V7_BASE
+    });
     const map = new Map();
-    for await (const row of iterateGzipNdjson(absPath)) {
+    for (const row of rows) {
         const canonicalId = normalizeCanonicalId(row?.canonical_id);
         if (!canonicalId || !Array.isArray(row?.bars) || !row.bars.length) continue;
         map.set(canonicalId, row.bars);
