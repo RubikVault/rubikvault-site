@@ -46,6 +46,7 @@
     { "pattern": "posts/**", "maxFileSizeBytes": 1048576, "class": "visitor-posts" },
 
     { "pattern": "data/public-status.json", "maxFileSizeBytes": 16384, "class": "public-status" },
+    { "pattern": "data/runtime/hist-probs-status-summary.json", "maxFileSizeBytes": 65536, "class": "hist-probs-public-status" },
     { "pattern": "data/eod/history/pack-manifest.us-eu.json", "maxFileSizeBytes": 20971520, "class": "eod-pack-manifest" },
     { "pattern": "data/eod/history/pack-manifest.us-eu.lookup.json", "maxFileSizeBytes": 10485760, "class": "eod-pack-manifest-lookup" },
     { "pattern": "data/eod/history/shards/*.json", "maxFileSizeBytes": 1048576, "class": "eod-shard" },
@@ -70,6 +71,9 @@
     { "pattern": "data/page-core/snapshots/**/manifest.json", "maxFileSizeBytes": 65536, "class": "page-core-manifest" },
     { "pattern": "data/page-core/snapshots/**/alias-shards/*.json.gz", "maxFileSizeBytes": 524288, "class": "page-core-alias-shard" },
     { "pattern": "data/page-core/snapshots/**/page-shards/*.json.gz", "maxFileSizeBytes": 1048576, "class": "page-core-page-shard" },
+    { "pattern": "data/hist-probs-public/latest.json", "maxFileSizeBytes": 4096, "class": "hist-probs-public-pointer" },
+    { "pattern": "data/hist-probs-public/manifest.json", "maxFileSizeBytes": 1048576, "class": "hist-probs-public-manifest" },
+    { "pattern": "data/hist-probs-public/shards/*.json", "maxFileSizeBytes": 2097152, "class": "hist-probs-public-shard" },
     { "pattern": "data/features-v4/**", "maxFileSizeBytes": 10485760, "class": "public-features-v4" },
 
     { "pattern": "deploy-probe-*.txt", "maxFileSizeBytes": 1024, "class": "probe" }

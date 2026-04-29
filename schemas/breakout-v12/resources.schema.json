@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["step", "status"],
+  "properties": {
+    "step": { "type": "string", "minLength": 1 },
+    "status": { "type": "string", "enum": ["ok", "failed", "skipped", "degraded"] },
+    "bucket": { "type": ["integer", "null"] },
+    "wall_sec": { "type": ["number", "null"] },
+    "peak_rss_mb": { "type": ["number", "null"] },
+    "rows_in": { "type": ["integer", "null"] },
+    "rows_out": { "type": ["integer", "null"] },
+    "asset_count": { "type": ["integer", "null"] }
+  },
+  "additionalProperties": true
+}

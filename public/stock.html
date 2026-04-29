@@ -699,12 +699,9 @@
       const _signalQuality = String(_analysisReadiness?.signal_quality || _dailyDecision?.signal_quality || 'fresh').toLowerCase();
       if (_signalQuality === 'suppressed') {
         _integrityItems.push({ text: 'Signals suppressed', color: 'var(--red)' });
-      } else if (_signalQuality === 'degraded') {
-        _integrityItems.push({ text: 'Signal quality degraded', color: 'var(--yellow)' });
       }
       const _learningGate = _decision.learning_gate || payload.evaluation_v4?.decision?.learning_gate || null;
       if (_decision.regime_transition_active) _integrityItems.push({ text: 'Regime transition active', color: 'var(--red)' });
-      if (fundamentalsView.status === 'unavailable' || fundamentalsView.status === 'degraded') _integrityItems.push({ text: 'Fundamentals limited; technical model remains independent', color: 'var(--yellow)' });
       if ((_learningGate?.learning_status || _decision.learning_status || payload.evaluation_v4?.decision?.learning_status) === 'BOOTSTRAP') _integrityItems.push({ text: 'Learning bootstrap active', color: 'var(--yellow)' });
       { const _minNNotMet = _learningGate?.minimum_n_not_met || _decision.minimum_n_not_met || payload.evaluation_v4?.decision?.minimum_n_not_met || payload.evaluation_v4?.decision?.safety_switch?.trigger === 'minimum_n_not_met'; const _perAssetGateEnabled = _learningGate?.per_asset_gate_enabled === true || _decision.per_asset_gate_enabled === true || payload.evaluation_v4?.decision?.per_asset_gate_enabled === true; if (_minNNotMet && !_perAssetGateEnabled) _integrityItems.push({ text: 'Minimum sample gate not met', color: 'var(--yellow)' }); }
       if (moduleFreshness.some(item => item.state === 'stale')) _integrityItems.push({ text: 'Modules have mixed as-of dates', color: 'var(--yellow)' });

@@ -21,6 +21,18 @@
 
 ---
 
+### 2026-04-29 · NAS · Breakout V12 daily must be incremental, never full-history
+
+**What:** The initial Breakout V12 NAS step could run the full V1.2 feature pipeline when enabled. That path scans broad materialized history parquet, filters a large asset set, computes rolling features, and materializes the result, which is unsafe for the DS720+ nightly profile.
+
+**Why:** Daily signal freshness was wired to a research/backfill-style compute path instead of a bounded daily path. Batching alone would not fix the semantic risk because local rolling features and cross-sectional ranks have different chunking rules.
+
+**Fix:** The NAS supervisor now calls a safe Breakout wrapper. Default nightly behavior attempts only the incremental Breakout V12 path and degrades with `latest_unchanged=true` on missing state, missing delta, dependency failure, memory guard, or validation failure. Legacy full compute is manual-only via `RV_BREAKOUT_V12_LEGACY_FULL_COMPUTE=1`.
+
+**Prevention:** Daily Breakout V12 must read exact `daily_delta/date=T/bucket=N.parquet` plus exact `state/tail-bars/bucket=N.parquet` files. Full-history scans, global history filters, bucket-glob filters inside the local pass, and direct latest writes are forbidden in the NAS nightly path.
+
+---
+
 ### 2026-04-24 · Deploy · NAS Wrangler credentials need both a token secret and the real account ID
 
 **What:** The NAS deploy lane had `CLOUDFLARE_API_TOKEN` set, but `wrangler pages deploy` still failed because `CLOUDFLARE_ACCOUNT_ID` was also set to a `cfut_...` token value. Wrangler then routed Pages calls to `/accounts/cfut_...`, which Cloudflare rejected as an invalid object identifier.

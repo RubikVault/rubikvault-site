@@ -38,7 +38,8 @@ const PATHS = {
   storage: path.join(ROOT, 'public/data/reports/storage-budget-latest.json'),
   decisionBundle: path.join(ROOT, 'public/data/decisions/latest.json'),
   decisionBundleOps: path.join(ROOT, 'public/data/ops/decision-bundle-latest.json'),
-  histProbsStatus: path.join(ROOT, 'public/data/hist-probs/status-summary.json'),
+  histProbsStatus: path.join(ROOT, 'public/data/runtime/hist-probs-status-summary.json'),
+  histProbsStatusLegacy: path.join(ROOT, 'public/data/hist-probs/status-summary.json'),
   heartbeat: path.join(ROOT, 'mirrors/ops/pipeline-master/supervisor-heartbeat.json'),
   crashSeal: path.join(ROOT, 'public/data/ops/crash-seal-latest.json'),
 };
@@ -917,7 +918,7 @@ async function main() {
   const launchd = readJson(PATHS.launchd) || null;
   const storage = readJson(PATHS.storage) || null;
   const decisionBundle = readJson(PATHS.decisionBundle) || readJson(PATHS.decisionBundleOps) || null;
-  const histProbsStatus = readJson(PATHS.histProbsStatus) || null;
+  const histProbsStatus = readJson(PATHS.histProbsStatus) || readJson(PATHS.histProbsStatusLegacy) || null;
   const heartbeat = readJson(PATHS.heartbeat) || null;
   const crashSeal = readJson(PATHS.crashSeal) || null;
   const previousFinal = readJson(FINAL_INTEGRITY_SEAL_PATH) || null;

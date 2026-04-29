@@ -299,7 +299,7 @@ describe('fetchV2StockPage', () => {
     assert.equal(result.data.historical_profile.availability.status, 'ready');
   });
 
-  it('returns an incomplete contract result instead of throwing when V2 core modules are missing', async () => {
+  it('keeps thin V2 summary renderable when non-core modules are missing', async () => {
     global.fetch = async (url) => {
       const href = String(url);
       const okJson = (data) => ({ ok: true, json: async () => data });
@@ -322,8 +322,8 @@ describe('fetchV2StockPage', () => {
     };
 
     const result = await fetchV2StockPage('VOW3.XETR');
-    assert.equal(result.ok, false);
-    assert.equal(result.mode, 'incomplete');
+    assert.equal(result.ok, true);
+    assert.equal(result.mode, 'v2_degraded');
     assert.deepEqual(result.missingModules.includes('governance'), true);
   });
 });
@@ -366,7 +366,7 @@ describe('fetchWithFallback', () => {
     delete globalThis._rvFallbackLog;
   });
 
-  it('returns an empty state when V2 core modules are incomplete', async () => {
+  it('keeps V2 degraded state renderable when summary exists but modules are incomplete', async () => {
     global.fetch = async (url) => {
       const href = String(url);
       const okJson = (data) => ({ ok: true, json: async () => data });
@@ -386,10 +386,10 @@ describe('fetchWithFallback', () => {
     };
 
     const result = await fetchWithFallback('VOW3.XETR');
-    assert.equal(result.source, 'none');
-    assert.equal(result.mode, 'empty_state');
+    assert.equal(result.source, 'v2');
+    assert.equal(result.mode, 'v2_degraded');
     assert.equal(result.payload.data.ticker, 'VOW3.XETR');
-    assert.match(result.notice, /Legacy fallback is disabled/i);
+    assert.match(result.notice, /Partial V2 data available/i);
   });
 
   it('keeps AAPL on the full V2 path when core modules are complete', async () => {

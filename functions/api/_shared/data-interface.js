@@ -7,6 +7,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { gunzipSync } from 'node:zlib';
+import { createHash } from 'node:crypto';
 import { resolveSymbol, normalizeTicker as normalizeTickerStrict } from './symbol-resolver.mjs';
 import { fetchBarsWithProviderChain } from './eod-providers.mjs';
 import { computeIndicators } from './eod-indicators.mjs';
@@ -283,6 +284,69 @@ async function fetchAssetJsonFromPaths(paths, request, env) {
     } catch { /* continue */ }
   }
   return null;
+}
+
+function histProbsPublicShardName(ticker, count = 256) {
+  const hash = createHash('sha256').update(String(ticker || '').toUpperCase()).digest();
+  const index = hash.readUInt32BE(0) % count;
+  return `${String(index).padStart(3, '0')}.json`;
+}
+
+async function fetchHistProbsPublicProjection(ticker, request, env) {
+  const latest = await fetchAssetJsonFromPaths([
+    '/data/hist-probs-public/latest.json',
+    '/public/data/hist-probs-public/latest.json',
+  ], request, env);
+  const shardCount = Math.max(1, Number(latest?.shard_count || 0));
+  if (!latest || !shardCount) return null;
+  const normalized = normalizeTicker(ticker);
+  const shard = await fetchAssetJsonFromPaths([
+    `/data/hist-probs-public/shards/${histProbsPublicShardName(normalized, shardCount)}`,
+    `/public/data/hist-probs-public/shards/${histProbsPublicShardName(normalized, shardCount)}`,
+  ], request, env);
+  return shard?.[normalized] || null;
+}
+
+function summarizeForwardReturns(bars, horizon) {
+  const values = [];
+  for (let index = 0; index + horizon < bars.length; index += 1) {
+    const start = Number(bars[index]?.adjClose ?? bars[index]?.close);
+    const end = Number(bars[index + horizon]?.adjClose ?? bars[index + horizon]?.close);
+    if (Number.isFinite(start) && Number.isFinite(end) && start > 0) values.push((end - start) / start);
+  }
+  if (values.length < 50) return null;
+  const wins = values.filter((value) => value > 0).length;
+  const avg = values.reduce((sum, value) => sum + value, 0) / values.length;
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  return {
+    n: values.length,
+    win_rate: Number((wins / values.length).toFixed(6)),
+    avg_return: Number(avg.toFixed(6)),
+    mae: Number(min.toFixed(6)),
+    mfe: Number(max.toFixed(6)),
+    max_drawdown: Number(Math.min(0, min).toFixed(6)),
+  };
+}
+
+function deriveHistoricalProfileFromBars(ticker, bars) {
+  if (!Array.isArray(bars) || bars.length < 250) return null;
+  const events = {};
+  const baseline = {};
+  for (const [key, horizon] of [['h5d', 5], ['h20d', 20], ['h60d', 60], ['h120d', 120]]) {
+    const summary = summarizeForwardReturns(bars, horizon);
+    if (summary) baseline[key] = summary;
+  }
+  if (Object.keys(baseline).length) events.event_price_history_baseline = baseline;
+  const latest = bars[bars.length - 1] || null;
+  return Object.keys(events).length ? {
+    ticker,
+    latest_date: latest?.date || null,
+    computed_at: nowUtcIso(),
+    bars_count: bars.length,
+    events,
+    source: 'derived_from_public_historical_bars',
+  } : null;
 }
 
 function buildHistoricalProfileCandidates(symbol) {
@@ -961,11 +1025,21 @@ export async function fetchStockHistoricalProfile(ticker, env, request) {
   let resolvedSymbol = null;
 
   for (const candidate of candidates) {
-    const doc = await fetchAssetJsonFromPaths(buildHistProbsCandidatePaths(candidate), request, env);
+    const doc = await fetchHistProbsPublicProjection(candidate, request, env)
+      || await fetchAssetJsonFromPaths(buildHistProbsCandidatePaths(candidate), request, env);
     if (doc) {
       profile = doc;
       resolvedSymbol = candidate;
       break;
+    }
+  }
+
+  if (!profile) {
+    const historical = await fetchStockHistorical(effectiveTicker, env, request);
+    const derived = deriveHistoricalProfileFromBars(effectiveTicker, historical?.data?.bars || []);
+    if (derived) {
+      profile = derived;
+      resolvedSymbol = effectiveTicker;
     }
   }
 

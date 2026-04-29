@@ -1,0 +1,81 @@
+{
+  "schema_version": 1,
+  "tail_bars": 300,
+  "features": [
+    {
+      "name": "distance_to_resistance_atr",
+      "class": "asset_local_rolling",
+      "lookback_bars": 63,
+      "point_in_time_safe": true,
+      "engine": "polars"
+    },
+    {
+      "name": "rvol_percentile_asset_252d",
+      "class": "asset_local_rolling",
+      "lookback_bars": 252,
+      "point_in_time_safe": true,
+      "engine": "polars"
+    },
+    {
+      "name": "atr_compression_percentile_252d",
+      "class": "asset_local_rolling",
+      "lookback_bars": 252,
+      "point_in_time_safe": true,
+      "engine": "polars"
+    },
+    {
+      "name": "price_position_20d_range",
+      "class": "asset_local_rolling",
+      "lookback_bars": 20,
+      "point_in_time_safe": true,
+      "engine": "polars"
+    },
+    {
+      "name": "recent_signal_count_20d",
+      "class": "asset_local_rolling",
+      "lookback_bars": 20,
+      "point_in_time_safe": true,
+      "engine": "polars"
+    },
+    {
+      "name": "rvol_percentile_sector_252d",
+      "class": "cross_sectional_daily",
+      "partition": "date+sector",
+      "input": "local_features",
+      "point_in_time_safe": true,
+      "engine": "duckdb"
+    },
+    {
+      "name": "sector_relative_strength_63d",
+      "class": "cross_sectional_daily",
+      "partition": "date+sector",
+      "input": "local_features",
+      "point_in_time_safe": true,
+      "engine": "duckdb"
+    },
+    {
+      "name": "liquidity_score",
+      "class": "cross_sectional_daily",
+      "partition": "date",
+      "input": "local_features",
+      "point_in_time_safe": true,
+      "engine": "duckdb"
+    },
+    {
+      "name": "market_regime_score",
+      "class": "global_regime_daily",
+      "partition": "date",
+      "input": "local_features",
+      "point_in_time_safe": true,
+      "engine": "duckdb"
+    },
+    {
+      "name": "sector_breadth_score",
+      "class": "cross_sectional_daily",
+      "partition": "date+sector",
+      "input": "local_features",
+      "point_in_time_safe": true,
+      "engine": "duckdb"
+    }
+  ]
+}

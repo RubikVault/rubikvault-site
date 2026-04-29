@@ -82,15 +82,16 @@ test('hist probs rescue flags support freshness budget and tiered catchup', () =
   assert.match(runner, /HIST_PROBS_FRESHNESS_BUDGET_TRADING_DAYS/);
   assert.match(runner, /HIST_PROBS_MAX_TICKERS/);
   assert.match(runner, /HIST_PROBS_TIER/);
-  assert.match(runner, /HIST_PROBS_PROTECTED_TICKERS = new Set\(\['AAPL', 'MSFT', 'F', 'V', 'TSLA', 'SPY', 'QQQ', 'BRK-B', 'BRK\.B', 'BF-B', 'BF\.B'\]\)/);
+  assert.match(runner, /HIST_PROBS_PROTECTED_TICKERS = new Set\(\['T', 'AAPL', 'MSFT', 'F', 'V', 'TSLA', 'SPY', 'QQQ', 'BRK-B', 'BRK\.B', 'BF-B', 'BF\.B'\]\)/);
   assert.match(runner, /budget_fresh_existing_files/);
 
   const supervisor = fs.readFileSync(path.join(ROOT, 'scripts/nas/rv-nas-night-supervisor.sh'), 'utf8');
-  assert.match(supervisor, /HIST_PROBS_FRESHNESS_BUDGET_TRADING_DAYS='\$\{RV_HIST_PROBS_FRESHNESS_BUDGET_TRADING_DAYS:-0\}'/);
+  assert.match(supervisor, /HIST_PROBS_FRESHNESS_BUDGET_TRADING_DAYS='\$\{RV_HIST_PROBS_FRESHNESS_BUDGET_TRADING_DAYS:-2\}'/);
   assert.match(supervisor, /HIST_PROBS_TIER='\$\{RV_HIST_PROBS_TIER:-all\}'/);
   assert.match(supervisor, /nas-hist-probs-worker-guard\.mjs/);
   assert.match(supervisor, /HIST_PROBS_WORKERS='\$\{RV_HIST_PROBS_WORKERS:-3\}'/);
   assert.match(supervisor, /HIST_PROBS_WORKER_BATCH_SIZE='\$\{RV_HIST_PROBS_WORKER_BATCH_SIZE:-50\}'/);
+  assert.match(supervisor, /build-hist-probs-public-projection\.mjs/);
 
   const freshness = fs.readFileSync(path.join(ROOT, 'scripts/ops/build-data-freshness-report.mjs'), 'utf8');
   assert.match(freshness, /histProbsReadCandidates/);

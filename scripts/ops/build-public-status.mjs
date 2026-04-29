@@ -14,7 +14,10 @@ const REPO_ROOT = path.resolve(fileURLToPath(new URL('.', import.meta.url)), '..
 const FINAL_SEAL_PATH = path.join(REPO_ROOT, 'public/data/ops/final-integrity-seal-latest.json');
 const RELEASE_STATE_PATH = path.join(REPO_ROOT, 'public/data/ops/release-state-latest.json');
 const PAGE_CORE_LATEST_PATH = path.join(REPO_ROOT, 'public/data/page-core/latest.json');
-const HIST_PROBS_STATUS_PATH = path.join(REPO_ROOT, 'public/data/hist-probs/status-summary.json');
+const HIST_PROBS_STATUS_PATHS = [
+  path.join(REPO_ROOT, 'public/data/runtime/hist-probs-status-summary.json'),
+  path.join(REPO_ROOT, 'public/data/hist-probs/status-summary.json'),
+];
 const OUT_PATH = path.join(REPO_ROOT, 'public/data/public-status.json');
 
 function readJson(filePath) {
@@ -31,7 +34,7 @@ function writeJsonAtomic(filePath, doc) {
 const seal = readJson(FINAL_SEAL_PATH);
 const releaseState = readJson(RELEASE_STATE_PATH);
 const pageCoreLatest = readJson(PAGE_CORE_LATEST_PATH);
-const histStatus = readJson(HIST_PROBS_STATUS_PATH);
+const histStatus = HIST_PROBS_STATUS_PATHS.map(readJson).find(Boolean) || null;
 const ready = seal?.release_ready === true || releaseState?.phase === 'RELEASE_READY';
 const targetDate = seal?.target_market_date || seal?.target_date || releaseState?.target_market_date || releaseState?.target_date || null;
 const pageCoreManifestPath = pageCoreLatest?.snapshot_path

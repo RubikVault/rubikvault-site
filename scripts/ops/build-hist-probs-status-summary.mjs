@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 const ROOT = path.resolve(fileURLToPath(new URL('.', import.meta.url)), '../..');
 const DEFAULT_RUN_SUMMARY = path.join(ROOT, 'public/data/hist-probs/run-summary.json');
 const DEFAULT_DATA_FRESHNESS = path.join(ROOT, 'public/data/reports/data-freshness-latest.json');
-const DEFAULT_OUTPUT = path.join(ROOT, 'public/data/hist-probs/status-summary.json');
+const DEFAULT_OUTPUT = path.join(ROOT, 'public/data/runtime/hist-probs-status-summary.json');
 
 function parseArgs(argv) {
   const options = {

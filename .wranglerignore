@@ -23,9 +23,8 @@ functions/api/_bak/**
 **/*.bak.*
 nohup.out
 
-# Override .gitignore: include data directories that are gitignored but
-# needed for local dev (wrangler pages dev uses .gitignore as fallback).
-!public/data/hist-probs/
-!public/data/hist-probs/**
+# Override .gitignore only for compact public projections needed by local dev.
+!public/data/hist-probs-public/
+!public/data/hist-probs-public/**
 !public/data/snapshots/
 !public/data/snapshots/**

@@ -281,19 +281,25 @@ export async function fetchV2StockPage(ticker) {
     if (pageCore?.ok && pageCore.data) {
       const summary = pageCoreToSummary(pageCore.data);
       const governance = pageCoreToGovernance(pageCore.data);
-      const historical = pageCoreToHistorical(pageCore.data);
-      const historicalProfile = pageCoreToHistoricalProfile(pageCore.data);
+      const [historicalResult, historicalProfileResult, fundamentalsResult] = await Promise.all([
+        settleModule(fetchV2Historical(ticker), 'v2_historical'),
+        settleModule(fetchV2HistoricalProfile(ticker), 'v2_historical_profile'),
+        settleModule(fetchFundamentals(ticker), 'fundamentals'),
+      ]);
+      const historical = historicalResult?.data || pageCoreToHistorical(pageCore.data);
+      const historicalProfile = historicalProfileResult?.data || pageCoreToHistoricalProfile(pageCore.data);
+      const fundamentals = fundamentalsResult?.data || null;
       const missingModules = moduleMissingKeys({
         summary: { data: summary },
-        historical: { data: historical },
+        historical: historicalResult?.data ? historicalResult : { data: historical },
         governance: { data: governance },
-        fundamentals: { data: null },
-        historicalProfile: { data: historicalProfile },
+        fundamentals: fundamentalsResult?.data ? fundamentalsResult : { data: fundamentals },
+        historicalProfile: historicalProfileResult?.data ? historicalProfileResult : { data: historicalProfile },
       });
       return {
         ok: true,
-        mode: 'page_core',
-        degraded: true,
+        mode: missingModules.length ? 'page_core_hydrated_degraded' : 'page_core_hydrated',
+        degraded: missingModules.length > 0,
         missingModules,
         notice: missingModules.length
           ? `Critical page data available (${missingModulesLabel(missingModules)} loading separately).`
@@ -303,15 +309,15 @@ export async function fetchV2StockPage(ticker) {
           historical,
           historical_profile: historicalProfile,
           governance,
-          fundamentals: null,
+          fundamentals,
           legacy: null,
         },
         meta: {
           summary: pageCore.meta || null,
-          historical: { provider: 'page-core', status: 'fresh' },
+          historical: historicalResult?.meta || { provider: 'page-core', status: 'fresh' },
           governance: pageCore.meta || null,
-          fundamentals: null,
-          historical_profile: { provider: 'page-core', status: 'pending' },
+          fundamentals: fundamentalsResult?.meta || null,
+          historical_profile: historicalProfileResult?.meta || { provider: 'page-core', status: 'pending' },
           legacy: null,
           page_core: pageCore.meta || null,
         },
@@ -456,6 +462,42 @@ function hasMeaningfulIdentity({ ticker, summaryName, fundamentalsName, universe
   return [summaryName, fundamentalsName, universeName].some((candidate) => isMeaningfulIdentityName(candidate, ticker));
 }
 
+function deriveStatesFromMarketContext({ stats = {}, close = null, latestBar = null } = {}) {
+  const price = Number.isFinite(Number(close)) ? Number(close) : Number(latestBar?.close ?? latestBar?.adjClose);
+  const sma20 = Number(stats?.sma20);
+  const sma50 = Number(stats?.sma50);
+  const sma200 = Number(stats?.sma200);
+  const rsi14 = Number(stats?.rsi14);
+  const volPctile = Number(stats?.volatility_percentile);
+  let trend = 'UNKNOWN';
+  if (Number.isFinite(price) && Number.isFinite(sma20) && Number.isFinite(sma50) && Number.isFinite(sma200)) {
+    if (price > sma20 && sma20 > sma50 && sma50 > sma200) trend = 'STRONG_UP';
+    else if (price > sma50 && sma50 >= sma200) trend = 'UP';
+    else if (price < sma20 && sma20 < sma50 && sma50 < sma200) trend = 'STRONG_DOWN';
+    else if (price < sma50 && sma50 <= sma200) trend = 'DOWN';
+    else trend = 'RANGE';
+  }
+  let momentum = 'UNKNOWN';
+  if (Number.isFinite(rsi14)) {
+    if (rsi14 < 30) momentum = 'OVERSOLD';
+    else if (rsi14 < 45) momentum = 'BEARISH';
+    else if (rsi14 <= 55) momentum = 'NEUTRAL';
+    else if (rsi14 <= 70) momentum = 'BULLISH';
+    else momentum = 'OVERBOUGHT';
+  }
+  let volatility = 'UNKNOWN';
+  if (Number.isFinite(volPctile)) {
+    volatility = volPctile >= 0.9 ? 'EXTREME' : volPctile >= 0.7 ? 'HIGH' : volPctile <= 0.25 ? 'LOW' : 'NORMAL';
+  }
+  return {
+    trend,
+    momentum,
+    volatility,
+    liquidity: Number(latestBar?.volume) > 0 ? 'ADEQUATE' : 'UNKNOWN',
+    data_quality_state: 'OK',
+  };
+}
+
 function dateLagDays(olderValue, newerValue) {
   const older = toIsoDate(olderValue);
   const newer = toIsoDate(newerValue);
@@ -585,6 +627,7 @@ export function transformV2ToStockShape(v2Data, v2Meta, historicalData = null, g
   });
   const marketPrices = canonicalMarket.marketPrices || pickLatestMarketPrices(v2Data.market_prices || {}, latestBar);
   const marketStats = canonicalMarket.marketStats || (hasMeaningfulMarketStats(v2Data.market_stats) ? v2Data.market_stats : (v2Data.market_stats || {}));
+  const derivedStates = deriveStatesFromMarketContext({ stats: marketStats?.stats || {}, close: marketPrices?.close, latestBar });
   const mergedFundamentals = isMeaningfulFundamentals(fundamentalsData) ? fundamentalsData : (fundamentalsData || null);
   const pageAsOf = marketPrices?.date || latestBar?.date || v2Meta?.data_date || null;
   const moduleFreshness = {
@@ -676,7 +719,7 @@ export function transformV2ToStockShape(v2Data, v2Meta, historicalData = null, g
       fundamentals: metaBundle?.fundamentals || null,
       legacy: null,
     },
-    states: v2Data.states || {},
+    states: Object.keys(v2Data.states || {}).length ? v2Data.states : derivedStates,
     decision: v2Data.decision || {},
     daily_decision: v2Data.daily_decision || null,
     analysis_readiness: v2Data.analysis_readiness || null,

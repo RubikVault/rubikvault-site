@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "mode": "daily_incremental",
+  "tail_bars": 300,
+  "bucket_count": 128,
+  "fallback_bucket_count": 256,
+  "workers": 1,
+  "polars_max_threads": 2,
+  "duckdb_threads": 2,
+  "duckdb_memory_limit": "2GB",
+  "soft_rss_warn_mb": 3500,
+  "hard_rss_fail_mb": 5000,
+  "min_free_memory_mb": 5000,
+  "duration_green_sec": 1800,
+  "duration_yellow_sec": 3600,
+  "compression": "zstd",
+  "compression_level": 3,
+  "status_public_path": "public/data/breakout/status.json",
+  "public_root": "public/data/breakout",
+  "quant_subdir": "breakout-v12",
+  "legacy_full_compute_env": "RV_BREAKOUT_V12_LEGACY_FULL_COMPUTE"
+}

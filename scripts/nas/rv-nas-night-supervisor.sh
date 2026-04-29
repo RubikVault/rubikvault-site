@@ -500,11 +500,7 @@ step_command() {
       printf '%s\n' "node scripts/quantlab/build_quantlab_v4_daily_report.mjs"
       ;;
     breakout_v12)
-      if [ "${RV_BREAKOUT_V12_ENABLED:-0}" = "1" ]; then
-        printf '%s\n' "node scripts/breakout/run-breakout-pipeline.mjs --as-of='$TARGET_MARKET_DATE' --max-assets='${RV_BREAKOUT_MAX_ASSETS:-5000}'"
-      else
-        printf '%s\n' "echo breakout_v12_skipped=memory_guard enable_with_RV_BREAKOUT_V12_ENABLED=1"
-      fi
+      printf '%s\n' "POLARS_MAX_THREADS='${POLARS_MAX_THREADS:-2}' OMP_NUM_THREADS='${OMP_NUM_THREADS:-2}' DUCKDB_THREADS='${DUCKDB_THREADS:-2}' node scripts/breakout/run-breakout-nightly-safe.mjs --as-of='$TARGET_MARKET_DATE' --max-assets='${RV_BREAKOUT_MAX_ASSETS:-5000}'"
       ;;
     scientific_summary)
       printf '%s\n' "node scripts/build-scientific-summary.mjs"
@@ -515,7 +511,7 @@ step_command() {
     hist_probs)
       local hist_skip_existing
       hist_skip_existing="$(hist_probs_skip_existing_value)"
-      printf '%s\n' "HIST_PROBS_WORKERS='${RV_HIST_PROBS_WORKERS:-3}' HIST_PROBS_WORKER_BATCH_SIZE='${RV_HIST_PROBS_WORKER_BATCH_SIZE:-50}' HIST_PROBS_SKIP_EXISTING='$hist_skip_existing' HIST_PROBS_WRITE_MODE='${RV_HIST_PROBS_WRITE_MODE:-bucket_only}' HIST_PROBS_TIER='${RV_HIST_PROBS_TIER:-all}' HIST_PROBS_MAX_TICKERS='${RV_HIST_PROBS_MAX_TICKERS:-0}' HIST_PROBS_FRESHNESS_BUDGET_TRADING_DAYS='${RV_HIST_PROBS_FRESHNESS_BUDGET_TRADING_DAYS:-2}' HIST_PROBS_RSS_BUDGET_MB='${RV_HIST_PROBS_RSS_BUDGET_MB:-7168}' HIST_PROBS_RESPECT_CHECKPOINT_VERSION='${RV_HIST_PROBS_RESPECT_CHECKPOINT_VERSION:-1}' HIST_PROBS_FAIL_ON_SOFT_ERRORS='${RV_HIST_PROBS_FAIL_ON_SOFT_ERRORS:-0}' HIST_PROBS_MIN_COVERAGE_RATIO='${RV_HIST_PROBS_MIN_COVERAGE_RATIO:-0.90}' node scripts/ops/nas-hist-probs-worker-guard.mjs --mode '${RV_HIST_PROBS_TIER:-all}' -- node run-hist-probs-turbo.mjs --asset-classes '$GLOBAL_ASSET_CLASSES' && node scripts/ops/build-hist-probs-status-summary.mjs"
+      printf '%s\n' "HIST_PROBS_WORKERS='${RV_HIST_PROBS_WORKERS:-3}' HIST_PROBS_WORKER_BATCH_SIZE='${RV_HIST_PROBS_WORKER_BATCH_SIZE:-50}' HIST_PROBS_SKIP_EXISTING='$hist_skip_existing' HIST_PROBS_WRITE_MODE='${RV_HIST_PROBS_WRITE_MODE:-bucket_only}' HIST_PROBS_TIER='${RV_HIST_PROBS_TIER:-all}' HIST_PROBS_MAX_TICKERS='${RV_HIST_PROBS_MAX_TICKERS:-0}' HIST_PROBS_FRESHNESS_BUDGET_TRADING_DAYS='${RV_HIST_PROBS_FRESHNESS_BUDGET_TRADING_DAYS:-2}' HIST_PROBS_RSS_BUDGET_MB='${RV_HIST_PROBS_RSS_BUDGET_MB:-7168}' HIST_PROBS_RESPECT_CHECKPOINT_VERSION='${RV_HIST_PROBS_RESPECT_CHECKPOINT_VERSION:-1}' HIST_PROBS_FAIL_ON_SOFT_ERRORS='${RV_HIST_PROBS_FAIL_ON_SOFT_ERRORS:-0}' HIST_PROBS_MIN_COVERAGE_RATIO='${RV_HIST_PROBS_MIN_COVERAGE_RATIO:-0.90}' node scripts/ops/nas-hist-probs-worker-guard.mjs --mode '${RV_HIST_PROBS_TIER:-all}' -- node run-hist-probs-turbo.mjs --asset-classes '$GLOBAL_ASSET_CLASSES' && node scripts/ops/build-hist-probs-status-summary.mjs && node scripts/ops/build-hist-probs-public-projection.mjs"
       ;;
     hist_probs_v2_shadow)
       printf '%s\n' "node scripts/hist-probs-v2/run-daily-shadow.mjs --date='$TARGET_MARKET_DATE' --max-assets='${RV_HIST_PROBS_V2_MAX_ASSETS:-2000}' --error-assets='${RV_HIST_PROBS_V2_ERROR_ASSETS:-200}' --timeout-ms='${RV_HIST_PROBS_V2_TIMEOUT_MS:-600000}' || true"
@@ -930,6 +926,11 @@ while IFS= read -r step_id; do
   step_status="$?"
   set -e
   if [[ "$step_status" -ne 0 ]]; then
+    if [[ "$step_id" == "breakout_v12" ]]; then
+      echo "optional_step_degraded=breakout_v12 exit_code=$step_status latest_unchanged=1" >&2
+      write_status "running" "optional_step_degraded" "$step_id"
+      continue
+    fi
     exit "$step_status"
   fi
 done < <(lane_steps)

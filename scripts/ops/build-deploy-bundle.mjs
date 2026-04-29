@@ -262,6 +262,32 @@ function buildPublicStatus() {
   if (r.stdout.trim()) log(r.stdout.trim());
 }
 
+function buildHistProbsPublicProjection() {
+  if (process.env.RV_HIST_PROBS_PUBLIC_PROJECTION_BUILD === '0') {
+    log('Hist-probs public projection build skipped via RV_HIST_PROBS_PUBLIC_PROJECTION_BUILD=0');
+    return;
+  }
+  const sourceDir = path.join(REPO_ROOT, 'public/data/hist-probs');
+  if (!fs.existsSync(sourceDir)) {
+    log('Hist-probs public projection skipped: public/data/hist-probs missing');
+    return;
+  }
+  const r = spawnSync(process.execPath, [
+    path.join(REPO_ROOT, 'scripts/ops/build-hist-probs-public-projection.mjs'),
+  ], {
+    cwd: REPO_ROOT,
+    encoding: 'utf8',
+    timeout: Number(process.env.RV_HIST_PROBS_PUBLIC_PROJECTION_TIMEOUT_MS || 600_000),
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
+  if (r.status !== 0) {
+    log(`ERROR: build-hist-probs-public-projection failed with exit ${r.status ?? 'timeout'}`);
+    if (r.stderr) log(r.stderr.slice(0, 1000));
+    process.exit(5);
+  }
+  if (r.stdout.trim()) log(r.stdout.trim());
+}
+
 // ─── Runtime Manifest Validation ──────────────────────────────────────────────
 // Checks every file in the bundle against config/runtime-manifest.json.
 // Default: unmatched files or violations cause exit 4.
@@ -357,6 +383,7 @@ log(`Strict manifest: ${isStrictManifest}`);
 
 const retentionReport = isDryRun ? null : runDecisionBundleRetention();
 const pageCoreRetentionReport = isDryRun ? null : runPageCoreRetention();
+if (!isDryRun) buildHistProbsPublicProjection();
 if (!isDryRun) buildPublicStatus();
 
 // Build rsync exclude args
