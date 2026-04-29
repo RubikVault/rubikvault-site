@@ -106,6 +106,34 @@ function runPython(pythonBin, scriptRel, inputManifestPath) {
   }
 }
 
+function pythonHasModule(pythonBin, moduleName) {
+  const res = spawnSync(pythonBin, ['-c', `import ${moduleName}`], {
+    cwd: REPO_ROOT,
+    stdio: 'ignore',
+    env: { ...process.env },
+  });
+  return res.status === 0;
+}
+
+function resolveBreakoutPythonBin() {
+  const explicit = process.env.RV_BREAKOUT_PYTHON_BIN;
+  if (explicit) return explicit;
+  const candidates = [
+    process.env.NAS_OPS_ROOT ? path.join(process.env.NAS_OPS_ROOT, 'tooling/venv39/bin/python') : '',
+    '/volume1/homes/neoboy/RepoOps/rubikvault-site/tooling/venv39/bin/python',
+    process.env.RV_Q1_PYTHON_BIN,
+    process.env.PYTHON,
+    'python3',
+  ].filter(Boolean);
+  const seen = new Set();
+  for (const candidate of candidates) {
+    if (seen.has(candidate)) continue;
+    seen.add(candidate);
+    if (pythonHasModule(candidate, 'polars')) return candidate;
+  }
+  return process.env.RV_Q1_PYTHON_BIN || process.env.PYTHON || 'python3';
+}
+
 function compileSchemas() {
   const ajv = new Ajv({ allErrors: true, strict: false });
   return {
@@ -281,7 +309,7 @@ function main() {
   const inputManifestPath = path.join(workDir, 'input_manifest.json');
   atomicWriteJson(inputManifestPath, inputManifest);
 
-  const pythonBin = process.env.RV_Q1_PYTHON_BIN || process.env.PYTHON || 'python3';
+  const pythonBin = resolveBreakoutPythonBin();
   const schemas = compileSchemas();
   try {
     runPython(pythonBin, 'scripts/breakout_compute/compute_features.py', inputManifestPath);

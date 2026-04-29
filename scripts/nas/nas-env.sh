@@ -108,6 +108,10 @@ if [[ -z "${RV_Q1_PYTHON_BIN:-}" ]]; then
   export RV_Q1_PYTHON_BIN="$(nas_find_python_with_modules pyarrow pandas requests || true)"
 fi
 
+if [[ -z "${RV_BREAKOUT_PYTHON_BIN:-}" ]]; then
+  export RV_BREAKOUT_PYTHON_BIN="$(nas_find_python_with_modules polars || true)"
+fi
+
 nas_is_placeholder_secret() {
   local value
   value="$(printf '%s' "${1:-}" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' -e "s/^['\"]//" -e "s/['\"]$//")"
