@@ -569,7 +569,7 @@
       window._rvResolution = _rvResolution;
       let _rvFinalSeal = null;
       try {
-        const _sealRes = await fetch('/data/ops/final-integrity-seal-latest.json?rv=' + Date.now(), { cache: 'no-store' });
+        const _sealRes = await fetch('/data/public-status.json?rv=' + Date.now(), { cache: 'no-store' });
         if (_sealRes.ok) _rvFinalSeal = await _sealRes.json();
       } catch (e) {
         _rvFinalSeal = null;
@@ -695,6 +695,12 @@
         const _reason = _assetBlockingReasons[0] || _dailyDecision.reason_codes?.[0] || _bundleBlockingReasons[0] || 'incomplete';
         const _isCriticalDecision = _assetPipelineStatus === 'FAILED' || _assetVerdict === 'WAIT_PIPELINE_INCOMPLETE' || _assetRiskLevel === 'UNKNOWN';
         _integrityItems.push({ text: _isCriticalDecision ? 'Analysis incomplete' : 'Analysis degraded', color: _isCriticalDecision ? 'var(--red)' : 'var(--yellow)', reason: _reason });
+      }
+      const _signalQuality = String(_analysisReadiness?.signal_quality || _dailyDecision?.signal_quality || 'fresh').toLowerCase();
+      if (_signalQuality === 'suppressed') {
+        _integrityItems.push({ text: 'Signals suppressed', color: 'var(--red)' });
+      } else if (_signalQuality === 'degraded') {
+        _integrityItems.push({ text: 'Signal quality degraded', color: 'var(--yellow)' });
       }
       const _learningGate = _decision.learning_gate || payload.evaluation_v4?.decision?.learning_gate || null;
       if (_decision.regime_transition_active) _integrityItems.push({ text: 'Regime transition active', color: 'var(--red)' });

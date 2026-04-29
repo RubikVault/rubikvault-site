@@ -6,17 +6,40 @@
 import { buildCanonicalMarketContext } from './stock-ssot.js';
 
 const V2_TIMEOUT_MS = 15000;
+const V2_RETRY_DELAYS_MS = [250, 750, 2000];
 
-async function fetchJsonWithTimeout(url) {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), V2_TIMEOUT_MS);
-  try {
-    const res = await fetch(url, { signal: controller.signal });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    return await res.json();
-  } finally {
-    clearTimeout(timer);
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function retryableFetchError(error) {
+  if (error?.name === 'AbortError') return true;
+  const status = Number(error?.status || 0);
+  return status >= 500;
+}
+
+async function fetchJsonWithTimeout(url, options = {}) {
+  let lastError = null;
+  for (let attempt = 0; attempt < V2_RETRY_DELAYS_MS.length; attempt += 1) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), options.timeoutMs || V2_TIMEOUT_MS);
+    try {
+      const res = await fetch(url, { signal: controller.signal, cache: options.cache });
+      if (!res.ok) {
+        const error = new Error(`HTTP ${res.status}`);
+        error.status = res.status;
+        throw error;
+      }
+      return await res.json();
+    } catch (error) {
+      lastError = error;
+      if (attempt >= V2_RETRY_DELAYS_MS.length - 1 || !retryableFetchError(error)) throw error;
+      await sleep(V2_RETRY_DELAYS_MS[attempt]);
+    } finally {
+      clearTimeout(timer);
+    }
   }
+  throw lastError || new Error('fetch_failed');
 }
 
 /**
@@ -32,6 +55,24 @@ export async function fetchV2Summary(ticker) {
   } catch (err) {
     throw err;
   }
+}
+
+export async function fetchPageCoreManifest() {
+  return fetchJsonWithTimeout('/data/page-core/latest.json', { cache: 'no-store' });
+}
+
+export async function fetchPageCore(ticker) {
+  const manifest = await fetchPageCoreManifest();
+  const snapshotId = manifest?.snapshot_id || manifest?.run_id || Date.now();
+  const payload = await fetchJsonWithTimeout(`/api/v2/page/${encodeURIComponent(ticker)}?v=${encodeURIComponent(snapshotId)}`);
+  return {
+    ok: payload?.ok === true,
+    data: payload?.data || null,
+    meta: payload?.meta || {},
+    error: payload?.error || null,
+    manifest,
+    source: 'page_core',
+  };
 }
 
 export async function fetchV2Historical(ticker) {
@@ -75,6 +116,92 @@ function moduleMissingKeys({ summary, historical, governance, fundamentals, hist
     !fundamentals?.data && 'fundamentals',
     !historicalProfile?.data && 'historical_profile',
   ].filter(Boolean);
+}
+
+function pageCoreToSummary(pageCore) {
+  const ticker = pageCore?.display_ticker || pageCore?.canonical_asset_id?.split(':')?.pop() || null;
+  const asOf = pageCore?.freshness?.as_of || pageCore?.freshness?.generated_at?.slice?.(0, 10) || null;
+  const close = Number.isFinite(Number(pageCore?.summary_min?.last_close)) ? Number(pageCore.summary_min.last_close) : null;
+  const latestBar = asOf && close != null ? {
+    date: asOf,
+    open: close,
+    high: close,
+    low: close,
+    close,
+    volume: null,
+  } : null;
+  const dailyDecision = {
+    pipeline_status: pageCore?.summary_min?.quality_status || 'DEGRADED',
+    verdict: pageCore?.summary_min?.decision_verdict || 'WAIT_PIPELINE_INCOMPLETE',
+    blocking_reasons: pageCore?.governance_summary?.blocking_reasons || [],
+    risk_assessment: { level: 'UNKNOWN' },
+  };
+  return {
+    ticker,
+    canonical_asset_id: pageCore?.canonical_asset_id || null,
+    name: pageCore?.identity?.name || ticker,
+    latest_bar: latestBar,
+    market_prices: {
+      ticker,
+      date: asOf,
+      close,
+      source_provider: 'page-core',
+    },
+    market_stats: { stats: {}, as_of: asOf, source_provider: 'page-core' },
+    change: {
+      abs: pageCore?.summary_min?.daily_change_abs ?? null,
+      pct: pageCore?.summary_min?.daily_change_pct ?? null,
+      daily_change_abs: pageCore?.summary_min?.daily_change_abs ?? null,
+      daily_change_pct: pageCore?.summary_min?.daily_change_pct ?? null,
+    },
+    decision: {
+      verdict: pageCore?.summary_min?.decision_verdict || null,
+      confidence_bucket: pageCore?.summary_min?.decision_confidence_bucket || null,
+    },
+    daily_decision: dailyDecision,
+    analysis_readiness: {
+      status: pageCore?.summary_min?.quality_status || 'DEGRADED',
+      source: 'page-core',
+      blocking_reasons: pageCore?.governance_summary?.blocking_reasons || [],
+      warnings: pageCore?.governance_summary?.warnings || [],
+    },
+    module_freshness: {
+      price_as_of: asOf,
+      historical_as_of: asOf,
+      market_stats_as_of: asOf,
+    },
+  };
+}
+
+function pageCoreToGovernance(pageCore) {
+  return {
+    ticker: pageCore?.display_ticker || null,
+    canonical_asset_id: pageCore?.canonical_asset_id || null,
+    universe: pageCore?.identity || null,
+    market_score: null,
+    evaluation_v4: null,
+    governance_summary: pageCore?.governance_summary || null,
+  };
+}
+
+function pageCoreToHistorical(pageCore) {
+  const summary = pageCoreToSummary(pageCore);
+  return {
+    ticker: summary.ticker,
+    bars: summary.latest_bar ? [summary.latest_bar] : [],
+    indicators: [],
+    breakout_v2: null,
+    availability: { status: 'page_core_minimal', reason: 'Full history loads lazily.' },
+  };
+}
+
+function pageCoreToHistoricalProfile(pageCore) {
+  return {
+    ticker: pageCore?.display_ticker || null,
+    profile: null,
+    regime: null,
+    availability: { status: 'pending', reason: 'Historical profile loads lazily.' },
+  };
 }
 
 function missingModulesLabel(missingModules = []) {
@@ -126,6 +253,62 @@ function buildEmptyStatePayload(ticker) {
 }
 
 export async function fetchV2StockPage(ticker) {
+  try {
+    const pageCore = await fetchPageCore(ticker);
+    if (pageCore?.ok && pageCore.data) {
+      const summary = pageCoreToSummary(pageCore.data);
+      const governance = pageCoreToGovernance(pageCore.data);
+      const historical = pageCoreToHistorical(pageCore.data);
+      const historicalProfile = pageCoreToHistoricalProfile(pageCore.data);
+      const missingModules = moduleMissingKeys({
+        summary: { data: summary },
+        historical: { data: historical },
+        governance: { data: governance },
+        fundamentals: { data: null },
+        historicalProfile: { data: historicalProfile },
+      });
+      return {
+        ok: true,
+        mode: 'page_core',
+        degraded: true,
+        missingModules,
+        notice: missingModules.length
+          ? `Critical page data available (${missingModulesLabel(missingModules)} loading separately).`
+          : null,
+        data: {
+          summary,
+          historical,
+          historical_profile: historicalProfile,
+          governance,
+          fundamentals: null,
+          legacy: null,
+        },
+        meta: {
+          summary: pageCore.meta || null,
+          historical: { provider: 'page-core', status: 'fresh' },
+          governance: pageCore.meta || null,
+          fundamentals: null,
+          historical_profile: { provider: 'page-core', status: 'pending' },
+          legacy: null,
+          page_core: pageCore.meta || null,
+        },
+      };
+    }
+    if (pageCore?.error?.code === 'INVALID_OR_UNMAPPED_TICKER') {
+      return {
+        ok: false,
+        mode: 'unmapped',
+        source: 'page_core',
+        ticker,
+        missingModules: ['page_core'],
+        notice: pageCore.error?.message || 'Ticker is not mapped in page-core.',
+        moduleErrors: { page_core: pageCore.error?.message || null },
+      };
+    }
+  } catch {
+    // Page-core is new infra; bridge falls back to old V2 path until latest.json exists in prod.
+  }
+
   const [summary, historical, governance, fundamentals, historicalProfile] = await Promise.all([
     settleModule(fetchV2Summary(ticker), 'v2_summary'),
     settleModule(fetchV2Historical(ticker), 'v2_historical'),
@@ -138,7 +321,13 @@ export async function fetchV2StockPage(ticker) {
     : summary?.data?.latest_bar?.date || null;
 
   const missingModules = moduleMissingKeys({ summary, historical, governance, fundamentals, historicalProfile });
-  const coreContractOk = Boolean(summary?.data?.ticker && governance?.data);
+  const coreContractOk = Boolean(
+    summary?.data?.ticker
+    || summary?.data?.name
+    || summary?.data?.latest_bar
+    || governance?.data?.universe
+    || governance?.data?.governance_summary
+  );
 
   if (!coreContractOk) {
     return {
