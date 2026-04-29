@@ -500,7 +500,11 @@ step_command() {
       printf '%s\n' "node scripts/quantlab/build_quantlab_v4_daily_report.mjs"
       ;;
     breakout_v12)
-      printf '%s\n' "node scripts/breakout/run-breakout-pipeline.mjs --as-of='$TARGET_MARKET_DATE' --max-assets='${RV_BREAKOUT_MAX_ASSETS:-5000}'"
+      if [ "${RV_BREAKOUT_V12_ENABLED:-0}" = "1" ]; then
+        printf '%s\n' "node scripts/breakout/run-breakout-pipeline.mjs --as-of='$TARGET_MARKET_DATE' --max-assets='${RV_BREAKOUT_MAX_ASSETS:-5000}'"
+      else
+        printf '%s\n' "echo breakout_v12_skipped=memory_guard enable_with_RV_BREAKOUT_V12_ENABLED=1"
+      fi
       ;;
     scientific_summary)
       printf '%s\n' "node scripts/build-scientific-summary.mjs"
