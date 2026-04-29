@@ -81,6 +81,7 @@ const RSYNC_EXCLUDES = [
   'data/universe/v7/read_models/marketphase_deep_summary.json', // 35 MB NAS-generated deep summary — build-only
   // Mac metadata artifacts — never appropriate in a web bundle
   '.DS_Store',
+  '._*',
   // Atomic write temp files — hidden files with extra extensions (.json.RANDOM_SUFFIX)
   '.*.json.*',
   // Placeholder files — directory markers only, no runtime value
