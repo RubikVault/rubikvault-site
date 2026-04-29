@@ -95,6 +95,11 @@ test('hist probs rescue flags support freshness budget and tiered catchup', () =
   const freshness = fs.readFileSync(path.join(ROOT, 'scripts/ops/build-data-freshness-report.mjs'), 'utf8');
   assert.match(freshness, /histProbsReadCandidates/);
   assert.match(freshness, /budget_fresh_count/);
+  assert.match(freshness, /operational_status_any_raw_with_structural_label_window/);
+  assert.match(freshness, /rawCanonicalLagSeverity/);
+  assert.match(freshness, /full_universe_audit_critical_families_only/);
+  assert.match(freshness, /auditNoCriticalFailures/);
+  assert.doesNotMatch(freshness, /build-stock-analyzer-universe-audit\.mjs --base-url http:\/\/127\.0\.0\.1:8788/);
 
   const resolver = fs.readFileSync(path.join(ROOT, 'scripts/lib/hist-probs/path-resolver.mjs'), 'utf8');
   assert.match(resolver, /resolveHistProbsWriteMode/);

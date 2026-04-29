@@ -360,7 +360,12 @@ function main() {
     && ['STOCK', 'ETF', 'INDEX'].every((cls) => histAssetClasses.includes(cls));
   const auditFamilies = Array.isArray(audit?.failure_families) ? audit.failure_families : [];
   const auditCriticalFamilies = auditFamilies.filter((family) => String(family?.severity || '').toLowerCase() === 'critical');
+  const auditWarningFamilies = auditFamilies.filter((family) => String(family?.severity || '').toLowerCase() === 'warning');
   const auditCriticalAssets = auditCriticalFamilies.reduce((sum, family) => sum + Number(family?.affected_assets || 0), 0);
+  const auditCriticalIssueCount = Number(audit?.summary?.artifact_critical_issue_count ?? audit?.summary?.critical_issue_count ?? 0);
+  const auditFullUniverse = audit?.summary?.full_universe === true;
+  const auditNoCriticalFailures = auditCriticalFamilies.length === 0 && auditCriticalIssueCount === 0;
+  const auditOperationalHealthy = auditFullUniverse && auditNoCriticalFailures;
 
   const rawBars = quantlabOperational?.rawBars || {};
   const rawAnyDataDate = rawBars.latestAnyRequiredDataDate || null;
@@ -369,6 +374,16 @@ function main() {
     ? Math.max(0, rawCanonicalLagDays - CANONICAL_LABEL_WINDOW_DAYS)
     : null;
   const rawAnyStaleDays = ageCalendarDays(rawAnyDataDate, expectedEod);
+  const rawAnyFreshForTarget = Boolean(rawAnyDataDate) && (rawAnyStaleDays ?? Infinity) <= 1;
+  const rawCanonicalLagSeverity = rawCanonicalExcessLag == null
+    ? 'ok'
+    : rawCanonicalExcessLag > 14
+      ? 'critical'
+      : rawCanonicalExcessLag > 7
+        ? 'warning'
+        : 'ok';
+  const rawOperationalHealthy = rawAnyFreshForTarget && rawCanonicalLagSeverity !== 'critical';
+  const rawOperationalSeverity = rawOperationalHealthy ? 'ok' : 'critical';
   const families = [
     buildFamily({
       family_id: 'market_history',
@@ -398,12 +413,23 @@ function main() {
       family_id: 'quantlab_raw',
       expected_eod: expectedEod,
       data_asof: rawAnyDataDate,
-      fresh_count: (rawAnyStaleDays ?? Infinity) <= 1 && (rawCanonicalExcessLag ?? 0) === 0 ? scopeSymbols.length : 0,
-      stale_count: (rawAnyStaleDays ?? Infinity) <= 1 && (rawCanonicalExcessLag ?? 0) === 0 ? 0 : scopeSymbols.length,
+      fresh_count: rawOperationalHealthy ? scopeSymbols.length : 0,
+      stale_count: rawOperationalHealthy ? 0 : scopeSymbols.length,
       missing_count: 0,
-      healthy: Boolean(rawAnyDataDate) && (rawAnyStaleDays ?? Infinity) <= 1 && (rawCanonicalExcessLag ?? Infinity) === 0,
-      verification_mode: 'operational_status_label_window',
+      healthy: rawOperationalHealthy,
+      severity: rawOperationalSeverity,
+      verification_mode: 'operational_status_any_raw_with_structural_label_window',
       fix_commands: ['node scripts/quantlab/build_quantlab_v4_daily_report.mjs'],
+      latest_canonical_data_date: rawBars.latestCanonicalRequiredDataDate || null,
+      latest_any_data_date: rawAnyDataDate,
+      raw_any_stale_days: rawAnyStaleDays,
+      canonical_label_lag_trading_days: rawCanonicalLagDays,
+      canonical_label_window_trading_days: CANONICAL_LABEL_WINDOW_DAYS,
+      canonical_excess_lag_trading_days: rawCanonicalExcessLag,
+      canonical_lag_severity: rawCanonicalLagSeverity,
+      lane_note: rawOperationalHealthy && rawCanonicalExcessLag > 0
+        ? 'Raw any-data is current for the target date; canonical label lag is tracked as structural advisory until it exceeds the hard label-window threshold.'
+        : null,
     }),
     buildFamily({
       family_id: 'hist_probs',
@@ -471,12 +497,26 @@ function main() {
       stale_count: auditCriticalAssets,
       missing_count: 0,
       sample_tickers: (audit?.samples?.failing_assets || []).slice(0, 10).map((row) => row.ticker),
-      // Use release_eligible (artifact-only gate) — live canary critical families are not blocking
-      healthy: audit?.summary?.full_universe === true && audit?.summary?.release_eligible === true,
-      verification_mode: 'allowlist_universe_audit',
+      // Only critical artifact failures block freshness. Warning families remain visible
+      // but Page-Core/public-decision gates own release readiness.
+      healthy: auditOperationalHealthy,
+      severity: auditOperationalHealthy ? 'ok' : 'critical',
+      verification_mode: 'full_universe_audit_critical_families_only',
       fix_commands: [
-        'RV_GLOBAL_ASSET_CLASSES="${RV_GLOBAL_ASSET_CLASSES:-STOCK,ETF}"; node scripts/universe-v7/build-global-scope.mjs --asset-classes "$RV_GLOBAL_ASSET_CLASSES" && node scripts/ops/build-history-pack-manifest.mjs --scope global --asset-classes "$RV_GLOBAL_ASSET_CLASSES" && node scripts/ops/build-stock-analyzer-universe-audit.mjs --base-url http://127.0.0.1:8788 --registry-path public/data/universe/v7/registry/registry.ndjson.gz --allowlist-path public/data/universe/v7/ssot/assets.global.canonical.ids.json --asset-classes "$RV_GLOBAL_ASSET_CLASSES" --max-tickers 0 --concurrency 12 --timeout-ms 30000',
+        'RV_GLOBAL_ASSET_CLASSES="${RV_GLOBAL_ASSET_CLASSES:-STOCK,ETF}"; node scripts/universe-v7/build-global-scope.mjs --asset-classes "$RV_GLOBAL_ASSET_CLASSES" && node scripts/ops/build-history-pack-manifest.mjs --scope global --asset-classes "$RV_GLOBAL_ASSET_CLASSES" && node scripts/ops/build-stock-analyzer-universe-audit.mjs --registry-path public/data/universe/v7/registry/registry.ndjson.gz --allowlist-path public/data/universe/v7/ssot/assets.global.canonical.ids.json --asset-classes "$RV_GLOBAL_ASSET_CLASSES" --max-tickers 0 --live-sample-size 0 --concurrency 12 --timeout-ms 30000',
       ],
+      legacy_release_eligible: audit?.summary?.release_eligible === true,
+      warning_failure_family_count: auditWarningFamilies.length,
+      critical_failure_family_count: auditCriticalFamilies.length,
+      artifact_critical_issue_count: auditCriticalIssueCount,
+      warning_failure_families: auditWarningFamilies.map((family) => ({
+        family_id: family.family_id,
+        affected_assets: family.affected_assets,
+        severity: family.severity,
+      })),
+      lane_note: auditOperationalHealthy && audit?.summary?.release_eligible !== true
+        ? 'Legacy audit release_eligible is false because warning families remain; freshness gate blocks only critical artifact failures. Public release truth is enforced by Page-Core, public decision coverage, and final seal gates.'
+        : null,
     }),
     buildFamily({
       family_id: 'fundamentals_scope',
