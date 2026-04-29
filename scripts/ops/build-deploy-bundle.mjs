@@ -272,6 +272,21 @@ function buildHistProbsPublicProjection() {
     log('Hist-probs public projection skipped: public/data/hist-probs missing');
     return;
   }
+  const outputDir = path.join(REPO_ROOT, 'public/data/hist-probs-public');
+  const latestPath = path.join(outputDir, 'latest.json');
+  const manifestPath = path.join(outputDir, 'manifest.json');
+  const force = process.env.RV_HIST_PROBS_PUBLIC_PROJECTION_FORCE === '1';
+  if (!force && fs.existsSync(latestPath) && fs.existsSync(manifestPath)) {
+    const latest = readJson(latestPath) || {};
+    const shardCount = Number(latest.shard_count || 0);
+    const profileCount = Number(latest.profile_count || 0);
+    const hasShards = shardCount > 0
+      && fs.existsSync(path.join(outputDir, 'shards', `${String(Math.max(0, shardCount - 1)).padStart(3, '0')}.json`));
+    if (profileCount > 0 && hasShards) {
+      log(`Hist-probs public projection reused (${profileCount} profiles, ${shardCount} shards). Set RV_HIST_PROBS_PUBLIC_PROJECTION_FORCE=1 to rebuild.`);
+      return;
+    }
+  }
   const r = spawnSync(process.execPath, [
     path.join(REPO_ROOT, 'scripts/ops/build-hist-probs-public-projection.mjs'),
   ], {
