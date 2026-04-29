@@ -81,6 +81,8 @@ const RSYNC_EXCLUDES = [
   'data/universe/v7/read_models/marketphase_deep_summary.json', // 35 MB NAS-generated deep summary — build-only
   // Mac metadata artifacts — never appropriate in a web bundle
   '.DS_Store',
+  '._*',
+  '__MACOSX/',
   // Atomic write temp files — hidden files with extra extensions (.json.RANDOM_SUFFIX)
   '.*.json.*',
   // Placeholder files — directory markers only, no runtime value
@@ -131,6 +133,24 @@ function dirSizeMb(dir) {
   if (!fs.existsSync(dir)) return 0;
   const r = spawnSync('du', ['-sm', dir], { encoding: 'utf8', timeout: 30000 });
   return parseInt(r.stdout?.split('\t')[0] || '0', 10);
+}
+
+function removeAppleDoubleArtifacts(dir) {
+  if (!fs.existsSync(dir)) return 0;
+  let removed = 0;
+  function walk(current) {
+    for (const entry of fs.readdirSync(current, { withFileTypes: true })) {
+      const full = path.join(current, entry.name);
+      if (entry.name === '__MACOSX' || entry.name.startsWith('._')) {
+        fs.rmSync(full, { recursive: true, force: true });
+        removed += 1;
+        continue;
+      }
+      if (entry.isDirectory()) walk(full);
+    }
+  }
+  walk(dir);
+  return removed;
 }
 
 function utcNow() { return new Date().toISOString(); }
@@ -378,6 +398,8 @@ if (!isDryRun) {
   // Print rsync stats to console
   const statsLines = (rsyncResult.stdout || '').split('\n').filter(l => l.trim());
   for (const line of statsLines.slice(-10)) log(line);
+  const removedAppleDouble = removeAppleDoubleArtifacts(DIST_DIR);
+  if (removedAppleDouble > 0) log(`Removed ${removedAppleDouble} AppleDouble metadata artifacts from dist/`);
 
   // Copy only git-tracked search bucket files (excludes 22K+ gitignored local buckets)
   const bucketsResult = spawnSync('git', ['ls-files', 'public/data/universe/v7/search/buckets'], {
