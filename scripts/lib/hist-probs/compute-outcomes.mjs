@@ -16,7 +16,7 @@ import path from 'node:path';
 import fs from 'node:fs/promises';
 import { REPO_ROOT, loadLocalBars, setLocalBarsRuntimeOverrides } from '../best-setups-local-loader.mjs';
 import { HistProbsRollingCore } from '../indicators/rolling-core.mjs';
-import { histProbsWriteTargets } from './path-resolver.mjs';
+import { histProbsWriteTargets, resolveHistProbsWriteMode } from './path-resolver.mjs';
 
 const OUTPUT_BASE = path.join(REPO_ROOT, 'public/data/hist-probs');
 const HORIZONS = [5, 10, 20, 60, 120, 250];
@@ -189,14 +189,19 @@ export async function computeOutcomes(ticker, options = {}) {
   }
 
   // Write output
-  const { flatPath: outPath, shardPath } = histProbsWriteTargets(OUTPUT_BASE, ticker);
-  const tmpPath = path.join(OUTPUT_BASE, `.${ticker.toUpperCase()}.${process.pid}.${Date.now()}.tmp`);
+  const { primaryPath, flatPath, shardPath } = histProbsWriteTargets(OUTPUT_BASE, ticker, {
+    mode: resolveHistProbsWriteMode(),
+  });
+  const tmpPath = path.join(path.dirname(primaryPath), `.${ticker.toUpperCase()}.${process.pid}.${Date.now()}.tmp`);
   await fs.mkdir(OUTPUT_BASE, { recursive: true });
-  await fs.mkdir(path.dirname(shardPath), { recursive: true });
+  await fs.mkdir(path.dirname(primaryPath), { recursive: true });
+  if (flatPath) await fs.mkdir(path.dirname(flatPath), { recursive: true });
+  if (shardPath) await fs.mkdir(path.dirname(shardPath), { recursive: true });
   try {
     await fs.writeFile(tmpPath, JSON.stringify(result, null, 2), 'utf8');
-    await fs.rename(tmpPath, outPath);
-    await fs.copyFile(outPath, shardPath);
+    await fs.rename(tmpPath, primaryPath);
+    if (flatPath && flatPath !== primaryPath) await fs.copyFile(primaryPath, flatPath);
+    if (shardPath && shardPath !== primaryPath) await fs.copyFile(primaryPath, shardPath);
   } finally {
     await fs.rm(tmpPath, { force: true }).catch(() => {});
   }

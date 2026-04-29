@@ -95,6 +95,11 @@ test('hist probs rescue flags support freshness budget and tiered catchup', () =
   const freshness = fs.readFileSync(path.join(ROOT, 'scripts/ops/build-data-freshness-report.mjs'), 'utf8');
   assert.match(freshness, /histProbsReadCandidates/);
   assert.match(freshness, /budget_fresh_count/);
+
+  const resolver = fs.readFileSync(path.join(ROOT, 'scripts/lib/hist-probs/path-resolver.mjs'), 'utf8');
+  assert.match(resolver, /resolveHistProbsWriteMode/);
+  assert.match(resolver, /'bucket_only'/);
+  assert.match(resolver, /histProbsShardPath\(baseDir, ticker\), histProbsFlatPath\(baseDir, ticker\)/);
 });
 
 test('page core smoke validates candidate artifacts without localhost runtime', () => {
