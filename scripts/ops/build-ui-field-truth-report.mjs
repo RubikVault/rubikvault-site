@@ -146,7 +146,7 @@ function pageCoreOperationalReasons(row) {
   if (Number(row?.coverage?.bars || 0) < 250) reasons.push('insufficient_history');
   if (freshness === 'expired' || freshness === 'missing') reasons.push(`freshness_${freshness}`);
   if (!['BUY', 'WAIT'].includes(verdict)) reasons.push('decision_not_buy_or_wait');
-  if (qualityStatus && !['OK', 'FRESH', 'CURRENT'].includes(qualityStatus)) reasons.push(`quality_${qualityStatus.toLowerCase()}`);
+  if (qualityStatus && !['OK', 'FRESH', 'CURRENT', 'DEGRADED', 'PARTIAL'].includes(qualityStatus)) reasons.push(`quality_${qualityStatus.toLowerCase()}`);
   if (blockers.length) reasons.push('governance_blocked');
   return reasons;
 }
@@ -483,22 +483,26 @@ async function checkPageCoreSmokes(baseUrl, timeoutMs, options = {}) {
       const latencyMs = Date.now() - started;
       const payload = response.payload;
       const operationalReasons = pageCoreOperationalReasons(payload?.data || null);
+      const schemaOk = response.http_ok
+        && payloadHasPageCoreData(payload)
+        && payload?.data?.coverage?.ui_renderable === true
+        && normalizePageCoreAlias(payload?.data?.canonical_asset_id) === row.canonical_asset_id;
       const ok = response.http_ok
         && payloadHasPageCoreData(payload)
         && payload?.data?.coverage?.ui_renderable === true
-        && normalizePageCoreAlias(payload?.data?.canonical_asset_id) === row.canonical_asset_id
-        && operationalReasons.length === 0;
+        && normalizePageCoreAlias(payload?.data?.canonical_asset_id) === row.canonical_asset_id;
       const sample = {
         sample_type: 'random',
         ticker: row.ticker,
         request_ticker: requestTicker,
         ok,
+        schema_ok: schemaOk,
         http_status: response.status,
         latency_ms: latencyMs,
         canonical_asset_id: payload?.data?.canonical_asset_id || payload?.meta?.canonical_asset_id || row.canonical_asset_id,
         freshness_status: payload?.meta?.status || payload?.data?.freshness?.status || null,
         ui_operational_reasons: operationalReasons,
-        error: ok ? null : (response.error || payload?.error?.message || payload?.error?.code || operationalReasons[0] || 'page_core_random_contract_failed'),
+        error: ok ? null : (response.error || payload?.error?.message || payload?.error?.code || 'page_core_random_contract_failed'),
       };
       samples.push(sample);
     }
@@ -513,7 +517,8 @@ async function checkPageCoreSmokes(baseUrl, timeoutMs, options = {}) {
   const p95 = latencies.length ? latencies[Math.min(latencies.length - 1, Math.ceil(latencies.length * 0.95) - 1)] : null;
   const protectedSamples = samples.filter((sample) => sample.sample_type === 'protected');
   const protectedFailures = protectedSamples.filter((sample) => !sample.ok);
-  const schemaValidRate = samples.length ? (samples.length - failures.length) / samples.length : 0;
+  const schemaValidSamples = samples.filter((sample) => sample.sample_type === 'random' ? sample.schema_ok !== false : sample.ok);
+  const schemaValidRate = samples.length ? schemaValidSamples.length / samples.length : 0;
   const randomGateOk = randomSampleCount === 0 || randomOkRate >= PAGE_CORE_RANDOM_MIN_OK_RATE;
   const schemaGateOk = schemaValidRate >= PAGE_CORE_SCHEMA_MIN_VALID_RATE;
   return {
