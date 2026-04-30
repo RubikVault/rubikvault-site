@@ -12,6 +12,7 @@ import {
 } from '../../functions/api/_shared/page-core-contract.js';
 import {
   clearPageCoreReaderCache,
+  normalizePageCoreOperationalState,
   readPageCoreForTicker,
 } from '../../functions/api/_shared/page-core-reader.js';
 
@@ -134,4 +135,22 @@ test('page-core reader marks expired freshness while preserving renderable row',
   assert.equal(result.ok, true);
   assert.equal(result.canonical_id, 'US:AAPL');
   assert.equal(result.freshness_status, 'expired');
+});
+
+test('page-core reader downgrades false-green rows without hiding core data', () => {
+  const bad = {
+    ...row('US:Z', 'Z'),
+    ui_banner_state: 'all_systems_operational',
+    key_levels_ready: false,
+    market_stats_min: null,
+    primary_blocker: null,
+  };
+  const normalized = normalizePageCoreOperationalState(bad, {
+    latest: { target_market_date: '2026-04-24' },
+    freshnessStatus: 'fresh',
+  });
+  assert.equal(normalized.ui_banner_state, 'degraded');
+  assert.equal(normalized.summary_min.last_close, 100);
+  assert.equal(normalized.status_contract.stock_detail_view_status, 'degraded');
+  assert.ok(normalized.status_contract.strict_blocking_reasons.includes('missing_market_stats_basis'));
 });

@@ -50,6 +50,10 @@ jobs:
           node scripts/learning/backfill-stock-analyzer-history.mjs $DATE_ARG --replay-days=${REPLAY_DAYS}
 
       - name: Run stock-analyzer publish chain
+        env:
+          RUN_ID: github-${{ github.run_id }}-${{ github.run_attempt }}
+          RV_RUN_ID: github-${{ github.run_id }}-${{ github.run_attempt }}
+          RV_PUBLISH_CHAIN_BUILD_DECISIONS: '0'
         run: |
           DATE_ARG=""
           if [ -n "${{ inputs.date }}" ]; then
@@ -86,7 +90,11 @@ jobs:
             public/data/pipeline/epoch.json
           do
             if [ -f "$optional_path" ]; then
-              git add "$optional_path"
+              if git check-ignore -q "$optional_path"; then
+                echo "Ignored runtime artifact, skipping add: $optional_path"
+              else
+                git add "$optional_path"
+              fi
             fi
           done
           if git diff --cached --quiet; then

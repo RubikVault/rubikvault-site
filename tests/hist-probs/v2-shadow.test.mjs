@@ -7,7 +7,9 @@ import {
   resolveHistProbsWriteMode,
 } from '../../scripts/lib/hist-probs/path-resolver.mjs';
 import { scoreBarsWithBaselineV2 } from '../../scripts/hist-probs-v2/lib/baseline-v2.mjs';
+import { validateHistProbsV2Artifacts } from '../../scripts/hist-probs-v2/validate-v2.mjs';
 import { buildComparison } from '../../scripts/reports/compare-hist-probs-v1-vs-v2.mjs';
+import { buildHistErrorTriage } from '../../scripts/hist-probs/classify-hist-errors.mjs';
 
 function makeBars(count) {
   const bars = [];
@@ -56,6 +58,44 @@ describe('hist-probs v2 shadow baseline', () => {
       assert.equal(score.score_date, '2026-04-30');
       assert.ok(score.probability >= 0.05 && score.probability <= 0.95);
     }
+  });
+});
+
+describe('hist-probs v2 validator', () => {
+  it('rejects stale target, under-min processed count, timeout, zero predictions, BUY mutation, and INDEX scores', () => {
+    const report = validateHistProbsV2Artifacts({
+      runId: 'r1',
+      targetDate: '2026-04-29',
+      expectedMinAssets: 300,
+      manifest: { target_market_date: '2026-04-28' },
+      coverage: { target_market_date: '2026-04-28', processed_assets: 299, scores: 2, predictions: 0 },
+      performance: { timed_out: true },
+      scores: [
+        { ticker: 'AAPL', asset_class: 'STOCK', verdict: 'BUY' },
+        { ticker: 'SPX', asset_class: 'INDEX', verdict: 'SHADOW' },
+      ],
+    });
+    assert.equal(report.status, 'failed');
+    assert.ok(report.errors.includes('target_market_date_mismatch'));
+    assert.ok(report.errors.includes('processed_assets_below_expected_min'));
+    assert.ok(report.errors.includes('zero_predictions'));
+    assert.ok(report.errors.includes('timed_out'));
+    assert.ok(report.errors.includes('shadow_contains_buy_signal'));
+    assert.ok(report.errors.includes('index_in_shadow_scores'));
+  });
+});
+
+describe('hist-probs error triage', () => {
+  it('does not report empty triage when run-summary residual sentinel is present', () => {
+    const report = buildHistErrorTriage([{
+      ticker: 'UNCLASSIFIED_REMAINING',
+      error: 'UNKNOWN',
+      message: 'tickers_remaining=564',
+      source: 'run_summary_remaining_sentinel',
+    }]);
+    assert.equal(report.unique_tickers, 1);
+    assert.equal(report.by_error_class.UNKNOWN, 1);
+    assert.equal(report.source_breakdown.run_summary_remaining_sentinel, 1);
   });
 });
 

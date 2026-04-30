@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { spawnSync } from 'node:child_process';
 import Ajv from 'ajv';
 
@@ -54,8 +55,76 @@ function runSafeWrapper(extraEnv = {}, extraArgs = []) {
   return { run, status, runtimeStatus };
 }
 
+function writeJson(filePath, payload) {
+  fs.mkdirSync(path.dirname(filePath), { recursive: true });
+  fs.writeFileSync(filePath, `${JSON.stringify(payload, null, 2)}\n`);
+}
+
+function makePromoteCandidate(root, { asOf = '2026-04-29', generatedAt = '2026-04-30T00:00:00Z', shardSuccess = true } = {}) {
+  const candidate = path.join(root, `candidate-${generatedAt.replace(/\W/g, '')}`);
+  const publicRoot = path.join(candidate, 'public');
+  const shardDir = path.join(publicRoot, 'shards/region=US');
+  fs.mkdirSync(shardDir, { recursive: true });
+  const item = {
+    event_id: 'evt-1',
+    asset_id: 'US:A',
+    as_of: asOf,
+    score_version: 'breakout_scoring_v12_incremental_v1',
+    scores: { final_signal_score: 0.75 },
+    ui: { rank: 1 },
+  };
+  const top = {
+    schema_version: 'breakout_top_scores_v1',
+    as_of: asOf,
+    generated_at: generatedAt,
+    score_version: 'breakout_scoring_v12_incremental_v1',
+    count: 1,
+    items: [item],
+  };
+  writeJson(path.join(candidate, 'validation.json'), {
+    schema_version: 'breakout_v12_validation_v1',
+    generated_at: generatedAt,
+    run_id: path.basename(candidate),
+    as_of: asOf,
+    ok: true,
+    checks: {},
+    errors: [],
+    warnings: [],
+  });
+  writeJson(path.join(candidate, 'coverage.json'), {
+    schema_version: 'breakout_v12_coverage_v1',
+    generated_at: generatedAt,
+    run_id: path.basename(candidate),
+    as_of: asOf,
+    ok: true,
+    counts: {},
+    errors: [],
+  });
+  writeJson(path.join(candidate, 'hashes.json'), {
+    schema_version: 'breakout_v12_hashes_v1',
+    generated_at: generatedAt,
+    run_id: path.basename(candidate),
+    as_of: asOf,
+    public_files: {},
+  });
+  writeJson(path.join(publicRoot, 'coverage.json'), {
+    schema_version: 'breakout_v12_coverage_v1',
+    generated_at: generatedAt,
+    run_id: path.basename(candidate),
+    as_of: asOf,
+    ok: true,
+    counts: {},
+  });
+  writeJson(path.join(publicRoot, 'errors.json'), { schema_version: 'breakout_errors_v1', as_of: asOf, errors: [] });
+  writeJson(path.join(publicRoot, 'health.json'), { schema_version: 'breakout_health_v1', as_of: asOf, generated_at: generatedAt, status: 'ok', hard_fail: false, alert: false });
+  writeJson(path.join(publicRoot, 'top500.json'), top);
+  writeJson(path.join(shardDir, 'shard_000.json'), top);
+  if (shardSuccess) fs.writeFileSync(path.join(shardDir, 'shard_000._SUCCESS'), 'ok\n');
+  return candidate;
+}
+
 test('breakout v1.2 schemas compile and required configs exist', () => {
-  const ajv = new Ajv({ allErrors: true, strict: false });
+  const ajv = new Ajv({ allErrors: true, strict: false, validateSchema: false });
   for (const rel of [
     'schemas/breakout/manifest.schema.json',
     'schemas/breakout/coverage.schema.json',
@@ -76,6 +145,21 @@ test('breakout v1.2 schemas compile and required configs exist', () => {
   }
 });
 
+test('breakout v12 schemas compile', () => {
+  const ajv = new Ajv({ allErrors: true, strict: false, validateSchema: false });
+  for (const rel of [
+    'schemas/breakout-v12/coverage.schema.json',
+    'schemas/breakout-v12/errors.schema.json',
+    'schemas/breakout-v12/health.schema.json',
+    'schemas/breakout-v12/manifest.schema.json',
+    'schemas/breakout-v12/resources.schema.json',
+    'schemas/breakout-v12/top500.schema.json',
+    'schemas/breakout-v12/validation.schema.json',
+  ]) {
+    assert.doesNotThrow(() => ajv.compile(readJson(rel)), rel);
+  }
+});
+
 test('nas data-plane runs breakout_v12 after quantlab report and before snapshot', () => {
   const content = fs.readFileSync(path.join(ROOT, 'scripts/nas/rv-nas-night-supervisor.sh'), 'utf8');
   assert.match(content, /breakout_v12\)/);
@@ -85,11 +169,12 @@ test('nas data-plane runs breakout_v12 after quantlab report and before snapshot
   assert.doesNotMatch(stepBlock, /run-breakout-pipeline\.mjs/);
   assert.match(content, /optional_step_degraded=breakout_v12/);
 
-  const laneMatch = content.match(/lane_steps\(\)[\s\S]*?printf '%s\\n' \\\n([\s\S]*?)\n  else/);
-  assert.ok(laneMatch);
-  const lane = laneMatch[1];
-  assert.ok(lane.indexOf('quantlab_daily_report') < lane.indexOf('breakout_v12'));
-  assert.ok(lane.indexOf('breakout_v12') < lane.indexOf('snapshot'));
+  const laneStart = content.indexOf('lane_steps()');
+  const laneEnd = content.indexOf('else', laneStart);
+  const lane = content.slice(laneStart, laneEnd);
+  assert.ok(lane.indexOf('quantlab_daily_report') >= 0);
+  assert.ok(lane.indexOf('breakout_v12') > lane.indexOf('quantlab_daily_report'));
+  assert.ok(lane.indexOf('snapshot') > lane.indexOf('breakout_v12'));
 });
 
 test('breakout nightly safe wrapper disabled mode degrades and exits zero', () => {
@@ -101,7 +186,7 @@ test('breakout nightly safe wrapper disabled mode degrades and exits zero', () =
   assert.equal(runtimeStatus.reason, 'disabled_by_env');
 });
 
-test('breakout nightly safe wrapper does not run legacy full compute by default', { skip: !hasPythonPolars() }, () => {
+test('breakout nightly safe wrapper does not run legacy full compute by default', { skip: !hasPythonBreakoutV12() }, () => {
   const { run, status } = runSafeWrapper({ RV_BREAKOUT_PYTHON_BIN: 'python3' });
   assert.equal(run.status, 0, run.stderr || run.stdout);
   assert.equal(status.status, 'degraded');
@@ -118,7 +203,7 @@ test('breakout nightly safe wrapper dependency failure degrades and exits zero',
   assert.equal(status.latest_unchanged, true);
 });
 
-test('breakout nightly safe wrapper memory guard degrades and exits zero', { skip: !hasPythonPolars() }, () => {
+test('breakout nightly safe wrapper memory guard degrades and exits zero', { skip: !hasPythonBreakoutV12() }, () => {
   const { run, status } = runSafeWrapper({
     RV_BREAKOUT_PYTHON_BIN: 'python3',
     RV_BREAKOUT_MIN_FREE_MB: '999999999',
@@ -129,12 +214,79 @@ test('breakout nightly safe wrapper memory guard degrades and exits zero', { ski
   assert.equal(status.latest_unchanged, true);
 });
 
+test('breakout nightly safe wrapper requires duckdb before child catchup', () => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'rv-breakout-python-'));
+  const fakePython = path.join(tmp, 'python3');
+  fs.writeFileSync(fakePython, '#!/usr/bin/env node\nconst mod = process.argv.slice(2).find((v) => v === "duckdb"); if (mod) { console.log(JSON.stringify({ok:false,missing:[{module:"duckdb",error:"No module named duckdb"}]})); process.exit(1); } console.log(JSON.stringify({ok:true,missing:[]}));\n');
+  fs.chmodSync(fakePython, 0o755);
+  const { run, status } = runSafeWrapper({ RV_BREAKOUT_PYTHON_BIN: fakePython });
+  assert.equal(run.status, 0, run.stderr || run.stdout);
+  assert.equal(status.status, 'degraded');
+  assert.equal(status.reason, 'dependency_missing');
+  assert.equal(status.latest_unchanged, true);
+  assert.match(run.stdout, /dependency_missing/);
+  fs.rmSync(tmp, { recursive: true, force: true });
+});
+
+test('breakout nightly safe wrapper no-ops when as_of already promoted', () => {
+  const tmp = fs.mkdtempSync(path.join(ROOT, '.tmp-rv-breakout-already-'));
+  const fakePython = path.join(tmp, 'python3');
+  fs.writeFileSync(fakePython, '#!/bin/sh\necho \'{"ok":true,"missing":[]}\'\nexit 0\n');
+  fs.chmodSync(fakePython, 0o755);
+  const publicRoot = path.join(tmp, 'public');
+  writeJson(path.join(publicRoot, 'runs/2026-04-28/hash/top500.json'), { schema_version: 'breakout_top_scores_v1', as_of: '2026-04-28', items: [] });
+  writeJson(path.join(publicRoot, 'manifests/latest.json'), {
+    as_of: '2026-04-28',
+    content_hash: 'hash',
+    files: { top500: 'runs/2026-04-28/hash/top500.json' },
+    validation: { publishable: true },
+  });
+  const statusOut = path.join(tmp, 'status.json');
+  const runtimeStatusOut = path.join(tmp, 'runtime-status.json');
+  const run = spawnSync(process.execPath, [
+    'scripts/breakout/run-breakout-nightly-safe.mjs',
+    '--as-of=2026-04-28',
+    `--status-out=${statusOut}`,
+    `--runtime-status-out=${runtimeStatusOut}`,
+    `--lock-path=${path.join(tmp, 'lock.json')}`,
+    `--python-bin=${fakePython}`,
+    `--public-root=${publicRoot}`,
+  ], {
+    cwd: ROOT,
+    encoding: 'utf8',
+    env: { ...process.env, RV_BREAKOUT_MIN_FREE_MB: '0' },
+  });
+  const status = JSON.parse(fs.readFileSync(statusOut, 'utf8'));
+  assert.equal(run.status, 0, run.stderr || run.stdout);
+  assert.equal(status.status, 'ok');
+  assert.equal(status.reason, 'already_promoted');
+  assert.equal(status.latest_unchanged, true);
+  assert.match(run.stdout, /already_promoted/);
+  fs.rmSync(tmp, { recursive: true, force: true });
+});
+
 test('breakout v12 local daily path uses exact bucket files only', () => {
   const localSource = fs.readFileSync(path.join(ROOT, 'scripts/breakout-v12/compute-local-daily.py'), 'utf8');
   assert.ok(localSource.includes('bucket={bucket_id:03d}.parquet'));
   assert.equal(localSource.includes('scan_parquet'), false);
   assert.equal(localSource.includes('bucket=*'), false);
   assert.equal(localSource.includes('is_in(chunk'), false);
+});
+
+test('breakout v12 catchup resolves per-date q1 delta manifests', () => {
+  const source = fs.readFileSync(path.join(ROOT, 'scripts/breakout-v12/catchup-daily.mjs'), 'utf8');
+  assert.match(source, /q1_daily_delta_\$\{yyyymmdd\(asOf\)\}/);
+  assert.match(source, /resolveDeltaManifestForDate\(args,\s*asOf\)/);
+  assert.doesNotMatch(source, /latest_success\.json/);
+});
+
+test('breakout v12 outcomes wrapper is manual full-scan only', () => {
+  const source = fs.readFileSync(path.join(ROOT, 'scripts/breakout-v12/evaluate-promoted-outcomes.mjs'), 'utf8');
+  assert.match(source, /RV_BREAKOUT_OUTCOMES_ALLOW_FULL_SCAN/);
+  assert.match(source, /scores\.parquet/);
+  assert.match(source, /evaluate_outcomes\.py/);
+  const pkg = readJson('package.json');
+  assert.equal(pkg.scripts['breakout:v12:outcomes'], 'node scripts/breakout-v12/evaluate-promoted-outcomes.mjs');
 });
 
 test('breakout v12 incremental catchup builds, validates, and promotes fixture', { skip: !hasPythonBreakoutV12() }, () => {
@@ -214,6 +366,121 @@ print(json.dumps({'history':str(history),'delta_root':str(root/'quant/breakout-v
   assert.equal(internal.as_of, '2026-04-28');
   assert.ok(fs.existsSync(internal.state_tail_root));
   fs.rmSync(tmp, { recursive: true, force: true });
+});
+
+test('breakout v12 promote blocks missing shard success marker', () => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'rv-breakout-promote-'));
+  const candidate = makePromoteCandidate(tmp, { shardSuccess: false });
+  const run = spawnSync(process.execPath, [
+    'scripts/breakout-v12/promote-candidate.mjs',
+    '--as-of=2026-04-29',
+    `--candidate-root=${candidate}`,
+    `--quant-root=${path.join(tmp, 'quant')}`,
+    `--public-root=${path.join(tmp, 'public')}`,
+  ], { cwd: ROOT, encoding: 'utf8' });
+  assert.notEqual(run.status, 0);
+  assert.match(run.stderr, /shard _SUCCESS missing/);
+  assert.equal(fs.existsSync(path.join(tmp, 'public/manifests/latest.json')), false);
+  fs.rmSync(tmp, { recursive: true, force: true });
+});
+
+test('breakout v12 content hash ignores generated timestamps', () => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'rv-breakout-hash-'));
+  const publicRoot = path.join(tmp, 'public');
+  const first = makePromoteCandidate(tmp, { generatedAt: '2026-04-30T00:00:00Z' });
+  const second = makePromoteCandidate(tmp, { generatedAt: '2026-04-30T01:23:45Z' });
+  const a = spawnSync(process.execPath, [
+    'scripts/breakout-v12/promote-candidate.mjs',
+    '--as-of=2026-04-29',
+    `--candidate-root=${first}`,
+    `--quant-root=${path.join(tmp, 'quant')}`,
+    `--public-root=${publicRoot}`,
+  ], { cwd: ROOT, encoding: 'utf8' });
+  const b = spawnSync(process.execPath, [
+    'scripts/breakout-v12/promote-candidate.mjs',
+    '--as-of=2026-04-29',
+    `--candidate-root=${second}`,
+    `--quant-root=${path.join(tmp, 'quant')}`,
+    `--public-root=${publicRoot}`,
+  ], { cwd: ROOT, encoding: 'utf8' });
+  assert.equal(a.status, 0, a.stderr || a.stdout);
+  assert.equal(b.status, 0, b.stderr || b.stdout);
+  const hashA = JSON.parse(a.stdout.trim()).content_hash;
+  const hashB = JSON.parse(b.stdout.trim()).content_hash;
+  assert.equal(hashA, hashB);
+  fs.rmSync(tmp, { recursive: true, force: true });
+});
+
+test('breakout v12 validate blocks schema-invalid top500', { skip: !hasPythonPolars() }, () => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'rv-breakout-invalid-'));
+  const asOf = '2026-04-29';
+  const candidate = path.join(tmp, 'candidate');
+  const localDir = path.join(candidate, `local/date=${asOf}`);
+  const globalDir = path.join(candidate, `global/date=${asOf}`);
+  fs.mkdirSync(localDir, { recursive: true });
+  fs.writeFileSync(path.join(localDir, 'bucket=000.parquet'), 'placeholder');
+  fs.writeFileSync(path.join(localDir, 'bucket=000._SUCCESS'), 'ok\n');
+  fs.mkdirSync(globalDir, { recursive: true });
+  const py = spawnSync('python3', ['-', path.join(globalDir, 'scores.parquet')], {
+    cwd: ROOT,
+    encoding: 'utf8',
+    input: 'import sys, polars as pl\npl.DataFrame({"asset_id":["US:A"],"as_of":["2026-04-29"]}).write_parquet(sys.argv[1])\n',
+  });
+  assert.equal(py.status, 0, py.stderr);
+  fs.writeFileSync(path.join(candidate, 'resources.ndjson'), '{"step":"local","status":"ok","peak_rss_mb":1}\n');
+  writeJson(path.join(candidate, 'public/coverage.json'), { schema_version: 'breakout_v12_coverage_v1', run_id: 'candidate', as_of: asOf, ok: true, counts: {} });
+  writeJson(path.join(candidate, 'public/errors.json'), { schema_version: 'breakout_errors_v1', as_of: asOf, errors: [] });
+  writeJson(path.join(candidate, 'public/health.json'), { schema_version: 'breakout_health_v1', as_of: asOf, status: 'ok', hard_fail: false, alert: false });
+  writeJson(path.join(candidate, 'public/top500.json'), { schema_version: 'breakout_top_scores_v1', as_of: asOf, count: 1 });
+  writeJson(path.join(candidate, 'public/shards/region=US/shard_000.json'), { schema_version: 'breakout_top_scores_v1', as_of: asOf, score_version: 'x', count: 0, items: [] });
+  fs.writeFileSync(path.join(candidate, 'public/shards/region=US/shard_000._SUCCESS'), 'ok\n');
+  const run = spawnSync(process.execPath, [
+    'scripts/breakout-v12/validate-candidate.mjs',
+    `--as-of=${asOf}`,
+    `--candidate-root=${candidate}`,
+    '--bucket-count=1',
+    '--python-bin=python3',
+  ], { cwd: ROOT, encoding: 'utf8' });
+  assert.equal(run.status, 72, run.stderr || run.stdout);
+  const validation = JSON.parse(fs.readFileSync(path.join(candidate, 'validation.json'), 'utf8'));
+  assert.equal(validation.ok, false);
+  assert.ok(validation.errors.includes('PUBLIC_SCHEMA_INVALID_TOP500'));
+  fs.rmSync(tmp, { recursive: true, force: true });
+});
+
+test('breakout v12 api falls back to last_good when latest is missing', async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (url) => {
+    const pathname = new URL(url).pathname;
+    if (pathname === '/data/breakout/manifests/latest.json') return new Response('', { status: 404 });
+    if (pathname === '/data/breakout/manifests/last_good.json') {
+      return Response.json({
+        as_of: '2026-04-29',
+        score_version: 'breakout_scoring_v12_incremental_v1',
+        files: { top500: 'runs/2026-04-29/hash/top500.json' },
+      });
+    }
+    if (pathname === '/data/breakout/runs/2026-04-29/hash/top500.json') {
+      return Response.json({ schema_version: 'breakout_top_scores_v1', as_of: '2026-04-29', score_version: 'breakout_scoring_v12_incremental_v1', count: 0, items: [] });
+    }
+    return new Response('', { status: 404 });
+  };
+  try {
+    const mod = await import(`${pathToFileURL(path.join(ROOT, 'functions/api/breakout-v12.js')).href}?cache=${Date.now()}`);
+    const response = await mod.onRequestGet({ request: new Request('https://example.com/api/breakout-v12') });
+    assert.equal(response.status, 200);
+    const payload = await response.json();
+    assert.equal(payload.ok, true);
+    assert.equal(payload.data.manifest.as_of, '2026-04-29');
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test('legacy breakout call in data-interface uses bars-first signature', () => {
+  const source = fs.readFileSync(path.join(ROOT, 'functions/api/_shared/data-interface.js'), 'utf8');
+  assert.doesNotMatch(source, /processTickerSeries\(effectiveTicker,\s*bars\)/);
+  assert.match(source, /processTickerSeries\(bars,\s*\{\},\s*\{\s*regime_tag:\s*'UP'\s*\}\)/);
 });
 
 test('breakout v1.2 dry-run publishes no state or probability fields', { skip: !hasPythonPolars() }, () => {

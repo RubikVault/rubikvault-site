@@ -48,6 +48,9 @@ const PATHS = {
   quantlabOperational: path.join(REPO_ROOT, 'public/data/quantlab/status/operational-status.json'),
   histProbs: path.join(REPO_ROOT, 'public/data/hist-probs/regime-daily.json'),
   histProbsSummary: path.join(REPO_ROOT, 'public/data/hist-probs/run-summary.json'),
+  histProbsDeferred: path.join(REPO_ROOT, 'public/data/hist-probs/deferred-latest.json'),
+  histProbsV2Latest: path.join(REPO_ROOT, 'public/data/reports/hist-probs-v2-latest.json'),
+  histProbsV2Validation: path.join(REPO_ROOT, 'public/data/reports/hist-probs-v2-validation-latest.json'),
   stockAnalyzerAudit: path.join(REPO_ROOT, 'public/data/reports/stock-analyzer-universe-audit-latest.json'),
   snapshot: path.join(REPO_ROOT, 'public/data/snapshots/best-setups-v4.json'),
   etfDiagnostic: path.join(REPO_ROOT, 'public/data/reports/best-setups-etf-diagnostic-latest.json'),
@@ -524,6 +527,9 @@ function main() {
   const quantlabOperational = readJson(PATHS.quantlabOperational);
   const histProbs = readJson(PATHS.histProbs);
   const histProbsSummary = readJson(PATHS.histProbsSummary);
+  const histProbsDeferred = readJson(PATHS.histProbsDeferred);
+  const histProbsV2Latest = readJson(PATHS.histProbsV2Latest);
+  const histProbsV2Validation = readJson(PATHS.histProbsV2Validation);
   const stockAnalyzerAudit = readJson(PATHS.stockAnalyzerAudit);
   const snapshot = readJson(PATHS.snapshot);
   const etfDiagnostic = readJson(PATHS.etfDiagnostic);
@@ -796,12 +802,17 @@ function main() {
   const histRegimeDate = normalizeDate(histProbsSummary?.regime_date || null);
   const histOutputAsof = maxIsoDate(histFamily?.data_asof, histRegimeDate, histProbs?.date || null);
   const expectedHistDate = normalizeDate(
-    recoveryReport?.target_market_date
+    expectedOperationalTargetDate
+    || histFamily?.expected_eod
+    || recoveryReport?.target_market_date
     || releaseState?.target_market_date
     || releaseState?.target_date
     || quantOutputAsof
     || histOutputAsof
   );
+  const histDeferredTarget = normalizeDate(histProbsDeferred?.target_market_date || null);
+  const histDeferredActive = histProbsDeferred?.schema === 'rv.hist_probs.deferred.v1'
+    && (!expectedHistDate || histDeferredTarget === expectedHistDate || histDeferredTarget >= expectedHistDate);
   const histAnchorDate = normalizeDate(histProbsAnchor?.latest_date || null);
   // Fallback: if scope registry lags (data not yet available for target date),
   // accept regime_date as proof that the run used the correct market regime.
@@ -825,6 +836,21 @@ function main() {
   const histArtifactCoverageRatio = stockUniverseCount && stockUniverseCount > 0
     ? Number(histFamily?.fresh_count ?? histProfileCount) / stockUniverseCount
     : null;
+  const histArtifactFreshnessRatio = Number.isFinite(Number(histFamily?.artifact_freshness_ratio))
+    ? Number(histFamily.artifact_freshness_ratio)
+    : Number.isFinite(Number(histFamily?.artifact_coverage_ratio))
+      ? Number(histFamily.artifact_coverage_ratio)
+      : histArtifactCoverageRatio;
+  const histMinCoverageRatio = Number.isFinite(Number(histFamily?.min_coverage_ratio))
+    ? Number(histFamily.min_coverage_ratio)
+    : Number.isFinite(Number(histProbsSummary?.min_coverage_ratio))
+      ? Number(histProbsSummary.min_coverage_ratio)
+      : 0.95;
+  const histArtifactStale = histArtifactFreshnessRatio != null
+    && Number.isFinite(histArtifactFreshnessRatio)
+    && histArtifactFreshnessRatio < histMinCoverageRatio;
+  const histWriteMode = String(histProbsSummary?.hist_probs_write_mode || histFamily?.hist_probs_write_mode || '').toLowerCase();
+  const histWriteModeOk = histWriteMode === 'bucket_only';
   const histCoverageRatio = Number.isFinite(Number(histFamily?.coverage_ratio))
     ? Number(histFamily.coverage_ratio)
     : histArtifactCoverageRatio;
@@ -851,7 +877,13 @@ function main() {
     : histFreshnessSeverity;
   const histSeverity = histRunZeroCoverage
     ? 'critical'
+    : histDeferredActive
+    ? 'critical'
     : histAnchorStale
+    ? 'critical'
+    : histArtifactStale
+    ? 'critical'
+    : !histWriteModeOk
     ? 'critical'
     : histSeverityBase;
   steps.hist_probs = buildStep({
@@ -862,13 +894,25 @@ function main() {
     severity: histSeverity,
     summary: histRunZeroCoverage
       ? 'Historical probabilities reported zero covered tickers for the required universe'
+      : histDeferredActive
+        ? 'Historical probabilities are deferred for the target market date'
       : histAnchorStale
         ? 'Historical probabilities anchor is stale for the target market date'
+      : histArtifactStale
+        ? 'Historical probability artifacts are mostly stale'
+      : !histWriteModeOk
+        ? 'Historical probabilities write mode is not bucket_only'
       : histSeverity === 'critical' ? 'Historical probabilities are stale' : histSeverity === 'warning' ? 'Historical probabilities are aging' : 'Historical probabilities are current',
     why: histRunZeroCoverage
       ? `Latest full-universe hist_probs run reported tickers_total=${histRunTotal}, tickers_covered=${histRunCovered}, tickers_excluded_inactive=${histProbsSummary?.tickers_excluded_inactive ?? 'unknown'}, source_mode=${histProbsSummary?.source_mode || 'unknown'}. This is a false-green condition and must not be treated as current coverage.`
+      : histDeferredActive
+      ? `Latest hist_probs run deferred target ${histDeferredTarget || 'unknown'} with ${histProbsDeferred?.remaining_tickers ?? 'unknown'} remaining tickers above threshold ${histProbsDeferred?.threshold ?? 'unknown'}; last_good_regime_date=${histProbsDeferred?.last_good_regime_date || 'unknown'}. Deferred output blocks release.`
       : histAnchorStale
       ? `Anchor ticker AAPL is stale at latest_date=${histAnchorDate || 'missing'} while the expected market date is ${expectedHistDate}. Process completion without fresh anchor output is not a valid success state.`
+      : histArtifactStale
+      ? `Hist run-summary coverage is ${Math.round(Number(histFamily?.run_coverage_ratio ?? histCoverageRatio ?? 0) * 10000) / 100}%, but artifact freshness is only ${Math.round(Number(histArtifactFreshnessRatio || 0) * 10000) / 100}% against a ${Math.round(histMinCoverageRatio * 100)}% floor. Stale artifacts are release-blocking.`
+      : !histWriteModeOk
+      ? `Latest hist_probs run used hist_probs_write_mode=${histWriteMode || 'missing'}; production acceptance requires bucket_only to avoid flat+bucket duplication and stale artifact ambiguity.`
       : histFamily && histFamily.residual_counts_blocking === false
       ? `Latest full-universe hist_probs run coverage is ${Math.round(Number(histFamily.run_coverage_ratio ?? histCoverageRatio ?? 0) * 10000) / 100}% against a ${Math.round(Number(histFamily.min_coverage_ratio ?? 0.95) * 100)}% floor; residual artifact counts remain visible (${histFamily.residual_stale_count ?? histFamily.stale_count ?? 0} stale, ${histFamily.residual_missing_count ?? histFamily.missing_count ?? 0} missing) but are not release blockers.`
       : histFamily
@@ -893,8 +937,15 @@ function main() {
         stock_universe_count: stockUniverseCount,
         stock_coverage_ratio: histCoverageRatio,
         artifact_coverage_ratio: histFamily?.artifact_coverage_ratio ?? histArtifactCoverageRatio,
+        artifact_freshness_ratio: histArtifactFreshnessRatio,
+        artifact_stale_guard: histArtifactStale,
+        min_coverage_ratio: histMinCoverageRatio,
+        hist_probs_write_mode: histWriteMode || null,
+        write_mode_ok: histWriteModeOk,
         run_coverage_ratio: histFamily?.run_coverage_ratio ?? histCoverageRatio,
         residual_counts_blocking: histFamily?.residual_counts_blocking ?? true,
+        deferred: histDeferredActive,
+        deferred_latest: histProbsDeferred || null,
         fresh_count: histFamily?.fresh_count ?? null,
         stale_count: histFamily?.stale_count ?? null,
         missing_count: histFamily?.missing_count ?? null,
@@ -912,6 +963,50 @@ function main() {
         : histFamily?.healthy
         ? 'Historical probability context is current for the required global STOCK+ETF+INDEX universe.'
         : 'Regime and passive probability context lags the market and should not be treated as current.',
+    },
+  });
+
+  const v2Coverage = histProbsV2Latest?.coverage || null;
+  const v2Performance = histProbsV2Latest?.performance || null;
+  const v2TargetDate = normalizeDate(histProbsV2Latest?.target_market_date || null);
+  const v2ExpectedMinAssets = Number(process.env.RV_HIST_PROBS_V2_MAX_ASSETS || 300);
+  const v2Processed = Number(v2Coverage?.processed_assets || 0);
+  const v2Predictions = Number(v2Coverage?.predictions || 0);
+  const v2TimedOut = v2Performance?.timed_out === true;
+  const v2ValidationOk = histProbsV2Validation?.status === 'ok';
+  const v2FreshForTarget = expectedHistDate ? v2TargetDate === expectedHistDate : Boolean(v2TargetDate);
+  const v2Ok = histProbsV2Latest?.status === 'ok'
+    && v2FreshForTarget
+    && v2Processed >= v2ExpectedMinAssets
+    && v2Predictions > 0
+    && !v2TimedOut
+    && v2ValidationOk;
+  steps.hist_probs_v2_shadow = buildStep({
+    id: 'hist_probs_v2_shadow',
+    label: 'Hist Probs v2 Shadow',
+    owner: 'Hist Probs',
+    subsystem: 'hist_probs',
+    severity: v2Ok ? 'ok' : 'warning',
+    summary: v2Ok ? 'Hist Probs v2 shadow is current' : 'Hist Probs v2 shadow is stale, failed, or incomplete',
+    why: v2Ok
+      ? `Shadow report target=${v2TargetDate}, processed=${v2Processed}, predictions=${v2Predictions}. It is diagnostic only.`
+      : `Shadow report status=${histProbsV2Latest?.status || 'missing'}, target=${v2TargetDate || 'missing'}, expected=${expectedHistDate || 'unknown'}, processed=${v2Processed}/${v2ExpectedMinAssets}, predictions=${v2Predictions}, timed_out=${v2TimedOut}, validation=${histProbsV2Validation?.status || 'missing'}. This is non-blocking for release.`,
+    next_fix: 'Run scripts/hist-probs-v2/run-daily-shadow-step.mjs after v1 hist-probs; keep it shadow-only until promotion gates pass.',
+    file_ref: 'scripts/hist-probs-v2/run-daily-shadow-step.mjs',
+    generated_at: histProbsV2Latest?.generated_at || null,
+    last_success_at: histProbsV2Latest?.status === 'ok' ? histProbsV2Latest.generated_at : null,
+    input_asof: expectedHistDate,
+    output_asof: v2TargetDate,
+    dependency_ids: ['hist_probs'],
+    blocked_by: [],
+    status_detail: {
+      non_blocking: true,
+      source: 'shadow_only',
+      default_hist_probs_source: 'v1_primary',
+      latest: histProbsV2Latest || null,
+      validation: histProbsV2Validation || null,
+      expected_min_assets: v2ExpectedMinAssets,
+      no_buy_mutation_required: true,
     },
   });
 

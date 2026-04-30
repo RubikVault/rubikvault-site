@@ -320,7 +320,7 @@ PY
 
 step_resource_class() {
   case "$1" in
-    hist_probs|snapshot|learning_daily)
+    hist_probs|hist_probs_catchup|snapshot|learning_daily)
       printf '%s\n' "heavy"
       ;;
     build_global_scope|forecast_daily|build_fundamentals|quantlab_daily_report|breakout_v12|scientific_summary|v1_audit|cutover_readiness|etf_diagnostic|page_core_bundle|hist_probs_v2_shadow)
@@ -344,6 +344,7 @@ step_timeout_sec() {
     scientific_summary) printf '%s\n' 1800 ;;
     forecast_daily) printf '%s\n' "${RV_FORECAST_DAILY_TIMEOUT_SEC:-21600}" ;;
     hist_probs) printf '%s\n' "${RV_HIST_PROBS_TIMEOUT_SEC:-21600}" ;;
+    hist_probs_catchup) printf '%s\n' "${RV_HIST_PROBS_CATCHUP_TIMEOUT_SEC:-57600}" ;;
     hist_probs_v2_shadow) printf '%s\n' "${RV_HIST_PROBS_V2_TIMEOUT_SEC:-900}" ;;
     snapshot) printf '%s\n' 5400 ;;
     page_core_bundle) printf '%s\n' 3600 ;;
@@ -397,6 +398,9 @@ step_heap_mb() {
   case "$1" in
     hist_probs)
       hist_probs_heap_mb
+      ;;
+    hist_probs_catchup)
+      printf '%s\n' "${RV_HIST_PROBS_CATCHUP_HEAP_MB:-3072}"
       ;;
     snapshot)
       printf '%s\n' 3072
@@ -480,7 +484,7 @@ step_command() {
       ;;
     build_global_scope)
       # pack-manifest.global goes to RV_GLOBAL_MANIFEST_DIR, not public/
-      printf '%s\n' "node scripts/universe-v7/build-global-scope.mjs --asset-classes '$GLOBAL_ASSET_CLASSES' && node scripts/ops/build-history-pack-manifest.mjs --scope global --asset-classes '$GLOBAL_ASSET_CLASSES'"
+      printf '%s\n' "node scripts/universe-v7/build-global-scope.mjs --asset-classes '$GLOBAL_ASSET_CLASSES' && node scripts/universe-v7/rebuild-search-exact-from-registry.mjs && node scripts/universe-v7/build-index-memberships.mjs && node scripts/ops/build-history-pack-manifest.mjs --scope global --asset-classes '$GLOBAL_ASSET_CLASSES'"
       ;;
     market_data_refresh)
       # pack-manifest.global goes to RV_GLOBAL_MANIFEST_DIR via env var (set in nas-env.sh)
@@ -511,16 +515,19 @@ step_command() {
     hist_probs)
       local hist_skip_existing
       hist_skip_existing="$(hist_probs_skip_existing_value)"
-      printf '%s\n' "HIST_PROBS_WORKERS='${RV_HIST_PROBS_WORKERS:-3}' HIST_PROBS_WORKER_BATCH_SIZE='${RV_HIST_PROBS_WORKER_BATCH_SIZE:-50}' HIST_PROBS_SKIP_EXISTING='$hist_skip_existing' HIST_PROBS_WRITE_MODE='${RV_HIST_PROBS_WRITE_MODE:-bucket_only}' HIST_PROBS_TIER='${RV_HIST_PROBS_TIER:-all}' HIST_PROBS_MAX_TICKERS='${RV_HIST_PROBS_MAX_TICKERS:-0}' HIST_PROBS_FRESHNESS_BUDGET_TRADING_DAYS='${RV_HIST_PROBS_FRESHNESS_BUDGET_TRADING_DAYS:-2}' HIST_PROBS_RSS_BUDGET_MB='${RV_HIST_PROBS_RSS_BUDGET_MB:-7168}' HIST_PROBS_RESPECT_CHECKPOINT_VERSION='${RV_HIST_PROBS_RESPECT_CHECKPOINT_VERSION:-1}' HIST_PROBS_FAIL_ON_SOFT_ERRORS='${RV_HIST_PROBS_FAIL_ON_SOFT_ERRORS:-0}' HIST_PROBS_MIN_COVERAGE_RATIO='${RV_HIST_PROBS_MIN_COVERAGE_RATIO:-0.90}' node scripts/ops/nas-hist-probs-worker-guard.mjs --mode '${RV_HIST_PROBS_TIER:-all}' -- node run-hist-probs-turbo.mjs --asset-classes '$GLOBAL_ASSET_CLASSES' && node scripts/ops/build-hist-probs-status-summary.mjs && node scripts/ops/build-hist-probs-public-projection.mjs"
+      printf '%s\n' "set +e; HIST_PROBS_WORKERS='${RV_HIST_PROBS_WORKERS:-3}' HIST_PROBS_WORKER_BATCH_SIZE='${RV_HIST_PROBS_WORKER_BATCH_SIZE:-50}' HIST_PROBS_SKIP_EXISTING='$hist_skip_existing' HIST_PROBS_WRITE_MODE='${RV_HIST_PROBS_WRITE_MODE:-bucket_only}' HIST_PROBS_TIER='${RV_HIST_PROBS_TIER:-all}' HIST_PROBS_MAX_TICKERS='${RV_HIST_PROBS_MAX_TICKERS:-0}' HIST_PROBS_FRESHNESS_BUDGET_TRADING_DAYS='${RV_HIST_PROBS_FRESHNESS_BUDGET_TRADING_DAYS:-2}' HIST_PROBS_RSS_BUDGET_MB='${RV_HIST_PROBS_RSS_BUDGET_MB:-7168}' HIST_PROBS_RESPECT_CHECKPOINT_VERSION='${RV_HIST_PROBS_RESPECT_CHECKPOINT_VERSION:-1}' HIST_PROBS_FAIL_ON_SOFT_ERRORS='${RV_HIST_PROBS_FAIL_ON_SOFT_ERRORS:-0}' HIST_PROBS_MIN_COVERAGE_RATIO='${RV_HIST_PROBS_MIN_COVERAGE_RATIO:-0.95}' HIST_PROBS_DEFER_IF_REMAINING_OVER='${RV_HIST_PROBS_DEFER_IF_REMAINING_OVER:-10000}' HIST_PROBS_ALLOW_DEFER_SUCCESS='${RV_HIST_PROBS_ALLOW_DEFER_SUCCESS:-0}' node scripts/ops/nas-hist-probs-worker-guard.mjs --mode '${RV_HIST_PROBS_TIER:-all}' -- node run-hist-probs-turbo.mjs --asset-classes '$GLOBAL_ASSET_CLASSES'; hist_status=\$?; post_status=0; node scripts/ops/build-hist-probs-status-summary.mjs || post_status=\$?; node scripts/ops/build-hist-probs-public-projection.mjs || post_status=\$?; node scripts/ops/triage-hist-probs-errors.mjs || post_status=\$?; node scripts/hist-probs/classify-hist-errors.mjs || post_status=\$?; node scripts/hist-probs/audit-current-state.mjs || post_status=\$?; if [ \"\$hist_status\" -ne 0 ]; then exit \"\$hist_status\"; fi; exit \"\$post_status\""
+      ;;
+    hist_probs_catchup)
+      printf '%s\n' "set +e; HIST_PROBS_WORKERS='${RV_HIST_PROBS_CATCHUP_WORKERS:-2}' HIST_PROBS_WORKER_BATCH_SIZE='${RV_HIST_PROBS_CATCHUP_BATCH_SIZE:-25}' HIST_PROBS_SKIP_EXISTING='1' HIST_PROBS_WRITE_MODE='bucket_only' HIST_PROBS_TIER='all' HIST_PROBS_MAX_TICKERS='0' HIST_PROBS_FRESHNESS_BUDGET_TRADING_DAYS='${RV_HIST_PROBS_FRESHNESS_BUDGET_TRADING_DAYS:-2}' HIST_PROBS_RSS_BUDGET_MB='${RV_HIST_PROBS_CATCHUP_RSS_BUDGET_MB:-3072}' HIST_PROBS_RESPECT_CHECKPOINT_VERSION='1' HIST_PROBS_FAIL_ON_SOFT_ERRORS='0' HIST_PROBS_MIN_COVERAGE_RATIO='${RV_HIST_PROBS_CATCHUP_MIN_COVERAGE_RATIO:-0.95}' HIST_PROBS_DEFER_IF_REMAINING_OVER='0' node scripts/ops/nas-hist-probs-worker-guard.mjs --mode all -- node run-hist-probs-turbo.mjs --asset-classes '$GLOBAL_ASSET_CLASSES'; hist_status=\$?; post_status=0; node scripts/ops/build-hist-probs-status-summary.mjs || post_status=\$?; node scripts/ops/build-hist-probs-public-projection.mjs || post_status=\$?; node scripts/ops/triage-hist-probs-errors.mjs || post_status=\$?; node scripts/hist-probs/classify-hist-errors.mjs || post_status=\$?; node scripts/hist-probs/audit-current-state.mjs || post_status=\$?; if [ \"\$hist_status\" -ne 0 ]; then exit \"\$hist_status\"; fi; exit \"\$post_status\""
       ;;
     hist_probs_v2_shadow)
-      printf '%s\n' "node scripts/hist-probs-v2/run-daily-shadow.mjs --date='$TARGET_MARKET_DATE' --max-assets='${RV_HIST_PROBS_V2_MAX_ASSETS:-2000}' --error-assets='${RV_HIST_PROBS_V2_ERROR_ASSETS:-200}' --timeout-ms='${RV_HIST_PROBS_V2_TIMEOUT_MS:-600000}' || true"
+      printf '%s\n' "node scripts/hist-probs-v2/run-daily-shadow-step.mjs --date='$TARGET_MARKET_DATE' --max-assets='${RV_HIST_PROBS_V2_MAX_ASSETS:-300}' --error-assets='${RV_HIST_PROBS_V2_ERROR_ASSETS:-200}' --timeout-ms='${RV_HIST_PROBS_V2_TIMEOUT_MS:-600000}'"
       ;;
     snapshot)
       printf '%s\n' "node scripts/ops/build-full-universe-decisions.mjs --target-market-date '$TARGET_MARKET_DATE' --replace && ALLOW_REMOTE_BAR_FETCH=0 BEST_SETUPS_DISABLE_NETWORK=1 node scripts/build-best-setups-v4.mjs"
       ;;
     page_core_bundle)
-      printf '%s\n' "node scripts/ops/build-page-core-bundle.mjs --target-market-date '$TARGET_MARKET_DATE' --replace && node scripts/ops/retention-page-core-bundles.mjs"
+      printf '%s\n' "NODE_OPTIONS='--max-old-space-size=${RV_PAGE_CORE_HEAP_MB:-8192}' node scripts/ops/build-page-core-bundle.mjs --target-market-date '$TARGET_MARKET_DATE' --replace && node scripts/ops/build-stock-analyzer-ui-state-summary.mjs --latest public/data/page-core/candidates/latest.candidate.json && node scripts/universe-v7/verify-search-registry-sync.mjs && node scripts/ops/retention-page-core-bundles.mjs"
       ;;
     etf_diagnostic)
       printf '%s\n' "node scripts/learning/diagnose-best-setups-etf-drop.mjs"
@@ -560,7 +567,7 @@ step_command() {
       # apply-history-touch-report runs first to ensure registry.bars_count is current before the audit.
       # operability rebuild uses --refresh-from-registry so bars_count and targetable denominator are
       # always derived from the freshly-scanned registry rather than stale operability records.
-      printf '%s\n' "mkdir -p '${RV_GLOBAL_MANIFEST_DIR:-${NAS_PIPELINE_ARTIFACTS_ROOT:-$NAS_OPS_ROOT/pipeline-artifacts}/manifests}' && node scripts/universe-v7/build-global-scope.mjs --asset-classes '$GLOBAL_ASSET_CLASSES' && node scripts/ops/build-history-pack-manifest.mjs --scope global --asset-classes '$GLOBAL_ASSET_CLASSES' && node scripts/ops/apply-history-touch-report-to-registry.mjs --scan-existing-packs && node scripts/ops/report-history-coverage.mjs --asset-classes '$GLOBAL_ASSET_CLASSES' --target-market-date '$TARGET_MARKET_DATE' && node scripts/ops/build-stock-analyzer-universe-audit.mjs --registry-path public/data/universe/v7/registry/registry.ndjson.gz --allowlist-path public/data/universe/v7/ssot/assets.global.canonical.ids.json --asset-classes '$GLOBAL_ASSET_CLASSES' --max-tickers 0 --live-sample-size 0 --concurrency '${RV_STOCK_ANALYZER_AUDIT_CONCURRENCY:-12}' --timeout-ms '${RV_STOCK_ANALYZER_AUDIT_TIMEOUT_MS:-30000}' && if [ -f public/data/ops/stock-analyzer-operability-latest.json ]; then node scripts/ops/build-stock-analyzer-operability.mjs --refresh-from-registry --registry-path public/data/universe/v7/registry/registry.ndjson.gz; else echo '{\"ok\":true,\"skipped\":\"stock_analyzer_operability_full_report_missing\"}'; fi"
+      printf '%s\n' "mkdir -p '${RV_GLOBAL_MANIFEST_DIR:-${NAS_PIPELINE_ARTIFACTS_ROOT:-$NAS_OPS_ROOT/pipeline-artifacts}/manifests}' && node scripts/universe-v7/build-global-scope.mjs --asset-classes '$GLOBAL_ASSET_CLASSES' && node scripts/universe-v7/rebuild-search-exact-from-registry.mjs && node scripts/universe-v7/build-index-memberships.mjs && node scripts/ops/build-history-pack-manifest.mjs --scope global --asset-classes '$GLOBAL_ASSET_CLASSES' && node scripts/ops/apply-history-touch-report-to-registry.mjs --scan-existing-packs && node scripts/ops/report-history-coverage.mjs --asset-classes '$GLOBAL_ASSET_CLASSES' --target-market-date '$TARGET_MARKET_DATE' && node scripts/ops/build-stock-analyzer-universe-audit.mjs --registry-path public/data/universe/v7/registry/registry.ndjson.gz --allowlist-path public/data/universe/v7/ssot/assets.global.canonical.ids.json --asset-classes '$GLOBAL_ASSET_CLASSES' --max-tickers 0 --live-sample-size 0 --concurrency '${RV_STOCK_ANALYZER_AUDIT_CONCURRENCY:-12}' --timeout-ms '${RV_STOCK_ANALYZER_AUDIT_TIMEOUT_MS:-30000}' && if [ -f public/data/ops/stock-analyzer-operability-latest.json ]; then node scripts/ops/build-stock-analyzer-operability.mjs --refresh-from-registry --registry-path public/data/universe/v7/registry/registry.ndjson.gz; else echo '{\"ok\":true,\"skipped\":\"stock_analyzer_operability_full_report_missing\"}'; fi"
       ;;
     ui_field_truth_report)
       if [[ "${RV_ALLOW_LOCAL_RUNTIME_GATES:-0}" == "1" ]]; then
@@ -573,7 +580,7 @@ step_command() {
       printf '%s\n' "node scripts/ops/build-ui-field-truth-report.mjs --page-core-only --page-core-latest-path public/data/page-core/candidates/latest.candidate.json --date='$TARGET_MARKET_DATE' --timeout-ms '${RV_UI_TRUTH_TIMEOUT_MS:-30000}'"
       ;;
     final_integrity_seal)
-      printf '%s\n' "node scripts/ops/build-pipeline-runtime-report.mjs && node scripts/ops/build-full-universe-decisions.mjs --target-market-date '$TARGET_MARKET_DATE' --replace && node scripts/ops/build-hist-probs-status-summary.mjs && node scripts/ops/final-integrity-seal.mjs --target-market-date '$TARGET_MARKET_DATE' && node scripts/ops/sync-release-state-from-final-seal.mjs"
+      printf '%s\n' "node scripts/ops/build-pipeline-runtime-report.mjs && node scripts/ops/build-hist-probs-status-summary.mjs && node scripts/ops/final-integrity-seal.mjs --target-market-date '$TARGET_MARKET_DATE' && node scripts/ops/sync-release-state-from-final-seal.mjs"
       ;;
     build_deploy_bundle)
       printf '%s\n' "node scripts/ops/build-deploy-bundle.mjs --strict"
@@ -799,7 +806,7 @@ run_step() {
   fi
 
   case "$step_id" in
-    build_global_scope|hist_probs|hist_probs_v2_shadow|snapshot|page_core_bundle|learning_daily|forecast_daily|build_fundamentals|quantlab_daily_report|breakout_v12|scientific_summary|v1_audit|cutover_readiness|etf_diagnostic|stage1_ops_pack|system_status_report|data_freshness_report|pipeline_epoch|generate_meta_dashboard_data|signal_performance_report|runtime_preflight|stock_analyzer_universe_audit|ui_field_truth_report|page_core_smoke|final_integrity_seal|build_deploy_bundle|wrangler_deploy)
+    build_global_scope|hist_probs|hist_probs_catchup|hist_probs_v2_shadow|snapshot|page_core_bundle|learning_daily|forecast_daily|build_fundamentals|quantlab_daily_report|breakout_v12|scientific_summary|v1_audit|cutover_readiness|etf_diagnostic|stage1_ops_pack|system_status_report|data_freshness_report|pipeline_epoch|generate_meta_dashboard_data|signal_performance_report|runtime_preflight|stock_analyzer_universe_audit|ui_field_truth_report|page_core_smoke|final_integrity_seal|build_deploy_bundle|wrangler_deploy)
       measure_args+=(--set-env "NODE_OPTIONS=--max-old-space-size=$heap_mb")
       ;;
   esac
@@ -823,7 +830,7 @@ run_step() {
   fi
 
   write_step_result "$result_json" "$measure_json" "$step_id" "$resource_class" "$heap_mb" ""
-  if [[ "$step_id" == "hist_probs" ]]; then
+  if [[ "$step_id" == "hist_probs" || "$step_id" == "hist_probs_catchup" ]]; then
     update_hist_probs_profile "$result_json"
   fi
 
@@ -839,7 +846,7 @@ run_step() {
 
 lane_steps() {
   if [[ "$ACTIVE_LANE" == "data-plane" ]]; then
-    printf '%s\n' \
+    local steps=(
       safe_code_sync \
       build_global_scope \
       market_data_refresh \
@@ -849,7 +856,12 @@ lane_steps() {
       breakout_v12 \
       scientific_summary \
       forecast_daily \
-      hist_probs \
+      hist_probs
+    )
+    if [[ "${RV_INCLUDE_HIST_PROBS_CATCHUP:-0}" == "1" ]]; then
+      steps+=(hist_probs_catchup)
+    fi
+    steps+=( \
       hist_probs_v2_shadow \
       snapshot \
       page_core_bundle \
@@ -863,6 +875,8 @@ lane_steps() {
       pipeline_epoch \
       generate_meta_dashboard_data \
       signal_performance_report
+    )
+    printf '%s\n' "${steps[@]}"
   else
     printf '%s\n' \
       stock_analyzer_universe_audit \

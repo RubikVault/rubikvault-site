@@ -1,7 +1,7 @@
-export const WEB_UNIVERSE_ALLOWED_CLASSES = ['STOCK', 'ETF', 'BOND'];
-export const WEB_UNIVERSE_ALLOWED_FILTERS = ['all', 'stock', 'etf', 'bond'];
-export const WEB_UNIVERSE_REMOVED_CLASSES = ['FUND', 'CRYPTO', 'FOREX', 'INDEX', 'OTHER'];
-export const WEB_UNIVERSE_REMOVED_FILTERS = ['fund', 'crypto', 'forex', 'index', 'other'];
+export const WEB_UNIVERSE_ALLOWED_CLASSES = ['STOCK', 'ETF', 'INDEX'];
+export const WEB_UNIVERSE_ALLOWED_FILTERS = ['all', 'stock', 'etf', 'index'];
+export const WEB_UNIVERSE_REMOVED_CLASSES = ['FUND', 'CRYPTO', 'FOREX', 'BOND', 'OTHER'];
+export const WEB_UNIVERSE_REMOVED_FILTERS = ['fund', 'crypto', 'forex', 'bond', 'other'];
 
 export const CONTEXT_BOND_SYMBOLS = Object.freeze([
   'US2Y',
@@ -97,7 +97,7 @@ export function getUniverseAssetClassOptions() {
     { value: 'all', label: 'All Assets' },
     { value: 'stock', label: 'Stocks' },
     { value: 'etf', label: 'ETFs' },
-    { value: 'bond', label: 'Bonds' },
+    { value: 'index', label: 'Indices' },
   ];
 }
 
@@ -117,7 +117,7 @@ export function isAllowedWebUniverseRecord(record = {}) {
   const typeNorm = normalizeUniverseTypeNorm(record?.type_norm || record?.type || record?.class);
   if (typeNorm === 'STOCK') return true;
   if (typeNorm === 'ETF') return true;
-  if (typeNorm === 'BOND') return isWhitelistedContextBond(record);
+  if (typeNorm === 'INDEX') return true;
   return false;
 }
 
@@ -142,7 +142,7 @@ function structureScore(record = {}) {
 
   if (typeNorm === 'STOCK') score += 40;
   else if (typeNorm === 'ETF') score += 20;
-  else if (typeNorm === 'BOND') score += 10;
+  else if (typeNorm === 'INDEX') score += 10;
 
   if (!/\b(ADR|ADS|GDR|CDR|DRC|DEPOSITARY|RECEIPT|RECEIPTS)\b/.test(name)) score += 8;
   if (!/\b(TRACKER|ETP|ETN|TOKENIZED|XSTOCK)\b/.test(name)) score += 6;

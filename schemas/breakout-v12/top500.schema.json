@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["schema_version", "as_of", "score_version", "count", "items"],
+  "properties": {
+    "schema_version": { "const": "breakout_top_scores_v1" },
+    "as_of": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$" },
+    "generated_at": { "type": "string" },
+    "score_version": { "type": "string", "minLength": 1 },
+    "count": { "type": "integer", "minimum": 0 },
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["event_id", "asset_id", "as_of", "score_version", "scores", "ui"],
+        "properties": {
+          "event_id": { "type": "string", "minLength": 1 },
+          "asset_id": { "type": "string", "minLength": 1 },
+          "as_of": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$" },
+          "score_version": { "type": "string", "minLength": 1 },
+          "scores": {
+            "type": "object",
+            "required": ["final_signal_score"],
+            "properties": {
+              "final_signal_score": { "type": "number", "minimum": 0, "maximum": 1 }
+            },
+            "additionalProperties": true
+          },
+          "ui": {
+            "type": "object",
+            "required": ["rank"],
+            "properties": {
+              "rank": { "type": "integer", "minimum": 1 }
+            },
+            "additionalProperties": true
+          }
+        },
+        "additionalProperties": true
+      }
+    }
+  },
+  "additionalProperties": true
+}

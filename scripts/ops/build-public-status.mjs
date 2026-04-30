@@ -14,6 +14,7 @@ const REPO_ROOT = path.resolve(fileURLToPath(new URL('.', import.meta.url)), '..
 const FINAL_SEAL_PATH = path.join(REPO_ROOT, 'public/data/ops/final-integrity-seal-latest.json');
 const RELEASE_STATE_PATH = path.join(REPO_ROOT, 'public/data/ops/release-state-latest.json');
 const PAGE_CORE_LATEST_PATH = path.join(REPO_ROOT, 'public/data/page-core/latest.json');
+const STOCK_UI_STATE_PATH = path.join(REPO_ROOT, 'public/data/runtime/stock-analyzer-ui-state-summary-latest.json');
 const HIST_PROBS_STATUS_PATHS = [
   path.join(REPO_ROOT, 'public/data/runtime/hist-probs-status-summary.json'),
   path.join(REPO_ROOT, 'public/data/hist-probs/status-summary.json'),
@@ -34,9 +35,13 @@ function writeJsonAtomic(filePath, doc) {
 const seal = readJson(FINAL_SEAL_PATH);
 const releaseState = readJson(RELEASE_STATE_PATH);
 const pageCoreLatest = readJson(PAGE_CORE_LATEST_PATH);
+const stockUiState = readJson(STOCK_UI_STATE_PATH);
 const histStatus = HIST_PROBS_STATUS_PATHS.map(readJson).find(Boolean) || null;
-const ready = seal?.release_ready === true || releaseState?.phase === 'RELEASE_READY';
-const targetDate = seal?.target_market_date || seal?.target_date || releaseState?.target_market_date || releaseState?.target_date || null;
+const releaseEvidenceTarget = seal?.target_market_date || seal?.target_date || releaseState?.target_market_date || releaseState?.target_date || null;
+const pageCoreTarget = pageCoreLatest?.target_market_date || null;
+const targetDate = pageCoreTarget || releaseEvidenceTarget;
+const releaseEvidenceFresh = Boolean(!pageCoreTarget || !releaseEvidenceTarget || pageCoreTarget === releaseEvidenceTarget);
+const ready = seal?.release_ready === true && releaseEvidenceFresh;
 const pageCoreManifestPath = pageCoreLatest?.snapshot_path
   ? path.join(REPO_ROOT, 'public', String(pageCoreLatest.snapshot_path).replace(/^\/+/, ''), 'manifest.json')
   : null;
@@ -64,7 +69,25 @@ const histStatusKnown = histProbsMode !== 'unknown' && catchupStatus !== 'unknow
 const histGreen = histStatusKnown
   && histCoverageRatio >= 0.90
   && !['failed', 'unknown'].includes(String(catchupStatus).toLowerCase());
-const uiGreen = Boolean(ready && pageCoreGreen && decisionPublicGreen && dataPlaneGreen && histGreen);
+const stockUiStateGreen = stockUiState?.release_eligible === true;
+const stockUiContractOk = Boolean(
+  stockUiState
+  && Number(stockUiState?.missing_scope_rows ?? 0) === 0
+  && Number(stockUiState?.counts?.contract_violation_total ?? 0) === 0
+);
+const coreReleaseReady = Boolean(
+  ready
+  && pageCoreGreen
+  && stockUiContractOk
+  && dataPlaneGreen
+  && seal?.core_release_ready !== false
+);
+const decisionReady = releaseEvidenceFresh && (seal?.decision_ready === true || decisionPublicGreen);
+const histReady = releaseEvidenceFresh && (seal?.hist_ready === true || histGreen);
+const breakoutReady = seal?.breakout_ready ?? null;
+const overallUiReady = seal?.overall_ui_ready === true
+  || Boolean(coreReleaseReady && stockUiStateGreen && decisionReady && histReady);
+const uiGreen = overallUiReady;
 
 const doc = {
   schema: 'rv_public_status_v1',
@@ -72,8 +95,21 @@ const doc = {
   status: uiGreen ? 'OK' : (ready ? 'DEGRADED' : 'LIMITED'),
   ui_green: uiGreen,
   release_ready: Boolean(ready),
+  core_release_ready: coreReleaseReady,
+  page_core_ready: Boolean(seal?.page_core_ready ?? pageCoreGreen),
+  search_ready: seal?.search_ready ?? null,
+  universe_ready: seal?.universe_ready ?? null,
+  decision_ready: decisionReady,
+  risk_ready: seal?.risk_ready ?? decisionReady,
+  hist_ready: histReady,
+  breakout_ready: breakoutReady,
+  overall_ui_ready: overallUiReady,
   target_market_date: targetDate,
+  release_evidence_target_market_date: releaseEvidenceTarget,
+  page_core_target_market_date: pageCoreTarget,
+  release_evidence_fresh: releaseEvidenceFresh,
   page_core_green: pageCoreGreen,
+  stock_analyzer_ui_state_green: stockUiStateGreen,
   decision_public_green: decisionPublicGreen,
   data_plane_green: dataPlaneGreen,
   hist_probs_green: histGreen,
@@ -86,8 +122,11 @@ const doc = {
   hist_probs_coverage_ratio: histCoverageRatio,
   signal_quality: seal?.signal_quality || (decisionPublicGreen ? 'degraded' : 'suppressed'),
   stock_analyzer: {
-    available: uiGreen,
+    available: coreReleaseReady,
     page_core_snapshot_id: pageCoreLatest?.snapshot_id || null,
+    ui_operational_ratio: stockUiState?.ui_operational_ratio ?? null,
+    ui_state_contract_violations: stockUiState?.counts?.contract_violation_total ?? null,
+    overall_ui_ready: overallUiReady,
   },
 };
 

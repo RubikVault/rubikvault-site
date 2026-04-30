@@ -33,7 +33,22 @@ const REQUIRED_FILES = [
 const PROVIDER_KEYS = ["schema_version", "policy", "providers"];
 const BUDGET_KEYS = ["schema_version", "currency", "hard_cap", "reserve", "stop_before_calls", "allocations", "max_planned_calls"];
 const ERROR_KEYS = ["schema_version", "taxonomy", "circuit_rules", "actions"];
-const RETENTION_KEYS = ["schema_version", "active_strategy", "strategy_a", "strategy_b", "hot_window_days", "mirrors_retention_days", "forecast_outcomes_retention_days", "forecast_forecasts_retention_days", "ops_ledger_retention_days", "cleanup_cadence", "safeguards"];
+const RETENTION_KEYS = [
+  "schema_version",
+  "active_strategy",
+  "strategy_a",
+  "strategy_b",
+  "hot_window_days",
+  "mirrors_retention_days",
+  "forecast_outcomes_retention_days",
+  "forecast_forecasts_retention_days",
+  "ops_ledger_retention_days",
+  "hist_probs_checkpoint_retention_days",
+  "pending_maturity_retention_days",
+  "dlq_retention_days",
+  "cleanup_cadence",
+  "safeguards",
+];
 
 function assert(condition, message, failures) {
   if (!condition) failures.push(message);

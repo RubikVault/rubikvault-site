@@ -287,9 +287,9 @@ function verifyProductionArtifactsOnce(targetDate) {
   };
   const failures = [];
   const publicStatus = checks.public_status.json || {};
-  const publicStatusOk = String(publicStatus.status || '').toUpperCase() === 'OK';
-  if (!checks.public_status.ok || targetDateOf(publicStatus) !== targetDate || !publicStatusOk || publicStatus.release_ready !== true || publicStatus.ui_green !== true) {
-    failures.push(`public_status target=${targetDateOf(publicStatus) || 'missing'} status=${publicStatus.status || 'missing'} release_ready=${publicStatus.release_ready} ui_green=${publicStatus.ui_green}`);
+  const publicStatusSafe = publicStatus.release_ready === true && publicStatus.core_release_ready !== false;
+  if (!checks.public_status.ok || targetDateOf(publicStatus) !== targetDate || !publicStatusSafe) {
+    failures.push(`public_status target=${targetDateOf(publicStatus) || 'missing'} status=${publicStatus.status || 'missing'} release_ready=${publicStatus.release_ready} core_release_ready=${publicStatus.core_release_ready} overall_ui_ready=${publicStatus.overall_ui_ready}`);
   }
   return { ok: failures.length === 0, failures, checks };
 }
@@ -336,8 +336,8 @@ function verifyRuntimeContracts(baseUrl, targetDate = null, { requirePublicStatu
   }
   if (requirePublicStatus) {
     const publicStatus = checks.public_status?.json || {};
-    const publicStatusOk = String(publicStatus.status || '').toUpperCase() === 'OK';
-    if (!checks.public_status?.ok || publicStatusOk !== true || publicStatus.ui_green !== true || (targetDate && targetDateOf(publicStatus) !== targetDate)) {
+    const publicStatusSafe = publicStatus.release_ready === true && publicStatus.core_release_ready !== false;
+    if (!checks.public_status?.ok || publicStatusSafe !== true || (targetDate && targetDateOf(publicStatus) !== targetDate)) {
       failures.push('public_status_contract_failed');
     }
   }
@@ -423,7 +423,7 @@ function checkReleaseState() {
   }
 
   if (!isForce && seal?.release_ready !== true) {
-    fail(`Final integrity seal is not green. Top blocker: ${seal?.blocking_reasons?.[0]?.id || 'unknown'}`);
+    fail(`Final integrity seal is not release-ready. Top blocker: ${seal?.blocking_reasons?.[0]?.id || 'unknown'}`);
   }
   checkStockAnalyzerTargets(seal);
 

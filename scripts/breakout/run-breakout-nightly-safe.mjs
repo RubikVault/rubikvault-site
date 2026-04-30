@@ -23,6 +23,7 @@ function parseArgs(argv) {
     runtimeStatusOut: process.env.RV_BREAKOUT_RUNTIME_STATUS_OUT || DEFAULT_RUNTIME_STATUS_PATH,
     lockPath: process.env.RV_BREAKOUT_V12_LOCK || DEFAULT_LOCK_PATH,
     pythonBin: process.env.RV_BREAKOUT_PYTHON_BIN || '',
+    publicRoot: process.env.RV_BREAKOUT_PUBLIC_ROOT || PUBLIC_BREAKOUT_ROOT,
     allowLegacyFullCompute: process.env.RV_BREAKOUT_V12_LEGACY_FULL_COMPUTE === '1',
   };
   for (const arg of argv) {
@@ -34,7 +35,9 @@ function parseArgs(argv) {
     else if (arg.startsWith('--runtime-status-out=')) args.runtimeStatusOut = arg.split('=')[1] || '';
     else if (arg.startsWith('--lock-path=')) args.lockPath = arg.split('=')[1] || '';
     else if (arg.startsWith('--python-bin=')) args.pythonBin = arg.split('=')[1] || '';
+    else if (arg.startsWith('--public-root=')) args.publicRoot = arg.split('=')[1] || args.publicRoot;
   }
+  args.publicRoot = path.resolve(args.publicRoot);
   return args;
 }
 
@@ -160,7 +163,7 @@ function candidatePythonBins(explicit) {
 }
 
 function resolvePython(explicit) {
-  const modules = ['polars', 'pyarrow'];
+  const modules = ['polars', 'pyarrow', 'duckdb'];
   const attempts = [];
   for (const candidate of candidatePythonBins(explicit)) {
     const check = moduleCheck(candidate, modules);
@@ -194,6 +197,30 @@ function basePayload(args, checks = {}) {
     },
     checks,
   };
+}
+
+function latestPublishedForAsOf(asOf, publicRoot) {
+  if (!asOf) return { ok: false, reason: 'as_of_missing' };
+  const manifestPath = path.join(publicRoot, 'manifests/latest.json');
+  try {
+    const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+    const top500 = manifest?.files?.top500 ? path.join(publicRoot, manifest.files.top500) : '';
+    const ok = manifest?.as_of === asOf
+      && manifest?.validation?.publishable === true
+      && Boolean(top500)
+      && fs.existsSync(top500);
+    return {
+      ok,
+      reason: ok ? 'already_promoted' : 'latest_not_matching',
+      manifest_path: manifestPath,
+      as_of: manifest?.as_of || null,
+      content_hash: manifest?.content_hash || null,
+      top500_exists: Boolean(top500 && fs.existsSync(top500)),
+      publishable: manifest?.validation?.publishable === true,
+    };
+  } catch (error) {
+    return { ok: false, reason: 'latest_missing_or_invalid', manifest_path: manifestPath, error: String(error?.message || error) };
+  }
 }
 
 function writeDegraded(args, reason, checks = {}, extra = {}) {
@@ -232,7 +259,7 @@ function runIncrementalCatchup(args, pythonBin) {
   if (process.env.RV_BREAKOUT_DAILY_DELTA_ROOT) childArgs.push(`--daily-delta-root=${process.env.RV_BREAKOUT_DAILY_DELTA_ROOT}`);
   if (process.env.RV_BREAKOUT_Q1_DELTA_MANIFEST) childArgs.push(`--delta-manifest=${process.env.RV_BREAKOUT_Q1_DELTA_MANIFEST}`);
   if (process.env.RV_BREAKOUT_LAST_GOOD_ROOT) childArgs.push(`--last-good-root=${process.env.RV_BREAKOUT_LAST_GOOD_ROOT}`);
-  if (process.env.RV_BREAKOUT_PUBLIC_ROOT) childArgs.push(`--public-root=${process.env.RV_BREAKOUT_PUBLIC_ROOT}`);
+  childArgs.push(`--public-root=${args.publicRoot}`);
   if (process.env.RV_BREAKOUT_BUCKET_COUNT) childArgs.push(`--bucket-count=${process.env.RV_BREAKOUT_BUCKET_COUNT}`);
   if (process.env.RV_BREAKOUT_TAIL_BARS) childArgs.push(`--tail-bars=${process.env.RV_BREAKOUT_TAIL_BARS}`);
   childArgs.push(`--python-bin=${pythonBin}`);
@@ -275,6 +302,18 @@ function main() {
     const memory = { ok: availableMb >= minFreeMb, available_mb: availableMb, min_free_mb: minFreeMb };
     if (!memory.ok) {
       writeDegraded(args, 'memory_guard', { lock, dependency, memory });
+      return 0;
+    }
+
+    const latest = latestPublishedForAsOf(args.asOf, args.publicRoot);
+    if (latest.ok) {
+      writeStatuses(args, {
+        ...basePayload(args, { lock, dependency, memory, latest }),
+        status: 'ok',
+        reason: 'already_promoted',
+        latest_unchanged: true,
+      });
+      console.log('BREAKOUT_V12_SAFE_OK reason=already_promoted latest_unchanged=true');
       return 0;
     }
 

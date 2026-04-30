@@ -10,6 +10,10 @@ import {
   readJson,
   resolveReleaseTargetMarketDate,
 } from './pipeline-artifact-contract.mjs';
+import {
+  pageCoreClaimsOperational,
+  pageCoreStrictOperationalReasons,
+} from '../../functions/api/_shared/page-core-reader.js';
 import { classifyRuntimeFailure } from './runtime-preflight.mjs';
 import {
   PAGE_CORE_SCHEMA,
@@ -38,7 +42,7 @@ const DEFAULT_CANARIES = [
   { ticker: 'AAPL', asset_class: 'STOCK' },
   { ticker: 'SPY', asset_class: 'ETF' },
 ];
-const PAGE_CORE_CANARIES = ['T', 'AAPL', 'MSFT', 'F', 'V', 'TSLA', 'SPY', 'QQQ', 'BRK-B', 'BRK.B', 'BF-B', 'BF.B'];
+const PAGE_CORE_CANARIES = ['Z', 'C', 'AAPL', 'MSFT', 'T', 'F', 'V', 'TSLA', 'SPY', 'QQQ', 'BRK-B', 'BRK.B', 'BF-B', 'BF.B'];
 const PAGE_CORE_RANDOM_SAMPLE_SIZE = Math.max(0, Number(process.env.RV_PAGE_CORE_RANDOM_SAMPLE_SIZE || 200));
 const PAGE_CORE_RANDOM_MIN_OK_RATE = Number(process.env.RV_PAGE_CORE_RANDOM_MIN_OK_RATE || 0.995);
 const PAGE_CORE_SCHEMA_MIN_VALID_RATE = Number(process.env.RV_PAGE_CORE_SCHEMA_MIN_VALID_RATE || 0.999);
@@ -134,21 +138,10 @@ function payloadHasPageCoreData(payload) {
   );
 }
 
-function pageCoreOperationalReasons(row) {
-  const reasons = [];
-  const verdict = String(row?.summary_min?.decision_verdict || '').toUpperCase();
-  const qualityStatus = String(row?.summary_min?.quality_status || '').toUpperCase();
-  const freshness = String(row?.freshness?.status || '').toLowerCase();
-  const blockers = Array.isArray(row?.governance_summary?.blocking_reasons)
-    ? row.governance_summary.blocking_reasons
-    : [];
-  if (row?.coverage?.ui_renderable !== true) reasons.push('ui_not_renderable');
-  if (Number(row?.coverage?.bars || 0) < 250) reasons.push('insufficient_history');
-  if (freshness === 'expired' || freshness === 'missing') reasons.push(`freshness_${freshness}`);
-  if (!['BUY', 'WAIT'].includes(verdict)) reasons.push('decision_not_buy_or_wait');
-  if (qualityStatus && !['OK', 'FRESH', 'CURRENT', 'DEGRADED', 'PARTIAL'].includes(qualityStatus)) reasons.push(`quality_${qualityStatus.toLowerCase()}`);
-  if (blockers.length) reasons.push('governance_blocked');
-  return reasons;
+function pageCoreContractViolations(row, latest = null) {
+  if (!pageCoreClaimsOperational(row)) return [];
+  return pageCoreStrictOperationalReasons(row, { latest })
+    .filter((reason) => reason !== 'ui_banner_not_operational');
 }
 
 function readPageCoreAssetJson(publicPath) {
@@ -453,8 +446,8 @@ async function checkPageCoreSmokes(baseUrl, timeoutMs, options = {}) {
       : await fetchJson(baseUrl, endpointPath, timeoutMs);
     const latencyMs = Date.now() - started;
     const payload = response.payload;
-    const operationalReasons = pageCoreOperationalReasons(payload?.data || null);
-    const ok = response.http_ok && payloadHasPageCoreData(payload) && operationalReasons.length === 0;
+    const contractViolations = pageCoreContractViolations(payload?.data || null, latest);
+    const ok = response.http_ok && payloadHasPageCoreData(payload) && contractViolations.length === 0;
     samples.push({
       sample_type: 'protected',
       ticker,
@@ -463,8 +456,8 @@ async function checkPageCoreSmokes(baseUrl, timeoutMs, options = {}) {
       latency_ms: latencyMs,
       canonical_asset_id: payload?.data?.canonical_asset_id || payload?.meta?.canonical_asset_id || null,
       freshness_status: payload?.meta?.status || payload?.data?.freshness?.status || null,
-      ui_operational_reasons: operationalReasons,
-      error: ok ? null : (response.error || payload?.error?.message || payload?.error?.code || operationalReasons[0] || 'page_core_contract_failed'),
+      ui_contract_violations: contractViolations,
+      error: ok ? null : (response.error || payload?.error?.message || payload?.error?.code || contractViolations[0] || 'page_core_contract_failed'),
     });
   }
   let rowCount = null;
@@ -482,7 +475,7 @@ async function checkPageCoreSmokes(baseUrl, timeoutMs, options = {}) {
       const response = readPageCoreSmokeLocal(latest, requestTicker);
       const latencyMs = Date.now() - started;
       const payload = response.payload;
-      const operationalReasons = pageCoreOperationalReasons(payload?.data || null);
+      const contractViolations = pageCoreContractViolations(payload?.data || null, latest);
       const schemaOk = response.http_ok
         && payloadHasPageCoreData(payload)
         && payload?.data?.coverage?.ui_renderable === true
@@ -490,7 +483,8 @@ async function checkPageCoreSmokes(baseUrl, timeoutMs, options = {}) {
       const ok = response.http_ok
         && payloadHasPageCoreData(payload)
         && payload?.data?.coverage?.ui_renderable === true
-        && normalizePageCoreAlias(payload?.data?.canonical_asset_id) === row.canonical_asset_id;
+        && normalizePageCoreAlias(payload?.data?.canonical_asset_id) === row.canonical_asset_id
+        && contractViolations.length === 0;
       const sample = {
         sample_type: 'random',
         ticker: row.ticker,
@@ -501,8 +495,8 @@ async function checkPageCoreSmokes(baseUrl, timeoutMs, options = {}) {
         latency_ms: latencyMs,
         canonical_asset_id: payload?.data?.canonical_asset_id || payload?.meta?.canonical_asset_id || row.canonical_asset_id,
         freshness_status: payload?.meta?.status || payload?.data?.freshness?.status || null,
-        ui_operational_reasons: operationalReasons,
-        error: ok ? null : (response.error || payload?.error?.message || payload?.error?.code || 'page_core_random_contract_failed'),
+        ui_contract_violations: contractViolations,
+        error: ok ? null : (response.error || payload?.error?.message || payload?.error?.code || contractViolations[0] || 'page_core_random_contract_failed'),
       };
       samples.push(sample);
     }

@@ -24,6 +24,7 @@ const PATHS = {
   quantlabOperational: path.join(ROOT, 'public/data/quantlab/status/operational-status.json'),
   histProbsSummary: path.join(ROOT, 'public/data/hist-probs/run-summary.json'),
   histProbsRegime: path.join(ROOT, 'public/data/hist-probs/regime-daily.json'),
+  histProbsDeferred: path.join(ROOT, 'public/data/hist-probs/deferred-latest.json'),
   histProbsDir: path.join(ROOT, 'public/data/hist-probs'),
   histProbsNoData: path.join(ROOT, 'public/data/hist-probs/no-data-tickers.json'),
   forecast: path.join(ROOT, 'public/data/forecast/latest.json'),
@@ -299,6 +300,7 @@ function main() {
   const quantlabOperational = readJson(PATHS.quantlabOperational);
   const histSummary = readJson(PATHS.histProbsSummary);
   const histRegime = readJson(PATHS.histProbsRegime);
+  const histDeferred = readJson(PATHS.histProbsDeferred);
   const histNoDataDoc = readJson(PATHS.histProbsNoData);
   const forecast = readJson(PATHS.forecast);
   const scientific = readJson(PATHS.scientific);
@@ -355,7 +357,19 @@ function main() {
   const histMinCoverageRatio = Math.max(0, Math.min(1, Number(histSummary?.min_coverage_ratio || 0.95)));
   const histRunCoverageOk = histSummaryCoverageRatio >= histMinCoverageRatio;
   const histAssetClasses = Array.isArray(histSummary?.asset_classes) ? histSummary.asset_classes : [];
+  const histRegimeDate = normalizeDateId(histSummary?.regime_date || histRegime?.date || null);
+  const expectedHistDate = normalizeDateId(expectedEod);
+  const histRegimeFresh = expectedHistDate ? Boolean(histRegimeDate && histRegimeDate >= expectedHistDate) : Boolean(histRegimeDate);
+  const deferredTarget = normalizeDateId(histDeferred?.target_market_date || null);
+  const histDeferredActive = histDeferred?.schema === 'rv.hist_probs.deferred.v1'
+    && (!expectedHistDate || deferredTarget === expectedHistDate || deferredTarget >= expectedHistDate);
+  const histArtifactCoverageOk = histFreshRatio >= histMinCoverageRatio;
+  const histWriteModeOk = String(histSummary?.hist_probs_write_mode || '').toLowerCase() === 'bucket_only';
   const histCoverageOk = histRunCoverageOk
+    && histArtifactCoverageOk
+    && histRegimeFresh
+    && !histDeferredActive
+    && histWriteModeOk
     && Number(histSummary?.worker_hard_failures || 0) === 0
     && ['STOCK', 'ETF', 'INDEX'].every((cls) => histAssetClasses.includes(cls));
   const auditFamilies = Array.isArray(audit?.failure_families) ? audit.failure_families : [];
@@ -424,14 +438,24 @@ function main() {
       coverage_ratio: histSummaryCoverageRatio,
       run_coverage_ratio: histSummaryCoverageRatio,
       artifact_coverage_ratio: histFreshRatio,
+      artifact_freshness_ratio: histFreshRatio,
       min_coverage_ratio: histMinCoverageRatio,
       run_coverage_ok: histRunCoverageOk,
+      artifact_coverage_ok: histArtifactCoverageOk,
+      regime_fresh: histRegimeFresh,
+      hist_probs_write_mode: histSummary?.hist_probs_write_mode || null,
+      write_mode_ok: histWriteModeOk,
+      deferred: histDeferredActive,
+      deferred_target_market_date: deferredTarget,
+      deferred_reason: histDeferredActive ? histDeferred?.reason || null : null,
+      deferred_remaining_tickers: histDeferredActive ? Number(histDeferred?.remaining_tickers || 0) : 0,
+      last_good_regime_date: histDeferredActive ? histDeferred?.last_good_regime_date || null : null,
       worker_hard_failures: Number(histSummary?.worker_hard_failures || 0),
       asset_classes: histAssetClasses,
       residual_fresh_count: histAnalysis.fresh_count,
       residual_stale_count: histAnalysis.stale_count,
       residual_missing_count: histAnalysis.missing_count,
-      residual_counts_blocking: false,
+      residual_counts_blocking: !histArtifactCoverageOk || histDeferredActive || !histRegimeFresh,
     }),
     buildFamily({
       family_id: 'forecast',
@@ -475,7 +499,7 @@ function main() {
       healthy: audit?.summary?.full_universe === true && audit?.summary?.release_eligible === true,
       verification_mode: 'allowlist_universe_audit',
       fix_commands: [
-        'RV_GLOBAL_ASSET_CLASSES="${RV_GLOBAL_ASSET_CLASSES:-STOCK,ETF}"; node scripts/universe-v7/build-global-scope.mjs --asset-classes "$RV_GLOBAL_ASSET_CLASSES" && node scripts/ops/build-history-pack-manifest.mjs --scope global --asset-classes "$RV_GLOBAL_ASSET_CLASSES" && node scripts/ops/build-stock-analyzer-universe-audit.mjs --registry-path public/data/universe/v7/registry/registry.ndjson.gz --allowlist-path public/data/universe/v7/ssot/assets.global.canonical.ids.json --asset-classes "$RV_GLOBAL_ASSET_CLASSES" --max-tickers 0 --live-sample-size 0 --concurrency 12 --timeout-ms 30000',
+        'RV_GLOBAL_ASSET_CLASSES="${RV_GLOBAL_ASSET_CLASSES:-STOCK,ETF,INDEX}"; node scripts/universe-v7/build-global-scope.mjs --asset-classes "$RV_GLOBAL_ASSET_CLASSES" && node scripts/ops/build-history-pack-manifest.mjs --scope global --asset-classes "$RV_GLOBAL_ASSET_CLASSES" && node scripts/ops/build-stock-analyzer-universe-audit.mjs --registry-path public/data/universe/v7/registry/registry.ndjson.gz --allowlist-path public/data/universe/v7/ssot/assets.global.canonical.ids.json --asset-classes "$RV_GLOBAL_ASSET_CLASSES" --max-tickers 0 --live-sample-size 0 --concurrency 12 --timeout-ms 30000',
       ],
     }),
     buildFamily({

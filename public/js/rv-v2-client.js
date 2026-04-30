@@ -118,27 +118,77 @@ function moduleMissingKeys({ summary, historical, governance, fundamentals, hist
   ].filter(Boolean);
 }
 
+function isoDate(value) {
+  if (typeof value !== 'string' || value.length < 10) return null;
+  const iso = value.slice(0, 10);
+  return /^\d{4}-\d{2}-\d{2}$/.test(iso) ? iso : null;
+}
+
+function strictPageCoreReasons(pageCore) {
+  const reasons = [];
+  const add = (reason) => {
+    if (reason && !reasons.includes(reason)) reasons.push(reason);
+  };
+  const marketStatsMin = pageCore?.market_stats_min && typeof pageCore.market_stats_min === 'object'
+    ? pageCore.market_stats_min
+    : null;
+  const stats = marketStatsMin?.stats && typeof marketStatsMin.stats === 'object' ? marketStatsMin.stats : null;
+  const latestBarDate = isoDate(marketStatsMin?.latest_bar_date || pageCore?.latest_bar_date || pageCore?.freshness?.as_of);
+  const priceDate = isoDate(marketStatsMin?.price_date || latestBarDate);
+  const statsDate = isoDate(marketStatsMin?.as_of || marketStatsMin?.stats_date || pageCore?.stats_date);
+  const targetDate = isoDate(pageCore?.target_market_date);
+  const freshness = String(pageCore?.freshness?.status || '').toLowerCase();
+  if (pageCore?.ui_banner_state !== 'all_systems_operational'
+    && String(pageCore?.status_contract?.stock_detail_view_status || '').toLowerCase() !== 'operational') {
+    add('ui_banner_not_operational');
+  }
+  if (!marketStatsMin) add('missing_market_stats_basis');
+  else {
+    if (!stats || Object.keys(stats).length === 0) add('missing_market_stats_values');
+    if (!marketStatsMin.price_source) add('missing_price_source');
+    if (!marketStatsMin.stats_source) add('missing_stats_source');
+    if (!latestBarDate) add('missing_latest_bar_date');
+    if (!priceDate) add('missing_price_date');
+    if (!statsDate) add('missing_stats_date');
+    if (priceDate && latestBarDate && priceDate !== latestBarDate) add('price_latest_bar_date_mismatch');
+    if (statsDate && latestBarDate && statsDate !== latestBarDate) add('stats_latest_bar_date_mismatch');
+    if (Array.isArray(marketStatsMin.issues) && marketStatsMin.issues.length) add(`market_stats_issue:${marketStatsMin.issues[0]}`);
+  }
+  if (pageCore?.key_levels_ready !== true || marketStatsMin?.key_levels_ready === false) add('key_levels_not_ready');
+  if (targetDate && (!latestBarDate || latestBarDate < targetDate)) add('bars_stale');
+  if (['stale', 'expired', 'missing', 'last_good', 'error'].includes(freshness)) add(`freshness_${freshness}`);
+  if (pageCore?.primary_blocker) add(`primary_blocker:${pageCore.primary_blocker}`);
+  return reasons;
+}
+
 function pageCoreToSummary(pageCore) {
   const ticker = pageCore?.display_ticker || pageCore?.canonical_asset_id?.split(':')?.pop() || null;
   const asOf = pageCore?.freshness?.as_of || pageCore?.freshness?.generated_at?.slice?.(0, 10) || null;
   const close = Number.isFinite(Number(pageCore?.summary_min?.last_close)) ? Number(pageCore.summary_min.last_close) : null;
-  const uiRenderable = pageCore?.coverage?.ui_renderable === true;
-  const qualityStatus = String(pageCore?.summary_min?.quality_status || '').toUpperCase();
-  const pipelineStatus = ['OK', 'FRESH', 'CURRENT'].includes(qualityStatus)
-    ? 'OK'
-    : (uiRenderable ? 'OK' : 'DEGRADED');
+  const marketStatsMin = pageCore?.market_stats_min && typeof pageCore.market_stats_min === 'object' ? pageCore.market_stats_min : null;
+  const marketStats = marketStatsMin?.stats && typeof marketStatsMin.stats === 'object'
+    ? {
+      stats: marketStatsMin.stats,
+      as_of: marketStatsMin.as_of || asOf,
+      source_provider: marketStatsMin.stats_source || 'page-core',
+    }
+    : { stats: {}, as_of: asOf, source_provider: 'missing' };
+  const strictReasons = strictPageCoreReasons(pageCore);
+  const pageCoreOperational = strictReasons.length === 0;
+  const pipelineStatus = pageCoreOperational ? 'OK' : 'DEGRADED';
   const decisionVerdict = String(pageCore?.summary_min?.decision_verdict || '').toUpperCase();
   const verdict = ['BUY', 'WAIT', 'SELL', 'AVOID'].includes(decisionVerdict)
     ? decisionVerdict
-    : (uiRenderable ? 'WAIT' : 'WAIT_PIPELINE_INCOMPLETE');
+    : (pageCoreOperational ? 'WAIT' : 'WAIT_PIPELINE_INCOMPLETE');
   const rawRiskLevel = String(pageCore?.summary_min?.risk_level || pageCore?.governance_summary?.risk_level || '').toUpperCase();
-  const riskLevel = rawRiskLevel && rawRiskLevel !== 'UNKNOWN'
-    ? rawRiskLevel
-    : (uiRenderable ? 'DEGRADED' : 'UNKNOWN');
+  const riskLevel = rawRiskLevel || 'UNKNOWN';
   const blockingReasons = Array.isArray(pageCore?.governance_summary?.blocking_reasons)
     ? pageCore.governance_summary.blocking_reasons
     : [];
-  const signalQuality = pipelineStatus === 'OK' ? 'degraded' : 'suppressed';
+  const effectiveBlockingReasons = pageCoreOperational
+    ? []
+    : [...strictReasons, pageCore?.primary_blocker, ...blockingReasons].filter(Boolean);
+  const signalQuality = pageCoreOperational ? 'fresh' : 'suppressed';
   const latestBar = asOf && close != null ? {
     date: asOf,
     open: close,
@@ -152,7 +202,7 @@ function pageCoreToSummary(pageCore) {
     source: 'page-core',
     pipeline_status: pipelineStatus,
     verdict,
-    blocking_reasons: pipelineStatus === 'OK' ? [] : blockingReasons,
+    blocking_reasons: effectiveBlockingReasons,
     risk_assessment: { level: riskLevel },
     signal_quality: signalQuality,
   };
@@ -163,11 +213,11 @@ function pageCoreToSummary(pageCore) {
     latest_bar: latestBar,
     market_prices: {
       ticker,
-      date: asOf,
+      date: marketStatsMin?.price_date || asOf,
       close,
-      source_provider: 'page-core',
+      source_provider: marketStatsMin?.price_source || 'page-core',
     },
-    market_stats: { stats: {}, as_of: asOf, source_provider: 'page-core' },
+    market_stats: marketStats,
     change: {
       abs: pageCore?.summary_min?.daily_change_abs ?? null,
       pct: pageCore?.summary_min?.daily_change_pct ?? null,
@@ -180,12 +230,12 @@ function pageCoreToSummary(pageCore) {
     },
     daily_decision: dailyDecision,
     analysis_readiness: {
-      status: pipelineStatus === 'OK' ? 'DEGRADED' : 'FAILED',
+      status: pageCoreOperational ? 'READY' : 'FAILED',
       source: 'page-core',
-      decision_bundle_status: pipelineStatus === 'OK' ? 'DEGRADED' : 'FAILED',
-      decision_public_green: pipelineStatus === 'OK',
+      decision_bundle_status: pageCoreOperational ? 'OK' : 'FAILED',
+      decision_public_green: pageCoreOperational,
       signal_quality: signalQuality,
-      blocking_reasons: pipelineStatus === 'OK' ? [] : blockingReasons,
+      blocking_reasons: effectiveBlockingReasons,
       warnings: pageCore?.governance_summary?.warnings || [],
     },
     module_freshness: {
@@ -680,7 +730,9 @@ export function transformV2ToStockShape(v2Data, v2Meta, historicalData = null, g
         market_context: {
           issues: canonicalMarket.consistency?.issues || [],
           use_historical_basis: Boolean(canonicalMarket.usedHistoricalBasis),
-          key_levels_ready: canonicalMarket.consistency?.keyLevelsReady !== false,
+          key_levels_ready: canonicalMarket.consistency?.keyLevelsReady === true
+            && Boolean(canonicalMarket.marketPrices)
+            && Boolean(canonicalMarket.marketStats),
           prices_source: canonicalMarket.sources?.prices || null,
           stats_source: canonicalMarket.sources?.stats || null,
           price_date: marketPrices?.date || null,

@@ -64,14 +64,16 @@ export const SYSTEM_STATUS_STEP_CONTRACTS = {
     lessons_learned: 'latestCanonicalRequiredDataDate lags latestAnyRequiredDataDate by the ML label window — structural, not a bug. Only excess lag beyond the window is a violation. Report freshness reflects publish asof, not raw-bar asof. latestCanonicalRequiredDataDate was 33 days stale (2026-03-11) due to missing auto-update — monitor this field.',
   },
   hist_probs: {
-    run_command: 'RV_GLOBAL_ASSET_CLASSES="${RV_GLOBAL_ASSET_CLASSES:-STOCK,ETF,INDEX}"; NODE_OPTIONS=--max-old-space-size=6144 node run-hist-probs-turbo.mjs --asset-classes "$RV_GLOBAL_ASSET_CLASSES"',
+    run_command: 'RV_GLOBAL_ASSET_CLASSES="${RV_GLOBAL_ASSET_CLASSES:-STOCK,ETF,INDEX}"; HIST_PROBS_WRITE_MODE="${HIST_PROBS_WRITE_MODE:-bucket_only}" HIST_PROBS_MIN_COVERAGE_RATIO="${HIST_PROBS_MIN_COVERAGE_RATIO:-0.95}" HIST_PROBS_DEFER_IF_REMAINING_OVER="${HIST_PROBS_DEFER_IF_REMAINING_OVER:-10000}" NODE_OPTIONS=--max-old-space-size=6144 node run-hist-probs-turbo.mjs --asset-classes "$RV_GLOBAL_ASSET_CLASSES"',
     verify_commands: [
       "jq '{ran_at,tickers_total,tickers_processed,tickers_skipped,tickers_errors,tickers_covered,tickers_remaining,regime_date,source_mode,asset_classes,max_tickers}' public/data/hist-probs/run-summary.json",
       "jq '{date,market_regime,volatility_regime,breadth_regime}' public/data/hist-probs/regime-daily.json",
+      "jq '{target_market_date,remaining_tickers,threshold,last_good_regime_date}' public/data/hist-probs/deferred-latest.json 2>/dev/null || true",
     ],
     outputs: [
       'public/data/hist-probs/run-summary.json',
       'public/data/hist-probs/regime-daily.json',
+      'public/data/hist-probs/deferred-latest.json',
       'public/data/hist-probs/<TICKER>.json',
     ],
     ui_surfaces: [
@@ -81,10 +83,36 @@ export const SYSTEM_STATUS_STEP_CONTRACTS = {
     ],
     failure_signals: [
       'regime_date stale',
+      'deferred-latest.json target_market_date matches current target',
+      'artifact_freshness_ratio below 0.95',
       'run-summary processed count below universe target',
       'active RV_GLOBAL_ASSET_CLASSES not included in run-summary asset_classes',
     ],
     lessons_learned: '45–90 min for historical full universe under normal daily deltas; post-backfill runs can be much longer. Always pass the shared RV_GLOBAL_ASSET_CLASSES value into hist-probs; ETF/INDEX omissions are silent coverage gaps. INACTIVE_TOLERANCE=20 trading days (was 5, now fixed). Write-verification added after each file write. fresh_skipped checkpoint enables crash recovery and idempotency.',
+  },
+  hist_probs_v2_shadow: {
+    run_command: 'node scripts/hist-probs-v2/run-daily-shadow-step.mjs --date=<YYYY-MM-DD> --max-assets="${RV_HIST_PROBS_V2_MAX_ASSETS:-300}" --error-assets="${RV_HIST_PROBS_V2_ERROR_ASSETS:-200}" --timeout-ms="${RV_HIST_PROBS_V2_TIMEOUT_MS:-600000}"',
+    verify_commands: [
+      "jq '{generated_at,status,target_market_date,processed:.coverage.processed_assets,predictions:.coverage.predictions,timed_out:.performance.timed_out}' public/data/reports/hist-probs-v2-latest.json",
+      "jq '{status,errors,expected_min_assets}' public/data/reports/hist-probs-v2-validation-latest.json",
+    ],
+    outputs: [
+      'public/data/reports/hist-probs-v2-latest.json',
+      'public/data/reports/hist-probs-v2-validation-latest.json',
+      'mirrors/hist-probs-v2/runs/latest.json',
+    ],
+    ui_surfaces: [
+      'dashboard_v7 hist_probs v2 shadow detail',
+      'public/data/reports/hist-probs-comparison-latest.json',
+    ],
+    failure_signals: [
+      'target_market_date stale',
+      'processed_assets < 300',
+      'predictions = 0',
+      'timed_out = true',
+      'validation status != ok',
+    ],
+    lessons_learned: 'v2 is diagnostic only. It must never mutate BUY verdicts or replace v1 until 60 trading-days shadow plus A/B promotion gates pass. Failure is a warning detail, not release-blocking.',
   },
   forecast_daily: {
     run_command: 'node scripts/forecast/run_daily.mjs',
@@ -370,6 +398,7 @@ export const PIPELINE_STEP_ORDER = [
   'q1_delta_ingest',
   'quantlab_daily_report',
   'hist_probs',
+  'hist_probs_v2_shadow',
   'forecast_daily',
   'scientific_summary',
   'learning_daily',

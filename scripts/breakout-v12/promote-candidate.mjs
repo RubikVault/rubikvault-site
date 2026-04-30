@@ -58,12 +58,56 @@ function sha256File(filePath) {
   return crypto.createHash('sha256').update(fs.readFileSync(filePath)).digest('hex');
 }
 
+function normalizeForHash(value) {
+  if (Array.isArray(value)) return value.map(normalizeForHash);
+  if (value && typeof value === 'object') {
+    const out = {};
+    for (const key of Object.keys(value).sort()) {
+      if (['generated_at', 'updated_at', 'promoted_at', 'run_id'].includes(key)) continue;
+      out[key] = normalizeForHash(value[key]);
+    }
+    return out;
+  }
+  return value;
+}
+
 function stableStringify(value) {
   if (Array.isArray(value)) return `[${value.map(stableStringify).join(',')}]`;
   if (value && typeof value === 'object') {
     return `{${Object.keys(value).sort().map((key) => `${JSON.stringify(key)}:${stableStringify(value[key])}`).join(',')}}`;
   }
   return JSON.stringify(value);
+}
+
+function canonicalSha256File(filePath) {
+  if (filePath.endsWith('.json')) {
+    return crypto.createHash('sha256')
+      .update(stableStringify(normalizeForHash(readJson(filePath))))
+      .digest('hex');
+  }
+  return sha256File(filePath);
+}
+
+function requireFile(filePath, label) {
+  if (!fs.existsSync(filePath)) throw new Error(`${label} missing: ${filePath}`);
+}
+
+function buildRequiredPublicCheck(publicCandidate) {
+  const missing = [];
+  for (const rel of ['coverage.json', 'errors.json', 'health.json', 'top500.json']) {
+    if (!fs.existsSync(path.join(publicCandidate, rel))) missing.push(rel);
+  }
+  const shardFiles = collectFiles(path.join(publicCandidate, 'shards')).filter((file) => file.endsWith('.json'));
+  const missingShardSuccess = shardFiles
+    .filter((file) => !fs.existsSync(file.replace(/\.json$/, '._SUCCESS')))
+    .map((file) => path.relative(publicCandidate, file).split(path.sep).join('/'));
+  return {
+    required_files_present: missing.length === 0,
+    missing,
+    shard_count: shardFiles.length,
+    shards_complete: shardFiles.length > 0 && missingShardSuccess.length === 0,
+    missing_shard_success: missingShardSuccess,
+  };
 }
 
 function main() {
@@ -74,11 +118,16 @@ function main() {
   if (!validation.ok) throw new Error(`candidate validation failed: ${(validation.errors || []).join(',')}`);
   const publicCandidate = path.join(args.candidateRoot, 'public');
   if (!fs.existsSync(publicCandidate)) throw new Error(`public candidate missing: ${publicCandidate}`);
+  const required = buildRequiredPublicCheck(publicCandidate);
+  if (!required.required_files_present) throw new Error(`public required files missing: ${required.missing.join(',')}`);
+  if (!required.shards_complete) throw new Error(`public shard _SUCCESS missing: ${required.missing_shard_success.join(',') || 'no shards'}`);
+  requireFile(path.join(args.candidateRoot, 'coverage.json'), 'candidate coverage');
+  requireFile(path.join(args.candidateRoot, 'hashes.json'), 'candidate hashes');
   const publicFiles = collectFiles(publicCandidate);
   const hashMap = {};
   for (const file of publicFiles) {
     const rel = path.relative(publicCandidate, file).split(path.sep).join('/');
-    hashMap[rel] = sha256File(file);
+    hashMap[rel] = canonicalSha256File(file);
   }
   const contentHash = crypto.createHash('sha256').update(stableStringify(hashMap)).digest('hex').slice(0, 24);
   const runId = path.basename(args.candidateRoot);
@@ -96,6 +145,12 @@ function main() {
     top500: `runs/${args.asOf}/${contentHash}/top500.json`,
     shards: shardFiles.map((file) => `runs/${args.asOf}/${contentHash}/${path.relative(publicRunRoot, file).split(path.sep).join('/')}`),
   };
+  const shardsComplete = files.shards.length > 0 && files.shards.every((rel) => fs.existsSync(path.join(args.publicRoot, rel.replace(/\.json$/, '._SUCCESS'))));
+  const requiredPublicFilesPresent = ['coverage', 'errors', 'health', 'top500'].every((key) => fs.existsSync(path.join(args.publicRoot, files[key])));
+  const publishable = Boolean(validation.ok && shardsComplete && requiredPublicFilesPresent && Object.keys(hashMap).length > 0);
+  if (!publishable) {
+    throw new Error(`candidate not publishable: shards_complete=${shardsComplete} required_public_files_present=${requiredPublicFilesPresent}`);
+  }
   const manifest = {
     contract_version: 'breakout_manifest_v1',
     run_id: `breakout_${args.asOf}_${contentHash}`,
@@ -109,10 +164,10 @@ function main() {
     file_hashes: Object.fromEntries(Object.entries(hashMap).map(([rel, hash]) => [`runs/${args.asOf}/${contentHash}/${rel}`, hash])),
     validation: {
       schema_valid: true,
-      shards_complete: files.shards.every((rel) => fs.existsSync(path.join(args.publicRoot, rel.replace(/\.json$/, '._SUCCESS')))),
+      shards_complete: shardsComplete,
       coverage_valid: true,
       hashes_valid: true,
-      publishable: true,
+      publishable,
     },
     manifest_path: `runs/${args.asOf}/${contentHash}/manifest.json`,
   };

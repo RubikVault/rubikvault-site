@@ -2,7 +2,12 @@ name: Universe v7 Daily
 on:
   schedule:
     - cron: '0 6 * * *'  # 06:00 UTC daily
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      run_heavy:
+        description: 'Run NAS-sized v7 daily stack from GitHub. Default is guard-only.'
+        required: false
+        default: 'false'
 
 permissions:
   contents: write
@@ -35,6 +40,7 @@ jobs:
         run: node scripts/validators/mirror-envelope-validator.mjs
 
       - name: Run v7 Daily Stack
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.run_heavy == 'true' }}
         continue-on-error: true
         env:
           EODHD_API_KEY: ${{ secrets.EODHD_API_KEY }}
@@ -48,8 +54,12 @@ jobs:
         run: node scripts/universe-v7/run-daily-stack.mjs --buckets stocks,etfs,rest --max-runs-per-bucket 50 --max-no-progress-runs 3 --backfill-max 2000 --sleep-ms 2000 --min-bars 200 --feature marketphase --allow-next-bucket-on-incomplete
 
       - name: Run stock-analyzer publish chain
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.run_heavy == 'true' }}
         env:
           NODE_OPTIONS: --max-old-space-size=6144
+          RUN_ID: github-${{ github.run_id }}-${{ github.run_attempt }}
+          RV_RUN_ID: github-${{ github.run_id }}-${{ github.run_attempt }}
+          RV_PUBLISH_CHAIN_BUILD_DECISIONS: '0'
         run: node scripts/ops/run-stock-analyzer-publish-chain.mjs
 
       - name: Upload Reports
@@ -90,7 +100,11 @@ jobs:
             public/data/pipeline/epoch.json
           do
             if [ -f "$required_path" ]; then
-              git add "$required_path"
+              if git check-ignore -q "$required_path"; then
+                echo "Ignored runtime artifact, skipping add: $required_path"
+              else
+                git add "$required_path"
+              fi
             fi
           done
           for optional_path in \
@@ -99,7 +113,11 @@ jobs:
             public/data/runtime/stock-analyzer-control.json
           do
             if [ -f "$optional_path" ]; then
-              git add "$optional_path"
+              if git check-ignore -q "$optional_path"; then
+                echo "Ignored runtime artifact, skipping add: $optional_path"
+              else
+                git add "$optional_path"
+              fi
             else
               echo "Optional artifact missing, skipping add: $optional_path"
             fi

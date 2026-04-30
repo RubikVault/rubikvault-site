@@ -92,7 +92,7 @@ function stepEnv(context, overrides = {}) {
     RV_RUN_ID: context.runId,
     TARGET_MARKET_DATE: context.targetMarketDate,
     RV_TARGET_MARKET_DATE: context.targetMarketDate,
-    RV_GLOBAL_ASSET_CLASSES: process.env.RV_GLOBAL_ASSET_CLASSES || 'STOCK,ETF',
+    RV_GLOBAL_ASSET_CLASSES: process.env.RV_GLOBAL_ASSET_CLASSES || 'STOCK,ETF,INDEX',
     ...overrides,
   };
 }
@@ -219,13 +219,33 @@ function defineSteps(options, context) {
       outputs: ['public/data/ops/runtime-preflight-latest.json'],
     },
     {
+      id: 'search_exact_rebuild',
+      enabled: true,
+      command: node,
+      args: ['scripts/universe-v7/rebuild-search-exact-from-registry.mjs'],
+      env: stepEnv(context),
+      outputs: [
+        'public/data/universe/v7/search/search_exact_by_symbol.json.gz',
+      ],
+    },
+    {
+      id: 'index_memberships',
+      enabled: true,
+      command: node,
+      args: ['scripts/universe-v7/build-index-memberships.mjs'],
+      env: stepEnv(context),
+      outputs: [
+        'public/data/universe/v7/index-memberships/manifest.json',
+      ],
+    },
+    {
       id: 'stock_analyzer_universe_audit',
       enabled: !options.skipUniverseAudit,
       command: node,
       args: [
         'scripts/ops/build-stock-analyzer-universe-audit.mjs',
         '--registry-path', 'public/data/universe/v7/registry/registry.ndjson.gz',
-        '--asset-classes', process.env.RV_GLOBAL_ASSET_CLASSES || 'STOCK,ETF',
+        '--asset-classes', process.env.RV_GLOBAL_ASSET_CLASSES || 'STOCK,ETF,INDEX',
         '--max-tickers', '0',
         `--date=${context.targetMarketDate}`,
         '--run-id', context.runId,
@@ -305,7 +325,7 @@ function defineSteps(options, context) {
     },
     {
       id: 'decision_bundle',
-      enabled: true,
+      enabled: process.env.RV_PUBLISH_CHAIN_BUILD_DECISIONS !== '0',
       command: node,
       args: [
         'scripts/ops/build-full-universe-decisions.mjs',
@@ -316,6 +336,46 @@ function defineSteps(options, context) {
       outputs: [
         'public/data/decisions/latest.json',
         'public/data/ops/decision-bundle-latest.json',
+      ],
+    },
+    {
+      id: 'page_core_bundle',
+      enabled: true,
+      command: node,
+      args: [
+        'scripts/ops/build-page-core-bundle.mjs',
+        `--target-market-date=${context.targetMarketDate}`,
+        '--replace',
+      ],
+      env: stepEnv(context, {
+        NODE_OPTIONS: process.env.NODE_OPTIONS || `--max-old-space-size=${process.env.RV_PAGE_CORE_HEAP_MB || 8192}`,
+      }),
+      outputs: [
+        'public/data/page-core/candidates/latest.candidate.json',
+      ],
+    },
+    {
+      id: 'page_core_ui_state',
+      enabled: true,
+      command: node,
+      args: [
+        'scripts/ops/build-stock-analyzer-ui-state-summary.mjs',
+        '--latest',
+        'public/data/page-core/candidates/latest.candidate.json',
+      ],
+      env: stepEnv(context),
+      outputs: [
+        'public/data/runtime/stock-analyzer-ui-state-summary-latest.json',
+      ],
+    },
+    {
+      id: 'search_registry_sync',
+      enabled: true,
+      command: node,
+      args: ['scripts/universe-v7/verify-search-registry-sync.mjs'],
+      env: stepEnv(context),
+      outputs: [
+        'public/data/universe/v7/reports/search_registry_sync_report.json',
       ],
     },
     {

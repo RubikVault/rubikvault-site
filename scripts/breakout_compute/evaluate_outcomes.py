@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import sys
 from datetime import timedelta
@@ -27,6 +28,10 @@ def parse_args(argv: Iterable[str]) -> argparse.Namespace:
     return p.parse_args(list(argv))
 
 
+def stable_event_id(asset_id: str, signal_date: str, score_version: str) -> str:
+    return hashlib.sha256(f"{asset_id}|{signal_date}|{score_version}".encode("utf-8")).hexdigest()[:32]
+
+
 def _first_existing(cols: set[str], candidates: list[str]) -> str | None:
     for col in candidates:
         if col in cols:
@@ -39,6 +44,34 @@ def _expr(cols: set[str], candidates: list[str], alias: str, dtype: pl.DataType 
     if col:
         return pl.col(col).cast(dtype, strict=False).alias(alias)
     return pl.lit(None, dtype=dtype).alias(alias)
+
+
+def normalize_signals(signals: pl.DataFrame, signal_date: str) -> pl.DataFrame:
+    cols = set(signals.columns)
+    if "asset_id" not in cols:
+        raise SystemExit("FATAL: signals parquet missing asset_id")
+    exprs: list[pl.Expr] = []
+    if "event_id" not in cols:
+        if "event_hash" in cols:
+            exprs.append(pl.col("event_hash").cast(pl.Utf8).str.slice(0, 32).alias("event_id"))
+        else:
+            score_col = _first_existing(cols, ["score_version"])
+            score_version = str(signals[score_col][0]) if score_col and signals.height else "breakout_scoring_v12_incremental_v1"
+            exprs.append(
+                pl.col("asset_id")
+                .cast(pl.Utf8)
+                .map_elements(lambda asset_id: stable_event_id(str(asset_id), signal_date, score_version), return_dtype=pl.Utf8)
+                .alias("event_id")
+            )
+    if "close" not in cols:
+        close_col = _first_existing(cols, ["close_raw", "close"])
+        exprs.append((pl.col(close_col).cast(pl.Float64, strict=False) if close_col else pl.lit(None, dtype=pl.Float64)).alias("close"))
+    if "atr14" not in cols:
+        atr_col = _first_existing(cols, ["atr_14", "atr14"])
+        exprs.append((pl.col(atr_col).cast(pl.Float64, strict=False) if atr_col else pl.lit(None, dtype=pl.Float64)).alias("atr14"))
+    if exprs:
+        signals = signals.with_columns(exprs)
+    return signals
 
 
 def _bars_root(manifest: dict[str, Any], quant_root: Path) -> Path:
@@ -74,7 +107,7 @@ def main(argv: Iterable[str]) -> int:
     if not signals_path.exists():
         raise SystemExit(f"FATAL: signals parquet missing: {signals_path}")
 
-    signals = pl.read_parquet(signals_path)
+    signals = normalize_signals(pl.read_parquet(signals_path), signal_date)
     if signals.is_empty():
         print(json.dumps({"ok": True, "skipped": "empty_signals"}))
         return 0

@@ -863,7 +863,7 @@ async function runBackfill({
     };
   }
 
-  const defaultTypePriority = ['STOCK', 'ETF', 'FUND', 'INDEX', 'FOREX', 'CRYPTO', 'BOND', 'OTHER'];
+  const defaultTypePriority = ['STOCK', 'ETF', 'INDEX'];
   const configuredTypePriority = Array.isArray(backfillCfg?.type_priority) && backfillCfg.type_priority.length
     ? backfillCfg.type_priority.map((x) => String(x || '').trim().toUpperCase()).filter(Boolean)
     : defaultTypePriority;
@@ -881,7 +881,7 @@ async function runBackfill({
     )
     : Array.isArray(backfillCfg?.type_allowlist)
       ? new Set(backfillCfg.type_allowlist.map((x) => String(x).toUpperCase()))
-      : null;
+      : new Set(defaultTypePriority);
   const exchangeAllow = Array.isArray(backfillCfg?.exchange_allowlist)
     ? new Set(backfillCfg.exchange_allowlist.map((x) => String(x).toUpperCase()))
     : null;

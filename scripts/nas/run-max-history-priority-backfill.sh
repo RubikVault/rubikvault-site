@@ -172,13 +172,9 @@ ssot_path = root / "public/data/universe/v7/ssot/assets.global.canonical.ids.jso
 registry_path = root / "public/data/universe/v7/registry/registry.ndjson.gz"
 manifest_path = root / "public/data/eod/history/pack-manifest.global.json"
 index_files = [
-    root / "data/symbols/sp500.json",
     root / "public/data/universe/sp500.json",
-    root / "data/symbols/dow.json",
     root / "public/data/universe/dowjones.json",
-    root / "data/symbols/nasdaq.json",
     root / "public/data/universe/nasdaq100.json",
-    root / "data/symbols/russell.json",
     root / "public/data/universe/russell2000.json",
 ]
 tradable_types = {"STOCK", "ETF", "INDEX"}

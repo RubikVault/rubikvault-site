@@ -114,10 +114,11 @@ function summarizeSet({ setName, symbols, bySymbolExact, bySymbolRegistry }) {
 }
 
 async function main() {
-  const [sp500Doc, nasdaq100Doc, dowDoc, exactDoc, registryBySymbol] = await Promise.all([
+  const [sp500Doc, nasdaq100Doc, dowDoc, russellDoc, exactDoc, registryBySymbol] = await Promise.all([
     readJson(path.join(REPO_ROOT, 'public/data/universe/sp500.json')),
     readJson(path.join(REPO_ROOT, 'public/data/universe/nasdaq100.json')),
     readJson(path.join(REPO_ROOT, 'public/data/universe/dowjones.json')),
+    readJson(path.join(REPO_ROOT, 'public/data/universe/russell2000.json')),
     readGzipJson(EXACT_INDEX_PATH),
     readRegistryBySymbol()
   ]);
@@ -142,6 +143,12 @@ async function main() {
     summarizeSet({
       setName: 'dowjones',
       symbols: extractSymbols(dowDoc),
+      bySymbolExact,
+      bySymbolRegistry: registryBySymbol
+    }),
+    summarizeSet({
+      setName: 'russell2000',
+      symbols: extractSymbols(russellDoc),
       bySymbolExact,
       bySymbolRegistry: registryBySymbol
     })
@@ -172,4 +179,3 @@ main().catch((err) => {
   process.stderr.write(`${JSON.stringify({ ok: false, error: String(err?.message || err) })}\n`);
   process.exit(1);
 });
-

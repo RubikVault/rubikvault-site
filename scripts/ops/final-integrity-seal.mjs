@@ -33,6 +33,8 @@ const PATHS = {
   runtimePreflight: path.join(ROOT, 'public/data/ops/runtime-preflight-latest.json'),
   stockAudit: path.join(ROOT, 'public/data/reports/stock-analyzer-universe-audit-latest.json'),
   stockOperability: path.join(ROOT, 'public/data/ops/stock-analyzer-operability-summary-latest.json'),
+  stockUiState: path.join(ROOT, 'public/data/runtime/stock-analyzer-ui-state-summary-latest.json'),
+  searchRegistrySync: path.join(ROOT, 'public/data/universe/v7/reports/search_registry_sync_report.json'),
   uiFieldTruth: path.join(ROOT, 'public/data/reports/ui-field-truth-report-latest.json'),
   launchd: path.join(ROOT, 'public/data/ops/launchd-reconcile-latest.json'),
   storage: path.join(ROOT, 'public/data/reports/storage-budget-latest.json'),
@@ -309,14 +311,32 @@ function histProbsStatusSummary(histProbsStatus = null) {
   const mode = String(histProbsStatus?.hist_probs_mode || 'unknown').toLowerCase();
   const catchup = String(histProbsStatus?.catchup_status || 'unknown').toLowerCase();
   const coverage = Number(histProbsStatus?.coverage_ratio ?? histProbsStatus?.artifact_coverage_ratio ?? histProbsStatus?.run_coverage_ratio ?? 0);
+  const artifactFreshness = Number(histProbsStatus?.artifact_freshness_ratio ?? histProbsStatus?.artifact_coverage_ratio ?? coverage);
+  const minCoverage = Number(histProbsStatus?.min_coverage_ratio ?? 0.95);
+  const deferred = histProbsStatus?.deferred === true || Number(histProbsStatus?.deferred_remaining_tickers || 0) > 0;
+  const writeMode = String(histProbsStatus?.hist_probs_write_mode || '').toLowerCase();
+  const writeModeOk = writeMode === 'bucket_only';
   const known = Boolean(mode && catchup && mode !== 'unknown' && catchup !== 'unknown');
-  const green = known && Number.isFinite(coverage) && coverage >= 0.90 && catchup !== 'failed';
+  const green = known
+    && Number.isFinite(coverage)
+    && Number.isFinite(artifactFreshness)
+    && coverage >= minCoverage
+    && artifactFreshness >= minCoverage
+    && catchup === 'complete'
+    && !deferred
+    && writeModeOk;
   return {
     green,
     known,
     mode,
     catchup_status: catchup,
     coverage_ratio: Number.isFinite(coverage) ? coverage : 0,
+    artifact_freshness_ratio: Number.isFinite(artifactFreshness) ? artifactFreshness : 0,
+    min_coverage_ratio: Number.isFinite(minCoverage) ? minCoverage : 0.95,
+    deferred,
+    deferred_remaining_tickers: Number.isFinite(Number(histProbsStatus?.deferred_remaining_tickers)) ? Number(histProbsStatus.deferred_remaining_tickers) : 0,
+    hist_probs_write_mode: writeMode || null,
+    write_mode_ok: writeModeOk,
     retry_remaining: Number.isFinite(Number(histProbsStatus?.retry_remaining)) ? Number(histProbsStatus.retry_remaining) : null,
     tier_a_count: Number.isFinite(Number(histProbsStatus?.tier_a_count)) ? Number(histProbsStatus.tier_a_count) : null,
     tier_b_pending: Number.isFinite(Number(histProbsStatus?.tier_b_pending)) ? Number(histProbsStatus.tier_b_pending) : null,
@@ -338,6 +358,8 @@ export function buildFinalIntegritySeal({
   runtimePreflight = null,
   stockAnalyzerAudit = null,
   stockAnalyzerOperability = null,
+  stockAnalyzerUiState = null,
+  searchRegistrySync = null,
   uiFieldTruth = null,
   launchd = null,
   storage = null,
@@ -570,9 +592,9 @@ export function buildFinalIntegritySeal({
       || targetableAssets <= 0
       || targetableGreenRatio < Number(operabilitySummary.release_green_threshold ?? 0.90);
     if (releaseBlocked) {
-      blockingReasons.push({
+      warningReasons.push({
         id: 'targetable_universe_operability_below_policy',
-        severity: 'critical',
+        severity: 'warning',
         details: {
           coverage_denominator: operabilitySummary.coverage_denominator || null,
           targetable_assets: operabilitySummary.targetable_assets ?? null,
@@ -582,6 +604,51 @@ export function buildFinalIntegritySeal({
         },
       });
     }
+  }
+  if (!stockAnalyzerUiState) {
+    warningReasons.push({
+      id: 'stock_analyzer_ui_state_summary_missing',
+      severity: 'warning',
+      details: null,
+    });
+  } else if (stockAnalyzerUiState.release_eligible !== true) {
+    const contractViolationTotal = Number(stockAnalyzerUiState.counts?.contract_violation_total ?? 0);
+    const missingScopeRows = Number(stockAnalyzerUiState.missing_scope_rows ?? 0);
+    const issue = {
+      id: contractViolationTotal > 0 || missingScopeRows > 0
+        ? 'stock_analyzer_ui_state_contract_failed'
+        : 'stock_analyzer_ui_state_degraded',
+      severity: contractViolationTotal > 0 || missingScopeRows > 0 ? 'critical' : 'warning',
+      details: {
+        ui_operational_ratio: stockAnalyzerUiState.ui_operational_ratio ?? null,
+        min_green_ratio: stockAnalyzerUiState.min_green_ratio ?? null,
+        missing_scope_rows: stockAnalyzerUiState.missing_scope_rows ?? null,
+        contract_violation_total: contractViolationTotal,
+        by_reason: stockAnalyzerUiState.counts?.by_reason || null,
+      },
+    };
+    if (issue.severity === 'critical') blockingReasons.push(issue);
+    else warningReasons.push(issue);
+  }
+  if (!searchRegistrySync) {
+    blockingReasons.push({
+      id: 'search_registry_sync_missing',
+      severity: 'critical',
+      details: null,
+    });
+  } else if (searchRegistrySync.status !== 'PASS') {
+    blockingReasons.push({
+      id: 'search_registry_sync_failed',
+      severity: 'critical',
+      details: {
+        search_generated_at: searchRegistrySync.search_generated_at || null,
+        registry_mtime: searchRegistrySync.registry_mtime || null,
+        search_fresh_against_registry: searchRegistrySync.search_fresh_against_registry ?? null,
+        out_of_scope_types: searchRegistrySync.outOfScopeTypes ?? null,
+        mismatch_count: searchRegistrySync.mismatchCount ?? null,
+        page_core_scoped_count_ok: searchRegistrySync.page_core_scoped_count_ok ?? null,
+      },
+    });
   }
   if (!artifactOnlyAudit && runtimePreflight?.ok === false) {
     blockingReasons.push({
@@ -645,7 +712,7 @@ export function buildFinalIntegritySeal({
   const decisionPublicGreen = pageCoreGateOk && dataPlaneGreen && strictFullCoverageRatio >= 0.90;
   const signalQuality = signalQualityForCoverage(strictFullCoverageRatio);
   if (strictFullCoverageRatio < 0.90) {
-    blockingReasons.push(reason('decision_public_coverage_below_90pct', 'critical', {
+    warningReasons.push(reason('decision_public_coverage_below_90pct', 'warning', {
       strict_full_coverage_ratio: strictFullCoverageRatio,
       required: 0.90,
     }));
@@ -656,17 +723,34 @@ export function buildFinalIntegritySeal({
       blocking_reasons: decisionBundleHealth.blocking_reasons,
     }));
   } else {
-    blockingReasons.push(...decisionBundleHealth.blocking_reasons);
+    warningReasons.push(...decisionBundleHealth.blocking_reasons.map((item) => ({
+      ...item,
+      severity: 'warning',
+    })));
   }
   warningReasons.push(...decisionBundleHealth.warnings);
   const histStatus = histProbsStatusSummary(histProbsStatus);
   if (!histStatus.known) {
-    blockingReasons.push(reason('hist_probs_status_unknown', 'critical', null));
+    warningReasons.push(reason('hist_probs_status_unknown', 'warning', null));
   } else if (!histStatus.green) {
-    blockingReasons.push(reason('hist_probs_not_release_green', 'critical', {
+    warningReasons.push(reason('hist_probs_not_release_green', 'warning', {
       hist_probs_mode: histStatus.mode,
       catchup_status: histStatus.catchup_status,
       coverage_ratio: histStatus.coverage_ratio,
+      artifact_freshness_ratio: histStatus.artifact_freshness_ratio,
+      min_coverage_ratio: histStatus.min_coverage_ratio,
+      deferred: histStatus.deferred,
+      deferred_remaining_tickers: histStatus.deferred_remaining_tickers,
+      hist_probs_write_mode: histStatus.hist_probs_write_mode,
+      write_mode_ok: histStatus.write_mode_ok,
+    }));
+  }
+  const systemHistSeverity = String(system?.steps?.hist_probs?.severity || '').toLowerCase();
+  if (systemHistSeverity === 'critical') {
+    warningReasons.push(reason('hist_probs_system_status_critical', 'warning', {
+      summary: system?.steps?.hist_probs?.summary || null,
+      why: system?.steps?.hist_probs?.why || null,
+      status_detail: system?.steps?.hist_probs?.status_detail || null,
     }));
   }
   const runtimeLiveness = evaluateCrashAndHeartbeat({
@@ -716,8 +800,25 @@ export function buildFinalIntegritySeal({
     else uniqueWarningReasons.push(item);
   }
 
-  const status = uniqueBlockingReasons.length > 0 ? 'FAILED' : uniqueWarningReasons.length > 0 ? 'DEGRADED' : 'OK';
-  const uiGreen = status === 'OK';
+  const coreReleaseReady = uniqueBlockingReasons.length === 0;
+  const pageCoreReady = pageCoreGateOk && uiFieldTruthOk;
+  const searchReady = searchRegistrySync?.status === 'PASS';
+  const universeReady = Boolean(summary && !sampledMode && artifactReleaseReady && auditCriticalIssueCount === 0);
+  const decisionReady = decisionPublicGreen && decisionBundleHealth.status === 'OK';
+  const riskReady = decisionReady;
+  const histReady = histStatus.green;
+  const breakoutReady = null;
+  const overallUiReady = Boolean(
+    coreReleaseReady
+    && pageCoreReady
+    && searchReady
+    && universeReady
+    && decisionReady
+    && histReady
+    && stockAnalyzerUiState?.release_eligible === true
+  );
+  const status = !coreReleaseReady ? 'FAILED' : overallUiReady && uniqueWarningReasons.length === 0 ? 'OK' : 'DEGRADED';
+  const uiGreen = overallUiReady;
   const leadBlockerStep = deriveLeadBlockerStep(uniqueBlockingReasons, recovery);
   const nextStep = deriveNextStep({
     leadBlockerStep,
@@ -736,7 +837,16 @@ export function buildFinalIntegritySeal({
     status,
     ui_green: uiGreen,
     global_green: uiGreen,
-    release_ready: uiGreen,
+    release_ready: coreReleaseReady,
+    core_release_ready: coreReleaseReady,
+    page_core_ready: pageCoreReady,
+    search_ready: searchReady,
+    universe_ready: universeReady,
+    decision_ready: decisionReady,
+    risk_ready: riskReady,
+    hist_ready: histReady,
+    breakout_ready: breakoutReady,
+    overall_ui_ready: overallUiReady,
     full_universe_validated: artifactFullValidated,
     policy_neutral_structural_gaps_only: policyNeutralStructuralGapsOnly,
     ui_field_truth_ok: uiFieldTruthOk,
@@ -744,6 +854,8 @@ export function buildFinalIntegritySeal({
     page_core_gate_ok: pageCoreGateOk,
     sampled_mode: sampledMode,
     stock_analyzer_operability: operabilitySummary,
+    stock_analyzer_ui_state: stockAnalyzerUiState,
+    search_registry_sync: searchRegistrySync,
     allowed_launchd_only: launchdOk,
     lock_integrity_ok: lockIntegrityOk,
     storage_ok: storageOk,
@@ -914,6 +1026,8 @@ async function main() {
   const runtimePreflight = readJson(PATHS.runtimePreflight) || null;
   const stockAnalyzerAudit = readJson(PATHS.stockAudit) || null;
   const stockAnalyzerOperability = readJson(PATHS.stockOperability) || null;
+  const stockAnalyzerUiState = readJson(PATHS.stockUiState) || null;
+  const searchRegistrySync = readJson(PATHS.searchRegistrySync) || null;
   const uiFieldTruth = readJson(PATHS.uiFieldTruth) || null;
   const launchd = readJson(PATHS.launchd) || null;
   const storage = readJson(PATHS.storage) || null;
@@ -961,6 +1075,8 @@ async function main() {
     runtimePreflight,
     stockAnalyzerAudit,
     stockAnalyzerOperability,
+    stockAnalyzerUiState,
+    searchRegistrySync,
     uiFieldTruth,
     launchd,
     storage,

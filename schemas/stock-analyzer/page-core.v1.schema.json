@@ -25,6 +25,7 @@
     "schema_version": { "const": "rv.page_core.v1" },
     "run_id": { "type": "string", "minLength": 1 },
     "snapshot_id": { "type": "string", "minLength": 1 },
+    "target_market_date": { "type": ["string", "null"] },
     "canonical_asset_id": { "type": "string", "pattern": "^[A-Z0-9_.-]+:[A-Z0-9_.-]+$" },
     "display_ticker": { "type": "string", "minLength": 1 },
     "provider_ticker": { "type": ["string", "null"] },
@@ -102,6 +103,29 @@
         "forecast": { "type": "boolean" },
         "ui_renderable": { "type": "boolean" }
       }
+    },
+    "market_stats_min": {
+      "type": ["object", "null"],
+      "additionalProperties": true
+    },
+    "price_source": { "type": ["string", "null"] },
+    "latest_bar_date": { "type": ["string", "null"] },
+    "stats_date": { "type": ["string", "null"] },
+    "core_status": { "type": ["string", "null"] },
+    "key_levels_ready": { "type": ["boolean", "null"] },
+    "ui_banner_state": { "type": ["string", "null"] },
+    "primary_blocker": { "type": ["string", "null"] },
+    "status_contract": {
+      "type": ["object", "null"],
+      "additionalProperties": true
+    },
+    "historical_profile_summary": {
+      "type": ["object", "null"],
+      "additionalProperties": true
+    },
+    "breakout_summary": {
+      "type": ["object", "null"],
+      "additionalProperties": true
     },
     "module_links": {
       "type": "object",

@@ -25,10 +25,13 @@ const ANCHORS = new Set(['SPY', 'QQQ', 'IWM', 'DIA', 'AAPL', 'MSFT', 'NVDA', 'GO
 
 function argValue(name, fallback = null) {
   const prefix = `${name}=`;
-  const hit = process.argv.slice(2).find((arg) => arg === name || arg.startsWith(prefix));
-  if (!hit) return fallback;
-  if (hit === name) return '1';
-  return hit.slice(prefix.length);
+  const args = process.argv.slice(2);
+  for (let i = 0; i < args.length; i += 1) {
+    const arg = args[i];
+    if (arg.startsWith(prefix)) return arg.slice(prefix.length);
+    if (arg === name) return args[i + 1] && !args[i + 1].startsWith('--') ? args[i + 1] : '1';
+  }
+  return fallback;
 }
 
 function normalizeTicker(value) {
@@ -170,7 +173,7 @@ function buildLearningPredictions(scores, targetDate) {
 
 export async function runDailyShadow(options = {}) {
   const targetDate = normalizeDate(options.date) || inferTargetDate();
-  const maxAssets = Math.max(1, Number(options.maxAssets ?? argValue('--max-assets', process.env.RV_HIST_PROBS_V2_MAX_ASSETS || '2000')) || 2000);
+  const maxAssets = Math.max(1, Number(options.maxAssets ?? argValue('--max-assets', process.env.RV_HIST_PROBS_V2_MAX_ASSETS || '300')) || 300);
   const errorAssetLimit = Math.max(0, Number(options.errorAssetLimit ?? argValue('--error-assets', '200')) || 0);
   const timeoutMs = Math.max(1000, Number(options.timeoutMs ?? argValue('--timeout-ms', process.env.RV_HIST_PROBS_V2_TIMEOUT_MS || '600000')) || 600000);
   const minBars = Math.max(60, Number(options.minBars ?? argValue('--min-bars', '60')) || 60);

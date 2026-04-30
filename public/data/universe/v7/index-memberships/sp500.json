@@ -1,0 +1,3035 @@
+{
+  "schema": "rv.index_membership.v1",
+  "generated_at": "2026-04-30T09:26:58.356Z",
+  "index_id": "sp500",
+  "label": "S&P 500",
+  "source_kind": "official_or_provider_snapshot",
+  "source_url": "https://www.spglobal.com/spdji/en/indices/equity/sp-500/",
+  "source_input_path": "public/data/universe/sp500.json",
+  "source_sha256": "9d821e3a8116d0f488d744eb3c4453cb8ecde3f442d6db542db7f969536a098e",
+  "expected_min": 490,
+  "expected_max": 510,
+  "count": 503,
+  "unmatched_count": 0,
+  "unmatched": [],
+  "constituents": [
+    {
+      "ticker": "A",
+      "name": "Agilent Technologies",
+      "canonical_id": "US:A",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "AAPL",
+      "name": "Apple Inc.",
+      "canonical_id": "US:AAPL",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "ABBV",
+      "name": "AbbVie",
+      "canonical_id": "US:ABBV",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "ABNB",
+      "name": "Airbnb",
+      "canonical_id": "US:ABNB",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "ABT",
+      "name": "Abbott Laboratories",
+      "canonical_id": "US:ABT",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "ACGL",
+      "name": "Arch Capital Group",
+      "canonical_id": "US:ACGL",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "ACN",
+      "name": "Accenture",
+      "canonical_id": "US:ACN",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "ADBE",
+      "name": "Adobe Inc.",
+      "canonical_id": "US:ADBE",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "ADI",
+      "name": "Analog Devices",
+      "canonical_id": "US:ADI",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "ADM",
+      "name": "Archer Daniels Midland",
+      "canonical_id": "US:ADM",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "ADP",
+      "name": "Automatic Data Processing",
+      "canonical_id": "US:ADP",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "ADSK",
+      "name": "Autodesk",
+      "canonical_id": "US:ADSK",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "AEE",
+      "name": "Ameren",
+      "canonical_id": "US:AEE",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "AEP",
+      "name": "American Electric Power",
+      "canonical_id": "US:AEP",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "AES",
+      "name": "AES Corporation",
+      "canonical_id": "US:AES",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "AFL",
+      "name": "Aflac",
+      "canonical_id": "US:AFL",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "AIG",
+      "name": "American International Group",
+      "canonical_id": "US:AIG",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "AIZ",
+      "name": "Assurant",
+      "canonical_id": "US:AIZ",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "AJG",
+      "name": "Arthur J. Gallagher & Co.",
+      "canonical_id": "US:AJG",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "AKAM",
+      "name": "Akamai Technologies",
+      "canonical_id": "US:AKAM",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "ALB",
+      "name": "Albemarle Corporation",
+      "canonical_id": "US:ALB",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "ALGN",
+      "name": "Align Technology",
+      "canonical_id": "US:ALGN",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "ALL",
+      "name": "Allstate",
+      "canonical_id": "US:ALL",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "ALLE",
+      "name": "Allegion",
+      "canonical_id": "US:ALLE",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "AMAT",
+      "name": "Applied Materials",
+      "canonical_id": "US:AMAT",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "AMCR",
+      "name": "Amcor",
+      "canonical_id": "US:AMCR",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "AMD",
+      "name": "Advanced Micro Devices",
+      "canonical_id": "US:AMD",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "AME",
+      "name": "Ametek",
+      "canonical_id": "US:AME",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "AMGN",
+      "name": "Amgen",
+      "canonical_id": "US:AMGN",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "AMP",
+      "name": "Ameriprise Financial",
+      "canonical_id": "US:AMP",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "AMT",
+      "name": "American Tower",
+      "canonical_id": "US:AMT",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "AMZN",
+      "name": "Amazon",
+      "canonical_id": "US:AMZN",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "ANET",
+      "name": "Arista Networks",
+      "canonical_id": "US:ANET",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "AON",
+      "name": "Aon plc",
+      "canonical_id": "US:AON",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "AOS",
+      "name": "A. O. Smith",
+      "canonical_id": "US:AOS",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "APA",
+      "name": "APA Corporation",
+      "canonical_id": "US:APA",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "APD",
+      "name": "Air Products",
+      "canonical_id": "US:APD",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "APH",
+      "name": "Amphenol",
+      "canonical_id": "US:APH",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "APO",
+      "name": "Apollo Global Management",
+      "canonical_id": "US:APO",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "APTV",
+      "name": "Aptiv",
+      "canonical_id": "US:APTV",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "ARE",
+      "name": "Alexandria Real Estate Equities",
+      "canonical_id": "US:ARE",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "ATO",
+      "name": "Atmos Energy",
+      "canonical_id": "US:ATO",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "AVB",
+      "name": "AvalonBay Communities",
+      "canonical_id": "US:AVB",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "AVGO",
+      "name": "Broadcom",
+      "canonical_id": "US:AVGO",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "AVY",
+      "name": "Avery Dennison",
+      "canonical_id": "US:AVY",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "AWK",
+      "name": "American Water Works",
+      "canonical_id": "US:AWK",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "AXON",
+      "name": "Axon Enterprise",
+      "canonical_id": "US:AXON",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "AXP",
+      "name": "American Express",
+      "canonical_id": "US:AXP",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "AZO",
+      "name": "AutoZone",
+      "canonical_id": "US:AZO",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "BA",
+      "name": "Boeing",
+      "canonical_id": "US:BA",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "BAC",
+      "name": "Bank of America",
+      "canonical_id": "US:BAC",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "BALL",
+      "name": "Ball Corporation",
+      "canonical_id": "US:BALL",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "BAX",
+      "name": "Baxter International",
+      "canonical_id": "US:BAX",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "BBY",
+      "name": "Best Buy",
+      "canonical_id": "US:BBY",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "BDX",
+      "name": "Becton Dickinson",
+      "canonical_id": "US:BDX",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "BEN",
+      "name": "Franklin Resources",
+      "canonical_id": "US:BEN",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "BF.B",
+      "name": "Brown–Forman",
+      "canonical_id": "US:BF.B",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "BG",
+      "name": "Bunge Global",
+      "canonical_id": "US:BG",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "BIIB",
+      "name": "Biogen",
+      "canonical_id": "US:BIIB",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "BK",
+      "name": "BNY Mellon",
+      "canonical_id": "US:BK",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "BKNG",
+      "name": "Booking Holdings",
+      "canonical_id": "US:BKNG",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "BKR",
+      "name": "Baker Hughes",
+      "canonical_id": "US:BKR",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "BLDR",
+      "name": "Builders FirstSource",
+      "canonical_id": "US:BLDR",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "BLK",
+      "name": "BlackRock",
+      "canonical_id": "US:BLK",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "BMY",
+      "name": "Bristol Myers Squibb",
+      "canonical_id": "US:BMY",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "BR",
+      "name": "Broadridge Financial Solutions",
+      "canonical_id": "US:BR",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "BRK.B",
+      "name": "Berkshire Hathaway",
+      "canonical_id": "US:BRK.B",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "BRO",
+      "name": "Brown & Brown",
+      "canonical_id": "US:BRO",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "BSX",
+      "name": "Boston Scientific",
+      "canonical_id": "US:BSX",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "BX",
+      "name": "Blackstone Inc.",
+      "canonical_id": "US:BX",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "BXP",
+      "name": "BXP, Inc.",
+      "canonical_id": "US:BXP",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "C",
+      "name": "Citigroup",
+      "canonical_id": "US:C",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "CAG",
+      "name": "Conagra Brands",
+      "canonical_id": "US:CAG",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "CAH",
+      "name": "Cardinal Health",
+      "canonical_id": "US:CAH",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "CARR",
+      "name": "Carrier Global",
+      "canonical_id": "US:CARR",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "CAT",
+      "name": "Caterpillar Inc.",
+      "canonical_id": "US:CAT",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "CB",
+      "name": "Chubb Limited",
+      "canonical_id": "US:CB",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "CBOE",
+      "name": "Cboe Global Markets",
+      "canonical_id": "US:CBOE",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "CBRE",
+      "name": "CBRE Group",
+      "canonical_id": "US:CBRE",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "CCI",
+      "name": "Crown Castle",
+      "canonical_id": "US:CCI",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "CCL",
+      "name": "Carnival",
+      "canonical_id": "US:CCL",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "CDNS",
+      "name": "Cadence Design Systems",
+      "canonical_id": "US:CDNS",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "CDW",
+      "name": "CDW Corporation",
+      "canonical_id": "US:CDW",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "CEG",
+      "name": "Constellation Energy",
+      "canonical_id": "US:CEG",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "CF",
+      "name": "CF Industries",
+      "canonical_id": "US:CF",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "CFG",
+      "name": "Citizens Financial Group",
+      "canonical_id": "US:CFG",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "CHD",
+      "name": "Church & Dwight",
+      "canonical_id": "US:CHD",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "CHRW",
+      "name": "C.H. Robinson",
+      "canonical_id": "US:CHRW",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "CHTR",
+      "name": "Charter Communications",
+      "canonical_id": "US:CHTR",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "CI",
+      "name": "Cigna",
+      "canonical_id": "US:CI",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "CINF",
+      "name": "Cincinnati Financial",
+      "canonical_id": "US:CINF",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "CL",
+      "name": "Colgate-Palmolive",
+      "canonical_id": "US:CL",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "CLX",
+      "name": "Clorox",
+      "canonical_id": "US:CLX",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "CMCSA",
+      "name": "Comcast",
+      "canonical_id": "US:CMCSA",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "CME",
+      "name": "CME Group",
+      "canonical_id": "US:CME",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "CMG",
+      "name": "Chipotle Mexican Grill",
+      "canonical_id": "US:CMG",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "CMI",
+      "name": "Cummins",
+      "canonical_id": "US:CMI",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "CMS",
+      "name": "CMS Energy",
+      "canonical_id": "US:CMS",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "CNC",
+      "name": "Centene Corporation",
+      "canonical_id": "US:CNC",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "CNP",
+      "name": "CenterPoint Energy",
+      "canonical_id": "US:CNP",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "COF",
+      "name": "Capital One",
+      "canonical_id": "US:COF",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "COIN",
+      "name": "Coinbase",
+      "canonical_id": "US:COIN",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "COO",
+      "name": "Cooper Companies (The)",
+      "canonical_id": "US:COO",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "COP",
+      "name": "ConocoPhillips",
+      "canonical_id": "US:COP",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "COR",
+      "name": "Cencora",
+      "canonical_id": "US:COR",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "COST",
+      "name": "Costco",
+      "canonical_id": "US:COST",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "CPAY",
+      "name": "Corpay",
+      "canonical_id": "US:CPAY",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "CPB",
+      "name": "Campbell's Company (The)",
+      "canonical_id": "US:CPB",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "CPRT",
+      "name": "Copart",
+      "canonical_id": "US:CPRT",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "CPT",
+      "name": "Camden Property Trust",
+      "canonical_id": "US:CPT",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "CRL",
+      "name": "Charles River Laboratories",
+      "canonical_id": "US:CRL",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "CRM",
+      "name": "Salesforce",
+      "canonical_id": "US:CRM",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "CRWD",
+      "name": "CrowdStrike",
+      "canonical_id": "US:CRWD",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "CSCO",
+      "name": "Cisco",
+      "canonical_id": "US:CSCO",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "CSGP",
+      "name": "CoStar Group",
+      "canonical_id": "US:CSGP",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "CSX",
+      "name": "CSX Corporation",
+      "canonical_id": "US:CSX",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "CTAS",
+      "name": "Cintas",
+      "canonical_id": "US:CTAS",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "CTRA",
+      "name": "Coterra",
+      "canonical_id": "US:CTRA",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "CTSH",
+      "name": "Cognizant",
+      "canonical_id": "US:CTSH",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "CTVA",
+      "name": "Corteva",
+      "canonical_id": "US:CTVA",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "CVS",
+      "name": "CVS Health",
+      "canonical_id": "US:CVS",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "CVX",
+      "name": "Chevron Corporation",
+      "canonical_id": "US:CVX",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "CZR",
+      "name": "Caesars Entertainment",
+      "canonical_id": "US:CZR",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "D",
+      "name": "Dominion Energy",
+      "canonical_id": "US:D",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "DAL",
+      "name": "Delta Air Lines",
+      "canonical_id": "US:DAL",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "DASH",
+      "name": "DoorDash",
+      "canonical_id": "US:DASH",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "DAY",
+      "name": "Dayforce",
+      "canonical_id": "US:DAY",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "DD",
+      "name": "DuPont",
+      "canonical_id": "US:DD",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "DDOG",
+      "name": "Datadog",
+      "canonical_id": "US:DDOG",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "DE",
+      "name": "Deere & Company",
+      "canonical_id": "US:DE",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "DECK",
+      "name": "Deckers Brands",
+      "canonical_id": "US:DECK",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "DELL",
+      "name": "Dell Technologies",
+      "canonical_id": "US:DELL",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "DG",
+      "name": "Dollar General",
+      "canonical_id": "US:DG",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "DGX",
+      "name": "Quest Diagnostics",
+      "canonical_id": "US:DGX",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "DHI",
+      "name": "D. R. Horton",
+      "canonical_id": "US:DHI",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "DHR",
+      "name": "Danaher Corporation",
+      "canonical_id": "US:DHR",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "DIS",
+      "name": "Walt Disney Company (The)",
+      "canonical_id": "US:DIS",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "DLR",
+      "name": "Digital Realty",
+      "canonical_id": "US:DLR",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "DLTR",
+      "name": "Dollar Tree",
+      "canonical_id": "US:DLTR",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "DOC",
+      "name": "Healthpeak Properties",
+      "canonical_id": "US:DOC",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "DOV",
+      "name": "Dover Corporation",
+      "canonical_id": "US:DOV",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "DOW",
+      "name": "Dow Inc.",
+      "canonical_id": "US:DOW",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "DPZ",
+      "name": "Domino's",
+      "canonical_id": "US:DPZ",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "DRI",
+      "name": "Darden Restaurants",
+      "canonical_id": "US:DRI",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "DTE",
+      "name": "DTE Energy",
+      "canonical_id": "US:DTE",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "DUK",
+      "name": "Duke Energy",
+      "canonical_id": "US:DUK",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "DVA",
+      "name": "DaVita",
+      "canonical_id": "US:DVA",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "DVN",
+      "name": "Devon Energy",
+      "canonical_id": "US:DVN",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "DXCM",
+      "name": "Dexcom",
+      "canonical_id": "US:DXCM",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "EA",
+      "name": "Electronic Arts",
+      "canonical_id": "US:EA",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "EBAY",
+      "name": "eBay Inc.",
+      "canonical_id": "US:EBAY",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "ECL",
+      "name": "Ecolab",
+      "canonical_id": "US:ECL",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "ED",
+      "name": "Consolidated Edison",
+      "canonical_id": "US:ED",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "EFX",
+      "name": "Equifax",
+      "canonical_id": "US:EFX",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "EG",
+      "name": "Everest Group",
+      "canonical_id": "US:EG",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "EIX",
+      "name": "Edison International",
+      "canonical_id": "US:EIX",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "EL",
+      "name": "Estée Lauder Companies (The)",
+      "canonical_id": "US:EL",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "ELV",
+      "name": "Elevance Health",
+      "canonical_id": "US:ELV",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "EMN",
+      "name": "Eastman Chemical Company",
+      "canonical_id": "US:EMN",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "EMR",
+      "name": "Emerson Electric",
+      "canonical_id": "US:EMR",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "ENPH",
+      "name": "Enphase Energy",
+      "canonical_id": "US:ENPH",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "EOG",
+      "name": "EOG Resources",
+      "canonical_id": "US:EOG",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "EPAM",
+      "name": "EPAM Systems",
+      "canonical_id": "US:EPAM",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "EQIX",
+      "name": "Equinix",
+      "canonical_id": "US:EQIX",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "EQR",
+      "name": "Equity Residential",
+      "canonical_id": "US:EQR",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "EQT",
+      "name": "EQT Corporation",
+      "canonical_id": "US:EQT",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "ERIE",
+      "name": "Erie Indemnity",
+      "canonical_id": "US:ERIE",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "ES",
+      "name": "Eversource Energy",
+      "canonical_id": "US:ES",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "ESS",
+      "name": "Essex Property Trust",
+      "canonical_id": "US:ESS",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "ETN",
+      "name": "Eaton Corporation",
+      "canonical_id": "US:ETN",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "ETR",
+      "name": "Entergy",
+      "canonical_id": "US:ETR",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "EVRG",
+      "name": "Evergy",
+      "canonical_id": "US:EVRG",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "EW",
+      "name": "Edwards Lifesciences",
+      "canonical_id": "US:EW",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "EXC",
+      "name": "Exelon",
+      "canonical_id": "US:EXC",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "EXE",
+      "name": "Expand Energy",
+      "canonical_id": "US:EXE",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "EXPD",
+      "name": "Expeditors International",
+      "canonical_id": "US:EXPD",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "EXPE",
+      "name": "Expedia Group",
+      "canonical_id": "US:EXPE",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "EXR",
+      "name": "Extra Space Storage",
+      "canonical_id": "US:EXR",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "F",
+      "name": "Ford Motor Company",
+      "canonical_id": "US:F",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "FANG",
+      "name": "Diamondback Energy",
+      "canonical_id": "US:FANG",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "FAST",
+      "name": "Fastenal",
+      "canonical_id": "US:FAST",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "FCX",
+      "name": "Freeport-McMoRan",
+      "canonical_id": "US:FCX",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "FDS",
+      "name": "FactSet",
+      "canonical_id": "US:FDS",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "FDX",
+      "name": "FedEx",
+      "canonical_id": "US:FDX",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "FE",
+      "name": "FirstEnergy",
+      "canonical_id": "US:FE",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "FFIV",
+      "name": "F5, Inc.",
+      "canonical_id": "US:FFIV",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "FI",
+      "name": "Fiserv",
+      "canonical_id": "US:FI",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "FICO",
+      "name": "Fair Isaac",
+      "canonical_id": "US:FICO",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "FIS",
+      "name": "Fidelity National Information Services",
+      "canonical_id": "US:FIS",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "FITB",
+      "name": "Fifth Third Bancorp",
+      "canonical_id": "US:FITB",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "FOX",
+      "name": "Fox Corporation (Class B)",
+      "canonical_id": "US:FOX",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "FOXA",
+      "name": "Fox Corporation (Class A)",
+      "canonical_id": "US:FOXA",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "FRT",
+      "name": "Federal Realty Investment Trust",
+      "canonical_id": "US:FRT",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "FSLR",
+      "name": "First Solar",
+      "canonical_id": "US:FSLR",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "FTNT",
+      "name": "Fortinet",
+      "canonical_id": "US:FTNT",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "FTV",
+      "name": "Fortive",
+      "canonical_id": "US:FTV",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "GD",
+      "name": "General Dynamics",
+      "canonical_id": "US:GD",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "GDDY",
+      "name": "GoDaddy",
+      "canonical_id": "US:GDDY",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "GE",
+      "name": "GE Aerospace",
+      "canonical_id": "US:GE",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "GEHC",
+      "name": "GE HealthCare",
+      "canonical_id": "US:GEHC",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "GEN",
+      "name": "Gen Digital",
+      "canonical_id": "US:GEN",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "GEV",
+      "name": "GE Vernova",
+      "canonical_id": "US:GEV",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "GILD",
+      "name": "Gilead Sciences",
+      "canonical_id": "US:GILD",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "GIS",
+      "name": "General Mills",
+      "canonical_id": "US:GIS",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "GL",
+      "name": "Globe Life",
+      "canonical_id": "US:GL",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "GLW",
+      "name": "Corning Inc.",
+      "canonical_id": "US:GLW",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "GM",
+      "name": "General Motors",
+      "canonical_id": "US:GM",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "GNRC",
+      "name": "Generac",
+      "canonical_id": "US:GNRC",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "GOOG",
+      "name": "Alphabet Inc. (Class C)",
+      "canonical_id": "US:GOOG",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "GOOGL",
+      "name": "Alphabet Inc. (Class A)",
+      "canonical_id": "US:GOOGL",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "GPC",
+      "name": "Genuine Parts Company",
+      "canonical_id": "US:GPC",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "GPN",
+      "name": "Global Payments",
+      "canonical_id": "US:GPN",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "GRMN",
+      "name": "Garmin",
+      "canonical_id": "US:GRMN",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "GS",
+      "name": "Goldman Sachs",
+      "canonical_id": "US:GS",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "GWW",
+      "name": "W. W. Grainger",
+      "canonical_id": "US:GWW",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "HAL",
+      "name": "Halliburton",
+      "canonical_id": "US:HAL",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "HAS",
+      "name": "Hasbro",
+      "canonical_id": "US:HAS",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "HBAN",
+      "name": "Huntington Bancshares",
+      "canonical_id": "US:HBAN",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "HCA",
+      "name": "HCA Healthcare",
+      "canonical_id": "US:HCA",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "HD",
+      "name": "Home Depot (The)",
+      "canonical_id": "US:HD",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "HIG",
+      "name": "Hartford (The)",
+      "canonical_id": "US:HIG",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "HII",
+      "name": "Huntington Ingalls Industries",
+      "canonical_id": "US:HII",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "HLT",
+      "name": "Hilton Worldwide",
+      "canonical_id": "US:HLT",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "HOLX",
+      "name": "Hologic",
+      "canonical_id": "US:HOLX",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "HON",
+      "name": "Honeywell",
+      "canonical_id": "US:HON",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "HPE",
+      "name": "Hewlett Packard Enterprise",
+      "canonical_id": "US:HPE",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "HPQ",
+      "name": "HP Inc.",
+      "canonical_id": "US:HPQ",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "HRL",
+      "name": "Hormel Foods",
+      "canonical_id": "US:HRL",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "HSIC",
+      "name": "Henry Schein",
+      "canonical_id": "US:HSIC",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "HST",
+      "name": "Host Hotels & Resorts",
+      "canonical_id": "US:HST",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "HSY",
+      "name": "Hershey Company (The)",
+      "canonical_id": "US:HSY",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "HUBB",
+      "name": "Hubbell Incorporated",
+      "canonical_id": "US:HUBB",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "HUM",
+      "name": "Humana",
+      "canonical_id": "US:HUM",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "HWM",
+      "name": "Howmet Aerospace",
+      "canonical_id": "US:HWM",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "IBM",
+      "name": "IBM",
+      "canonical_id": "US:IBM",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "ICE",
+      "name": "Intercontinental Exchange",
+      "canonical_id": "US:ICE",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "IDXX",
+      "name": "Idexx Laboratories",
+      "canonical_id": "US:IDXX",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "IEX",
+      "name": "IDEX Corporation",
+      "canonical_id": "US:IEX",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "IFF",
+      "name": "International Flavors & Fragrances",
+      "canonical_id": "US:IFF",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "INCY",
+      "name": "Incyte",
+      "canonical_id": "US:INCY",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "INTC",
+      "name": "Intel",
+      "canonical_id": "US:INTC",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "INTU",
+      "name": "Intuit",
+      "canonical_id": "US:INTU",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "INVH",
+      "name": "Invitation Homes",
+      "canonical_id": "US:INVH",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "IP",
+      "name": "International Paper",
+      "canonical_id": "US:IP",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "IPG",
+      "name": "Interpublic Group of Companies (The)",
+      "canonical_id": "US:IPG",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "IQV",
+      "name": "IQVIA",
+      "canonical_id": "US:IQV",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "IR",
+      "name": "Ingersoll Rand",
+      "canonical_id": "US:IR",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "IRM",
+      "name": "Iron Mountain",
+      "canonical_id": "US:IRM",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "ISRG",
+      "name": "Intuitive Surgical",
+      "canonical_id": "US:ISRG",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "IT",
+      "name": "Gartner",
+      "canonical_id": "US:IT",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "ITW",
+      "name": "Illinois Tool Works",
+      "canonical_id": "US:ITW",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "IVZ",
+      "name": "Invesco",
+      "canonical_id": "US:IVZ",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "J",
+      "name": "Jacobs Solutions",
+      "canonical_id": "US:J",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "JBHT",
+      "name": "J.B. Hunt",
+      "canonical_id": "US:JBHT",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "JBL",
+      "name": "Jabil",
+      "canonical_id": "US:JBL",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "JCI",
+      "name": "Johnson Controls",
+      "canonical_id": "US:JCI",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "JKHY",
+      "name": "Jack Henry & Associates",
+      "canonical_id": "US:JKHY",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "JNJ",
+      "name": "Johnson & Johnson",
+      "canonical_id": "US:JNJ",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "JPM",
+      "name": "JPMorgan Chase",
+      "canonical_id": "US:JPM",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "K",
+      "name": "Kellanova",
+      "canonical_id": "US:K",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "KDP",
+      "name": "Keurig Dr Pepper",
+      "canonical_id": "US:KDP",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "KEY",
+      "name": "KeyCorp",
+      "canonical_id": "US:KEY",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "KEYS",
+      "name": "Keysight Technologies",
+      "canonical_id": "US:KEYS",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "KHC",
+      "name": "Kraft Heinz",
+      "canonical_id": "US:KHC",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "KIM",
+      "name": "Kimco Realty",
+      "canonical_id": "US:KIM",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "KKR",
+      "name": "KKR & Co.",
+      "canonical_id": "US:KKR",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "KLAC",
+      "name": "KLA Corporation",
+      "canonical_id": "US:KLAC",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "KMB",
+      "name": "Kimberly-Clark",
+      "canonical_id": "US:KMB",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "KMI",
+      "name": "Kinder Morgan",
+      "canonical_id": "US:KMI",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "KMX",
+      "name": "CarMax",
+      "canonical_id": "US:KMX",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "KO",
+      "name": "Coca-Cola Company (The)",
+      "canonical_id": "US:KO",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "KR",
+      "name": "Kroger",
+      "canonical_id": "US:KR",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "KVUE",
+      "name": "Kenvue",
+      "canonical_id": "US:KVUE",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "L",
+      "name": "Loews Corporation",
+      "canonical_id": "US:L",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "LDOS",
+      "name": "Leidos",
+      "canonical_id": "US:LDOS",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "LEN",
+      "name": "Lennar",
+      "canonical_id": "US:LEN",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "LH",
+      "name": "Labcorp",
+      "canonical_id": "US:LH",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "LHX",
+      "name": "L3Harris",
+      "canonical_id": "US:LHX",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "LII",
+      "name": "Lennox International",
+      "canonical_id": "US:LII",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "LIN",
+      "name": "Linde plc",
+      "canonical_id": "US:LIN",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "LKQ",
+      "name": "LKQ Corporation",
+      "canonical_id": "US:LKQ",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "LLY",
+      "name": "Lilly (Eli)",
+      "canonical_id": "US:LLY",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "LMT",
+      "name": "Lockheed Martin",
+      "canonical_id": "US:LMT",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "LNT",
+      "name": "Alliant Energy",
+      "canonical_id": "US:LNT",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "LOW",
+      "name": "Lowe's",
+      "canonical_id": "US:LOW",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "LRCX",
+      "name": "Lam Research",
+      "canonical_id": "US:LRCX",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "LULU",
+      "name": "Lululemon Athletica",
+      "canonical_id": "US:LULU",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "LUV",
+      "name": "Southwest Airlines",
+      "canonical_id": "US:LUV",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "LVS",
+      "name": "Las Vegas Sands",
+      "canonical_id": "US:LVS",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "LW",
+      "name": "Lamb Weston",
+      "canonical_id": "US:LW",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "LYB",
+      "name": "LyondellBasell",
+      "canonical_id": "US:LYB",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "LYV",
+      "name": "Live Nation Entertainment",
+      "canonical_id": "US:LYV",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "MA",
+      "name": "Mastercard",
+      "canonical_id": "US:MA",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "MAA",
+      "name": "Mid-America Apartment Communities",
+      "canonical_id": "US:MAA",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "MAR",
+      "name": "Marriott International",
+      "canonical_id": "US:MAR",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "MAS",
+      "name": "Masco",
+      "canonical_id": "US:MAS",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "MCD",
+      "name": "McDonald's",
+      "canonical_id": "US:MCD",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "MCHP",
+      "name": "Microchip Technology",
+      "canonical_id": "US:MCHP",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "MCK",
+      "name": "McKesson Corporation",
+      "canonical_id": "US:MCK",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "MCO",
+      "name": "Moody's Corporation",
+      "canonical_id": "US:MCO",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "MDLZ",
+      "name": "Mondelez International",
+      "canonical_id": "US:MDLZ",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "MDT",
+      "name": "Medtronic",
+      "canonical_id": "US:MDT",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "MET",
+      "name": "MetLife",
+      "canonical_id": "US:MET",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "META",
+      "name": "Meta Platforms",
+      "canonical_id": "US:META",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "MGM",
+      "name": "MGM Resorts",
+      "canonical_id": "US:MGM",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "MHK",
+      "name": "Mohawk Industries",
+      "canonical_id": "US:MHK",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "MKC",
+      "name": "McCormick & Company",
+      "canonical_id": "US:MKC",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "MKTX",
+      "name": "MarketAxess",
+      "canonical_id": "US:MKTX",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "MLM",
+      "name": "Martin Marietta Materials",
+      "canonical_id": "US:MLM",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "MMC",
+      "name": "Marsh McLennan",
+      "canonical_id": "US:MMC",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "MMM",
+      "name": "3M",
+      "canonical_id": "US:MMM",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "MNST",
+      "name": "Monster Beverage",
+      "canonical_id": "US:MNST",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "MO",
+      "name": "Altria",
+      "canonical_id": "US:MO",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "MOH",
+      "name": "Molina Healthcare",
+      "canonical_id": "US:MOH",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "MOS",
+      "name": "Mosaic Company (The)",
+      "canonical_id": "US:MOS",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "MPC",
+      "name": "Marathon Petroleum",
+      "canonical_id": "US:MPC",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "MPWR",
+      "name": "Monolithic Power Systems",
+      "canonical_id": "US:MPWR",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "MRK",
+      "name": "Merck & Co.",
+      "canonical_id": "US:MRK",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "MRNA",
+      "name": "Moderna",
+      "canonical_id": "US:MRNA",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "MS",
+      "name": "Morgan Stanley",
+      "canonical_id": "US:MS",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "MSCI",
+      "name": "MSCI Inc.",
+      "canonical_id": "US:MSCI",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "MSFT",
+      "name": "Microsoft",
+      "canonical_id": "US:MSFT",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "MSI",
+      "name": "Motorola Solutions",
+      "canonical_id": "US:MSI",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "MTB",
+      "name": "M&T Bank",
+      "canonical_id": "US:MTB",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "MTCH",
+      "name": "Match Group",
+      "canonical_id": "US:MTCH",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "MTD",
+      "name": "Mettler Toledo",
+      "canonical_id": "US:MTD",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "MU",
+      "name": "Micron Technology",
+      "canonical_id": "US:MU",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "NCLH",
+      "name": "Norwegian Cruise Line Holdings",
+      "canonical_id": "US:NCLH",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "NDAQ",
+      "name": "Nasdaq, Inc.",
+      "canonical_id": "US:NDAQ",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "NDSN",
+      "name": "Nordson Corporation",
+      "canonical_id": "US:NDSN",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "NEE",
+      "name": "NextEra Energy",
+      "canonical_id": "US:NEE",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "NEM",
+      "name": "Newmont",
+      "canonical_id": "US:NEM",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "NFLX",
+      "name": "Netflix",
+      "canonical_id": "US:NFLX",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "NI",
+      "name": "NiSource",
+      "canonical_id": "US:NI",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "NKE",
+      "name": "Nike, Inc.",
+      "canonical_id": "US:NKE",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "NOC",
+      "name": "Northrop Grumman",
+      "canonical_id": "US:NOC",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "NOW",
+      "name": "ServiceNow",
+      "canonical_id": "US:NOW",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "NRG",
+      "name": "NRG Energy",
+      "canonical_id": "US:NRG",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "NSC",
+      "name": "Norfolk Southern",
+      "canonical_id": "US:NSC",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "NTAP",
+      "name": "NetApp",
+      "canonical_id": "US:NTAP",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "NTRS",
+      "name": "Northern Trust",
+      "canonical_id": "US:NTRS",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "NUE",
+      "name": "Nucor",
+      "canonical_id": "US:NUE",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "NVDA",
+      "name": "Nvidia",
+      "canonical_id": "US:NVDA",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "NVR",
+      "name": "NVR, Inc.",
+      "canonical_id": "US:NVR",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "NWS",
+      "name": "News Corp (Class B)",
+      "canonical_id": "US:NWS",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "NWSA",
+      "name": "News Corp (Class A)",
+      "canonical_id": "US:NWSA",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "NXPI",
+      "name": "NXP Semiconductors",
+      "canonical_id": "US:NXPI",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "O",
+      "name": "Realty Income",
+      "canonical_id": "US:O",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "ODFL",
+      "name": "Old Dominion",
+      "canonical_id": "US:ODFL",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "OKE",
+      "name": "Oneok",
+      "canonical_id": "US:OKE",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "OMC",
+      "name": "Omnicom Group",
+      "canonical_id": "US:OMC",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "ON",
+      "name": "ON Semiconductor",
+      "canonical_id": "US:ON",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "ORCL",
+      "name": "Oracle Corporation",
+      "canonical_id": "US:ORCL",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "ORLY",
+      "name": "O’Reilly Automotive",
+      "canonical_id": "US:ORLY",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "OTIS",
+      "name": "Otis Worldwide",
+      "canonical_id": "US:OTIS",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "OXY",
+      "name": "Occidental Petroleum",
+      "canonical_id": "US:OXY",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "PANW",
+      "name": "Palo Alto Networks",
+      "canonical_id": "US:PANW",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "PAYC",
+      "name": "Paycom",
+      "canonical_id": "US:PAYC",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "PAYX",
+      "name": "Paychex",
+      "canonical_id": "US:PAYX",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "PCAR",
+      "name": "Paccar",
+      "canonical_id": "US:PCAR",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "PCG",
+      "name": "PG&E Corporation",
+      "canonical_id": "US:PCG",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "PEG",
+      "name": "Public Service Enterprise Group",
+      "canonical_id": "US:PEG",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "PEP",
+      "name": "PepsiCo",
+      "canonical_id": "US:PEP",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "PFE",
+      "name": "Pfizer",
+      "canonical_id": "US:PFE",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "PFG",
+      "name": "Principal Financial Group",
+      "canonical_id": "US:PFG",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "PG",
+      "name": "Procter & Gamble",
+      "canonical_id": "US:PG",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "PGR",
+      "name": "Progressive Corporation",
+      "canonical_id": "US:PGR",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "PH",
+      "name": "Parker Hannifin",
+      "canonical_id": "US:PH",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "PHM",
+      "name": "PulteGroup",
+      "canonical_id": "US:PHM",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "PKG",
+      "name": "Packaging Corporation of America",
+      "canonical_id": "US:PKG",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "PLD",
+      "name": "Prologis",
+      "canonical_id": "US:PLD",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "PLTR",
+      "name": "Palantir Technologies",
+      "canonical_id": "US:PLTR",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "PM",
+      "name": "Philip Morris International",
+      "canonical_id": "US:PM",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "PNC",
+      "name": "PNC Financial Services",
+      "canonical_id": "US:PNC",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "PNR",
+      "name": "Pentair",
+      "canonical_id": "US:PNR",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "PNW",
+      "name": "Pinnacle West Capital",
+      "canonical_id": "US:PNW",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "PODD",
+      "name": "Insulet Corporation",
+      "canonical_id": "US:PODD",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "POOL",
+      "name": "Pool Corporation",
+      "canonical_id": "US:POOL",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "PPG",
+      "name": "PPG Industries",
+      "canonical_id": "US:PPG",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "PPL",
+      "name": "PPL Corporation",
+      "canonical_id": "US:PPL",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "PRU",
+      "name": "Prudential Financial",
+      "canonical_id": "US:PRU",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "PSA",
+      "name": "Public Storage",
+      "canonical_id": "US:PSA",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "PSKY",
+      "name": "Paramount Skydance Corporation",
+      "canonical_id": "US:PSKY",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "PSX",
+      "name": "Phillips 66",
+      "canonical_id": "US:PSX",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "PTC",
+      "name": "PTC Inc.",
+      "canonical_id": "US:PTC",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "PWR",
+      "name": "Quanta Services",
+      "canonical_id": "US:PWR",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "PYPL",
+      "name": "PayPal",
+      "canonical_id": "US:PYPL",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "QCOM",
+      "name": "Qualcomm",
+      "canonical_id": "US:QCOM",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "RCL",
+      "name": "Royal Caribbean Group",
+      "canonical_id": "US:RCL",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "REG",
+      "name": "Regency Centers",
+      "canonical_id": "US:REG",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "REGN",
+      "name": "Regeneron Pharmaceuticals",
+      "canonical_id": "US:REGN",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "RF",
+      "name": "Regions Financial Corporation",
+      "canonical_id": "US:RF",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "RJF",
+      "name": "Raymond James Financial",
+      "canonical_id": "US:RJF",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "RL",
+      "name": "Ralph Lauren Corporation",
+      "canonical_id": "US:RL",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "RMD",
+      "name": "ResMed",
+      "canonical_id": "US:RMD",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "ROK",
+      "name": "Rockwell Automation",
+      "canonical_id": "US:ROK",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "ROL",
+      "name": "Rollins, Inc.",
+      "canonical_id": "US:ROL",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "ROP",
+      "name": "Roper Technologies",
+      "canonical_id": "US:ROP",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "ROST",
+      "name": "Ross Stores",
+      "canonical_id": "US:ROST",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "RSG",
+      "name": "Republic Services",
+      "canonical_id": "US:RSG",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "RTX",
+      "name": "RTX Corporation",
+      "canonical_id": "US:RTX",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "RVTY",
+      "name": "Revvity",
+      "canonical_id": "US:RVTY",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "SBAC",
+      "name": "SBA Communications",
+      "canonical_id": "US:SBAC",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "SBUX",
+      "name": "Starbucks",
+      "canonical_id": "US:SBUX",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "SCHW",
+      "name": "Charles Schwab Corporation",
+      "canonical_id": "US:SCHW",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "SHW",
+      "name": "Sherwin-Williams",
+      "canonical_id": "US:SHW",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "SJM",
+      "name": "J.M. Smucker Company (The)",
+      "canonical_id": "US:SJM",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "SLB",
+      "name": "Schlumberger",
+      "canonical_id": "US:SLB",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "SMCI",
+      "name": "Supermicro",
+      "canonical_id": "US:SMCI",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "SNA",
+      "name": "Snap-on",
+      "canonical_id": "US:SNA",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "SNPS",
+      "name": "Synopsys",
+      "canonical_id": "US:SNPS",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "SO",
+      "name": "Southern Company",
+      "canonical_id": "US:SO",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "SOLV",
+      "name": "Solventum",
+      "canonical_id": "US:SOLV",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "SPG",
+      "name": "Simon Property Group",
+      "canonical_id": "US:SPG",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "SPGI",
+      "name": "S&P Global",
+      "canonical_id": "US:SPGI",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "SRE",
+      "name": "Sempra",
+      "canonical_id": "US:SRE",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "STE",
+      "name": "Steris",
+      "canonical_id": "US:STE",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "STLD",
+      "name": "Steel Dynamics",
+      "canonical_id": "US:STLD",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "STT",
+      "name": "State Street Corporation",
+      "canonical_id": "US:STT",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "STX",
+      "name": "Seagate Technology",
+      "canonical_id": "US:STX",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "STZ",
+      "name": "Constellation Brands",
+      "canonical_id": "US:STZ",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "SW",
+      "name": "Smurfit Westrock",
+      "canonical_id": "US:SW",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "SWK",
+      "name": "Stanley Black & Decker",
+      "canonical_id": "US:SWK",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "SWKS",
+      "name": "Skyworks Solutions",
+      "canonical_id": "US:SWKS",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "SYF",
+      "name": "Synchrony Financial",
+      "canonical_id": "US:SYF",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "SYK",
+      "name": "Stryker Corporation",
+      "canonical_id": "US:SYK",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "SYY",
+      "name": "Sysco",
+      "canonical_id": "US:SYY",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "T",
+      "name": "AT&T",
+      "canonical_id": "US:T",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "TAP",
+      "name": "Molson Coors Beverage Company",
+      "canonical_id": "US:TAP",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "TDG",
+      "name": "TransDigm Group",
+      "canonical_id": "US:TDG",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "TDY",
+      "name": "Teledyne Technologies",
+      "canonical_id": "US:TDY",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "TECH",
+      "name": "Bio-Techne",
+      "canonical_id": "US:TECH",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "TEL",
+      "name": "TE Connectivity",
+      "canonical_id": "US:TEL",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "TER",
+      "name": "Teradyne",
+      "canonical_id": "US:TER",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "TFC",
+      "name": "Truist Financial",
+      "canonical_id": "US:TFC",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "TGT",
+      "name": "Target Corporation",
+      "canonical_id": "US:TGT",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "TJX",
+      "name": "TJX Companies",
+      "canonical_id": "US:TJX",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "TKO",
+      "name": "TKO Group Holdings",
+      "canonical_id": "US:TKO",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "TMO",
+      "name": "Thermo Fisher Scientific",
+      "canonical_id": "US:TMO",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "TMUS",
+      "name": "T-Mobile US",
+      "canonical_id": "US:TMUS",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "TPL",
+      "name": "Texas Pacific Land Corporation",
+      "canonical_id": "US:TPL",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "TPR",
+      "name": "Tapestry, Inc.",
+      "canonical_id": "US:TPR",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "TRGP",
+      "name": "Targa Resources",
+      "canonical_id": "US:TRGP",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "TRMB",
+      "name": "Trimble Inc.",
+      "canonical_id": "US:TRMB",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "TROW",
+      "name": "T. Rowe Price",
+      "canonical_id": "US:TROW",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "TRV",
+      "name": "Travelers Companies (The)",
+      "canonical_id": "US:TRV",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "TSCO",
+      "name": "Tractor Supply",
+      "canonical_id": "US:TSCO",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "TSLA",
+      "name": "Tesla, Inc.",
+      "canonical_id": "US:TSLA",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "TSN",
+      "name": "Tyson Foods",
+      "canonical_id": "US:TSN",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "TT",
+      "name": "Trane Technologies",
+      "canonical_id": "US:TT",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "TTD",
+      "name": "Trade Desk (The)",
+      "canonical_id": "US:TTD",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "TTWO",
+      "name": "Take-Two Interactive",
+      "canonical_id": "US:TTWO",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "TXN",
+      "name": "Texas Instruments",
+      "canonical_id": "US:TXN",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "TXT",
+      "name": "Textron",
+      "canonical_id": "US:TXT",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "TYL",
+      "name": "Tyler Technologies",
+      "canonical_id": "US:TYL",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "UAL",
+      "name": "United Airlines Holdings",
+      "canonical_id": "US:UAL",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "UBER",
+      "name": "Uber",
+      "canonical_id": "US:UBER",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "UDR",
+      "name": "UDR, Inc.",
+      "canonical_id": "US:UDR",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "UHS",
+      "name": "Universal Health Services",
+      "canonical_id": "US:UHS",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "ULTA",
+      "name": "Ulta Beauty",
+      "canonical_id": "US:ULTA",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "UNH",
+      "name": "UnitedHealth Group",
+      "canonical_id": "US:UNH",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "UNP",
+      "name": "Union Pacific Corporation",
+      "canonical_id": "US:UNP",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "UPS",
+      "name": "United Parcel Service",
+      "canonical_id": "US:UPS",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "URI",
+      "name": "United Rentals",
+      "canonical_id": "US:URI",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "USB",
+      "name": "U.S. Bancorp",
+      "canonical_id": "US:USB",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "V",
+      "name": "Visa Inc.",
+      "canonical_id": "US:V",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "VICI",
+      "name": "Vici Properties",
+      "canonical_id": "US:VICI",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "VLO",
+      "name": "Valero Energy",
+      "canonical_id": "US:VLO",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "VLTO",
+      "name": "Veralto",
+      "canonical_id": "US:VLTO",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "VMC",
+      "name": "Vulcan Materials Company",
+      "canonical_id": "US:VMC",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "VRSK",
+      "name": "Verisk Analytics",
+      "canonical_id": "US:VRSK",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "VRSN",
+      "name": "Verisign",
+      "canonical_id": "US:VRSN",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "VRTX",
+      "name": "Vertex Pharmaceuticals",
+      "canonical_id": "US:VRTX",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "VST",
+      "name": "Vistra Corp.",
+      "canonical_id": "US:VST",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "VTR",
+      "name": "Ventas",
+      "canonical_id": "US:VTR",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "VTRS",
+      "name": "Viatris",
+      "canonical_id": "US:VTRS",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "VZ",
+      "name": "Verizon",
+      "canonical_id": "US:VZ",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "WAB",
+      "name": "Wabtec",
+      "canonical_id": "US:WAB",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "WAT",
+      "name": "Waters Corporation",
+      "canonical_id": "US:WAT",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "WBA",
+      "name": "Walgreens Boots Alliance",
+      "canonical_id": "US:WBA",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "WBD",
+      "name": "Warner Bros. Discovery",
+      "canonical_id": "US:WBD",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "WDAY",
+      "name": "Workday, Inc.",
+      "canonical_id": "US:WDAY",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "WDC",
+      "name": "Western Digital",
+      "canonical_id": "US:WDC",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "WEC",
+      "name": "WEC Energy Group",
+      "canonical_id": "US:WEC",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "WELL",
+      "name": "Welltower",
+      "canonical_id": "US:WELL",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "WFC",
+      "name": "Wells Fargo",
+      "canonical_id": "US:WFC",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "WM",
+      "name": "Waste Management",
+      "canonical_id": "US:WM",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "WMB",
+      "name": "Williams Companies",
+      "canonical_id": "US:WMB",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "WMT",
+      "name": "Walmart",
+      "canonical_id": "US:WMT",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "WRB",
+      "name": "W. R. Berkley Corporation",
+      "canonical_id": "US:WRB",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "WSM",
+      "name": "Williams-Sonoma, Inc.",
+      "canonical_id": "US:WSM",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "WST",
+      "name": "West Pharmaceutical Services",
+      "canonical_id": "US:WST",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "WTW",
+      "name": "Willis Towers Watson",
+      "canonical_id": "US:WTW",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "WY",
+      "name": "Weyerhaeuser",
+      "canonical_id": "US:WY",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "WYNN",
+      "name": "Wynn Resorts",
+      "canonical_id": "US:WYNN",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "XEL",
+      "name": "Xcel Energy",
+      "canonical_id": "US:XEL",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "XOM",
+      "name": "ExxonMobil",
+      "canonical_id": "US:XOM",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "XYL",
+      "name": "Xylem Inc.",
+      "canonical_id": "US:XYL",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "XYZ",
+      "name": "Block, Inc.",
+      "canonical_id": "US:XYZ",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "YUM",
+      "name": "Yum! Brands",
+      "canonical_id": "US:YUM",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "ZBH",
+      "name": "Zimmer Biomet",
+      "canonical_id": "US:ZBH",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "ZBRA",
+      "name": "Zebra Technologies",
+      "canonical_id": "US:ZBRA",
+      "type_norm": "STOCK"
+    },
+    {
+      "ticker": "ZTS",
+      "name": "Zoetis",
+      "canonical_id": "US:ZTS",
+      "type_norm": "STOCK"
+    }
+  ]
+}

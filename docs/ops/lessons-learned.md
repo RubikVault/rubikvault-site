@@ -21,6 +21,18 @@
 
 ---
 
+### 2026-04-30 · Stock Analyzer · Page-Core green must include coherent key-level basis
+
+**What:** Page-Core could publish rows with `ui_banner_state=all_systems_operational` while `market_stats_min=null` and `key_levels_ready=false`. Separately, `search_exact_by_symbol.json.gz` could stay older than the registry, causing index/audit mismatches and stale bars in exact symbol resolution.
+
+**Why:** The Page-Core bundle builder suppressed market stats in a lite contract, while release gates counted static Page-Core as if it matched hydrated UI behavior. Search exact was not rebuilt from the same registry run before index/audit checks.
+
+**Fix:** Page-Core now derives `market_stats_min` and `key_levels_ready` from historical bars/indicators, blocks green unless price/date/stats are coherent, uses historical price basis when available, and publishes an explicit UI-state summary gate. Search exact is rebuilt from registry for `STOCK`, `ETF`, and `INDEX` only, then verified against registry freshness and Page-Core scope count.
+
+**Prevention:** Release must fail if any row is green without key levels, if search exact is older than registry, if search exact contains non-operational types, or if Page-Core asset count differs from global scope count.
+
+---
+
 ### 2026-04-29 · NAS · Breakout V12 daily must be incremental, never full-history
 
 **What:** The initial Breakout V12 NAS step could run the full V1.2 feature pipeline when enabled. That path scans broad materialized history parquet, filters a large asset set, computes rolling features, and materializes the result, which is unsafe for the DS720+ nightly profile.

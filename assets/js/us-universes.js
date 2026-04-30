@@ -1,12 +1,9 @@
 const UNIVERSE_PATHS = [
-  "./data/universes/all_us.json",
-  "./data/symbols/universe.min.json",
-  "./data/symbols/symbols.min.json",
-  "./data/symbols/sp500.json",
-  "./data/symbols/nasdaq.json",
-  "./data/symbols/dow.json",
-  "./data/symbols/russell.json",
-  "./assets/nasdaq_symbols.min.json"
+  "/data/universe/all.json",
+  "/data/universe/sp500.json",
+  "/data/universe/nasdaq100.json",
+  "/data/universe/dowjones.json",
+  "/data/universe/russell2000.json"
 ];
 
 let universePromise = null;

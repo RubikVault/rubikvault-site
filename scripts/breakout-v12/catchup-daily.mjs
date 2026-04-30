@@ -85,6 +85,18 @@ function hasAllDeltaBuckets(root, asOf, bucketCount) {
   return true;
 }
 
+function yyyymmdd(asOf) {
+  return String(asOf || '').replace(/-/g, '').slice(0, 8);
+}
+
+function resolveDeltaManifestForDate(args, asOf) {
+  if (args.deltaManifest && args.dates.length <= 1) return path.resolve(args.deltaManifest);
+  const direct = path.join(args.quantRoot, 'jobs', `q1_daily_delta_${yyyymmdd(asOf)}`, 'manifest.json');
+  if (fs.existsSync(direct)) return direct;
+  if (args.deltaManifest) return path.resolve(args.deltaManifest);
+  return '';
+}
+
 function main() {
   const args = parseArgs(process.argv.slice(2));
   if (!args.dates.length) throw new Error('as-of/dates missing');
@@ -107,7 +119,8 @@ function main() {
         `--output-root=${dailyDeltaRoot}`,
         `--bucket-count=${args.bucketCount}`,
       ];
-      if (args.deltaManifest) prepareArgs.push(`--delta-manifest=${path.resolve(args.deltaManifest)}`);
+      const deltaManifest = resolveDeltaManifestForDate(args, asOf);
+      if (deltaManifest) prepareArgs.push(`--delta-manifest=${deltaManifest}`);
       run(args.pythonBin, prepareArgs);
     }
     run(process.execPath, [
@@ -171,5 +184,19 @@ try {
   process.exitCode = main();
 } catch (error) {
   console.error(error?.stack || error?.message || String(error));
+  try {
+    const args = parseArgs(process.argv.slice(2));
+    const storeRoot = path.join(path.resolve(args.quantRoot), 'breakout-v12');
+    writeJson(path.join(storeRoot, 'catchup-status.json'), {
+      schema_version: 'breakout_v12_catchup_status_v1',
+      generated_at: new Date().toISOString(),
+      status: 'failed',
+      as_of: args.asOf || null,
+      dates: args.dates,
+      error: String(error?.message || error),
+    });
+  } catch {
+    // Preserve original failure.
+  }
   process.exitCode = 1;
 }

@@ -1,6 +1,6 @@
 import { isV2Enabled, v2GateResponse } from '../../../_shared/v2-gate.js';
 import { fetchStockSummary } from '../../../_shared/data-interface.js';
-import { readPageCoreForTicker } from '../../../_shared/page-core-reader.js';
+import { pageCoreStrictOperationalReasons, readPageCoreForTicker } from '../../../_shared/page-core-reader.js';
 import { normalizeTicker } from '../../../_shared/stock-helpers.js';
 import { logV2Request, logV2Gate } from '../../../_shared/v2-observability.js';
 import { errorEnvelope, jsonEnvelopeResponse } from '../../../_shared/envelope.js';
@@ -9,31 +9,43 @@ function buildSummaryFromPageCore(pageCore) {
   const ticker = pageCore?.display_ticker || pageCore?.canonical_asset_id?.split(':')?.pop() || null;
   const asOf = pageCore?.freshness?.as_of || pageCore?.freshness?.generated_at?.slice?.(0, 10) || null;
   const close = Number.isFinite(Number(pageCore?.summary_min?.last_close)) ? Number(pageCore.summary_min.last_close) : null;
-  const uiRenderable = pageCore?.coverage?.ui_renderable === true;
-  const qualityStatus = String(pageCore?.summary_min?.quality_status || '').toUpperCase();
-  const pipelineStatus = ['OK', 'FRESH', 'CURRENT'].includes(qualityStatus)
-    ? 'OK'
-    : (uiRenderable ? 'OK' : 'DEGRADED');
+  const marketStatsMin = pageCore?.market_stats_min && typeof pageCore.market_stats_min === 'object' ? pageCore.market_stats_min : null;
+  const marketStats = marketStatsMin?.stats && typeof marketStatsMin.stats === 'object'
+    ? {
+      stats: marketStatsMin.stats,
+      as_of: marketStatsMin.as_of || asOf,
+      source_provider: marketStatsMin.stats_source || 'page-core',
+    }
+    : { stats: {}, as_of: asOf, source_provider: 'missing' };
+  const strictReasons = pageCoreStrictOperationalReasons(pageCore);
+  const pageCoreOperational = strictReasons.length === 0;
+  const pipelineStatus = pageCoreOperational ? 'OK' : 'DEGRADED';
   const decisionVerdict = String(pageCore?.summary_min?.decision_verdict || '').toUpperCase();
   const verdict = ['BUY', 'WAIT', 'SELL', 'AVOID'].includes(decisionVerdict)
     ? decisionVerdict
-    : (uiRenderable ? 'WAIT' : 'WAIT_PIPELINE_INCOMPLETE');
+    : (pageCoreOperational ? 'WAIT' : 'WAIT_PIPELINE_INCOMPLETE');
   const rawRiskLevel = String(pageCore?.summary_min?.risk_level || pageCore?.governance_summary?.risk_level || '').toUpperCase();
-  const riskLevel = rawRiskLevel && rawRiskLevel !== 'UNKNOWN'
-    ? rawRiskLevel
-    : (uiRenderable ? 'DEGRADED' : 'UNKNOWN');
+  const riskLevel = rawRiskLevel || 'UNKNOWN';
   const blockingReasons = Array.isArray(pageCore?.governance_summary?.blocking_reasons)
     ? pageCore.governance_summary.blocking_reasons
     : [];
-  const signalQuality = pipelineStatus === 'OK' ? 'degraded' : 'suppressed';
+  const effectiveBlockingReasons = pageCoreOperational
+    ? []
+    : [...strictReasons, pageCore?.primary_blocker, ...blockingReasons].filter(Boolean);
+  const signalQuality = pageCoreOperational ? 'fresh' : 'suppressed';
   const latestBar = asOf && close != null ? { date: asOf, open: close, high: close, low: close, close, volume: null } : null;
   return {
     ticker,
     canonical_asset_id: pageCore?.canonical_asset_id || null,
     name: pageCore?.identity?.name || ticker,
     latest_bar: latestBar,
-    market_prices: { ticker, date: asOf, close, source_provider: 'page-core' },
-    market_stats: { stats: {}, as_of: asOf, source_provider: 'page-core' },
+    market_prices: {
+      ticker,
+      date: marketStatsMin?.price_date || asOf,
+      close,
+      source_provider: marketStatsMin?.price_source || 'page-core',
+    },
+    market_stats: marketStats,
     change: {
       abs: pageCore?.summary_min?.daily_change_abs ?? null,
       pct: pageCore?.summary_min?.daily_change_pct ?? null,
@@ -49,20 +61,61 @@ function buildSummaryFromPageCore(pageCore) {
       source: 'page-core-summary-bridge',
       pipeline_status: pipelineStatus,
       verdict,
-      blocking_reasons: pipelineStatus === 'OK' ? [] : blockingReasons,
+      blocking_reasons: effectiveBlockingReasons,
       risk_assessment: { level: riskLevel },
       signal_quality: signalQuality,
     },
     analysis_readiness: {
-      status: pipelineStatus === 'OK' ? 'DEGRADED' : 'FAILED',
+      status: pageCoreOperational ? 'READY' : 'FAILED',
       source: 'page-core-summary-bridge',
-      decision_bundle_status: pipelineStatus === 'OK' ? 'DEGRADED' : 'FAILED',
-      decision_public_green: pipelineStatus === 'OK',
+      decision_bundle_status: pageCoreOperational ? 'OK' : 'FAILED',
+      decision_public_green: pageCoreOperational,
       signal_quality: signalQuality,
-      blocking_reasons: pipelineStatus === 'OK' ? [] : blockingReasons,
+      blocking_reasons: effectiveBlockingReasons,
       warnings: pageCore?.governance_summary?.warnings || [],
     },
     module_freshness: { price_as_of: asOf, historical_as_of: asOf, market_stats_as_of: asOf },
+  };
+}
+
+function degradeLegacyFallbackResult(result) {
+  if (!result?.ok || !result?.data || typeof result.data !== 'object') return result;
+  const data = {
+    ...result.data,
+    daily_decision: {
+      ...(result.data.daily_decision || {}),
+      schema: 'rv.asset_daily_decision.v1',
+      source: result.data.daily_decision?.source || 'legacy-summary-fallback',
+      pipeline_status: 'DEGRADED',
+      verdict: result.data.daily_decision?.verdict || result.data.decision?.verdict || 'WAIT_PIPELINE_INCOMPLETE',
+      blocking_reasons: Array.from(new Set([
+        ...(Array.isArray(result.data.daily_decision?.blocking_reasons) ? result.data.daily_decision.blocking_reasons : []),
+        'page_core_unavailable_legacy_fallback',
+      ])),
+      risk_assessment: result.data.daily_decision?.risk_assessment || { level: 'UNKNOWN' },
+      signal_quality: 'suppressed',
+    },
+    analysis_readiness: {
+      ...(result.data.analysis_readiness || {}),
+      status: 'FAILED',
+      source: result.data.analysis_readiness?.source || 'legacy-summary-fallback',
+      decision_bundle_status: 'FAILED',
+      decision_public_green: false,
+      signal_quality: 'suppressed',
+      blocking_reasons: Array.from(new Set([
+        ...(Array.isArray(result.data.analysis_readiness?.blocking_reasons) ? result.data.analysis_readiness.blocking_reasons : []),
+        'page_core_unavailable_legacy_fallback',
+      ])),
+    },
+  };
+  return {
+    ...result,
+    data,
+    meta: {
+      ...(result.meta || {}),
+      status: result.meta?.status === 'fresh' ? 'degraded' : (result.meta?.status || 'degraded'),
+      page_core_fallback: 'legacy_degraded',
+    },
   };
 }
 
@@ -125,7 +178,7 @@ export async function onRequestGet(context) {
   }
 
   // Bridge fallback until page-core latest.json is deployed.
-  const result = await fetchStockSummary(ticker, env, request);
+  const result = degradeLegacyFallbackResult(await fetchStockSummary(ticker, env, request));
   const durationMs = Date.now() - start;
 
   logV2Request({

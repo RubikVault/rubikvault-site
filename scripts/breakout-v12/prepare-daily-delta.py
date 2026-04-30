@@ -5,15 +5,27 @@ import argparse
 import hashlib
 import json
 import os
+import shutil
 import time
 import uuid
 from pathlib import Path
 from typing import Iterable, Any
 
 import polars as pl
+import pyarrow.parquet as pq
 
 
 BAR_COLS = ["asset_id", "date", "asset_class", "open_raw", "high_raw", "low_raw", "close_raw", "volume_raw"]
+SOURCE_CANDIDATES = {
+    "asset_id": ["asset_id", "canonical_id"],
+    "date": ["date", "trading_date", "asof_date"],
+    "asset_class": ["asset_class"],
+    "open_raw": ["open_raw", "open"],
+    "high_raw": ["high_raw", "high"],
+    "low_raw": ["low_raw", "low"],
+    "close_raw": ["close_raw", "close", "adj_close"],
+    "volume_raw": ["volume_raw", "volume"],
+}
 
 
 def parse_args(argv: Iterable[str] | None = None) -> argparse.Namespace:
@@ -26,6 +38,7 @@ def parse_args(argv: Iterable[str] | None = None) -> argparse.Namespace:
     p.add_argument("--bucket-count", type=int, default=128)
     p.add_argument("--compression", default="zstd")
     p.add_argument("--compression-level", type=int, default=3)
+    p.add_argument("--batch-files", type=int, default=512)
     return p.parse_args(list(argv) if argv is not None else None)
 
 
@@ -134,6 +147,20 @@ def normalize(df: pl.DataFrame) -> pl.DataFrame:
     )
 
 
+def read_delta_file(path: Path) -> pl.DataFrame:
+    parquet = pq.ParquetFile(path)
+    schema_names = set(parquet.schema_arrow.names)
+    columns: set[str] = set()
+    for candidates in SOURCE_CANDIDATES.values():
+        for candidate in candidates:
+            if candidate in schema_names:
+                columns.add(candidate)
+                break
+    if not columns:
+        return pl.DataFrame(schema=empty_schema())
+    return normalize(pl.from_arrow(parquet.read(columns=sorted(columns))))
+
+
 def empty_schema() -> dict[str, pl.DataType]:
     return {
         "asset_id": pl.Utf8,
@@ -147,6 +174,42 @@ def empty_schema() -> dict[str, pl.DataType]:
     }
 
 
+def part_schema() -> dict[str, pl.DataType]:
+    schema = empty_schema()
+    schema["_bucket"] = pl.Int64
+    schema["_source_order"] = pl.Int64
+    return schema
+
+
+def flush_parts(
+    frames: list[pl.DataFrame],
+    parts_root: Path,
+    part_counts: dict[int, int],
+    *,
+    compression: str,
+    compression_level: int,
+) -> int:
+    if not frames:
+        return 0
+    batch = pl.concat(frames, how="vertical_relaxed")
+    rows = int(batch.height)
+    if rows <= 0:
+        return 0
+    for bucket in sorted(batch["_bucket"].unique().to_list()):
+        bucket_int = int(bucket)
+        part_idx = int(part_counts.get(bucket_int, 0))
+        out_path = parts_root / f"bucket={bucket_int:03d}" / f"part={part_idx:06d}.parquet"
+        out_df = batch.filter(pl.col("_bucket") == bucket_int)
+        write_parquet_atomic(
+            out_df,
+            out_path,
+            compression=compression,
+            compression_level=compression_level,
+        )
+        part_counts[bucket_int] = part_idx + 1
+    return rows
+
+
 def main(argv: Iterable[str] | None = None) -> int:
     args = parse_args(argv)
     started = time.time()
@@ -158,28 +221,65 @@ def main(argv: Iterable[str] | None = None) -> int:
     files = sorted(raw_root.glob("asset_class=*/delta_*.parquet"))
     if not files:
         raise SystemExit(f"FATAL: no q1 daily delta parquet files under {raw_root}")
-    frames = []
-    for file in files:
-        df = normalize(pl.read_parquet(file)).filter(pl.col("date") == str(args.as_of)[:10])
-        if not df.is_empty():
-            frames.append(df)
-    all_delta = pl.concat(frames, how="vertical_relaxed") if frames else pl.DataFrame(schema=empty_schema())
-    if not all_delta.is_empty():
-        all_delta = all_delta.unique(["asset_id", "date"], keep="last").with_columns(
-            pl.col("asset_id")
-            .map_elements(lambda value: stable_bucket(value, int(args.bucket_count)), return_dtype=pl.Int64)
-            .alias("_bucket")
-        )
     output_date_root = Path(args.output_root).resolve() / f"date={str(args.as_of)[:10]}"
+    parts_root = output_date_root / ".parts" / f"prepare_{os.getpid()}_{uuid.uuid4().hex}"
+    frames: list[pl.DataFrame] = []
+    part_counts: dict[int, int] = {}
+    total_rows = 0
+    for idx, file in enumerate(files):
+        df = read_delta_file(file).filter(pl.col("date") == str(args.as_of)[:10])
+        if not df.is_empty():
+            frames.append(
+                df.with_columns(
+                    [
+                        pl.col("asset_id")
+                        .map_elements(lambda value: stable_bucket(value, int(args.bucket_count)), return_dtype=pl.Int64)
+                        .alias("_bucket"),
+                        pl.lit(idx, dtype=pl.Int64).alias("_source_order"),
+                    ]
+                )
+            )
+        if len(frames) >= max(1, int(args.batch_files)):
+            total_rows += flush_parts(
+                frames,
+                parts_root,
+                part_counts,
+                compression=args.compression,
+                compression_level=int(args.compression_level),
+            )
+            frames = []
+    total_rows += flush_parts(
+        frames,
+        parts_root,
+        part_counts,
+        compression=args.compression,
+        compression_level=int(args.compression_level),
+    )
     buckets = []
     for bucket in range(int(args.bucket_count)):
-        if all_delta.is_empty():
-            out_df = pl.DataFrame(schema=empty_schema())
+        part_glob = str(parts_root / f"bucket={bucket:03d}" / "part=*.parquet")
+        if part_counts.get(bucket, 0):
+            out_df = (
+                pl.scan_parquet(part_glob)
+                .select(BAR_COLS + ["_source_order"])
+                .sort(["asset_id", "date", "_source_order"])
+                .unique(["asset_id", "date"], keep="last")
+                .drop("_source_order")
+                .select(BAR_COLS)
+                .collect()
+            )
         else:
-            out_df = all_delta.filter(pl.col("_bucket") == bucket).drop("_bucket").select(BAR_COLS)
+            out_df = pl.DataFrame(schema=empty_schema())
         out_path = output_date_root / f"bucket={bucket:03d}.parquet"
         write_parquet_atomic(out_df, out_path, compression=args.compression, compression_level=int(args.compression_level))
         buckets.append({"bucket": bucket, "path": str(out_path), "rows": int(out_df.height), "sha256": file_sha256(out_path)})
+    try:
+        shutil.rmtree(parts_root)
+        parent = parts_root.parent
+        if parent.exists() and not any(parent.iterdir()):
+            parent.rmdir()
+    except OSError:
+        pass
     summary = {
         "schema": "breakout_v12_daily_delta_manifest_v1",
         "generated_at": utc_now_iso(),
@@ -187,7 +287,7 @@ def main(argv: Iterable[str] | None = None) -> int:
         "source_delta_manifest": str(manifest_path),
         "raw_ingest_root": str(raw_root),
         "bucket_count": int(args.bucket_count),
-        "counts": {"source_files": len(files), "rows": int(all_delta.height), "buckets": len(buckets)},
+        "counts": {"source_files": len(files), "rows": int(total_rows), "buckets": len(buckets)},
         "buckets": buckets,
         "wall_sec": round(time.time() - started, 3),
     }

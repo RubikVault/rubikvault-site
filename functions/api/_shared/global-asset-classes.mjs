@@ -1,4 +1,4 @@
-export const DEFAULT_GLOBAL_ASSET_CLASSES = Object.freeze(['STOCK', 'ETF']);
+export const DEFAULT_GLOBAL_ASSET_CLASSES = Object.freeze(['STOCK', 'ETF', 'INDEX']);
 export const SUPPORTED_GLOBAL_ASSET_CLASSES = Object.freeze(['STOCK', 'ETF', 'INDEX']);
 
 const SUPPORTED_SET = new Set(SUPPORTED_GLOBAL_ASSET_CLASSES);

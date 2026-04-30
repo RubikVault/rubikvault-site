@@ -893,7 +893,7 @@ export async function fetchStockHistorical(ticker, env, request) {
 
   let breakoutV2 = null;
   try {
-    const result = processTickerSeries(effectiveTicker, bars);
+    const result = processTickerSeries(bars, {}, { regime_tag: 'UP' });
     if (result) breakoutV2 = result;
   } catch { /* optional */ }
   const indicatorIssues = [];

@@ -6,12 +6,14 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(fileURLToPath(new URL('.', import.meta.url)), '../..');
 const DEFAULT_RUN_SUMMARY = path.join(ROOT, 'public/data/hist-probs/run-summary.json');
+const DEFAULT_DEFERRED = path.join(ROOT, 'public/data/hist-probs/deferred-latest.json');
 const DEFAULT_DATA_FRESHNESS = path.join(ROOT, 'public/data/reports/data-freshness-latest.json');
 const DEFAULT_OUTPUT = path.join(ROOT, 'public/data/runtime/hist-probs-status-summary.json');
 
 function parseArgs(argv) {
   const options = {
     runSummaryPath: process.env.RV_HIST_PROBS_RUN_SUMMARY_PATH || DEFAULT_RUN_SUMMARY,
+    deferredPath: process.env.RV_HIST_PROBS_DEFERRED_PATH || DEFAULT_DEFERRED,
     dataFreshnessPath: process.env.RV_DATA_FRESHNESS_PATH || DEFAULT_DATA_FRESHNESS,
     outputPath: process.env.RV_HIST_PROBS_STATUS_OUTPUT || DEFAULT_OUTPUT,
   };
@@ -23,6 +25,11 @@ function parseArgs(argv) {
       i += 1;
     } else if (arg.startsWith('--run-summary=')) {
       options.runSummaryPath = path.resolve(ROOT, arg.split('=').slice(1).join('='));
+    } else if (arg === '--deferred' && next) {
+      options.deferredPath = path.resolve(ROOT, next);
+      i += 1;
+    } else if (arg.startsWith('--deferred=')) {
+      options.deferredPath = path.resolve(ROOT, arg.split('=').slice(1).join('='));
     } else if (arg === '--data-freshness' && next) {
       options.dataFreshnessPath = path.resolve(ROOT, next);
       i += 1;
@@ -109,7 +116,7 @@ function findHistFreshness(dataFreshness) {
       for (const item of value) walk(item);
       return;
     }
-    const id = String(value.id || value.step_id || value.family || value.name || '').toLowerCase();
+    const id = String(value.id || value.step_id || value.family_id || value.family || value.name || '').toLowerCase();
     if (id.includes('hist') && id.includes('prob')) candidates.push(value);
     for (const child of Object.values(value)) walk(child);
   };
@@ -117,7 +124,7 @@ function findHistFreshness(dataFreshness) {
   return candidates[0] || null;
 }
 
-function buildStatus({ runSummary, dataFreshness, runSummaryPath }) {
+function buildStatus({ runSummary, deferred, dataFreshness, runSummaryPath }) {
   const hasRunSummary = Boolean(runSummary && Object.keys(runSummary).length > 0);
   const tickersCovered = nonNegative(runSummary?.tickers_covered ?? runSummary?.covered_count ?? runSummary?.profiles_written);
   const tickersTotal = nonNegative(runSummary?.tickers_total ?? runSummary?.total_tickers ?? runSummary?.universe_total);
@@ -133,27 +140,36 @@ function buildStatus({ runSummary, dataFreshness, runSummaryPath }) {
   );
   const coverage = numberOrNull(runSummary?.coverage_ratio) ?? artifactCoverage ?? runCoverage ?? 0;
   const retryRemaining = nonNegative(runSummary?.retry_remaining ?? ((tickersRemaining || 0) + (tickersErrors || 0)));
-  const minCoverage = numberOrNull(process.env.HIST_PROBS_MIN_COVERAGE_RATIO || runSummary?.min_coverage_ratio) ?? 0.90;
+  const minCoverage = numberOrNull(process.env.HIST_PROBS_MIN_COVERAGE_RATIO || runSummary?.min_coverage_ratio) ?? 0.95;
   const mode = hasRunSummary ? inferMode(runSummary) : 'unknown';
+  const writeMode = String(runSummary?.hist_probs_write_mode || '').trim().toLowerCase() || null;
+  const writeModeOk = writeMode === 'bucket_only';
   const freshnessBudgetDays = nonNegative(
     process.env.HIST_PROBS_FRESHNESS_BUDGET_TRADING_DAYS
     ?? runSummary?.freshness_budget_trading_days
     ?? runSummary?.freshness_budget_days
   );
+  const freshness = findHistFreshness(dataFreshness);
+  const artifactFreshnessRatio = numberOrNull(freshness?.artifact_freshness_ratio ?? freshness?.artifact_coverage_ratio) ?? artifactCoverage ?? 0;
+  const deferredTarget = String(deferred?.target_market_date || '').slice(0, 10) || null;
+  const freshnessExpected = String(freshness?.expected_eod || '').slice(0, 10) || null;
+  const deferredActive = deferred?.schema === 'rv.hist_probs.deferred.v1'
+    && (!freshnessExpected || deferredTarget === freshnessExpected || deferredTarget >= freshnessExpected);
   let catchupStatus = 'unknown';
   if (hasRunSummary) {
-    if (coverage >= minCoverage && retryRemaining === 0) catchupStatus = 'complete';
+    if (coverage >= minCoverage && artifactFreshnessRatio >= minCoverage && retryRemaining === 0 && !deferredActive && writeModeOk) catchupStatus = 'complete';
     else if (coverage >= 0.90) catchupStatus = 'partial';
     else if (coverage > 0) catchupStatus = 'degraded';
     else catchupStatus = 'failed';
   }
-  const freshness = findHistFreshness(dataFreshness);
   return {
     schema: 'rv.hist_probs.status_summary.v1',
     generated_at: new Date().toISOString(),
     source_run_summary_path: path.relative(ROOT, runSummaryPath),
     run_summary_exists: hasRunSummary,
     hist_probs_mode: mode,
+    hist_probs_write_mode: writeMode,
+    write_mode_ok: writeModeOk,
     catchup_status: catchupStatus,
     retry_remaining: retryRemaining,
     tier_a_count: tierA,
@@ -161,8 +177,14 @@ function buildStatus({ runSummary, dataFreshness, runSummaryPath }) {
     freshness_budget_days: freshnessBudgetDays,
     coverage_ratio: coverage,
     artifact_coverage_ratio: artifactCoverage,
+    artifact_freshness_ratio: artifactFreshnessRatio,
     run_coverage_ratio: runCoverage,
     min_coverage_ratio: minCoverage,
+    deferred: deferredActive,
+    deferred_target_market_date: deferredTarget,
+    deferred_reason: deferredActive ? deferred?.reason || null : null,
+    deferred_remaining_tickers: deferredActive ? nonNegative(deferred?.remaining_tickers) ?? 0 : 0,
+    last_good_regime_date: deferredActive ? deferred?.last_good_regime_date || null : null,
     tickers_covered: tickersCovered,
     tickers_total: tickersTotal,
     tickers_input_total: tickersInputTotal,
@@ -180,9 +202,11 @@ function buildStatus({ runSummary, dataFreshness, runSummaryPath }) {
 function main() {
   const options = parseArgs(process.argv);
   const runSummary = readJson(options.runSummaryPath);
+  const deferred = readJson(options.deferredPath);
   const dataFreshness = readJson(options.dataFreshnessPath);
   const status = buildStatus({
     runSummary,
+    deferred,
     dataFreshness,
     runSummaryPath: options.runSummaryPath,
   });

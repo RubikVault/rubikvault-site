@@ -44,6 +44,11 @@ const HIST_PROBS_RSS_BUDGET_MB = Math.max(128, Number(process.env.HIST_PROBS_RSS
 const RESPECT_CHECKPOINT_VERSION = process.env.HIST_PROBS_RESPECT_CHECKPOINT_VERSION !== '0';
 const FAIL_ON_SOFT_ERRORS = process.env.HIST_PROBS_FAIL_ON_SOFT_ERRORS !== '0';
 const MIN_COVERAGE_RATIO = Math.max(0, Math.min(1, Number(process.env.HIST_PROBS_MIN_COVERAGE_RATIO || 0.95)));
+const HIST_PROBS_DEFER_IF_REMAINING_OVER = Math.max(0, Number(process.env.HIST_PROBS_DEFER_IF_REMAINING_OVER || 0) || 0);
+const HIST_PROBS_ALLOW_DEFER_SUCCESS = parseBooleanFlag(
+  process.env.HIST_PROBS_ALLOW_DEFER_SUCCESS
+    || process.env.RV_HIST_PROBS_ALLOW_DEFER_SUCCESS
+) === true;
 const HIST_PROBS_FRESHNESS_BUDGET_TRADING_DAYS = Math.max(0, Number(
   process.env.HIST_PROBS_FRESHNESS_BUDGET_TRADING_DAYS
     || process.env.RV_HIST_PROBS_FRESHNESS_BUDGET_TRADING_DAYS
@@ -64,6 +69,7 @@ const HIST_PROBS_TIER_A_TOP_STOCKS = Math.max(0, Number(
     || 3000,
 ) || 0);
 const HIST_PROBS_PROTECTED_TICKERS = new Set(['T', 'AAPL', 'MSFT', 'F', 'V', 'TSLA', 'SPY', 'QQQ', 'BRK-B', 'BRK.B', 'BF-B', 'BF.B']);
+const HIST_PROBS_DEFER_PATH = path.join(HIST_PROBS_DIR, 'deferred-latest.json');
 
 function readJsonSync(filePath) {
   try {
@@ -530,6 +536,17 @@ async function writeSummaryAtomic(summary, summaryPath = path.join(HIST_PROBS_DI
   return summaryPath;
 }
 
+async function writeJsonAtomic(filePath, payload) {
+  const tmpPath = path.join(path.dirname(filePath), `.${path.basename(filePath)}.${process.pid}.${Date.now()}.tmp`);
+  await fs.mkdir(path.dirname(filePath), { recursive: true });
+  try {
+    await fs.writeFile(tmpPath, `${JSON.stringify(payload, null, 2)}\n`, 'utf8');
+    await fs.rename(tmpPath, filePath);
+  } finally {
+    await fs.rm(tmpPath, { force: true }).catch(() => {});
+  }
+}
+
 if (isMainThread) {
   // Re-import after setting env
   const { computeRegime } = await import('./scripts/lib/hist-probs/compute-regime.mjs');
@@ -700,6 +717,39 @@ if (isMainThread) {
       budgetFreshExistingCount = budgetFresh;
       maxBudgetFreshLagTradingDays = maxBudgetFreshLag;
       console.log(`[Turbo-Hist] Skip-existing: ${skippedCount} fresh skipped (${strictFreshExistingCount} strict, ${budgetFreshExistingCount} budget≤${HIST_PROBS_FRESHNESS_BUDGET_TRADING_DAYS}T), ${tickerList.length} remaining, ${staleExistingCount} stale, ${missingExistingCount} missing, ${invalidExistingCount} invalid, ${forcedRebuildCount} rebuild-forced`);
+    }
+
+    if (writeGlobalArtifacts && HIST_PROBS_DEFER_IF_REMAINING_OVER > 0 && tickerList.length > HIST_PROBS_DEFER_IF_REMAINING_OVER) {
+      const lastGoodSummary = readJsonSync(path.join(HIST_PROBS_DIR, 'run-summary.json'));
+      const deferredPayload = {
+        schema: 'rv.hist_probs.deferred.v1',
+        generated_at: new Date().toISOString(),
+        target_market_date: targetMarketDate || regime?.date || null,
+        remaining_tickers: tickerList.length,
+        threshold: HIST_PROBS_DEFER_IF_REMAINING_OVER,
+        reason: 'remaining_over_threshold',
+        last_good_regime_date: lastGoodSummary?.regime_date || null,
+        last_good_ran_at: lastGoodSummary?.ran_at || null,
+        total_universe: totalUniverse,
+        skipped_fresh: skippedCount,
+        stale_existing_files: staleExistingCount,
+        missing_existing_files: missingExistingCount,
+        invalid_existing_files: invalidExistingCount,
+        strict_fresh_existing_files: strictFreshExistingCount,
+        budget_fresh_existing_files: budgetFreshExistingCount,
+        freshness_budget_trading_days: HIST_PROBS_FRESHNESS_BUDGET_TRADING_DAYS,
+        hist_probs_write_mode: HIST_PROBS_WRITE_MODE,
+        hist_probs_tier: tierSelection.tier,
+        asset_classes: [...cli.assetClasses].sort(),
+        workers_requested: NUM_WORKERS,
+        worker_scaling_gate_state: WORKER_GATE.gateState,
+        allow_defer_success: HIST_PROBS_ALLOW_DEFER_SUCCESS,
+      };
+      saveCheckpoints(checkpointStore);
+      await writeJsonAtomic(HIST_PROBS_DEFER_PATH, deferredPayload);
+      console.warn(`[Turbo-Hist] Deferred nightly catchup: ${tickerList.length} remaining > ${HIST_PROBS_DEFER_IF_REMAINING_OVER}. Last-good run-summary preserved.`);
+      if (!HIST_PROBS_ALLOW_DEFER_SUCCESS) process.exit(23);
+      return;
     }
 
     if (tickerList.length === 0) {
@@ -946,6 +996,9 @@ if (isMainThread) {
     const snapshot = buildStateSnapshot(checkpointStore, summaryPayload);
     writeStateSnapshot(snapshot);
     const summaryPath = await writeSummaryAtomic(summaryPayload, writeGlobalArtifacts ? path.join(HIST_PROBS_DIR, 'run-summary.json') : RETRY_SUMMARY_PATH);
+    if (writeGlobalArtifacts) {
+      await fs.rm(HIST_PROBS_DEFER_PATH, { force: true }).catch(() => {});
+    }
     console.log('[Turbo-Hist] Summary written to', summaryPath);
     const coverageRatio = effectiveTotal > 0 ? tickersCovered / effectiveTotal : 0;
     const softErrorFailure = FAIL_ON_SOFT_ERRORS && (totalErrors > 0 || tickersRemaining > 0);

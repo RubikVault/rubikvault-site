@@ -157,6 +157,125 @@ function failure(code, message, details = {}) {
   };
 }
 
+function isoDate(value) {
+  if (typeof value !== 'string' || value.length < 10) return null;
+  const iso = value.slice(0, 10);
+  return /^\d{4}-\d{2}-\d{2}$/.test(iso) ? iso : null;
+}
+
+function unique(values) {
+  return Array.from(new Set(values.filter(Boolean)));
+}
+
+function addReason(reasons, reason) {
+  if (reason && !reasons.includes(reason)) reasons.push(reason);
+}
+
+export function pageCoreStrictOperationalReasons(row, { latest = null, freshnessStatus = null } = {}) {
+  const reasons = [];
+  const marketStatsMin = row?.market_stats_min && typeof row.market_stats_min === 'object'
+    ? row.market_stats_min
+    : null;
+  const stats = marketStatsMin?.stats && typeof marketStatsMin.stats === 'object'
+    ? marketStatsMin.stats
+    : null;
+  const latestBarDate = isoDate(marketStatsMin?.latest_bar_date || row?.latest_bar_date || row?.freshness?.as_of);
+  const priceDate = isoDate(marketStatsMin?.price_date || row?.price_date || latestBarDate);
+  const statsDate = isoDate(marketStatsMin?.as_of || marketStatsMin?.stats_date || row?.stats_date);
+  const targetDate = isoDate(latest?.target_market_date || latest?.target_date || row?.target_market_date);
+  const priceSource = String(marketStatsMin?.price_source || row?.price_source || '').trim();
+  const statsSource = String(marketStatsMin?.stats_source || row?.stats_source || '').trim();
+  const freshness = String(freshnessStatus || row?.freshness?.status || '').toLowerCase();
+  const statusContractView = String(row?.status_contract?.stock_detail_view_status || '').toLowerCase();
+
+  if (row?.ui_banner_state !== 'all_systems_operational' && statusContractView !== 'operational') {
+    addReason(reasons, 'ui_banner_not_operational');
+  }
+  if (row?.coverage?.ui_renderable !== true) addReason(reasons, 'ui_not_renderable');
+  if (!marketStatsMin) {
+    addReason(reasons, 'missing_market_stats_basis');
+  } else {
+    if (!stats || Object.keys(stats).length === 0) addReason(reasons, 'missing_market_stats_values');
+    if (!priceSource) addReason(reasons, 'missing_price_source');
+    if (!statsSource) addReason(reasons, 'missing_stats_source');
+    if (!latestBarDate) addReason(reasons, 'missing_latest_bar_date');
+    if (!priceDate) addReason(reasons, 'missing_price_date');
+    if (!statsDate) addReason(reasons, 'missing_stats_date');
+    if (priceDate && latestBarDate && priceDate !== latestBarDate) addReason(reasons, 'price_latest_bar_date_mismatch');
+    if (statsDate && latestBarDate && statsDate !== latestBarDate) addReason(reasons, 'stats_latest_bar_date_mismatch');
+    if (Array.isArray(marketStatsMin.issues) && marketStatsMin.issues.length > 0) {
+      addReason(reasons, `market_stats_issue:${String(marketStatsMin.issues[0])}`);
+    }
+  }
+  if (row?.key_levels_ready !== true || marketStatsMin?.key_levels_ready === false) {
+    addReason(reasons, 'key_levels_not_ready');
+  }
+  if (targetDate && (!latestBarDate || latestBarDate < targetDate)) addReason(reasons, 'bars_stale');
+  if (['stale', 'expired', 'missing', 'last_good', 'error'].includes(freshness)) {
+    addReason(reasons, `freshness_${freshness}`);
+  }
+  if (row?.primary_blocker) addReason(reasons, `primary_blocker:${String(row.primary_blocker)}`);
+  return unique(reasons);
+}
+
+export function pageCoreClaimsOperational(row) {
+  return row?.ui_banner_state === 'all_systems_operational'
+    || String(row?.status_contract?.stock_detail_view_status || '').toLowerCase() === 'operational';
+}
+
+export function normalizePageCoreOperationalState(row, { latest = null, freshnessStatus = null } = {}) {
+  if (!row || typeof row !== 'object') return row;
+  const strictReasons = pageCoreStrictOperationalReasons(row, { latest, freshnessStatus });
+  const strictlyOperational = strictReasons.length === 0;
+  const normalized = {
+    ...row,
+    status_contract: {
+      ...(row.status_contract || {}),
+      core_status: strictReasons.some((reason) => reason === 'bars_stale' || reason.startsWith('freshness_'))
+        ? 'stale'
+        : (row?.freshness?.as_of ? 'fresh' : 'missing'),
+      page_core_status: strictlyOperational ? 'operational' : 'degraded',
+      key_levels_status: row?.key_levels_ready === true && row?.market_stats_min ? 'ready' : 'degraded',
+      decision_status: row?.summary_min?.governance_status === 'available' ? 'available' : 'degraded',
+      risk_status: String(row?.summary_min?.risk_level || row?.governance_summary?.risk_level || '').toUpperCase() === 'UNKNOWN'
+        ? 'degraded'
+        : (row?.summary_min?.risk_level || row?.governance_summary?.risk_level ? 'available' : 'missing'),
+      hist_status: row?.market_stats_min ? 'available' : 'missing',
+      breakout_status: row?.breakout_summary ? 'available' : 'missing',
+      stock_detail_view_status: strictlyOperational ? 'operational' : 'degraded',
+      strict_operational: strictlyOperational,
+      strict_blocking_reasons: strictReasons,
+    },
+  };
+  if (!strictlyOperational && pageCoreClaimsOperational(row)) {
+    normalized.ui_banner_state = 'degraded';
+    normalized.primary_blocker = row.primary_blocker || strictReasons[0] || 'strict_operational_contract_failed';
+    normalized.summary_min = {
+      ...(row.summary_min || {}),
+      quality_status: 'DEGRADED',
+    };
+    normalized.governance_summary = {
+      ...(row.governance_summary || {}),
+      blocking_reasons: unique([
+        ...(Array.isArray(row?.governance_summary?.blocking_reasons) ? row.governance_summary.blocking_reasons : []),
+        normalized.primary_blocker,
+      ]),
+      warnings: unique([
+        ...(Array.isArray(row?.governance_summary?.warnings) ? row.governance_summary.warnings : []),
+        'false_green_downgraded_by_page_core_reader',
+      ]),
+    };
+    normalized.meta = {
+      ...(row.meta || {}),
+      warnings: unique([
+        ...(Array.isArray(row?.meta?.warnings) ? row.meta.warnings : []),
+        'false_green_downgraded_by_page_core_reader',
+      ]),
+    };
+  }
+  return normalized;
+}
+
 export function clearPageCoreReaderCache() {
   latestCache = null;
   aliasShardCache.clear();
@@ -195,6 +314,10 @@ export async function readPageCoreForTicker(rawTicker, options = {}) {
       });
     }
     const freshness = evaluateFreshness(row.freshness, MAX_STALE_MS.page_core_daily, options.nowMs || Date.now());
+    const pageCore = normalizePageCoreOperationalState(row, {
+      latest,
+      freshnessStatus: freshness.status,
+    });
     return {
       ok: true,
       httpStatus: 200,
@@ -202,7 +325,7 @@ export async function readPageCoreForTicker(rawTicker, options = {}) {
       snapshot_id: latest.snapshot_id,
       canonical_id: canonical,
       freshness_status: freshness.status,
-      pageCore: row,
+      pageCore,
       latest,
     };
   } catch (error) {

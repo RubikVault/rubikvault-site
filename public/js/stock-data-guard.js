@@ -82,16 +82,25 @@ export function guardPayload(payload, ticker) {
 export function guardPriceStack(payload) {
   const marketContext = payload?.data?.ssot?.market_context || null;
   if (marketContext) {
-    const issues = Array.isArray(marketContext.issues) ? marketContext.issues : [];
-    const valid = marketContext.key_levels_ready !== false;
+    const issues = Array.isArray(marketContext.issues) ? marketContext.issues.slice() : [];
+    const priceDate = marketContext.price_date || null;
+    const statsDate = marketContext.stats_date || null;
+    const latestBarDate = marketContext.latest_bar_date || null;
+    if (!marketContext.prices_source) issues.push('missing_price_source');
+    if (!marketContext.stats_source) issues.push('missing_stats_source');
+    if (!priceDate) issues.push('missing_price_date');
+    if (!statsDate) issues.push('missing_stats_date');
+    if (!latestBarDate) issues.push('missing_latest_bar_date');
+    if (priceDate && latestBarDate && priceDate !== latestBarDate) issues.push('price_latest_bar_date_mismatch');
+    if (statsDate && latestBarDate && statsDate !== latestBarDate) issues.push('stats_latest_bar_date_mismatch');
+    const valid = marketContext.key_levels_ready === true && issues.length === 0;
     return {
       valid,
-      issues,
+      issues: Array.from(new Set(issues)),
       source: marketContext.prices_source || null,
       warning: !valid && issues.length ? `Price stack mismatch: ${issues.join('; ')}` : null,
     };
   }
-
   const prices = payload?.data?.market_prices || {};
   const lastBar = Array.isArray(payload?.data?.bars) && payload.data.bars.length
     ? payload.data.bars[payload.data.bars.length - 1]
@@ -101,7 +110,7 @@ export function guardPriceStack(payload) {
   const barClose = Number(lastBar?.close ?? lastBar?.adjClose);
   const high52w = Number(stats?.high_52w);
   const low52w = Number(stats?.low_52w);
-  const issues = [];
+  const issues = ['missing_ssot_market_context'];
 
   if (Number.isFinite(close) && Number.isFinite(barClose) && close > 0 && barClose > 0) {
     const ratio = Math.max(close, barClose) / Math.min(close, barClose);
@@ -112,10 +121,10 @@ export function guardPriceStack(payload) {
   }
 
   return {
-    valid: issues.length === 0,
-    issues,
+    valid: false,
+    issues: Array.from(new Set(issues)),
     source: null,
-    warning: issues.length ? `Price stack mismatch: ${issues.join('; ')}` : null,
+    warning: `Price stack mismatch: ${Array.from(new Set(issues)).join('; ')}`,
   };
 }
 
@@ -335,23 +344,23 @@ export function guardModelConsensus(decision, ev4) {
   const states = ev4.input_states;
   const hasScientific = states.scientific?.status === 'ok';
   const hasForecast = states.forecast?.status === 'ok';
+  const hasElliott = states.elliott?.status === 'ok';
   const hasQuantlab = states.quantlab?.status === 'ok';
-  const available = [hasScientific, hasForecast, hasQuantlab].filter(Boolean).length;
+  const available = [hasScientific, hasForecast, hasElliott, hasQuantlab].filter(Boolean).length;
   const missingModels = [
     !hasQuantlab ? 'QuantLab' : null,
     !hasForecast ? 'Forecast' : null,
+    !hasElliott ? 'Elliott' : null,
     !hasScientific ? 'Scientific' : null,
   ].filter(Boolean);
 
   if (available === 0) return { valid: false, warning: 'Model consensus: no model data available', available, missingModels, degraded: true };
   
-  // More permissive: 2 out of 4 is acceptable for a "ready" state, though still "degraded" if < 4 for internal tracking
-  // But we only set degraded = true for the UI banner if it's really low (< 2)
   const isUiDegraded = available < 2;
 
   return { 
     valid: true, 
-    warning: available < 3 ? `Model consensus: ${available}/3 models available` : null, 
+    warning: available < 4 ? `Model consensus: ${available}/4 models available` : null,
     available, 
     missingModels, 
     degraded: isUiDegraded 
