@@ -55,7 +55,7 @@ export function writeLeafSeal(stepId, status, {
   outputsVerified = [],
   blockingReasons = [],
   warnings = [],
-  meta = null,
+  meta = {},
 } = {}) {
   const allowedStatuses = new Set(['OK', 'DEGRADED', 'FAILED']);
   const normalizedStatus = String(status || '').toUpperCase();
