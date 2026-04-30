@@ -6,7 +6,6 @@ import {
   loadUniverse,
   loadIndexUniverseMap,
   getPrimaryIndex,
-  loadAdjustedSeries,
   loadEodLatestMap
 } from './lib-stock-ui.mjs';
 
@@ -53,19 +52,33 @@ async function main() {
   const avgVolumeByTicker = new Map();
   const latestDates = [];
   for (const ticker of tickers) {
-    const series = await loadAdjustedSeries(ticker, 'US');
-    const avgVol = Number(latestByTicker.get(ticker)?.volume);
+    const latest = latestByTicker.get(ticker);
+    const avgVol = Number(latest?.volume);
     if (Number.isFinite(avgVol)) avgVolumeByTicker.set(ticker, avgVol);
-    const seriesDate = series.length ? series[series.length - 1].date : null;
-    const latestDate = latestByTicker.get(ticker)?.date || null;
-    if (seriesDate) latestDates.push(seriesDate);
-    else if (latestDate) latestDates.push(latestDate);
+    if (latest?.date) latestDates.push(latest.date);
   }
 
   const peers = {};
   const peerMeta = {};
 
   const sortedTickers = [...tickers].sort((a, b) => a.localeCompare(b));
+  const tickerOrdinal = new Map(sortedTickers.map((ticker, index) => [ticker, index]));
+  const rankedCandidateCache = new Map();
+  const rankCandidates = (key, iterable) => {
+    if (rankedCandidateCache.has(key)) return rankedCandidateCache.get(key);
+    const ranked = [...iterable]
+      .filter((symbol) => universeSet.has(symbol))
+      .sort((a, b) => {
+        const av = avgVolumeByTicker.get(a);
+        const bv = avgVolumeByTicker.get(b);
+        const avScore = Number.isFinite(av) ? av : -1;
+        const bvScore = Number.isFinite(bv) ? bv : -1;
+        if (avScore !== bvScore) return bvScore - avScore;
+        return a.localeCompare(b);
+      });
+    rankedCandidateCache.set(key, ranked);
+    return ranked;
+  };
 
   for (const ticker of tickers) {
     let candidates = [];
@@ -73,27 +86,18 @@ async function main() {
 
     const sector = sectorByTicker.get(ticker);
     if (sector && membersBySector.get(sector)?.size >= PEER_COUNT + 1) {
-      candidates = [...membersBySector.get(sector)].filter((sym) => sym !== ticker);
+      candidates = rankCandidates(`sector:${sector}`, membersBySector.get(sector));
       strategy = `sector:${sector}`;
     } else {
       const primaryIndex = getPrimaryIndex(ticker, indexMap);
       if (primaryIndex !== 'all') {
-        candidates = [...(indexMap.get(primaryIndex) || new Set())].filter((sym) => sym !== ticker && universeSet.has(sym));
+        candidates = rankCandidates(`index:${primaryIndex}`, indexMap.get(primaryIndex) || new Set());
         strategy = `index:${primaryIndex}`;
       } else {
-        candidates = sortedTickers.filter((sym) => sym !== ticker);
+        candidates = rankCandidates('index:all', sortedTickers);
         strategy = 'index:all';
       }
     }
-
-    candidates.sort((a, b) => {
-      const av = avgVolumeByTicker.get(a);
-      const bv = avgVolumeByTicker.get(b);
-      const avScore = Number.isFinite(av) ? av : -1;
-      const bvScore = Number.isFinite(bv) ? bv : -1;
-      if (avScore !== bvScore) return bvScore - avScore;
-      return a.localeCompare(b);
-    });
 
     const chosen = [];
     for (const symbol of candidates) {
@@ -106,7 +110,7 @@ async function main() {
 
     // Deterministic lexical fallback when a group is too small.
     if (chosen.length < PEER_COUNT) {
-      const origin = sortedTickers.indexOf(ticker);
+      const origin = tickerOrdinal.get(ticker) ?? sortedTickers.indexOf(ticker);
       let radius = 1;
       while (chosen.length < PEER_COUNT && radius < sortedTickers.length) {
         const left = origin - radius;
