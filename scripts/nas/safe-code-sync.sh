@@ -13,6 +13,24 @@ SYNC_ROOT="${SYNC_ROOT:-$NAS_DEV_ROOT}"
 TARBALL_REPO="${RV_TARBALL_REPO:-RubikVault/rubikvault-site}"
 TARBALL_BRANCH="${RV_TARBALL_BRANCH:-$TARGET_BRANCH}"
 
+PUBLIC_DATA_CODE_ALLOWLIST=(
+  public/data/universe/all.json
+  public/data/universe/dowjones.json
+  public/data/universe/nasdaq100.json
+  public/data/universe/russell2000.json
+  public/data/universe/sp500.json
+  public/data/universe/v7/config/evaluation_policy.json
+  public/data/universe/v7/config/global_trading_cost_model.json
+  public/data/universe/v7/config/license_publish_whitelist.json
+  public/data/universe/v7/config/us_holidays_2020_2030.json
+  public/data/universe/v7/config/v7.config.json
+  public/data/universe/v7/index-memberships/dowjones.json
+  public/data/universe/v7/index-memberships/manifest.json
+  public/data/universe/v7/index-memberships/nasdaq100.json
+  public/data/universe/v7/index-memberships/russell2000.json
+  public/data/universe/v7/index-memberships/sp500.json
+)
+
 if [[ "${ALLOW_ACTIVE_NIGHT_PIPELINE_LOCK:-0}" != "1" ]]; then
   nas_assert_global_lock_clear "night-pipeline"
 fi
@@ -48,6 +66,20 @@ run_manifest_guard() {
     return 0
   fi
   "$node_bin" "$SYNC_ROOT/scripts/nas/verify-code-manifest.mjs"
+}
+
+sync_public_data_code_allowlist() {
+  local src_root="$1"
+  local copied=0
+  local rel
+  for rel in "${PUBLIC_DATA_CODE_ALLOWLIST[@]}"; do
+    if [[ -f "$src_root/$rel" ]]; then
+      mkdir -p "$SYNC_ROOT/$(dirname "$rel")"
+      rsync -a "$src_root/$rel" "$SYNC_ROOT/$rel"
+      copied=$((copied + 1))
+    fi
+  done
+  printf 'safe_code_sync_public_data_code_allowlist copied=%s\n' "$copied"
 }
 
 tarball_sync() {
@@ -95,6 +127,8 @@ tarball_sync() {
     --exclude="ops_*.txt" \
     --exclude="*.pid" \
     "$tmp/extract/" "$SYNC_ROOT/"
+
+  sync_public_data_code_allowlist "$tmp/extract"
 
   # AppleDouble (._*) leak prevention — clean the code tree but never enter
   # public/data/ (NAS runtime data may legitimately contain dotfiles).
