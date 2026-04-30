@@ -20,7 +20,7 @@ export function guardPayload(payload, ticker) {
   const explanation = payload?.explanation || {};
   const fund = data.fundamentals || null;
   const ev4 = payload?.evaluation_v4 || null;
-  const brk = data.breakout_v2 || null;
+  const brk = data.breakout_v12 || data.breakout_v2 || null;
   const priceStack = guardPriceStack(payload);
 
   // Run all guards
@@ -390,7 +390,9 @@ export function guardPanelGate(panel, ctx) {
       return { show: true };
     }
     case 'breakout': {
-      if (!ctx.brk || !ctx.brk.state) return { show: false, reason: 'No breakout data' };
+      if (!ctx.brk || (!ctx.brk.state && !ctx.brk.status && ctx.brk?.scores?.final_signal_score == null && ctx.brk?.final_signal_score == null)) {
+        return { show: false, reason: 'No breakout data' };
+      }
       return { show: true };
     }
     case 'keyLevels': {

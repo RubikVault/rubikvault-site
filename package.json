@@ -209,6 +209,8 @@
     "breakout:v12:prepare-delta": "python3 scripts/breakout-v12/prepare-daily-delta.py",
     "breakout:v12:legacy-full:dry-run": "node scripts/breakout/run-breakout-pipeline.mjs --dry-run --keep-temp --max-assets=100",
     "breakout:v12:outcomes": "node scripts/breakout-v12/evaluate-promoted-outcomes.mjs",
+    "breakout:v12:verify": "node scripts/breakout-v12/verify-production-ready.mjs",
+    "breakout:v12:validity-report": "python3 scripts/breakout_compute/build_validity_report.py",
     "forecast:calibrate": "node scripts/forecast/calibrate_forecast.mjs",
     "forecast:build-probability-calibration": "node scripts/forecast/build_stock_analyzer_probability_calibration.mjs",
     "forecast:generate-daily": "node scripts/forecast/run_generate_daily.mjs",

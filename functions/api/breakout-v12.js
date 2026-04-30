@@ -7,7 +7,9 @@ async function readJsonAsset(origin, path) {
 export async function onRequestGet(context) {
   const url = new URL(context.request.url);
   const latest = await readJsonAsset(url.origin, "/data/breakout/manifests/latest.json");
-  const manifest = latest || await readJsonAsset(url.origin, "/data/breakout/manifests/last_good.json");
+  const manifest = latest?.validation?.publishable === true
+    ? latest
+    : await readJsonAsset(url.origin, "/data/breakout/manifests/last_good.json");
   if (!manifest?.files?.top500) {
     return Response.json({
       ok: false,

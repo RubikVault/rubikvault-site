@@ -289,6 +289,19 @@ test('breakout v12 outcomes wrapper is manual full-scan only', () => {
   assert.equal(pkg.scripts['breakout:v12:outcomes'], 'node scripts/breakout-v12/evaluate-promoted-outcomes.mjs');
 });
 
+test('breakout v12 production verifier is wired and checks hard readiness facts', () => {
+  const source = fs.readFileSync(path.join(ROOT, 'scripts/breakout-v12/verify-production-ready.mjs'), 'utf8');
+  assert.match(source, /polars/);
+  assert.match(source, /pyarrow/);
+  assert.match(source, /duckdb/);
+  assert.match(source, /tail bucket count/);
+  assert.match(source, /top500 count/);
+  assert.match(source, /shard _SUCCESS missing/);
+  assert.match(source, /hash mismatch/);
+  const pkg = readJson('package.json');
+  assert.equal(pkg.scripts['breakout:v12:verify'], 'node scripts/breakout-v12/verify-production-ready.mjs');
+});
+
 test('breakout v12 incremental catchup builds, validates, and promotes fixture', { skip: !hasPythonBreakoutV12() }, () => {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'rv-breakout-inc-'));
   const setup = String.raw`
@@ -477,10 +490,61 @@ test('breakout v12 api falls back to last_good when latest is missing', async ()
   }
 });
 
-test('legacy breakout call in data-interface uses bars-first signature', () => {
+test('breakout v12 api falls back to last_good when latest is not publishable', async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (url) => {
+    const pathname = new URL(url).pathname;
+    if (pathname === '/data/breakout/manifests/latest.json') {
+      return Response.json({
+        as_of: '2026-04-29',
+        validation: { publishable: false },
+        files: { top500: 'runs/2026-04-29/bad/top500.json' },
+      });
+    }
+    if (pathname === '/data/breakout/manifests/last_good.json') {
+      return Response.json({
+        as_of: '2026-04-28',
+        validation: { publishable: true },
+        files: { top500: 'runs/2026-04-28/good/top500.json' },
+      });
+    }
+    if (pathname === '/data/breakout/runs/2026-04-28/good/top500.json') {
+      return Response.json({ schema_version: 'breakout_top_scores_v1', as_of: '2026-04-28', count: 0, items: [] });
+    }
+    return new Response('', { status: 404 });
+  };
+  try {
+    const mod = await import(`${pathToFileURL(path.join(ROOT, 'functions/api/breakout-v12.js')).href}?cache=${Date.now()}`);
+    const response = await mod.onRequestGet({ request: new Request('https://example.com/api/breakout-v12') });
+    assert.equal(response.status, 200);
+    const payload = await response.json();
+    assert.equal(payload.ok, true);
+    assert.equal(payload.data.manifest.as_of, '2026-04-28');
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test('stock product paths expose static breakout_v12 and keep legacy comparison non-canonical', () => {
   const source = fs.readFileSync(path.join(ROOT, 'functions/api/_shared/data-interface.js'), 'utf8');
   assert.doesNotMatch(source, /processTickerSeries\(effectiveTicker,\s*bars\)/);
   assert.match(source, /processTickerSeries\(bars,\s*\{\},\s*\{\s*regime_tag:\s*'UP'\s*\}\)/);
+  assert.match(source, /breakout_v12:\s*breakoutV12/);
+  assert.match(source, /breakout_v2_legacy:\s*breakoutV2/);
+  assert.match(source, /breakout_v2:\s*toBreakoutV2Compat\(breakoutV12\)/);
+  assert.match(source, /fetchBreakoutV12ForRequest\(request,\s*env/);
+  assert.match(source, /\/data\/breakout\/manifests\/latest\.json/);
+
+  const stockSource = fs.readFileSync(path.join(ROOT, 'functions/api/stock.js'), 'utf8');
+  assert.match(stockSource, /breakout_v12:\s*breakoutV12/);
+  assert.match(stockSource, /breakout_v2_legacy:\s*breakoutV2Legacy/);
+  assert.match(stockSource, /breakout_v2:\s*toBreakoutV2Compat\(breakoutV12\)/);
+  assert.doesNotMatch(stockSource, /breakoutState:\s*payload\.data\?\.breakout_v2\?\.state/);
+
+  const guard = fs.readFileSync(path.join(ROOT, 'public/js/stock-data-guard.js'), 'utf8');
+  assert.match(guard, /data\.breakout_v12 \|\| data\.breakout_v2/);
+  const page = fs.readFileSync(path.join(ROOT, 'public/stock.html'), 'utf8');
+  assert.match(page, /data\.breakout_v12 \|\| data\.breakout_v2/);
 });
 
 test('breakout v1.2 dry-run publishes no state or probability fields', { skip: !hasPythonPolars() }, () => {

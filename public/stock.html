@@ -801,7 +801,7 @@
       const setupPhaseSubtext = _decision.setup_phase === 'EARLY' ? 'Early-stage, confirmation pending'
         : _decision.setup_phase === 'LATE' ? 'Late-stage, breakout watch'
           : 'Accumulation in progress';
-      const _brkState = data.breakout_v2?.state;
+      const _brkState = data.breakout_v12?.label || data.breakout_v12?.status || data.breakout_v2?.state;
       const setupType = _decision.setup_type === 'TREND_FOLLOW' ? 'Confirming Uptrend'
         : _decision.setup_type === 'MEAN_REVERSION' ? 'Pullback in Uptrend'
           : _decision.setup_type === 'BREAKOUT' && _brkState && _brkState !== 'NONE'
@@ -1455,7 +1455,7 @@
         universe: payload.universe || payload.evaluation_v4?.universe || null,
         catalysts: data.catalysts || null,
       });
-      const breakoutDensityView = buildBreakoutDensityPresentation({ breakout: data.breakout_v2 || {}, verdict: effectiveVerdict });
+      const breakoutDensityView = buildBreakoutDensityPresentation({ breakout: data.breakout_v12 || data.breakout_v2 || {}, verdict: effectiveVerdict });
       const catalystMode = catalystView.renderMode || catalystView.variant || 'inline';
       const isEtf = catalystView.assetClass === 'ETF';
       const explanationHeading = effectiveVerdict === 'BUY' || effectiveVerdict === 'SELL' ? 'Why This Trade?' : 'Why WAIT';
@@ -1934,7 +1934,7 @@
       })();
 
       // ── Breakout V4 Render Layer ──
-      const brk = data.breakout_v2 || data.breakout || {};
+      const brk = data.breakout_v12 || data.breakout_v2 || data.breakout || {};
       if (brk.state) {
         const score = brk.scores?.total || 0;
         document.getElementById('brk-score').innerText = score;

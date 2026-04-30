@@ -2,6 +2,12 @@ import { sha256Hex } from './_shared/digest.mjs';
 import { resolveSymbol, normalizeTicker as normalizeTickerStrict } from './_shared/symbol-resolver.mjs';
 import { fetchBarsWithProviderChain } from './_shared/eod-providers.mjs';
 import { processTickerSeries } from './_shared/breakout-core.mjs';
+import {
+  buildBreakoutV12Candidates,
+  findBreakoutV12Item,
+  shapeBreakoutV12Result,
+  toBreakoutV2Compat,
+} from './_shared/breakout-v12-static.mjs';
 import { recordFailure } from './_shared/circuit.js';
 import { computeIndicators } from './_shared/eod-indicators.mjs';
 // EODHD is the sole equity EOD provider (v13.1) — no tiingo-key import needed
@@ -463,6 +469,31 @@ async function fetchSnapshot(moduleName, request) {
       attempted: results,
     };
   }
+}
+
+async function readBreakoutV12Json(origin, assetPath) {
+  try {
+    const response = await fetch(new URL(assetPath, origin).toString(), { cf: { cacheTtl: 60 } });
+    if (!response.ok) return null;
+    return await response.json();
+  } catch {
+    return null;
+  }
+}
+
+async function fetchBreakoutV12Static(request, { ticker, canonicalId, exchange } = {}) {
+  const origin = new URL(request.url).origin;
+  const latest = await readBreakoutV12Json(origin, '/data/breakout/manifests/latest.json');
+  const manifest = latest?.validation?.publishable === true
+    ? latest
+    : await readBreakoutV12Json(origin, '/data/breakout/manifests/last_good.json');
+  const candidates = buildBreakoutV12Candidates({ ticker, canonicalId, exchange });
+  if (!manifest?.files?.top500) {
+    return shapeBreakoutV12Result({ manifest: null, candidates });
+  }
+  const top500 = await readBreakoutV12Json(origin, `/data/breakout/${manifest.files.top500}`);
+  const item = findBreakoutV12Item(top500, candidates);
+  return shapeBreakoutV12Result({ manifest, top500, item, candidates });
 }
 
 function isLocalDevRequest(request) {
@@ -1723,6 +1754,26 @@ export async function onRequestGet(context) {
   const providerHint = eodProvider || sourceChain?.selected || sourceChain?.primary || null;
   const marketPricesPayload = buildMarketPricesFromLatestBar(latestBar, effectiveTicker, providerHint) || marketPricesSnapshotPayload;
   const marketStatsPayload = buildMarketStatsFromIndicators(indicatorOut.indicators, effectiveTicker, latestBar?.date) || marketStatsSnapshotPayload;
+  const breakoutV12 = await fetchBreakoutV12Static(request, {
+    ticker: effectiveTicker,
+    canonicalId: resolvedCanonicalId,
+    exchange: resolvedExchange || universePayload?.exchange || null,
+  });
+  const breakoutV2Legacy = (() => {
+    try {
+      const stats = processTickerSeries(eodBars || [], {}, { regime_tag: 'UP' });
+      return {
+        state: stats.state,
+        max_level: stats.max_level,
+        scores: stats.scores,
+        history: stats.history ? stats.history.slice(-30) : [],
+        source: 'legacy_v2_request_time',
+        legacy: true,
+      };
+    } catch (e) {
+      return { state: 'ERROR', error: e.message, source: 'legacy_v2_request_time', legacy: true };
+    }
+  })();
 
   const data = {
     ticker: effectiveTicker,
@@ -1742,19 +1793,9 @@ export async function onRequestGet(context) {
     market_prices: marketPricesPayload,
     market_stats: marketStatsPayload,
     market_score: scoreEntry,
-    breakout_v2: (() => {
-      try {
-        const stats = processTickerSeries(eodBars || [], {}, { regime_tag: 'UP' });
-        return {
-          state: stats.state,
-          max_level: stats.max_level,
-          scores: stats.scores,
-          history: stats.history ? stats.history.slice(-30) : []
-        };
-      } catch (e) {
-        return { state: 'ERROR', error: e.message };
-      }
-    })()
+    breakout_v12: breakoutV12,
+    breakout_v2: toBreakoutV2Compat(breakoutV12),
+    breakout_v2_legacy: breakoutV2Legacy,
   };
 
   const asOf =
@@ -1906,7 +1947,7 @@ export async function onRequestGet(context) {
       forecastMeta: decisionInputs.forecastMeta,
       inputFingerprints: decisionInputs.input_fingerprints,
       runtimeControl: decisionInputs.runtimeControl,
-      breakoutState: payload.data?.breakout_v2?.state || null,
+      breakoutState: payload.data?.breakout_v12?.label || payload.data?.breakout_v12?.status || null,
     });
     payload.meta.evaluation_v4 = {
       requested: true,

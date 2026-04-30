@@ -665,6 +665,29 @@ export function buildHistoricalModulePresentation(freshness = {}) {
 }
 
 export function buildBreakoutDensityPresentation({ breakout = {}, verdict = 'WAIT' } = {}) {
+  const isV12 = breakout?.source === 'breakout_v12_static'
+    || breakout?.score_version
+    || breakout?.scores?.final_signal_score != null
+    || breakout?.final_signal_score != null;
+  if (isV12) {
+    const rawScore = toNumber(breakout?.final_signal_score ?? breakout?.scores?.final_signal_score);
+    const score = rawScore == null ? 0 : Math.round(rawScore * 100);
+    const status = String(breakout?.status || '').toLowerCase();
+    const label = String(breakout?.label || breakout?.ui?.label || status || 'not_in_current_signal_set');
+    const rank = breakout?.rank ?? breakout?.ui?.rank ?? null;
+    const asOf = breakout?.as_of || breakout?.manifest?.as_of || null;
+    const compact = status !== 'ok';
+    return {
+      mode: compact ? 'compact' : 'full',
+      title: 'Breakout V12',
+      headline: compact ? 'Breakout: Not in current V12 signal set' : 'Breakout: V12 candidate',
+      detail: compact
+        ? 'Static V12 did not rank this asset in the current signal set.'
+        : `Rank ${rank || '—'}${asOf ? ` as of ${asOf}` : ''}`,
+      score,
+      state: label.toUpperCase(),
+    };
+  }
   const state = String(breakout?.state || 'NONE').toUpperCase();
   const score = toNumber(breakout?.scores?.total) ?? 0;
   const compact = state === 'NONE'

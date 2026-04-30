@@ -1,0 +1,126 @@
+import fs from 'node:fs';
+import path from 'node:path';
+
+function upper(value) {
+  return String(value || '').trim().toUpperCase();
+}
+
+export function buildBreakoutV12Candidates({ ticker = '', canonicalId = '', exchange = '' } = {}) {
+  const out = new Set();
+  for (const raw of [ticker, canonicalId]) {
+    const value = upper(raw);
+    if (!value) continue;
+    out.add(value);
+    out.add(value.replace('.', ':'));
+    out.add(value.replace(':', '.'));
+    if (!value.includes(':') && !value.includes('.')) out.add(`US:${value}`);
+  }
+  const cleanTicker = upper(ticker);
+  const cleanExchange = upper(exchange);
+  if (cleanTicker && cleanExchange) {
+    out.add(`${cleanExchange}:${cleanTicker}`);
+    out.add(`${cleanTicker}.${cleanExchange}`);
+  }
+  return out;
+}
+
+export function findBreakoutV12Item(top500, candidates) {
+  const candidateSet = candidates instanceof Set ? candidates : new Set(candidates || []);
+  const items = Array.isArray(top500?.items) ? top500.items : [];
+  return items.find((item) => {
+    const assetId = upper(item?.asset_id);
+    const symbol = upper(item?.symbol);
+    return candidateSet.has(assetId) || candidateSet.has(symbol) || candidateSet.has(assetId.replace(':', '.'));
+  }) || null;
+}
+
+export function shapeBreakoutV12Result({ manifest = null, top500 = null, item = null, candidates = new Set() } = {}) {
+  const asOf = item?.as_of || manifest?.as_of || top500?.as_of || null;
+  if (!item) {
+    return {
+      status: manifest ? 'not_in_current_signal_set' : 'unavailable',
+      source: 'breakout_v12_static',
+      as_of: asOf,
+      manifest: manifest ? {
+        as_of: manifest.as_of || null,
+        content_hash: manifest.content_hash || null,
+        score_version: manifest.score_version || top500?.score_version || null,
+      } : null,
+      candidates: Array.from(candidates || []),
+    };
+  }
+  const finalScore = Number(item?.scores?.final_signal_score ?? item?.final_signal_score ?? NaN);
+  return {
+    status: 'ok',
+    source: 'breakout_v12_static',
+    asset_id: item.asset_id || null,
+    symbol: item.symbol || null,
+    name: item.name || null,
+    as_of: asOf,
+    score_version: item.score_version || manifest?.score_version || top500?.score_version || null,
+    scores: item.scores || {},
+    features: item.features || {},
+    risk: item.risk || {},
+    ui: item.ui || {},
+    reasons: Array.isArray(item.reasons) ? item.reasons : [],
+    warnings: Array.isArray(item.warnings) ? item.warnings : [],
+    final_signal_score: Number.isFinite(finalScore) ? finalScore : null,
+    rank: Number.isFinite(Number(item?.ui?.rank)) ? Number(item.ui.rank) : null,
+    rank_percentile: Number.isFinite(Number(item?.ui?.rank_percentile)) ? Number(item.ui.rank_percentile) : null,
+    label: item?.ui?.label || null,
+    manifest: {
+      as_of: manifest?.as_of || null,
+      content_hash: manifest?.content_hash || null,
+      score_version: manifest?.score_version || top500?.score_version || null,
+    },
+  };
+}
+
+export function toBreakoutV2Compat(v12) {
+  if (!v12 || v12.status !== 'ok') return null;
+  const score = Number(v12.final_signal_score);
+  const total = Number.isFinite(score) ? Math.round(score * 100) : 0;
+  return {
+    state: String(v12.label || 'breakout_candidate').toUpperCase(),
+    as_of: v12.as_of || null,
+    source: 'breakout_v12_compat',
+    legacy: false,
+    scores: {
+      total,
+      final_signal_score: v12.final_signal_score,
+      structure: v12.scores?.structure_score ?? null,
+      volume: v12.scores?.volume_score ?? null,
+      compression: v12.scores?.compression_score ?? null,
+    },
+    rank: v12.rank,
+    rank_percentile: v12.rank_percentile,
+    explanation: v12.label || 'Static Breakout V12 score',
+    trigger_confirmed: total >= 55,
+  };
+}
+
+function readJsonIfExists(filePath) {
+  try {
+    return JSON.parse(fs.readFileSync(filePath, 'utf8'));
+  } catch {
+    return null;
+  }
+}
+
+export function readBreakoutV12StaticForTicker({
+  repoRoot = process.cwd(),
+  publicRoot = '',
+  ticker = '',
+  canonicalId = '',
+  exchange = '',
+} = {}) {
+  const root = publicRoot || path.join(repoRoot, 'public/data/breakout');
+  const latest = readJsonIfExists(path.join(root, 'manifests/latest.json'));
+  const lastGood = readJsonIfExists(path.join(root, 'manifests/last_good.json'));
+  const manifest = latest?.validation?.publishable === true ? latest : lastGood;
+  if (!manifest?.files?.top500) return shapeBreakoutV12Result({ manifest: null });
+  const top500 = readJsonIfExists(path.join(root, manifest.files.top500));
+  const candidates = buildBreakoutV12Candidates({ ticker, canonicalId, exchange });
+  const item = findBreakoutV12Item(top500, candidates);
+  return shapeBreakoutV12Result({ manifest, top500, item, candidates });
+}

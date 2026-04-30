@@ -12,6 +12,12 @@ import { resolveSymbol, normalizeTicker as normalizeTickerStrict } from './symbo
 import { fetchBarsWithProviderChain } from './eod-providers.mjs';
 import { computeIndicators } from './eod-indicators.mjs';
 import { processTickerSeries } from './breakout-core.mjs';
+import {
+  buildBreakoutV12Candidates,
+  findBreakoutV12Item,
+  shapeBreakoutV12Result,
+  toBreakoutV2Compat,
+} from './breakout-v12-static.mjs';
 import { createCache, getJsonKV, computeAgeSeconds, nowUtcIso, todayUtcDate } from './cache-law.js';
 import { evaluateQuality } from './quality.js';
 import { computeCacheStatus } from './freshness.js';
@@ -516,6 +522,21 @@ async function fetchJsonMaybeGzip(url, assetFetcher = null) {
   }
 }
 
+async function fetchBreakoutV12ForRequest(request, env, { ticker, canonicalId, exchange } = {}) {
+  if (!request?.url) return shapeBreakoutV12Result({ manifest: null });
+  const origin = new URL(request.url).origin;
+  const assetFetcher = env?.ASSETS || null;
+  const latest = await fetchJsonMaybeGzip(new URL('/data/breakout/manifests/latest.json', origin), assetFetcher);
+  const manifest = latest?.validation?.publishable === true
+    ? latest
+    : await fetchJsonMaybeGzip(new URL('/data/breakout/manifests/last_good.json', origin), assetFetcher);
+  const candidates = buildBreakoutV12Candidates({ ticker, canonicalId, exchange });
+  if (!manifest?.files?.top500) return shapeBreakoutV12Result({ manifest: null, candidates });
+  const top500 = await fetchJsonMaybeGzip(new URL(`/data/breakout/${manifest.files.top500}`, origin), assetFetcher);
+  const item = findBreakoutV12Item(top500, candidates);
+  return shapeBreakoutV12Result({ manifest, top500, item, candidates });
+}
+
 async function fetchStaticFallbackIdentityName(ticker, request, env) {
   if (!ticker || !request?.url) return null;
   const now = Date.now();
@@ -894,8 +915,13 @@ export async function fetchStockHistorical(ticker, env, request) {
   let breakoutV2 = null;
   try {
     const result = processTickerSeries(bars, {}, { regime_tag: 'UP' });
-    if (result) breakoutV2 = result;
+    if (result) breakoutV2 = { ...result, source: 'legacy_v2_request_time', legacy: true };
   } catch { /* optional */ }
+  const breakoutV12 = await fetchBreakoutV12ForRequest(request, env, {
+    ticker: effectiveTicker,
+    canonicalId: ctx.canonicalId || null,
+    exchange: ctx.exchange || null,
+  });
   const indicatorIssues = [];
   const normalizedIndicators = indicatorArray;
   const historicalQualityFlags = [...new Set([...(qualityFlags.length ? qualityFlags : []), ...indicatorIssues])];
@@ -907,7 +933,9 @@ export async function fetchStockHistorical(ticker, env, request) {
       bars,
       indicators: normalizedIndicators,
       indicator_issues: indicatorIssues,
-      breakout_v2: breakoutV2,
+      breakout_v12: breakoutV12,
+      breakout_v2: toBreakoutV2Compat(breakoutV12),
+      breakout_v2_legacy: breakoutV2,
     },
     meta: {
       status,
