@@ -15,6 +15,7 @@ const ALLOWED_FILES = new Set([
   'scripts/ops/build-pipeline-runtime-report.mjs',
   'scripts/ops/build-pipeline-epoch.mjs',
   'scripts/ops/final-integrity-seal.mjs',
+  'scripts/ops/sync-release-state-from-final-seal.mjs',
   'scripts/ci/guard-authoritative-writes.mjs',
 ]);
 const SCAN_DIRS = ['scripts', 'functions'];
