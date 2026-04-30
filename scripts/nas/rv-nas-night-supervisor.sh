@@ -482,6 +482,9 @@ step_command() {
     safe_code_sync)
       printf '%s\n' "bash scripts/nas/safe-code-sync.sh"
       ;;
+    code_manifest_guard)
+      printf '%s\n' "node scripts/nas/verify-code-manifest.mjs"
+      ;;
     build_global_scope)
       # pack-manifest.global goes to RV_GLOBAL_MANIFEST_DIR, not public/
       printf '%s\n' "node scripts/universe-v7/build-global-scope.mjs --asset-classes '$GLOBAL_ASSET_CLASSES' && node scripts/universe-v7/rebuild-search-exact-from-registry.mjs && node scripts/universe-v7/build-index-memberships.mjs && node scripts/ops/build-history-pack-manifest.mjs --scope global --asset-classes '$GLOBAL_ASSET_CLASSES'"
@@ -806,7 +809,7 @@ run_step() {
   fi
 
   case "$step_id" in
-    build_global_scope|hist_probs|hist_probs_catchup|hist_probs_v2_shadow|snapshot|page_core_bundle|learning_daily|forecast_daily|build_fundamentals|quantlab_daily_report|breakout_v12|scientific_summary|v1_audit|cutover_readiness|etf_diagnostic|stage1_ops_pack|system_status_report|data_freshness_report|pipeline_epoch|generate_meta_dashboard_data|signal_performance_report|runtime_preflight|stock_analyzer_universe_audit|ui_field_truth_report|page_core_smoke|final_integrity_seal|build_deploy_bundle|wrangler_deploy)
+    build_global_scope|hist_probs|hist_probs_catchup|hist_probs_v2_shadow|snapshot|page_core_bundle|learning_daily|forecast_daily|build_fundamentals|quantlab_daily_report|breakout_v12|scientific_summary|v1_audit|cutover_readiness|etf_diagnostic|stage1_ops_pack|system_status_report|data_freshness_report|pipeline_epoch|generate_meta_dashboard_data|signal_performance_report|runtime_preflight|stock_analyzer_universe_audit|ui_field_truth_report|page_core_smoke|final_integrity_seal|build_deploy_bundle|wrangler_deploy|code_manifest_guard)
       measure_args+=(--set-env "NODE_OPTIONS=--max-old-space-size=$heap_mb")
       ;;
   esac
@@ -848,6 +851,7 @@ lane_steps() {
   if [[ "$ACTIVE_LANE" == "data-plane" ]]; then
     local steps=(
       safe_code_sync \
+      code_manifest_guard \
       build_global_scope \
       market_data_refresh \
       q1_delta_ingest \
@@ -879,6 +883,7 @@ lane_steps() {
     printf '%s\n' "${steps[@]}"
   else
     printf '%s\n' \
+      code_manifest_guard \
       stock_analyzer_universe_audit \
       data_freshness_report \
       system_status_report \

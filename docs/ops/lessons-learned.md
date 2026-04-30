@@ -21,6 +21,18 @@
 
 ---
 
+### 2026-04-30 · Stock Analyzer · Operability and deploy gates must consume Page-Core strict truth
+
+**What:** MAIN could deploy stale Page-Core artifacts while an older operability report still counted assets green from stale titles and `Math.max(old_report_bars, registry_bars)`. `/api/universe?q=ford` also risked cold-loading the full exact symbol index during normal search.
+
+**Why:** Decision scope, Page-Core, UI-state, operability, and release gates were not all using the same global `STOCK,ETF,INDEX` truth chain. Registry refresh could not shrink stale operability bars, and protected universe searches depended on a large exact-index parse.
+
+**Fix:** Decision bundles now prefer global scope; operability rebuilds from Page-Core strict rows plus registry, ignores stale green titles, allows registry shrink, and blocks green without current Page-Core basis. Final seal and release gate hard-block below-90% UI-state, target mismatch, stale public status, and Ford runtime contracts. Normal `/api/universe` protected searches use small protected/bucket/global paths before any exact-index scan.
+
+**Prevention:** NAS supervisor verifies a committed release truth-chain code manifest immediately after code sync. A release cannot proceed when NAS scripts differ from the committed manifest or when UI-state/public status are not current and release-eligible.
+
+---
+
 ### 2026-04-30 · Stock Analyzer · Page-Core green must include coherent key-level basis
 
 **What:** Page-Core could publish rows with `ui_banner_state=all_systems_operational` while `market_stats_min=null` and `key_levels_ready=false`. Separately, `search_exact_by_symbol.json.gz` could stay older than the registry, causing index/audit mismatches and stale bars in exact symbol resolution.

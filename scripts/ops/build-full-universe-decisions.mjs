@@ -26,6 +26,7 @@ import { latestUsMarketSessionIso } from '../../functions/api/_shared/market-cal
 const ROOT = path.resolve(new URL('.', import.meta.url).pathname, '../..');
 const DECISIONS_ROOT = path.join(ROOT, 'public/data/decisions');
 const REGISTRY_PATH = path.join(ROOT, 'public/data/universe/v7/registry/registry.ndjson.gz');
+const GLOBAL_SCOPE_PATH = path.join(ROOT, 'public/data/universe/v7/ssot/assets.global.canonical.ids.json');
 const DAILY_SCOPE_PATH = path.join(ROOT, 'public/data/universe/v7/ssot/assets.us_eu.daily_eval.canonical.ids.json');
 const COMPAT_SCOPE_PATH = path.join(ROOT, 'public/data/universe/v7/ssot/stocks_etfs.us_eu.canonical.ids.json');
 const OPS_DECISION_SEAL_PATH = path.join(ROOT, 'public/data/ops/decision-bundle-latest.json');
@@ -52,14 +53,21 @@ function readJson(filePath) {
 }
 
 function readScopeIds() {
-  const usingCompat = !fs.existsSync(DAILY_SCOPE_PATH);
-  const scopePath = usingCompat ? COMPAT_SCOPE_PATH : DAILY_SCOPE_PATH;
-  if (usingCompat) {
-    process.stderr.write(`[build-full-universe-decisions] WARN: daily_eval scope file missing, falling back to compat scope: ${COMPAT_SCOPE_PATH}\n`);
+  const forcedScopePath = process.env.RV_DECISION_SCOPE_PATH
+    ? path.resolve(ROOT, process.env.RV_DECISION_SCOPE_PATH)
+    : null;
+  const scopePath = forcedScopePath
+    || (fs.existsSync(GLOBAL_SCOPE_PATH) ? GLOBAL_SCOPE_PATH : null)
+    || (fs.existsSync(DAILY_SCOPE_PATH) ? DAILY_SCOPE_PATH : COMPAT_SCOPE_PATH);
+  if (!fs.existsSync(scopePath)) {
+    throw new Error(`DECISION_SCOPE_MISSING:${scopePath}`);
+  }
+  if (scopePath !== GLOBAL_SCOPE_PATH) {
+    process.stderr.write(`[build-full-universe-decisions] WARN: global scope missing/overridden, using scope: ${scopePath}\n`);
   }
   const doc = readJson(scopePath);
   const ids = Array.isArray(doc?.canonical_ids) ? doc.canonical_ids : [];
-  if (!ids.length) throw new Error(`DAILY_EVAL_SCOPE_EMPTY:${scopePath}`);
+  if (!ids.length) throw new Error(`DECISION_SCOPE_EMPTY:${scopePath}`);
   return { scopePath, ids: new Set(ids.map((id) => String(id).toUpperCase())) };
 }
 

@@ -471,3 +471,80 @@ test('final seal keeps decision bundle coverage warnings advisory-only', () => {
   assert.equal(seal.advisories.some((item) => item.id === 'eligible_wait_pipeline_incomplete'), true);
   assert.equal(seal.advisories.some((item) => item.id === 'risk_unknown'), true);
 });
+
+test('final seal hard-fails when stock analyzer UI ratio is below release floor', () => {
+  const targetMarketDate = '2026-04-17';
+  const seal = buildFinalIntegritySeal({
+    runId: 'r1',
+    targetMarketDate,
+    phase: 'VERIFY',
+    system: {
+      run_id: 'r1',
+      summary: { target_market_date: targetMarketDate, local_data_green: true },
+      steps: {},
+    },
+    runtime: {
+      run_id: 'r1',
+      generated_at: '2026-04-17T20:10:00Z',
+      target_market_date: targetMarketDate,
+    },
+    epoch: {
+      run_id: 'r1',
+      generated_at: '2026-04-17T20:10:00Z',
+      target_market_date: targetMarketDate,
+      pipeline_ok: true,
+      modules: {},
+      blocking_gaps: [],
+    },
+    recovery: {
+      generated_at: '2026-04-17T20:15:00Z',
+      target_market_date: targetMarketDate,
+      next_step: 'page_core_bundle',
+    },
+    release: {
+      run_id: 'r1',
+      target_date: targetMarketDate,
+      phase: 'VERIFY',
+    },
+    publish: { ok: true, steps: [] },
+    runtimePreflight: {
+      ok: true,
+      generated_at: '2026-04-17T20:16:00Z',
+      failure_reasons: [],
+      diag_ok: true,
+      canary_ok: true,
+    },
+    stockAnalyzerAudit: {
+      summary: {
+        full_universe: true,
+        artifact_release_ready: true,
+        artifact_critical_issue_count: 0,
+        critical_failure_family_count: 0,
+        live_endpoint_mode: 'full',
+      },
+    },
+    uiFieldTruth: {
+      target_market_date: targetMarketDate,
+      summary: { ui_field_truth_ok: true },
+    },
+    launchd: { allowed_launchd_only: true },
+    storage: { disk: { heavy_jobs_allowed: true }, nas: { reachable: true } },
+    decisionBundle: validDecisionBundle(targetMarketDate),
+    histProbsStatus: validHistStatus(),
+    stockAnalyzerUiState: {
+      release_eligible: false,
+      ui_operational_ratio: 0.899,
+      min_green_ratio: 0.9,
+      missing_scope_rows: 0,
+      counts: { contract_violation_total: 0 },
+    },
+    searchRegistrySync: validSearchRegistrySync(),
+    heartbeat: { last_seen: '2026-04-17T20:55:00Z' },
+    previousFinal: { generated_at: '2026-04-17T20:30:00Z' },
+    requiredLeafFailed: false,
+    now: new Date('2026-04-17T21:00:00Z'),
+  });
+  assert.equal(seal.status, 'FAILED');
+  assert.equal(seal.release_ready, false);
+  assert.equal(seal.blocking_reasons.some((item) => item.id === 'stock_analyzer_ui_state_degraded'), true);
+});

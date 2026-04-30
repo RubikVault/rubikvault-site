@@ -100,15 +100,14 @@ test('universe v7 API search keeps name matches and ranks US Visa first for visa
   }
 });
 
-test('universe v7 API search uses exact index when buckets/global miss protected majors', async () => {
+test('universe v7 API search uses protected fallbacks when buckets/global miss protected majors', async () => {
   const originalFetch = globalThis.fetch;
+  let exactIndexFetches = 0;
   globalThis.fetch = async (rawUrl) => {
     const url = new URL(String(rawUrl));
     if (url.pathname === '/data/universe/v7/search/search_exact_by_symbol.json.gz') {
-      return jsonResponse({
-        schema: 'rv_v7_search_exact_v1',
-        by_symbol: { F: usFord, TSLA: usTesla },
-      });
+      exactIndexFetches += 1;
+      return new Response('exact index should not be loaded for normal protected search', { status: 500 });
     }
     if (url.pathname === '/data/universe/v7/search/search_index_manifest.json') {
       return jsonResponse({ schema: 'rv_v7_search_manifest_v1', buckets: {} });
@@ -128,6 +127,7 @@ test('universe v7 API search uses exact index when buckets/global miss protected
       const payload = await res.json();
       assert.equal(payload?.data?.symbols?.[0]?.canonical_id, expected);
     }
+    assert.equal(exactIndexFetches, 0);
   } finally {
     globalThis.fetch = originalFetch;
   }

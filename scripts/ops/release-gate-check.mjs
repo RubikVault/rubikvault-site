@@ -36,6 +36,8 @@ const REPO_ROOT = path.resolve(fileURLToPath(new URL('.', import.meta.url)), '..
 // ─── Paths ─────────────────────────────────────────────────────────────────────
 const RELEASE_STATE_PATH = path.join(REPO_ROOT, 'public/data/ops/release-state-latest.json');
 const FINAL_INTEGRITY_SEAL_PATH = path.join(REPO_ROOT, 'public/data/ops/final-integrity-seal-latest.json');
+const PUBLIC_STATUS_PATH = path.join(REPO_ROOT, 'public/data/public-status.json');
+const STOCK_UI_STATE_PATH = path.join(REPO_ROOT, 'public/data/runtime/stock-analyzer-ui-state-summary-latest.json');
 const DEPLOY_PROOF_PATH  = path.join(REPO_ROOT, 'var/private/ops/deploy-proof-latest.json');
 const BUNDLE_META_PATH   = path.join(REPO_ROOT, 'var/private/ops/build-bundle-meta.json');
 const BUILD_META_PATH    = path.join(REPO_ROOT, 'public/data/ops/build-meta.json');
@@ -287,7 +289,10 @@ function verifyProductionArtifactsOnce(targetDate) {
   };
   const failures = [];
   const publicStatus = checks.public_status.json || {};
-  const publicStatusSafe = publicStatus.release_ready === true && publicStatus.core_release_ready !== false;
+  const publicStatusSafe = publicStatus.release_ready === true
+    && publicStatus.core_release_ready !== false
+    && publicStatus.overall_ui_ready === true
+    && publicStatus.status === 'OK';
   if (!checks.public_status.ok || targetDateOf(publicStatus) !== targetDate || !publicStatusSafe) {
     failures.push(`public_status target=${targetDateOf(publicStatus) || 'missing'} status=${publicStatus.status || 'missing'} release_ready=${publicStatus.release_ready} core_release_ready=${publicStatus.core_release_ready} overall_ui_ready=${publicStatus.overall_ui_ready}`);
   }
@@ -319,6 +324,9 @@ function verifyRuntimeContracts(baseUrl, targetDate = null, { requirePublicStatu
     page_aapl: fetchJsonSmoke(`${clean}/api/v2/page/AAPL?${cacheBust}`),
     page_brkb: fetchJsonSmoke(`${clean}/api/v2/page/BRK-B?${cacheBust}`),
     page_brkdotb: fetchJsonSmoke(`${clean}/api/v2/page/BRK.B?${cacheBust}`),
+    page_f: fetchJsonSmoke(`${clean}/api/v2/page/F?${cacheBust}`),
+    summary_f: fetchJsonSmoke(`${clean}/api/v2/stocks/F/summary?${cacheBust}`),
+    historical_f: fetchJsonSmoke(`${clean}/api/v2/stocks/F/historical?asset_id=US:F&${cacheBust}`),
     stock_f: fetchJsonSmoke(`${clean}/api/stock?ticker=F&${cacheBust}`),
   };
   if (requirePublicStatus) {
@@ -328,9 +336,11 @@ function verifyRuntimeContracts(baseUrl, targetDate = null, { requirePublicStatu
   if (!checks.universe_ford.ok || !universeHasCanonical(checks.universe_ford.json, 'US:F')) failures.push('universe_ford_missing_US:F');
   if (!checks.universe_visa.ok || !universeHasCanonical(checks.universe_visa.json, 'US:V')) failures.push('universe_visa_missing_US:V');
   if (!checks.universe_tesla.ok || !universeHasCanonical(checks.universe_tesla.json, 'US:TSLA')) failures.push('universe_tesla_missing_US:TSLA');
-  for (const key of ['page_aapl', 'page_brkb', 'page_brkdotb']) {
+  for (const key of ['page_aapl', 'page_brkb', 'page_brkdotb', 'page_f']) {
     if (!checks[key].ok || checks[key].json?.ok !== true || !checks[key].json?.data?.canonical_asset_id) failures.push(`${key}_page_core_failed`);
   }
+  if (!checks.summary_f.ok || checks.summary_f.json?.ok !== true) failures.push('summary_f_failed');
+  if (!checks.historical_f.ok || checks.historical_f.json?.ok !== true) failures.push('historical_f_failed');
   if (!checks.stock_f.ok || checks.stock_f.json?.ok !== true || !stockHasNoPublicBundleBlocker(checks.stock_f.json)) {
     failures.push('api_stock_f_public_bundle_blocker');
   }
@@ -398,6 +408,56 @@ function checkStockAnalyzerTargets(seal) {
   }
 }
 
+function checkStockAnalyzerUiState(seal) {
+  const uiState = seal?.stock_analyzer_ui_state || readJson(STOCK_UI_STATE_PATH);
+  const expectedTargetDate = targetDateOf(seal);
+  if (!uiState) {
+    if (!isForce) fail('Stock Analyzer UI-state summary missing.');
+    warn('Stock Analyzer UI-state summary missing but --force active.');
+    return;
+  }
+  const uiTargetDate = targetDateOf(uiState);
+  if (expectedTargetDate && uiTargetDate && uiTargetDate !== expectedTargetDate && !isForce) {
+    fail(`Stock Analyzer UI-state target mismatch: expected ${expectedTargetDate}, got ${uiTargetDate}.`);
+  }
+  const ratio = Number(uiState.ui_operational_ratio ?? NaN);
+  if (!Number.isFinite(ratio) && !isForce) {
+    fail('Stock Analyzer UI operational ratio missing.');
+  }
+  if (Number.isFinite(ratio) && ratio < STOCK_ANALYZER_GREEN_MINIMUM && !isForce) {
+    fail(`Stock Analyzer UI operational ratio ${(ratio * 100).toFixed(2)}% is below minimum ${(STOCK_ANALYZER_GREEN_MINIMUM * 100).toFixed(0)}%.`);
+  }
+  const missingScopeRows = Number(uiState.missing_scope_rows ?? 0);
+  const contractViolations = Number(uiState.counts?.contract_violation_total ?? 0);
+  if (uiState.release_eligible !== true && !isForce) {
+    fail(`Stock Analyzer UI-state is not release eligible: ratio=${Number.isFinite(ratio) ? ratio : 'missing'} missing_scope_rows=${missingScopeRows} contract_violations=${contractViolations}.`);
+  }
+  if ((missingScopeRows > 0 || contractViolations > 0) && !isForce) {
+    fail(`Stock Analyzer UI-state contract failed: missing_scope_rows=${missingScopeRows} contract_violations=${contractViolations}.`);
+  }
+}
+
+function checkLocalPublicStatus(seal) {
+  const status = readJson(PUBLIC_STATUS_PATH);
+  if (!status) {
+    if (!isForce) fail(`public-status.json missing at ${PUBLIC_STATUS_PATH}.`);
+    warn('public-status.json missing but --force active.');
+    return;
+  }
+  const expectedTargetDate = targetDateOf(seal);
+  const statusTargetDate = targetDateOf(status);
+  const safe = status.status === 'OK'
+    && status.release_ready === true
+    && status.overall_ui_ready === true
+    && status.core_release_ready !== false;
+  if (expectedTargetDate && statusTargetDate !== expectedTargetDate && !isForce) {
+    fail(`public-status target mismatch: expected ${expectedTargetDate}, got ${statusTargetDate || 'missing'}.`);
+  }
+  if (!safe && !isForce) {
+    fail(`public-status is not OK/release-ready: status=${status.status || 'missing'} release_ready=${status.release_ready} overall_ui_ready=${status.overall_ui_ready}.`);
+  }
+}
+
 // ─── Gate Checks ───────────────────────────────────────────────────────────────
 
 function checkReleaseState() {
@@ -426,6 +486,8 @@ function checkReleaseState() {
     fail(`Final integrity seal is not release-ready. Top blocker: ${seal?.blocking_reasons?.[0]?.id || 'unknown'}`);
   }
   checkStockAnalyzerTargets(seal);
+  checkStockAnalyzerUiState(seal);
+  checkLocalPublicStatus(seal);
 
   return state
     ? { ...state, final_integrity_seal: seal || null, final_integrity_seal_verification: sealVerification }

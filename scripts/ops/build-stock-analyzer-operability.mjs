@@ -5,14 +5,20 @@ import zlib from 'node:zlib';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
+import {
+  pageCoreClaimsOperational,
+  pageCoreStrictOperationalReasons,
+} from '../../functions/api/_shared/page-core-reader.js';
 
 const REPO_ROOT = path.resolve(fileURLToPath(new URL('.', import.meta.url)), '../..');
 const DEFAULT_INPUT = path.join(REPO_ROOT, 'public/data/ops/stock-analyzer-operability-latest.json');
 const DEFAULT_SUMMARY_OUTPUT = path.join(REPO_ROOT, 'public/data/ops/stock-analyzer-operability-summary-latest.json');
 const DEFAULT_AUDIT_REPORT = path.join(REPO_ROOT, 'public/data/reports/stock-analyzer-universe-audit-latest.json');
 const DEFAULT_FINAL_SEAL = path.join(REPO_ROOT, 'public/data/ops/final-integrity-seal-latest.json');
+const DEFAULT_PAGE_CORE_LATEST = path.join(REPO_ROOT, 'public/data/page-core/latest.json');
 const DEFAULT_MIN_BARS = 200;
 const RELEASE_GREEN_THRESHOLD = 0.90;
+const OPERATIONAL_ASSET_CLASSES = new Set(['STOCK', 'ETF', 'INDEX']);
 
 function parseArgs(argv = process.argv.slice(2)) {
   const get = (name) => {
@@ -32,6 +38,7 @@ function parseArgs(argv = process.argv.slice(2)) {
     summaryOnly: argv.includes('--summary-only'),
     refreshRegistry: argv.includes('--refresh-from-registry'),
     registryPath: get('registry-path') ? path.resolve(get('registry-path')) : null,
+    pageCoreLatestPath: get('page-core-latest') ? path.resolve(REPO_ROOT, get('page-core-latest')) : DEFAULT_PAGE_CORE_LATEST,
   };
 }
 
@@ -76,6 +83,12 @@ function toFiniteNumber(value) {
   return Number.isFinite(number) ? number : null;
 }
 
+function isoDate(value) {
+  if (typeof value !== 'string' || value.length < 10) return null;
+  const iso = value.slice(0, 10);
+  return /^\d{4}-\d{2}-\d{2}$/.test(iso) ? iso : null;
+}
+
 function registryBars(row) {
   return toFiniteNumber(row?.registry_bars_count);
 }
@@ -89,23 +102,121 @@ function loadRegistryIndex(registryPath) {
     try {
       const entry = JSON.parse(line);
       if (entry.canonical_id) {
-        index.set(entry.canonical_id, Number(entry.bars_count) || 0);
+        index.set(String(entry.canonical_id).toUpperCase(), {
+          bars_count: Number(entry.bars_count) || 0,
+          last_trade_date: isoDate(entry.last_trade_date || entry.latest_bar_date || entry.actual_last_trade_date),
+          asset_class: String(entry.type_norm || entry.asset_class || '').toUpperCase() || null,
+          symbol: entry.symbol || entry.ticker || null,
+        });
       }
     } catch { /* skip malformed lines */ }
   }
   return index;
 }
 
+function registryRecord(row, registryIndex) {
+  if (!registryIndex || !row?.canonical_id) return null;
+  const value = registryIndex.get(String(row.canonical_id).toUpperCase());
+  if (value == null) return null;
+  if (typeof value === 'number') return { bars_count: value };
+  return value && typeof value === 'object' ? value : null;
+}
+
 function effectiveBars(row, registryIndex) {
   const existing = registryBars(row);
   if (registryIndex) {
-    const fromRegistry = registryIndex.get(row.canonical_id) ?? 0;
-    // MAX: never let registry shrink a correct existing value (global vs exchange-specific
-    // pack counts differ), but DO let a higher registry value override a corrupted/missing one.
-    const best = Math.max(existing ?? 0, fromRegistry);
-    return best > 0 ? best : null;
+    const fromRegistry = toFiniteNumber(registryRecord(row, registryIndex)?.bars_count);
+    return fromRegistry;
   }
   return existing;
+}
+
+function resolveSnapshotPath(latestPath, latest) {
+  const raw = String(latest?.snapshot_path || '').replace(/^\/+/, '');
+  if (!raw) throw new Error('PAGE_CORE_SNAPSHOT_PATH_MISSING');
+  return path.join(REPO_ROOT, 'public', raw);
+}
+
+function readMaybeGzipJson(filePath) {
+  const body = fs.readFileSync(filePath);
+  const text = filePath.endsWith('.gz') ? zlib.gunzipSync(body).toString('utf8') : body.toString('utf8');
+  return JSON.parse(text);
+}
+
+function loadPageCoreIndex(latestPath) {
+  if (!latestPath || !fs.existsSync(latestPath)) return null;
+  const latest = readJson(latestPath);
+  if (!latest || latest.schema !== 'rv.page_core_latest.v1') return null;
+  const snapshotPath = resolveSnapshotPath(latestPath, latest);
+  const pageDir = path.join(snapshotPath, 'page-shards');
+  if (!fs.existsSync(pageDir)) return null;
+  const rows = new Map();
+  for (const file of fs.readdirSync(pageDir).filter((name) => name.endsWith('.json.gz')).sort()) {
+    const shard = readMaybeGzipJson(path.join(pageDir, file));
+    for (const row of Object.values(shard || {})) {
+      const canonicalId = String(row?.canonical_asset_id || row?.identity?.canonical_id || '').toUpperCase();
+      if (canonicalId) rows.set(canonicalId, row);
+    }
+  }
+  return { latest, rows };
+}
+
+function pageCoreBars(row) {
+  return toFiniteNumber(row?.coverage?.bars);
+}
+
+function pageCoreDate(row) {
+  return isoDate(
+    row?.market_stats_min?.latest_bar_date
+    || row?.latest_bar_date
+    || row?.freshness?.as_of
+    || row?.price_date
+  );
+}
+
+function pageCoreBlockers(row, { latest = null, minBars = DEFAULT_MIN_BARS } = {}) {
+  const blockers = [];
+  const assetClass = String(row?.identity?.asset_class || row?.asset_class || '').toUpperCase();
+  const bars = pageCoreBars(row);
+  const verdict = String(row?.summary_min?.decision_verdict || '').toUpperCase();
+  const quality = String(row?.summary_min?.quality_status || '').toUpperCase();
+  const govStatus = String(row?.governance_summary?.status || '').toLowerCase();
+  const riskLevel = String(row?.summary_min?.risk_level || row?.governance_summary?.risk_level || '').toUpperCase();
+  const governanceBlockers = Array.isArray(row?.governance_summary?.blocking_reasons)
+    ? row.governance_summary.blocking_reasons
+    : [];
+  const warnings = [
+    ...(Array.isArray(row?.meta?.warnings) ? row.meta.warnings : []),
+    ...(Array.isArray(row?.governance_summary?.warnings) ? row.governance_summary.warnings : []),
+    ...(Array.isArray(row?.coverage?.warnings) ? row.coverage.warnings : []),
+  ].map((item) => String(item || ''));
+  if (!OPERATIONAL_ASSET_CLASSES.has(assetClass)) blockers.push('asset_class_out_of_scope');
+  if (bars == null || bars < minBars) blockers.push('insufficient_history');
+  for (const reason of pageCoreStrictOperationalReasons(row, { latest })) {
+    if (reason !== 'ui_banner_not_operational') blockers.push(reason);
+  }
+  if (warnings.includes('decision_bundle_missing')) blockers.push('decision_bundle_missing');
+  if (warnings.includes('bars_stale')) blockers.push('bars_stale');
+  if (!['BUY', 'WAIT'].includes(verdict)) blockers.push('decision_not_buy_or_wait');
+  if (quality !== 'OK') blockers.push(`quality_${quality.toLowerCase() || 'missing'}`);
+  if (!['ok', 'available'].includes(govStatus)) blockers.push(`governance_${govStatus || 'missing'}`);
+  if (!riskLevel || riskLevel === 'UNKNOWN') blockers.push('risk_unknown');
+  if (governanceBlockers.length > 0) blockers.push(String(governanceBlockers[0] || 'governance_blocked'));
+  if (!pageCoreClaimsOperational(row) && blockers.length === 0) blockers.push('ui_banner_not_operational');
+  return [...new Set(blockers.filter(Boolean))];
+}
+
+function rowLatestDate(row, registryEntry = null) {
+  const dates = [
+    row?.actual_last_trade_date,
+    row?.latest_bar_date,
+    row?.last_trade_date,
+    row?.price_date,
+    row?.target_market_date,
+    row?.freshness?.as_of,
+    registryEntry?.last_trade_date,
+  ].map(isoDate).filter(Boolean);
+  return dates.length ? dates.sort().at(-1) : null;
 }
 
 // Assets excluded from the targetable denominator regardless of bars count.
@@ -120,8 +231,24 @@ const NON_TARGETABLE_FAMILIES = new Set([
   'true_short_history',
 ]);
 
-function isOperational(row) {
-  return row?.operational === true || String(row?.current_ui_title || '').trim() === 'All systems operational';
+function strictOperabilityBlockers(row, { targetMarketDate = null, registryEntry = null } = {}) {
+  const blockers = [];
+  const titleClaimsGreen = String(row?.current_ui_title || '').trim() === 'All systems operational';
+  if (row?.operational !== true && !titleClaimsGreen) blockers.push('ui_title_not_operational');
+  const latestDate = rowLatestDate(row, registryEntry);
+  if (targetMarketDate) {
+    if (!latestDate) blockers.push('missing_latest_bar_date');
+    else if (latestDate < targetMarketDate) blockers.push('bars_stale');
+  }
+  const stack = Array.isArray(row?.blocking_stack) ? row.blocking_stack : [];
+  if (stack.length > 0) blockers.push(String(stack[0] || 'blocking_stack_present'));
+  const severity = String(row?.severity || '').toLowerCase();
+  if (severity && !['ok', 'info'].includes(severity)) blockers.push(`severity_${severity}`);
+  return [...new Set(blockers.filter(Boolean))];
+}
+
+function isOperational(row, context = {}) {
+  return strictOperabilityBlockers(row, context).length === 0;
 }
 
 function binForRegistryBars(value, minBars) {
@@ -145,7 +272,7 @@ function compactExamples(rows, limit = 3) {
   }));
 }
 
-function buildSummary(records, { minBars = DEFAULT_MIN_BARS, registryIndex = null } = {}) {
+function buildSummary(records, { minBars = DEFAULT_MIN_BARS, registryIndex = null, targetMarketDate = null } = {}) {
   const barBins = {
     zero_or_unknown: { assets: 0, operational_assets: 0 },
     one_to_199: { assets: 0, operational_assets: 0 },
@@ -178,7 +305,10 @@ function buildSummary(records, { minBars = DEFAULT_MIN_BARS, registryIndex = nul
   for (const row of records) {
     const bars = effectiveBars(row, registryIndex);
     const bin = binForRegistryBars(bars, minBars);
-    const operational = isOperational(row);
+    const operational = isOperational(row, {
+      targetMarketDate,
+      registryEntry: registryRecord(row, registryIndex),
+    });
     const family = String(row?.primary_reason_family || '').trim();
     const targetable = bars != null && bars >= minBars && !NON_TARGETABLE_FAMILIES.has(family);
 
@@ -290,11 +420,15 @@ function modulesAllClean(row) {
   return !Object.values(flags).some((v) => v === true);
 }
 
-function reconcileFromRegistry(row, bars, minBars) {
+function reconcileFromRegistry(row, bars, minBars, { targetMarketDate = null, registryEntry = null } = {}) {
   const family = String(row?.primary_reason_family || '').trim();
   if (!family || !RECONCILABLE_FAMILIES.has(family)) return row;
   if (bars == null || bars < minBars) return row;
   if (!modulesAllClean(row)) return row;
+  if (targetMarketDate) {
+    const latestDate = rowLatestDate(row, registryEntry);
+    if (!latestDate || latestDate < targetMarketDate) return row;
+  }
   return {
     ...row,
     primary_reason_family: null,
@@ -313,35 +447,103 @@ function reconcileFromRegistry(row, bars, minBars) {
     reconciliation: {
       reconciled_from_family: family,
       reconciled_at: new Date().toISOString(),
-      reconciliation_basis: 'registry_bars_count_confirms_healthy',
+      reconciliation_basis: 'registry_bars_count_and_target_date_confirm_healthy',
       registry_bars_count_at_reconciliation: bars,
+      last_trade_date_at_reconciliation: rowLatestDate(row, registryEntry),
     },
   };
 }
 
-export function rebuildOperabilityDocument(inputDoc, { minBars = DEFAULT_MIN_BARS, targetMarketDate = null, registryIndex = null } = {}) {
+function applyPageCoreTruth(row, pageRow, { latest = null, minBars = DEFAULT_MIN_BARS } = {}) {
+  if (!pageRow) return row;
+  const blockers = pageCoreBlockers(pageRow, { latest, minBars });
+  const operational = blockers.length === 0;
+  const bars = pageCoreBars(pageRow);
+  const lastTradeDate = pageCoreDate(pageRow);
+  return {
+    ...row,
+    canonical_id: row?.canonical_id || pageRow?.canonical_asset_id || null,
+    symbol: row?.symbol || pageRow?.display_ticker || pageRow?.identity?.symbol || null,
+    asset_class: row?.asset_class || pageRow?.identity?.asset_class || null,
+    current_ui_title: operational ? 'All systems operational' : 'Analysis incomplete',
+    severity: operational ? 'ok' : 'warning',
+    operational,
+    primary_reason_family: operational ? null : blockers[0] || 'page_core_degraded',
+    blocking_stack: operational ? [] : blockers,
+    reason_codes: operational ? [] : blockers,
+    registry_bars_count: bars ?? row?.registry_bars_count ?? null,
+    actual_last_trade_date: lastTradeDate || row?.actual_last_trade_date || null,
+    ui_banner_state: pageRow?.ui_banner_state || null,
+    market_stats_min_present: Boolean(pageRow?.market_stats_min),
+    key_levels_ready: pageRow?.key_levels_ready === true,
+    price_source: pageRow?.market_stats_min?.price_source || pageRow?.price_source || null,
+    risk_level: pageRow?.summary_min?.risk_level || pageRow?.governance_summary?.risk_level || null,
+    decision_verdict: pageRow?.summary_min?.decision_verdict || null,
+    page_core_truth: {
+      snapshot_id: latest?.snapshot_id || null,
+      target_market_date: latest?.target_market_date || null,
+      strict_operational: operational,
+      blockers,
+    },
+  };
+}
+
+export function rebuildOperabilityDocument(inputDoc, {
+  minBars = DEFAULT_MIN_BARS,
+  targetMarketDate = null,
+  registryIndex = null,
+  pageCoreIndex = null,
+} = {}) {
   const records = Array.isArray(inputDoc?.records) ? inputDoc.records : [];
   if (!records.length) throw new Error('stock_analyzer_operability_records_missing');
-  const updatedRecords = records.map((row) => {
+  const resolvedTargetMarketDate = targetMarketDate || inputDoc?.target_market_date || inputDoc?.target_date || pageCoreIndex?.latest?.target_market_date || null;
+  const baseRecords = [...records];
+  if (pageCoreIndex?.rows?.size) {
+    const existingIds = new Set(records.map((row) => String(row?.canonical_id || '').toUpperCase()).filter(Boolean));
+    for (const [canonicalId, pageRow] of pageCoreIndex.rows.entries()) {
+      if (!existingIds.has(canonicalId)) {
+        baseRecords.push({
+          environment: 'PAGE_CORE',
+          canonical_id: canonicalId,
+          symbol: pageRow?.display_ticker || pageRow?.identity?.symbol || null,
+          asset_class: pageRow?.identity?.asset_class || null,
+        });
+      }
+    }
+  }
+  const updatedRecords = baseRecords.map((sourceRow) => {
+    const canonicalId = String(sourceRow?.canonical_id || '').toUpperCase();
+    const pageRow = pageCoreIndex?.rows?.get(canonicalId) || null;
+    const row = applyPageCoreTruth(sourceRow, pageRow, { latest: pageCoreIndex?.latest || null, minBars });
+    const registryEntry = registryRecord(row, registryIndex);
     const bars = effectiveBars(row, registryIndex);
     let updatedRow = registryIndex != null
       ? { ...row, registry_bars_count: bars ?? row.registry_bars_count ?? null }
       : { ...row };
     if (registryIndex != null) {
-      updatedRow = reconcileFromRegistry(updatedRow, bars, minBars);
+      updatedRow = reconcileFromRegistry(updatedRow, bars, minBars, {
+        targetMarketDate: resolvedTargetMarketDate,
+        registryEntry,
+      });
     }
     const family = String(updatedRow?.primary_reason_family || '').trim();
     const targetable = bars != null && bars >= minBars && !NON_TARGETABLE_FAMILIES.has(family);
+    const operational = pageRow
+      ? updatedRow.operational === true
+      : isOperational(updatedRow, {
+        targetMarketDate: resolvedTargetMarketDate,
+        registryEntry,
+      });
     return {
       ...updatedRow,
       targetable,
       targetable_basis: 'registry_bars_count',
       targetable_min_bars: minBars,
-      operational: isOperational(updatedRow),
+      operational,
+      current_ui_title: operational ? 'All systems operational' : 'Analysis incomplete',
     };
   });
-  const summary = buildSummary(updatedRecords, { minBars, registryIndex: null });
-  const resolvedTargetMarketDate = targetMarketDate || inputDoc?.target_market_date || inputDoc?.target_date || null;
+  const summary = buildSummary(updatedRecords, { minBars, registryIndex: null, targetMarketDate: resolvedTargetMarketDate });
   return {
     ...inputDoc,
     schema: inputDoc.schema || 'rv.stock_analyzer_operability.v1',
@@ -350,6 +552,8 @@ export function rebuildOperabilityDocument(inputDoc, { minBars = DEFAULT_MIN_BAR
     input_target_market_date: inputDoc?.target_market_date || inputDoc?.target_date || null,
     required_min_bars: minBars,
     producer: 'scripts/ops/build-stock-analyzer-operability.mjs',
+    page_core_snapshot_id: pageCoreIndex?.latest?.snapshot_id || null,
+    page_core_rows: pageCoreIndex?.rows?.size ?? null,
     generated_at: new Date().toISOString(),
     summary,
     records: updatedRecords,
@@ -373,7 +577,13 @@ async function main() {
   const registryIndex = (options.refreshRegistry && options.registryPath)
     ? loadRegistryIndex(options.registryPath)
     : null;
-  const fullDoc = rebuildOperabilityDocument(input, { minBars: options.minBars, targetMarketDate, registryIndex });
+  const pageCoreIndex = loadPageCoreIndex(options.pageCoreLatestPath);
+  const fullDoc = rebuildOperabilityDocument(input, {
+    minBars: options.minBars,
+    targetMarketDate,
+    registryIndex,
+    pageCoreIndex,
+  });
   const summaryDoc = summaryDocument(fullDoc);
   fullDoc.artifact_hash = artifactHash(fullDoc);
   summaryDoc.artifact_hash = artifactHash(summaryDoc);

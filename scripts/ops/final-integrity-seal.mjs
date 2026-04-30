@@ -592,9 +592,9 @@ export function buildFinalIntegritySeal({
       || targetableAssets <= 0
       || targetableGreenRatio < Number(operabilitySummary.release_green_threshold ?? 0.90);
     if (releaseBlocked) {
-      warningReasons.push({
+      blockingReasons.push({
         id: 'targetable_universe_operability_below_policy',
-        severity: 'warning',
+        severity: 'critical',
         details: {
           coverage_denominator: operabilitySummary.coverage_denominator || null,
           targetable_assets: operabilitySummary.targetable_assets ?? null,
@@ -606,29 +606,37 @@ export function buildFinalIntegritySeal({
     }
   }
   if (!stockAnalyzerUiState) {
-    warningReasons.push({
+    blockingReasons.push({
       id: 'stock_analyzer_ui_state_summary_missing',
-      severity: 'warning',
+      severity: 'critical',
       details: null,
     });
-  } else if (stockAnalyzerUiState.release_eligible !== true) {
+  } else {
     const contractViolationTotal = Number(stockAnalyzerUiState.counts?.contract_violation_total ?? 0);
     const missingScopeRows = Number(stockAnalyzerUiState.missing_scope_rows ?? 0);
-    const issue = {
-      id: contractViolationTotal > 0 || missingScopeRows > 0
-        ? 'stock_analyzer_ui_state_contract_failed'
-        : 'stock_analyzer_ui_state_degraded',
-      severity: contractViolationTotal > 0 || missingScopeRows > 0 ? 'critical' : 'warning',
-      details: {
-        ui_operational_ratio: stockAnalyzerUiState.ui_operational_ratio ?? null,
-        min_green_ratio: stockAnalyzerUiState.min_green_ratio ?? null,
-        missing_scope_rows: stockAnalyzerUiState.missing_scope_rows ?? null,
-        contract_violation_total: contractViolationTotal,
-        by_reason: stockAnalyzerUiState.counts?.by_reason || null,
-      },
-    };
-    if (issue.severity === 'critical') blockingReasons.push(issue);
-    else warningReasons.push(issue);
+    const uiStateTarget = normalizeDate(stockAnalyzerUiState.target_market_date);
+    if (uiStateTarget && expectedTargetDate && uiStateTarget !== expectedTargetDate) {
+      blockingReasons.push({
+        id: 'stock_analyzer_ui_state_target_mismatch',
+        severity: 'critical',
+        details: { expected: expectedTargetDate, actual: uiStateTarget },
+      });
+    }
+    if (stockAnalyzerUiState.release_eligible !== true) {
+      blockingReasons.push({
+        id: contractViolationTotal > 0 || missingScopeRows > 0
+          ? 'stock_analyzer_ui_state_contract_failed'
+          : 'stock_analyzer_ui_state_degraded',
+        severity: 'critical',
+        details: {
+          ui_operational_ratio: stockAnalyzerUiState.ui_operational_ratio ?? null,
+          min_green_ratio: stockAnalyzerUiState.min_green_ratio ?? null,
+          missing_scope_rows: stockAnalyzerUiState.missing_scope_rows ?? null,
+          contract_violation_total: contractViolationTotal,
+          by_reason: stockAnalyzerUiState.counts?.by_reason || null,
+        },
+      });
+    }
   }
   if (!searchRegistrySync) {
     blockingReasons.push({

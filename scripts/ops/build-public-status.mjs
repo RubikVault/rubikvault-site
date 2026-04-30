@@ -41,7 +41,7 @@ const releaseEvidenceTarget = seal?.target_market_date || seal?.target_date || r
 const pageCoreTarget = pageCoreLatest?.target_market_date || null;
 const targetDate = pageCoreTarget || releaseEvidenceTarget;
 const releaseEvidenceFresh = Boolean(!pageCoreTarget || !releaseEvidenceTarget || pageCoreTarget === releaseEvidenceTarget);
-const ready = seal?.release_ready === true && releaseEvidenceFresh;
+const coreSealReady = seal?.release_ready === true && releaseEvidenceFresh;
 const pageCoreManifestPath = pageCoreLatest?.snapshot_path
   ? path.join(REPO_ROOT, 'public', String(pageCoreLatest.snapshot_path).replace(/^\/+/, ''), 'manifest.json')
   : null;
@@ -76,7 +76,7 @@ const stockUiContractOk = Boolean(
   && Number(stockUiState?.counts?.contract_violation_total ?? 0) === 0
 );
 const coreReleaseReady = Boolean(
-  ready
+  coreSealReady
   && pageCoreGreen
   && stockUiContractOk
   && dataPlaneGreen
@@ -88,6 +88,7 @@ const breakoutReady = seal?.breakout_ready ?? null;
 const overallUiReady = seal?.overall_ui_ready === true
   || Boolean(coreReleaseReady && stockUiStateGreen && decisionReady && histReady);
 const uiGreen = overallUiReady;
+const ready = Boolean(coreSealReady && overallUiReady);
 
 const doc = {
   schema: 'rv_public_status_v1',
@@ -122,7 +123,7 @@ const doc = {
   hist_probs_coverage_ratio: histCoverageRatio,
   signal_quality: seal?.signal_quality || (decisionPublicGreen ? 'degraded' : 'suppressed'),
   stock_analyzer: {
-    available: coreReleaseReady,
+    available: overallUiReady,
     page_core_snapshot_id: pageCoreLatest?.snapshot_id || null,
     ui_operational_ratio: stockUiState?.ui_operational_ratio ?? null,
     ui_state_contract_violations: stockUiState?.counts?.contract_violation_total ?? null,

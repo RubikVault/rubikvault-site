@@ -24,3 +24,13 @@ test('release gate can verify signed final integrity seals', () => {
   assert.match(content, /RV_FINAL_SEAL_VERIFY_REQUIRED/);
   assert.match(content, /signature_invalid|signature_missing|public_key_missing/);
 });
+
+test('release gate hard-blocks stale Stock Analyzer UI truth before main deploy', () => {
+  const content = fs.readFileSync(path.join(ROOT, 'scripts/ops/release-gate-check.mjs'), 'utf8');
+  assert.match(content, /checkStockAnalyzerUiState\(seal\)/);
+  assert.match(content, /ui_operational_ratio/);
+  assert.match(content, /release_eligible !== true/);
+  assert.match(content, /checkLocalPublicStatus\(seal\)/);
+  assert.match(content, /overall_ui_ready/);
+  assert.match(content, /api\/universe\?q=ford/);
+});

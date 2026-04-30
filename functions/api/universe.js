@@ -11,7 +11,7 @@ let CACHE_EXACT_INDEX = null;
 let CACHE_EXACT_TIME = 0;
 
 export async function onRequestGet(context) {
-  const { request } = context;
+  const { request, env = {} } = context;
   const url = new URL(request.url);
 
   const implMarker = "functions/api/universe.js:fallback-v1";
@@ -113,6 +113,33 @@ export async function onRequestGet(context) {
     ["tesla", ["TSLA"]],
   ]);
 
+  const PROTECTED_SEARCH_ROWS = new Map([
+    ["F", {
+      canonical_id: "US:F",
+      symbol: "F",
+      exchange: "US",
+      name: "Ford Motor Company",
+      type_norm: "STOCK",
+      layer: "L0_LEGACY_CORE",
+    }],
+    ["V", {
+      canonical_id: "US:V",
+      symbol: "V",
+      exchange: "US",
+      name: "Visa Inc",
+      type_norm: "STOCK",
+      layer: "L0_LEGACY_CORE",
+    }],
+    ["TSLA", {
+      canonical_id: "US:TSLA",
+      symbol: "TSLA",
+      exchange: "US",
+      name: "Tesla Inc",
+      type_norm: "STOCK",
+      layer: "L0_LEGACY_CORE",
+    }],
+  ]);
+
   function normalizeSearchText(raw) {
     return String(raw || "").toLowerCase().replace(/[^a-z0-9]/g, "");
   }
@@ -131,6 +158,12 @@ export async function onRequestGet(context) {
     }
     if (symbolQuery) out.push(symbolQuery);
     return [...new Set(out.map((value) => normalizeSymbol(value)).filter(Boolean))];
+  }
+
+  function protectedFallbackItemsForQuery(normalizedQuery, symbolQuery) {
+    return protectedSymbolsForQuery(normalizedQuery, symbolQuery)
+      .map((symbol) => PROTECTED_SEARCH_ROWS.get(symbol))
+      .filter(Boolean);
   }
 
   function scanExactIndexByName(exactBySymbol, normalizedQuery, maxItems = 750) {
@@ -172,6 +205,8 @@ export async function onRequestGet(context) {
     || url.searchParams.get("assetClass")
   );
   const exact = normalizeBool(url.searchParams.get("exact"));
+  const allowColdExactScan = normalizeBool(url.searchParams.get("allow_exact_scan"))
+    || String(env?.RV_UNIVERSE_ALLOW_EXACT_SCAN || "").trim() === "1";
   const requestedLimit = Number(url.searchParams.get("limit"));
   const LIMIT = Number.isFinite(requestedLimit) ? Math.max(1, Math.min(100, requestedLimit)) : 25;
   const cursor = Number(url.searchParams.get("cursor"));
@@ -266,26 +301,10 @@ export async function onRequestGet(context) {
     }
 
     if (!exact && normalized.length === 1) {
-      const exactIndexDoc = await getExactIndexDoc();
-      const exactBySymbol = exactIndexDoc?.by_symbol && typeof exactIndexDoc.by_symbol === "object"
-        ? exactIndexDoc.by_symbol
-        : null;
-      const exactByPrefix1 = exactIndexDoc?.by_prefix_1 && typeof exactIndexDoc.by_prefix_1 === "object"
-        ? exactIndexDoc.by_prefix_1
-        : null;
       let candidates = [];
-      if (exactBySymbol && exactByPrefix1) {
-        const prefixKey = normalized.charAt(0).toLowerCase();
-        if (Array.isArray(exactByPrefix1[prefixKey])) {
-          candidates = exactByPrefix1[prefixKey]
-            .map((symbol) => exactBySymbol[String(symbol || "").toUpperCase()])
-            .filter(Boolean);
-        }
-      }
-      if (!candidates.length) {
-        const globalTop = await fetchJson("/data/universe/v7/search/search_global_top_2000.json.gz");
-        if (Array.isArray(globalTop?.items)) candidates = globalTop.items;
-      }
+      const globalTop = await fetchJson("/data/universe/v7/search/search_global_top_30000.json.gz")
+        || await fetchJson("/data/universe/v7/search/search_global_top_2000.json.gz");
+      if (Array.isArray(globalTop?.items)) candidates = globalTop.items;
       if (candidates.length) {
         const seenSymbols = new Set();
         const filtered = candidates
@@ -337,13 +356,22 @@ export async function onRequestGet(context) {
       }
     }
 
-    const exactIndexDoc = await getExactIndexDoc();
-    const exactBySymbol = exactIndexDoc?.by_symbol && typeof exactIndexDoc.by_symbol === "object"
-      ? exactIndexDoc.by_symbol
-      : null;
-    const protectedItems = protectedSymbolsForQuery(normalized, qSymbol)
-      .map((symbol) => exactBySymbol?.[symbol])
-      .filter(Boolean);
+    let exactIndexDoc = null;
+    let exactBySymbol = null;
+    if (allowColdExactScan) {
+      exactIndexDoc = await getExactIndexDoc();
+      exactBySymbol = exactIndexDoc?.by_symbol && typeof exactIndexDoc.by_symbol === "object"
+        ? exactIndexDoc.by_symbol
+        : null;
+    }
+    const protectedItems = protectedFallbackItemsForQuery(normalized, qSymbol);
+    if (exactBySymbol) {
+      appendUniqueCandidates(
+        protectedItems,
+        protectedSymbolsForQuery(normalized, qSymbol).map((symbol) => exactBySymbol?.[symbol]).filter(Boolean),
+        new Set(protectedItems.map((item) => canonicalKey(item))),
+      );
+    }
 
     const manifest = await fetchJson("/data/universe/v7/search/search_index_manifest.json");
     const buckets = manifest?.buckets;
@@ -370,7 +398,7 @@ export async function onRequestGet(context) {
     const globalTop = await fetchJson("/data/universe/v7/search/search_global_top_30000.json.gz")
       || await fetchJson("/data/universe/v7/search/search_global_top_2000.json.gz");
     const globalItems = Array.isArray(globalTop?.items) ? globalTop.items : [];
-    const exactNameItems = scanExactIndexByName(exactBySymbol, normalized);
+    const exactNameItems = allowColdExactScan ? scanExactIndexByName(exactBySymbol, normalized) : [];
     const mergedSourceItems = [];
     const mergedSeen = new Set();
     appendUniqueCandidates(mergedSourceItems, protectedItems, mergedSeen);
@@ -386,7 +414,7 @@ export async function onRequestGet(context) {
     ].filter(Boolean).join("+") || "v7_search_empty";
 
     if (!Array.isArray(sourceItems) || sourceItems.length === 0) {
-      const exactByPrefix1 = exactIndexDoc?.by_prefix_1 && typeof exactIndexDoc.by_prefix_1 === "object"
+      const exactByPrefix1 = allowColdExactScan && exactIndexDoc?.by_prefix_1 && typeof exactIndexDoc.by_prefix_1 === "object"
         ? exactIndexDoc.by_prefix_1
         : null;
       let candidates = [];

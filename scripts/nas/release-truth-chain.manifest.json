@@ -1,0 +1,76 @@
+{
+  "schema": "rv.nas.release_truth_chain_code_manifest.v1",
+  "generated_at": "2026-04-30T15:12:55.711Z",
+  "git_head": "0baae590176a61f389b16c66408b93ce3c3b2cdd",
+  "paths_file": "scripts/nas/inputs/release-truth-chain.paths",
+  "file_count": 13,
+  "combined_hash": "204463ab4feefeed4fe04bdc3c04feb2a2916684abed96556f22890f928e7ab4",
+  "missing": [],
+  "files": [
+    {
+      "path": "functions/api/_shared/page-core-reader.js",
+      "size_bytes": 13562,
+      "sha256": "4003b9897c1a54a92cad10b5bc68629f1475f3001d98b73002603cfd7051ef87"
+    },
+    {
+      "path": "functions/api/universe.js",
+      "size_bytes": 24730,
+      "sha256": "855acd1af4a7f77f779970c2d8d3ff5bccc3a247f5a00e80e0578a565b63271a"
+    },
+    {
+      "path": "scripts/nas/inputs/release-truth-chain.paths",
+      "size_bytes": 515,
+      "sha256": "a915e24b49907ecda16ac223ce614399894728c140d2bfcd7a2e5eba5d84b369"
+    },
+    {
+      "path": "scripts/nas/rv-nas-night-supervisor.sh",
+      "size_bytes": 41604,
+      "sha256": "32c04e8de9e3f967d33faaac2e8cb995d2528c38c369c0301c044f86b1d8a1c0"
+    },
+    {
+      "path": "scripts/nas/safe-code-sync.sh",
+      "size_bytes": 1143,
+      "sha256": "3a9abb61ccacd578a7761bb77b71363af93f5585f03cb5244e2277c01217b8d1"
+    },
+    {
+      "path": "scripts/nas/verify-code-manifest.mjs",
+      "size_bytes": 4735,
+      "sha256": "0ef52ab2629be6ed755bc9042e61e8a1e208540e1a7da41b9dbd6ea2a792f3ca"
+    },
+    {
+      "path": "scripts/ops/build-full-universe-decisions.mjs",
+      "size_bytes": 13157,
+      "sha256": "468e23c4dbf11b02c92372312393b6fdebd8ee79daab3f8461cbb981c6b1c5ef"
+    },
+    {
+      "path": "scripts/ops/build-page-core-bundle.mjs",
+      "size_bytes": 37965,
+      "sha256": "97d083383c02dab60528a41d58519e8bf71cec45d6f2b858ba9740627ca69137"
+    },
+    {
+      "path": "scripts/ops/build-public-status.mjs",
+      "size_bytes": 6296,
+      "sha256": "17786d299a26a908dde686fd8df79c3548461d7a5640b050471bbce92dbd901d"
+    },
+    {
+      "path": "scripts/ops/build-stock-analyzer-operability.mjs",
+      "size_bytes": 25535,
+      "sha256": "18a6ec77d659222a6a9ec08e26861cc148c6bd76f33a7d3e2606cfa89b834367"
+    },
+    {
+      "path": "scripts/ops/build-stock-analyzer-ui-state-summary.mjs",
+      "size_bytes": 9706,
+      "sha256": "bfe79ae579f0fe4fa98a1f3e1faea3b5eed128d610b168918ef2e43163000851"
+    },
+    {
+      "path": "scripts/ops/final-integrity-seal.mjs",
+      "size_bytes": 46471,
+      "sha256": "a1a992c552202d050db182a83c5ff7c2f1e69ef4d21103a7b571b9a4e34ed553"
+    },
+    {
+      "path": "scripts/ops/release-gate-check.mjs",
+      "size_bytes": 34655,
+      "sha256": "498cc1899b3f4468c601662382d9424051d61db9431abd57b4671973133a88e5"
+    }
+  ]
+}
