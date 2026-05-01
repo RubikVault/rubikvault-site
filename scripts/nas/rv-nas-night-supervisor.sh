@@ -417,6 +417,9 @@ step_heap_mb() {
     build_fundamentals|quantlab_daily_report|breakout_v12|scientific_summary|etf_diagnostic|signal_performance_report)
       printf '%s\n' 512
       ;;
+    wrangler_deploy)
+      printf '%s\n' "${RV_WRANGLER_DEPLOY_HEAP_MB:-2048}"
+      ;;
     *)
       printf '%s\n' 384
       ;;
