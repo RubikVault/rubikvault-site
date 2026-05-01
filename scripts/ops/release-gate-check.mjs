@@ -54,6 +54,7 @@ const PAGES_DEPLOY_BRANCH = process.env.CLOUDFLARE_PAGES_BRANCH || process.env.C
 const PAGE_CORE_STAGING_BRANCH = process.env.RV_PAGE_CORE_STAGING_BRANCH || 'page-core-staging';
 const WRANGLER_SKIP_CACHING = process.env.RV_WRANGLER_SKIP_CACHING !== '0';
 const WRANGLER_DEPLOY_TIMEOUT_MS = Number(process.env.RV_WRANGLER_DEPLOY_TIMEOUT_MS || 2_700_000);
+const WRANGLER_DEPLOY_MAX_BUFFER = Number(process.env.RV_WRANGLER_DEPLOY_MAX_BUFFER || 128 * 1024 * 1024);
 const PRODUCTION_ARTIFACT_SMOKE_ATTEMPTS = Number(process.env.RV_PRODUCTION_ARTIFACT_SMOKE_ATTEMPTS || 3);
 const PRODUCTION_ARTIFACT_SMOKE_BACKOFF_SEC = Number(process.env.RV_PRODUCTION_ARTIFACT_SMOKE_BACKOFF_SEC || 20);
 const RUNTIME_CONTRACT_SMOKE_ATTEMPTS = Number(process.env.RV_RUNTIME_CONTRACT_SMOKE_ATTEMPTS || 3);
@@ -594,10 +595,15 @@ function runWranglerDeploy(branch = PAGES_DEPLOY_BRANCH) {
     cwd: REPO_ROOT,
     encoding: 'utf8',
     timeout: WRANGLER_DEPLOY_TIMEOUT_MS,
+    maxBuffer: WRANGLER_DEPLOY_MAX_BUFFER,
     stdio: ['ignore', 'pipe', 'pipe'],
   });
   const output = (r.stdout || '') + (r.stderr || '');
   log(`wrangler exit=${r.status ?? 'timeout'}`);
+  if (r.error) {
+    console.error(output.slice(-4000));
+    fail(`wrangler pages deploy error: ${r.error.message || r.error.code || 'unknown'}.`);
+  }
   if (r.status !== 0) {
     console.error(output);
     fail('wrangler pages deploy failed.');
@@ -605,8 +611,12 @@ function runWranglerDeploy(branch = PAGES_DEPLOY_BRANCH) {
   // Extract deployment URL and ID from wrangler output
   const urlMatch = output.match(/https:\/\/[a-z0-9-]+(?:\.[a-z0-9-]+)*\.pages\.dev/i);
   const idMatch  = output.match(/Deployment ID[:\s]+([a-f0-9-]+)/i);
+  const fallbackUrl = branch && branch !== 'main'
+    ? `https://${branch}.rubikvault-site.pages.dev`
+    : PROD_BASE;
+  if (!urlMatch) warn(`Wrangler output did not include deployment URL; using fallback ${fallbackUrl}.`);
   return {
-    deployment_url: urlMatch?.[0] || null,
+    deployment_url: urlMatch?.[0] || fallbackUrl,
     deployment_id: idMatch?.[1] || null,
     raw_output: output,
   };
