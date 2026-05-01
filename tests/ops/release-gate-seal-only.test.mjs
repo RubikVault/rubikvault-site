@@ -55,6 +55,8 @@ test('release gate captures large wrangler output and falls back to branch URL',
   const content = fs.readFileSync(path.join(ROOT, 'scripts/ops/release-gate-check.mjs'), 'utf8');
   assert.match(content, /WRANGLER_DEPLOY_MAX_BUFFER/);
   assert.match(content, /maxBuffer: WRANGLER_DEPLOY_MAX_BUFFER/);
+  assert.match(content, /wrangler-deploy-\$\{branch\}/);
+  assert.match(content, /readTextMaybe\(wranglerLogPath\)/);
   assert.match(content, /wrangler pages deploy error/);
   assert.match(content, /using fallback/);
 });

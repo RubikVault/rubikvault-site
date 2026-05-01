@@ -591,14 +591,22 @@ function runWranglerDeploy(branch = PAGES_DEPLOY_BRANCH) {
   if (removedAppleDouble > 0) log(`Removed ${removedAppleDouble} AppleDouble metadata artifacts before wrangler deploy.`);
   const deployArgs = ['pages', 'deploy', 'dist/pages-prod/', '--project-name', 'rubikvault-site', '--branch', branch];
   if (WRANGLER_SKIP_CACHING) deployArgs.push('--skip-caching');
-  const r = spawnSync(localWrangler, deployArgs, {
-    cwd: REPO_ROOT,
-    encoding: 'utf8',
-    timeout: WRANGLER_DEPLOY_TIMEOUT_MS,
-    maxBuffer: WRANGLER_DEPLOY_MAX_BUFFER,
-    stdio: ['ignore', 'pipe', 'pipe'],
-  });
-  const output = (r.stdout || '') + (r.stderr || '');
+  fs.mkdirSync(path.dirname(DEPLOY_PROOF_PATH), { recursive: true });
+  const wranglerLogPath = path.join(path.dirname(DEPLOY_PROOF_PATH), `wrangler-deploy-${branch}-${Date.now()}.log`);
+  const wranglerLogFd = fs.openSync(wranglerLogPath, 'w');
+  let r;
+  try {
+    r = spawnSync(localWrangler, deployArgs, {
+      cwd: REPO_ROOT,
+      encoding: 'utf8',
+      timeout: WRANGLER_DEPLOY_TIMEOUT_MS,
+      maxBuffer: WRANGLER_DEPLOY_MAX_BUFFER,
+      stdio: ['ignore', wranglerLogFd, wranglerLogFd],
+    });
+  } finally {
+    fs.closeSync(wranglerLogFd);
+  }
+  const output = readTextMaybe(wranglerLogPath) || '';
   log(`wrangler exit=${r.status ?? 'timeout'}`);
   if (r.error) {
     console.error(output.slice(-4000));
