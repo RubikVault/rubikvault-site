@@ -75,6 +75,16 @@
     { "pattern": "data/hist-probs-public/latest.json", "maxFileSizeBytes": 4096, "class": "hist-probs-public-pointer" },
     { "pattern": "data/hist-probs-public/manifest.json", "maxFileSizeBytes": 1048576, "class": "hist-probs-public-manifest" },
     { "pattern": "data/hist-probs-public/shards/*.json", "maxFileSizeBytes": 2097152, "class": "hist-probs-public-shard" },
+    { "pattern": "data/breakout/status.json", "maxFileSizeBytes": 65536, "class": "breakout-v12-status" },
+    { "pattern": "data/breakout/manifests/*.json", "maxFileSizeBytes": 65536, "class": "breakout-v12-manifest-pointer" },
+    { "pattern": "data/breakout/reports/validity/*.json", "maxFileSizeBytes": 262144, "class": "breakout-v12-validity-report" },
+    { "pattern": "data/breakout/runs/**/manifest.json", "maxFileSizeBytes": 65536, "class": "breakout-v12-run-manifest" },
+    { "pattern": "data/breakout/runs/**/coverage.json", "maxFileSizeBytes": 262144, "class": "breakout-v12-run-health" },
+    { "pattern": "data/breakout/runs/**/errors.json", "maxFileSizeBytes": 262144, "class": "breakout-v12-run-health" },
+    { "pattern": "data/breakout/runs/**/health.json", "maxFileSizeBytes": 262144, "class": "breakout-v12-run-health" },
+    { "pattern": "data/breakout/runs/**/top500.json", "maxFileSizeBytes": 5242880, "class": "breakout-v12-top500" },
+    { "pattern": "data/breakout/runs/**/shards/**/*.json", "maxFileSizeBytes": 5242880, "class": "breakout-v12-shard" },
+    { "pattern": "data/breakout/runs/**/shards/**/shard_*._SUCCESS", "maxFileSizeBytes": 1024, "class": "breakout-v12-shard-marker" },
     { "pattern": "data/features-v4/**", "maxFileSizeBytes": 10485760, "class": "public-features-v4" },
 
     { "pattern": "deploy-probe-*.txt", "maxFileSizeBytes": 1024, "class": "probe" }

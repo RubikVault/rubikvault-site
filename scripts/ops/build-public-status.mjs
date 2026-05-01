@@ -14,6 +14,7 @@ const REPO_ROOT = path.resolve(fileURLToPath(new URL('.', import.meta.url)), '..
 const FINAL_SEAL_PATH = path.join(REPO_ROOT, 'public/data/ops/final-integrity-seal-latest.json');
 const RELEASE_STATE_PATH = path.join(REPO_ROOT, 'public/data/ops/release-state-latest.json');
 const PAGE_CORE_LATEST_PATH = path.join(REPO_ROOT, 'public/data/page-core/latest.json');
+const PAGE_CORE_CANDIDATE_LATEST_PATH = path.join(REPO_ROOT, 'public/data/page-core/candidates/latest.candidate.json');
 const STOCK_UI_STATE_PATH = path.join(REPO_ROOT, 'public/data/runtime/stock-analyzer-ui-state-summary-latest.json');
 const HIST_PROBS_STATUS_PATHS = [
   path.join(REPO_ROOT, 'public/data/runtime/hist-probs-status-summary.json'),
@@ -34,10 +35,19 @@ function writeJsonAtomic(filePath, doc) {
 
 const seal = readJson(FINAL_SEAL_PATH);
 const releaseState = readJson(RELEASE_STATE_PATH);
-const pageCoreLatest = readJson(PAGE_CORE_LATEST_PATH);
+const activePageCoreLatest = readJson(PAGE_CORE_LATEST_PATH);
+const candidatePageCoreLatest = readJson(PAGE_CORE_CANDIDATE_LATEST_PATH);
 const stockUiState = readJson(STOCK_UI_STATE_PATH);
 const histStatus = HIST_PROBS_STATUS_PATHS.map(readJson).find(Boolean) || null;
 const releaseEvidenceTarget = seal?.target_market_date || seal?.target_date || releaseState?.target_market_date || releaseState?.target_date || null;
+const candidateMatchesRelease = Boolean(
+  candidatePageCoreLatest?.schema === 'rv.page_core_latest.v1'
+  && candidatePageCoreLatest?.snapshot_id
+  && releaseEvidenceTarget
+  && candidatePageCoreLatest?.target_market_date === releaseEvidenceTarget
+);
+const pageCoreLatest = candidateMatchesRelease ? candidatePageCoreLatest : activePageCoreLatest;
+const pageCoreSource = candidateMatchesRelease ? 'candidate' : 'active';
 const pageCoreTarget = pageCoreLatest?.target_market_date || null;
 const targetDate = pageCoreTarget || releaseEvidenceTarget;
 const releaseEvidenceFresh = Boolean(!pageCoreTarget || !releaseEvidenceTarget || pageCoreTarget === releaseEvidenceTarget);
@@ -108,6 +118,7 @@ const doc = {
   target_market_date: targetDate,
   release_evidence_target_market_date: releaseEvidenceTarget,
   page_core_target_market_date: pageCoreTarget,
+  page_core_source: pageCoreSource,
   release_evidence_fresh: releaseEvidenceFresh,
   page_core_green: pageCoreGreen,
   stock_analyzer_ui_state_green: stockUiStateGreen,

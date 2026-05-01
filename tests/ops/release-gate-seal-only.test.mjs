@@ -34,3 +34,19 @@ test('release gate hard-blocks stale Stock Analyzer UI truth before main deploy'
   assert.match(content, /overall_ui_ready/);
   assert.match(content, /api\/universe\?q=ford/);
 });
+
+test('public status can use release-matching page-core candidate before promotion', () => {
+  const content = fs.readFileSync(path.join(ROOT, 'scripts/ops/build-public-status.mjs'), 'utf8');
+  assert.match(content, /PAGE_CORE_CANDIDATE_LATEST_PATH/);
+  assert.match(content, /candidateMatchesRelease/);
+  assert.match(content, /pageCoreSource/);
+});
+
+test('runtime manifest allowlists public breakout v12 artifacts', () => {
+  const manifest = JSON.parse(fs.readFileSync(path.join(ROOT, 'config/runtime-manifest.json'), 'utf8'));
+  const patterns = new Set((manifest.allow || []).map((rule) => rule.pattern));
+  assert.equal(patterns.has('data/breakout/status.json'), true);
+  assert.equal(patterns.has('data/breakout/manifests/*.json'), true);
+  assert.equal(patterns.has('data/breakout/runs/**/top500.json'), true);
+  assert.equal(patterns.has('data/breakout/runs/**/shards/**/*.json'), true);
+});
