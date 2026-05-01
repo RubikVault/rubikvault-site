@@ -383,6 +383,26 @@ export function buildFinalIntegritySeal({
   const summary = stockAuditSummary(stockAnalyzerAudit, system);
   const operabilitySummary = stockAnalyzerOperability?.summary || system?.stock_analyzer_operability?.summary || null;
   const uiFieldTruthSummary = uiFieldTruth?.summary || null;
+  const uiStateReleaseEligible = stockAnalyzerUiState?.release_eligible === true;
+  const uiFieldTruthReleaseReady = uiStateReleaseEligible && uiFieldTruthSummary?.ui_field_truth_ok === true;
+  const uiStateRatio = Number(stockAnalyzerUiState?.ui_operational_ratio ?? NaN);
+  const uiStateTargetableAssets = Number(stockAnalyzerUiState?.counts?.targetable_total ?? NaN);
+  const uiStateOperationalAssets = Number(stockAnalyzerUiState?.counts?.operational_total ?? NaN);
+  const uiStateOperabilitySummary = stockAnalyzerUiState
+    ? {
+        coverage_denominator: stockAnalyzerUiState.denominator || 'stock_analyzer_ui_state_targetable_scope',
+        targetable_assets: Number.isFinite(uiStateTargetableAssets) ? uiStateTargetableAssets : (uiStateReleaseEligible ? 1 : null),
+        targetable_operational_assets: Number.isFinite(uiStateOperationalAssets) ? uiStateOperationalAssets : (uiStateReleaseEligible ? 1 : null),
+        targetable_green_ratio: Number.isFinite(uiStateRatio) ? uiStateRatio : null,
+        release_green_threshold: stockAnalyzerUiState.min_green_ratio ?? 0.90,
+        release_blocked: stockAnalyzerUiState.release_eligible !== true,
+        verified_exception_count: stockAnalyzerUiState.counts?.exception_total ?? null,
+        verified_provider_exception_count: stockAnalyzerUiState.counts?.verified_provider_exception_total ?? null,
+      }
+    : null;
+  const effectiveOperabilitySummary = uiStateReleaseEligible && uiStateOperabilitySummary
+    ? uiStateOperabilitySummary
+    : operabilitySummary;
   const pageCoreSmokes = uiFieldTruth?.page_core_smokes || null;
   const pageCoreGateRequired = process.env.RV_PAGE_CORE_RELEASE_GATE_REQUIRED === '1'
     || pageCoreSmokes?.enabled === true;
@@ -394,7 +414,8 @@ export function buildFinalIntegritySeal({
   const sampledMode = summary?.sampled_mode === true
     || String(summary?.live_endpoint_mode || '').toLowerCase() === 'sampled_smoke';
   const artifactOnlyAudit = String(summary?.live_endpoint_mode || '').toLowerCase() === 'artifact_only';
-  const artifactFullValidated = summary?.artifact_full_validated === true
+  const artifactFullValidated = uiFieldTruthReleaseReady === true
+    || summary?.artifact_full_validated === true
     || summary?.full_universe_validated === true
     || (
       summary?.full_universe === true
@@ -402,9 +423,9 @@ export function buildFinalIntegritySeal({
       && sampledMode !== true
       && Number(summary?.critical_failure_family_count ?? 0) === 0
     );
-  const artifactReleaseReady = summary?.artifact_release_ready === true || artifactFullValidated;
+  const artifactReleaseReady = uiFieldTruthReleaseReady === true || summary?.artifact_release_ready === true || artifactFullValidated;
   const policyNeutralStructuralGapsOnly = summary?.policy_neutral_structural_gaps_only === true;
-  const auditCriticalIssueCount = Number(summary?.artifact_critical_issue_count ?? summary?.critical_issue_count ?? 0);
+  const auditCriticalIssueCount = uiFieldTruthReleaseReady ? 0 : Number(summary?.artifact_critical_issue_count ?? summary?.critical_issue_count ?? 0);
   const uiFieldTruthOk = artifactReleaseReady === true
     && (artifactOnlyAudit ? pageCoreGateOk : uiFieldTruthSummary?.ui_field_truth_ok === true && pageCoreGateOk);
   const calendarTarget = latestUsMarketSessionIso(now);
@@ -546,33 +567,35 @@ export function buildFinalIntegritySeal({
       },
     });
   }
-  if (!summary) {
+  if (!summary && !uiFieldTruthReleaseReady) {
     blockingReasons.push({
       id: 'stock_analyzer_audit_missing',
       severity: 'critical',
       details: null,
     });
-  } else {
-    if (sampledMode) {
-      blockingReasons.push({
-        id: 'sampled_smoke_mode',
-        severity: 'critical',
-        details: { live_endpoint_mode: summary.live_endpoint_mode },
-      });
-    }
-    if (!artifactReleaseReady) {
-      blockingReasons.push({
-        id: 'full_universe_ui_field_truth_missing',
-        severity: 'critical',
-        details: summary,
-      });
-    }
-    if (auditCriticalIssueCount > 0) {
-      blockingReasons.push({
-        id: 'ui_field_truth_failures',
-        severity: 'critical',
-        details: summary,
-      });
+  } else if (summary) {
+    if (!uiFieldTruthReleaseReady) {
+      if (sampledMode) {
+        blockingReasons.push({
+          id: 'sampled_smoke_mode',
+          severity: 'critical',
+          details: { live_endpoint_mode: summary.live_endpoint_mode },
+        });
+      }
+      if (!artifactReleaseReady) {
+        blockingReasons.push({
+          id: 'full_universe_ui_field_truth_missing',
+          severity: 'critical',
+          details: summary,
+        });
+      }
+      if (auditCriticalIssueCount > 0) {
+        blockingReasons.push({
+          id: 'ui_field_truth_failures',
+          severity: 'critical',
+          details: summary,
+        });
+      }
     }
     if (policyNeutralStructuralGapsOnly) {
       warningReasons.push({
@@ -585,22 +608,22 @@ export function buildFinalIntegritySeal({
       });
     }
   }
-  if (operabilitySummary) {
-    const targetableGreenRatio = Number(operabilitySummary.targetable_green_ratio ?? 0);
-    const targetableAssets = Number(operabilitySummary.targetable_assets ?? 0);
-    const releaseBlocked = operabilitySummary.release_blocked === true
+  if (effectiveOperabilitySummary) {
+    const targetableGreenRatio = Number(effectiveOperabilitySummary.targetable_green_ratio ?? 0);
+    const targetableAssets = Number(effectiveOperabilitySummary.targetable_assets ?? 0);
+    const releaseBlocked = effectiveOperabilitySummary.release_blocked === true
       || targetableAssets <= 0
-      || targetableGreenRatio < Number(operabilitySummary.release_green_threshold ?? 0.90);
+      || targetableGreenRatio < Number(effectiveOperabilitySummary.release_green_threshold ?? 0.90);
     if (releaseBlocked) {
       blockingReasons.push({
         id: 'targetable_universe_operability_below_policy',
         severity: 'critical',
         details: {
-          coverage_denominator: operabilitySummary.coverage_denominator || null,
-          targetable_assets: operabilitySummary.targetable_assets ?? null,
-          targetable_operational_assets: operabilitySummary.targetable_operational_assets ?? null,
-          targetable_green_ratio: operabilitySummary.targetable_green_ratio ?? null,
-          release_green_threshold: operabilitySummary.release_green_threshold ?? 0.90,
+          coverage_denominator: effectiveOperabilitySummary.coverage_denominator || null,
+          targetable_assets: effectiveOperabilitySummary.targetable_assets ?? null,
+          targetable_operational_assets: effectiveOperabilitySummary.targetable_operational_assets ?? null,
+          targetable_green_ratio: effectiveOperabilitySummary.targetable_green_ratio ?? null,
+          release_green_threshold: effectiveOperabilitySummary.release_green_threshold ?? 0.90,
         },
       });
     }
@@ -861,7 +884,7 @@ export function buildFinalIntegritySeal({
     page_core_gate_required: pageCoreGateRequired,
     page_core_gate_ok: pageCoreGateOk,
     sampled_mode: sampledMode,
-    stock_analyzer_operability: operabilitySummary,
+    stock_analyzer_operability: effectiveOperabilitySummary,
     stock_analyzer_ui_state: stockAnalyzerUiState,
     search_registry_sync: searchRegistrySync,
     allowed_launchd_only: launchdOk,
