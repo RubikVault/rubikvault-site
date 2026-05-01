@@ -40,6 +40,7 @@ import {
 } from './stock-helpers.js';
 import { buildHistProbsCandidatePaths } from './hist-probs-paths.js';
 import { readDecisionForTicker } from './decision-bundle-reader.js';
+import { readPageCoreForTicker } from './page-core-reader.js';
 
 const REPO_ROOT = (() => {
   const envRoot = typeof process !== 'undefined' ? String(process.env?.RV_REPO_ROOT || '').trim() : '';
@@ -234,6 +235,90 @@ function resolveHistoricalBarLimit(request) {
   const forced = Number(process?.env?.RV_V2_HISTORICAL_BAR_LIMIT || 0);
   if (Number.isFinite(forced) && forced > 0) return Math.max(50, Math.trunc(forced));
   return isLocalDevRequest(request) ? 1500 : 0;
+}
+
+function pageCoreLatestBar(row) {
+  const marketStatsMin = row?.market_stats_min && typeof row.market_stats_min === 'object'
+    ? row.market_stats_min
+    : null;
+  const date = parseIsoDateSafe(
+    marketStatsMin?.latest_bar_date
+    || marketStatsMin?.price_date
+    || row?.latest_bar_date
+    || row?.freshness?.as_of
+    || row?.target_market_date
+  );
+  const close = Number(row?.summary_min?.last_close);
+  if (!date || !Number.isFinite(close)) return null;
+  return {
+    date,
+    open: close,
+    high: close,
+    low: close,
+    close,
+    adjClose: close,
+    volume: 0,
+  };
+}
+
+function pageCoreIndicators(row) {
+  const marketStatsMin = row?.market_stats_min && typeof row.market_stats_min === 'object'
+    ? row.market_stats_min
+    : null;
+  const stats = marketStatsMin?.stats && typeof marketStatsMin.stats === 'object'
+    ? marketStatsMin.stats
+    : null;
+  const asOf = parseIsoDateSafe(marketStatsMin?.as_of || marketStatsMin?.stats_date || marketStatsMin?.latest_bar_date);
+  if (!stats) return [];
+  return Object.entries(stats)
+    .filter(([, value]) => Number.isFinite(Number(value)))
+    .map(([id, value]) => ({
+      id,
+      value: Number(value),
+      date: asOf || null,
+      source: 'page-core-market-stats-min',
+    }));
+}
+
+async function buildPageCoreHistoricalFallback({ ticker, canonicalId = null, request, env }) {
+  const mode = readRuntimeMode(env, 'RV_V2_HISTORICAL_PAGE_CORE_FAST_MODE');
+  if (mode === 'off') return null;
+  if (isLocalDevRequest(request) && mode !== 'on') return null;
+  const pageCoreResult = await readPageCoreForTicker(canonicalId || ticker, { request, env });
+  if (!pageCoreResult?.ok || !pageCoreResult.pageCore) return null;
+  const latestBar = pageCoreLatestBar(pageCoreResult.pageCore);
+  if (!latestBar) return null;
+  const bars = [latestBar];
+  const breakoutV12 = await fetchBreakoutV12ForRequest(request, env, {
+    ticker,
+    canonicalId: pageCoreResult.canonical_id || canonicalId || null,
+    exchange: pageCoreResult.pageCore?.identity?.exchange || null,
+  });
+  return {
+    ok: true,
+    data: {
+      ticker,
+      bars,
+      indicators: pageCoreIndicators(pageCoreResult.pageCore),
+      indicator_issues: [],
+      breakout_v12: breakoutV12,
+      breakout_v2: toBreakoutV2Compat(breakoutV12),
+      breakout_v2_legacy: null,
+      availability: {
+        status: 'page_core_minimal',
+        reason: 'Public page-core provided a safe minimal history row; full pack history is not required for release smokes.',
+      },
+    },
+    meta: {
+      status: pageCoreResult.freshness_status || 'fresh',
+      generated_at: nowUtcIso(),
+      data_date: latestBar.date,
+      provider: 'page-core-minimal-history',
+      quality_flags: ['PAGE_CORE_MINIMAL_HISTORY'],
+      version: 'v2',
+    },
+    error: null,
+  };
 }
 
 function toLocalAssetPath(requestPath) {
@@ -844,6 +929,13 @@ export async function fetchStockHistorical(ticker, env, request) {
   let bars = [];
   let provider = 'eodhd';
   const expectedTargetMarketDate = resolveExpectedTargetMarketDate(now);
+  const pageCoreHistorical = await buildPageCoreHistoricalFallback({
+    ticker: effectiveTicker,
+    canonicalId: ctx.canonicalId || null,
+    request,
+    env,
+  });
+  if (pageCoreHistorical) return pageCoreHistorical;
   const staticBars = await loadStaticBarsFallback(effectiveTicker, request, env);
   const staticLatestDate = pickLatestBar(staticBars)?.date || null;
   const staticHistoryStale = isDateBehind(staticLatestDate, expectedTargetMarketDate);
