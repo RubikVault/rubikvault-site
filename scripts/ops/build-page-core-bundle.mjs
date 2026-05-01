@@ -559,6 +559,9 @@ function buildPageCoreRow({ canonicalId, registryRow, decisionRow, lookupValue, 
   const effectiveBlockingReasons = freshnessOk
     ? blockingReasons.filter((reason) => String(reason || '') !== 'bars_stale')
     : blockingReasons;
+  const effectiveWarnings = freshnessOk
+    ? warnings.filter((reason) => String(reason || '') !== 'bars_stale')
+    : warnings;
   const decisionOperational = Boolean(
     decisionRow
     && decisionRow.pipeline_status === 'OK'
@@ -584,7 +587,7 @@ function buildPageCoreRow({ canonicalId, registryRow, decisionRow, lookupValue, 
     || (!freshnessOk ? 'bars_stale' : null)
     || (!decisionRow ? 'decision_bundle_missing' : null)
     || (!decisionOperational ? (riskLevel === 'UNKNOWN' ? 'risk_unknown' : 'decision_not_operational') : null)
-    || warnings[0]
+    || effectiveWarnings[0]
     || null;
   const uiBannerState = decisionOperational && targetable && historicalBasisOk && freshnessOk
     ? 'all_systems_operational'
@@ -632,7 +635,7 @@ function buildPageCoreRow({ canonicalId, registryRow, decisionRow, lookupValue, 
       learning_gate_status: null,
       risk_level: riskLevel || null,
       blocking_reasons: effectiveBlockingReasons,
-      warnings,
+      warnings: effectiveWarnings,
     },
     coverage: {
       bars: barsCount || numberOrNull(registryRow?.bars_count),
