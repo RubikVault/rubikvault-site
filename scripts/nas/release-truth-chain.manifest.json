@@ -1,10 +1,10 @@
 {
   "schema": "rv.nas.release_truth_chain_code_manifest.v1",
-  "generated_at": "2026-05-01T08:51:24.885Z",
-  "git_head": "678ee939ef7ccba281b2039efc4ef7785228014a",
+  "generated_at": "2026-05-01T10:43:22.943Z",
+  "git_head": "761811392186493c2bc486931eb7437c3f3fa0ee",
   "paths_file": "scripts/nas/inputs/release-truth-chain.paths",
-  "file_count": 13,
-  "combined_hash": "632a681cc6f560c7f277e4c44dad7bd56bcc911ee1de74fe94a7c9488493c3b7",
+  "file_count": 14,
+  "combined_hash": "b4e86e728975010394013a5150c7e836d90f20b11b5791fd4b6e4ef045c3bba2",
   "missing": [],
   "files": [
     {
@@ -19,13 +19,13 @@
     },
     {
       "path": "scripts/nas/inputs/release-truth-chain.paths",
-      "size_bytes": 515,
-      "sha256": "a915e24b49907ecda16ac223ce614399894728c140d2bfcd7a2e5eba5d84b369"
+      "size_bytes": 572,
+      "sha256": "b66047c02bdfb1ce5ea52e1ff2c1cccb3aadf04074568caa7a8cff8f720a0ea4"
     },
     {
       "path": "scripts/nas/rv-nas-night-supervisor.sh",
-      "size_bytes": 41671,
-      "sha256": "92c40916cf76b9b7fa1e374c45c33d1ddb9ad748a116ad119f358568221f88c7"
+      "size_bytes": 41779,
+      "sha256": "e92d121bd25d41ac63edada5a84ff14bf535a3a3b1f40c7fa48b90f4e97c7328"
     },
     {
       "path": "scripts/nas/safe-code-sync.sh",
@@ -44,8 +44,8 @@
     },
     {
       "path": "scripts/ops/build-page-core-bundle.mjs",
-      "size_bytes": 37965,
-      "sha256": "97d083383c02dab60528a41d58519e8bf71cec45d6f2b858ba9740627ca69137"
+      "size_bytes": 38142,
+      "sha256": "9aaa597cac8b25a6ff1c745ab09c448db9d024cc795abeaadd5a8be952f7d00d"
     },
     {
       "path": "scripts/ops/build-public-status.mjs",
@@ -58,9 +58,14 @@
       "sha256": "18a6ec77d659222a6a9ec08e26861cc148c6bd76f33a7d3e2606cfa89b834367"
     },
     {
+      "path": "scripts/ops/build-stock-analyzer-provider-exceptions.mjs",
+      "size_bytes": 7020,
+      "sha256": "9acafb3e8f43d088fca5289f29a148969e4b6ef566b4db2b712c41df9a022c32"
+    },
+    {
       "path": "scripts/ops/build-stock-analyzer-ui-state-summary.mjs",
-      "size_bytes": 9706,
-      "sha256": "bfe79ae579f0fe4fa98a1f3e1faea3b5eed128d610b168918ef2e43163000851"
+      "size_bytes": 11905,
+      "sha256": "79a2c371eab638098920be3fd307d8a5966177acce102d3fbabd9d921ebe549c"
     },
     {
       "path": "scripts/ops/final-integrity-seal.mjs",

@@ -556,11 +556,14 @@ function buildPageCoreRow({ canonicalId, registryRow, decisionRow, lookupValue, 
   const targetable = OPERATIONAL_ASSET_CLASSES.has(assetClass) && barsCount >= 200;
   const freshnessOk = targetMarketDate ? Boolean(asOf && asOf >= targetMarketDate) : Boolean(asOf);
   const riskLevel = String(decisionRow?.risk_assessment?.level || '').toUpperCase();
+  const effectiveBlockingReasons = freshnessOk
+    ? blockingReasons.filter((reason) => String(reason || '') !== 'bars_stale')
+    : blockingReasons;
   const decisionOperational = Boolean(
     decisionRow
     && decisionRow.pipeline_status === 'OK'
     && ['BUY', 'WAIT'].includes(decisionRow.verdict)
-    && blockingReasons.length === 0
+    && effectiveBlockingReasons.length === 0
     && riskLevel !== 'UNKNOWN'
   );
   const keyLevelsReady = historyContext.consistency?.keyLevelsReady === true;
@@ -571,7 +574,7 @@ function buildPageCoreRow({ canonicalId, registryRow, decisionRow, lookupValue, 
     && historyContext.marketStatsMin
     && keyLevelsReady
   );
-  const primaryBlocker = blockingReasons[0]
+  const primaryBlocker = effectiveBlockingReasons[0]
     || (!OPERATIONAL_ASSET_CLASSES.has(assetClass) ? 'asset_class_out_of_scope' : null)
     || (barsCount < 200 ? 'insufficient_history' : null)
     || (!historyContext.latestBar ? 'missing_historical_bar_basis' : null)
@@ -628,7 +631,7 @@ function buildPageCoreRow({ canonicalId, registryRow, decisionRow, lookupValue, 
       evaluation_role: decisionRow?.evaluation_role || null,
       learning_gate_status: null,
       risk_level: riskLevel || null,
-      blocking_reasons: blockingReasons,
+      blocking_reasons: effectiveBlockingReasons,
       warnings,
     },
     coverage: {

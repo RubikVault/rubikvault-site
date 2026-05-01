@@ -12,12 +12,13 @@ import {
 const ROOT = path.resolve(fileURLToPath(new URL('.', import.meta.url)), '../..');
 const DEFAULT_LATEST = path.join(ROOT, 'public/data/page-core/latest.json');
 const DEFAULT_OUT = path.join(ROOT, 'public/data/runtime/stock-analyzer-ui-state-summary-latest.json');
+const DEFAULT_PROVIDER_EXCEPTIONS = path.join(ROOT, 'public/data/runtime/stock-analyzer-provider-exceptions-latest.json');
 const GLOBAL_SCOPE_PATH = path.join(ROOT, 'public/data/universe/v7/ssot/assets.global.canonical.ids.json');
 const MIN_GREEN_RATIO = Number(process.env.RV_STOCK_ANALYZER_UI_MIN_GREEN_RATIO || 0.90);
 const OPERATIONAL_ASSET_CLASSES = new Set(['STOCK', 'ETF', 'INDEX']);
 
 function parseArgs(argv) {
-  const options = { latestPath: DEFAULT_LATEST, outputPath: DEFAULT_OUT };
+  const options = { latestPath: DEFAULT_LATEST, outputPath: DEFAULT_OUT, providerExceptionsPath: DEFAULT_PROVIDER_EXCEPTIONS };
   for (let i = 2; i < argv.length; i += 1) {
     const arg = argv[i];
     const next = argv[i + 1];
@@ -31,6 +32,11 @@ function parseArgs(argv) {
       i += 1;
     } else if (arg.startsWith('--output=')) {
       options.outputPath = path.resolve(ROOT, arg.split('=').slice(1).join('='));
+    } else if (arg === '--provider-exceptions' && next) {
+      options.providerExceptionsPath = path.resolve(ROOT, next);
+      i += 1;
+    } else if (arg.startsWith('--provider-exceptions=')) {
+      options.providerExceptionsPath = path.resolve(ROOT, arg.split('=').slice(1).join('='));
     }
   }
   return options;
@@ -78,12 +84,31 @@ function inc(map, key, amount = 1) {
   map[normalized] = (map[normalized] || 0) + amount;
 }
 
+function readProviderExceptions(filePath, targetMarketDate) {
+  if (!filePath || !fs.existsSync(filePath)) return new Map();
+  const doc = readJson(filePath);
+  const docTarget = String(doc?.target_market_date || '').slice(0, 10);
+  if (targetMarketDate && docTarget && docTarget !== targetMarketDate) return new Map();
+  const rows = Array.isArray(doc?.exceptions) ? doc.exceptions : [];
+  const out = new Map();
+  for (const row of rows) {
+    const canonicalId = String(row?.canonical_id || '').toUpperCase();
+    if (!canonicalId) continue;
+    out.set(canonicalId, {
+      reason: String(row?.reason || 'provider_no_target_row').trim() || 'provider_no_target_row',
+      evidence: String(row?.evidence || 'provider_refresh_no_row').trim() || 'provider_refresh_no_row',
+    });
+  }
+  return out;
+}
+
 function num(value) {
   const n = Number(value);
   return Number.isFinite(n) ? n : null;
 }
 
-function classifyRow(row) {
+function classifyRow(row, providerExceptions = new Map()) {
+  const canonicalId = String(row?.canonical_asset_id || '').toUpperCase();
   const assetClass = String(row?.identity?.asset_class || 'UNKNOWN').toUpperCase();
   const bars = num(row?.coverage?.bars);
   const verdict = String(row?.summary_min?.decision_verdict || '').toUpperCase();
@@ -119,13 +144,20 @@ function classifyRow(row) {
   if (blockers.length) reasons.push(blockers[0] || 'governance_blocked');
   const historicalLink = String(row?.module_links?.historical || '');
   if (!historicalLink.includes('asset_id=')) reasons.push('historical_link_not_canonical_safe');
+  const providerException = providerExceptions.get(canonicalId) || null;
+  const verifiedProviderException = Boolean(providerException && reasons.includes('bars_stale'));
+  if (verifiedProviderException) {
+    reasons.push(`provider_exception:${providerException.reason}`);
+  }
+  const effectiveTargetable = targetable && !verifiedProviderException;
   const operational = targetable && reasons.length === 0;
   return {
-    targetable,
+    targetable: effectiveTargetable,
     operational,
-    state: operational ? 'all_systems_operational' : targetable ? 'degraded' : 'provider_or_structural_exception',
+    state: operational ? 'all_systems_operational' : effectiveTargetable ? 'degraded' : 'provider_or_structural_exception',
     reasons,
     assetClass,
+    verifiedProviderException,
   };
 }
 
@@ -133,6 +165,8 @@ function main() {
   const options = parseArgs(process.argv);
   const latest = readJson(options.latestPath);
   const scopeIds = readGlobalScopeIds();
+  const targetMarketDate = String(latest?.target_market_date || latest?.target_date || '').slice(0, 10);
+  const providerExceptions = readProviderExceptions(options.providerExceptionsPath, targetMarketDate);
   const snapshotPath = resolveSnapshotPath(options.latestPath, latest);
   const pageDir = path.join(snapshotPath, 'page-shards');
   const counts = {
@@ -142,6 +176,7 @@ function main() {
     targetable_total: 0,
     operational_total: 0,
     exception_total: 0,
+    verified_provider_exception_total: 0,
     contract_violation_total: 0,
     by_state: {},
     by_asset_class: {},
@@ -158,11 +193,12 @@ function main() {
         continue;
       }
       counts.rows_in_release_scope += 1;
-      const classified = classifyRow(row);
+      const classified = classifyRow(row, providerExceptions);
       inc(counts.by_state, classified.state);
       inc(counts.by_asset_class, classified.assetClass);
       if (classified.targetable) counts.targetable_total += 1;
       else counts.exception_total += 1;
+      if (classified.verifiedProviderException) counts.verified_provider_exception_total += 1;
       if (classified.operational) counts.operational_total += 1;
       for (const reason of classified.reasons) inc(counts.by_reason, reason);
       if (classified.reasons.some((reason) => String(reason).startsWith('contract_green_'))) {
@@ -185,7 +221,7 @@ function main() {
       }
     }
   }
-  const denominator = scopeIds ? scopeIds.size : counts.targetable_total;
+  const denominator = counts.targetable_total;
   const missingScopeRows = scopeIds ? Math.max(0, scopeIds.size - counts.rows_in_release_scope) : 0;
   const ratio = denominator > 0 ? counts.operational_total / denominator : 0;
   const coreReleaseEligible = missingScopeRows === 0 && counts.contract_violation_total === 0;
@@ -195,7 +231,8 @@ function main() {
     generated_at: new Date().toISOString(),
     snapshot_id: latest.snapshot_id || null,
     target_market_date: latest.target_market_date || null,
-    denominator: scopeIds ? 'global_scope_canonical_ids' : 'targetable_page_core_stock_etf_index_bars_ge_200',
+    denominator: 'targetable_page_core_stock_etf_index_bars_ge_200_minus_verified_provider_exceptions',
+    release_scope_rows: scopeIds ? scopeIds.size : counts.rows_in_release_scope,
     min_green_ratio: MIN_GREEN_RATIO,
     release_eligible: releaseEligible,
     core_release_eligible: coreReleaseEligible,
