@@ -530,7 +530,7 @@ step_command() {
       printf '%s\n' "node scripts/ops/build-full-universe-decisions.mjs --target-market-date '$TARGET_MARKET_DATE' --replace && ALLOW_REMOTE_BAR_FETCH=0 BEST_SETUPS_DISABLE_NETWORK=1 node scripts/build-best-setups-v4.mjs"
       ;;
     page_core_bundle)
-      printf '%s\n' "NODE_OPTIONS='--max-old-space-size=${RV_PAGE_CORE_HEAP_MB:-8192}' node scripts/ops/build-page-core-bundle.mjs --target-market-date '$TARGET_MARKET_DATE' --replace && node scripts/ops/build-stock-analyzer-ui-state-summary.mjs --latest public/data/page-core/candidates/latest.candidate.json && node scripts/universe-v7/verify-search-registry-sync.mjs && node scripts/ops/retention-page-core-bundles.mjs"
+      printf '%s\n' "NODE_OPTIONS='--max-old-space-size=${RV_PAGE_CORE_HEAP_MB:-8192}' node scripts/ops/build-page-core-bundle.mjs --target-market-date '$TARGET_MARKET_DATE' --replace && node scripts/ops/build-stock-analyzer-ui-state-summary.mjs --latest public/data/page-core/candidates/latest.candidate.json && node scripts/universe-v7/rebuild-search-exact-from-registry.mjs && node scripts/universe-v7/verify-search-registry-sync.mjs && node scripts/ops/retention-page-core-bundles.mjs"
       ;;
     etf_diagnostic)
       printf '%s\n' "node scripts/learning/diagnose-best-setups-etf-drop.mjs"
