@@ -21,6 +21,18 @@
 
 ---
 
+### 2026-05-02 · NAS · Global EODHD bulk-yield gates must not assume every exchange trades on the same date
+
+**What:** The NAS market refresh wrote 31,538 valid 2026-05-01 rows, but the step still exited `provider_blocked_partial` because `bulk-min-yield-ratio=0.80` and `bulk-min-rows-matched=50000` treated a global holiday mix as provider failure.
+
+**Why:** The gate compared same-day matched rows against the full STOCK/ETF/INDEX universe. On regional holidays, many non-US assets legitimately keep the previous trading date, so a full-universe same-date ratio is not a valid health signal.
+
+**Fix:** The nightly bulk gate now uses an absolute floor suitable for provider sanity checks, while the history coverage report evaluates freshness with a two-business-day budget that matches the Stock Analyzer UI contract.
+
+**Prevention:** Daily global history gates must be based on renderable freshness, coverage, and typed provider reasons, not a single global same-date row ratio. If a market is closed, the previous valid trading day can still be fresh.
+
+---
+
 ### 2026-05-02 · Stock Analyzer · UI-green must require rendered module truth, not page-core availability alone
 
 **What:** MAIN showed `All Systems Operational` for assets whose visible analyzer panels still had one-bar chart fallback, missing model evidence, missing Breakout V12 manifests, summary-only benchmark context, and untyped module gaps.

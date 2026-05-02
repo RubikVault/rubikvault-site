@@ -1,10 +1,10 @@
 {
   "schema": "rv.nas.release_truth_chain_code_manifest.v1",
-  "generated_at": "2026-05-02T12:34:26.192Z",
-  "git_head": "80b08109fc667040ecddb83949fc5e8c449b0cbe",
+  "generated_at": "2026-05-02T13:51:32.167Z",
+  "git_head": "d152e119def955a15baba5ac99adea01d7f111f2",
   "paths_file": "scripts/nas/inputs/release-truth-chain.paths",
-  "file_count": 18,
-  "combined_hash": "7c8913ef6c614559f7eb438ccef1896602ad3fafae630f267fc171d1b726d709",
+  "file_count": 19,
+  "combined_hash": "780c13ce4efcc0a7324dbb742e2e667107626901e7fd9126afed310ee15cac9e",
   "missing": [],
   "files": [
     {
@@ -29,13 +29,13 @@
     },
     {
       "path": "scripts/nas/inputs/release-truth-chain.paths",
-      "size_bytes": 735,
-      "sha256": "6c95ff7c0f98f03fb840c8c9c4e325c209339ba92700d2c0edfe5f0af6f5354d"
+      "size_bytes": 775,
+      "sha256": "d4f174d3f5c71d9db0e43fde50a197c995420312a1c4339ec2781bf7a842e411"
     },
     {
       "path": "scripts/nas/rv-nas-night-supervisor.sh",
-      "size_bytes": 43684,
-      "sha256": "4906cb6cd69e1a96ad01079bb0d0ed6e2f34c73e57fc3a934885d18d58e86150"
+      "size_bytes": 43681,
+      "sha256": "3694dd0ba2e94807cdd57df79aafb6ff4bbc42629410876b6865a0c680553766"
     },
     {
       "path": "scripts/nas/safe-code-sync.sh",
@@ -91,6 +91,11 @@
       "path": "scripts/ops/release-gate-check.mjs",
       "size_bytes": 35525,
       "sha256": "06d1ba62fe4cda8d84cc4076938b0e955a03757c603f3fd2c283575cfad42347"
+    },
+    {
+      "path": "scripts/ops/report-history-coverage.mjs",
+      "size_bytes": 10868,
+      "sha256": "7c553744fb708768a0308bdb45342ccff0c3a7e40f26f7df16e6e9f1cabc0ce9"
     },
     {
       "path": "scripts/quantlab/refresh_v7_history_from_eodhd.py",

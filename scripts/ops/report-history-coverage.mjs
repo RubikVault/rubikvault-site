@@ -16,6 +16,7 @@ function parseArgs(argv = process.argv.slice(2)) {
     assetClasses: process.env.RV_GLOBAL_ASSET_CLASSES || 'STOCK,ETF,INDEX',
     targetMarketDate: process.env.RV_TARGET_MARKET_DATE || process.env.TARGET_MARKET_DATE || '',
     minBars: Number(process.env.RV_HISTORY_COVERAGE_MIN_BARS || 200),
+    freshnessBudgetDays: Number(process.env.RV_HISTORY_COVERAGE_FRESHNESS_BUDGET_DAYS || 2),
   };
   for (let i = 0; i < argv.length; i += 1) {
     const arg = String(argv[i] || '');
@@ -31,8 +32,12 @@ function parseArgs(argv = process.argv.slice(2)) {
     else if (arg === '--asset-classes' || arg.startsWith('--asset-classes=')) out.assetClasses = readValue();
     else if (arg === '--target-market-date' || arg.startsWith('--target-market-date=')) out.targetMarketDate = readValue();
     else if (arg === '--min-bars' || arg.startsWith('--min-bars=')) out.minBars = Number(readValue());
+    else if (arg === '--freshness-budget-days' || arg.startsWith('--freshness-budget-days=')) out.freshnessBudgetDays = Number(readValue());
   }
   out.minBars = Number.isFinite(out.minBars) && out.minBars > 0 ? Math.floor(out.minBars) : 200;
+  out.freshnessBudgetDays = Number.isFinite(out.freshnessBudgetDays) && out.freshnessBudgetDays >= 0
+    ? Math.floor(out.freshnessBudgetDays)
+    : 2;
   return out;
 }
 
@@ -74,6 +79,24 @@ function normalize(value) {
 
 function normalizeDate(value) {
   return String(value || '').trim().slice(0, 10);
+}
+
+function businessDaysBetween(startValue, endValue) {
+  const startIso = normalizeDate(startValue);
+  const endIso = normalizeDate(endValue);
+  if (!startIso || !endIso) return null;
+  const start = new Date(`${startIso}T12:00:00Z`);
+  const end = new Date(`${endIso}T12:00:00Z`);
+  if (!Number.isFinite(start.getTime()) || !Number.isFinite(end.getTime())) return null;
+  if (start >= end) return 0;
+  let days = 0;
+  const cursor = new Date(start);
+  while (cursor < end) {
+    cursor.setUTCDate(cursor.getUTCDate() + 1);
+    const dow = cursor.getUTCDay();
+    if (dow !== 0 && dow !== 6) days += 1;
+  }
+  return days;
 }
 
 function pct(count, total) {
@@ -195,12 +218,20 @@ function main() {
         counts.bars_1000_plus += 1;
         counts.bars_ge_1000 += 1;
       }
-      if (targetMarketDate && lastTradeDate >= targetMarketDate) {
+      const lagBusinessDays = targetMarketDate && lastTradeDate
+        ? businessDaysBetween(lastTradeDate, targetMarketDate)
+        : null;
+      if (targetMarketDate && lagBusinessDays != null && lagBusinessDays <= args.freshnessBudgetDays) {
         counts.fresh_ge_200 += 1;
       } else if (targetMarketDate) {
         counts.stale_ge_200 += 1;
         if (staleTargetableSample.length < 25) {
-          staleTargetableSample.push({ canonical_id: canonicalId, bars_count: bars, last_trade_date: lastTradeDate || null });
+          staleTargetableSample.push({
+            canonical_id: canonicalId,
+            bars_count: bars,
+            last_trade_date: lastTradeDate || null,
+            lag_business_days: lagBusinessDays,
+          });
         }
       }
     }
@@ -211,6 +242,7 @@ function main() {
     generated_at: new Date().toISOString(),
     target_market_date: targetMarketDate || null,
     min_bars: args.minBars,
+    freshness_budget_days: args.freshnessBudgetDays,
     asset_classes: Array.from(assetClasses),
     sources: {
       allowlist: path.relative(ROOT, allowlistPath),
