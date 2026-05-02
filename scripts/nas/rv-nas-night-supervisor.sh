@@ -365,7 +365,7 @@ step_timeout_sec() {
     cutover_readiness) printf '%s\n' 1800 ;;
     stage1_ops_pack) printf '%s\n' 1800 ;;
     system_status_report|data_freshness_report|pipeline_epoch|generate_meta_dashboard_data) printf '%s\n' 1800 ;;
-    runtime_preflight) printf '%s\n' 1800 ;;
+    runtime_preflight|stock_ui_integrity_audit) printf '%s\n' 1800 ;;
     stock_analyzer_universe_audit) printf '%s\n' 5400 ;;
     ui_field_truth_report) printf '%s\n' 2400 ;;
     final_integrity_seal) printf '%s\n' 1800 ;;
@@ -520,7 +520,7 @@ step_command() {
       printf '%s\n' "node scripts/quantlab/build_quantlab_v4_daily_report.mjs"
       ;;
     breakout_v12)
-      printf '%s\n' "POLARS_MAX_THREADS='${POLARS_MAX_THREADS:-2}' OMP_NUM_THREADS='${OMP_NUM_THREADS:-2}' DUCKDB_THREADS='${DUCKDB_THREADS:-2}' node scripts/breakout/run-breakout-nightly-safe.mjs --as-of='$TARGET_MARKET_DATE' --max-assets='${RV_BREAKOUT_MAX_ASSETS:-5000}'"
+      printf '%s\n' "POLARS_MAX_THREADS='${POLARS_MAX_THREADS:-2}' OMP_NUM_THREADS='${OMP_NUM_THREADS:-2}' DUCKDB_THREADS='${DUCKDB_THREADS:-2}' node scripts/breakout/run-breakout-nightly-safe.mjs --as-of='$TARGET_MARKET_DATE' --max-assets='${RV_BREAKOUT_MAX_ASSETS:-5000}' && node scripts/breakout-v12/verify-production-ready.mjs --as-of='$TARGET_MARKET_DATE'"
       ;;
     scientific_summary)
       printf '%s\n' "node scripts/build-scientific-summary.mjs"
@@ -544,6 +544,9 @@ step_command() {
       ;;
     page_core_bundle)
       printf '%s\n' "NODE_OPTIONS='--max-old-space-size=${RV_PAGE_CORE_HEAP_MB:-8192}' node scripts/ops/build-page-core-bundle.mjs --target-market-date '$TARGET_MARKET_DATE' --replace && node scripts/ops/build-stock-analyzer-provider-exceptions.mjs --target-market-date '$TARGET_MARKET_DATE' && node scripts/ops/build-stock-analyzer-ui-state-summary.mjs --latest public/data/page-core/candidates/latest.candidate.json && node scripts/universe-v7/rebuild-search-exact-from-registry.mjs && node scripts/universe-v7/verify-search-registry-sync.mjs && node scripts/ops/retention-page-core-bundles.mjs"
+      ;;
+    stock_ui_integrity_audit)
+      printf '%s\n' "node scripts/ops/audit-stock-analyzer-ui-integrity.mjs --base-url='${RV_STOCK_UI_AUDIT_BASE_URL:-${RV_PUBLIC_BASE_URL:-https://rubikvault-site.pages.dev}}' --gate=ui_renderable --min-pass-rate='${RV_STOCK_UI_AUDIT_MIN_PASS_RATE:-0.90}' --min-operational-rate='${RV_STOCK_UI_AUDIT_MIN_OPERATIONAL_RATE:-0.90}' || { audit_status=\$?; if [ \"${RV_STOCK_UI_AUDIT_HARD_GATE:-0}\" = \"1\" ]; then exit \"\$audit_status\"; fi; echo \"stock_ui_integrity_audit_warn_only exit_code=\$audit_status\" >&2; exit 0; }"
       ;;
     etf_diagnostic)
       printf '%s\n' "node scripts/learning/diagnose-best-setups-etf-drop.mjs"
@@ -823,7 +826,7 @@ run_step() {
   fi
 
   case "$step_id" in
-    build_global_scope|hist_probs|hist_probs_catchup|hist_probs_v2_shadow|snapshot|page_core_bundle|learning_daily|forecast_daily|build_fundamentals|quantlab_daily_report|breakout_v12|scientific_summary|v1_audit|cutover_readiness|etf_diagnostic|stage1_ops_pack|system_status_report|data_freshness_report|pipeline_epoch|generate_meta_dashboard_data|signal_performance_report|runtime_preflight|stock_analyzer_universe_audit|ui_field_truth_report|page_core_smoke|final_integrity_seal|build_deploy_bundle|wrangler_deploy|code_manifest_guard)
+    build_global_scope|hist_probs|hist_probs_catchup|hist_probs_v2_shadow|snapshot|page_core_bundle|learning_daily|forecast_daily|build_fundamentals|quantlab_daily_report|breakout_v12|scientific_summary|v1_audit|cutover_readiness|etf_diagnostic|stage1_ops_pack|system_status_report|data_freshness_report|pipeline_epoch|generate_meta_dashboard_data|signal_performance_report|runtime_preflight|stock_analyzer_universe_audit|ui_field_truth_report|stock_ui_integrity_audit|page_core_smoke|final_integrity_seal|build_deploy_bundle|wrangler_deploy|code_manifest_guard)
       measure_args+=(--set-env "NODE_OPTIONS=--max-old-space-size=$heap_mb")
       ;;
   esac
@@ -908,7 +911,8 @@ lane_steps() {
       generate_meta_dashboard_data \
       signal_performance_report \
       build_deploy_bundle \
-      wrangler_deploy
+      wrangler_deploy \
+      stock_ui_integrity_audit
   fi
 }
 

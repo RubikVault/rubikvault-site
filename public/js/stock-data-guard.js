@@ -177,7 +177,7 @@ export function buildUiIntegrity(payload, { ticker = null, priceStack = null } =
     ? field(true, 'VALID', null, true, priceAsOf)
     : field(null, 'BLOCK', readinessReasons[0] || 'decision contract failed', true, priceAsOf);
 
-  const decisionCritical = ['current_price', 'asset_return_1d', 'price_series', 'decision_contract'];
+  const decisionCritical = ['current_price', 'asset_return_1d', 'price_series', 'chart', 'decision_contract'];
   const criticalBlocks = decisionCritical.filter((key) => fields[key]?.status === 'BLOCK');
   const allBlocks = Object.entries(fields).filter(([, value]) => value?.status === 'BLOCK');
   const pageState = criticalBlocks.length > 0
@@ -521,8 +521,8 @@ export function guardPanelGate(panel, ctx) {
       return { show: true };
     }
     case 'modelConsensus': {
-      if (!ctx.ev4) return { show: false, reason: 'No evaluation data' };
-      if (!ctx.consensusValid) return { show: false, reason: 'No model data' };
+      if (!ctx.ev4) return { show: true, degraded: true, reason: 'No evaluation data' };
+      if (!ctx.consensusValid) return { show: true, degraded: true, reason: 'No model data' };
       if (ctx.consensusDegraded) return { show: true, degraded: true, reason: 'Partial model coverage' };
       return { show: true };
     }

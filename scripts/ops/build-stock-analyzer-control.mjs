@@ -35,6 +35,7 @@ const stockAnalyzer = report?.features?.stock_analyzer || {};
 const generatedAt = new Date().toISOString();
 const learningGate = deriveLearningGate({
   learning_status: stockAnalyzer.learning_status || report?.best_setups_policy?.learning_status_current || policy?.learning_status?.default || 'BOOTSTRAP',
+  ui_renderable_unaffected_by_learning_gate: true,
   safety_switch: stockAnalyzer.safety_switch || null,
   minimum_n_status: stockAnalyzer.minimum_n_status || null,
   policy,

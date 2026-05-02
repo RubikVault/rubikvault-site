@@ -329,12 +329,24 @@ function pageCoreToSummary(pageCore) {
 }
 
 function pageCoreToGovernance(pageCore) {
+  const reason = 'evaluation_inputs_unavailable';
   return {
     ticker: pageCore?.display_ticker || null,
     canonical_asset_id: pageCore?.canonical_asset_id || null,
     universe: pageCore?.identity || null,
     market_score: null,
-    evaluation_v4: null,
+    evaluation_v4: {
+      status: 'not_built_at_request_time',
+      availability: { status: 'not_built_at_request_time', reason, ui_renderable: false },
+      input_states: {
+        quantlab: { status: 'unavailable', reason },
+        forecast: { status: 'unavailable', reason },
+        scientific: { status: 'unavailable', reason },
+        elliott: { status: 'unavailable', reason },
+      },
+      v4_contract: {},
+      decision: null,
+    },
     governance_summary: pageCore?.governance_summary || null,
   };
 }
@@ -346,7 +358,11 @@ function pageCoreToHistorical(pageCore) {
     bars: summary.latest_bar ? [summary.latest_bar] : [],
     indicators: [],
     breakout_v2: null,
-    availability: { status: 'page_core_minimal', reason: 'Full history loads lazily.' },
+    availability: {
+      status: 'page_core_minimal',
+      reason: 'Full historical bars are unavailable; page-core can only provide a one-row latest-price fallback.',
+      ui_renderable: false,
+    },
   };
 }
 
@@ -355,7 +371,7 @@ function pageCoreToHistoricalProfile(pageCore) {
     ticker: pageCore?.display_ticker || null,
     profile: null,
     regime: null,
-    availability: { status: 'pending', reason: 'Historical profile loads lazily.' },
+    availability: { status: 'not_generated', reason: 'Historical profile has not been generated for this asset yet.' },
   };
 }
 
@@ -619,7 +635,8 @@ function deriveStatesFromMarketContext({ stats = {}, close = null, latestBar = n
   }
   let volatility = 'UNKNOWN';
   if (Number.isFinite(volPctile)) {
-    volatility = volPctile >= 0.9 ? 'EXTREME' : volPctile >= 0.7 ? 'HIGH' : volPctile <= 0.25 ? 'LOW' : 'NORMAL';
+    const normalizedVolPctile = volPctile <= 1 ? volPctile * 100 : volPctile;
+    volatility = normalizedVolPctile >= 90 ? 'EXTREME' : normalizedVolPctile >= 70 ? 'HIGH' : normalizedVolPctile <= 25 ? 'LOW' : 'NORMAL';
   }
   return {
     trend,
@@ -789,6 +806,7 @@ export function transformV2ToStockShape(v2Data, v2Meta, historicalData = null, g
       reason: 'Historical profile is still loading or has not been generated for this asset yet.',
     },
   };
+  const assetClass = String(governanceData?.universe?.asset_class || governanceData?.universe?.security_type || '').toUpperCase();
   const catalysts = v2Data?.catalysts
     || (Array.isArray(mergedFundamentals?.confirmedCatalysts) || mergedFundamentals?.nextEarningsDate
       ? {
@@ -796,7 +814,12 @@ export function transformV2ToStockShape(v2Data, v2Meta, historicalData = null, g
         next_earnings_date: mergedFundamentals?.nextEarningsDate || null,
         items: mergedFundamentals?.confirmedCatalysts || [],
       }
-      : null);
+      : {
+        status: assetClass && assetClass !== 'STOCK' ? 'not_applicable' : 'not_generated',
+        reason: assetClass && assetClass !== 'STOCK' ? 'Catalyst calendar is not applicable for this asset class.' : 'Catalyst calendar has not been published for this asset yet.',
+        next_earnings_date: null,
+        items: [],
+      });
   return {
     data: {
       ticker: v2Data.ticker,

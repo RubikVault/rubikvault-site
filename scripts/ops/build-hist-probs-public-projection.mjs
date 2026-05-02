@@ -4,10 +4,13 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
+import { gunzipSync } from 'node:zlib';
 
 const ROOT = path.resolve(fileURLToPath(new URL('.', import.meta.url)), '../..');
 const DEFAULT_INPUT_DIR = path.join(ROOT, 'public/data/hist-probs');
 const DEFAULT_OUTPUT_DIR = path.join(ROOT, 'public/data/hist-probs-public');
+const SYMBOL_RESOLVE_PATH = path.join(ROOT, 'public/data/symbol-resolve.v1.json');
+const SEARCH_EXACT_PATH = path.join(ROOT, 'public/data/universe/v7/search/search_exact_by_symbol.json.gz');
 
 function parseArgs(argv) {
   const options = {
@@ -61,6 +64,61 @@ function readJson(filePath) {
 function writeJson(filePath, doc) {
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
   fs.writeFileSync(filePath, `${JSON.stringify(doc)}\n`, 'utf8');
+}
+
+function readJsonMaybeGzip(filePath) {
+  try {
+    const body = fs.readFileSync(filePath);
+    const text = filePath.endsWith('.gz') ? gunzipSync(body).toString('utf8') : body.toString('utf8');
+    return JSON.parse(text);
+  } catch {
+    return null;
+  }
+}
+
+function normalizeKey(value) {
+  return String(value || '').trim().toUpperCase();
+}
+
+function isSymbolAlias(value) {
+  const normalized = normalizeKey(value);
+  return Boolean(normalized)
+    && normalized.length <= 30
+    && /^[A-Z0-9.\-:^]+$/.test(normalized)
+    && !/\s/.test(normalized);
+}
+
+function addAlias(map, owner, alias) {
+  const normalizedOwner = normalizeKey(owner);
+  const normalizedAlias = normalizeKey(alias);
+  if (!normalizedOwner || !isSymbolAlias(normalizedAlias)) return;
+  if (!map.has(normalizedOwner)) map.set(normalizedOwner, new Set());
+  map.get(normalizedOwner).add(normalizedAlias);
+}
+
+function buildAliasCandidates() {
+  const map = new Map();
+  const symbolResolve = readJsonMaybeGzip(SYMBOL_RESOLVE_PATH);
+  for (const row of Array.isArray(symbolResolve?.entries) ? symbolResolve.entries : []) {
+    const ticker = normalizeKey(row?.ticker || row?.symbol);
+    if (!ticker) continue;
+    addAlias(map, ticker, ticker);
+    addAlias(map, ticker, row?.canonical_id);
+    addAlias(map, ticker, row?.exchange && ticker ? `${row.exchange}:${ticker}` : null);
+    addAlias(map, ticker, row?.exchange && ticker ? `${ticker}.${row.exchange}` : null);
+    for (const alias of Array.isArray(row?.aliases) ? row.aliases : []) addAlias(map, ticker, alias);
+  }
+
+  const exact = readJsonMaybeGzip(SEARCH_EXACT_PATH);
+  for (const row of Object.values(exact?.by_symbol || {})) {
+    const ticker = normalizeKey(row?.symbol);
+    if (!ticker) continue;
+    addAlias(map, ticker, ticker);
+    addAlias(map, ticker, row?.canonical_id);
+    addAlias(map, ticker, row?.exchange && ticker ? `${row.exchange}:${ticker}` : null);
+    addAlias(map, ticker, row?.exchange && ticker ? `${ticker}.${row.exchange}` : null);
+  }
+  return map;
 }
 
 function compactHorizon(value) {
@@ -132,11 +190,13 @@ function main() {
   const generatedAt = new Date().toISOString();
   const files = listProfileFiles(options.inputDir);
   const shards = Array.from({ length: options.shardCount }, () => ({}));
+  const aliasCandidates = buildAliasCandidates();
+  const profiles = [];
+  const aliasOwners = new Map();
   let read = 0;
-  let written = 0;
   let skipped = 0;
   for (const filePath of files) {
-    if (options.maxProfiles > 0 && written >= options.maxProfiles) break;
+    if (options.maxProfiles > 0 && profiles.length >= options.maxProfiles) break;
     read += 1;
     const doc = readJson(filePath);
     const ticker = path.basename(filePath, '.json');
@@ -145,9 +205,32 @@ function main() {
       skipped += 1;
       continue;
     }
-    const index = shardIndex(compact.ticker, options.shardCount);
-    shards[index][compact.ticker] = compact;
-    written += 1;
+    profiles.push(compact);
+    const aliases = new Set([compact.ticker, ...(aliasCandidates.get(normalizeKey(compact.ticker)) || [])]);
+    for (const alias of aliases) {
+      const key = normalizeKey(alias);
+      if (!isSymbolAlias(key)) continue;
+      const owner = aliasOwners.get(key);
+      if (!owner) aliasOwners.set(key, compact.ticker);
+      else if (owner !== compact.ticker) aliasOwners.set(key, null);
+    }
+  }
+
+  let written = 0;
+  let aliasWritten = 0;
+  for (const compact of profiles) {
+    const aliases = new Set([compact.ticker, ...(aliasCandidates.get(normalizeKey(compact.ticker)) || [])]);
+    for (const alias of aliases) {
+      const key = normalizeKey(alias);
+      if (!isSymbolAlias(key) || aliasOwners.get(key) !== compact.ticker) continue;
+      const index = shardIndex(key, options.shardCount);
+      const payload = key === compact.ticker
+        ? compact
+        : { ...compact, canonical_for_alias: compact.ticker, alias_key: key };
+      shards[index][key] = payload;
+      written += 1;
+      if (key !== compact.ticker) aliasWritten += 1;
+    }
   }
 
   fs.rmSync(options.outputDir, { recursive: true, force: true });
@@ -164,7 +247,9 @@ function main() {
     generated_at: generatedAt,
     shard_count: options.shardCount,
     max_events_per_profile: options.maxEvents,
-    profile_count: written,
+    profile_count: profiles.length,
+    runtime_key_count: written,
+    alias_key_count: aliasWritten,
     skipped_count: skipped,
     source: 'public/data/hist-probs',
     shards_path: 'shards',
@@ -174,13 +259,19 @@ function main() {
     schema: 'rv.hist_probs_public_manifest.v1',
     generated_at: generatedAt,
     input_files_read: read,
+    alias_sources: [
+      path.relative(ROOT, SYMBOL_RESOLVE_PATH).split(path.sep).join('/'),
+      path.relative(ROOT, SEARCH_EXACT_PATH).split(path.sep).join('/'),
+    ],
     ...latest,
     shard_stats: shardStats,
   });
   console.log(JSON.stringify({
     ok: true,
     output: path.relative(ROOT, options.outputDir),
-    profiles: written,
+    profiles: profiles.length,
+    runtime_keys: written,
+    alias_keys: aliasWritten,
     skipped,
     shards: options.shardCount,
     max_shard_bytes: Math.max(0, ...shardStats.map((item) => item.bytes)),

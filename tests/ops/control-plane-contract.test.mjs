@@ -467,7 +467,7 @@ test('final seal keeps decision bundle coverage warnings advisory-only', () => {
   assert.equal(seal.warnings.some((item) => item.id === 'decision_public_coverage_below_90pct'), true);
   assert.equal(seal.status, 'DEGRADED');
   assert.equal(seal.release_ready, true);
-  assert.equal(seal.overall_ui_ready, false);
+  assert.equal(seal.overall_ui_ready, true);
   assert.equal(seal.advisories.some((item) => item.id === 'eligible_wait_pipeline_incomplete'), true);
   assert.equal(seal.advisories.some((item) => item.id === 'risk_unknown'), true);
 });

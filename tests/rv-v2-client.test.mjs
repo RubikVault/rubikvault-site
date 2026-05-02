@@ -52,6 +52,25 @@ describe('fetchPageCore', () => {
 });
 
 describe('transformV2ToStockShape', () => {
+  it('uses 0-100 volatility percentile thresholds with 0-1 backward compatibility', () => {
+    const base = (volatilityPercentile) => transformV2ToStockShape(
+      {
+        ticker: 'HOOD',
+        market_prices: { close: 72.89, date: '2026-04-30' },
+        market_stats: { stats: { volatility_percentile: volatilityPercentile } },
+        change: { pct: 0.01 },
+      },
+      { data_date: '2026-04-30', provider: 'v2-summary' },
+      { bars: [{ date: '2026-04-29', close: 72 }, { date: '2026-04-30', close: 72.89 }] },
+      { universe: { name: 'Robinhood Markets Inc', asset_class: 'STOCK' } },
+    ).states.volatility;
+
+    assert.equal(base(42.86), 'NORMAL');
+    assert.equal(base(75), 'HIGH');
+    assert.equal(base(95), 'EXTREME');
+    assert.equal(base(0.42), 'NORMAL');
+  });
+
   it('preserves name, bars, governance, and fundamentals', () => {
     const payload = transformV2ToStockShape(
       {

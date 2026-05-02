@@ -21,6 +21,18 @@
 
 ---
 
+### 2026-05-02 · Stock Analyzer · UI-green must require rendered module truth, not page-core availability alone
+
+**What:** MAIN showed `All Systems Operational` for assets whose visible analyzer panels still had one-bar chart fallback, missing model evidence, missing Breakout V12 manifests, summary-only benchmark context, and untyped module gaps.
+
+**Why:** Page-Core strict checks, UI state summary, endpoint fallbacks, and the browser guard used parallel definitions of green. A `page-core-minimal-history` fallback could satisfy endpoint availability while chart rendering correctly blocked. The guard marked chart coverage partial but did not make it decision-critical, and governance still returned `evaluation_v4: null`.
+
+**Fix:** Historical fallback is terminal only, chart blocks operational state, governance builds or types `evaluation_v4`, hist-probs projection publishes alias keys, Breakout V12 publish is verified, UI state splits `ui_renderable` from `decision_ready`, and the UI audit now fails false-green rendered module gaps.
+
+**Prevention:** `All Systems Operational` must mean every visible UI module is populated or has a typed provider/asset reason. SAFE_MODE/BOOTSTRAP can block decisions, but must not be used as either a UI-green substitute or a UI-render blocker.
+
+---
+
 ### 2026-04-30 · Stock Analyzer · Operability and deploy gates must consume Page-Core strict truth
 
 **What:** MAIN could deploy stale Page-Core artifacts while an older operability report still counted assets green from stale titles and `Math.max(old_report_bars, registry_bars)`. `/api/universe?q=ford` also risked cold-loading the full exact symbol index during normal search.

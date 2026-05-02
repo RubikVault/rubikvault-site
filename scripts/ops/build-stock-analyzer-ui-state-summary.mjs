@@ -107,6 +107,66 @@ function num(value) {
   return Number.isFinite(n) ? n : null;
 }
 
+function moduleStatus(row, key) {
+  const statusKey = `${key}_status`;
+  return String(
+    row?.status_contract?.[statusKey]
+    || row?.coverage?.[statusKey]
+    || row?.[key]?.availability?.status
+    || row?.[key]?.status
+    || ''
+  ).trim().toLowerCase();
+}
+
+function hasTypedModuleStatus(row, key) {
+  return [
+    'available',
+    'ready',
+    'ok',
+    'not_applicable',
+    'out_of_scope',
+    'provider_unavailable',
+    'provider_no_data',
+    'not_generated',
+    'insufficient_history',
+    'unavailable',
+    'updating',
+  ].includes(moduleStatus(row, key));
+}
+
+function uiModuleCompletenessReasons(row) {
+  const reasons = [];
+  const assetClass = String(row?.identity?.asset_class || 'UNKNOWN').toUpperCase();
+  if (!row?.breakout_summary && !hasTypedModuleStatus(row, 'breakout')) reasons.push('breakout_v12_missing_or_untyped');
+  if (assetClass === 'STOCK') {
+    if (row?.coverage?.fundamentals !== true && !hasTypedModuleStatus(row, 'fundamentals')) reasons.push('fundamentals_missing_or_untyped');
+    if (row?.coverage?.forecast !== true && !hasTypedModuleStatus(row, 'forecast')) reasons.push('forecast_missing_or_untyped');
+    if (row?.coverage?.catalysts === false && !hasTypedModuleStatus(row, 'catalysts')) reasons.push('catalysts_missing_or_untyped');
+  }
+  return reasons;
+}
+
+function splitBlockingReasons(reasons) {
+  const ui = [];
+  const decision = [];
+  for (const reason of reasons) {
+    const text = String(reason || '');
+    if (
+      text === 'decision_bundle_missing'
+      || text === 'decision_not_buy_or_wait'
+      || text === 'risk_unknown'
+      || text.startsWith('minimum_n_')
+      || text.startsWith('learning_')
+      || text.startsWith('governance_blocked')
+    ) {
+      decision.push(text);
+    } else {
+      ui.push(text);
+    }
+  }
+  return { ui, decision };
+}
+
 function classifyRow(row, providerExceptions = new Map()) {
   const canonicalId = String(row?.canonical_asset_id || '').toUpperCase();
   const assetClass = String(row?.identity?.asset_class || 'UNKNOWN').toUpperCase();
@@ -144,18 +204,25 @@ function classifyRow(row, providerExceptions = new Map()) {
   if (blockers.length) reasons.push(blockers[0] || 'governance_blocked');
   const historicalLink = String(row?.module_links?.historical || '');
   if (!historicalLink.includes('asset_id=')) reasons.push('historical_link_not_canonical_safe');
+  reasons.push(...uiModuleCompletenessReasons(row));
   const providerException = providerExceptions.get(canonicalId) || null;
   const verifiedProviderException = Boolean(providerException && reasons.includes('bars_stale'));
   if (verifiedProviderException) {
     reasons.push(`provider_exception:${providerException.reason}`);
   }
   const effectiveTargetable = targetable && !verifiedProviderException;
-  const operational = targetable && reasons.length === 0;
+  const split = splitBlockingReasons(reasons);
+  const uiRenderable = effectiveTargetable && split.ui.length === 0;
+  const decisionReady = uiRenderable && split.decision.length === 0;
   return {
     targetable: effectiveTargetable,
-    operational,
-    state: operational ? 'all_systems_operational' : effectiveTargetable ? 'degraded' : 'provider_or_structural_exception',
+    operational: uiRenderable,
+    ui_renderable: uiRenderable,
+    decision_ready: decisionReady,
+    state: uiRenderable ? 'all_systems_operational' : effectiveTargetable ? 'degraded' : 'provider_or_structural_exception',
     reasons,
+    ui_blocking_reasons: split.ui,
+    decision_blocking_reasons: split.decision,
     assetClass,
     verifiedProviderException,
   };
@@ -175,12 +242,16 @@ function main() {
     rows_outside_release_scope: 0,
     targetable_total: 0,
     operational_total: 0,
+    ui_renderable_total: 0,
+    decision_ready_total: 0,
     exception_total: 0,
     verified_provider_exception_total: 0,
     contract_violation_total: 0,
     by_state: {},
     by_asset_class: {},
     by_reason: {},
+    by_ui_blocking_reason: {},
+    by_decision_blocking_reason: {},
   };
   const samples = { degraded: [], exceptions: [] };
   for (const file of fs.readdirSync(pageDir).filter((name) => name.endsWith('.json.gz')).sort()) {
@@ -200,7 +271,11 @@ function main() {
       else counts.exception_total += 1;
       if (classified.verifiedProviderException) counts.verified_provider_exception_total += 1;
       if (classified.operational) counts.operational_total += 1;
+      if (classified.ui_renderable) counts.ui_renderable_total += 1;
+      if (classified.decision_ready) counts.decision_ready_total += 1;
       for (const reason of classified.reasons) inc(counts.by_reason, reason);
+      for (const reason of classified.ui_blocking_reasons) inc(counts.by_ui_blocking_reason, reason);
+      for (const reason of classified.decision_blocking_reasons) inc(counts.by_decision_blocking_reason, reason);
       if (classified.reasons.some((reason) => String(reason).startsWith('contract_green_'))) {
         counts.contract_violation_total += 1;
       }
@@ -210,6 +285,8 @@ function main() {
           display_ticker: row?.display_ticker || null,
           asset_class: classified.assetClass,
           reasons: classified.reasons,
+          ui_blocking_reasons: classified.ui_blocking_reasons,
+          decision_blocking_reasons: classified.decision_blocking_reasons,
         });
       } else if (!classified.targetable && samples.exceptions.length < 25) {
         samples.exceptions.push({
@@ -227,7 +304,7 @@ function main() {
   const coreReleaseEligible = missingScopeRows === 0 && counts.contract_violation_total === 0;
   const releaseEligible = ratio >= MIN_GREEN_RATIO && coreReleaseEligible;
   const doc = {
-    schema: 'rv.stock_analyzer.ui_state_summary.v1',
+    schema: 'rv.stock_analyzer.ui_state_summary.v2',
     generated_at: new Date().toISOString(),
     snapshot_id: latest.snapshot_id || null,
     target_market_date: latest.target_market_date || null,
@@ -235,9 +312,13 @@ function main() {
     release_scope_rows: scopeIds ? scopeIds.size : counts.rows_in_release_scope,
     min_green_ratio: MIN_GREEN_RATIO,
     release_eligible: releaseEligible,
+    ui_renderable_release_eligible: releaseEligible,
+    decision_ready_release_eligible: denominator > 0 ? (counts.decision_ready_total / denominator) >= MIN_GREEN_RATIO && coreReleaseEligible : false,
     core_release_eligible: coreReleaseEligible,
     overall_ui_ready: releaseEligible,
     ui_operational_ratio: Number(ratio.toFixed(6)),
+    ui_renderable_ratio: Number(ratio.toFixed(6)),
+    decision_ready_ratio: Number((denominator > 0 ? counts.decision_ready_total / denominator : 0).toFixed(6)),
     missing_scope_rows: missingScopeRows,
     counts,
     samples,

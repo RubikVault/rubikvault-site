@@ -30,7 +30,14 @@ function baseRow() {
       stats: { rsi14: 42, sma20: 79, sma50: 76, atr14: 4.86, low_52w: 45.6 },
     },
     key_levels_ready: true,
-    coverage: { bars: 1193, ui_renderable: true },
+    coverage: {
+      bars: 1193,
+      ui_renderable: true,
+      fundamentals: true,
+      forecast: true,
+      catalysts_status: 'not_generated',
+    },
+    breakout_summary: { status: 'not_in_signal_set' },
     governance_summary: { blocking_reasons: [], warnings: [] },
   };
 }
@@ -46,8 +53,21 @@ test('stock analyzer UI audit treats normalizable percent-unit returns as pass',
   const result = auditRow(row, { target_market_date: '2026-04-30' });
   assert.equal(result.raw_false_green, false);
   assert.equal(result.normalized_false_green, false);
+  assert.equal(result.false_green_ui_render, false);
   assert.equal(result.pass, true);
   assert.equal(result.bucket, 'other resolver BLOCK');
+});
+
+test('stock analyzer UI audit flags green rows with missing UI modules', () => {
+  const row = baseRow();
+  delete row.breakout_summary;
+  row.coverage.fundamentals = false;
+  row.coverage.forecast = false;
+  const result = auditRow(row, { target_market_date: '2026-04-30' });
+  assert.equal(result.false_green_ui_render, true);
+  assert.equal(result.pass, false);
+  assert.ok(result.ui_completeness_reasons.includes('breakout_v12_missing_or_untyped'));
+  assert.ok(result.ui_completeness_reasons.includes('fundamentals_missing_or_untyped'));
 });
 
 test('stock analyzer UI audit buckets known failure reasons', () => {

@@ -60,6 +60,45 @@ export function eligible(row) {
   return ELIGIBLE_CLASSES.has(cls) && Boolean(row?.display_ticker || row?.canonical_asset_id);
 }
 
+function moduleStatus(row, key) {
+  const statusKey = `${key}_status`;
+  return String(
+    row?.status_contract?.[statusKey]
+    || row?.coverage?.[statusKey]
+    || row?.[key]?.availability?.status
+    || row?.[key]?.status
+    || ''
+  ).trim().toLowerCase();
+}
+
+function hasTypedModuleStatus(row, key) {
+  return [
+    'available',
+    'ready',
+    'ok',
+    'not_applicable',
+    'out_of_scope',
+    'provider_unavailable',
+    'provider_no_data',
+    'not_generated',
+    'insufficient_history',
+    'unavailable',
+    'updating',
+  ].includes(moduleStatus(row, key));
+}
+
+export function uiCompletenessReasons(row) {
+  const reasons = [];
+  const assetClass = String(row?.identity?.asset_class || row?.identity?.security_type || '').toUpperCase();
+  if (!row?.breakout_summary && !hasTypedModuleStatus(row, 'breakout')) reasons.push('breakout_v12_missing_or_untyped');
+  if (assetClass === 'STOCK') {
+    if (row?.coverage?.fundamentals !== true && !hasTypedModuleStatus(row, 'fundamentals')) reasons.push('fundamentals_missing_or_untyped');
+    if (row?.coverage?.forecast !== true && !hasTypedModuleStatus(row, 'forecast')) reasons.push('forecast_missing_or_untyped');
+    if (row?.coverage?.catalysts === false && !hasTypedModuleStatus(row, 'catalysts')) reasons.push('catalysts_missing_or_untyped');
+  }
+  return reasons;
+}
+
 export function auditRow(row, latest, { aliasFallbackRow = null } = {}) {
   const rawReasons = pageCoreStrictOperationalReasons(row, {
     latest,
@@ -76,11 +115,14 @@ export function auditRow(row, latest, { aliasFallbackRow = null } = {}) {
   });
   const rawFalseGreen = pageCoreClaimsOperational(row) && rawReasons.length > 0;
   const normalizedFalseGreen = pageCoreClaimsOperational(normalized) && normalizedReasons.length > 0;
+  const uiIncompleteReasons = uiCompletenessReasons(normalized);
+  const falseGreenUiRender = pageCoreClaimsOperational(normalized) && normalizedReasons.length === 0 && uiIncompleteReasons.length > 0;
   const bucketSource = [...rawReasons, ...normalizedReasons, normalized?.primary_blocker]
+    .concat(uiIncompleteReasons)
     .find((reason) => reason && reason !== 'ui_banner_not_operational');
   const bucket = bucketReason(bucketSource || rawReasons[0] || normalizedReasons[0] || normalized?.primary_blocker);
-  const operational = normalizedReasons.length === 0 && pageCoreClaimsOperational(normalized);
-  const pass = !normalizedFalseGreen && EXPLAINED_BUCKETS.has(bucket);
+  const operational = normalizedReasons.length === 0 && uiIncompleteReasons.length === 0 && pageCoreClaimsOperational(normalized);
+  const pass = !normalizedFalseGreen && !falseGreenUiRender && EXPLAINED_BUCKETS.has(bucket);
   return {
     pass,
     operational,
@@ -88,8 +130,10 @@ export function auditRow(row, latest, { aliasFallbackRow = null } = {}) {
     canonical_id: row?.canonical_asset_id || null,
     raw_false_green: rawFalseGreen,
     normalized_false_green: normalizedFalseGreen,
+    false_green_ui_render: falseGreenUiRender,
     bucket,
     reasons: rawReasons.length ? rawReasons : normalizedReasons,
+    ui_completeness_reasons: uiIncompleteReasons,
     normalized_status: normalized?.status_contract?.stock_detail_view_status || null,
   };
 }
@@ -100,6 +144,7 @@ async function main() {
   const minPassRate = Number(argValue('--min-pass-rate', '0.90'));
   const minOperationalRateRaw = argValue('--min-operational-rate', null);
   const minOperationalRate = minOperationalRateRaw == null ? null : Number(minOperationalRateRaw);
+  const gate = String(argValue('--gate', 'ui_renderable') || 'ui_renderable').toLowerCase();
   const latest = await fetchJsonMaybeGzip(`${baseUrl}/data/page-core/latest.json`);
   const snapshotPath = String(latest.snapshot_path || '').replace(/\/+$/, '');
   if (!snapshotPath) throw new Error('PAGE_CORE_SNAPSHOT_PATH_MISSING');
@@ -120,6 +165,7 @@ async function main() {
 
   const failures = [];
   const falseAuthorityFailures = [];
+  const falseGreenUiFailures = [];
   const operationalBuckets = {};
   const buckets = {};
   let denominator = 0;
@@ -136,6 +182,7 @@ async function main() {
       buckets[result.bucket] = (buckets[result.bucket] || 0) + (result.pass ? 0 : 1);
       if (result.pass) passCount += 1;
       else falseAuthorityFailures.push(result);
+      if (result.false_green_ui_render) falseGreenUiFailures.push(result);
       if (result.operational) {
         operationalCount += 1;
       } else {
@@ -156,16 +203,19 @@ async function main() {
     pass_count: passCount,
     fail_count: failures.length,
     false_authority_fail_count: falseAuthorityFailures.length,
+    false_green_ui_render_count: falseGreenUiFailures.length,
     operational_fail_count: failures.length,
     pass_rate: Number(passRate.toFixed(6)),
     operational_count: operationalCount,
     operational_rate: Number(operationalRate.toFixed(6)),
     min_pass_rate: minPassRate,
     min_operational_rate: minOperationalRate,
+    gate,
     qualitygate: passRate >= minPassRate && (minOperationalRate == null || operationalRate >= minOperationalRate) ? 'PASS' : 'FAIL',
     buckets,
     operational_buckets: operationalBuckets,
     false_authority_failures: falseAuthorityFailures.slice(0, 5000),
+    false_green_ui_render_failures: falseGreenUiFailures.slice(0, 5000),
     failures: failures.slice(0, 5000),
   };
 

@@ -57,6 +57,31 @@ describe('UI integrity resolver', () => {
     assert.match(result.reason, /benchmark return plausibility/i);
   });
 
+  it('blocks all-systems banner when only chart contract fails', () => {
+    const payload = {
+      data: {
+        market_prices: { close: 72.89, date: '2026-04-30' },
+        change: { pct: 0.01, abs: 0.72 },
+        market_stats: { stats: { low_52w: 45.6, rsi14: 42.4, sma20: 79, sma50: 76.4, atr14: 4.86 } },
+        bars: [{ date: '2026-04-30', close: 72.89 }],
+        ssot: { page_core: { coverage: { bars: 1193 } } },
+      },
+      daily_decision: { schema: 'rv.asset_daily_decision.v1', pipeline_status: 'OK', verdict: 'WAIT', blocking_reasons: [], risk_assessment: { level: 'MEDIUM' } },
+      analysis_readiness: { status: 'READY', decision_bundle_status: 'OK', blocking_reasons: [] },
+      meta: { historical: { provider: 'page-core-minimal-history' } },
+    };
+    const integrity = buildUiIntegrity(payload, { ticker: 'HOOD', priceStack: { valid: true } });
+    assert.equal(integrity.fields.chart.status, 'BLOCK');
+    assert.equal(integrity.pageState, 'DATA_ISSUE');
+    assert.equal(integrity.dataQuality, 'FAILED');
+  });
+
+  it('renders model evidence panel as degraded instead of blank when evaluation is missing', () => {
+    const gate = guardPanelGate('modelConsensus', { ev4: null, consensusValid: false, consensusDegraded: true });
+    assert.equal(gate.show, true);
+    assert.equal(gate.degraded, true);
+  });
+
   it('keeps single-stock extreme returns as warning unless 52W low cross-check fails', () => {
     const result = validateReturnField({ pct: 0.62, close: 32.4, low52w: 10, isBenchmark: false, ticker: 'MOVE' });
     assert.equal(result.status, 'WARNING');

@@ -282,8 +282,7 @@ function pageCoreIndicators(row) {
 
 async function buildPageCoreHistoricalFallback({ ticker, canonicalId = null, request, env }) {
   const mode = readRuntimeMode(env, 'RV_V2_HISTORICAL_PAGE_CORE_FAST_MODE');
-  if (mode === 'off') return null;
-  if (isLocalDevRequest(request) && mode !== 'on') return null;
+  if (mode !== 'on') return null;
   const pageCoreResult = await readPageCoreForTicker(canonicalId || ticker, { request, env });
   if (!pageCoreResult?.ok || !pageCoreResult.pageCore) return null;
   const latestBar = pageCoreLatestBar(pageCoreResult.pageCore);
@@ -306,7 +305,8 @@ async function buildPageCoreHistoricalFallback({ ticker, canonicalId = null, req
       breakout_v2_legacy: null,
       availability: {
         status: 'page_core_minimal',
-        reason: 'Public page-core provided a safe minimal history row; full pack history is not required for release smokes.',
+        reason: 'Full historical bars are unavailable; page-core can only provide a one-row latest-price fallback.',
+        ui_renderable: false,
       },
     },
     meta: {
@@ -440,10 +440,17 @@ function deriveHistoricalProfileFromBars(ticker, bars) {
   } : null;
 }
 
-function buildHistoricalProfileCandidates(symbol) {
+function buildHistoricalProfileCandidates(symbol, { canonicalId = null, exchange = null } = {}) {
   const normalized = normalizeTicker(symbol);
-  if (!normalized) return [];
-  const candidates = new Set([normalized]);
+  const candidates = new Set();
+  if (canonicalId) candidates.add(String(canonicalId).trim().toUpperCase());
+  if (!normalized) return [...candidates];
+  candidates.add(normalized);
+  const cleanExchange = String(exchange || '').trim().toUpperCase();
+  if (cleanExchange) {
+    candidates.add(`${cleanExchange}:${normalized}`);
+    candidates.add(`${normalized}.${cleanExchange}`);
+  }
   if (normalized.includes('.')) {
     const [base, suffix] = normalized.split('.', 2);
     if (base) candidates.add(base);
@@ -454,7 +461,7 @@ function buildHistoricalProfileCandidates(symbol) {
     if (base) candidates.add(base);
     if (prefix && base) candidates.add(`${base}.${prefix}`);
   }
-  return [...candidates];
+  return [...candidates].filter(Boolean);
 }
 
 function summarizeHistoricalProfileAvailability(profile) {
@@ -474,6 +481,27 @@ function summarizeHistoricalProfileAvailability(profile) {
   return {
     status: 'ready',
     reason: 'Historical profile ready.',
+  };
+}
+
+function buildEvaluationUnavailable({ ticker, reason = 'not_built_at_request_time', governanceSummary = null } = {}) {
+  return {
+    status: 'not_built_at_request_time',
+    availability: {
+      status: 'not_built_at_request_time',
+      reason,
+      ui_renderable: false,
+    },
+    ticker: ticker || null,
+    input_states: {
+      quantlab: { status: 'unavailable', reason },
+      forecast: { status: 'unavailable', reason },
+      scientific: { status: 'unavailable', reason },
+      elliott: { status: 'unavailable', reason },
+    },
+    v4_contract: {},
+    decision: governanceSummary?.decision || null,
+    governance_summary: governanceSummary || null,
   };
 }
 
@@ -929,13 +957,6 @@ export async function fetchStockHistorical(ticker, env, request) {
   let bars = [];
   let provider = 'eodhd';
   const expectedTargetMarketDate = resolveExpectedTargetMarketDate(now);
-  const pageCoreHistorical = await buildPageCoreHistoricalFallback({
-    ticker: effectiveTicker,
-    canonicalId: ctx.canonicalId || null,
-    request,
-    env,
-  });
-  if (pageCoreHistorical) return pageCoreHistorical;
   const staticBars = await loadStaticBarsFallback(effectiveTicker, request, env);
   const staticLatestDate = pickLatestBar(staticBars)?.date || null;
   const staticHistoryStale = isDateBehind(staticLatestDate, expectedTargetMarketDate);
@@ -985,6 +1006,13 @@ export async function fetchStockHistorical(ticker, env, request) {
   }
 
   if (!bars.length) {
+    const pageCoreHistorical = await buildPageCoreHistoricalFallback({
+      ticker: effectiveTicker,
+      canonicalId: ctx.canonicalId || null,
+      request,
+      env,
+    });
+    if (pageCoreHistorical) return pageCoreHistorical;
     return {
       ok: false, data: null,
       meta: { status: 'error', provider, data_date: todayUtcDate(), version: 'v2' },
@@ -1055,6 +1083,14 @@ export async function fetchStockGovernance(ticker, env, request) {
   let universe = null;
   let marketScore = null;
   let evaluationV4 = null;
+  let pageCoreResult = null;
+
+  try {
+    pageCoreResult = await readPageCoreForTicker(ctx.canonicalId || effectiveTicker, { request, env });
+    if (pageCoreResult?.ok && pageCoreResult.pageCore?.identity) {
+      universe = pageCoreResult.pageCore.identity;
+    }
+  } catch { /* optional */ }
 
   try {
     const [uSnap, msSnap] = await Promise.all([
@@ -1071,8 +1107,9 @@ export async function fetchStockGovernance(ticker, env, request) {
     }
   } catch { /* optional */ }
 
-  try {
-    const { assembleDecisionInputs, loadRequestCoreInputs } = await import('./decision-input-assembly.js');
+  const evaluationMode = readRuntimeMode(env, 'RV_V2_GOVERNANCE_EVALUATION_MODE');
+  if (evaluationMode === 'full') try {
+    const { assembleDecisionInputs } = await import('./decision-input-assembly.js');
     const { buildStockInsightsV4Evaluation } = await import('./stock-insights-v4.js');
     const origin = new URL(request.url).origin;
     const assetFetcher = env?.ASSETS || null;
@@ -1088,9 +1125,21 @@ export async function fetchStockGovernance(ticker, env, request) {
         return res.ok ? await res.json() : null;
       } catch { return null; }
     }
+    const pageCore = pageCoreResult?.pageCore || null;
+    const latestBar = pageCoreLatestBar(pageCore);
+    const pageCoreStats = pageCore?.market_stats_min?.stats && typeof pageCore.market_stats_min.stats === 'object'
+      ? pageCore.market_stats_min.stats
+      : {};
     const inputs = await assembleDecisionInputs(effectiveTicker, {
       fetchJson: fetchJsonForAssembly,
-      loadCoreInputs: (t) => loadRequestCoreInputs(t, { request, assetFetcher, fetchJson: fetchJsonForAssembly }),
+      coreInputs: {
+        bars: latestBar ? [latestBar] : [],
+        stats: pageCoreStats,
+        universe: universe || pageCore?.identity || null,
+        fundamentals: null,
+        segmentationProfile: null,
+        as_of: latestBar?.date || pageCore?.freshness?.as_of || null,
+      },
     });
     evaluationV4 = buildStockInsightsV4Evaluation({
       ticker: effectiveTicker,
@@ -1108,6 +1157,13 @@ export async function fetchStockGovernance(ticker, env, request) {
       runtimeControl: inputs.runtimeControl,
     });
   } catch { /* evaluation unavailable */ }
+
+  if (!evaluationV4) {
+    evaluationV4 = buildEvaluationUnavailable({
+      ticker: effectiveTicker,
+      reason: evaluationMode === 'full' ? 'evaluation_inputs_unavailable' : 'evaluation_not_built_in_fast_mode',
+    });
+  }
 
   const dataDate = todayUtcDate();
   const status = universe || marketScore || evaluationV4 ? 'fresh' : 'error';
@@ -1140,7 +1196,10 @@ export async function fetchStockHistoricalProfile(ticker, env, request) {
   const ttl = getEndpointTTL('v2_historical');
   const effectiveTicker = ctx.ticker;
   const now = new Date();
-  const candidates = buildHistoricalProfileCandidates(effectiveTicker);
+  const candidates = buildHistoricalProfileCandidates(effectiveTicker, {
+    canonicalId: ctx.canonicalId || null,
+    exchange: ctx.exchange || null,
+  });
   let profile = null;
   let resolvedSymbol = null;
 

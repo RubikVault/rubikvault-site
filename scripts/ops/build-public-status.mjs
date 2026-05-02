@@ -51,7 +51,7 @@ const pageCoreSource = candidateMatchesRelease ? 'candidate' : 'active';
 const pageCoreTarget = pageCoreLatest?.target_market_date || null;
 const targetDate = pageCoreTarget || releaseEvidenceTarget;
 const releaseEvidenceFresh = Boolean(!pageCoreTarget || !releaseEvidenceTarget || pageCoreTarget === releaseEvidenceTarget);
-const coreSealReady = seal?.release_ready === true && releaseEvidenceFresh;
+const coreSealReady = (seal?.core_release_ready === true || seal?.release_ready === true) && releaseEvidenceFresh;
 const pageCoreManifestPath = pageCoreLatest?.snapshot_path
   ? path.join(REPO_ROOT, 'public', String(pageCoreLatest.snapshot_path).replace(/^\/+/, ''), 'manifest.json')
   : null;
@@ -93,7 +93,7 @@ const histStatusKnown = histProbsMode !== 'unknown' && catchupStatus !== 'unknow
 const histGreen = histStatusKnown
   && histCoverageRatio >= 0.90
   && !['failed', 'unknown'].includes(String(catchupStatus).toLowerCase());
-const stockUiStateGreen = stockUiState?.release_eligible === true;
+const stockUiStateGreen = (stockUiState?.ui_renderable_release_eligible ?? stockUiState?.release_eligible) === true;
 const stockUiContractOk = Boolean(
   stockUiState
   && Number(stockUiState?.missing_scope_rows ?? 0) === 0
@@ -110,7 +110,7 @@ const decisionReady = releaseEvidenceFresh && (seal?.decision_ready === true || 
 const histReady = releaseEvidenceFresh && (seal?.hist_ready === true || histGreen);
 const breakoutReady = seal?.breakout_ready ?? null;
 const overallUiReady = seal?.overall_ui_ready === true
-  || Boolean(coreReleaseReady && stockUiStateGreen && decisionReady && histReady);
+  || Boolean(coreReleaseReady && stockUiStateGreen && histReady);
 const uiGreen = overallUiReady;
 const ready = Boolean(coreSealReady && overallUiReady);
 
@@ -154,6 +154,8 @@ const doc = {
     available: overallUiReady,
     page_core_snapshot_id: pageCoreLatest?.snapshot_id || null,
     ui_operational_ratio: stockUiState?.ui_operational_ratio ?? null,
+    ui_renderable_ratio: stockUiState?.ui_renderable_ratio ?? stockUiState?.ui_operational_ratio ?? null,
+    decision_ready_ratio: stockUiState?.decision_ready_ratio ?? null,
     ui_state_contract_violations: stockUiState?.counts?.contract_violation_total ?? null,
     overall_ui_ready: overallUiReady,
   },

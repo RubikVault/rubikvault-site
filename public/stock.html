@@ -725,9 +725,9 @@
       const _panelMeta = (asOf, gate) => {
         const parts = [];
         if (asOf) {
-          const ageMs = Date.now() - new Date(asOf).getTime();
-          const staleColor = ageMs > 172800000 ? 'var(--yellow)' : 'var(--green)';
-          const staleLabel = ageMs > 172800000 ? 'stale' : 'current';
+          const freshness = classifyHistoricalFreshness(asOf);
+          const staleColor = freshness.status === 'fresh' ? 'var(--green)' : 'var(--yellow)';
+          const staleLabel = freshness.status === 'fresh' ? 'current' : freshness.status;
           parts.push('as-of: ' + asOf + ' <span style="color:' + staleColor + ';font-weight:600">\u00B7 ' + staleLabel + '</span>');
         }
         if (gate?.degraded) parts.push('<span style="color:var(--yellow)">\u26A0 degraded</span>');
@@ -1064,14 +1064,13 @@
         };
         try {
           const [spyRes, qqqRes] = await Promise.all([
-            timeoutJson('/api/v2/stocks/SPY/summary').catch(() => ({ data: {} })),
-            timeoutJson('/api/v2/stocks/QQQ/summary').catch(() => ({ data: {} }))
+            timeoutJson('/api/v2/stocks/SPY/historical').catch(() => ({ data: {} })),
+            timeoutJson('/api/v2/stocks/QQQ/historical').catch(() => ({ data: {} }))
           ]);
           const spyD = spyRes.data || {}, qqqD = qqqRes.data || {};
           const spyBars = spyD.bars || [], qqqBars = qqqD.bars || [];
-          const spyChg = spyD.change || {}, qqqChg = qqqD.change || {};
-          const spy1d = validateBenchmarkReturn(spyChg.pct ?? spyChg.daily_change_pct);
-          const qqq1d = validateBenchmarkReturn(qqqChg.pct ?? qqqChg.daily_change_pct);
+          const spy1d = validateBenchmarkReturn(barsReturn(spyBars, 1));
+          const qqq1d = validateBenchmarkReturn(barsReturn(qqqBars, 1));
           if (_assetReturnBlocked || spy1d == null || qqq1d == null) {
             throw new Error('benchmark validation failed');
           }

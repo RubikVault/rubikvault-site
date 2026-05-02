@@ -383,7 +383,7 @@ export function buildFinalIntegritySeal({
   const summary = stockAuditSummary(stockAnalyzerAudit, system);
   const operabilitySummary = stockAnalyzerOperability?.summary || system?.stock_analyzer_operability?.summary || null;
   const uiFieldTruthSummary = uiFieldTruth?.summary || null;
-  const uiStateReleaseEligible = stockAnalyzerUiState?.release_eligible === true;
+  const uiStateReleaseEligible = (stockAnalyzerUiState?.ui_renderable_release_eligible ?? stockAnalyzerUiState?.release_eligible) === true;
   const uiFieldTruthReleaseReady = uiStateReleaseEligible && uiFieldTruthSummary?.ui_field_truth_ok === true;
   const uiStateRatio = Number(stockAnalyzerUiState?.ui_operational_ratio ?? NaN);
   const uiStateTargetableAssets = Number(stockAnalyzerUiState?.counts?.targetable_total ?? NaN);
@@ -645,7 +645,7 @@ export function buildFinalIntegritySeal({
         details: { expected: expectedTargetDate, actual: uiStateTarget },
       });
     }
-    if (stockAnalyzerUiState.release_eligible !== true) {
+    if ((stockAnalyzerUiState.ui_renderable_release_eligible ?? stockAnalyzerUiState.release_eligible) !== true) {
       blockingReasons.push({
         id: contractViolationTotal > 0 || missingScopeRows > 0
           ? 'stock_analyzer_ui_state_contract_failed'
@@ -844,9 +844,8 @@ export function buildFinalIntegritySeal({
     && pageCoreReady
     && searchReady
     && universeReady
-    && decisionReady
     && histReady
-    && stockAnalyzerUiState?.release_eligible === true
+    && (stockAnalyzerUiState?.ui_renderable_release_eligible ?? stockAnalyzerUiState?.release_eligible) === true
   );
   const status = !coreReleaseReady ? 'FAILED' : overallUiReady && uniqueWarningReasons.length === 0 ? 'OK' : 'DEGRADED';
   const uiGreen = overallUiReady;
