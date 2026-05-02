@@ -542,7 +542,7 @@ function buildPageCoreRow({ canonicalId, registryRow, decisionRow, lookupValue, 
     ? 'historical-bars'
     : (registryClose != null ? 'registry_tmp_recent_closes' : null);
   const dailyChangeAbs = lastClose != null && prevClose != null ? Number((lastClose - prevClose).toFixed(6)) : null;
-  const dailyChangePct = dailyChangeAbs != null && prevClose ? Number(((dailyChangeAbs / prevClose) * 100).toFixed(6)) : null;
+  const dailyChangePct = dailyChangeAbs != null && prevClose ? Number((dailyChangeAbs / prevClose).toFixed(8)) : null;
   const qualityStatus = decisionRow?.pipeline_status || (registryRow ? 'DEGRADED' : 'MISSING_DATA');
   const blockingReasons = Array.isArray(decisionRow?.blocking_reasons)
     ? decisionRow.blocking_reasons

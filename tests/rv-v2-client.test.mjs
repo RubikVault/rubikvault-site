@@ -2,12 +2,54 @@ import { describe, it, beforeEach, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   transformV2ToStockShape,
+  fetchPageCore,
   fetchV2StockPage,
   fetchWithFallback,
   evaluateV2PromotionGate,
+  normalizeReturnDecimal,
 } from '../public/js/rv-v2-client.js';
 
 const originalFetch = global.fetch;
+
+describe('normalizeReturnDecimal', () => {
+  it('normalizes page-core percent-unit daily_change_pct using abs and close', () => {
+    const result = normalizeReturnDecimal({ pct: 2.373596, abs: 1.69, close: 72.89 });
+    assert.equal(result.status, 'normalized_percent_unit');
+    assert.ok(Math.abs(result.value - 0.02373596) < 0.000001);
+  });
+
+  it('preserves decimal daily_change_pct', () => {
+    const result = normalizeReturnDecimal({ pct: 0.02373596, abs: 1.69, close: 72.89 });
+    assert.equal(result.status, 'ok');
+    assert.ok(Math.abs(result.value - 0.02373596) < 0.000001);
+  });
+});
+
+describe('fetchPageCore', () => {
+  it('keeps canonical colon ids usable in the page-core route', async () => {
+    const seen = [];
+    global.fetch = async (url) => {
+      const href = String(url);
+      seen.push(href);
+      if (href.includes('/data/page-core/latest.json')) {
+        return { ok: true, json: async () => ({ snapshot_id: 'page-test' }) };
+      }
+      if (href.includes('/api/v2/page/STU:189A')) {
+        return { ok: true, json: async () => ({ ok: true, data: { canonical_asset_id: 'STU:189A' }, meta: {} }) };
+      }
+      throw new Error(`Unexpected URL: ${href}`);
+    };
+    try {
+      const result = await fetchPageCore('STU:189A');
+      assert.equal(result.ok, true);
+      assert.equal(result.data.canonical_asset_id, 'STU:189A');
+      assert.equal(seen.some((href) => href.includes('/api/v2/page/STU:189A')), true);
+      assert.equal(seen.some((href) => href.includes('/api/v2/page/STU%3A189A')), false);
+    } finally {
+      global.fetch = originalFetch;
+    }
+  });
+});
 
 describe('transformV2ToStockShape', () => {
   it('preserves name, bars, governance, and fundamentals', () => {

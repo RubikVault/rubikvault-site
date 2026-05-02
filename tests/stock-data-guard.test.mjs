@@ -2,6 +2,8 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   guardPayload,
+  buildUiIntegrity,
+  validateReturnField,
   guard52WRange,
   guardPriceStack,
   guardTradePlan,
@@ -13,6 +15,54 @@ import {
   guardModelConsensus,
   guardPanelGate,
 } from '../public/js/stock-data-guard.js';
+
+describe('UI integrity resolver', () => {
+  it('blocks the HOOD false-authority fixture', () => {
+    const payload = {
+      data: {
+        market_prices: { close: 72.89, date: '2026-04-30' },
+        change: { pct: 2.3736, abs: 1.69 },
+        market_stats: { stats: { low_52w: 45.6, rsi14: 42.4, sma20: 79, sma50: 76.4, atr14: 4.86 } },
+        bars: [{ date: '2026-04-30', close: 72.89 }],
+        ssot: {
+          page_core: { coverage: { bars: 1193 } },
+          market_context: {
+            key_levels_ready: true,
+            issues: [],
+            prices_source: 'historical-bars',
+            stats_source: 'historical-indicators',
+            price_date: '2026-04-30',
+            stats_date: '2026-04-30',
+            latest_bar_date: '2026-04-30',
+          },
+        },
+      },
+      daily_decision: { schema: 'rv.asset_daily_decision.v1', pipeline_status: 'OK', verdict: 'WAIT', blocking_reasons: [], risk_assessment: { level: 'HIGH' } },
+      analysis_readiness: { status: 'READY', decision_bundle_status: 'OK', blocking_reasons: [] },
+      meta: { historical: { provider: 'page-core-minimal-history' } },
+    };
+    const integrity = buildUiIntegrity(payload, { ticker: 'HOOD', priceStack: { valid: true } });
+    assert.equal(integrity.pageState, 'DATA_ISSUE');
+    assert.equal(integrity.fields.asset_return_1d.status, 'BLOCK');
+    assert.equal(integrity.fields.chart.status, 'BLOCK');
+    assert.equal(integrity.dataQuality, 'FAILED');
+    assert.equal(integrity.coverage, 'PARTIAL');
+    assert.equal(integrity.decisionReadiness, 'UNAVAILABLE');
+    assert.ok(integrity.flags.includes('RETURN_VALIDATION_FAILED'));
+  });
+
+  it('blocks broad-market benchmark returns above 20%', () => {
+    const result = validateReturnField({ pct: 2.35, close: 718.66, isBenchmark: true, ticker: 'SPY' });
+    assert.equal(result.status, 'BLOCK');
+    assert.match(result.reason, /benchmark return plausibility/i);
+  });
+
+  it('keeps single-stock extreme returns as warning unless 52W low cross-check fails', () => {
+    const result = validateReturnField({ pct: 0.62, close: 32.4, low52w: 10, isBenchmark: false, ticker: 'MOVE' });
+    assert.equal(result.status, 'WARNING');
+    assert.match(result.reason, /asset return plausibility warning/i);
+  });
+});
 
 // ─── guard52WRange ──────────────────────────────────────────────────────────
 

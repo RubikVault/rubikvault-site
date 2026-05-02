@@ -5,7 +5,7 @@
 /**
  * @param {object} payload - Raw API response
  * @param {string} ticker - Requested ticker
- * @returns {{ warnings: string[], panelGates: object, corrections: object }}
+ * @returns {{ warnings: string[], panelGates: object, corrections: object, integrity: object }}
  */
 export function guardPayload(payload, ticker) {
   const warnings = [];
@@ -22,6 +22,7 @@ export function guardPayload(payload, ticker) {
   const ev4 = payload?.evaluation_v4 || null;
   const brk = data.breakout_v12 || data.breakout_v2 || null;
   const priceStack = guardPriceStack(payload);
+  const integrity = buildUiIntegrity(payload, { ticker, priceStack });
 
   // Run all guards
   const r52w = guard52WRange(s, close);
@@ -76,7 +77,127 @@ export function guardPayload(payload, ticker) {
   if (fundGuard.warning) warnings.push(fundGuard.warning);
   if (consensusGuard.warning) warnings.push(consensusGuard.warning);
 
-  return { warnings, panelGates, corrections };
+  return { warnings, panelGates, corrections, integrity };
+}
+
+function finiteNumber(value) {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : null;
+}
+
+function unique(values) {
+  return Array.from(new Set(values.filter(Boolean)));
+}
+
+function field(value, status = 'VALID', reason = null, usedInDecision = false, asOf = null) {
+  return { value, status, reason, usedInDecision, asOf };
+}
+
+export function validateReturnField({ pct, abs = null, close = null, low52w = null, ticker = null, isBenchmark = false, asOf = null } = {}) {
+  const value = finiteNumber(pct);
+  if (value == null) return field(null, 'BLOCK', 'return missing', true, asOf);
+  const price = finiteNumber(close);
+  const low = finiteNumber(low52w);
+  if (price != null && low != null && low > 0 && value > -0.95) {
+    const impliedPrevClose = price / (1 + value);
+    if (impliedPrevClose < low * 0.98 && price >= low * 0.98) {
+      return field(value, 'BLOCK', 'return conflicts with validated 52W low', true, asOf);
+    }
+  }
+  const threshold = isBenchmark ? 0.20 : 0.50;
+  if (Math.abs(value) > threshold) {
+    return field(
+      value,
+      isBenchmark ? 'BLOCK' : 'WARNING',
+      isBenchmark ? 'benchmark return plausibility failed' : 'asset return plausibility warning',
+      true,
+      asOf,
+    );
+  }
+  return field(value, 'VALID', null, true, asOf);
+}
+
+function hasPriceSeries(payload, priceStack) {
+  const marketContext = payload?.data?.ssot?.market_context || {};
+  if (priceStack?.valid === true) return true;
+  if (marketContext?.key_levels_ready === true && Array.isArray(marketContext?.issues) && marketContext.issues.length === 0) return true;
+  const stats = payload?.data?.market_stats?.stats || {};
+  return ['rsi14', 'sma20', 'sma50', 'atr14'].filter((key) => finiteNumber(stats?.[key]) != null).length >= 3;
+}
+
+function chartContractStatus(payload) {
+  const bars = Array.isArray(payload?.data?.bars) ? payload.data.bars : [];
+  const ssotBars = finiteNumber(payload?.data?.ssot?.page_core?.coverage?.bars)
+    ?? finiteNumber(payload?.data?.coverage?.bars)
+    ?? finiteNumber(payload?.coverage?.bars);
+  const histProvider = String(payload?.meta?.historical?.provider || payload?.metadata?.historical?.provider || '').toLowerCase();
+  const histAvailability = String(payload?.data?.historical?.availability?.status || payload?.data?.availability?.status || '').toLowerCase();
+  const minimal = histProvider.includes('page-core-minimal') || histAvailability === 'page_core_minimal';
+  if (bars.length >= 3) return field(true, 'VALID', null, false, bars[bars.length - 1]?.date || null);
+  if (minimal || (ssotBars != null && ssotBars > 10)) {
+    return field(null, 'BLOCK', 'chart contract failed', false, null);
+  }
+  return field(null, 'WARNING', 'chart history unavailable', false, null);
+}
+
+export function buildUiIntegrity(payload, { ticker = null, priceStack = null } = {}) {
+  const data = payload?.data || {};
+  const stats = data.market_stats?.stats || {};
+  const prices = data.market_prices || {};
+  const change = data.change || {};
+  const moduleFreshness = data.module_freshness || {};
+  const close = finiteNumber(prices.close ?? data.latest_bar?.close);
+  const priceAsOf = prices.date || moduleFreshness.price_as_of || payload?.metadata?.as_of || null;
+  const low52w = finiteNumber(stats.low_52w);
+  const fields = {};
+  fields.current_price = close != null
+    ? field(close, 'VALID', null, true, priceAsOf)
+    : field(null, 'BLOCK', 'current price missing', true, priceAsOf);
+  fields.asset_return_1d = validateReturnField({
+    pct: change.pct ?? change.daily_change_pct,
+    abs: change.abs ?? change.daily_change_abs,
+    close,
+    low52w,
+    ticker,
+    isBenchmark: false,
+    asOf: priceAsOf,
+  });
+  fields.price_series = hasPriceSeries(payload, priceStack)
+    ? field(true, 'VALID', null, true, moduleFreshness.market_stats_as_of || priceAsOf)
+    : field(null, 'BLOCK', 'price series basis unavailable', true, moduleFreshness.market_stats_as_of || priceAsOf);
+  fields.chart = chartContractStatus(payload);
+
+  const readiness = payload?.analysis_readiness || data.analysis_readiness || {};
+  const dailyDecision = payload?.daily_decision || data.daily_decision || {};
+  const readinessReasons = unique([
+    ...(Array.isArray(readiness.blocking_reasons) ? readiness.blocking_reasons : []),
+    ...(Array.isArray(dailyDecision.blocking_reasons) ? dailyDecision.blocking_reasons : []),
+  ]);
+  fields.decision_contract = readinessReasons.length === 0 && String(readiness.status || 'READY').toUpperCase() !== 'FAILED'
+    ? field(true, 'VALID', null, true, priceAsOf)
+    : field(null, 'BLOCK', readinessReasons[0] || 'decision contract failed', true, priceAsOf);
+
+  const decisionCritical = ['current_price', 'asset_return_1d', 'price_series', 'decision_contract'];
+  const criticalBlocks = decisionCritical.filter((key) => fields[key]?.status === 'BLOCK');
+  const allBlocks = Object.entries(fields).filter(([, value]) => value?.status === 'BLOCK');
+  const pageState = criticalBlocks.length > 0
+    ? (criticalBlocks.length / decisionCritical.length > 0.5 ? 'GLOBAL_OUTAGE' : 'DATA_ISSUE')
+    : 'OK';
+  const flags = criticalBlocks.length ? ['DATA_ISSUE'] : [];
+  if (fields.asset_return_1d.status === 'BLOCK') flags.push('RETURN_VALIDATION_FAILED');
+  if (fields.chart.status === 'BLOCK') flags.push('CHART_CONTRACT_FAILED');
+  if (fields.price_series.status === 'BLOCK') flags.push('PRICE_SERIES_FAILED');
+
+  return {
+    fields,
+    pageState,
+    dataQuality: pageState === 'OK' ? 'OK' : 'FAILED',
+    coverage: fields.chart.status === 'BLOCK' || fields.price_series.status === 'BLOCK' ? 'PARTIAL' : 'FULL',
+    decisionReadiness: criticalBlocks.length ? 'UNAVAILABLE' : 'READY',
+    flags: unique(flags),
+    blockingReasons: unique(criticalBlocks.map((key) => fields[key]?.reason)),
+    issueCount: allBlocks.length,
+  };
 }
 
 export function guardPriceStack(payload) {

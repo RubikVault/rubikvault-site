@@ -11,8 +11,10 @@ import {
   pageShardName,
 } from '../../functions/api/_shared/page-core-contract.js';
 import {
+  applyPageCoreAliasMarketDataFallback,
   clearPageCoreReaderCache,
   normalizePageCoreOperationalState,
+  pageCoreAliasMarketDataCompatible,
   readPageCoreForTicker,
 } from '../../functions/api/_shared/page-core-reader.js';
 
@@ -44,7 +46,7 @@ function row(canonical, ticker, asOf = '2026-04-24') {
     identity: { name: ticker, country: 'US', exchange: 'US', sector: null, industry: null, asset_class: 'STOCK' },
     summary_min: {
       last_close: 100,
-      daily_change_pct: 1,
+      daily_change_pct: 0.01010101,
       daily_change_abs: 1,
       market_cap: null,
       decision_verdict: 'WAIT',
@@ -153,4 +155,108 @@ test('page-core reader downgrades false-green rows without hiding core data', ()
   assert.equal(normalized.summary_min.last_close, 100);
   assert.equal(normalized.status_contract.stock_detail_view_status, 'degraded');
   assert.ok(normalized.status_contract.strict_blocking_reasons.includes('missing_market_stats_basis'));
+});
+
+test('page-core reader treats normalizable percent-unit returns as compatibility data', () => {
+  const bad = {
+    ...row('US:HOOD', 'HOOD'),
+    summary_min: {
+      ...row('US:HOOD', 'HOOD').summary_min,
+      last_close: 72.89,
+      daily_change_abs: 1.69,
+      daily_change_pct: 2.373596,
+    },
+    market_stats_min: {
+      key_levels_ready: true,
+      price_source: 'historical-bars',
+      stats_source: 'historical-indicators',
+      price_date: '2026-04-30',
+      latest_bar_date: '2026-04-30',
+      as_of: '2026-04-30',
+      issues: [],
+      stats: { rsi14: 42, sma20: 79, sma50: 76, atr14: 4.86, low_52w: 45.6 },
+    },
+    key_levels_ready: true,
+    ui_banner_state: 'all_systems_operational',
+    primary_blocker: null,
+  };
+  const normalized = normalizePageCoreOperationalState(bad, {
+    latest: { target_market_date: '2026-04-30' },
+    freshnessStatus: 'fresh',
+  });
+  assert.equal(normalized.ui_banner_state, 'all_systems_operational');
+  assert.equal(normalized.status_contract.strict_operational, true);
+  assert.deepEqual(normalized.status_contract.strict_blocking_reasons, []);
+});
+
+test('page-core reader honors two-trading-day operational freshness window', () => {
+  const staleButAllowed = {
+    ...row('US:TTL', 'TTL', '2026-04-28'),
+    market_stats_min: {
+      key_levels_ready: true,
+      price_source: 'historical-bars',
+      stats_source: 'historical-indicators',
+      price_date: '2026-04-28',
+      latest_bar_date: '2026-04-28',
+      as_of: '2026-04-28',
+      issues: [],
+      stats: { rsi14: 42, sma20: 99, sma50: 98, atr14: 2, low_52w: 60 },
+    },
+    key_levels_ready: true,
+    ui_banner_state: 'provider_or_data_reason',
+    primary_blocker: 'bars_stale',
+  };
+  const normalized = normalizePageCoreOperationalState(staleButAllowed, {
+    latest: { target_market_date: '2026-04-30' },
+    freshnessStatus: 'expired',
+  });
+  assert.equal(normalized.ui_banner_state, 'all_systems_operational');
+  assert.equal(normalized.primary_blocker, null);
+  assert.equal(normalized.status_contract.stock_detail_view_status, 'operational');
+  assert.deepEqual(normalized.status_contract.strict_blocking_reasons, []);
+});
+
+test('page-core reader can use a compatible fresh alias basis for stale duplicate listings', () => {
+  const staleStuttgart = {
+    ...row('STU:189A', '189A', '2026-04-23'),
+    identity: { ...row('STU:189A', '189A').identity, name: 'Grupo Supervielle SA', country: 'GERMANY', exchange: 'STU' },
+    market_stats_min: {
+      key_levels_ready: true,
+      price_source: 'historical-bars',
+      stats_source: 'historical-indicators',
+      price_date: '2026-04-23',
+      latest_bar_date: '2026-04-23',
+      as_of: '2026-04-23',
+      issues: [],
+      stats: { rsi14: 42, sma20: 8, sma50: 7, atr14: 0.5, low_52w: 4 },
+    },
+    key_levels_ready: true,
+    ui_banner_state: 'provider_or_data_reason',
+    primary_blocker: 'bars_stale',
+  };
+  const freshFrankfurt = {
+    ...row('F:189A', '189A', '2026-04-30'),
+    identity: { ...row('F:189A', '189A').identity, name: 'Grupo Supervielle S.A', country: 'GERMANY', exchange: 'F' },
+    market_stats_min: {
+      key_levels_ready: true,
+      price_source: 'historical-bars',
+      stats_source: 'historical-indicators',
+      price_date: '2026-04-30',
+      latest_bar_date: '2026-04-30',
+      as_of: '2026-04-30',
+      issues: [],
+      stats: { rsi14: 42, sma20: 8, sma50: 7, atr14: 0.5, low_52w: 4 },
+    },
+    key_levels_ready: true,
+    ui_banner_state: 'all_systems_operational',
+    primary_blocker: null,
+  };
+  assert.equal(pageCoreAliasMarketDataCompatible(staleStuttgart, freshFrankfurt), true);
+  const normalized = applyPageCoreAliasMarketDataFallback(staleStuttgart, freshFrankfurt, {
+    latest: { target_market_date: '2026-04-30' },
+  });
+  assert.equal(normalized.canonical_asset_id, 'STU:189A');
+  assert.equal(normalized.market_stats_min.latest_bar_date, '2026-04-30');
+  assert.equal(normalized.status_contract.stock_detail_view_status, 'operational');
+  assert.equal(normalized.meta.market_data_alias_basis.source_canonical_id, 'F:189A');
 });

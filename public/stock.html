@@ -546,6 +546,7 @@
         validateLevelConsistency,
         buildTradePlanModel,
         computeTooltipFrame,
+        formatOrdinal,
       } = await import('/js/stock-page-view-model.js');
       let payload;
       let _rvDataSource = 'v2';
@@ -600,6 +601,11 @@
       if (_guard.warnings.length) console.debug('[RV Guard]', _guard.warnings);
 
       const data = payload.data || {}, meta = payload.metadata || {}, s = data.market_stats?.stats || {}, prices = data.market_prices || {}, bars = data.bars || [], change = data.change || {};
+      const _integrity = _guard.integrity || {};
+      const _integrityFields = _integrity.fields || {};
+      const _decisionBlockedByIntegrity = _integrity.decisionReadiness === 'UNAVAILABLE';
+      const _chartBlockedByIntegrity = _integrityFields.chart?.status === 'BLOCK';
+      window._rvUiIntegrity = _integrity;
       const ssotMarketContext = data.ssot?.market_context || {};
       const historicalProfileEnvelope = data.historical_profile || null;
       const lastBar = bars.length ? bars[bars.length - 1] : {};
@@ -707,6 +713,13 @@
       if (moduleFreshness.some(item => item.state === 'stale')) _integrityItems.push({ text: 'Modules have mixed as-of dates', color: 'var(--yellow)' });
       if (_guard.corrections.modelConsensus?.degraded) _integrityItems.push({ text: 'Model evidence limited', color: 'var(--yellow)' });
       if (_guard.panelGates.keyLevels?.show === false) _integrityItems.push({ text: 'Key levels awaiting coherent price stack', color: 'var(--yellow)' });
+      if (_integrity.pageState && _integrity.pageState !== 'OK') {
+        _integrityItems.push({
+          text: _integrity.pageState === 'GLOBAL_OUTAGE' ? 'Market data integrity issue' : 'Input data integrity issue',
+          color: 'var(--red)',
+          reason: (_integrity.blockingReasons || [])[0] || 'data_integrity_failed',
+        });
+      }
 
       // Panel meta helper: standardized provenance line
       const _panelMeta = (asOf, gate) => {
@@ -772,7 +785,14 @@
       const _freshDot = _freshnessAgeH == null ? '' : _freshnessAgeH < 48
         ? ' <span title="Data is current (fetched within 48h)" style="color:var(--green);font-size:.75rem;vertical-align:middle;cursor:default">●</span>'
         : ' <span title="Data may be stale (older than 48h)" style="color:var(--yellow);font-size:.75rem;vertical-align:middle;cursor:default">●</span>';
-      document.getElementById('sc-price').innerHTML = (close != null ? '$' + close.toFixed(2) + ' <span style="color:' + ((change.pct || 0) >= 0 ? 'var(--green)' : 'var(--red)') + '">' + ((change.pct || 0) >= 0 ? '+' : '') + (Object.is((change.pct || 0) * 100, -0) ? 0 : (change.pct || 0) * 100).toFixed(2) + '%</span> <span style="font-size:.7rem;color:var(--text-muted);margin-left:.4rem">' + (pageAsOf || 'date pending') + '</span>' : '—') + _freshDot;
+      const _assetReturnBlocked = _integrityFields.asset_return_1d?.status === 'BLOCK';
+      const _formatShortDate = (value) => value ? new Date(value + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'date pending';
+      const _marketOpenNow = /open/i.test(document.querySelector('[data-rv-market-label]')?.textContent || '');
+      const _priceFreshnessText = `${_marketOpenNow && pageAsOf ? 'NOT LIVE · ' : ''}EOD ${_formatShortDate(pageAsOf)}`;
+      const _returnHtml = !_assetReturnBlocked && change.pct != null
+        ? '<span style="color:' + ((change.pct || 0) >= 0 ? 'var(--green)' : 'var(--red)') + '">' + ((change.pct || 0) >= 0 ? '+' : '') + (Object.is((change.pct || 0) * 100, -0) ? 0 : (change.pct || 0) * 100).toFixed(2) + '%</span>'
+        : '<span style="color:var(--yellow)">N/A - data issue</span>';
+      document.getElementById('sc-price').innerHTML = (close != null ? '$' + close.toFixed(2) + ' ' + _returnHtml + ' <span style="font-size:.7rem;color:var(--text-muted);margin-left:.4rem">' + _priceFreshnessText + '</span>' : '—') + _freshDot;
 
       // Fix D: Sector Badge
       const _sectorPart = fundamentalsView?.sectorLine ? fundamentalsView.sectorLine.split('·')[0].trim() : null;
@@ -826,7 +846,7 @@
         { key: 'long', label: 'LONG' }
       ].map(h => {
         const slice = horizonDecisionMap[h.key] || _decision;
-        const vLabel = slice?.verdict || overallLabel;
+        const vLabel = _decisionBlockedByIntegrity ? 'N/A' : (slice?.verdict || overallLabel);
         const cls = vLabel === 'BUY' ? 'bullish' : vLabel === 'AVOID' || vLabel === 'SELL' ? 'bearish' : 'neutral';
         return {
           ...h,
@@ -853,18 +873,31 @@
         Object.assign(window, { _verdictOverridden: true });
         // We can't reassign const, so we use the variables downstream
       }
-      const effectiveVerdict = allHorizonsWait ? 'WAIT' : baseVerdict;
-      const effectiveLabel = allHorizonsWait && !shouldRenderSetupPhase ? 'WAIT' : overallLabel;
-      const effectiveColor = effectiveLabel === 'BUY' ? 'var(--green)' : effectiveLabel === 'SELL' || effectiveLabel === 'AVOID' ? 'var(--red)' : 'var(--yellow)';
-      const effectiveText = allHorizonsWait ? waitStateView.subheadline
+      const effectiveVerdict = _decisionBlockedByIntegrity ? 'UNAVAILABLE' : (allHorizonsWait ? 'WAIT' : baseVerdict);
+      const effectiveLabel = _decisionBlockedByIntegrity ? 'UNAVAILABLE - DATA ISSUE' : (allHorizonsWait && !shouldRenderSetupPhase ? 'WAIT' : overallLabel);
+      const effectiveColor = _decisionBlockedByIntegrity ? 'var(--red)' : (effectiveLabel === 'BUY' ? 'var(--green)' : effectiveLabel === 'SELL' || effectiveLabel === 'AVOID' ? 'var(--red)' : 'var(--yellow)');
+      const effectiveText = _decisionBlockedByIntegrity ? 'Input data integrity check failed. Decision-grade analysis is temporarily unavailable.' : allHorizonsWait ? waitStateView.subheadline
         : hasHorizonSplit && baseVerdict === 'WAIT' ? 'Split consensus — no clear directional edge'
           : overallText;
-      const executiveDecisionView = buildExecutiveDecisionPresentation({ decision: _decision, states: _states, explanation: _explanation, stats: s, close, effectiveVerdict });
+      const executiveDecisionView = _decisionBlockedByIntegrity
+        ? {
+          headline: 'Decision unavailable',
+          summaryLine: 'Qualitative assessment unavailable due to input data integrity issue.',
+          subheadline: 'Decision-grade analysis is temporarily unavailable.',
+          whyNotNow: [],
+          whatMustChange: [],
+          primaryNextAction: 'Unavailable until data validation passes',
+          secondaryWatch: 'Unavailable until data validation passes',
+          upgradeTrigger: 'Unavailable until data validation passes',
+          blocker: ((_integrity.blockingReasons || [])[0] || 'Input data integrity issue'),
+        }
+        : buildExecutiveDecisionPresentation({ decision: _decision, states: _states, explanation: _explanation, stats: s, close, effectiveVerdict });
       const horizonView = buildHorizonPresentation(horizons);
 
       // Block status badges
       const _decisionBadge = _blockStatus([
         { check: !_decision || !_decision.verdict, level: 'invalid', msg: 'No decision data' },
+        { check: _decisionBlockedByIntegrity, level: 'invalid', msg: ((_integrity.blockingReasons || [])[0] || 'Input data integrity issue') },
         { check: _decision.fallback_level && _decision.fallback_level !== 'exact', level: 'warning', msg: 'Fallback: ' + (_decision.fallback_level || '') },
         { check: _decision.regime_transition_active, level: 'warning', msg: 'Regime transition active' },
         { check: effectiveVerdict !== baseVerdict, level: 'warning', msg: 'Verdict overridden by horizon sync' },
@@ -906,7 +939,13 @@
 
       // What Changed Data (dynamic) — interpretive first
       const _bbLabel = bbPctB != null && bbPctB <= 0.2 ? 'Near lower band' : bbPctB >= 0.8 ? 'Near upper band' : 'Range midbound';
-      window._whatChangedData = {
+      window._whatChangedData = (_decisionBlockedByIntegrity || _assetReturnBlocked) ? {
+        '1D': { summary: 'Return narrative unavailable due to data integrity issue.', items: [] },
+        '3D': { summary: 'Return narrative unavailable due to data integrity issue.', items: [] },
+        '1W': { summary: 'Return narrative unavailable due to data integrity issue.', items: [] },
+        '2W': { summary: 'Return narrative unavailable due to data integrity issue.', items: [] },
+        '1M': { summary: 'Return narrative unavailable due to data integrity issue.', items: [] },
+      } : {
         '1D': buildInterpretiveChangePresentation({ timeframe: '1D', close, stats: s, change, trendLabel, maStack, riskLabel, rsiZone, bbLabel: _bbLabel, macdLabel, rangeLabel: r52label }),
         '3D': buildInterpretiveChangePresentation({ timeframe: '3D', close, stats: s, change, trendLabel, maStack, riskLabel, rsiZone, bbLabel: _bbLabel, macdLabel, rangeLabel: r52label }),
         '1W': buildInterpretiveChangePresentation({ timeframe: '1W', close, stats: s, change, trendLabel, maStack, riskLabel, rsiZone, bbLabel: _bbLabel, macdLabel, rangeLabel: r52label }),
@@ -947,7 +986,7 @@
 
       // Market Context — fetch SPY & QQQ for real vs-benchmark comparison
       const _mktCtx = { spy: null, qqq: null, corr: [], loaded: false, loading: false, degraded: false, cacheUsed: false, cacheAgeLabel: '', errorReason: '' };
-      const _mktCtxCacheKey = `rv-market-context:${tkr}`;
+      const _mktCtxCacheKey = `rv-market-context:v2:${tkr}`;
       const _mktCtxCacheTtlMs = 24 * 60 * 60 * 1000;
 
       function _formatCacheAge(ms) {
@@ -999,12 +1038,17 @@
       // Pearson correlation between two arrays
       function pearson(a, b) {
         const n = Math.min(a.length, b.length);
-        if (n < 10) return 0;
+        if (n < 10) return null;
         const ax = a.slice(-n), bx = b.slice(-n);
         const ma = ax.reduce((s, v) => s + v, 0) / n, mb = bx.reduce((s, v) => s + v, 0) / n;
         let num = 0, da = 0, db = 0;
         for (let i = 0; i < n; i++) { const x = ax[i] - ma, y = bx[i] - mb; num += x * y; da += x * x; db += y * y; }
-        return da && db ? num / Math.sqrt(da * db) : 0;
+        return da && db ? num / Math.sqrt(da * db) : null;
+      }
+
+      function validateBenchmarkReturn(value) {
+        const n = Number(value);
+        return Number.isFinite(n) && Math.abs(n) <= 0.20 ? n : null;
       }
 
       // Fetch benchmarks in background
@@ -1020,22 +1064,26 @@
         };
         try {
           const [spyRes, qqqRes] = await Promise.all([
-            timeoutJson('/api/stock?ticker=SPY').catch(() => ({ data: {} })),
-            timeoutJson('/api/stock?ticker=QQQ').catch(() => ({ data: {} }))
+            timeoutJson('/api/v2/stocks/SPY/summary').catch(() => ({ data: {} })),
+            timeoutJson('/api/v2/stocks/QQQ/summary').catch(() => ({ data: {} }))
           ]);
           const spyD = spyRes.data || {}, qqqD = qqqRes.data || {};
           const spyBars = spyD.bars || [], qqqBars = qqqD.bars || [];
           const spyChg = spyD.change || {}, qqqChg = qqqD.change || {};
-          const spyS = spyD.market_stats?.stats || {}, qqqS = qqqD.market_stats?.stats || {};
+          const spy1d = validateBenchmarkReturn(spyChg.pct ?? spyChg.daily_change_pct);
+          const qqq1d = validateBenchmarkReturn(qqqChg.pct ?? qqqChg.daily_change_pct);
+          if (_assetReturnBlocked || spy1d == null || qqq1d == null) {
+            throw new Error('benchmark validation failed');
+          }
 
           // Returns per timeframe: compute ticker return minus benchmark return
           const tfMap = { '1D': 1, '1W': 5, '1M': 20, '1Y': 252 };
           const nextSpy = {};
           const nextQqq = {};
           for (const [tf, n] of Object.entries(tfMap)) {
-            const tRet = n === 1 ? (change.pct || 0) : barsReturn(bars, n);
-            const sRet = n === 1 ? (spyChg.pct || 0) : barsReturn(spyBars, n);
-            const qRet = n === 1 ? (qqqChg.pct || 0) : barsReturn(qqqBars, n);
+            const tRet = n === 1 ? change.pct : barsReturn(bars, n);
+            const sRet = n === 1 ? spy1d : barsReturn(spyBars, n);
+            const qRet = n === 1 ? qqq1d : barsReturn(qqqBars, n);
             nextSpy[tf] = tRet != null && sRet != null ? tRet - sRet : null;
             nextQqq[tf] = tRet != null && qRet != null ? tRet - qRet : null;
           }
@@ -1061,7 +1109,7 @@
           const nextCorr = [
             { t: 'SPY', c: pearson(tickerRets, spyRets) },
             { t: 'QQQ', c: pearson(tickerRets, qqqRets) }
-          ].sort((a, b) => Math.abs(b.c) - Math.abs(a.c));
+          ].sort((a, b) => Math.abs(b.c || 0) - Math.abs(a.c || 0));
           const cachePayload = {
             spy: nextSpy,
             qqq: nextQqq,
@@ -1089,7 +1137,9 @@
             _mktCtx.degraded = true;
             _mktCtx.cacheUsed = false;
             _mktCtx.cacheAgeLabel = '';
-            _mktCtx.errorReason = 'Market context unavailable.';
+            _mktCtx.errorReason = /benchmark validation failed/i.test(String(e?.message || ''))
+              ? 'Market context unavailable - benchmark validation failed.'
+              : 'Market context unavailable.';
           }
           const el = document.getElementById('dyn-market-context');
           if (el) el.innerHTML = window._renderMarketContext();
@@ -1153,7 +1203,7 @@
             ${_mktCtx.corr.map(c => `
               <div style="flex:1; font-size:0.6rem; background:rgba(255,255,255,0.01); border:1px solid rgba(255,255,255,0.02); padding:3px 6px; border-radius:4px; display:flex; justify-content:space-between; align-items:center;">
                 <span style="font-weight:700; color:var(--text-dim);">${c.t}</span>
-                <span style="color:var(--accent); font-weight:700;">${c.c.toFixed(2)}</span>
+                <span style="color:${c.c == null ? 'var(--text-dim)' : 'var(--accent)'}; font-weight:700;">${c.c == null ? 'N/A' : c.c.toFixed(2)}</span>
               </div>
             `).join('')}
           </div>
@@ -1171,6 +1221,14 @@
       const narrativeSynthesis = _explanation.synthesis || _explanation.headline || '';
       const narrativeRiskNote = _explanation.risk_note || '';
       const renderStoryFlow = () => {
+        if (_decisionBlockedByIntegrity) {
+          return `
+      <div style="margin-top:1.25rem; padding:.6rem; border-radius:8px; background:rgba(248,113,113,0.06); border:1px solid rgba(248,113,113,0.16);">
+        <div style="font-size: .62rem; color: var(--red); text-transform: uppercase; font-weight: 700; margin-bottom: .4rem;">Qualitative assessment unavailable</div>
+        <div style="font-size:0.68rem; line-height:1.4; color:var(--text-dim);">Input data integrity issue. Narrative and next action are unavailable until validation passes.</div>
+      </div>
+    `;
+        }
         let rationale;
         let title = 'Strategic Rationale';
         if (narrativeSynthesis) {
@@ -1186,12 +1244,15 @@
           rationale = 'Structural downtrend confirmed. All major moving averages signal adverse alignment. No trend-following setup available — wait for base formation and structural recovery before re-evaluation.';
         } else {
           title = 'Why WAIT';
-          rationale = waitStateView.whyBullets.map((item) => `• ${item}`).join(' · ');
+          rationale = waitStateView.whyBullets;
         }
+        const rationaleHtml = Array.isArray(rationale)
+          ? `<ul style="margin:0;padding-left:1rem;display:grid;gap:3px">${rationale.map((item) => `<li>${_esc(item)}</li>`).join('')}</ul>`
+          : _esc(rationale);
         return `
       <div style="margin-top:1.25rem; padding:.6rem; border-radius:8px; background:rgba(255,255,255,0.01); border:1px solid rgba(255,255,255,0.03);">
         <div style="font-size: .62rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700; margin-bottom: .4rem;">${title}</div>
-        <div style="font-size:0.68rem; line-height:1.4; color:var(--text-dim);">${_esc(rationale)}</div>
+        <div style="font-size:0.68rem; line-height:1.4; color:var(--text-dim);">${rationaleHtml}</div>
         ${narrativeRiskNote ? `<div style="margin-top:.5rem;font-size:0.64rem;line-height:1.4;color:var(--yellow)">${_esc(narrativeRiskNote)}</div>` : ''}
       </div>
     `;
@@ -1259,10 +1320,13 @@
 
       // ── Render Chart ──
       function svgChart(height, id, bc) {
+        if (_chartBlockedByIntegrity) {
+          return '<div style="height:' + height + 'px;display:flex;align-items:center;justify-content:center;text-align:center;padding:.8rem;background:rgba(248,113,113,0.06);border:1px solid rgba(248,113,113,0.16);border-radius:8px;color:var(--text-dim)">Chart unavailable — data integrity issue</div>';
+        }
         const recent = bars.slice(-(bc || 60));
         const cl = recent.map(b => Number(b.adjClose ?? b.close)).filter(Number.isFinite);
         const dates = recent.map(b => b.date);
-        if (cl.length < 3) return '<div style="height:' + height + 'px;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,0.02);color:var(--text-dim)">No Data</div>';
+        if (cl.length < 3) return '<div style="height:' + height + 'px;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,0.02);color:var(--text-dim)">Chart unavailable</div>';
 
         const paddingLeft = 42, paddingRight = 8, paddingTop = 10, paddingBottom = 20;
         const w = 800, graphW = w - paddingLeft - paddingRight, graphH = height - paddingTop - paddingBottom;
@@ -1433,8 +1497,13 @@
       else reboundConds.push('Near structure support bounds');
       const reboundPoints = reboundConds.map(r => '<li>' + r + '</li>').join('');
       const confidencePct = _decision.confidence != null ? `${(_decision.confidence * 100).toFixed(0)}%` : confidence;
-      const decisionFlags = _decision.data_quality_flags?.length ? _decision.data_quality_flags.join(', ') : 'None';
-      const decisionReason = humanizeDecisionBasis(_decision.wait_reason || _explanation.headline || _explanation.synthesis || effectiveText);
+      const _decisionFlags = (_integrity.flags || []).filter(flag => !(flag === 'CHART_CONTRACT_FAILED' && _integrity.decisionReadiness === 'READY'));
+      const decisionFlags = (_decisionFlags && _decisionFlags.length)
+        ? _decisionFlags.join(', ')
+        : (_decision.data_quality_flags?.length ? _decision.data_quality_flags.join(', ') : 'None');
+      const decisionReason = _decisionBlockedByIntegrity
+        ? 'Input data integrity check failed'
+        : humanizeDecisionBasis(_decision.wait_reason || _explanation.headline || _explanation.synthesis || effectiveText);
       const executiveGridItems = [
         ['Confidence', confidencePct || '—'],
         ['Flags', decisionFlags],
@@ -1463,15 +1532,24 @@
       const showDecisionTelemetry = (_v6.bucket || _v6.hold_state) && (effectiveVerdict === 'BUY' || effectiveVerdict === 'SELL');
 
       // ── Construct Layout ──
-      const _allSystemsOperational = _finalSealOperational && _assetDecisionOperational && _integrityItems.length === 0;
-      const _statusSeverity = !_allSystemsOperational && _integrityItems.some(item => item.color === 'var(--red)') ? 'critical' : (_allSystemsOperational ? 'ok' : 'warning');
-      const _statusTitle = _statusSeverity === 'ok'
+      const _criticalIntegrityItems = _integrityItems.filter(item => item.color === 'var(--red)');
+      const _allSystemsOperational = _finalSealOperational && _assetDecisionOperational && (_integrity.pageState || 'OK') === 'OK' && _criticalIntegrityItems.length === 0;
+      const _statusSeverity = _integrity.pageState && _integrity.pageState !== 'OK' ? 'critical' : (_criticalIntegrityItems.length ? 'critical' : (_allSystemsOperational ? 'ok' : 'warning'));
+      const _statusTitle = _integrity.pageState === 'GLOBAL_OUTAGE'
+        ? 'System Status: GLOBAL OUTAGE'
+        : _integrity.pageState === 'DATA_ISSUE'
+          ? 'System Status: DATA ISSUE'
+          : _statusSeverity === 'ok'
         ? 'All systems operational'
         : _statusSeverity === 'critical'
           ? (_assetVerdict === 'WAIT_PIPELINE_INCOMPLETE' ? 'Analysis incomplete' : 'System attention required')
           : (_integrityItems[0]?.text || 'Data notice');
-      const _statusSubline = _statusSeverity === 'ok'
-        ? `Data as-of ${_esc(pageAsOf || '—')}`
+      const _statusSubline = _integrity.pageState === 'GLOBAL_OUTAGE'
+        ? 'Market data integrity issue. Decision-grade analysis is temporarily unavailable.'
+        : _integrity.pageState === 'DATA_ISSUE'
+          ? 'Input data integrity check failed. Decision-grade analysis is temporarily unavailable.'
+          : _statusSeverity === 'ok'
+        ? `${_integrityItems.length ? _esc(_integrityItems[0]?.text || 'Non-core context notice') + '. ' : ''}Data as-of ${_esc(pageAsOf || '—')}`
         : _statusSeverity === 'critical'
           ? 'Decision quality is limited until the active blocker clears.'
           : (fundamentalsView.status === 'unavailable' || fundamentalsView.status === 'degraded')
@@ -1485,7 +1563,10 @@
       const _statusBg = _statusSeverity === 'ok' ? 'rgba(16,185,129,0.06)' : _statusSeverity === 'critical' ? 'rgba(248,113,113,0.08)' : 'rgba(245,158,11,0.06)';
       const _statusBorder = _statusSeverity === 'ok' ? 'rgba(16,185,129,0.12)' : _statusSeverity === 'critical' ? 'rgba(248,113,113,0.18)' : 'rgba(245,158,11,0.12)';
       const _integrityBanner = '<div style="padding:.45rem .7rem;margin-bottom:.75rem;border-radius:8px;background:' + _statusBg + ';border:1px solid ' + _statusBorder + ';display:flex;align-items:flex-start;gap:.55rem"><span style="color:' + _statusColor + ';font-size:.7rem;line-height:1.3">' + (_statusSeverity === 'ok' ? '\u2713' : _statusSeverity === 'critical' ? '\u26A0' : '\u25CF') + '</span><div><div style="font-size:.64rem;color:' + _statusColor + ';font-weight:800;text-transform:uppercase;letter-spacing:.04em">' + _statusTitle + '</div><div style="font-size:.6rem;color:var(--text-muted);margin-top:2px;line-height:1.45">' + _esc(_statusSubline) + '</div></div></div>';
-      const _trustBar = `<div class="trust-bar" id="rv-trust-bar"><span class="trust-summary">${_esc(trustView.summaryText)}</span><span class="trust-chip">Analysis & Price as-of: ${_esc(trustView.priceDate || trustView.decisionDate || 'latest available')}</span><span class="trust-chip">Historical context: ${_esc(trustView.historicalState)}</span><span class="trust-chip">Coverage: ${_esc(trustView.coverageLabel)}</span></div>`;
+      const _qualityLabel = _integrity.dataQuality || (trustView.coverageLabel === 'partial' ? 'DATA ISSUE' : 'OK');
+      const _coverageLabel = _integrity.coverage || String(trustView.coverageLabel || 'partial').toUpperCase();
+      const _trustSummary = _integrity.pageState && _integrity.pageState !== 'OK' ? 'Data Quality: FAILED' : _esc(trustView.summaryText);
+      const _trustBar = `<div class="trust-bar" id="rv-trust-bar"><span class="trust-summary">${_trustSummary}</span><span class="trust-chip">Data Quality: ${_esc(_qualityLabel)}</span><span class="trust-chip">Analysis & Price as-of: ${_esc(trustView.priceDate || trustView.decisionDate || 'latest available')}</span><span class="trust-chip">Historical context: ${_esc(trustView.historicalState)}</span><span class="trust-chip">Coverage: ${_esc(_coverageLabel)}</span></div>`;
       const _waitWhy = executiveDecisionView.whyNotNow.length ? `<div style="margin-top:.5rem"><div style="font-size:.56rem;color:var(--text-muted);text-transform:uppercase;font-weight:700;margin-bottom:.25rem">Why not now</div><div style="display:grid;gap:3px">${executiveDecisionView.whyNotNow.map((item) => `<div style="font-size:.64rem;color:var(--text-dim);display:flex;gap:5px"><span style="color:var(--yellow)">•</span><span>${_esc(item)}</span></div>`).join('')}</div></div>` : '';
       const _whatMustChange = executiveDecisionView.whatMustChange.length ? `<div style="margin-top:.6rem"><div style="font-size:.56rem;color:var(--text-muted);text-transform:uppercase;font-weight:700;margin-bottom:.25rem">What must change</div><div style="display:grid;gap:3px">${executiveDecisionView.whatMustChange.map((item) => `<div style="font-size:.64rem;color:var(--text-dim);display:flex;gap:5px"><span style="color:var(--accent)">•</span><span>${_esc(item)}</span></div>`).join('')}</div></div>` : '';
       const _nextActionCard = effectiveVerdict === 'WAIT' ? `<div style="margin-bottom:.75rem;padding:.65rem;border-radius:8px;background:rgba(255,255,255,0.01);border:1px solid rgba(255,255,255,0.04)"><div style="font-size:.58rem;color:var(--text-muted);text-transform:uppercase;font-weight:700;margin-bottom:.3rem">Next action</div><div style="display:grid;gap:6px"><div class="tap-row"><span style="color:var(--text);font-weight:700">Primary next action: ${_esc(executiveDecisionView.primaryNextAction)}</span><span style="color:var(--text-muted)">Primary</span></div><div class="tap-row"><span style="color:var(--text);font-weight:600">Secondary watch: ${_esc(executiveDecisionView.secondaryWatch)}</span><span style="color:var(--text-muted)">Secondary</span></div><div class="tap-row"><span style="color:var(--text);font-weight:600">Trigger to upgrade: ${_esc(executiveDecisionView.upgradeTrigger)}</span><span style="color:var(--text-muted)">Upgrade</span></div></div></div>` : '';
@@ -1502,7 +1583,7 @@
             <div style="font-weight:800; font-size:1rem; color:#fff;">${displayName}</div>
             <div style="display:flex;align-items:center;gap:.45rem;margin-top:3px;">
               <span style="font-size:.72rem;font-weight:700;color:var(--text-muted)">${tkr}</span>
-              ${close != null ? `<span style="font-size:.72rem;font-weight:800;color:#fff">$${close.toFixed(2)}</span>${change.pct != null ? `<span style="font-size:.62rem;font-weight:900;color:${change.pct >= 0 ? 'var(--green)' : 'var(--red)'};margin-left:.2rem">${change.pct >= 0 ? '+' : ''}${(change.pct * 100).toFixed(2)}%</span>` : ''}<span style="font-size:.5rem;color:${_freshnessAgeH != null && _freshnessAgeH >= 48 ? 'var(--yellow)' : 'var(--text-muted)'};font-weight:600;margin-left:.4rem">${_freshnessAgeH != null && _freshnessAgeH >= 48 ? '⚠ Stale' : 'End of Day'}${pageAsOf ? ' · ' + new Date(pageAsOf + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : ''}</span>` : ''}
+              ${close != null ? `<span style="font-size:.72rem;font-weight:800;color:#fff">$${close.toFixed(2)}</span>${(!_assetReturnBlocked && change.pct != null) ? `<span style="font-size:.62rem;font-weight:900;color:${change.pct >= 0 ? 'var(--green)' : 'var(--red)'};margin-left:.2rem">${change.pct >= 0 ? '+' : ''}${(change.pct * 100).toFixed(2)}%</span>` : `<span style="font-size:.62rem;font-weight:900;color:var(--yellow);margin-left:.2rem">N/A</span>`}<span style="font-size:.5rem;color:${_freshnessAgeH != null && _freshnessAgeH >= 48 ? 'var(--yellow)' : 'var(--text-muted)'};font-weight:600;margin-left:.4rem">${_priceFreshnessText}</span>` : ''}
             </div>
           </div>
           <h2 style="margin:0; font-size:0.68rem; color:var(--text-muted); text-transform:uppercase;">Executive Decision <span title="${_decisionBadge.tooltip}" style="color:${_decisionBadge.color};cursor:default;font-size:.55rem">${_decisionBadge.label}</span></h2>
@@ -1679,8 +1760,8 @@
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:.2rem;margin-top:.3rem">
               <div title="Average True Range (14d) in dollar terms" style="font-size:.65rem;cursor:default"><span style="color:var(--text-muted)">ATR:</span> <span style="font-weight:600">${atr != null ? '$' + atr.toFixed(2) : '—'}</span></div>
               <div title="ATR as percentage of price" style="font-size:.65rem;cursor:default"><span style="color:var(--text-muted)">ATR%:</span> <span style="font-weight:600">${atrPct != null ? atrPct.toFixed(2) + '%' : '—'}</span></div>
-              <div title="Daily realized volatility (20d rolling std of log returns)" style="font-size:.65rem;cursor:default"><span style="color:var(--text-muted)">20D Vol:</span> <span style="font-weight:600">${volPct != null ? volPct + '%' : '—'}</span></div>
-              <div title="Volatility percentile vs 252-day history" style="font-size:.65rem;cursor:default"><span style="color:var(--text-muted)">Volatility percentile:</span> <span style="font-weight:600">${s.volatility_percentile != null ? s.volatility_percentile.toFixed(0) + 'th' : '—'}</span></div>
+              <div title="Daily realized volatility (20d rolling std of log returns)" style="font-size:.65rem;cursor:default"><span style="color:var(--text-muted)">20D Vol daily realized:</span> <span style="font-weight:600">${volPct != null ? volPct + '%' : '—'}</span></div>
+              <div title="Volatility percentile vs 252-day history" style="font-size:.65rem;cursor:default"><span style="color:var(--text-muted)">Volatility percentile:</span> <span style="font-weight:600">${s.volatility_percentile != null ? formatOrdinal(s.volatility_percentile) : '—'}</span></div>
             </div>
           </div>
         </div>
@@ -1725,7 +1806,7 @@
         <div style="margin-bottom:1.25rem;background:rgba(255,255,255,0.01);padding:.6rem;border-radius:8px;border:1px solid rgba(255,255,255,0.03);">
           <div style="font-size:.65rem;color:var(--text-muted);text-transform:uppercase;margin-bottom:.4rem;font-weight:700">Momentum Dashboard</div>
           ${[
-          ['1D', change.pct],
+          ['1D', _assetReturnBlocked ? null : change.pct],
           ['5D', s.ret_5d_pct],
           ['20D', s.ret_20d_pct],
           ['60D', s.ret_60d_pct]
@@ -1746,7 +1827,7 @@
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.4rem">
             <div style="font-size:.65rem;color:var(--text-dim);font-weight:700">PRICE HISTORY</div>
             <div style="display:flex;gap:.25rem" id="tf-btns">
-              ${['1W', '1M', '6M', '1Y', 'ALL'].map(tf => `<button class="tf-btn ${tf === '1M' ? 'active' : ''}" data-tf="${tf}" onclick="window._switchTF(this)">${tf}</button>`).join('')}
+              ${_chartBlockedByIntegrity ? '' : ['1W', '1M', '6M', '1Y', 'ALL'].map(tf => `<button class="tf-btn ${tf === '1M' ? 'active' : ''}" data-tf="${tf}" onclick="window._switchTF(this)">${tf}</button>`).join('')}
             </div>
           </div>
           <div id="tf-chart">${svgChart(180, 'chg-main', 22)}</div>
@@ -1923,10 +2004,10 @@
       (function renderTrustFooter() {
         const el = document.getElementById('rv-trust-footer');
         if (!el) return;
-        const dqState = _decision.data_quality_state || _states.data_quality_state || null;
+        const dqState = _integrity.dataQuality === 'FAILED' ? 'FAILED' : (_decision.data_quality_state || _states.data_quality_state || null);
         const regV = _v6?.regime_version || meta?.methodologyVersion || meta?.version || null;
         const parts = [];
-        if (dqState) parts.push(`Data Quality: <strong style="color:${dqState === 'PASS' ? 'var(--green)' : 'var(--yellow)'}">${_esc(dqState)}</strong>`);
+        if (dqState) parts.push(`Data Quality: <strong style="color:${dqState === 'PASS' || dqState === 'OK' ? 'var(--green)' : dqState === 'FAILED' ? 'var(--red)' : 'var(--yellow)'}">${_esc(dqState)}</strong>`);
         if (regV) parts.push(`Methodology: <strong style="color:var(--text-dim)">${_esc(regV)}</strong>`);
         if (pageAsOf) parts.push(`Page as-of: <strong style="color:var(--text-dim)">${_esc(pageAsOf)}</strong>`);
         if (!parts.length) { el.style.display = 'none'; return; }
@@ -2132,6 +2213,7 @@
         let confidence;
         if (suspectRatio >= 1.0) confidence = 'UNAVAILABLE';
         else if (suspectRatio >= 0.5) confidence = 'LOW';
+        else if (keys.length < 10) confidence = 'LOW';
         else confidence = totalN > 1000 ? 'HIGH' : totalN > 300 ? 'MEDIUM' : 'LOW';
         const confColor = confidence === 'HIGH' ? 'var(--green)' : confidence === 'MEDIUM' ? 'var(--yellow)' : confidence === 'UNAVAILABLE' ? 'var(--red)' : 'var(--text-muted)';
 
@@ -2296,7 +2378,7 @@
             <div style="font-size:.58rem;color:var(--text-dim);margin-top:.2rem">Background context only — not used as a live trade signal.</div>
           </div>
           <div style="display:flex;align-items:center;gap:.5rem;flex-wrap:wrap">
-            <span style="font-size:.5rem;color:var(--text-muted)">${hpDoc.latest_date ? 'as-of: ' + hpDoc.latest_date : ''} · ${(hpDoc.bars_count || 0).toLocaleString()} bars</span>
+            <span style="font-size:.5rem;color:var(--text-muted)">${hpDoc.latest_date ? 'as-of: ' + hpDoc.latest_date : ''} · ${(hpDoc.bars_count || 0).toLocaleString()} daily bars</span>
             <button class="bg-toggle" onclick="window._toggleHistoricalDetails('${matrixId}','Historical signal profile', this)">Hide details</button>
           </div>
         </div>

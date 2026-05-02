@@ -1,6 +1,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { gunzipSync } from 'node:zlib';
+import { tradingDaysBetween } from './market-calendar.js';
 import { MAX_STALE_MS, evaluateFreshness } from './staleness-budgets.js';
 import {
   PAGE_CORE_SCHEMA,
@@ -23,6 +24,8 @@ const LOCAL_ROOT = (() => {
     return '.';
   }
 })();
+const PAGE_CORE_MAX_STALE_TRADING_DAYS = 2;
+const ALIAS_MARKET_DATA_NAME_SIMILARITY_MIN = 0.8;
 
 let latestCache = null;
 const aliasShardCache = new Map();
@@ -171,6 +174,177 @@ function addReason(reasons, reason) {
   if (reason && !reasons.includes(reason)) reasons.push(reason);
 }
 
+function finiteNumber(value) {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : null;
+}
+
+function normalizeNameForAliasBasis(value) {
+  return String(value || '')
+    .toLowerCase()
+    .replace(/&/g, 'and')
+    .replace(/\([^)]*\)/g, ' ')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .replace(/\b(inc|incorporated|corp|corporation|co|company|ltd|limited|plc|sa|nv|ag|se|holdings|holding|group|class|common|registered|shares|adr|sponsored)\b/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function trigrams(value) {
+  const text = normalizeNameForAliasBasis(value).replace(/\s+/g, '');
+  const grams = new Set();
+  for (let i = 0; i < text.length - 2; i += 1) grams.add(text.slice(i, i + 3));
+  if (grams.size === 0 && text) grams.add(text);
+  return grams;
+}
+
+function nameSimilarity(a, b) {
+  const left = trigrams(a);
+  const right = trigrams(b);
+  if (!left.size || !right.size) return 0;
+  let intersection = 0;
+  for (const item of left) {
+    if (right.has(item)) intersection += 1;
+  }
+  return intersection / Math.max(1, Math.min(left.size, right.size));
+}
+
+function aliasFallbackSourceAllowed(row, latest = null, freshnessStatus = null) {
+  const reasons = pageCoreStrictOperationalReasons(row, { latest, freshnessStatus })
+    .filter((reason) => reason !== 'ui_banner_not_operational');
+  if (reasons.length === 0) return false;
+  return reasons.every((reason) => (
+    reason === 'bars_stale'
+    || reason === 'freshness_stale'
+    || reason === 'freshness_expired'
+    || reason === 'primary_blocker:bars_stale'
+  ));
+}
+
+export function pageCoreAliasMarketDataCompatible(sourceRow, candidateRow) {
+  if (!sourceRow || !candidateRow || sourceRow === candidateRow) return false;
+  if (sourceRow.canonical_asset_id === candidateRow.canonical_asset_id) return false;
+  if (String(sourceRow.display_ticker || '') !== String(candidateRow.display_ticker || '')) return false;
+  const sourceClass = String(sourceRow?.identity?.asset_class || '').toUpperCase();
+  const candidateClass = String(candidateRow?.identity?.asset_class || '').toUpperCase();
+  if (!sourceClass || sourceClass !== candidateClass) return false;
+  const sourceCountry = String(sourceRow?.identity?.country || '').toUpperCase();
+  const candidateCountry = String(candidateRow?.identity?.country || '').toUpperCase();
+  if (!sourceCountry || sourceCountry !== candidateCountry) return false;
+  return nameSimilarity(sourceRow?.identity?.name, candidateRow?.identity?.name) >= ALIAS_MARKET_DATA_NAME_SIMILARITY_MIN;
+}
+
+export function applyPageCoreAliasMarketDataFallback(sourceRow, candidateRow, { latest = null } = {}) {
+  if (!aliasFallbackSourceAllowed(sourceRow, latest, sourceRow?.freshness?.status || null)) return null;
+  if (!pageCoreAliasMarketDataCompatible(sourceRow, candidateRow)) return null;
+  const candidate = normalizePageCoreOperationalState(candidateRow, {
+    latest,
+    freshnessStatus: candidateRow?.freshness?.status || null,
+  });
+  const candidateReasons = pageCoreStrictOperationalReasons(candidate, {
+    latest,
+    freshnessStatus: candidate?.freshness?.status || null,
+  });
+  if (candidateReasons.length > 0 || !pageCoreClaimsOperational(candidate)) return null;
+  const basis = {
+    source_canonical_id: candidate.canonical_asset_id || null,
+    source_ticker: candidate.display_ticker || null,
+    requested_canonical_id: sourceRow.canonical_asset_id || null,
+    reason: 'stale_equivalent_alias_market_data_basis',
+  };
+  return normalizePageCoreOperationalState({
+    ...candidate,
+    canonical_asset_id: sourceRow.canonical_asset_id,
+    display_ticker: sourceRow.display_ticker,
+    provider_ticker: sourceRow.provider_ticker || sourceRow.display_ticker || candidate.provider_ticker || null,
+    identity: {
+      ...(candidate.identity || {}),
+      ...(sourceRow.identity || {}),
+    },
+    module_links: {
+      ...(candidate.module_links || {}),
+      ...(sourceRow.module_links || {}),
+    },
+    meta: {
+      ...(candidate.meta || {}),
+      market_data_alias_basis: basis,
+      warnings: unique([
+        ...(Array.isArray(candidate?.meta?.warnings) ? candidate.meta.warnings : []),
+        `market_data_alias_basis:${candidate.canonical_asset_id}`,
+      ]),
+    },
+    status_contract: {
+      ...(candidate.status_contract || {}),
+      alias_market_data_basis: basis,
+    },
+  }, {
+    latest,
+    freshnessStatus: candidate?.freshness?.status || null,
+  });
+}
+
+function latestBarLagTradingDays(row, latest = null) {
+  const marketStatsMin = row?.market_stats_min && typeof row.market_stats_min === 'object'
+    ? row.market_stats_min
+    : null;
+  const latestBarDate = isoDate(marketStatsMin?.latest_bar_date || row?.latest_bar_date || row?.freshness?.as_of);
+  const targetDate = isoDate(latest?.target_market_date || latest?.target_date || row?.target_market_date);
+  if (!latestBarDate || !targetDate) return null;
+  return tradingDaysBetween(latestBarDate, targetDate);
+}
+
+function latestBarWithinOperationalTtl(row, latest = null) {
+  const lag = latestBarLagTradingDays(row, latest);
+  return lag != null && lag <= PAGE_CORE_MAX_STALE_TRADING_DAYS;
+}
+
+export function pageCoreReturnIntegrity(row) {
+  const summary = row?.summary_min || {};
+  const rawPct = finiteNumber(summary.daily_change_pct);
+  const absChange = finiteNumber(summary.daily_change_abs);
+  const close = finiteNumber(summary.last_close);
+  if (rawPct == null) return { status: 'missing', reason: 'return_missing', value: null };
+  let value = rawPct;
+  let reason = null;
+  let status = 'ok';
+  if (absChange != null && close != null) {
+    const prevClose = close - absChange;
+    if (prevClose > 0) {
+      const expected = absChange / prevClose;
+      if (Math.abs(rawPct - expected) <= 0.0005) {
+        value = Number(expected.toFixed(8));
+      } else if (Math.abs((rawPct / 100) - expected) <= 0.0005) {
+        value = Number(expected.toFixed(8));
+        status = 'normalized_percent_unit';
+      } else {
+        status = 'mismatch';
+        reason = 'return_abs_pct_mismatch';
+      }
+    }
+  }
+  const displayTicker = String(row?.display_ticker || '').toUpperCase();
+  const broadBenchmark = displayTicker === 'SPY' || displayTicker === 'QQQ';
+  const threshold = broadBenchmark ? 0.20 : 0.50;
+  if (Math.abs(value) > threshold) {
+    if (broadBenchmark) {
+      status = 'implausible';
+      reason = 'benchmark_return_plausibility_failed';
+    } else {
+      status = 'warning';
+      reason = 'asset_return_plausibility_warning';
+    }
+  }
+  const low52w = finiteNumber(row?.market_stats_min?.stats?.low_52w);
+  if (close != null && low52w != null && low52w > 0 && value > -0.95) {
+    const impliedPrevClose = close / (1 + value);
+    if (impliedPrevClose < low52w * 0.98 && close >= low52w * 0.98) {
+      status = 'implausible';
+      reason = 'return_conflicts_with_52w_low';
+    }
+  }
+  return { status, reason, value, raw: rawPct };
+}
+
 export function pageCoreStrictOperationalReasons(row, { latest = null, freshnessStatus = null } = {}) {
   const reasons = [];
   const marketStatsMin = row?.market_stats_min && typeof row.market_stats_min === 'object'
@@ -187,10 +361,10 @@ export function pageCoreStrictOperationalReasons(row, { latest = null, freshness
   const statsSource = String(marketStatsMin?.stats_source || row?.stats_source || '').trim();
   const freshness = String(freshnessStatus || row?.freshness?.status || '').toLowerCase();
   const statusContractView = String(row?.status_contract?.stock_detail_view_status || '').toLowerCase();
+  const latestBarFreshEnough = latestBarWithinOperationalTtl(row, latest);
+  const primaryBlocker = String(row?.primary_blocker || '');
 
-  if (row?.ui_banner_state !== 'all_systems_operational' && statusContractView !== 'operational') {
-    addReason(reasons, 'ui_banner_not_operational');
-  }
+  const claimsNonOperational = row?.ui_banner_state !== 'all_systems_operational' && statusContractView !== 'operational';
   if (row?.coverage?.ui_renderable !== true) addReason(reasons, 'ui_not_renderable');
   if (!marketStatsMin) {
     addReason(reasons, 'missing_market_stats_basis');
@@ -210,11 +384,16 @@ export function pageCoreStrictOperationalReasons(row, { latest = null, freshness
   if (row?.key_levels_ready !== true || marketStatsMin?.key_levels_ready === false) {
     addReason(reasons, 'key_levels_not_ready');
   }
-  if (targetDate && (!latestBarDate || latestBarDate < targetDate)) addReason(reasons, 'bars_stale');
-  if (['stale', 'expired', 'missing', 'last_good', 'error'].includes(freshness)) {
+  if (targetDate && (!latestBarDate || (!latestBarFreshEnough && latestBarDate < targetDate))) addReason(reasons, 'bars_stale');
+  if (['stale', 'expired', 'missing', 'last_good', 'error'].includes(freshness) && !latestBarFreshEnough) {
     addReason(reasons, `freshness_${freshness}`);
   }
-  if (row?.primary_blocker) addReason(reasons, `primary_blocker:${String(row.primary_blocker)}`);
+  if (primaryBlocker && !(primaryBlocker === 'bars_stale' && latestBarFreshEnough)) {
+    addReason(reasons, `primary_blocker:${primaryBlocker}`);
+  }
+  const returnIntegrity = pageCoreReturnIntegrity(row);
+  if (returnIntegrity.reason && returnIntegrity.status !== 'warning') addReason(reasons, returnIntegrity.reason);
+  if (claimsNonOperational && reasons.length > 0) addReason(reasons, 'ui_banner_not_operational');
   return unique(reasons);
 }
 
@@ -229,6 +408,12 @@ export function normalizePageCoreOperationalState(row, { latest = null, freshnes
   const strictlyOperational = strictReasons.length === 0;
   const normalized = {
     ...row,
+    ui_banner_state: strictlyOperational ? 'all_systems_operational' : row.ui_banner_state,
+    primary_blocker: strictlyOperational ? null : row.primary_blocker,
+    summary_min: {
+      ...(row.summary_min || {}),
+      quality_status: strictlyOperational ? 'OK' : row?.summary_min?.quality_status,
+    },
     status_contract: {
       ...(row.status_contract || {}),
       core_status: strictReasons.some((reason) => reason === 'bars_stale' || reason.startsWith('freshness_'))
@@ -314,10 +499,23 @@ export async function readPageCoreForTicker(rawTicker, options = {}) {
       });
     }
     const freshness = evaluateFreshness(row.freshness, MAX_STALE_MS.page_core_daily, options.nowMs || Date.now());
-    const pageCore = normalizePageCoreOperationalState(row, {
+    let pageCore = normalizePageCoreOperationalState(row, {
       latest,
       freshnessStatus: freshness.status,
     });
+    if (pageCoreStrictOperationalReasons(pageCore, { latest, freshnessStatus: pageCore?.freshness?.status || freshness.status }).length > 0) {
+      const displayAlias = normalizePageCoreAlias(row.display_ticker || '');
+      if (displayAlias && displayAlias !== canonical) {
+        const displayAliasShard = await loadAliasShard(latest, aliasShardIndex(displayAlias), options);
+        const aliasCanonical = normalizePageCoreAlias(displayAliasShard?.[displayAlias]);
+        if (aliasCanonical && aliasCanonical !== canonical) {
+          const aliasPageShard = await loadPageShard(latest, pageShardIndex(aliasCanonical), options);
+          const aliasRow = aliasPageShard?.[aliasCanonical] || null;
+          const aliasFallback = applyPageCoreAliasMarketDataFallback(row, aliasRow, { latest });
+          if (aliasFallback) pageCore = aliasFallback;
+        }
+      }
+    }
     return {
       ok: true,
       httpStatus: 200,

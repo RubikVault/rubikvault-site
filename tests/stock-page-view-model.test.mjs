@@ -22,7 +22,17 @@ import {
   computeTooltipFrame,
   buildPageIdentity,
   buildModuleFreshnessPresentation,
+  formatOrdinal,
 } from '../public/js/stock-page-view-model.js';
+
+describe('formatOrdinal', () => {
+  it('formats English ordinal suffixes', () => {
+    assert.deepEqual(
+      [1, 2, 3, 4, 11, 12, 13, 21, 22, 23, 43].map(formatOrdinal),
+      ['1st', '2nd', '3rd', '4th', '11th', '12th', '13th', '21st', '22nd', '23rd', '43rd'],
+    );
+  });
+});
 
 describe('buildRiskPresentation', () => {
   it('keeps final risk and raw score semantics separate', () => {

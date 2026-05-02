@@ -57,6 +57,19 @@ function formatPercent(value, digits = 1) {
   return `${safe.toFixed(digits)}%`;
 }
 
+export function formatOrdinal(value) {
+  const n = Math.trunc(Number(value));
+  if (!Number.isFinite(n)) return null;
+  const abs = Math.abs(n);
+  const mod100 = abs % 100;
+  if (mod100 >= 11 && mod100 <= 13) return `${n}th`;
+  const mod10 = abs % 10;
+  if (mod10 === 1) return `${n}st`;
+  if (mod10 === 2) return `${n}nd`;
+  if (mod10 === 3) return `${n}rd`;
+  return `${n}th`;
+}
+
 export function businessDaysBetween(startValue, endValue = new Date()) {
   const start = parseDate(startValue);
   const end = parseDate(endValue);
@@ -186,11 +199,11 @@ export function buildRiskPresentation({ decision = {}, states = {}, stats = {} }
     if (volPct > 90) {
       finalState = 'Elevated';
       overrideApplied = true;
-      overrideReason = `Raw volatility is at the ${volPct.toFixed(0)}th percentile.`;
+      overrideReason = `Raw volatility is at the ${formatOrdinal(volPct)} percentile.`;
     } else if (volPct > 75 && volatility !== 'UNKNOWN') {
       finalState = 'Medium';
       overrideApplied = finalState !== finalBaseState;
-      overrideReason = overrideApplied ? `Raw volatility is elevated at the ${volPct.toFixed(0)}th percentile.` : null;
+      overrideReason = overrideApplied ? `Raw volatility is elevated at the ${formatOrdinal(volPct)} percentile.` : null;
     }
   }
 
@@ -208,16 +221,16 @@ export function buildRiskPresentation({ decision = {}, states = {}, stats = {} }
   const verdict = String(decision?.verdict || decision?.final_verdict || '').toUpperCase();
   let displaySentence = `Final risk is ${finalState}.`;
   if (overrideApplied && Number.isFinite(volPct)) {
-    displaySentence = `Raw volatility is extreme at the ${volPct.toFixed(0)}th percentile, but final risk is moderated to ${finalState} by structural context.`;
+    displaySentence = `Raw volatility is extreme at the ${formatOrdinal(volPct)} percentile, but final risk is moderated to ${finalState} by structural context.`;
   } else if (Number.isFinite(volPct)) {
-    displaySentence = `Final risk is ${finalState} based on ${regimeLabel.toLowerCase()} and ${volPct.toFixed(0)}th-percentile volatility.`;
+    displaySentence = `Final risk is ${finalState}. Absolute volatility: ${regimeLabel.toLowerCase()}. Relative volatility: ${formatOrdinal(volPct)} percentile.`;
   } else if (regimeLabel) {
     displaySentence = `Final risk is ${finalState} in a ${regimeLabel.toLowerCase()} regime.`;
   }
   if (verdict === 'WAIT' || verdict === 'AVOID') {
     displaySentence += ' This measures structural conditions, not trade readiness.';
   }
-  const percentileText = Number.isFinite(volPct) ? `Volatility percentile: ${volPct.toFixed(0)}th` : 'Volatility percentile unavailable';
+  const percentileText = Number.isFinite(volPct) ? `Volatility percentile: ${formatOrdinal(volPct)}` : 'Volatility percentile unavailable';
   const contextText = Number.isFinite(volPct)
     ? (volPct >= 95
         ? 'Current volatility is extremely elevated relative to recent history.'
@@ -240,7 +253,7 @@ export function buildRiskPresentation({ decision = {}, states = {}, stats = {} }
     overrideApplied,
     overrideReason,
     regimeLabel,
-    rawSignalBand: Number.isFinite(volPct) ? `${volPct.toFixed(0)}th percentile volatility` : regimeLabel,
+    rawSignalBand: Number.isFinite(volPct) ? `${formatOrdinal(volPct)} percentile volatility` : regimeLabel,
     displaySentence,
     scoreHelperText: 'Higher = better structural quality, not lower final risk.',
     rawSignalText: percentileText,
@@ -507,7 +520,7 @@ export function buildTrustPresentation({
 function sanitizeReason(reason) {
   const raw = String(reason || '').trim();
   if (!raw) return null;
-  if (/EXTREME_VOLATILITY/i.test(raw)) return 'volatility remains too high';
+  if (/EXTREME_VOLATILITY/i.test(raw)) return 'absolute volatility remains high';
   if (/LOW[_ ]CONF/i.test(raw)) return 'signal confidence is still weak';
   if (/INSUFFICIENT_DATA|MINIMUM[_ ]N|BOOTSTRAP/i.test(raw)) return 'coverage is still limited';
   if (/^[A-Z][A-Z0-9_]+$/.test(raw)) return raw.toLowerCase().replace(/_/g, ' ');
@@ -518,7 +531,7 @@ export function buildWaitStatePresentation({ decision = {}, states = {}, explana
   const why = [];
   if (states?.trend === 'RANGE' || states?.trend === 'UNKNOWN') why.push('trend remains sideways');
   if (states?.volatility === 'HIGH' || states?.volatility === 'EXTREME' || toNumber(stats?.volatility_percentile) >= 85) {
-    why.push('volatility remains too high');
+    why.push('absolute volatility remains high');
   }
   if (states?.volume === 'WEAK' || states?.volume === 'DRY' || states?.liquidity === 'LOW') why.push('participation is not strong enough');
   if ((states?.momentum === 'NEUTRAL' || states?.momentum === 'BEARISH') && why.length < 3) why.push('momentum lacks confirmation');
@@ -543,7 +556,7 @@ export function buildWaitStatePresentation({ decision = {}, states = {}, explana
     whyBullets: why.slice(0, 4),
     nextActions,
     signalBalanceText: 'Signal balance: no strong bullish or bearish trigger',
-    reboundTitle: why.includes('volatility remains too high') ? 'Recovery watch' : 'Rebound conditions not yet met',
+    reboundTitle: why.includes('absolute volatility remains high') ? 'Recovery watch' : 'Rebound conditions not yet met',
     setupQualityText: Number.isFinite(toNumber(decision?.scores?.composite))
       ? `Setup quality: Moderate (${toNumber(decision?.scores?.composite).toFixed(0)}/100)`
       : 'Setup quality: Moderate',
@@ -560,7 +573,7 @@ export function buildExecutiveDecisionPresentation({ decision = {}, states = {},
   const participationNeedsWork = states?.volume === 'WEAK' || states?.volume === 'DRY' || states?.liquidity === 'LOW';
   const whatMustChange = [];
   if (trendNeedsWork) whatMustChange.push('price structure must resolve out of the current range');
-  if (volatilityNeedsWork) whatMustChange.push('volatility must normalize before setup quality can clear');
+  if (volatilityNeedsWork) whatMustChange.push('absolute volatility must fall below the configured risk threshold');
   if (participationNeedsWork) whatMustChange.push('participation must strengthen on the next move');
   if (!whatMustChange.length) whatMustChange.push('a cleaner trigger must confirm before action');
   return {
@@ -739,7 +752,7 @@ export function buildInterpretiveChangePresentation({ timeframe = '1D', close = 
       items: [
         `52-week position remains ${String(rangeLabel || 'Mid range').toLowerCase()}`,
         `ATR is ${formatMoney(stats?.atr14, 2) || '—'}`,
-        `volatility percentile is ${stats?.volatility_percentile != null ? `${Number(stats.volatility_percentile).toFixed(0)}th` : '—'}`,
+        `volatility percentile is ${stats?.volatility_percentile != null ? formatOrdinal(stats.volatility_percentile) : '—'}`,
       ],
     },
     '1M': {

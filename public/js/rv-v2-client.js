@@ -7,6 +7,8 @@ import { buildCanonicalMarketContext } from './stock-ssot.js';
 
 const V2_TIMEOUT_MS = 15000;
 const V2_RETRY_DELAYS_MS = [250, 750, 2000];
+const US_MARKET_HOLIDAYS_2026 = new Set(['2026-01-01', '2026-01-19', '2026-02-16', '2026-04-03', '2026-05-25', '2026-06-19', '2026-07-03', '2026-09-07', '2026-11-26', '2026-12-25']);
+const PAGE_CORE_MAX_STALE_TRADING_DAYS = 2;
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -64,7 +66,8 @@ export async function fetchPageCoreManifest() {
 export async function fetchPageCore(ticker) {
   const manifest = await fetchPageCoreManifest();
   const snapshotId = manifest?.snapshot_id || manifest?.run_id || Date.now();
-  const payload = await fetchJsonWithTimeout(`/api/v2/page/${encodeURIComponent(ticker)}?v=${encodeURIComponent(snapshotId)}`);
+  const tickerPath = encodeURIComponent(ticker).replace(/%3A/gi, ':');
+  const payload = await fetchJsonWithTimeout(`/api/v2/page/${tickerPath}?v=${encodeURIComponent(snapshotId)}`);
   return {
     ok: payload?.ok === true,
     data: payload?.data || null,
@@ -124,6 +127,72 @@ function isoDate(value) {
   return /^\d{4}-\d{2}-\d{2}$/.test(iso) ? iso : null;
 }
 
+function finiteNumber(value) {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : null;
+}
+
+function isoDay(date = new Date()) {
+  return date.toISOString().slice(0, 10);
+}
+
+function isUsTradingDay(value) {
+  const iso = isoDate(value);
+  if (!iso || US_MARKET_HOLIDAYS_2026.has(iso)) return false;
+  const day = new Date(`${iso}T12:00:00Z`).getUTCDay();
+  return day !== 0 && day !== 6;
+}
+
+function tradingDaysBetween(olderValue, newerValue) {
+  const older = isoDate(olderValue);
+  const newer = isoDate(newerValue);
+  if (!older || !newer) return null;
+  if (newer <= older) return 0;
+  let count = 0;
+  const cursor = new Date(`${older}T12:00:00Z`);
+  cursor.setUTCDate(cursor.getUTCDate() + 1);
+  while (isoDay(cursor) <= newer) {
+    if (isUsTradingDay(isoDay(cursor))) count += 1;
+    cursor.setUTCDate(cursor.getUTCDate() + 1);
+  }
+  return count;
+}
+
+export function normalizeReturnDecimal({ pct = null, abs = null, close = null } = {}) {
+  const raw = finiteNumber(pct);
+  if (raw == null) return { value: null, status: 'missing', reason: 'return missing' };
+  const absChange = finiteNumber(abs);
+  const lastClose = finiteNumber(close);
+  if (absChange != null && lastClose != null) {
+    const prevClose = lastClose - absChange;
+    if (prevClose > 0) {
+      const expected = absChange / prevClose;
+      if (Math.abs(raw - expected) <= 0.0005) {
+        return { value: Number(expected.toFixed(8)), status: 'ok', reason: null, expected };
+      }
+      if (Math.abs((raw / 100) - expected) <= 0.0005) {
+        return { value: Number(expected.toFixed(8)), status: 'normalized_percent_unit', reason: 'daily_change_pct percent-unit normalized to decimal', raw, expected };
+      }
+      return { value: raw, status: 'mismatch', reason: 'daily_change_pct mismatches daily_change_abs and last_close', raw, expected };
+    }
+  }
+  return { value: raw, status: Math.abs(raw) > 1 ? 'implausible' : 'ok', reason: Math.abs(raw) > 1 ? 'return plausibility failed' : null };
+}
+
+function normalizeChangeObject(change = {}, close = null) {
+  const result = normalizeReturnDecimal({
+    pct: change?.pct ?? change?.daily_change_pct,
+    abs: change?.abs ?? change?.daily_change_abs,
+    close,
+  });
+  return {
+    ...change,
+    pct: result.value,
+    daily_change_pct: result.value,
+    _rv_return_integrity: result,
+  };
+}
+
 function strictPageCoreReasons(pageCore) {
   const reasons = [];
   const add = (reason) => {
@@ -138,10 +207,11 @@ function strictPageCoreReasons(pageCore) {
   const statsDate = isoDate(marketStatsMin?.as_of || marketStatsMin?.stats_date || pageCore?.stats_date);
   const targetDate = isoDate(pageCore?.target_market_date);
   const freshness = String(pageCore?.freshness?.status || '').toLowerCase();
-  if (pageCore?.ui_banner_state !== 'all_systems_operational'
-    && String(pageCore?.status_contract?.stock_detail_view_status || '').toLowerCase() !== 'operational') {
-    add('ui_banner_not_operational');
-  }
+  const lagTradingDays = latestBarDate && targetDate ? tradingDaysBetween(latestBarDate, targetDate) : null;
+  const latestBarFreshEnough = lagTradingDays != null && lagTradingDays <= PAGE_CORE_MAX_STALE_TRADING_DAYS;
+  const primaryBlocker = String(pageCore?.primary_blocker || '');
+  const claimsNonOperational = pageCore?.ui_banner_state !== 'all_systems_operational'
+    && String(pageCore?.status_contract?.stock_detail_view_status || '').toLowerCase() !== 'operational';
   if (!marketStatsMin) add('missing_market_stats_basis');
   else {
     if (!stats || Object.keys(stats).length === 0) add('missing_market_stats_values');
@@ -155,9 +225,10 @@ function strictPageCoreReasons(pageCore) {
     if (Array.isArray(marketStatsMin.issues) && marketStatsMin.issues.length) add(`market_stats_issue:${marketStatsMin.issues[0]}`);
   }
   if (pageCore?.key_levels_ready !== true || marketStatsMin?.key_levels_ready === false) add('key_levels_not_ready');
-  if (targetDate && (!latestBarDate || latestBarDate < targetDate)) add('bars_stale');
-  if (['stale', 'expired', 'missing', 'last_good', 'error'].includes(freshness)) add(`freshness_${freshness}`);
-  if (pageCore?.primary_blocker) add(`primary_blocker:${pageCore.primary_blocker}`);
+  if (targetDate && (!latestBarDate || (!latestBarFreshEnough && latestBarDate < targetDate))) add('bars_stale');
+  if (['stale', 'expired', 'missing', 'last_good', 'error'].includes(freshness) && !latestBarFreshEnough) add(`freshness_${freshness}`);
+  if (primaryBlocker && !(primaryBlocker === 'bars_stale' && latestBarFreshEnough)) add(`primary_blocker:${primaryBlocker}`);
+  if (claimsNonOperational && reasons.length > 0) add('ui_banner_not_operational');
   return reasons;
 }
 
@@ -165,6 +236,12 @@ function pageCoreToSummary(pageCore) {
   const ticker = pageCore?.display_ticker || pageCore?.canonical_asset_id?.split(':')?.pop() || null;
   const asOf = pageCore?.freshness?.as_of || pageCore?.freshness?.generated_at?.slice?.(0, 10) || null;
   const close = Number.isFinite(Number(pageCore?.summary_min?.last_close)) ? Number(pageCore.summary_min.last_close) : null;
+  const normalizedChange = normalizeChangeObject({
+    abs: pageCore?.summary_min?.daily_change_abs ?? null,
+    pct: pageCore?.summary_min?.daily_change_pct ?? null,
+    daily_change_abs: pageCore?.summary_min?.daily_change_abs ?? null,
+    daily_change_pct: pageCore?.summary_min?.daily_change_pct ?? null,
+  }, close);
   const marketStatsMin = pageCore?.market_stats_min && typeof pageCore.market_stats_min === 'object' ? pageCore.market_stats_min : null;
   const marketStats = marketStatsMin?.stats && typeof marketStatsMin.stats === 'object'
     ? {
@@ -219,10 +296,9 @@ function pageCoreToSummary(pageCore) {
     },
     market_stats: marketStats,
     change: {
+      ...normalizedChange,
       abs: pageCore?.summary_min?.daily_change_abs ?? null,
-      pct: pageCore?.summary_min?.daily_change_pct ?? null,
       daily_change_abs: pageCore?.summary_min?.daily_change_abs ?? null,
-      daily_change_pct: pageCore?.summary_min?.daily_change_pct ?? null,
     },
     decision: {
       verdict: pageCore?.summary_min?.decision_verdict || null,
@@ -237,6 +313,12 @@ function pageCoreToSummary(pageCore) {
       signal_quality: signalQuality,
       blocking_reasons: effectiveBlockingReasons,
       warnings: pageCore?.governance_summary?.warnings || [],
+    },
+    page_core_contract: {
+      coverage: pageCore?.coverage || null,
+      status_contract: pageCore?.status_contract || null,
+      ui_banner_state: pageCore?.ui_banner_state || null,
+      primary_blocker: pageCore?.primary_blocker || null,
     },
     module_freshness: {
       price_as_of: asOf,
@@ -677,6 +759,7 @@ export function transformV2ToStockShape(v2Data, v2Meta, historicalData = null, g
   });
   const marketPrices = canonicalMarket.marketPrices || pickLatestMarketPrices(v2Data.market_prices || {}, latestBar);
   const marketStats = canonicalMarket.marketStats || (hasMeaningfulMarketStats(v2Data.market_stats) ? v2Data.market_stats : (v2Data.market_stats || {}));
+  const normalizedChange = normalizeChangeObject(v2Data.change || {}, marketPrices?.close ?? latestBar?.close ?? null);
   const derivedStates = deriveStatesFromMarketContext({ stats: marketStats?.stats || {}, close: marketPrices?.close, latestBar });
   const mergedFundamentals = isMeaningfulFundamentals(fundamentalsData) ? fundamentalsData : (fundamentalsData || null);
   const pageAsOf = marketPrices?.date || latestBar?.date || v2Meta?.data_date || null;
@@ -721,7 +804,7 @@ export function transformV2ToStockShape(v2Data, v2Meta, historicalData = null, g
       bars,
       market_prices: marketPrices,
       market_stats: marketStats,
-      change: v2Data.change || {},
+      change: normalizedChange,
       breakout_v12: historicalData?.breakout_v12 || v2Data?.breakout_v12 || null,
       breakout_v2: historicalData?.breakout_v2 || v2Data?.breakout_v2 || null,
       breakout_v2_legacy: historicalData?.breakout_v2_legacy || v2Data?.breakout_v2_legacy || null,
@@ -747,6 +830,7 @@ export function transformV2ToStockShape(v2Data, v2Meta, historicalData = null, g
           profile_as_of: historicalProfile?.profile?.latest_date || null,
           regime_as_of: historicalProfile?.regime?.date || null,
         },
+        page_core: v2Data.page_core_contract || null,
       },
       source_provenance: {
         market_stats_source: hasMeaningfulMarketStats(v2Data.market_stats) ? 'v2_summary' : 'none',

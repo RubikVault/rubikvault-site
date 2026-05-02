@@ -1,6 +1,6 @@
 import { isV2Enabled, v2GateResponse } from '../../../_shared/v2-gate.js';
 import { fetchStockSummary } from '../../../_shared/data-interface.js';
-import { pageCoreStrictOperationalReasons, readPageCoreForTicker } from '../../../_shared/page-core-reader.js';
+import { pageCoreReturnIntegrity, pageCoreStrictOperationalReasons, readPageCoreForTicker } from '../../../_shared/page-core-reader.js';
 import { normalizeTicker } from '../../../_shared/stock-helpers.js';
 import { logV2Request, logV2Gate } from '../../../_shared/v2-observability.js';
 import { errorEnvelope, jsonEnvelopeResponse } from '../../../_shared/envelope.js';
@@ -9,6 +9,7 @@ function buildSummaryFromPageCore(pageCore) {
   const ticker = pageCore?.display_ticker || pageCore?.canonical_asset_id?.split(':')?.pop() || null;
   const asOf = pageCore?.freshness?.as_of || pageCore?.freshness?.generated_at?.slice?.(0, 10) || null;
   const close = Number.isFinite(Number(pageCore?.summary_min?.last_close)) ? Number(pageCore.summary_min.last_close) : null;
+  const returnIntegrity = pageCoreReturnIntegrity(pageCore);
   const marketStatsMin = pageCore?.market_stats_min && typeof pageCore.market_stats_min === 'object' ? pageCore.market_stats_min : null;
   const marketStats = marketStatsMin?.stats && typeof marketStatsMin.stats === 'object'
     ? {
@@ -48,9 +49,10 @@ function buildSummaryFromPageCore(pageCore) {
     market_stats: marketStats,
     change: {
       abs: pageCore?.summary_min?.daily_change_abs ?? null,
-      pct: pageCore?.summary_min?.daily_change_pct ?? null,
+      pct: returnIntegrity.value,
       daily_change_abs: pageCore?.summary_min?.daily_change_abs ?? null,
-      daily_change_pct: pageCore?.summary_min?.daily_change_pct ?? null,
+      daily_change_pct: returnIntegrity.value,
+      _rv_return_integrity: returnIntegrity,
     },
     decision: {
       verdict: pageCore?.summary_min?.decision_verdict || null,
@@ -73,6 +75,12 @@ function buildSummaryFromPageCore(pageCore) {
       signal_quality: signalQuality,
       blocking_reasons: effectiveBlockingReasons,
       warnings: pageCore?.governance_summary?.warnings || [],
+    },
+    page_core_contract: {
+      coverage: pageCore?.coverage || null,
+      status_contract: pageCore?.status_contract || null,
+      ui_banner_state: pageCore?.ui_banner_state || null,
+      primary_blocker: pageCore?.primary_blocker || null,
     },
     module_freshness: { price_as_of: asOf, historical_as_of: asOf, market_stats_as_of: asOf },
   };
