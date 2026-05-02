@@ -158,6 +158,10 @@ function splitBlockingReasons(reasons) {
       || text.startsWith('minimum_n_')
       || text.startsWith('learning_')
       || text.startsWith('governance_blocked')
+      || text.startsWith('breakout_v12_')
+      || text === 'fundamentals_missing_or_untyped'
+      || text === 'forecast_missing_or_untyped'
+      || text === 'catalysts_missing_or_untyped'
     ) {
       decision.push(text);
     } else {
