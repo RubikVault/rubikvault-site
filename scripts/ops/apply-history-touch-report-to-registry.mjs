@@ -20,6 +20,7 @@ function parseArgs(argv) {
     dryRun: false,
     scanExistingPacks: false,
     ignoreFresh: false,
+    allowEmpty: false,
   };
   for (let i = 0; i < argv.length; i += 1) {
     const arg = String(argv[i] || '');
@@ -35,6 +36,7 @@ function parseArgs(argv) {
     else if (arg === '--dry-run') out.dryRun = true;
     else if (arg === '--scan-existing-packs') out.scanExistingPacks = true;
     else if (arg === '--ignore-fresh') out.ignoreFresh = true;
+    else if (arg === '--allow-empty') out.allowEmpty = true;
   }
   return out;
 }
@@ -314,7 +316,7 @@ function main() {
   const targetDate = normalizeDate(touchReport?.meta?.to_date || touchReport?.to_date || null);
   const touchIndex = buildTouchIndex(touchReport);
   const appliedAt = new Date().toISOString();
-  if (!touchIndex.size && !args.scanExistingPacks) {
+  if (!touchIndex.size && !args.scanExistingPacks && !args.allowEmpty) {
     throw new Error(`history_touch_report_has_no_entries:${args.touchReport}`);
   }
 
