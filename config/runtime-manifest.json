@@ -75,7 +75,7 @@
     { "pattern": "data/page-core/snapshots/**/page-shards/*.json.gz", "maxFileSizeBytes": 1048576, "class": "page-core-page-shard" },
     { "pattern": "data/hist-probs-public/latest.json", "maxFileSizeBytes": 4096, "class": "hist-probs-public-pointer" },
     { "pattern": "data/hist-probs-public/manifest.json", "maxFileSizeBytes": 1048576, "class": "hist-probs-public-manifest" },
-    { "pattern": "data/hist-probs-public/shards/*.json", "maxFileSizeBytes": 2097152, "class": "hist-probs-public-shard" },
+    { "pattern": "data/hist-probs-public/shards/*.json", "maxFileSizeBytes": 6291456, "class": "hist-probs-public-shard" },
     { "pattern": "data/breakout/status.json", "maxFileSizeBytes": 65536, "class": "breakout-v12-status" },
     { "pattern": "data/breakout/manifests/*.json", "maxFileSizeBytes": 65536, "class": "breakout-v12-manifest-pointer" },
     { "pattern": "data/breakout/reports/validity/*.json", "maxFileSizeBytes": 262144, "class": "breakout-v12-validity-report" },
