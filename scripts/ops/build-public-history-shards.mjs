@@ -18,9 +18,11 @@ const BENCHMARK_SYMBOLS = new Set(['SPY', 'QQQ', 'DIA', 'IWM', 'VTI', 'VOO']);
 
 function argValue(name, fallback = null) {
   const prefix = `${name}=`;
-  const hit = process.argv.slice(2).find((arg) => arg === name || arg.startsWith(prefix));
-  if (!hit) return fallback;
-  if (hit === name) return true;
+  const args = process.argv.slice(2);
+  const index = args.findIndex((arg) => arg === name || arg.startsWith(prefix));
+  if (index < 0) return fallback;
+  const hit = args[index];
+  if (hit === name) return args[index + 1] ?? true;
   return hit.slice(prefix.length);
 }
 
