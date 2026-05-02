@@ -89,8 +89,14 @@ function assertRefreshEvidence(reportPath, targetMarketDate) {
   const toDate = isoDate(report?.to_date || report?.target_market_date);
   const requested = Number(report?.assets_requested || 0);
   const found = Number(report?.assets_found_in_registry || 0);
+  const changed = Number(report?.assets_changed || 0);
   const errors = Number(report?.fetch_errors_total || 0);
-  if (status !== 'ok') throw new Error(`refresh_report_not_ok:${status}`);
+  const partialOk = ['provider_blocked_partial', 'budget_stopped_partial'].includes(status)
+    && String(report?.provider_blocked_reason || '').toLowerCase() === 'bulk_yield_below_threshold'
+    && Number.isFinite(changed)
+    && changed > 0
+    && (!Number.isFinite(errors) || errors === 0);
+  if (status !== 'ok' && !partialOk) throw new Error(`refresh_report_not_ok:${status}`);
   if (toDate !== targetMarketDate) throw new Error(`refresh_report_target_mismatch:${toDate}:${targetMarketDate}`);
   if (!Number.isFinite(requested) || requested <= 0) throw new Error('refresh_report_assets_requested_missing');
   if (!Number.isFinite(found) || found <= 0) throw new Error('refresh_report_assets_found_missing');
