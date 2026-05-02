@@ -158,6 +158,9 @@ function tradingDaysBetween(olderValue, newerValue) {
   return count;
 }
 
+// SSOT: functions/api/_shared/return-units.js — client keeps inline copy as defense-in-depth
+// (browser cannot import from functions/api/_shared; server normalizes at write-time,
+// client re-normalizes idempotently for legacy data or CDN-cached bundles)
 export function normalizeReturnDecimal({ pct = null, abs = null, close = null } = {}) {
   const raw = finiteNumber(pct);
   if (raw == null) return { value: null, status: 'missing', reason: 'return missing' };

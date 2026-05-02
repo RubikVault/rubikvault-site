@@ -5,6 +5,7 @@ import path from 'node:path';
 import zlib from 'node:zlib';
 import Ajv2020 from 'ajv/dist/2020.js';
 import { computeIndicators } from '../../functions/api/_shared/eod-indicators.mjs';
+import { normalizeReturnDecimal } from '../../functions/api/_shared/return-units.js';
 import {
   assessMarketDataConsistency,
   buildMarketPricesFromBar,
@@ -542,7 +543,9 @@ function buildPageCoreRow({ canonicalId, registryRow, decisionRow, lookupValue, 
     ? 'historical-bars'
     : (registryClose != null ? 'registry_tmp_recent_closes' : null);
   const dailyChangeAbs = lastClose != null && prevClose != null ? Number((lastClose - prevClose).toFixed(6)) : null;
-  const dailyChangePct = dailyChangeAbs != null && prevClose ? Number((dailyChangeAbs / prevClose).toFixed(8)) : null;
+  const rawDailyChangePct = dailyChangeAbs != null && prevClose ? Number((dailyChangeAbs / prevClose).toFixed(8)) : null;
+  const returnIntegrity = normalizeReturnDecimal({ pct: rawDailyChangePct, abs: dailyChangeAbs, close: lastClose });
+  const dailyChangePct = returnIntegrity.value;
   const qualityStatus = decisionRow?.pipeline_status || (registryRow ? 'DEGRADED' : 'MISSING_DATA');
   const blockingReasons = Array.isArray(decisionRow?.blocking_reasons)
     ? decisionRow.blocking_reasons
