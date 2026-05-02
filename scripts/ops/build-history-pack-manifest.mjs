@@ -151,10 +151,9 @@ function main() {
       missing_pack_canonical_ids: missingPackCanonicalIds.length,
     },
     asset_classes: assetClasses,
-    by_symbol: bySymbol,
     by_canonical_id: byCanonicalId,
     missing_pack_canonical_ids: missingPackCanonicalIds.slice(0, 1000),
-  });
+  }, 0); // compact JSON — must stay under CF 25 MiB per-file limit
 
   writeJson(lookupPath, {
     schema: `rv.history_pack_manifest.${args.scope}.lookup.v1`,
