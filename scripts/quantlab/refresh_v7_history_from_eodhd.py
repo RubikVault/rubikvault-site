@@ -122,6 +122,54 @@ def release_job_lock(lock_path: Path | None) -> None:
         pass
 
 
+def reset_run_state(state_root: Path, job_name: str, run_id: str) -> dict[str, Any]:
+    """Wipe prior status JSONs + dead worker locks so a previous failure cannot mask the new run.
+
+    MUST be called AFTER acquire_job_lock has succeeded (PID-protected). Only removes:
+      - <job>.json, <job>.report.json, <job>.fetched-assets.json
+      - parallel_targeted_refresh_runs/*.lock whose recorded PID is no longer alive
+    Then writes a fresh starting-state JSON.
+    """
+    summary: dict[str, Any] = {"removed_state_files": [], "removed_dead_locks": 0, "kept_live_locks": 0}
+    for fname in (f"{job_name}.json", f"{job_name}.report.json", f"{job_name}.fetched-assets.json"):
+        target = state_root / fname
+        if target.exists():
+            try:
+                target.unlink()
+                summary["removed_state_files"].append(fname)
+            except Exception as exc:
+                summary.setdefault("errors", []).append({"file": fname, "error": f"{type(exc).__name__}:{exc}"})
+    workers_dir = state_root / "parallel_targeted_refresh_runs"
+    if workers_dir.is_dir():
+        for lock_file in workers_dir.glob("*.lock"):
+            existing_pid = 0
+            try:
+                payload = json.loads(lock_file.read_text() or "{}")
+                existing_pid = int(payload.get("pid") or 0)
+            except Exception:
+                existing_pid = 0
+            if existing_pid and _pid_is_running(existing_pid):
+                summary["kept_live_locks"] += 1
+                continue
+            try:
+                lock_file.unlink()
+                summary["removed_dead_locks"] += 1
+            except FileNotFoundError:
+                pass
+            except Exception as exc:
+                summary.setdefault("errors", []).append({"lock": str(lock_file), "error": f"{type(exc).__name__}:{exc}"})
+    atomic_write_json(
+        state_root / f"{job_name}.json",
+        {
+            "status": "starting",
+            "generated_at": utc_now_iso(),
+            "run_id": run_id,
+            "reset_summary": summary,
+        },
+    )
+    return summary
+
+
 def acquire_flock_lock(lock_path: Path) -> None:
     lock_path.parent.mkdir(parents=True, exist_ok=True)
     fd = os.open(lock_path, os.O_CREAT | os.O_RDWR, 0o666)
@@ -301,6 +349,30 @@ def parse_args(argv: Iterable[str]) -> argparse.Namespace:
     )
     p.add_argument("--job-name", default="refresh_v7_history_from_eodhd")
     p.add_argument("--report-path", default="")
+    p.add_argument(
+        "--reset-state-on-start",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="On start (after lock), unlink prior state JSONs and dead worker locks so a stale failure (e.g. provider_blocked) cannot mask the new run.",
+    )
+    p.add_argument(
+        "--bulk-min-yield-ratio",
+        type=float,
+        default=float(os.environ.get("RV_EODHD_BULK_MIN_YIELD_RATIO", "0.80")),
+        help="In --bulk-last-day mode, abort further EODHD use if matched_rows/expected_assets falls below this. 0 disables.",
+    )
+    p.add_argument(
+        "--bulk-min-rows-matched",
+        type=int,
+        default=int(os.environ.get("RV_EODHD_BULK_MIN_ROWS_MATCHED", "50000")),
+        help="In --bulk-last-day mode, abort further EODHD use if absolute matched-rows count falls below this. 0 disables.",
+    )
+    p.add_argument(
+        "--hard-daily-cap-calls",
+        type=int,
+        default=int(os.environ.get("RV_EODHD_HARD_DAILY_CAP", "0")),
+        help="Hard kill ceiling on api_attempts_total (eodhd weighted). Distinct from soft --max-eodhd-calls. 0 disables.",
+    )
     return p.parse_args(list(argv))
 
 
@@ -906,6 +978,9 @@ def main(argv: Iterable[str]) -> int:
         raise
     try:
         state_root.mkdir(parents=True, exist_ok=True)
+        if bool(getattr(args, "reset_state_on_start", True)):
+            reset_summary = reset_run_state(state_root, args.job_name, run_id)
+            print(json.dumps({"reset_run_state": reset_summary, "run_id": run_id}), flush=True)
         fetched_assets_by_index: dict[int, dict[str, Any]] = {}
         fetch_errors: list[dict[str, Any]] = []
         pack_updates: dict[str, dict[str, list[dict[str, Any]]]] = {}
@@ -919,6 +994,7 @@ def main(argv: Iterable[str]) -> int:
         progress_every = max(0, int(args.progress_every or 0))
         flush_every = max(1, int(args.flush_every or 1000))
         max_eodhd_calls = max(0, int(args.max_eodhd_calls or 0))
+        hard_daily_cap = max(0, int(getattr(args, "hard_daily_cap_calls", 0) or 0))
         indexed_allowlist = list(enumerate(allowlist_ids, start=1))
         indexed_registry: list[tuple[int, str, AssetMeta]] = []
         for index, canonical_id in indexed_allowlist:
@@ -1060,9 +1136,16 @@ def main(argv: Iterable[str]) -> int:
                 "last_date": str(item.get("last_date") or ""),
             }
 
+        def _hard_cap_reached() -> bool:
+            return hard_daily_cap > 0 and eodhd_attempts_total >= hard_daily_cap
+
         def _eodhd_budget_stopped(meta: AssetMeta) -> bool:
             if STOP_REQUESTED:
                 return True
+            if _hard_cap_reached():
+                if EODHD_DISABLED_REASON is None:
+                    globals()["EODHD_DISABLED_REASON"] = "hard_daily_cap_reached"
+                return not (meta.exchange == "US" and args.us_provider_mode == "stooq-only")
             if max_eodhd_calls > 0 and eodhd_attempts_total >= max_eodhd_calls:
                 return not (meta.exchange == "US" and args.us_provider_mode == "stooq-only")
             if EODHD_DISABLED_REASON:
@@ -1203,6 +1286,11 @@ def main(argv: Iterable[str]) -> int:
             for ex in exchanges:
                 if STOP_REQUESTED:
                     break
+                if _hard_cap_reached():
+                    if EODHD_DISABLED_REASON is None:
+                        globals()["EODHD_DISABLED_REASON"] = "hard_daily_cap_reached"
+                    skipped_due_to_stop += sum(1 for _, _, meta in indexed_registry if meta.exchange == ex)
+                    continue
                 if max_eodhd_calls > 0 and eodhd_attempts_total >= max_eodhd_calls:
                     skipped_due_to_stop += sum(1 for _, _, meta in indexed_registry if meta.exchange == ex)
                     continue
@@ -1283,6 +1371,31 @@ def main(argv: Iterable[str]) -> int:
                     )
             if bulk_exchange_errors:
                 fetch_errors.extend(bulk_exchange_errors[:50])
+            bulk_min_yield_ratio = float(getattr(args, "bulk_min_yield_ratio", 0.0) or 0.0)
+            bulk_min_rows_matched = int(getattr(args, "bulk_min_rows_matched", 0) or 0)
+            bulk_expected = max(1, len(indexed_registry))
+            bulk_yield_ratio = bulk_rows_matched / bulk_expected
+            yield_below_ratio = bulk_min_yield_ratio > 0 and bulk_yield_ratio < bulk_min_yield_ratio
+            yield_below_abs = bulk_min_rows_matched > 0 and bulk_rows_matched < bulk_min_rows_matched
+            if (yield_below_ratio or yield_below_abs) and not STOP_REQUESTED:
+                if EODHD_DISABLED_REASON is None:
+                    globals()["EODHD_DISABLED_REASON"] = "bulk_yield_below_threshold"
+                print(
+                    json.dumps(
+                        {
+                            "warning": "bulk_yield_below_threshold",
+                            "ratio": round(bulk_yield_ratio, 4),
+                            "matched": bulk_rows_matched,
+                            "expected": bulk_expected,
+                            "rows_total": bulk_rows_total,
+                            "rows_wrong_date": bulk_rows_wrong_date,
+                            "min_ratio": bulk_min_yield_ratio,
+                            "min_matched": bulk_min_rows_matched,
+                            "exchanges_failed": [e.get("exchange") for e in bulk_exchange_errors],
+                        }
+                    ),
+                    flush=True,
+                )
         elif concurrency <= 1:
             for index, canonical_id, meta in indexed_registry:
                 if _eodhd_budget_stopped(meta):

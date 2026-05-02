@@ -55,7 +55,20 @@ const coreSealReady = seal?.release_ready === true && releaseEvidenceFresh;
 const pageCoreManifestPath = pageCoreLatest?.snapshot_path
   ? path.join(REPO_ROOT, 'public', String(pageCoreLatest.snapshot_path).replace(/^\/+/, ''), 'manifest.json')
   : null;
-const pageCoreGreen = Boolean(
+// Defense-in-depth freshness gate: weekends + holidays can legitimately sit at ~72h, so the
+// default 96h threshold tolerates Sun/Mon while still catching multi-day stalls. Override via
+// RV_PUBLIC_STATUS_MAX_STALENESS_HOURS (e.g. 48 for stricter weekday-only checks).
+const MAX_STALENESS_HOURS = Number(process.env.RV_PUBLIC_STATUS_MAX_STALENESS_HOURS || 96);
+let pageCoreFreshnessLagHours = null;
+let pageCoreFreshnessOk = true;
+if (targetDate) {
+  const targetMs = Date.parse(`${String(targetDate).slice(0, 10)}T00:00:00Z`);
+  if (Number.isFinite(targetMs)) {
+    pageCoreFreshnessLagHours = Math.max(0, Math.round((Date.now() - targetMs) / 3600000));
+    pageCoreFreshnessOk = pageCoreFreshnessLagHours <= MAX_STALENESS_HOURS;
+  }
+}
+const pageCoreStructureGreen = Boolean(
   pageCoreLatest?.schema === 'rv.page_core_latest.v1'
   && pageCoreLatest?.snapshot_id
   && Number(pageCoreLatest?.alias_shard_count) === 64
@@ -63,6 +76,7 @@ const pageCoreGreen = Boolean(
   && pageCoreManifestPath
   && fs.existsSync(pageCoreManifestPath)
 );
+const pageCoreGreen = Boolean(pageCoreStructureGreen && pageCoreFreshnessOk);
 const dataPlaneGreen = seal?.data_plane_green !== false;
 const decisionPublicGreen = seal?.decision_public_green === true;
 const histProbsMode = histStatus?.hist_probs_mode
@@ -121,6 +135,9 @@ const doc = {
   page_core_source: pageCoreSource,
   release_evidence_fresh: releaseEvidenceFresh,
   page_core_green: pageCoreGreen,
+  page_core_freshness_ok: pageCoreFreshnessOk,
+  page_core_freshness_lag_hours: pageCoreFreshnessLagHours,
+  page_core_freshness_max_hours: MAX_STALENESS_HOURS,
   stock_analyzer_ui_state_green: stockUiStateGreen,
   decision_public_green: decisionPublicGreen,
   data_plane_green: dataPlaneGreen,

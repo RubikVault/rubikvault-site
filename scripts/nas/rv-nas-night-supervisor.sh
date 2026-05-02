@@ -267,6 +267,16 @@ print(json.dumps({
 PY
 }
 
+purge_stale_market_refresh_state() {
+  # Räume tote Worker-Locks im parallel_targeted_refresh_runs/-Friedhof älter als 3h.
+  # Nur NAS-relevant; main job lock + state JSONs werden vom Python-Skript via
+  # --reset-state-on-start nach erfolgreichem acquire_job_lock entfernt.
+  local workers_dir="${NIGHT_REPO_ROOT:-$REPO_ROOT}/mirrors/universe-v7/state/parallel_targeted_refresh_runs"
+  if [[ -d "$workers_dir" ]]; then
+    find "$workers_dir" -type f -name '*.lock' -mmin +180 -delete 2>/dev/null || true
+  fi
+}
+
 assert_eodhd_budget() {
   local required_calls="$1"
   local budget
@@ -494,7 +504,7 @@ step_command() {
       ;;
     market_data_refresh)
       # pack-manifest.global goes to RV_GLOBAL_MANIFEST_DIR via env var (set in nas-env.sh)
-      printf '%s\n' "python3 scripts/quantlab/refresh_v7_history_from_eodhd.py --env-file '$RV_EODHD_ENV_FILE' --allowlist-path public/data/universe/v7/ssot/assets.global.canonical.ids.json --from-date '$TARGET_MARKET_DATE' --to-date '$TARGET_MARKET_DATE' --bulk-last-day --bulk-exchange-cost '${RV_EODHD_BULK_EXCHANGE_COST:-100}' --global-lock-path '$NAS_LOCK_ROOT/eodhd.lock' --max-eodhd-calls '${RV_MARKET_REFRESH_MAX_EODHD_CALLS:-0}' --max-retries '${RV_MARKET_REFRESH_MAX_RETRIES:-1}' --timeout-sec '${RV_MARKET_REFRESH_TIMEOUT_PER_REQUEST_SEC:-60}' --flush-every '${RV_MARKET_REFRESH_FLUSH_EVERY:-250}' --concurrency '$MARKET_REFRESH_CONCURRENCY' --progress-every '$MARKET_REFRESH_PROGRESS_EVERY' --write-mode '${RV_HISTORY_WRITE_MODE:-merge}' && node scripts/ops/apply-history-touch-report-to-registry.mjs --scan-existing-packs && node scripts/ops/build-history-pack-manifest.mjs --scope global --asset-classes '$GLOBAL_ASSET_CLASSES' && node scripts/ops/report-history-coverage.mjs --asset-classes '$GLOBAL_ASSET_CLASSES' --target-market-date '$TARGET_MARKET_DATE'"
+      printf '%s\n' "python3 scripts/quantlab/refresh_v7_history_from_eodhd.py --env-file '$RV_EODHD_ENV_FILE' --allowlist-path public/data/universe/v7/ssot/assets.global.canonical.ids.json --from-date '$TARGET_MARKET_DATE' --to-date '$TARGET_MARKET_DATE' --bulk-last-day --bulk-exchange-cost '${RV_EODHD_BULK_EXCHANGE_COST:-100}' --global-lock-path '$NAS_LOCK_ROOT/eodhd.lock' --max-eodhd-calls '${RV_MARKET_REFRESH_MAX_EODHD_CALLS:-0}' --max-retries '${RV_MARKET_REFRESH_MAX_RETRIES:-1}' --timeout-sec '${RV_MARKET_REFRESH_TIMEOUT_PER_REQUEST_SEC:-60}' --flush-every '${RV_MARKET_REFRESH_FLUSH_EVERY:-250}' --concurrency '$MARKET_REFRESH_CONCURRENCY' --progress-every '$MARKET_REFRESH_PROGRESS_EVERY' --write-mode '${RV_HISTORY_WRITE_MODE:-merge}' --reset-state-on-start --bulk-min-yield-ratio '${RV_EODHD_BULK_MIN_YIELD_RATIO:-0.80}' --bulk-min-rows-matched '${RV_EODHD_BULK_MIN_ROWS_MATCHED:-50000}' --hard-daily-cap-calls '${RV_EODHD_HARD_DAILY_CAP:-90000}' && node scripts/ops/apply-history-touch-report-to-registry.mjs --scan-existing-packs && node scripts/ops/build-history-pack-manifest.mjs --scope global --asset-classes '$GLOBAL_ASSET_CLASSES' && node scripts/ops/report-history-coverage.mjs --asset-classes '$GLOBAL_ASSET_CLASSES' --target-market-date '$TARGET_MARKET_DATE'"
       ;;
     q1_delta_ingest)
       printf '%s\n' "${RV_Q1_PYTHON_BIN:-python3} scripts/quantlab/run_daily_delta_ingest_q1.py --ingest-date '$TARGET_MARKET_DATE' --workers '${RV_Q1_WORKERS:-1}'"
@@ -772,6 +782,7 @@ run_step() {
   write_status "running" "step_start" "$step_id"
 
   if [[ "$step_id" == "market_data_refresh" ]]; then
+    purge_stale_market_refresh_state
     if ! assert_eodhd_budget "${RV_MARKET_REFRESH_MIN_EODHD_AVAILABLE_CALLS:-10000}"; then
       write_guard_blocked_result "$result_json" "$step_id" "eodhd_budget_below_floor" "$resource_class" "$heap_mb" "$mem_before_kb" "$swap_before_kb"
       write_status "guard_blocked" "eodhd_budget_below_floor" "$step_id"

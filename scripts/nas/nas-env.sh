@@ -27,6 +27,15 @@ export QUANT_ROOT="${QUANT_ROOT:-$NAS_QUANT_ROOT}"
 export RV_EODHD_ENV_FILE="${RV_EODHD_ENV_FILE:-$NAS_DEV_ROOT/.env.local}"
 export RV_CLOUDFLARE_ENV_FILE="${RV_CLOUDFLARE_ENV_FILE:-$NAS_OPS_ROOT/secrets/cloudflare.env}"
 
+# EODHD daily-fetch robustness (consumed by rv-nas-night-supervisor.sh + refresh_v7_history_from_eodhd.py).
+# Floor below which the budget pre-flight blocks the market_data_refresh step.
+export RV_MARKET_REFRESH_MIN_EODHD_AVAILABLE_CALLS="${RV_MARKET_REFRESH_MIN_EODHD_AVAILABLE_CALLS:-10000}"
+# Bulk-yield guard: abort further EODHD use if the bulk fetch underdelivers.
+export RV_EODHD_BULK_MIN_YIELD_RATIO="${RV_EODHD_BULK_MIN_YIELD_RATIO:-0.80}"
+export RV_EODHD_BULK_MIN_ROWS_MATCHED="${RV_EODHD_BULK_MIN_ROWS_MATCHED:-50000}"
+# Hard kill ceiling on EODHD attempts (eodhd weighted). Distinct from soft --max-eodhd-calls.
+export RV_EODHD_HARD_DAILY_CAP="${RV_EODHD_HARD_DAILY_CAP:-90000}"
+
 export NAS_RUNTIME_ROOT="${NAS_RUNTIME_ROOT:-$NAS_OPS_ROOT/runtime}"
 export NAS_LOCK_ROOT="${NAS_LOCK_ROOT:-$NAS_RUNTIME_ROOT/locks}"
 export NAS_REPORTS_ROOT="${NAS_REPORTS_ROOT:-$NAS_RUNTIME_ROOT/reports}"
