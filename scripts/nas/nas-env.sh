@@ -35,6 +35,11 @@ export RV_EODHD_BULK_MIN_YIELD_RATIO="${RV_EODHD_BULK_MIN_YIELD_RATIO:-0.80}"
 export RV_EODHD_BULK_MIN_ROWS_MATCHED="${RV_EODHD_BULK_MIN_ROWS_MATCHED:-50000}"
 # Hard kill ceiling on EODHD attempts (eodhd weighted). Distinct from soft --max-eodhd-calls.
 export RV_EODHD_HARD_DAILY_CAP="${RV_EODHD_HARD_DAILY_CAP:-90000}"
+# Step timeout for market_data_refresh. Default 28800 (8h) was insufficient — Fri 2026-05-01
+# bulk-fetch reached only 3,323 / 86,231 assets in 7h39m at ~50 assets/min. 43200 (12h)
+# extends the budget while still finishing well before the next EODHD daily-cap reset
+# at midnight UTC. Override per-environment if your bulk rate differs.
+export RV_MARKET_REFRESH_TIMEOUT_SEC="${RV_MARKET_REFRESH_TIMEOUT_SEC:-43200}"
 
 export NAS_RUNTIME_ROOT="${NAS_RUNTIME_ROOT:-$NAS_OPS_ROOT/runtime}"
 export NAS_LOCK_ROOT="${NAS_LOCK_ROOT:-$NAS_RUNTIME_ROOT/locks}"
