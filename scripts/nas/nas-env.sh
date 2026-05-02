@@ -56,7 +56,7 @@ export NAS_NIGHT_PIPELINE_ROOT="${NAS_NIGHT_PIPELINE_ROOT:-$NAS_RUNTIME_ROOT/nig
 #
 # RV_GLOBAL_MANIFEST_DIR  → build-history-pack-manifest.mjs (--scope global)
 #   Keeps pack-manifest.global.json (~40 MB) out of public/data/eod/history/.
-#   Note: pack-manifest.us-eu.json always stays in public/ — it IS served at runtime.
+#   Public runtime uses compact data/eod/history/shards/*.json.gz instead of pack manifests.
 #
 # RV_MARKETPHASE_DEEP_SUMMARY_PATH → build-marketphase-deep-summary.mjs
 #   Keeps marketphase_deep_summary.json (~35 MB) out of public/data/universe/v7/read_models/.

@@ -76,8 +76,10 @@ const RSYNC_EXCLUDES = [
   // Too large for Cloudflare Pages (25 MiB per-file limit)
   'data/ops/stock-analyzer-operability-latest.json', // full universe audit — 50–60 MB, not served by Pages
   'data/ops/mac-history-rescue-all-latest.json',     // rescue audit snapshot — build-only
-  'data/eod/history/pack-manifest.global.json',      // global pack manifest — 40 MB, build-only; runtime uses us-eu
-  'data/eod/history/pack-manifest.global.lookup.json', // global lookup — also build-only
+  'data/eod/history/pack-manifest.global.json',      // global pack manifest — build-only
+  'data/eod/history/pack-manifest.global.lookup.json', // global lookup — build-only
+  'data/eod/history/pack-manifest.us-eu.json',       // oversized build manifest; runtime uses public shards
+  'data/eod/history/pack-manifest.us-eu.lookup.json', // manifest lookup pairs with oversized manifest
   'data/universe/v7/read_models/marketphase_deep_summary.json', // 35 MB NAS-generated deep summary — build-only
   // Mac metadata artifacts — never appropriate in a web bundle
   '.DS_Store',
