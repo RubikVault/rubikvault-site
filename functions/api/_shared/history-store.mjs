@@ -116,6 +116,7 @@ export function resolveLocalAssetPaths(relPath) {
         const packRelative = relative.slice(historyPackPrefix.length);
         if (packRelative) {
             candidates.push(path.join(REPO_ROOT, 'mirrors', 'universe-v7', 'history', packRelative));
+            candidates.push(path.join(REPO_ROOT, 'mirrors', 'universe-v7', 'history', 'history', packRelative));
         }
     }
     return candidates;

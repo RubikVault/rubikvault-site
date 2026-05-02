@@ -12,6 +12,7 @@ const DEFAULT_PACK_ROOTS = [
   process.env.RV_HISTORY_PACK_ROOT,
   process.env.RV_HISTORY_PACK_ROOT ? path.join(process.env.RV_HISTORY_PACK_ROOT, 'history') : '',
   path.join(ROOT, 'mirrors/universe-v7/history'),
+  path.join(ROOT, 'mirrors/universe-v7/history/history'),
   path.join(ROOT, 'public/data/eod/history/packs'),
   '/volume1/homes/neoboy/QuantLabHot/storage/universe-v7-history',
   '/volume1/homes/neoboy/QuantLabHot/storage/universe-v7-history/history',
@@ -71,9 +72,17 @@ function compactBars(rows, limit) {
 }
 
 function resolvePackPath(packPath, roots) {
+  const rawPackPath = String(packPath || '').trim();
+  const variants = [
+    rawPackPath,
+    rawPackPath.replace(/^history\//, ''),
+    rawPackPath.startsWith('history/') ? '' : path.join('history', rawPackPath),
+  ].filter(Boolean);
   for (const root of roots) {
-    const candidate = path.join(root, packPath);
-    if (fs.existsSync(candidate)) return candidate;
+    for (const variant of variants) {
+      const candidate = path.join(root, variant);
+      if (fs.existsSync(candidate)) return candidate;
+    }
   }
   return null;
 }
