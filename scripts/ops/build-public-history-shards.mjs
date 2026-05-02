@@ -10,9 +10,11 @@ const DEFAULT_MANIFEST = path.join(ROOT, 'public/data/eod/history/pack-manifest.
 const DEFAULT_OUT_DIR = path.join(ROOT, 'public/data/eod/history/shards');
 const DEFAULT_PACK_ROOTS = [
   process.env.RV_HISTORY_PACK_ROOT,
+  process.env.RV_HISTORY_PACK_ROOT ? path.join(process.env.RV_HISTORY_PACK_ROOT, 'history') : '',
   path.join(ROOT, 'mirrors/universe-v7/history'),
   path.join(ROOT, 'public/data/eod/history/packs'),
   '/volume1/homes/neoboy/QuantLabHot/storage/universe-v7-history',
+  '/volume1/homes/neoboy/QuantLabHot/storage/universe-v7-history/history',
 ].filter(Boolean);
 const BENCHMARK_SYMBOLS = new Set(['SPY', 'QQQ', 'DIA', 'IWM', 'VTI', 'VOO']);
 

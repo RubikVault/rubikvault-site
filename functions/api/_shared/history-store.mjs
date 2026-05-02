@@ -29,15 +29,30 @@ const historyPackLookupCache = {
     value: null,
 };
 const historyPackRowsCache = new Map();
+const KNOWN_EODHD_SUFFIXES = new Set([
+    'AS', 'AT', 'AX', 'BE', 'BK', 'BO', 'BR', 'CO', 'DE', 'DU', 'F', 'HA', 'HE', 'HK', 'HM',
+    'IR', 'IS', 'JK', 'JO', 'KL', 'KQ', 'KS', 'L', 'LS', 'MC', 'MI', 'MX', 'OL', 'PA', 'PR',
+    'SA', 'SG', 'SN', 'SR', 'SS', 'ST', 'SW', 'SZ', 'T', 'TA', 'TO', 'TW', 'V', 'VI', 'WA',
+]);
+
+function withoutKnownExchangeSuffix(value) {
+    const raw = String(value || '').trim().toUpperCase();
+    const match = raw.match(/^(.+)\.([A-Z0-9]{1,4})$/);
+    if (!match || !KNOWN_EODHD_SUFFIXES.has(match[2])) return null;
+    return match[1];
+}
 
 function buildSymbolCandidates(symbol) {
     const raw = String(symbol || '').trim().toUpperCase();
     if (!raw) return [];
+    const strippedExchangeSuffix = withoutKnownExchangeSuffix(raw);
     const candidates = [
         raw,
         raw.includes(':') ? raw.split(':').pop() : raw,
+        strippedExchangeSuffix,
         raw.replace(/[^A-Z0-9.\-]/g, ''),
-        raw.replace(/^[A-Z0-9]+:/, '').replace(/[^A-Z0-9.\-]/g, '')
+        raw.replace(/^[A-Z0-9]+:/, '').replace(/[^A-Z0-9.\-]/g, ''),
+        strippedExchangeSuffix ? strippedExchangeSuffix.replace(/[^A-Z0-9.\-]/g, '') : ''
     ].filter(Boolean);
     return [...new Set(candidates)];
 }
