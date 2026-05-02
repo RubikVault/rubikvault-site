@@ -45,13 +45,13 @@ async function fetchJsonMaybeGzip(url) {
   return JSON.parse(text);
 }
 
-async function fetchJsonOrNull(url, attempts = 3) {
+async function fetchJsonOrNull(url, attempts = 5) {
   for (let attempt = 1; attempt <= attempts; attempt += 1) {
     try {
       return await fetchJsonMaybeGzip(url);
     } catch {
       if (attempt >= attempts) return null;
-      await new Promise((resolve) => setTimeout(resolve, 500 * attempt));
+      await new Promise((resolve) => setTimeout(resolve, 1000 * attempt));
     }
   }
   return null;
@@ -164,15 +164,23 @@ function pickProbeRows(rows, auditResults, sampleSize) {
   const byKey = new Map();
   for (const row of rows) {
     const ticker = String(row?.display_ticker || '').toUpperCase();
-    if (ticker && !byTicker.has(ticker)) byTicker.set(ticker, row);
+    if (ticker) {
+      const list = byTicker.get(ticker) || [];
+      list.push(row);
+      byTicker.set(ticker, list);
+    }
     byKey.set(rowKey(row), row);
   }
   const picked = new Map();
   for (const ticker of REQUIRED_PROBE_TICKERS) {
-    const row = byTicker.get(ticker);
+    const list = byTicker.get(ticker) || [];
+    const row = list.find((candidate) => String(candidate?.canonical_asset_id || '').toUpperCase() === `US:${ticker}`)
+      || list.find((candidate) => String(candidate?.canonical_asset_id || '').toUpperCase().endsWith(`:${ticker}`))
+      || list[0];
     if (row) picked.set(rowKey(row), row);
   }
   for (const result of auditResults) {
+    if (picked.size >= sampleSize) break;
     if (!result.operational) continue;
     const row = byKey.get(`${result.canonical_id || ''}|${result.ticker || ''}`);
     if (!row) continue;
