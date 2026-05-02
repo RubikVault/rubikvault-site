@@ -73,14 +73,24 @@ function decideWorkers({ mode, memInfo, previous }) {
   const reasons = [];
   let workers = Math.min(requested, 4);
   if (requested >= 6) reasons.push('requested_6_or_more_clamped');
-  if (workers < 3) workers = 3;
   const previousRss = Number(previous?.rss_mb);
   const previousSwap = Number(previous?.swap_used_mb);
-  const pressure = memInfo.mem_available_mb < 2048
+  // Two pressure tiers — separate hard pressure (single worker required) from soft (downscale to 2).
+  // Threshold tuning post-2026-05-02 SIGTERM (NAS 10GB RAM, swap 8GB; previous SIGTERM at
+  // mem_available=8688 / swap_used=1214). Hard tier kicks at lower swap headroom OR after a
+  // proven RSS overshoot from the prior run.
+  const hardPressure = memInfo.mem_available_mb < 1024
+    || memInfo.swap_used_mb > 1536
+    || (Number.isFinite(previousRss) && previousRss >= 6144)
+    || (Number.isFinite(previousSwap) && previousSwap > 1536);
+  const softPressure = memInfo.mem_available_mb < 2048
     || memInfo.swap_used_mb > 1024
     || (Number.isFinite(previousRss) && previousRss >= 8192)
     || (Number.isFinite(previousSwap) && previousSwap > 1024);
-  if (pressure) {
+  if (hardPressure) {
+    workers = 1;
+    reasons.push('memory_or_swap_pressure_hard_single_worker');
+  } else if (softPressure) {
     workers = 2;
     reasons.push('memory_or_swap_pressure');
   } else if (requested >= 4) {
@@ -92,12 +102,22 @@ function decideWorkers({ mode, memInfo, previous }) {
       reasons.push('unsafe_for_4_workers');
     }
   } else {
-    workers = 3;
-    reasons.push('default_3_workers');
+    workers = Math.max(1, Math.min(requested, 3));
+    reasons.push('default_workers_under_pressure_aware');
   }
   const normalizedMode = String(mode || 'all').toLowerCase();
-  const batchSize = Number(process.env.RV_HIST_PROBS_WORKER_BATCH_SIZE || process.env.HIST_PROBS_WORKER_BATCH_SIZE)
-    || (normalizedMode.includes('retry') ? 25 : 50);
+  // Smaller batches under pressure cap RSS spikes between flushes (post-SIGTERM lesson).
+  const batchSizeOverride = Number(process.env.RV_HIST_PROBS_WORKER_BATCH_SIZE || process.env.HIST_PROBS_WORKER_BATCH_SIZE);
+  let batchSize;
+  if (Number.isFinite(batchSizeOverride) && batchSizeOverride > 0) {
+    batchSize = batchSizeOverride;
+  } else if (hardPressure) {
+    batchSize = 25;
+  } else if (softPressure || normalizedMode.includes('retry')) {
+    batchSize = 25;
+  } else {
+    batchSize = 50;
+  }
   return {
     requested,
     workers,
