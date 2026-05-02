@@ -106,6 +106,7 @@ function removeStaleGzipShards(outDir, activeKeys) {
 async function main() {
   const manifestPath = path.resolve(String(argValue('--manifest', DEFAULT_MANIFEST)));
   const outDir = path.resolve(String(argValue('--out-dir', DEFAULT_OUT_DIR)));
+  const targetMarketDate = String(argValue('--target-market-date', process.env.RV_TARGET_MARKET_DATE || process.env.TARGET_MARKET_DATE || '') || '').slice(0, 10) || null;
   const tailBars = Math.max(60, Number.parseInt(String(argValue('--tail-bars', process.env.RV_PUBLIC_HISTORY_TAIL_BARS || '120')), 10) || 120);
   const benchmarkTailBars = Math.max(tailBars, Number.parseInt(String(argValue('--benchmark-tail-bars', process.env.RV_PUBLIC_HISTORY_BENCHMARK_TAIL_BARS || '260')), 10) || 260);
   const maxAssets = Number.parseInt(String(argValue('--max-assets', '0')), 10) || 0;
@@ -135,6 +136,7 @@ async function main() {
   const summary = {
     schema: 'rv.public_history_shards.v1',
     generated_at: new Date().toISOString(),
+    target_market_date: targetMarketDate,
     manifest: path.relative(ROOT, manifestPath).split(path.sep).join('/'),
     tail_bars: tailBars,
     benchmark_tail_bars: benchmarkTailBars,
@@ -185,6 +187,10 @@ async function main() {
     const stat = fs.statSync(outPath);
     summary.shards[key] = { assets: Object.keys(doc).length, bytes: stat.size };
   }
+  const shardValues = Object.values(summary.shards);
+  summary.shard_count = shardValues.length;
+  summary.max_bytes = shardValues.reduce((max, row) => Math.max(max, Number(row.bytes) || 0), 0);
+  summary.packed_ratio = summary.wanted_assets > 0 ? Number((summary.packed_assets / summary.wanted_assets).toFixed(4)) : 0;
   fs.writeFileSync(path.join(outDir, 'manifest.public-history-shards.json'), `${JSON.stringify(summary, null, 2)}\n`);
   console.log(`[public-history-shards] packed=${summary.packed_assets}/${summary.wanted_assets} shards=${Object.keys(summary.shards).length} missing_pack_files=${summary.missing_pack_files} missing_rows=${summary.missing_rows}`);
   if (summary.packed_assets < Math.floor(summary.wanted_assets * 0.9)) process.exitCode = 1;
