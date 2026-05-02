@@ -51,6 +51,7 @@
     "ops:us-eu-history-packs": "node scripts/ops/build-us-eu-history-pack-manifest.mjs",
     "ops:page-core-ui-state": "node scripts/ops/build-stock-analyzer-ui-state-summary.mjs",
     "ops:stock-ui-integrity-audit": "node scripts/ops/audit-stock-analyzer-ui-integrity.mjs",
+    "ops:public-history-shards": "node scripts/ops/build-public-history-shards.mjs",
     "ops:stock-analyzer-publish-chain": "node scripts/ops/run-stock-analyzer-publish-chain.mjs",
     "ops:retention": "node scripts/ops/retention-cleanup.v3.mjs && node scripts/ops/build-storage-budget-report.mjs",
     "nas:validate": "bash scripts/nas/validate-priorities.sh",

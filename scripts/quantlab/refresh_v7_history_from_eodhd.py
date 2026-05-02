@@ -349,12 +349,18 @@ def parse_args(argv: Iterable[str]) -> argparse.Namespace:
     )
     p.add_argument("--job-name", default="refresh_v7_history_from_eodhd")
     p.add_argument("--report-path", default="")
-    p.add_argument(
-        "--reset-state-on-start",
-        action=argparse.BooleanOptionalAction,
-        default=True,
-        help="On start (after lock), unlink prior state JSONs and dead worker locks so a stale failure (e.g. provider_blocked) cannot mask the new run.",
-    )
+    if hasattr(argparse, "BooleanOptionalAction"):
+        p.add_argument(
+            "--reset-state-on-start",
+            action=argparse.BooleanOptionalAction,
+            default=True,
+            help="On start (after lock), unlink prior state JSONs and dead worker locks so a stale failure (e.g. provider_blocked) cannot mask the new run.",
+        )
+    else:
+        reset_group = p.add_mutually_exclusive_group()
+        reset_group.add_argument("--reset-state-on-start", dest="reset_state_on_start", action="store_true")
+        reset_group.add_argument("--no-reset-state-on-start", dest="reset_state_on_start", action="store_false")
+        p.set_defaults(reset_state_on_start=True)
     p.add_argument(
         "--bulk-min-yield-ratio",
         type=float,

@@ -48,6 +48,41 @@ function latestMergedDate(rows) {
     return typeof latest?.date === 'string' ? latest.date : null;
 }
 
+async function responseTextMaybeGzip(response, relPath) {
+    const contentEncoding = String(response.headers.get('content-encoding') || '').toLowerCase();
+    const contentType = String(response.headers.get('content-type') || '').toLowerCase();
+    const maybeGzip =
+        relPath.endsWith('.gz') ||
+        contentEncoding.includes('gzip') ||
+        contentType.includes('application/gzip') ||
+        contentType.includes('application/x-gzip');
+
+    if (maybeGzip && typeof response.arrayBuffer === 'function') {
+        const responseClone = response.clone();
+        try {
+            return gunzipSync(Buffer.from(await responseClone.arrayBuffer())).toString('utf8');
+        } catch {
+            // Fall through; some runtimes auto-decode gzip before userland reads.
+        }
+    }
+
+    if (maybeGzip && typeof DecompressionStream !== 'undefined' && response.body) {
+        const responseClone = response.clone();
+        try {
+            const stream = responseClone.body.pipeThrough(new DecompressionStream('gzip'));
+            return await new Response(stream).text();
+        } catch {
+            // Fall through to arrayBuffer/text fallback below.
+        }
+    }
+
+    try {
+        return await response.text();
+    } catch {
+        return null;
+    }
+}
+
 function isLocalOrigin(baseUrl) {
     try {
         const { hostname } = new URL(baseUrl);
@@ -126,36 +161,7 @@ export async function getStaticBars(symbol, baseUrl, assetFetcher = null) {
                 ? await assetFetcher.fetch(url)
                 : await fetch(url);
             if (!response.ok || !response.body) return null;
-            const contentEncoding = String(response.headers.get('content-encoding') || '').toLowerCase();
-            const contentType = String(response.headers.get('content-type') || '').toLowerCase();
-            const maybeGzip =
-                relPath.endsWith('.gz') ||
-                contentEncoding.includes('gzip') ||
-                contentType.includes('application/gzip') ||
-                contentType.includes('application/x-gzip');
-            let text = null;
-
-            if (maybeGzip && typeof DecompressionStream !== 'undefined') {
-                const responseClone = response.clone();
-                try {
-                    const stream = response.body.pipeThrough(new DecompressionStream('gzip'));
-                    text = await new Response(stream).text();
-                } catch {
-                    try {
-                        text = await responseClone.text();
-                    } catch {
-                        text = null;
-                    }
-                }
-            }
-
-            if (text == null) {
-                try {
-                    text = await response.text();
-                } catch {
-                    return null;
-                }
-            }
+            const text = await responseTextMaybeGzip(response, relPath);
 
             if (!text) return null;
             return text
@@ -176,6 +182,25 @@ export async function getStaticBars(symbol, baseUrl, assetFetcher = null) {
             if (!Array.isArray(rows)) return [];
             return rows
                 .map((row) => {
+                    if (Array.isArray(row)) {
+                        const date = String(row[0] || '').slice(0, 10);
+                        const close = Number(row[4] ?? row[5]);
+                        if (!date || !Number.isFinite(close)) return null;
+                        const open = Number(row[1]);
+                        const high = Number(row[2]);
+                        const low = Number(row[3]);
+                        const adjClose = Number(row[5]);
+                        const volume = Number(row[6]);
+                        return {
+                            date,
+                            open: Number.isFinite(open) ? open : close,
+                            high: Number.isFinite(high) ? high : close,
+                            low: Number.isFinite(low) ? low : close,
+                            close,
+                            adjClose: Number.isFinite(adjClose) ? adjClose : close,
+                            volume: Number.isFinite(volume) ? volume : 0
+                        };
+                    }
                     const date = String(row?.date || row?.trading_date || '').slice(0, 10);
                     const close = Number(row?.close ?? row?.adjusted_close ?? row?.adj_close);
                     if (!date || !Number.isFinite(close)) return null;
@@ -214,6 +239,10 @@ export async function getStaticBars(symbol, baseUrl, assetFetcher = null) {
                     ? await assetFetcher.fetch(url)
                     : await fetch(url);
                 if (!response.ok) return null;
+                if (relPath.endsWith('.gz')) {
+                    const text = await responseTextMaybeGzip(response, relPath);
+                    return text ? JSON.parse(text) : null;
+                }
                 return await response.json();
             } catch {
                 return null;
@@ -304,6 +333,7 @@ export async function getStaticBars(symbol, baseUrl, assetFetcher = null) {
         // New: Try Sharded History (100% universe fallback)
         const shard = cleanSymbol[0] || '_';
         const shardCandidates = [
+            `/data/eod/history/shards/${shard}.json.gz`,
             `/data/eod/history/shards/${shard}.json`
         ];
 
@@ -329,24 +359,12 @@ export async function getStaticBars(symbol, baseUrl, assetFetcher = null) {
                         continue;
                     }
                 }
-                const url = baseUrl ? new URL(shardPath, baseUrl).toString() : shardPath;
-                const res = assetFetcher && shardPath.startsWith('/data/')
-                    ? await assetFetcher.fetch(url)
-                    : await fetch(url);
-                if (res.ok) {
-                    const shardData = await res.json();
+                const shardData = await fetchJson(shardPath);
+                if (shardData && typeof shardData === 'object') {
                     for (const candidate of candidates) {
                         const tickerBarsRaw = shardData[candidate] || shardData[candidate.replace(/[^A-Z0-9.\-]/g, '')];
                         if (Array.isArray(tickerBarsRaw)) {
-                            mergeInBars(tickerBarsRaw.map(b => ({
-                                date: b[0],
-                                open: b[1],
-                                high: b[2],
-                                low: b[3],
-                                close: b[4],
-                                adjClose: b[5],
-                                volume: b[6]
-                            })));
+                            mergeInBars(tickerBarsRaw);
                         }
                     }
                 }

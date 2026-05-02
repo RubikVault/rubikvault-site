@@ -51,6 +51,7 @@
     { "pattern": "data/eod/history/pack-manifest.us-eu.json", "maxFileSizeBytes": 20971520, "class": "eod-pack-manifest" },
     { "pattern": "data/eod/history/pack-manifest.us-eu.lookup.json", "maxFileSizeBytes": 10485760, "class": "eod-pack-manifest-lookup" },
     { "pattern": "data/eod/history/shards/*.json", "maxFileSizeBytes": 1048576, "class": "eod-shard" },
+    { "pattern": "data/eod/history/shards/*.json.gz", "maxFileSizeBytes": 26214400, "class": "eod-public-chart-shard" },
     { "pattern": "data/eod/batches/*.json", "maxFileSizeBytes": 2097152, "class": "eod-batch" },
     { "pattern": "data/eod/manifest.latest.json", "maxFileSizeBytes": 524288, "class": "eod-manifest" },
     { "pattern": "data/v3/**", "maxFileSizeBytes": 5242880, "class": "v3-public-data" },

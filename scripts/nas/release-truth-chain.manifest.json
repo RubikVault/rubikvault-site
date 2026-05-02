@@ -1,12 +1,22 @@
 {
   "schema": "rv.nas.release_truth_chain_code_manifest.v1",
-  "generated_at": "2026-05-02T12:16:41.053Z",
-  "git_head": "71736570ae9b7281f901b36b0efeeba22a7f6e84",
+  "generated_at": "2026-05-02T12:34:26.192Z",
+  "git_head": "80b08109fc667040ecddb83949fc5e8c449b0cbe",
   "paths_file": "scripts/nas/inputs/release-truth-chain.paths",
-  "file_count": 14,
-  "combined_hash": "e58ee6ae041831678462fb47e1d3222ec991185c843df5239516feeac7b3f647",
+  "file_count": 18,
+  "combined_hash": "7c8913ef6c614559f7eb438ccef1896602ad3fafae630f267fc171d1b726d709",
   "missing": [],
   "files": [
+    {
+      "path": "config/runtime-manifest.json",
+      "size_bytes": 8567,
+      "sha256": "75d4c18ed39aaf0582f3e21640819a8ab75c99301a297ce3f3da854d4aed958a"
+    },
+    {
+      "path": "functions/api/_shared/history-store.mjs",
+      "size_bytes": 16276,
+      "sha256": "02fdb68553d6cd51b896653e34cada64ec5213cc9ff32370967ec5e66e5f35af"
+    },
     {
       "path": "functions/api/_shared/page-core-reader.js",
       "size_bytes": 22252,
@@ -19,13 +29,13 @@
     },
     {
       "path": "scripts/nas/inputs/release-truth-chain.paths",
-      "size_bytes": 572,
-      "sha256": "b66047c02bdfb1ce5ea52e1ff2c1cccb3aadf04074568caa7a8cff8f720a0ea4"
+      "size_bytes": 735,
+      "sha256": "6c95ff7c0f98f03fb840c8c9c4e325c209339ba92700d2c0edfe5f0af6f5354d"
     },
     {
       "path": "scripts/nas/rv-nas-night-supervisor.sh",
-      "size_bytes": 43368,
-      "sha256": "5e002f35cc9b84370866a362b84d6b9c4641d6b566314bf98e11c2db5f917b19"
+      "size_bytes": 43684,
+      "sha256": "4906cb6cd69e1a96ad01079bb0d0ed6e2f34c73e57fc3a934885d18d58e86150"
     },
     {
       "path": "scripts/nas/safe-code-sync.sh",
@@ -46,6 +56,11 @@
       "path": "scripts/ops/build-page-core-bundle.mjs",
       "size_bytes": 38545,
       "sha256": "3c30de3dc000995066c6db44301f18831880a5179a3f281e8091d31ae3f0bbc0"
+    },
+    {
+      "path": "scripts/ops/build-public-history-shards.mjs",
+      "size_bytes": 7851,
+      "sha256": "0f69b49c5da6c22b79920deee500f084a15e650723a43ac9e0b0a28bcd75ce40"
     },
     {
       "path": "scripts/ops/build-public-status.mjs",
@@ -76,6 +91,11 @@
       "path": "scripts/ops/release-gate-check.mjs",
       "size_bytes": 35525,
       "sha256": "06d1ba62fe4cda8d84cc4076938b0e955a03757c603f3fd2c283575cfad42347"
+    },
+    {
+      "path": "scripts/quantlab/refresh_v7_history_from_eodhd.py",
+      "size_bytes": 70621,
+      "sha256": "d057851295f97b1a24aa1da073f81697e3bb29e3e3ee282cd311c60a2f5ddb6e"
     }
   ]
 }
