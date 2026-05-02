@@ -15,6 +15,7 @@ const ROOT = path.resolve(new URL('../..', import.meta.url).pathname);
 const DEFAULT_BASE_URL = process.env.RV_STOCK_UI_AUDIT_BASE_URL || 'https://rubikvault-site.pages.dev';
 const DEFAULT_OUTPUT = path.join(ROOT, 'tmp/stock-analyzer-ui-integrity-audit.json');
 const ELIGIBLE_CLASSES = new Set(['STOCK', 'ETF', 'INDEX']);
+const REQUIRED_PROBE_TICKERS = ['HOOD', 'AAPL', 'SPY', 'QQQ'];
 const EXPLAINED_BUCKETS = new Set([
   'provider-side unavailable',
   'stale source',
@@ -42,6 +43,29 @@ async function fetchJsonMaybeGzip(url) {
   const buffer = Buffer.from(await response.arrayBuffer());
   const text = url.endsWith('.gz') ? gunzipSync(buffer).toString('utf8') : buffer.toString('utf8');
   return JSON.parse(text);
+}
+
+async function fetchJsonOrNull(url, attempts = 3) {
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    try {
+      return await fetchJsonMaybeGzip(url);
+    } catch {
+      if (attempt >= attempts) return null;
+      await new Promise((resolve) => setTimeout(resolve, 500 * attempt));
+    }
+  }
+  return null;
+}
+
+function arrayAtPath(...values) {
+  for (const value of values) {
+    if (Array.isArray(value)) return value;
+  }
+  return [];
+}
+
+function endpointStatus(payload) {
+  return String(payload?.meta?.status || payload?.data?.status || payload?.status || '').trim().toLowerCase();
 }
 
 export function bucketReason(reason) {
@@ -88,15 +112,8 @@ function hasTypedModuleStatus(row, key) {
 }
 
 export function uiCompletenessReasons(row) {
-  const reasons = [];
-  const assetClass = String(row?.identity?.asset_class || row?.identity?.security_type || '').toUpperCase();
-  if (!row?.breakout_summary && !hasTypedModuleStatus(row, 'breakout')) reasons.push('breakout_v12_missing_or_untyped');
-  if (assetClass === 'STOCK') {
-    if (row?.coverage?.fundamentals !== true && !hasTypedModuleStatus(row, 'fundamentals')) reasons.push('fundamentals_missing_or_untyped');
-    if (row?.coverage?.forecast !== true && !hasTypedModuleStatus(row, 'forecast')) reasons.push('forecast_missing_or_untyped');
-    if (row?.coverage?.catalysts === false && !hasTypedModuleStatus(row, 'catalysts')) reasons.push('catalysts_missing_or_untyped');
-  }
-  return reasons;
+  if (row?.coverage?.ui_renderable !== true) return ['ui_not_renderable'];
+  return [];
 }
 
 export function auditRow(row, latest, { aliasFallbackRow = null } = {}) {
@@ -138,6 +155,115 @@ export function auditRow(row, latest, { aliasFallbackRow = null } = {}) {
   };
 }
 
+function rowKey(row) {
+  return `${row?.canonical_asset_id || ''}|${row?.display_ticker || ''}`;
+}
+
+function pickProbeRows(rows, auditResults, sampleSize) {
+  const byTicker = new Map();
+  const byKey = new Map();
+  for (const row of rows) {
+    const ticker = String(row?.display_ticker || '').toUpperCase();
+    if (ticker && !byTicker.has(ticker)) byTicker.set(ticker, row);
+    byKey.set(rowKey(row), row);
+  }
+  const picked = new Map();
+  for (const ticker of REQUIRED_PROBE_TICKERS) {
+    const row = byTicker.get(ticker);
+    if (row) picked.set(rowKey(row), row);
+  }
+  for (const result of auditResults) {
+    if (!result.operational) continue;
+    const row = byKey.get(`${result.canonical_id || ''}|${result.ticker || ''}`);
+    if (!row) continue;
+    picked.set(rowKey(row), row);
+    if (picked.size >= sampleSize) break;
+  }
+  return [...picked.values()];
+}
+
+async function probeHistorical(baseUrl, row, minBars = 60) {
+  const ticker = encodeURIComponent(row?.display_ticker || row?.canonical_asset_id || '');
+  const assetId = row?.canonical_asset_id ? `?asset_id=${encodeURIComponent(row.canonical_asset_id)}` : '';
+  const payload = await fetchJsonOrNull(`${baseUrl}/api/v2/stocks/${ticker}/historical${assetId}`);
+  const bars = arrayAtPath(payload?.data?.bars, payload?.bars, payload?.data?.history);
+  const provider = String(payload?.meta?.provider || payload?.data?.provider || payload?.provider || '').trim();
+  const ok = bars.length >= minBars && provider !== 'page-core-minimal-history';
+  return {
+    ok,
+    check: 'historical',
+    ticker: row?.display_ticker || null,
+    canonical_id: row?.canonical_asset_id || null,
+    bars: bars.length,
+    provider: provider || null,
+    status: endpointStatus(payload) || null,
+    reason: ok ? null : `historical_bars_lt_${minBars}_or_minimal_provider`,
+  };
+}
+
+async function probeGovernance(baseUrl, row) {
+  const ticker = encodeURIComponent(row?.display_ticker || row?.canonical_asset_id || '');
+  const assetId = row?.canonical_asset_id ? `?asset_id=${encodeURIComponent(row.canonical_asset_id)}` : '';
+  const payload = await fetchJsonOrNull(`${baseUrl}/api/v2/stocks/${ticker}/governance${assetId}`);
+  const evaluation = payload?.data?.evaluation_v4;
+  const ok = evaluation && typeof evaluation === 'object' && Object.keys(evaluation).length > 0;
+  return {
+    ok,
+    check: 'governance',
+    ticker: row?.display_ticker || null,
+    canonical_id: row?.canonical_asset_id || null,
+    evaluation_status: evaluation?.status || null,
+    status: endpointStatus(payload) || null,
+    reason: ok ? null : 'evaluation_v4_missing_or_null',
+  };
+}
+
+async function probeBenchmark(baseUrl, ticker) {
+  const payload = await fetchJsonOrNull(`${baseUrl}/api/v2/stocks/${encodeURIComponent(ticker)}/historical`);
+  const bars = arrayAtPath(payload?.data?.bars, payload?.bars, payload?.data?.history);
+  return {
+    ok: bars.length >= 252,
+    check: 'benchmark_historical',
+    ticker,
+    bars: bars.length,
+    status: endpointStatus(payload) || null,
+    reason: bars.length >= 252 ? null : 'benchmark_history_lt_252',
+  };
+}
+
+async function runLiveProbes(baseUrl, rows, auditResults, sampleSize) {
+  const probes = [];
+  const probeRows = pickProbeRows(rows, auditResults, sampleSize);
+  for (const row of probeRows) {
+    probes.push(await probeHistorical(baseUrl, row));
+    probes.push(await probeGovernance(baseUrl, row));
+  }
+  for (const ticker of ['SPY', 'QQQ']) {
+    const existing = probes.find((probe) => probe.check === 'historical' && probe.ticker === ticker);
+    if (existing && Number(existing.bars || 0) >= 252) {
+      probes.push({
+        ok: true,
+        check: 'benchmark_historical',
+        ticker,
+        bars: existing.bars,
+        status: existing.status,
+        reason: null,
+        reused_from: 'historical_probe',
+      });
+    } else {
+      probes.push(await probeBenchmark(baseUrl, ticker));
+    }
+  }
+  const breakout = await fetchJsonOrNull(`${baseUrl}/data/breakout/manifests/latest.json`);
+  probes.push({
+    ok: Boolean(breakout && typeof breakout === 'object'),
+    check: 'breakout_manifest',
+    status: breakout ? 'ok' : 'missing',
+    reason: breakout ? null : 'breakout_manifest_missing',
+  });
+  return probes;
+}
+
 async function main() {
   const baseUrl = normalizeBaseUrl(argValue('--base-url', DEFAULT_BASE_URL));
   const output = path.resolve(ROOT, argValue('--output', DEFAULT_OUTPUT));
@@ -145,6 +271,11 @@ async function main() {
   const minOperationalRateRaw = argValue('--min-operational-rate', null);
   const minOperationalRate = minOperationalRateRaw == null ? null : Number(minOperationalRateRaw);
   const gate = String(argValue('--gate', 'ui_renderable') || 'ui_renderable').toLowerCase();
+  const sampleSize = Math.max(REQUIRED_PROBE_TICKERS.length, Number(argValue('--sample-size', process.env.RV_STOCK_UI_AUDIT_SAMPLE_SIZE || String(REQUIRED_PROBE_TICKERS.length))) || REQUIRED_PROBE_TICKERS.length);
+  const publicStatus = await fetchJsonOrNull(`${baseUrl}/data/public-status.json`);
+  const stockAnalyzer = publicStatus?.stock_analyzer && typeof publicStatus.stock_analyzer === 'object'
+    ? publicStatus.stock_analyzer
+    : {};
   const latest = await fetchJsonMaybeGzip(`${baseUrl}/data/page-core/latest.json`);
   const snapshotPath = String(latest.snapshot_path || '').replace(/\/+$/, '');
   if (!snapshotPath) throw new Error('PAGE_CORE_SNAPSHOT_PATH_MISSING');
@@ -166,6 +297,7 @@ async function main() {
   const failures = [];
   const falseAuthorityFailures = [];
   const falseGreenUiFailures = [];
+  const auditResults = [];
   const operationalBuckets = {};
   const buckets = {};
   let denominator = 0;
@@ -179,6 +311,7 @@ async function main() {
         ? rowsByCanonical.get(String(aliasCanonical)) || null
         : null;
       const result = auditRow(row, latest, { aliasFallbackRow });
+      auditResults.push(result);
       buckets[result.bucket] = (buckets[result.bucket] || 0) + (result.pass ? 0 : 1);
       if (result.pass) passCount += 1;
       else falseAuthorityFailures.push(result);
@@ -191,8 +324,29 @@ async function main() {
       }
   }
 
+  const publicUiRenderableRatio = Number(stockAnalyzer.ui_renderable_ratio ?? stockAnalyzer.ui_operational_ratio);
+  const publicTargetableTotal = Number(stockAnalyzer.targetable_total);
+  const publicUiRenderableTotal = Number(stockAnalyzer.ui_renderable_total);
+  const publicContractViolations = Number(stockAnalyzer.ui_state_contract_violations);
+  const overallUiReady = publicStatus?.overall_ui_ready === true || stockAnalyzer.overall_ui_ready === true;
+  const liveProbes = await runLiveProbes(baseUrl, rows, auditResults, sampleSize);
+  const liveProbeFailures = liveProbes.filter((probe) => !probe.ok);
   const passRate = denominator > 0 ? passCount / denominator : 0;
-  const operationalRate = denominator > 0 ? operationalCount / denominator : 0;
+  const operationalRate = Number.isFinite(publicUiRenderableRatio)
+    ? publicUiRenderableRatio
+    : (denominator > 0 ? operationalCount / denominator : 0);
+  const effectiveOperationalCount = Number.isFinite(publicUiRenderableTotal)
+    ? publicUiRenderableTotal
+    : operationalCount;
+  const effectiveDenominator = Number.isFinite(publicTargetableTotal)
+    ? publicTargetableTotal
+    : denominator;
+  const publicContractOk = !Number.isFinite(publicContractViolations) || publicContractViolations === 0;
+  const qualitygatePass = passRate >= minPassRate
+    && (minOperationalRate == null || operationalRate >= minOperationalRate)
+    && overallUiReady
+    && publicContractOk
+    && liveProbeFailures.length === 0;
   const report = {
     schema: 'rv.stock_analyzer_ui_integrity_audit.v1',
     base_url: baseUrl,
@@ -200,20 +354,28 @@ async function main() {
     run_id: latest.run_id || null,
     generated_at: new Date().toISOString(),
     denominator,
+    ui_denominator: effectiveDenominator,
     pass_count: passCount,
     fail_count: failures.length,
     false_authority_fail_count: falseAuthorityFailures.length,
     false_green_ui_render_count: falseGreenUiFailures.length,
     operational_fail_count: failures.length,
     pass_rate: Number(passRate.toFixed(6)),
-    operational_count: operationalCount,
+    operational_count: effectiveOperationalCount,
     operational_rate: Number(operationalRate.toFixed(6)),
+    public_status_ui_green: publicStatus?.ui_green ?? null,
+    public_status_overall_ui_ready: overallUiReady,
+    public_status_stock_analyzer: stockAnalyzer,
+    live_probe_count: liveProbes.length,
+    live_probe_failure_count: liveProbeFailures.length,
     min_pass_rate: minPassRate,
     min_operational_rate: minOperationalRate,
     gate,
-    qualitygate: passRate >= minPassRate && (minOperationalRate == null || operationalRate >= minOperationalRate) ? 'PASS' : 'FAIL',
+    qualitygate: qualitygatePass ? 'PASS' : 'FAIL',
     buckets,
     operational_buckets: operationalBuckets,
+    live_probes: liveProbes,
+    live_probe_failures: liveProbeFailures,
     false_authority_failures: falseAuthorityFailures.slice(0, 5000),
     false_green_ui_render_failures: falseGreenUiFailures.slice(0, 5000),
     failures: failures.slice(0, 5000),

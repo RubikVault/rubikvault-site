@@ -153,6 +153,12 @@ const doc = {
   stock_analyzer: {
     available: overallUiReady,
     page_core_snapshot_id: pageCoreLatest?.snapshot_id || null,
+    denominator: stockUiState?.denominator ?? null,
+    targetable_total: stockUiState?.counts?.targetable_total ?? null,
+    ui_renderable_total: stockUiState?.counts?.ui_renderable_total ?? stockUiState?.counts?.operational_total ?? null,
+    decision_ready_total: stockUiState?.counts?.decision_ready_total ?? null,
+    exception_total: stockUiState?.counts?.exception_total ?? null,
+    verified_provider_exception_total: stockUiState?.counts?.verified_provider_exception_total ?? null,
     ui_operational_ratio: stockUiState?.ui_operational_ratio ?? null,
     ui_renderable_ratio: stockUiState?.ui_renderable_ratio ?? stockUiState?.ui_operational_ratio ?? null,
     decision_ready_ratio: stockUiState?.decision_ready_ratio ?? null,

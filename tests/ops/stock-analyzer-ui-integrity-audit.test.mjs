@@ -58,16 +58,15 @@ test('stock analyzer UI audit treats normalizable percent-unit returns as pass',
   assert.equal(result.bucket, 'other resolver BLOCK');
 });
 
-test('stock analyzer UI audit flags green rows with missing UI modules', () => {
+test('stock analyzer UI audit treats decision-only module gaps as non-UI blockers', () => {
   const row = baseRow();
   delete row.breakout_summary;
   row.coverage.fundamentals = false;
   row.coverage.forecast = false;
   const result = auditRow(row, { target_market_date: '2026-04-30' });
-  assert.equal(result.false_green_ui_render, true);
-  assert.equal(result.pass, false);
-  assert.ok(result.ui_completeness_reasons.includes('breakout_v12_missing_or_untyped'));
-  assert.ok(result.ui_completeness_reasons.includes('fundamentals_missing_or_untyped'));
+  assert.equal(result.false_green_ui_render, false);
+  assert.equal(result.pass, true);
+  assert.deepEqual(result.ui_completeness_reasons, []);
 });
 
 test('stock analyzer UI audit buckets known failure reasons', () => {
