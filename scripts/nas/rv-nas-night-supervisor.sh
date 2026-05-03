@@ -394,6 +394,7 @@ step_timeout_sec() {
     ui_field_truth_report) printf '%s\n' 2400 ;;
     final_integrity_seal) printf '%s\n' 1800 ;;
     build_deploy_bundle) printf '%s\n' 1800 ;;
+    pre_deploy_smoke) printf '%s\n' 120 ;;
     wrangler_deploy) printf '%s\n' 3600 ;;
     *) printf '%s\n' 1800 ;;
   esac
@@ -642,6 +643,13 @@ step_command() {
     build_deploy_bundle)
       printf '%s\n' "node scripts/ops/build-deploy-bundle.mjs --strict"
       ;;
+    pre_deploy_smoke)
+      # P8: hard pre-deploy smoke matrix on the on-disk bundle. If a required
+      # runtime artifact is missing or unparseable, fail BEFORE wrangler_deploy
+      # so a broken candidate cannot be published. Reads the bundle root
+      # (dist/pages-prod) directly — no live HTTP needed at this stage.
+      printf '%s\n' "node -e \"const fs=require('node:fs');const path=require('node:path');const root=path.join(process.cwd(),'dist','pages-prod');function need(rel,key){const p=path.join(root,rel);if(!fs.existsSync(p)){console.error('pre_deploy_smoke_fail missing='+rel);process.exit(50)};let d;try{d=JSON.parse(fs.readFileSync(p,'utf8'))}catch(e){console.error('pre_deploy_smoke_fail unparseable='+rel+' err='+e.message);process.exit(51)};if(key&&!(key in d)){console.error('pre_deploy_smoke_fail missing_key='+key+' in='+rel);process.exit(52)}return d}const status=need('data/public-status.json','ui_green');const breakout=need('data/breakout/manifests/latest.json');const pageCore=need('data/page-core/latest.json','snapshot_id');console.log('pre_deploy_smoke_ok ui_green='+status.ui_green+' release_ready='+status.release_ready+' page_core_snapshot='+pageCore.snapshot_id+' target='+(status.target_market_date||'null'));process.exit(0);\""
+      ;;
     wrangler_deploy)
       printf '%s\n' "node scripts/ops/release-gate-check.mjs"
       ;;
@@ -864,7 +872,7 @@ run_step() {
   fi
 
   case "$step_id" in
-    build_global_scope|hist_probs|hist_probs_catchup|hist_probs_v2_shadow|snapshot|page_core_bundle|public_history_shards|learning_daily|forecast_daily|build_fundamentals|quantlab_daily_report|breakout_v12|scientific_summary|v1_audit|cutover_readiness|etf_diagnostic|stage1_ops_pack|system_status_report|data_freshness_report|pipeline_epoch|generate_meta_dashboard_data|signal_performance_report|runtime_preflight|stock_analyzer_universe_audit|ui_field_truth_report|stock_ui_integrity_audit|page_core_smoke|final_integrity_seal|build_deploy_bundle|wrangler_deploy|code_manifest_guard)
+    build_global_scope|hist_probs|hist_probs_catchup|hist_probs_v2_shadow|snapshot|page_core_bundle|public_history_shards|learning_daily|forecast_daily|build_fundamentals|quantlab_daily_report|breakout_v12|scientific_summary|v1_audit|cutover_readiness|etf_diagnostic|stage1_ops_pack|system_status_report|data_freshness_report|pipeline_epoch|generate_meta_dashboard_data|signal_performance_report|runtime_preflight|stock_analyzer_universe_audit|ui_field_truth_report|stock_ui_integrity_audit|page_core_smoke|final_integrity_seal|build_deploy_bundle|pre_deploy_smoke|wrangler_deploy|code_manifest_guard)
       measure_args+=(--set-env "NODE_OPTIONS=--max-old-space-size=$heap_mb")
       ;;
   esac
@@ -978,6 +986,7 @@ lane_steps() {
       generate_meta_dashboard_data \
       signal_performance_report \
       build_deploy_bundle \
+      pre_deploy_smoke \
       wrangler_deploy \
       stock_ui_integrity_audit
   fi
