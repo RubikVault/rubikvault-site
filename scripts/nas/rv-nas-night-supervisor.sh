@@ -878,10 +878,38 @@ run_step() {
     nas_acquire_global_lock "q1-writer"
   fi
 
-  set +e
-  "${measure_args[@]}" --command "$command"
-  local cmd_status="$?"
-  set -e
+  # P5: per-step retry for transient errors. Conservative — only retry steps
+  # whose failure modes are typically network/cache-flake (CF propagation,
+  # GitHub tarball, manifest fetch). Heavy data steps are NOT retried because
+  # mid-run partial state would compound the problem.
+  local max_retries=0
+  case "$step_id" in
+    safe_code_sync|code_manifest_guard|wrangler_deploy|smoke_release|stock_ui_integrity_audit)
+      max_retries="${RV_TRANSIENT_RETRIES:-1}"
+      ;;
+  esac
+
+  local cmd_status=1
+  local attempt=0
+  while (( attempt <= max_retries )); do
+    set +e
+    "${measure_args[@]}" --command "$command"
+    cmd_status="$?"
+    set -e
+    # Retry only for step_timeout (124), explicit transient signal, or generic 1
+    # for the whitelisted steps above. Guard exits (10,11,17,19) and OOM kill
+    # (137) are NEVER retried — they signal real resource/budget/state issues.
+    if (( cmd_status == 0 )); then break; fi
+    if (( attempt >= max_retries )); then break; fi
+    case "$cmd_status" in
+      124|1)
+        attempt=$((attempt + 1))
+        sleep "$(( 30 * attempt ))"
+        echo "[run_step] transient exit=$cmd_status step=$step_id retry=$attempt/$max_retries" >&2
+        ;;
+      *) break ;;
+    esac
+  done
 
   if [[ "$step_id" == "q1_delta_ingest" ]]; then
     nas_release_global_lock "q1-writer"
