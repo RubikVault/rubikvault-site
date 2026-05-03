@@ -37,6 +37,29 @@ esac
 
 nas_ensure_runtime_roots
 
+# P3: SUPERVISOR_STOP guard — never silent. If the legacy stop-file is present, emit a
+# critical journal entry and either auto-migrate (after 48h) or exit with a non-zero
+# code that makes the failure visible in the DSM task log + dashboard-sync. Previously
+# the legacy launcher run-pipeline-master-supervisor-node20.sh swallowed it via
+# `exec sleep 2147483647`, so a stale STOP file blocked the pipeline silently for days.
+SUPERVISOR_STOP_PATH="$REPO_ROOT/mirrors/ops/pipeline-master/SUPERVISOR_STOP"
+if [[ -f "$SUPERVISOR_STOP_PATH" ]]; then
+  stop_age_hours="$(python3 -c "import os,sys,time; p=sys.argv[1]; print(round((time.time()-os.path.getmtime(p))/3600,2)) if os.path.exists(p) else print(0)" "$SUPERVISOR_STOP_PATH" 2>/dev/null || echo 0)"
+  stop_iso="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  mkdir -p "$NAS_NIGHT_PIPELINE_ROOT/journal" "$NAS_NIGHT_PIPELINE_ROOT/scheduled" 2>/dev/null || true
+  printf '{"event":"supervisor_stop_active","severity":"critical","stop_path":"%s","age_hours":%s,"detected_at":"%s","lane":"%s"}\n' \
+    "$SUPERVISOR_STOP_PATH" "$stop_age_hours" "$stop_iso" "${ACTIVE_LANE:-unknown}" \
+    >> "$NAS_NIGHT_PIPELINE_ROOT/journal/supervisor-stop-events.ndjson"
+  if (( $(printf '%s\n' "$stop_age_hours" | python3 -c "import sys; v=float(sys.stdin.read().strip() or 0); print(1 if v>=48 else 0)") == 1 )); then
+    expired_path="${SUPERVISOR_STOP_PATH}.auto-expired-$(date -u +%Y%m%d)"
+    mv "$SUPERVISOR_STOP_PATH" "$expired_path" 2>/dev/null || true
+    echo "supervisor_stop_auto_migrated age_hours=$stop_age_hours migrated_to=$expired_path" >&2
+  else
+    echo "supervisor_stop_active_block age_hours=$stop_age_hours path=$SUPERVISOR_STOP_PATH" >&2
+    exit 19
+  fi
+fi
+
 CAMPAIGN_STAMP="${CAMPAIGN_STAMP:-$(date -u +%Y%m%dT%H%M%SZ)}"
 PIPELINE_ROOT="$NAS_NIGHT_PIPELINE_ROOT"
 CAMPAIGN_DIR="$PIPELINE_ROOT/runs/$CAMPAIGN_STAMP"
