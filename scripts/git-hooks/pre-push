@@ -35,6 +35,28 @@ if [ "$push_targets_main" -eq 0 ]; then
   exit 0
 fi
 
+# P4: code-manifest auto-regen.
+# After Stage-2/W6/W1B/manifest-rebuild day (2026-05-02) we needed three manual
+# commits to keep scripts/nas/release-truth-chain.manifest.json in sync after
+# editing files in the truth chain. The supervisor's code_manifest_guard step
+# fails fast if the on-disk manifest diverges, so a stale manifest can break
+# the next NAS auto-run silently. Auto-regen here + fail-with-message if drift
+# detected so the manifest commit can never be forgotten.
+echo "[pre-push] verifying release-truth-chain manifest..."
+if ! node scripts/nas/verify-code-manifest.mjs >/dev/null 2>&1; then
+  echo "[pre-push] manifest drift detected — auto-regenerating..."
+  node scripts/nas/verify-code-manifest.mjs --write >/dev/null 2>&1 || true
+  if ! git diff --quiet -- scripts/nas/release-truth-chain.manifest.json; then
+    echo "[pre-push] FAIL: scripts/nas/release-truth-chain.manifest.json was regenerated."
+    echo "[pre-push] Stage + commit the updated manifest, then re-push:"
+    echo "[pre-push]   git add scripts/nas/release-truth-chain.manifest.json"
+    echo "[pre-push]   git commit -m 'chore(nas): regenerate code-manifest'"
+    echo "[pre-push]   git push origin main"
+    echo "[pre-push] Bypass with --no-verify only if NAS code_manifest_guard would still pass."
+    exit 1
+  fi
+fi
+
 echo "[pre-push] verifying deploy bundle builds cleanly (dist/pages-prod/)..."
 if ! node scripts/ops/build-deploy-bundle.mjs --strict --strict-manifest >/dev/null 2>&1; then
   echo "[pre-push] FAIL: build-deploy-bundle.mjs --strict --strict-manifest failed."
