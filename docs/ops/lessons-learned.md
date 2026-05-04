@@ -21,6 +21,18 @@
 
 ---
 
+### 2026-05-04 · NAS · Exported env defaults can override safer supervisor fallbacks
+
+**What:** The 2026-05-04 DSM auto-run failed in `market_data_refresh` with `provider_blocked_partial` although EODHD preflight passed, fetch errors were zero, and 31,623 valid rows for `2026-05-01` were fetched. The command still used `--bulk-min-yield-ratio 0.80 --bulk-min-rows-matched 50000`.
+
+**Why:** The supervisor command had safer shell fallbacks (`${RV_EODHD_BULK_MIN_YIELD_RATIO:-0}` and `${RV_EODHD_BULK_MIN_ROWS_MATCHED:-25000}`), but `scripts/nas/nas-env.sh` exported older defaults (`0.80` and `50000`). Exported values win over shell fallbacks, so the actual DSM run still enforced a global same-date ratio that is invalid on regional holiday mixes.
+
+**Fix:** `nas-env.sh` now defaults to an absolute provider sanity floor: ratio `0`, matched rows `25000`. Freshness and renderability remain enforced by the history coverage report and UI-state gates.
+
+**Prevention:** When changing supervisor fallbacks, update exported NAS env defaults in the same commit and verify the rendered command in the latest `measure.json`. Do not trust source fallbacks alone.
+
+---
+
 ### 2026-05-02 · NAS · Global EODHD bulk-yield gates must not assume every exchange trades on the same date
 
 **What:** The NAS market refresh wrote 31,538 valid 2026-05-01 rows, but the step still exited `provider_blocked_partial` because `bulk-min-yield-ratio=0.80` and `bulk-min-rows-matched=50000` treated a global holiday mix as provider failure.
