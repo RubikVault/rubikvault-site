@@ -21,6 +21,15 @@ function finiteNumber(value) {
   return Number.isFinite(n) ? n : null;
 }
 
+function firstNonEmpty(...values) {
+  for (const value of values) {
+    if (typeof value !== 'string') continue;
+    const normalized = value.trim();
+    if (normalized) return normalized;
+  }
+  return null;
+}
+
 function latestBarLagTradingDays(row, latest = null) {
   const marketStatsMin = row?.market_stats_min && typeof row.market_stats_min === 'object'
     ? row.market_stats_min
@@ -144,6 +153,8 @@ export function normalizePageCoreOperationalState(row, { latest = null, freshnes
   if (!row || typeof row !== 'object') return row;
   const strictReasons = pageCoreStrictOperationalReasons(row, { latest, freshnessStatus });
   const strictlyOperational = strictReasons.length === 0;
+  const existingContract = row.status_contract || {};
+  const coverage = row.coverage || {};
   const normalized = {
     ...row,
     ui_banner_state: strictlyOperational ? 'all_systems_operational' : row.ui_banner_state,
@@ -153,18 +164,26 @@ export function normalizePageCoreOperationalState(row, { latest = null, freshnes
       quality_status: strictlyOperational ? 'OK' : row?.summary_min?.quality_status,
     },
     status_contract: {
-      ...(row.status_contract || {}),
+      ...existingContract,
       core_status: strictReasons.some((reason) => reason === 'bars_stale' || reason.startsWith('freshness_'))
         ? 'stale'
         : (row?.freshness?.as_of ? 'fresh' : 'missing'),
       page_core_status: strictlyOperational ? 'operational' : 'degraded',
       key_levels_status: row?.key_levels_ready === true && row?.market_stats_min ? 'ready' : 'degraded',
-      decision_status: row?.summary_min?.governance_status === 'available' ? 'available' : 'degraded',
-      risk_status: String(row?.summary_min?.risk_level || row?.governance_summary?.risk_level || '').toUpperCase() === 'UNKNOWN'
+      decision_status: firstNonEmpty(existingContract.decision_status)
+        || (row?.summary_min?.governance_status === 'available' ? 'available' : 'degraded'),
+      risk_status: firstNonEmpty(existingContract.risk_status)
+        || (String(row?.summary_min?.risk_level || row?.governance_summary?.risk_level || '').toUpperCase() === 'UNKNOWN'
         ? 'degraded'
-        : (row?.summary_min?.risk_level || row?.governance_summary?.risk_level ? 'available' : 'missing'),
-      hist_status: row?.market_stats_min ? 'available' : 'missing',
-      breakout_status: row?.breakout_summary ? 'available' : 'missing',
+        : (row?.summary_min?.risk_level || row?.governance_summary?.risk_level ? 'available' : 'missing')),
+      hist_status: firstNonEmpty(existingContract.hist_status)
+        || (row?.market_stats_min ? 'available' : 'missing'),
+      fundamentals_status: firstNonEmpty(existingContract.fundamentals_status, coverage.fundamentals_status)
+        || (coverage.fundamentals === true ? 'available' : 'missing'),
+      forecast_status: firstNonEmpty(existingContract.forecast_status, coverage.forecast_status)
+        || (coverage.forecast === true ? 'available' : 'missing'),
+      breakout_status: firstNonEmpty(existingContract.breakout_status, coverage.breakout_status)
+        || (row?.breakout_summary ? 'available' : 'missing'),
       stock_detail_view_status: strictlyOperational ? 'operational' : 'degraded',
       strict_operational: strictlyOperational,
       strict_blocking_reasons: strictReasons,
