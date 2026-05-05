@@ -25,6 +25,22 @@ import { writeJsonDurableAtomicSync } from '../lib/durable-atomic-write.mjs';
 import { assertProductionRuntime } from './prod-runtime-guard.mjs';
 
 const ROOT = path.resolve(new URL('.', import.meta.url).pathname, '../..');
+if (process.env.RV_PIPELINE_MASTER_ENABLED !== '1') {
+  const line = [
+    `[${new Date().toISOString()}]`,
+    'pipeline_master_disabled_by_default=true',
+    'enable_with_RV_PIPELINE_MASTER_ENABLED=1',
+  ].join(' ');
+  const logPath = path.join(ROOT, 'logs/pipeline-master-supervisor.log');
+  try {
+    fs.mkdirSync(path.dirname(logPath), { recursive: true });
+    fs.appendFileSync(logPath, `${line}\n`, 'utf8');
+  } catch {
+    // A disabled legacy supervisor must not create a new failure loop.
+  }
+  console.log(line);
+  process.exit(0);
+}
 const STATE_PATH = path.join(ROOT, 'mirrors/ops/pipeline-master/state.json');
 const LOCK_PATH = path.join(ROOT, 'mirrors/ops/pipeline-master/lock.json');
 const HEARTBEAT_PATH = path.join(ROOT, 'mirrors/ops/pipeline-master/supervisor-heartbeat.json');

@@ -110,6 +110,38 @@ sys.exit(1)
 PY
 }
 
+rogue_pipeline_is_active() {
+  python3 <<'PY'
+import os
+import sys
+
+needles = (
+    "run-pipeline-master-supervisor.mjs",
+    "run-dashboard-green-recovery.mjs",
+    "run-hist-probs-turbo.mjs",
+    "measure-command.py",
+)
+allowed = (
+    "rv-nas-night-supervisor.sh",
+    "run-nightly-full-pipeline.sh",
+    "run-nightly-full-pipeline-if-no-backfill.sh",
+)
+for name in os.listdir("/proc"):
+    if not name.isdigit():
+        continue
+    try:
+        cmdline = open(f"/proc/{name}/cmdline", "rb").read().decode("utf-8", "replace")
+    except Exception:
+        continue
+    if not cmdline:
+        continue
+    if any(needle in cmdline for needle in needles) and not any(item in cmdline for item in allowed):
+        print(f"rogue_pipeline_process pid={name} cmd={cmdline.replace(chr(0), ' ')[:240]}", file=sys.stderr)
+        sys.exit(0)
+sys.exit(1)
+PY
+}
+
 write_skip_state() {
   local skip_reason="$1"
   python3 - "$STATE_JSON" "$BACKFILL_STATE_JSON" "$skip_reason" <<'PY'
@@ -187,6 +219,12 @@ fi
 if pipeline_is_active; then
   write_skip_state "night_pipeline_active"
   echo "nightly_full_skipped=night_pipeline_active state=$PIPELINE_LATEST_JSON"
+  exit 0
+fi
+
+if rogue_pipeline_is_active; then
+  write_skip_state "rogue_pipeline_process_active"
+  echo "nightly_full_skipped=rogue_pipeline_process_active"
   exit 0
 fi
 

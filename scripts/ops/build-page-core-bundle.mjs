@@ -5,6 +5,7 @@ import path from 'node:path';
 import zlib from 'node:zlib';
 import Ajv2020 from 'ajv/dist/2020.js';
 import { computeIndicators } from '../../functions/api/_shared/eod-indicators.mjs';
+import { pageCoreStrictOperationalReasons } from '../../functions/api/_shared/page-core-operational-contract.js';
 import { normalizeReturnDecimal } from '../../functions/api/_shared/return-units.js';
 import {
   assessMarketDataConsistency,
@@ -310,6 +311,10 @@ function buildAliasMap({ lookupExact, searchExact, registryRows, scopeIds }) {
 function numberOrNull(value) {
   const n = Number(value);
   return Number.isFinite(n) ? n : null;
+}
+
+function uniqueStrings(values) {
+  return Array.from(new Set(values.map((value) => String(value || '').trim()).filter(Boolean)));
 }
 
 function normalizeHistoryBar(row) {
@@ -682,6 +687,41 @@ function buildPageCoreRow({ canonicalId, registryRow, decisionRow, lookupValue, 
       warnings,
     },
   };
+  const strictReasons = pageCoreStrictOperationalReasons(row, {
+    latest: { target_market_date: targetMarketDate || null },
+    freshnessStatus: row.freshness?.status || null,
+  }).filter((reason) => reason !== 'ui_banner_not_operational');
+  if (strictReasons.length > 0 && row.ui_banner_state === 'all_systems_operational') {
+    const strictBlocker = strictReasons[0] || 'strict_operational_contract_failed';
+    row.ui_banner_state = 'degraded';
+    row.primary_blocker = strictBlocker;
+    row.summary_min = {
+      ...row.summary_min,
+      quality_status: 'DEGRADED',
+    };
+    row.governance_summary = {
+      ...row.governance_summary,
+      blocking_reasons: uniqueStrings([...(row.governance_summary.blocking_reasons || []), strictBlocker]),
+      warnings: uniqueStrings([...(row.governance_summary.warnings || []), 'false_green_downgraded_by_page_core_contract']),
+    };
+    row.status_contract = {
+      ...row.status_contract,
+      page_core_status: 'degraded',
+      stock_detail_view_status: 'degraded',
+      strict_operational: false,
+      strict_blocking_reasons: strictReasons,
+    };
+    row.meta = {
+      ...row.meta,
+      warnings: uniqueStrings([...(row.meta.warnings || []), 'false_green_downgraded_by_page_core_contract']),
+    };
+  } else {
+    row.status_contract = {
+      ...row.status_contract,
+      strict_operational: row.ui_banner_state === 'all_systems_operational' && strictReasons.length === 0,
+      strict_blocking_reasons: strictReasons.length > 0 ? strictReasons : row.status_contract.strict_blocking_reasons,
+    };
+  }
   const bytes = Buffer.byteLength(JSON.stringify(row), 'utf8');
   if (bytes > PAGE_CORE_TARGET_BYTES) row.meta.warnings = Array.from(new Set([...row.meta.warnings, 'row_over_target_size']));
   const hardBytes = Buffer.byteLength(JSON.stringify(row), 'utf8');

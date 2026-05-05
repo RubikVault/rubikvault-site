@@ -7,7 +7,7 @@ import { gunzipSync } from 'node:zlib';
 import {
   pageCoreClaimsOperational,
   pageCoreStrictOperationalReasons,
-} from '../../functions/api/_shared/page-core-reader.js';
+} from '../../functions/api/_shared/page-core-operational-contract.js';
 
 const ROOT = path.resolve(fileURLToPath(new URL('.', import.meta.url)), '../..');
 const DEFAULT_LATEST = path.join(ROOT, 'public/data/page-core/latest.json');
@@ -232,6 +232,26 @@ function classifyRow(row, providerExceptions = new Map()) {
   };
 }
 
+function contractViolationSample(row, classified) {
+  const reasons = classified.reasons
+    .filter((reason) => String(reason || '').startsWith('contract_green_'));
+  if (!reasons.length) return null;
+  const strictReasons = pageCoreStrictOperationalReasons(row)
+    .filter((reason) => reason !== 'ui_banner_not_operational');
+  return {
+    canonical_asset_id: row?.canonical_asset_id || null,
+    display_ticker: row?.display_ticker || null,
+    asset_class: classified.assetClass,
+    reasons,
+    strict_blocking_reasons: strictReasons,
+    last_close: row?.summary_min?.last_close ?? null,
+    daily_change_pct: row?.summary_min?.daily_change_pct ?? null,
+    low_52w: row?.market_stats_min?.stats?.low_52w ?? null,
+    latest_bar_date: row?.market_stats_min?.latest_bar_date || row?.latest_bar_date || row?.freshness?.as_of || null,
+    price_source: row?.market_stats_min?.price_source || row?.price_source || null,
+  };
+}
+
 function main() {
   const options = parseArgs(process.argv);
   const latest = readJson(options.latestPath);
@@ -257,7 +277,7 @@ function main() {
     by_ui_blocking_reason: {},
     by_decision_blocking_reason: {},
   };
-  const samples = { degraded: [], exceptions: [] };
+  const samples = { degraded: [], exceptions: [], contract_violations: [] };
   for (const file of fs.readdirSync(pageDir).filter((name) => name.endsWith('.json.gz')).sort()) {
     const shard = readMaybeGzip(path.join(pageDir, file));
     for (const row of Object.values(shard)) {
@@ -282,6 +302,8 @@ function main() {
       for (const reason of classified.decision_blocking_reasons) inc(counts.by_decision_blocking_reason, reason);
       if (classified.reasons.some((reason) => String(reason).startsWith('contract_green_'))) {
         counts.contract_violation_total += 1;
+        const sample = contractViolationSample(row, classified);
+        if (sample && samples.contract_violations.length < 25) samples.contract_violations.push(sample);
       }
       if (classified.targetable && !classified.operational && samples.degraded.length < 50) {
         samples.degraded.push({

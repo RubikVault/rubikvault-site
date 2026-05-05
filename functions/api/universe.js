@@ -365,6 +365,14 @@ export async function onRequestGet(context) {
         : null;
     }
     const protectedItems = protectedFallbackItemsForQuery(normalized, qSymbol);
+    if (protectedItems.length > 0) {
+      const protectedRows = protectedItems
+        .filter((item) => includeByAssetClass(item))
+        .map((item) => toUniverseOutRow(item))
+        .filter(Boolean)
+        .slice(offset, offset + LIMIT);
+      if (protectedRows.length > 0) return makeV7Payload(protectedRows, "protected_fastpath", null);
+    }
     if (exactBySymbol) {
       appendUniqueCandidates(
         protectedItems,

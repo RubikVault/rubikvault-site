@@ -234,7 +234,7 @@ function shouldSkipSummarySnapshotJoins(request, env) {
 function resolveHistoricalBarLimit(request) {
   const forced = Number(process?.env?.RV_V2_HISTORICAL_BAR_LIMIT || 0);
   if (Number.isFinite(forced) && forced > 0) return Math.max(50, Math.trunc(forced));
-  return isLocalDevRequest(request) ? 1500 : 0;
+  return isLocalDevRequest(request) ? 1500 : 750;
 }
 
 function pageCoreLatestBar(row) {

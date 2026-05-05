@@ -28,7 +28,42 @@ export async function onRequestGet(context) {
     });
   }
 
-  const result = await fetchStockHistorical(ticker, env, request);
+  let result = null;
+  try {
+    result = await fetchStockHistorical(ticker, env, request);
+  } catch (err) {
+    const todayUtc = new Date().toISOString().slice(0, 10);
+    result = {
+      ok: false,
+      data: {
+        ticker,
+        bars: [],
+        indicators: [],
+        indicator_issues: ['historical_runtime_exception'],
+        breakout_v12: null,
+        breakout_v2: null,
+        breakout_v2_legacy: null,
+        availability: {
+          status: 'degraded',
+          reason: 'Historical data could not be prepared in the current runtime.',
+          ui_renderable: false,
+        },
+      },
+      meta: {
+        status: 'degraded',
+        generated_at: new Date().toISOString(),
+        data_date: todayUtc,
+        provider: 'typed-degraded-runtime-fallback',
+        quality_flags: ['HISTORICAL_RUNTIME_EXCEPTION'],
+        version: 'v2',
+      },
+      error: {
+        code: 'HISTORICAL_RUNTIME_EXCEPTION',
+        message: err?.message || 'Historical runtime exception',
+        retryable: true,
+      },
+    };
+  }
   const durationMs = Date.now() - start;
 
   logV2Request({
@@ -41,7 +76,7 @@ export async function onRequestGet(context) {
     source: result.meta?.provider,
   });
 
-  const status = result.ok ? 200 : 502;
+  const status = result.ok || result?.meta?.provider === 'typed-degraded-runtime-fallback' ? 200 : 502;
   return new Response(JSON.stringify(result), {
     status,
     headers: { 'Content-Type': 'application/json; charset=utf-8' },

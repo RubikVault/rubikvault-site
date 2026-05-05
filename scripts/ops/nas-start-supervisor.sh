@@ -8,6 +8,10 @@
 #   - This repo at /volume1/homes/neoboy/Dev/rubikvault-site/
 
 set -e
+if [ "${RV_DASHBOARD_GREEN_RECOVERY_ENABLED:-0}" != "1" ]; then
+  echo "dashboard_green_recovery_disabled_by_default=true enable_with_RV_DASHBOARD_GREEN_RECOVERY_ENABLED=1"
+  exit 0
+fi
 REPO_DIR="/volume1/homes/neoboy/Dev/rubikvault-site"
 LOG_DIR="$REPO_DIR/logs/dashboard_v7"
 NVM_DIR="$HOME/.nvm"

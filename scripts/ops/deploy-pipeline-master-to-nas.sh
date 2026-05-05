@@ -103,6 +103,10 @@ remote_shell "
 if [[ "$RESTART_AFTER_DEPLOY" -eq 1 ]]; then
   remote_shell "
     cd '$REMOTE_REPO'
+    if [ \"\${RV_PIPELINE_MASTER_ENABLED:-0}\" != \"1\" ]; then
+      echo 'pipeline_master_restart_skipped=disabled_by_default enable_with_RV_PIPELINE_MASTER_ENABLED=1'
+      exit 0
+    fi
     pid=\$(jq -r '.pid // empty' mirrors/ops/pipeline-master/supervisor-heartbeat.json 2>/dev/null || true)
     if [ -n \"\$pid\" ] && kill -0 \"\$pid\" 2>/dev/null; then
       kill \"\$pid\" 2>/dev/null || true
