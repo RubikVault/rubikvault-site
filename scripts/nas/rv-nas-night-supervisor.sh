@@ -1039,8 +1039,14 @@ while IFS= read -r step_id; do
   step_status="$?"
   set -e
   if [[ "$step_status" -ne 0 ]]; then
-    if [[ "$step_id" == "breakout_v12" ]]; then
-      echo "optional_step_degraded=breakout_v12 exit_code=$step_status latest_unchanged=1" >&2
+    # P10: optional-step list. These are decision-only modules per W10/W11 split —
+    # their failure must NOT kill the lane because UI-renderable doesn't depend on
+    # them. Tonight 2026-05-05 hist_probs deferred (exit 23) and lost the entire
+    # data-plane lane + release-full + wrangler_deploy. Treat the same family as
+    # breakout_v12: log degraded, continue.
+    OPTIONAL_STEPS_LIST="${RV_OPTIONAL_STEPS:-breakout_v12 hist_probs hist_probs_catchup hist_probs_v2_shadow scientific_summary etf_diagnostic stock_ui_integrity_audit}"
+    if [[ " $OPTIONAL_STEPS_LIST " == *" $step_id "* ]]; then
+      echo "optional_step_degraded=$step_id exit_code=$step_status latest_unchanged=1" >&2
       write_status "running" "optional_step_degraded" "$step_id"
       continue
     fi
