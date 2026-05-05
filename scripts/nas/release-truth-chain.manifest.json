@@ -1,16 +1,21 @@
 {
   "schema": "rv.nas.release_truth_chain_code_manifest.v1",
-  "generated_at": "2026-05-05T09:47:34.064Z",
-  "git_head": "148fb9becc942b548c32c79419aa624744b6b2c4",
+  "generated_at": "2026-05-05T11:56:11.870Z",
+  "git_head": "b5cb355a837e9e2a9524f2e5abbf4ef301de53d2",
   "paths_file": "scripts/nas/inputs/release-truth-chain.paths",
-  "file_count": 24,
-  "combined_hash": "1aece7c5bdb75fbcc052dae1153fe1719041b1fb988a338209d82cafe12cdae7",
+  "file_count": 26,
+  "combined_hash": "78428b86c1a40e06fbb2f36e8317a333c764fcb2017218756ebca96d6857757f",
   "missing": [],
   "files": [
     {
       "path": "config/runtime-manifest.json",
-      "size_bytes": 8567,
-      "sha256": "5b47da38bccd2c70d48abd92d5012cfdbc1248609d189da21c0f22f9665623a4"
+      "size_bytes": 8685,
+      "sha256": "a12f3697b20c8b7ffdd34a3a0011c50bac7c1eefcba1f64f40f6c199eab387b5"
+    },
+    {
+      "path": "functions/api/_shared/fundamentals-scope.mjs",
+      "size_bytes": 7230,
+      "sha256": "f865194a2b10ae6a6d96bbb6faa6a40f2bd0ecad2230e10d5f0415bfb3c128ba"
     },
     {
       "path": "functions/api/_shared/history-store.mjs",
@@ -34,8 +39,8 @@
     },
     {
       "path": "scripts/nas/inputs/release-truth-chain.paths",
-      "size_bytes": 995,
-      "sha256": "7c2ef8f7dd694709bca401625e15050cc2a23fe32f92947ee846477b77c9343f"
+      "size_bytes": 1079,
+      "sha256": "fbe7d432b0ceac7e3a8e967d9a6e411a6c9a738aff118f34cbbae9425693253f"
     },
     {
       "path": "scripts/nas/nas-env.sh",
@@ -79,8 +84,8 @@
     },
     {
       "path": "scripts/ops/build-page-core-bundle.mjs",
-      "size_bytes": 40364,
-      "sha256": "d24fd8232b5db5b0cb18f413a134b744f65360b35b60f8000ca96a86df85151a"
+      "size_bytes": 45571,
+      "sha256": "aa0fae408c1f1c26d0a2f2d3c5579b49afc88b83d959ee83b166baff9f65178b"
     },
     {
       "path": "scripts/ops/build-public-history-shards.mjs",
@@ -89,8 +94,8 @@
     },
     {
       "path": "scripts/ops/build-public-status.mjs",
-      "size_bytes": 8681,
-      "sha256": "16610275b4a1f730468bcda867c5ef145807ef70c1be170c71ca51a6bd3923ac"
+      "size_bytes": 9009,
+      "sha256": "e603f752e34d31402c1463365792a8d7398ff16c72b6499e381c897843ac7b65"
     },
     {
       "path": "scripts/ops/build-stock-analyzer-operability.mjs",
@@ -109,13 +114,18 @@
     },
     {
       "path": "scripts/ops/final-integrity-seal.mjs",
-      "size_bytes": 48491,
-      "sha256": "be174d7086febe5f547de91b613810546df6c76cfc73809a4c26770633e96da2"
+      "size_bytes": 48922,
+      "sha256": "33179f0a82ac345a7fa531f259351a79d7ca2f27bf82c319532e0c932aa87e76"
+    },
+    {
+      "path": "scripts/ops/lib/release-gate-model.mjs",
+      "size_bytes": 3308,
+      "sha256": "295cd669ce8d0c51872cefd4048ec666408bf6080db5cf12a18ae252079205a7"
     },
     {
       "path": "scripts/ops/release-gate-check.mjs",
-      "size_bytes": 35525,
-      "sha256": "06d1ba62fe4cda8d84cc4076938b0e955a03757c603f3fd2c283575cfad42347"
+      "size_bytes": 37841,
+      "sha256": "6ca5454b9825144af974fc02ef6b8f39c51470ecf1f6401c38adb48f44a2f86f"
     },
     {
       "path": "scripts/ops/report-history-coverage.mjs",

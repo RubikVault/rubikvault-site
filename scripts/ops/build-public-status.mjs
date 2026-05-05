@@ -9,6 +9,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { buildReleaseGateModel } from './lib/release-gate-model.mjs';
 
 const REPO_ROOT = path.resolve(fileURLToPath(new URL('.', import.meta.url)), '../..');
 const FINAL_SEAL_PATH = path.join(REPO_ROOT, 'public/data/ops/final-integrity-seal-latest.json');
@@ -109,15 +110,23 @@ const coreReleaseReady = Boolean(
 const decisionReady = releaseEvidenceFresh && (seal?.decision_ready === true || decisionPublicGreen);
 const histReady = releaseEvidenceFresh && (seal?.hist_ready === true || histGreen);
 const breakoutReady = seal?.breakout_ready ?? null;
-const overallUiReady = seal?.overall_ui_ready === true
-  || Boolean(coreReleaseReady && stockUiStateGreen && histReady);
+const releaseGate = buildReleaseGateModel({
+  coreReleaseReady,
+  pageCoreReady: Boolean(seal?.page_core_ready ?? pageCoreGreen),
+  searchReady: seal?.search_ready !== false,
+  universeReady: seal?.universe_ready !== false,
+  stockUiState,
+  stockUiReleaseEligible: stockUiStateGreen,
+  histReady,
+});
+const overallUiReady = releaseGate.release_ui_ready;
 const uiGreen = overallUiReady;
-const ready = Boolean(coreSealReady && overallUiReady);
+const ready = releaseGate.deploy_allowed;
 
 const doc = {
   schema: 'rv_public_status_v1',
   generated_at: new Date().toISOString(),
-  status: uiGreen ? 'OK' : (ready ? 'DEGRADED' : 'LIMITED'),
+  status: uiGreen ? 'OK' : 'LIMITED',
   ui_green: uiGreen,
   release_ready: Boolean(ready),
   core_release_ready: coreReleaseReady,
@@ -127,8 +136,10 @@ const doc = {
   decision_ready: decisionReady,
   risk_ready: seal?.risk_ready ?? decisionReady,
   hist_ready: histReady,
+  hist_release_blocking: false,
   breakout_ready: breakoutReady,
   overall_ui_ready: overallUiReady,
+  release_gate: releaseGate,
   target_market_date: targetDate,
   release_evidence_target_market_date: releaseEvidenceTarget,
   page_core_target_market_date: pageCoreTarget,

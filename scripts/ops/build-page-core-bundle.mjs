@@ -6,6 +6,7 @@ import zlib from 'node:zlib';
 import Ajv2020 from 'ajv/dist/2020.js';
 import { computeIndicators } from '../../functions/api/_shared/eod-indicators.mjs';
 import { pageCoreStrictOperationalReasons } from '../../functions/api/_shared/page-core-operational-contract.js';
+import { annotateFundamentalsForScope } from '../../functions/api/_shared/fundamentals-scope.mjs';
 import { normalizeReturnDecimal } from '../../functions/api/_shared/return-units.js';
 import {
   assessMarketDataConsistency,
@@ -40,6 +41,12 @@ const COMPAT_SCOPE_PATH = path.join(ROOT, 'public/data/universe/v7/ssot/stocks_e
 const OPERABILITY_PATH = path.join(ROOT, 'public/data/ops/stock-analyzer-operability-summary-latest.json');
 const OPERABILITY_FULL_PATH = path.join(ROOT, 'public/data/ops/stock-analyzer-operability-latest.json');
 const DECISIONS_LATEST_PATH = path.join(ROOT, 'public/data/decisions/latest.json');
+const FUNDAMENTALS_SCOPE_PATH = path.join(ROOT, 'public/data/fundamentals/_scope.json');
+const FORECAST_LATEST_PATH = path.join(ROOT, 'public/data/forecast/latest.json');
+const BREAKOUT_LATEST_MANIFEST_PATHS = [
+  path.join(ROOT, 'public/data/breakout/manifests/latest.json'),
+  path.join(ROOT, 'public/data/breakout/status.json'),
+];
 const PAGE_CORE_SCHEMA_PATH = path.join(ROOT, 'schemas/stock-analyzer/page-core.v1.schema.json');
 const HISTORY_MANIFEST_CANDIDATES = [
   process.env.RV_PAGE_CORE_HISTORY_MANIFEST_PATH,
@@ -221,6 +228,80 @@ function readDecisionRows() {
     }
   }
   return out;
+}
+
+function readForecastSymbols() {
+  const doc = readJsonMaybe(FORECAST_LATEST_PATH);
+  const rows = Array.isArray(doc?.data?.forecasts) ? doc.data.forecasts : [];
+  return new Set(rows.map((row) => normalizePageCoreAlias(row?.symbol || row?.ticker)).filter(Boolean));
+}
+
+function collectBreakoutKeys(value, out = new Set()) {
+  if (!value || typeof value !== 'object') return out;
+  if (Array.isArray(value)) {
+    for (const item of value) collectBreakoutKeys(item, out);
+    return out;
+  }
+  const direct = normalizePageCoreAlias(value.canonical_id || value.canonicalId || value.asset_id || value.assetId);
+  if (direct) out.add(direct);
+  const ticker = normalizePageCoreAlias(value.symbol || value.ticker);
+  if (ticker) out.add(ticker);
+  for (const key of ['assets', 'symbols', 'candidates', 'rows', 'signals', 'setups', 'data']) {
+    if (value[key]) collectBreakoutKeys(value[key], out);
+  }
+  return out;
+}
+
+function readBreakoutKeys() {
+  const keys = new Set();
+  for (const filePath of BREAKOUT_LATEST_MANIFEST_PATHS) {
+    const doc = readJsonMaybe(filePath);
+    if (doc) collectBreakoutKeys(doc, keys);
+  }
+  return keys;
+}
+
+function normalizeTypedStatus(value, fallback = 'not_generated') {
+  const normalized = String(value || '').trim().toLowerCase();
+  return normalized || fallback;
+}
+
+function fundamentalsStatusFor({ display, name, assetClass, scopeDoc, targetMarketDate }) {
+  const annotated = annotateFundamentalsForScope({
+    ticker: display,
+    universe: { name, asset_class: assetClass },
+    fundamentals: null,
+    scopeDoc,
+    targetMarketDate,
+    assetClass,
+  });
+  const status = normalizeTypedStatus(annotated.scope_status || annotated.typed_status);
+  return status === 'ready' ? 'available' : status;
+}
+
+function forecastStatusFor({ display, assetClass, forecastSymbols }) {
+  if (assetClass !== 'STOCK') return 'not_applicable';
+  return forecastSymbols?.has(normalizePageCoreAlias(display)) ? 'available' : 'not_generated';
+}
+
+function breakoutStatusFor({ canonicalId, display, barsCount, breakoutKeys }) {
+  if (breakoutKeys?.has(normalizePageCoreAlias(canonicalId)) || breakoutKeys?.has(normalizePageCoreAlias(display))) return 'available';
+  return Number(barsCount || 0) < 200 ? 'insufficient_history' : 'not_generated';
+}
+
+function riskFallbackFor({ assetClass, marketStatsMin }) {
+  const stats = marketStatsMin?.stats || {};
+  const volPct = Number(stats.volatility_percentile);
+  if (Number.isFinite(volPct)) {
+    return {
+      level: volPct >= 75 ? 'HIGH' : volPct >= 35 ? 'MODERATE' : 'LOW',
+      source: 'vol_heuristic',
+      score: Number(volPct.toFixed(2)),
+    };
+  }
+  if (assetClass === 'ETF' || assetClass === 'INDEX') return { level: 'LOW', source: 'asset_class_default', score: null };
+  if (assetClass === 'STOCK') return { level: 'MODERATE', source: 'asset_class_default', score: null };
+  return null;
 }
 
 function addAlias(aliasMap, collisions, alias, canonical, { authoritative = false } = {}) {
@@ -535,7 +616,7 @@ function buildHistoricalMarketContext({ canonicalId, display, registryRow = null
   };
 }
 
-function buildPageCoreRow({ canonicalId, registryRow, decisionRow, lookupValue, targetMarketDate, generatedAt, runId, snapshotId }) {
+function buildPageCoreRow({ canonicalId, registryRow, decisionRow, lookupValue, targetMarketDate, generatedAt, runId, snapshotId, moduleContext = {} }) {
   const display = normalizePageCoreAlias(registryRow?.symbol || (Array.isArray(lookupValue) ? lookupValue[0] : null) || canonicalId.split(':').pop());
   const name = registryRow?.name || (Array.isArray(lookupValue) ? lookupValue[1] : null) || display;
   const assetClass = normalizePageCoreAlias(registryRow?.type_norm || registryRow?.asset_class || (Array.isArray(lookupValue) ? lookupValue[5] : null) || 'UNKNOWN');
@@ -563,7 +644,15 @@ function buildPageCoreRow({ canonicalId, registryRow, decisionRow, lookupValue, 
   const barsCount = Math.max(numberOrNull(registryRow?.bars_count) || 0, historyContext.bars.length || 0);
   const targetable = OPERATIONAL_ASSET_CLASSES.has(assetClass) && barsCount >= 200;
   const freshnessOk = targetMarketDate ? Boolean(asOf && asOf >= targetMarketDate) : Boolean(asOf);
-  const riskLevel = String(decisionRow?.risk_assessment?.level || '').toUpperCase();
+  const rawRiskLevel = String(decisionRow?.risk_assessment?.level || '').toUpperCase();
+  const riskFallback = (!rawRiskLevel || rawRiskLevel === 'UNKNOWN') && targetable
+    ? riskFallbackFor({ assetClass, marketStatsMin: historyContext.marketStatsMin })
+    : null;
+  const riskLevel = riskFallback?.level || rawRiskLevel;
+  const riskSource = riskFallback?.source || decisionRow?.risk_assessment?.source || (decisionRow ? 'decision_bundle' : null);
+  const riskScore = riskFallback?.score ?? decisionRow?.risk_assessment?.score ?? null;
+  const rawVerdict = String(decisionRow?.verdict || '').toUpperCase();
+  const effectiveVerdict = riskFallback && rawVerdict === 'BUY' ? 'WAIT' : rawVerdict;
   const effectiveBlockingReasons = freshnessOk
     ? blockingReasons.filter((reason) => String(reason || '') !== 'bars_stale')
     : blockingReasons;
@@ -573,7 +662,7 @@ function buildPageCoreRow({ canonicalId, registryRow, decisionRow, lookupValue, 
   const decisionOperational = Boolean(
     decisionRow
     && decisionRow.pipeline_status === 'OK'
-    && ['BUY', 'WAIT'].includes(decisionRow.verdict)
+    && ['BUY', 'WAIT'].includes(effectiveVerdict)
     && effectiveBlockingReasons.length === 0
     && riskLevel !== 'UNKNOWN'
   );
@@ -597,6 +686,27 @@ function buildPageCoreRow({ canonicalId, registryRow, decisionRow, lookupValue, 
     || (!decisionOperational ? (riskLevel === 'UNKNOWN' ? 'risk_unknown' : 'decision_not_operational') : null)
     || effectiveWarnings[0]
     || null;
+  const fundamentalsStatus = fundamentalsStatusFor({
+    display,
+    name,
+    assetClass,
+    scopeDoc: moduleContext.fundamentalsScope,
+    targetMarketDate,
+  });
+  const forecastStatus = forecastStatusFor({
+    display,
+    assetClass,
+    forecastSymbols: moduleContext.forecastSymbols,
+  });
+  const breakoutStatus = breakoutStatusFor({
+    canonicalId,
+    display,
+    barsCount,
+    breakoutKeys: moduleContext.breakoutKeys,
+  });
+  const moduleWarnings = [];
+  if (riskFallback) moduleWarnings.push(`risk_fallback_${riskFallback.source}`);
+  if (riskFallback && rawVerdict === 'BUY') moduleWarnings.push('buy_suppressed_by_risk_fallback');
   const uiBannerState = decisionOperational && targetable && historicalBasisOk && freshnessOk
     ? 'all_systems_operational'
     : primaryBlocker
@@ -630,9 +740,10 @@ function buildPageCoreRow({ canonicalId, registryRow, decisionRow, lookupValue, 
       daily_change_pct: dailyChangePct,
       daily_change_abs: dailyChangeAbs,
       market_cap: null,
-      decision_verdict: decisionRow?.verdict || (registryRow ? 'WAIT' : 'WAIT_PIPELINE_INCOMPLETE'),
-      decision_confidence_bucket: confidenceBucket(registryRow?.computed?.score_0_100 || decisionRow?.risk_assessment?.score),
+      decision_verdict: effectiveVerdict || (registryRow ? 'WAIT' : 'WAIT_PIPELINE_INCOMPLETE'),
+      decision_confidence_bucket: confidenceBucket(registryRow?.computed?.score_0_100 || riskScore),
       risk_level: riskLevel || null,
+      risk_source: riskSource,
       learning_status: null,
       quality_status: qualityStatus,
       governance_status: decisionRow ? 'available' : 'unavailable',
@@ -642,15 +753,19 @@ function buildPageCoreRow({ canonicalId, registryRow, decisionRow, lookupValue, 
       evaluation_role: decisionRow?.evaluation_role || null,
       learning_gate_status: null,
       risk_level: riskLevel || null,
+      risk_source: riskSource,
       blocking_reasons: effectiveBlockingReasons,
-      warnings: effectiveWarnings,
+      warnings: uniqueStrings([...effectiveWarnings, ...moduleWarnings]),
     },
     coverage: {
       bars: barsCount || numberOrNull(registryRow?.bars_count),
       derived_daily: Boolean(decisionRow),
       governance: Boolean(decisionRow),
-      fundamentals: false,
-      forecast: false,
+      fundamentals: fundamentalsStatus === 'available',
+      fundamentals_status: fundamentalsStatus,
+      forecast: forecastStatus === 'available',
+      forecast_status: forecastStatus,
+      breakout_status: breakoutStatus,
       ui_renderable: true,
     },
     price_source: priceSource,
@@ -667,8 +782,11 @@ function buildPageCoreRow({ canonicalId, registryRow, decisionRow, lookupValue, 
       key_levels_status: keyLevelsReady && historyContext.marketStatsMin ? 'ready' : 'degraded',
       decision_status: decisionRow ? (decisionOperational ? 'operational' : 'degraded') : 'missing',
       risk_status: riskLevel && riskLevel !== 'UNKNOWN' ? 'available' : 'degraded',
+      risk_source: riskSource,
       hist_status: historyContext.marketStatsMin ? 'available' : 'missing',
-      breakout_status: 'missing',
+      fundamentals_status: fundamentalsStatus,
+      forecast_status: forecastStatus,
+      breakout_status: breakoutStatus,
       stock_detail_view_status: uiBannerState === 'all_systems_operational' ? 'operational' : 'degraded',
       strict_operational: uiBannerState === 'all_systems_operational',
       strict_blocking_reasons: primaryBlocker ? [primaryBlocker] : [],
@@ -684,7 +802,7 @@ function buildPageCoreRow({ canonicalId, registryRow, decisionRow, lookupValue, 
     meta: {
       source: 'page-core-builder',
       render_contract: 'critical_page_contract',
-      warnings,
+      warnings: uniqueStrings([...warnings, ...moduleWarnings]),
     },
   };
   const strictReasons = pageCoreStrictOperationalReasons(row, {
@@ -774,6 +892,11 @@ function buildBundle(opts) {
   const searchExact = readSearchExact();
   const lookupExact = readSymbolLookup();
   const decisions = readDecisionRows();
+  const moduleContext = {
+    fundamentalsScope: readJsonMaybe(FUNDAMENTALS_SCOPE_PATH),
+    forecastSymbols: readForecastSymbols(),
+    breakoutKeys: readBreakoutKeys(),
+  };
   const { aliases, collisions } = buildAliasMap({ lookupExact, searchExact, registryRows, scopeIds });
   const snapshotId = buildPageCoreSnapshotId({
     runId: opts.runId,
@@ -804,6 +927,7 @@ function buildBundle(opts) {
       generatedAt,
       runId: opts.runId,
       snapshotId,
+      moduleContext,
     });
     rows.push(row);
   }

@@ -46,6 +46,7 @@
     { "pattern": "posts/**", "maxFileSizeBytes": 1048576, "class": "visitor-posts" },
 
     { "pattern": "data/public-status.json", "maxFileSizeBytes": 16384, "class": "public-status" },
+    { "pattern": "data/status/deploy-proof-latest.json", "maxFileSizeBytes": 16384, "class": "public-deploy-proof" },
     { "pattern": "data/runtime/hist-probs-status-summary.json", "maxFileSizeBytes": 65536, "class": "hist-probs-public-status" },
     { "pattern": "data/runtime/stock-analyzer-ui-delivery.json", "maxFileSizeBytes": 262144, "class": "stock-analyzer-public-delivery-status" },
     { "pattern": "data/eod/history/pack-manifest.us-eu.json", "maxFileSizeBytes": 20971520, "class": "eod-pack-manifest" },

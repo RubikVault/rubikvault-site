@@ -30,6 +30,7 @@ import { execFileSync, spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { verifySealPayload } from '../lib/pipeline_authority/gates/release-seal.mjs';
 import { resolveRuntimeConfig } from '../lib/pipeline_authority/config/runtime-config.mjs';
+import { buildReleaseGateModel } from './lib/release-gate-model.mjs';
 
 const REPO_ROOT = path.resolve(fileURLToPath(new URL('.', import.meta.url)), '../..');
 
@@ -39,6 +40,7 @@ const FINAL_INTEGRITY_SEAL_PATH = path.join(REPO_ROOT, 'public/data/ops/final-in
 const PUBLIC_STATUS_PATH = path.join(REPO_ROOT, 'public/data/public-status.json');
 const STOCK_UI_STATE_PATH = path.join(REPO_ROOT, 'public/data/runtime/stock-analyzer-ui-state-summary-latest.json');
 const DEPLOY_PROOF_PATH  = path.join(REPO_ROOT, 'var/private/ops/deploy-proof-latest.json');
+const PUBLIC_DEPLOY_PROOF_PATH = path.join(REPO_ROOT, 'public/data/status/deploy-proof-latest.json');
 const BUNDLE_META_PATH   = path.join(REPO_ROOT, 'var/private/ops/build-bundle-meta.json');
 const BUILD_META_PATH    = path.join(REPO_ROOT, 'public/data/ops/build-meta.json');
 const PAGE_CORE_ACTIVE_LATEST_PATH = path.join(REPO_ROOT, 'public/data/page-core/latest.json');
@@ -287,15 +289,20 @@ function verifyProductionArtifactsOnce(targetDate) {
   const cacheBust = `rv=${Date.now()}`;
   const checks = {
     public_status: fetchJsonSmoke(`${PROD_BASE}/data/public-status.json?${cacheBust}`),
+    deploy_proof: fetchJsonSmoke(`${PROD_BASE}/data/status/deploy-proof-latest.json?${cacheBust}`),
   };
   const failures = [];
   const publicStatus = checks.public_status.json || {};
   const publicStatusSafe = publicStatus.release_ready === true
     && publicStatus.core_release_ready !== false
     && publicStatus.overall_ui_ready === true
-    && publicStatus.status === 'OK';
+    && publicStatus.ui_green === true;
   if (!checks.public_status.ok || targetDateOf(publicStatus) !== targetDate || !publicStatusSafe) {
     failures.push(`public_status target=${targetDateOf(publicStatus) || 'missing'} status=${publicStatus.status || 'missing'} release_ready=${publicStatus.release_ready} core_release_ready=${publicStatus.core_release_ready} overall_ui_ready=${publicStatus.overall_ui_ready}`);
+  }
+  const publicProof = checks.deploy_proof.json || {};
+  if (!checks.deploy_proof.ok || targetDateOf(publicProof) !== targetDate || publicProof.release_ready !== true) {
+    failures.push(`deploy_proof target=${targetDateOf(publicProof) || 'missing'} release_ready=${publicProof.release_ready}`);
   }
   return { ok: failures.length === 0, failures, checks };
 }
@@ -447,15 +454,26 @@ function checkLocalPublicStatus(seal) {
   }
   const expectedTargetDate = targetDateOf(seal);
   const statusTargetDate = targetDateOf(status);
-  const safe = status.status === 'OK'
-    && status.release_ready === true
+  const uiState = readJson(STOCK_UI_STATE_PATH);
+  const gate = buildReleaseGateModel({
+    coreReleaseReady: status.core_release_ready !== false && status.release_ready === true,
+    pageCoreReady: status.page_core_ready !== false,
+    searchReady: status.search_ready !== false,
+    universeReady: status.universe_ready !== false,
+    stockUiState: uiState,
+    stockUiReleaseEligible: status.stock_analyzer_ui_state_green === true || uiState?.release_eligible === true,
+    histReady: status.hist_ready === true,
+  });
+  const safe = status.release_ready === true
     && status.overall_ui_ready === true
-    && status.core_release_ready !== false;
+    && status.ui_green === true
+    && status.core_release_ready !== false
+    && gate.deploy_allowed === true;
   if (expectedTargetDate && statusTargetDate !== expectedTargetDate && !isForce) {
     fail(`public-status target mismatch: expected ${expectedTargetDate}, got ${statusTargetDate || 'missing'}.`);
   }
   if (!safe && !isForce) {
-    fail(`public-status is not OK/release-ready: status=${status.status || 'missing'} release_ready=${status.release_ready} overall_ui_ready=${status.overall_ui_ready}.`);
+    fail(`public-status is not release-ready: status=${status.status || 'missing'} release_ready=${status.release_ready} overall_ui_ready=${status.overall_ui_ready} gate_blockers=${gate.blocking_reasons.map((item) => item.id).join(',') || 'none'}.`);
   }
 }
 
@@ -553,6 +571,31 @@ function writeDeployProof({
     target_date: targetDate,
   };
   writeJsonAtomic(DEPLOY_PROOF_PATH, proof);
+  const publicProof = {
+    schema: 'rv_public_deploy_proof_v1',
+    generated_at: utcNow(),
+    proof_mode: deploymentId ? 'post_deploy_local' : 'pre_deploy_bundle',
+    git_commit_sha: deployedCommit,
+    deployment_id: deploymentId,
+    deployment_url: deploymentUrl,
+    smokes_ok: smokesOk,
+    release_ready: contractCheck === 'failed' ? false : true,
+    bundle_file_count: bundleMeta?.bundle_file_count ?? null,
+    bundle_size_mb: bundleMeta?.bundle_size_mb ?? null,
+    bundle_max_file_bytes: bundleMeta?.bundle_max_file_bytes ?? null,
+    contract_check: contractCheck ?? bundleMeta?.manifest_check ?? null,
+    release_state_phase: releaseStatePhase,
+    target_market_date: targetDate,
+    target_date: targetDate,
+    requested_at: requestedAt,
+    verified_at: verifiedAt,
+  };
+  writeJsonAtomic(PUBLIC_DEPLOY_PROOF_PATH, publicProof);
+  const distProofPath = path.join(DIST_DIR, 'data/status/deploy-proof-latest.json');
+  if (fs.existsSync(DIST_DIR)) {
+    fs.mkdirSync(path.dirname(distProofPath), { recursive: true });
+    fs.copyFileSync(PUBLIC_DEPLOY_PROOF_PATH, distProofPath);
+  }
   return proof;
 }
 

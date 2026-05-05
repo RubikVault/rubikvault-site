@@ -19,6 +19,7 @@ import { resolveRuntimeConfig } from '../lib/pipeline_authority/config/runtime-c
 import { evaluateCoveragePolicy } from '../lib/decision-bundle-contract.mjs';
 import { assertMayWriteProductionTruth } from './prod-runtime-guard.mjs';
 import { readLeafSeal, REQUIRED_LEAF_SEAL_STEP_IDS } from '../lib/write-leaf-seal.mjs';
+import { buildReleaseGateModel } from './lib/release-gate-model.mjs';
 
 const ROOT = path.resolve(new URL('.', import.meta.url).pathname, '../..');
 export const FINAL_INTEGRITY_SEAL_PATH = path.join(ROOT, 'public/data/ops/final-integrity-seal-latest.json');
@@ -839,21 +840,25 @@ export function buildFinalIntegritySeal({
   const riskReady = decisionReady;
   const histReady = histStatus.green;
   const breakoutReady = null;
-  const overallUiReady = Boolean(
-    coreReleaseReady
-    && pageCoreReady
-    && searchReady
-    && universeReady
-    && histReady
-    && (stockAnalyzerUiState?.ui_renderable_release_eligible ?? stockAnalyzerUiState?.release_eligible) === true
-  );
-  const status = !coreReleaseReady ? 'FAILED' : overallUiReady && uniqueWarningReasons.length === 0 ? 'OK' : 'DEGRADED';
+  const releaseGate = buildReleaseGateModel({
+    coreReleaseReady,
+    pageCoreReady,
+    searchReady,
+    universeReady,
+    stockUiState: stockAnalyzerUiState,
+    stockUiReleaseEligible: (stockAnalyzerUiState?.ui_renderable_release_eligible ?? stockAnalyzerUiState?.release_eligible) === true,
+    histReady,
+  });
+  const overallUiReady = releaseGate.release_ui_ready;
+  const mergedBlockingReasons = [...uniqueBlockingReasons, ...releaseGate.blocking_reasons];
+  const mergedWarningReasons = [...uniqueWarningReasons, ...releaseGate.warning_reasons];
+  const status = !overallUiReady ? 'FAILED' : mergedWarningReasons.length === 0 ? 'OK' : 'DEGRADED';
   const uiGreen = overallUiReady;
-  const leadBlockerStep = deriveLeadBlockerStep(uniqueBlockingReasons, recovery);
+  const leadBlockerStep = deriveLeadBlockerStep(mergedBlockingReasons, recovery);
   const nextStep = deriveNextStep({
     leadBlockerStep,
     recovery,
-    blockingReasons: uniqueBlockingReasons,
+    blockingReasons: mergedBlockingReasons,
   });
   return {
     schema: 'rv.final_integrity_seal.v1',
@@ -867,7 +872,7 @@ export function buildFinalIntegritySeal({
     status,
     ui_green: uiGreen,
     global_green: uiGreen,
-    release_ready: coreReleaseReady,
+    release_ready: releaseGate.deploy_allowed,
     core_release_ready: coreReleaseReady,
     page_core_ready: pageCoreReady,
     search_ready: searchReady,
@@ -875,8 +880,10 @@ export function buildFinalIntegritySeal({
     decision_ready: decisionReady,
     risk_ready: riskReady,
     hist_ready: histReady,
+    hist_release_blocking: false,
     breakout_ready: breakoutReady,
     overall_ui_ready: overallUiReady,
+    release_gate: releaseGate,
     full_universe_validated: artifactFullValidated,
     policy_neutral_structural_gaps_only: policyNeutralStructuralGapsOnly,
     ui_field_truth_ok: uiFieldTruthOk,
@@ -916,8 +923,8 @@ export function buildFinalIntegritySeal({
     control_plane: consistency,
     pipeline_consistency: consistency,
     module_dates: moduleDates,
-    blocking_reasons: uniqueBlockingReasons,
-    warnings: uniqueWarningReasons,
+    blocking_reasons: mergedBlockingReasons,
+    warnings: mergedWarningReasons,
     advisories: advisoryReasons,
     decision_bundle: {
       status: decisionBundleHealth.status,
