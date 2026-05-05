@@ -327,17 +327,18 @@ function validateBundleAgainstManifest(bundleDir, manifest) {
       const size    = fs.statSync(full).size;
       const nameLow = entry.name.toLowerCase();
 
-      // denyNameHints check (secondary safety net for obviously wrong files)
-      const hitHint = denyHints.find(h => nameLow.includes(h));
-      if (hitHint) {
-        violations.push({ file: relPath, reason: 'deny_hint', hint: hitHint, size_bytes: size });
-        continue;
-      }
-
       // match against allow rules (first match wins)
       let matched = null;
       for (const rule of allowRules) {
         if (globMatches(relPath, rule.pattern)) { matched = rule; break; }
+      }
+
+      // denyNameHints are a secondary safety net for broad allow rules. A file
+      // with a sensitive-looking name must opt in explicitly in its allow rule.
+      const hitHint = denyHints.find(h => nameLow.includes(h));
+      if (hitHint && matched?.allowDenyNameHints !== true) {
+        violations.push({ file: relPath, reason: 'deny_hint', hint: hitHint, size_bytes: size });
+        continue;
       }
 
       if (!matched) {
