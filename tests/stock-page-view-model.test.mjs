@@ -16,6 +16,7 @@ import {
   buildInterpretiveChangePresentation,
   buildBackgroundModulePresentation,
   buildMobileNavigationPresentation,
+  buildStockUiState,
   classifyHistoricalFreshness,
   validateLevelConsistency,
   buildTradePlanModel,
@@ -154,6 +155,51 @@ describe('buildTrustPresentation', () => {
     assert.equal(trust.coverageLabel, 'partial');
     assert.match(trust.historicalState, /delayed by 4 trading days/i);
     assert.match(trust.summaryText, /Analysis & Price as-of: 2026-03-31/i);
+  });
+});
+
+describe('buildStockUiState', () => {
+  it('forces WAIT when raw BUY disagrees with all horizons', () => {
+    const view = buildStockUiState({
+      decision: { verdict: 'BUY', confidence_bucket: 'HIGH', tactical_action: 'ENTER_LONG' },
+      horizons: [
+        { key: 'short', label: 'SHORT', v: { l: 'WAIT', cf: 'LOW' } },
+        { key: 'medium', label: 'MID', v: { l: 'WAIT', cf: 'LOW' } },
+        { key: 'long', label: 'LONG', v: { l: 'WAIT', cf: 'LOW' } },
+      ],
+      modelEvidenceLimited: true,
+      missingModels: ['forecast', 'scientific'],
+      moduleFreshness: [{ label: 'Historical', state: 'delayed', ageDays: 4 }],
+      pageAsOf: '2026-05-04',
+    });
+    assert.equal(view.action, 'WAIT');
+    assert.equal(view.confidence, 'HIGH');
+    assert.equal(view.tradePlanStatus, 'PENDING');
+    assert.match(view.trustChips.join(' | '), /Models: 1\/3/);
+    assert.match(view.trustChips.join(' | '), /History: delayed 4d/);
+  });
+
+  it('keeps LOW confidence as single source and blocks active trade plan', () => {
+    const view = buildStockUiState({
+      decision: { verdict: 'BUY', confidence_bucket: 'LOW', tactical_action: 'ENTER_LONG' },
+      horizons: [{ key: 'short', label: 'SHORT', v: { l: 'BUY', cf: 'LOW' } }],
+      tradePlan: { status: 'ready', entry: 44, stop: 42, target: 48, rr: 2 },
+    });
+    assert.equal(view.action, 'WAIT');
+    assert.equal(view.confidence, 'LOW');
+    assert.equal(view.tradePlanStatus, 'PENDING');
+    assert.ok(view.blockers.includes('Signal confidence is low'));
+  });
+
+  it('allows active BUY only with confirmed entry, valid geometry, and no blockers', () => {
+    const view = buildStockUiState({
+      decision: { verdict: 'BUY', confidence_bucket: 'MEDIUM', tactical_action: 'ENTER_LONG' },
+      horizons: [{ key: 'short', label: 'SHORT', v: { l: 'BUY', cf: 'MEDIUM' } }],
+      tradePlan: { status: 'ready', entry: 100, stop: 95, target: 110, rr: 2 },
+    });
+    assert.equal(view.action, 'BUY');
+    assert.equal(view.tradePlanStatus, 'ACTIVE');
+    assert.equal(view.setupStatus, 'ACTIVE');
   });
 });
 

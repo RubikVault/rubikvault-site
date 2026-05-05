@@ -342,7 +342,7 @@ export function buildFundamentalsPresentation({ ticker, name, fundamentals, univ
   const asOf = normalizeAsOf(fundamentals?.updatedAt);
   const typedStatus = String(fundamentals?.typed_status || '').toUpperCase();
   const scopeStatus = String(fundamentals?.scope_status || '').toLowerCase();
-  const scopeName = fundamentals?.scope_name || 'Fundamentals-Universum';
+  const scopeName = fundamentals?.scope_name || 'fundamentals universe';
   const scopeRank = Number.isFinite(Number(fundamentals?.scope_rank)) ? Number(fundamentals.scope_rank) : null;
   const metrics = [
     { label: 'Market Cap', value: formatMarketCap(fundamentals?.marketCap) },
@@ -366,10 +366,10 @@ export function buildFundamentalsPresentation({ ticker, name, fundamentals, univ
       availableLabels,
       unavailableLabels,
       sectorLine,
-      primaryText: 'Nicht im priorisierten Fundamentals-Universum.',
+      primaryText: 'Not in the prioritized fundamentals universe.',
       secondaryText: scopeRank != null
-        ? `${scopeName} Rang ${scopeRank}`
-        : `${scopeName} deckt nur priorisierte Assets ab.`,
+        ? `${scopeName} rank ${scopeRank}`
+        : `${scopeName} only covers prioritized assets.`,
       dimOpacity: 0.82,
     };
   }
@@ -386,8 +386,8 @@ export function buildFundamentalsPresentation({ ticker, name, fundamentals, univ
       unavailableLabels,
       sectorLine,
       primaryText: assetClass === 'ETF'
-        ? 'Für dieses ETF ist kein Fundamentals-Scope vorgesehen.'
-        : 'Fundamentals sind für dieses Asset nicht relevant.',
+        ? 'No fundamentals scope is configured for this ETF.'
+        : 'Fundamentals are not applicable for this asset.',
       secondaryText: fundamentals?.typed_reason || null,
       dimOpacity: 0.8,
     };
@@ -404,8 +404,8 @@ export function buildFundamentalsPresentation({ ticker, name, fundamentals, univ
       availableLabels,
       unavailableLabels,
       sectorLine,
-      primaryText: 'Fundamentals werden aktualisiert.',
-      secondaryText: fundamentals?.typed_reason || (asOf ? `Stand ${asOf}` : 'Scope-Mitglied, Refresh ausstehend.'),
+      primaryText: 'Fundamentals are updating.',
+      secondaryText: fundamentals?.typed_reason || (asOf ? `As of ${asOf}` : 'Scope member, refresh pending.'),
       dimOpacity: 0.78,
     };
   }
@@ -517,6 +517,166 @@ export function buildTrustPresentation({
   };
 }
 
+function normalizeUiAction(value) {
+  const raw = String(value || '').toUpperCase();
+  if (raw === 'BUY' || raw === 'WATCH' || raw === 'WAIT' || raw === 'SELL' || raw === 'AVOID' || raw === 'UNAVAILABLE') return raw;
+  if (raw === 'N/A' || raw === 'NA' || raw === 'INSUFFICIENT_DATA' || raw === 'WAIT_PIPELINE_INCOMPLETE') return 'UNAVAILABLE';
+  return 'WAIT';
+}
+
+function normalizeUiConfidence(value) {
+  const raw = String(value || '').toUpperCase();
+  if (raw === 'HIGH' || raw === 'MEDIUM' || raw === 'LOW') return raw;
+  const n = toNumber(value);
+  if (n == null) return 'LOW';
+  const pct = n <= 1 ? n * 100 : n;
+  if (pct >= 70) return 'HIGH';
+  if (pct >= 40) return 'MEDIUM';
+  return 'LOW';
+}
+
+function actionBias(action, horizons = [], states = {}) {
+  const normalized = normalizeUiAction(action);
+  if (normalized === 'BUY') return 'CONSTRUCTIVE';
+  if (normalized === 'SELL' || normalized === 'AVOID') return 'BEARISH';
+  const horizonVerdicts = horizons.map((item) => normalizeUiAction(item?.v?.l || item?.verdict || item?.label)).filter(Boolean);
+  if (horizonVerdicts.includes('BUY')) return 'CONSTRUCTIVE';
+  if (horizonVerdicts.some((value) => value === 'SELL' || value === 'AVOID')) return 'BEARISH';
+  if (states?.trend === 'UP' || states?.trend === 'STRONG_UP') return 'CONSTRUCTIVE';
+  if (states?.trend === 'DOWN' || states?.trend === 'STRONG_DOWN') return 'BEARISH';
+  return 'NEUTRAL';
+}
+
+function horizonDisplayLabel(verdict, action) {
+  const value = normalizeUiAction(verdict);
+  if (value === 'BUY') return action === 'BUY' ? 'Entry ready' : 'Up bias';
+  if (value === 'SELL' || value === 'AVOID') return action === value ? 'Exit ready' : 'Down bias';
+  if (value === 'UNAVAILABLE') return 'Unavailable';
+  return 'Entry wait';
+}
+
+function normalizeStockHorizon(item, action, defaultConfidence) {
+  const verdict = normalizeUiAction(item?.v?.l || item?.verdict || item?.label || action);
+  const confidence = normalizeUiConfidence(item?.v?.cf ?? item?.confidence ?? defaultConfidence);
+  const tone = verdict === 'BUY'
+    ? 'bullish'
+    : (verdict === 'SELL' || verdict === 'AVOID')
+      ? 'bearish'
+      : 'neutral';
+  return {
+    ...item,
+    v: {
+      ...(item?.v || {}),
+      l: verdict,
+      c: tone,
+      cf: confidence,
+    },
+    displayLabel: horizonDisplayLabel(verdict, action),
+    entryStatus: action === 'BUY' || action === 'SELL' ? 'ready' : 'wait',
+  };
+}
+
+export function buildStockUiState({
+  payload = null,
+  decision = payload?.decision || {},
+  states = payload?.states || {},
+  stats = payload?.data?.market_stats?.stats || {},
+  horizons = [],
+  integrityBlocked = false,
+  modelEvidenceLimited = false,
+  missingModels = [],
+  moduleFreshness = [],
+  fundamentalsStatus = 'ready',
+  pageAsOf = payload?.data?.market_prices?.date || payload?.metadata?.as_of || null,
+  priceAsOf = pageAsOf,
+  breakout = payload?.data?.breakout_v12 || payload?.data?.breakout_v2 || null,
+  tradePlan = null,
+  close = payload?.data?.market_prices?.close || null,
+} = {}) {
+  const rawAction = normalizeUiAction(decision?.verdict || decision?.final_verdict || 'WAIT');
+  const confidence = normalizeUiConfidence(decision?.confidence_bucket ?? decision?.confidence);
+  const rawHorizons = Array.isArray(horizons) ? horizons : [];
+  const horizonVerdicts = rawHorizons.map((item) => normalizeUiAction(item?.v?.l || item?.verdict || item?.label)).filter(Boolean);
+  const allHorizonsWait = horizonVerdicts.length > 0 && horizonVerdicts.every((value) => value === 'WAIT' || value === 'UNAVAILABLE');
+  const tacticalAction = String(decision?.tactical_action || '').toUpperCase();
+  const confirmedEntry = (rawAction === 'BUY' && tacticalAction === 'ENTER_LONG') || (rawAction === 'SELL' && tacticalAction === 'ENTER_SHORT');
+  const breakoutStatus = String(breakout?.status || breakout?.state || breakout?.label || '').toLowerCase();
+  const breakoutInactive = breakoutStatus
+    && !/ok|active|confirmed|triggered|armed|setup|candidate/.test(breakoutStatus);
+  const blockers = [];
+
+  if (integrityBlocked) blockers.push('Input data integrity issue');
+  for (const reason of decision?.trigger_gates || []) {
+    const clean = sanitizeReason(reason);
+    if (clean && !blockers.includes(clean)) blockers.push(clean);
+  }
+  for (const reason of decision?.blocking_reasons || []) {
+    const clean = sanitizeReason(reason);
+    if (clean && !blockers.includes(clean)) blockers.push(clean);
+  }
+  if ((rawAction === 'BUY' || rawAction === 'SELL') && !confirmedEntry) blockers.push('Entry confirmation pending');
+  if ((rawAction === 'BUY' || rawAction === 'SELL') && confidence === 'LOW') blockers.push('Signal confidence is low');
+  if (modelEvidenceLimited) blockers.push('Model coverage limited');
+  if (breakoutInactive) blockers.push('Breakout inactive');
+
+  let action = rawAction;
+  if (integrityBlocked) {
+    action = 'UNAVAILABLE';
+  } else if (allHorizonsWait) {
+    action = 'WAIT';
+  } else if ((rawAction === 'BUY' || rawAction === 'SELL') && blockers.length > 0) {
+    action = 'WAIT';
+  }
+
+  const normalizedHorizons = rawHorizons.map((item) => normalizeStockHorizon(item, action, confidence));
+  const tradePlanStatus = action === 'UNAVAILABLE'
+    ? 'UNAVAILABLE'
+    : ((action === 'BUY' || action === 'SELL') && confirmedEntry && tradePlan?.status === 'ready' && blockers.length === 0)
+      ? 'ACTIVE'
+      : 'PENDING';
+  const setupStatus = tradePlanStatus === 'ACTIVE'
+    ? 'ACTIVE'
+    : action === 'UNAVAILABLE'
+      ? 'UNAVAILABLE'
+      : blockers.length
+        ? 'BLOCKED'
+        : 'PENDING';
+  const modelTotal = 3;
+  const missingCount = Array.isArray(missingModels) ? new Set(missingModels).size : 0;
+  const modelCount = modelEvidenceLimited ? Math.max(0, modelTotal - missingCount) : modelTotal;
+  const historical = moduleFreshness.find((item) => item.label === 'Historical');
+  const historyChip = historical?.state
+    ? `History: ${historical.state}${Number.isFinite(historical.ageDays) ? ` ${historical.ageDays}d` : ''}`
+    : 'History: unavailable';
+  const canonicalDate = normalizeAsOf(priceAsOf || pageAsOf);
+  const trustChips = [
+    `System: ${integrityBlocked ? 'Blocked' : 'OK'}`,
+    `Price/Tech: ${canonicalDate ? `OK · ${canonicalDate} EOD` : 'Pending'}`,
+    `Models: ${modelCount}/${modelTotal}`,
+    historyChip,
+    `Signal: ${confidence}`,
+  ];
+  if (fundamentalsStatus && fundamentalsStatus !== 'ready') trustChips.push(`Fundamentals: ${String(fundamentalsStatus).replace(/_/g, ' ')}`);
+  const triggerLevel = toNumber(decision?.trigger_price ?? decision?.entry_trigger ?? stats?.sma20 ?? close);
+  const triggers = triggerLevel != null
+    ? [`Close above $${triggerLevel.toFixed(2)}`]
+    : ['Wait for confirmed entry trigger'];
+
+  return {
+    action,
+    rawAction,
+    bias: actionBias(action, normalizedHorizons, states),
+    confidence,
+    setupStatus,
+    tradePlanStatus,
+    blockers,
+    triggers,
+    trustChips,
+    trustSummary: trustChips.join(' · '),
+    horizons: normalizedHorizons,
+  };
+}
+
 function sanitizeReason(reason) {
   const raw = String(reason || '').trim();
   if (!raw) return null;
@@ -620,11 +780,11 @@ export function buildActiveModelConsensusPresentation({ evaluation = null, decis
         ? 'Coverage incomplete'
         : 'Broad model confirmation available';
   const finalInterpretation = coverageCount >= 3
-    ? 'Model consensus: Actionable alignment is available'
-    : `Model consensus: Not actionable · Coverage incomplete (${coverageCount}/3 models) · ${isolatedSignal}`;
+    ? 'Model evidence: Actionable alignment is available'
+    : `Model evidence: Not actionable · Coverage incomplete (${coverageCount}/3 models) · ${isolatedSignal}`;
   return {
-    title: coverageCount < 4 ? 'Active Model Consensus' : 'Model Consensus',
-    compactTitle: coverageCount < 4 ? 'Active Model Consensus' : 'Model Consensus',
+    title: 'Model Evidence',
+    compactTitle: 'Model Evidence',
     coverageCount,
     activeModels,
     isolatedSignal,

@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {
   transformV2ToStockShape,
   fetchPageCore,
+  fetchV2Historical,
   fetchV2StockPage,
   fetchWithFallback,
   evaluateV2PromotionGate,
@@ -45,6 +46,26 @@ describe('fetchPageCore', () => {
       assert.equal(result.data.canonical_asset_id, 'STU:189A');
       assert.equal(seen.some((href) => href.includes('/api/v2/page/STU:189A')), true);
       assert.equal(seen.some((href) => href.includes('/api/v2/page/STU%3A189A')), false);
+    } finally {
+      global.fetch = originalFetch;
+    }
+  });
+});
+
+describe('fetchV2Historical', () => {
+  it('keeps default historical fetch bounded without full=1', async () => {
+    const seen = [];
+    global.fetch = async (url) => {
+      const href = String(url);
+      seen.push(href);
+      return { ok: true, json: async () => ({ ok: true, data: { bars: [] }, meta: {} }) };
+    };
+    try {
+      const result = await fetchV2Historical('AAPL');
+      assert.equal(result.ok, true);
+      assert.equal(seen.length, 1);
+      assert.equal(seen[0], '/api/v2/stocks/AAPL/historical');
+      assert.equal(seen[0].includes('full=1'), false);
     } finally {
       global.fetch = originalFetch;
     }

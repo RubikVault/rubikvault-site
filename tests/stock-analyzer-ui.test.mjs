@@ -557,6 +557,16 @@ test('Live stock.html differentiates volume omission reason and model evidence v
   assert.ok(content.includes('Price as-of:'), 'Header price as-of label is missing');
 });
 
+test('Stock analyzer UI copy remains English-only', async () => {
+  const fs = await import('node:fs');
+  const content = fs.readFileSync(new URL('../public/stock.html', import.meta.url), 'utf-8');
+  const viewModel = fs.readFileSync(new URL('../public/js/stock-page-view-model.js', import.meta.url), 'utf-8');
+  const combined = `${content}\n${viewModel}`;
+  for (const forbidden of ['Nicht ', 'Für dieses', 'werden aktualisiert', 'Scope-Mitglied', 'Rang ']) {
+    assert.ok(!combined.includes(forbidden), `Found non-English UI copy: ${forbidden}`);
+  }
+});
+
 test('Live stock.html removes help cursor from non-interactive badges', async () => {
   const fs = await import('node:fs');
   const content = fs.readFileSync(new URL('../public/stock.html', import.meta.url), 'utf-8');
@@ -572,10 +582,11 @@ test('Live stock.html places model evidence above momentum dashboard', async () 
 test('Live stock.html adds a single trust bar with consolidated timing', async () => {
   const fs = await import('node:fs');
   const content = fs.readFileSync(new URL('../public/stock.html', import.meta.url), 'utf-8');
+  const viewModel = fs.readFileSync(new URL('../public/js/stock-page-view-model.js', import.meta.url), 'utf-8');
   assert.ok(content.includes('trust-bar'), 'Trust bar container is missing');
-  assert.ok(content.includes('trustView.summaryText'), 'Trust summary text is missing');
-  assert.ok(content.includes('Analysis & Price as-of:'), 'Canonical analysis/price chip is missing');
-  assert.ok(content.includes('Historical context:'), 'Historical context chip is missing');
+  assert.ok(content.includes('stockUiState.trustSummary'), 'Normalized trust summary is missing');
+  assert.ok(content.includes('stockUiState.trustChips'), 'Normalized trust chips are missing');
+  assert.ok(viewModel.includes('Price/Tech:'), 'Canonical price/technical chip is missing');
 });
 
 test('Live stock.html removes outdated dashboard copy', async () => {

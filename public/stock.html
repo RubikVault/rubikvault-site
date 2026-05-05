@@ -542,6 +542,7 @@
         buildInterpretiveChangePresentation,
         buildBackgroundModulePresentation,
         buildMobileNavigationPresentation,
+        buildStockUiState,
         classifyHistoricalFreshness,
         validateLevelConsistency,
         buildTradePlanModel,
@@ -832,7 +833,7 @@
         : overallLabel === 'AVOID' || overallLabel === 'SELL' ? 'Strategic AVOID'
           : overallLabel === 'INSUFFICIENT_DATA' ? 'Insufficient Data'
             : waitStateView.subheadline;
-      const confidence = _decision.confidence_bucket || 'LOW';
+      const rawConfidence = _decision.confidence_bucket || _decision.confidence || 'LOW';
 
       // Map backend explanation bullets to bull/bear reasons for display
       const bullR = (_explanation.sentiment === 'positive' ? (_explanation.bullets || []).slice(0, 3) : []);
@@ -840,7 +841,7 @@
 
       // Horizon cards now come from the backend decision layer.
       const horizonDecisionMap = _decision.horizons || {};
-      const horizons = [
+      const rawHorizons = [
         { key: 'short', label: 'SHORT' },
         { key: 'medium', label: 'MID' },
         { key: 'long', label: 'LONG' }
@@ -853,7 +854,7 @@
           v: {
             l: vLabel,
             c: cls,
-            cf: slice?.confidence_bucket || confidence
+            cf: slice?.confidence_bucket || rawConfidence
           },
           score: {
             score: slice?.scores?.composite || 0,
@@ -861,6 +862,23 @@
           }
         };
       });
+      const stockUiStateBase = buildStockUiState({
+        decision: _decision,
+        states: _states,
+        stats: s,
+        horizons: rawHorizons,
+        integrityBlocked: _decisionBlockedByIntegrity,
+        modelEvidenceLimited: _guard.corrections.modelConsensus?.degraded,
+        missingModels: _guard.corrections.modelConsensus?.missingModels || [],
+        moduleFreshness,
+        fundamentalsStatus: fundamentalsView.status,
+        pageAsOf,
+        priceAsOf: pageAsOf,
+        breakout: data.breakout_v12 || data.breakout_v2 || {},
+        close,
+      });
+      const confidence = stockUiStateBase.confidence;
+      const horizons = stockUiStateBase.horizons.length ? stockUiStateBase.horizons : rawHorizons;
       const shortV = horizons[0]?.v?.l || overallLabel;
       const midV = horizons[1]?.v?.l || overallLabel;
       const longV = horizons[2]?.v?.l || overallLabel;
@@ -873,10 +891,10 @@
         Object.assign(window, { _verdictOverridden: true });
         // We can't reassign const, so we use the variables downstream
       }
-      const effectiveVerdict = _decisionBlockedByIntegrity ? 'UNAVAILABLE' : (allHorizonsWait ? 'WAIT' : baseVerdict);
-      const effectiveLabel = _decisionBlockedByIntegrity ? 'UNAVAILABLE - DATA ISSUE' : (allHorizonsWait && !shouldRenderSetupPhase ? 'WAIT' : overallLabel);
+      const effectiveVerdict = _decisionBlockedByIntegrity ? 'UNAVAILABLE' : stockUiStateBase.action;
+      const effectiveLabel = _decisionBlockedByIntegrity ? 'UNAVAILABLE - DATA ISSUE' : stockUiStateBase.action;
       const effectiveColor = _decisionBlockedByIntegrity ? 'var(--red)' : (effectiveLabel === 'BUY' ? 'var(--green)' : effectiveLabel === 'SELL' || effectiveLabel === 'AVOID' ? 'var(--red)' : 'var(--yellow)');
-      const effectiveText = _decisionBlockedByIntegrity ? 'Input data integrity check failed. Decision-grade analysis is temporarily unavailable.' : allHorizonsWait ? waitStateView.subheadline
+      const effectiveText = _decisionBlockedByIntegrity ? 'Input data integrity check failed. Decision-grade analysis is temporarily unavailable.' : effectiveVerdict === 'WAIT' ? waitStateView.subheadline
         : hasHorizonSplit && baseVerdict === 'WAIT' ? 'Split consensus — no clear directional edge'
           : overallText;
       const executiveDecisionView = _decisionBlockedByIntegrity
@@ -1230,7 +1248,10 @@
         }
         let rationale;
         let title = 'Strategic Rationale';
-        if (narrativeSynthesis) {
+        if (effectiveVerdict === 'WAIT') {
+          title = 'Why WAIT';
+          rationale = waitStateView.whyBullets;
+        } else if (narrativeSynthesis) {
           rationale = narrativeSynthesis;
         } else if (longV === 'BUY' && shortV === 'BUY' && midV === 'BUY') {
           rationale = 'Full alignment across all horizons. Trend, momentum, and structure confirm constructive posture. Standard trend-following setup with defined risk parameters.';
@@ -1242,7 +1263,6 @@
         } else if (longV === 'AVOID') {
           rationale = 'Structural downtrend confirmed. All major moving averages signal adverse alignment. No trend-following setup available — wait for base formation and structural recovery before re-evaluation.';
         } else {
-          title = 'Why WAIT';
           rationale = waitStateView.whyBullets;
         }
         const rationaleHtml = Array.isArray(rationale)
@@ -1457,6 +1477,22 @@
       const targetPrice = tradePlan.target ?? null;
       const stopPr = tradePlan.stop ?? null;
       const rrRatio = Number.isFinite(tradePlan.rr) ? tradePlan.rr.toFixed(1) : '—';
+      const stockUiState = buildStockUiState({
+        decision: _decision,
+        states: _states,
+        stats: s,
+        horizons: rawHorizons,
+        integrityBlocked: _decisionBlockedByIntegrity,
+        modelEvidenceLimited: _guard.corrections.modelConsensus?.degraded,
+        missingModels: _guard.corrections.modelConsensus?.missingModels || [],
+        moduleFreshness,
+        fundamentalsStatus: fundamentalsView.status,
+        pageAsOf,
+        priceAsOf: pageAsOf,
+        breakout: data.breakout_v12 || data.breakout_v2 || {},
+        tradePlan,
+        close,
+      });
 
       var rows = displayLevels.map(l => {
         var c = l.kind === 'support' ? 'var(--green)' : 'var(--red)';
@@ -1495,7 +1531,7 @@
       if (close < (s.sma20 || Infinity) && close > (s.sma200 || 0)) reboundConds.push('Between SMA20 and SMA200 — pullback zone');
       else reboundConds.push('Near structure support bounds');
       const reboundPoints = reboundConds.map(r => '<li>' + r + '</li>').join('');
-      const confidencePct = _decision.confidence != null ? `${(_decision.confidence * 100).toFixed(0)}%` : confidence;
+      const confidencePct = stockUiState.confidence;
       const _decisionFlags = (_integrity.flags || []).filter(flag => !(flag === 'CHART_CONTRACT_FAILED' && _integrity.decisionReadiness === 'READY'));
       const decisionFlags = (_decisionFlags && _decisionFlags.length)
         ? _decisionFlags.join(', ')
@@ -1527,7 +1563,7 @@
       const catalystMode = catalystView.renderMode || catalystView.variant || 'inline';
       const isEtf = catalystView.assetClass === 'ETF';
       const explanationHeading = effectiveVerdict === 'BUY' || effectiveVerdict === 'SELL' ? 'Why This Trade?' : 'Why WAIT';
-      const checklistApplicable = tradePlan.status === 'ready' && (effectiveVerdict === 'BUY' || effectiveVerdict === 'SELL');
+      const checklistApplicable = stockUiState.tradePlanStatus === 'ACTIVE' && tradePlan.status === 'ready' && (effectiveVerdict === 'BUY' || effectiveVerdict === 'SELL');
       const showDecisionTelemetry = (_v6.bucket || _v6.hold_state) && (effectiveVerdict === 'BUY' || effectiveVerdict === 'SELL');
 
       // ── Construct Layout ──
@@ -1564,8 +1600,8 @@
       const _integrityBanner = '<div style="padding:.45rem .7rem;margin-bottom:.75rem;border-radius:8px;background:' + _statusBg + ';border:1px solid ' + _statusBorder + ';display:flex;align-items:flex-start;gap:.55rem"><span style="color:' + _statusColor + ';font-size:.7rem;line-height:1.3">' + (_statusSeverity === 'ok' ? '\u2713' : _statusSeverity === 'critical' ? '\u26A0' : '\u25CF') + '</span><div><div style="font-size:.64rem;color:' + _statusColor + ';font-weight:800;text-transform:uppercase;letter-spacing:.04em">' + _statusTitle + '</div><div style="font-size:.6rem;color:var(--text-muted);margin-top:2px;line-height:1.45">' + _esc(_statusSubline) + '</div></div></div>';
       const _qualityLabel = _integrity.dataQuality || (trustView.coverageLabel === 'partial' ? 'DATA ISSUE' : 'OK');
       const _coverageLabel = _integrity.coverage || String(trustView.coverageLabel || 'partial').toUpperCase();
-      const _trustSummary = _integrity.pageState && _integrity.pageState !== 'OK' ? 'Data Quality: FAILED' : _esc(trustView.summaryText);
-      const _trustBar = `<div class="trust-bar" id="rv-trust-bar"><span class="trust-summary">${_trustSummary}</span><span class="trust-chip">Data Quality: ${_esc(_qualityLabel)}</span><span class="trust-chip">Analysis & Price as-of: ${_esc(trustView.priceDate || trustView.decisionDate || 'latest available')}</span><span class="trust-chip">Historical context: ${_esc(trustView.historicalState)}</span><span class="trust-chip">Coverage: ${_esc(_coverageLabel)}</span></div>`;
+      const _trustSummary = _integrity.pageState && _integrity.pageState !== 'OK' ? 'Data Quality: FAILED' : _esc(stockUiState.trustSummary || trustView.summaryText);
+      const _trustBar = `<div class="trust-bar" id="rv-trust-bar"><span class="trust-summary">${_trustSummary}</span>${stockUiState.trustChips.map((chip) => `<span class="trust-chip">${_esc(chip)}</span>`).join('')}</div>`;
       const _waitWhy = executiveDecisionView.whyNotNow.length ? `<div style="margin-top:.5rem"><div style="font-size:.56rem;color:var(--text-muted);text-transform:uppercase;font-weight:700;margin-bottom:.25rem">Why not now</div><div style="display:grid;gap:3px">${executiveDecisionView.whyNotNow.map((item) => `<div style="font-size:.64rem;color:var(--text-dim);display:flex;gap:5px"><span style="color:var(--yellow)">•</span><span>${_esc(item)}</span></div>`).join('')}</div></div>` : '';
       const _whatMustChange = executiveDecisionView.whatMustChange.length ? `<div style="margin-top:.6rem"><div style="font-size:.56rem;color:var(--text-muted);text-transform:uppercase;font-weight:700;margin-bottom:.25rem">What must change</div><div style="display:grid;gap:3px">${executiveDecisionView.whatMustChange.map((item) => `<div style="font-size:.64rem;color:var(--text-dim);display:flex;gap:5px"><span style="color:var(--accent)">•</span><span>${_esc(item)}</span></div>`).join('')}</div></div>` : '';
       const _nextActionCard = effectiveVerdict === 'WAIT' ? `<div style="margin-bottom:.75rem;padding:.65rem;border-radius:8px;background:rgba(255,255,255,0.01);border:1px solid rgba(255,255,255,0.04)"><div style="font-size:.58rem;color:var(--text-muted);text-transform:uppercase;font-weight:700;margin-bottom:.3rem">Next action</div><div style="display:grid;gap:6px"><div class="tap-row"><span style="color:var(--text);font-weight:700">Primary next action: ${_esc(executiveDecisionView.primaryNextAction)}</span><span style="color:var(--text-muted)">Primary</span></div><div class="tap-row"><span style="color:var(--text);font-weight:600">Secondary watch: ${_esc(executiveDecisionView.secondaryWatch)}</span><span style="color:var(--text-muted)">Secondary</span></div><div class="tap-row"><span style="color:var(--text);font-weight:600">Trigger to upgrade: ${_esc(executiveDecisionView.upgradeTrigger)}</span><span style="color:var(--text-muted)">Upgrade</span></div></div></div>` : '';
@@ -1609,7 +1645,7 @@
         return `
               <div style="text-align:center;padding:.5rem;border-radius:8px;background:rgba(255,255,255,0.02);border:1px solid var(--border)">
                 <div style="font-size:.58rem;color:var(--text-muted);text-transform:uppercase">${h.label}</div>
-                <div style="font-weight:700;color:${c};font-size:1rem">${h.v.l}</div>
+                <div style="font-weight:700;color:${c};font-size:1rem">${_esc(h.displayLabel || h.v.l)}</div>
                 <div style="font-size:.52rem;color:var(--text-muted);margin-top:2px;opacity:.75">${timeStr}</div>
                 <div style="font-size:.55rem;color:var(--text-muted);background:rgba(255,255,255,0.04);border-radius:3px;margin:3px 4px;padding:1px 0">${cfLabel} CONF.</div>
                 <div style="font-size:.55rem;color:${pc};font-weight:600;margin-top:4px">${info}</div>
@@ -1635,7 +1671,7 @@
         ${effectiveVerdict === 'WAIT' ? `<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.5rem;margin-bottom:.75rem"><div style="padding:.65rem;border-radius:8px;background:rgba(255,255,255,0.01);border:1px solid rgba(255,255,255,0.04)"><div style="font-size:.56rem;color:var(--text-muted);text-transform:uppercase;font-weight:700;margin-bottom:.25rem">Risk blocker</div><div style="font-size:.66rem;color:var(--text);font-weight:700">${_esc(executiveDecisionView.blocker)}</div></div><div style="padding:.65rem;border-radius:8px;background:rgba(255,255,255,0.01);border:1px solid rgba(255,255,255,0.04)"><div style="font-size:.56rem;color:var(--text-muted);text-transform:uppercase;font-weight:700;margin-bottom:.25rem">Data health</div><div style="font-size:.66rem;color:var(--text);font-weight:700">${_esc(trustView.coverageLabel === 'partial' ? 'Data health is being monitored' : 'Coverage supports the live verdict')}</div></div></div>` : ''}
         ${_nextActionCard}
         <!-- Trade Plan -->
-        ${tradePlan.status === 'ready' ? `<div style="display: flex; justify-content: space-between; font-size: 0.62rem; margin-bottom: 0.35rem; padding: 6px 10px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.04); border-radius: 6px;">
+        ${stockUiState.tradePlanStatus === 'ACTIVE' && tradePlan.status === 'ready' ? `<div style="display: flex; justify-content: space-between; font-size: 0.62rem; margin-bottom: 0.35rem; padding: 6px 10px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.04); border-radius: 6px;">
             <div><span style="color:var(--text-muted)">Entry:</span> <span style="font-weight:600;">${tradePlan.entry != null ? '$' + tradePlan.entry.toFixed(2) : '—'}</span></div>
             <div><span style="color:var(--text-muted)">Stop:</span> <span style="font-weight:600; color:var(--red);">${tradePlan.stop != null ? '$' + tradePlan.stop.toFixed(2) : '—'}</span></div>
             <div><span style="color:var(--text-muted)">Target:</span> <span style="font-weight:600; color:var(--green);">${tradePlan.target != null ? '$' + tradePlan.target.toFixed(2) : '—'}</span></div>
@@ -1643,7 +1679,7 @@
         </div>
         <div style="font-size:0.58rem; color:var(--text-dim); text-align:center; margin-bottom:0.75rem; font-style:italic;">
           Entry: current price · Stop: ATR geometry · Target: nearest directional level
-        </div>` : `<div style="display:flex;align-items:center;justify-content:center;font-size:0.62rem;margin-bottom:0.75rem;padding:8px 10px;background:rgba(255,255,255,0.01);border:1px dashed rgba(255,255,255,0.08);border-radius:6px;color:var(--text-muted)">${_esc(tradePlan.invalidReason || ('No active trade plan — ' + effectiveText))}</div>`}
+        </div>` : `<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:0.62rem;margin-bottom:0.75rem;padding:8px 10px;background:rgba(255,255,255,0.01);border:1px dashed rgba(255,255,255,0.08);border-radius:6px;color:var(--text-muted)"><span style="font-weight:700;color:var(--text)">Pending setup - no active R/R</span><span>${_esc(stockUiState.triggers[0] || tradePlan.invalidReason || effectiveText)}</span></div>`}
 
         ${_decision.scores ? `<div style="padding:6px 10px;margin-bottom:0.5rem;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.04);border-radius:6px;">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
