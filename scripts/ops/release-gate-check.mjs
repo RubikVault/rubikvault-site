@@ -42,6 +42,7 @@ const STOCK_UI_STATE_PATH = path.join(REPO_ROOT, 'public/data/runtime/stock-anal
 const DEPLOY_PROOF_PATH  = path.join(REPO_ROOT, 'var/private/ops/deploy-proof-latest.json');
 const PUBLIC_DEPLOY_PROOF_PATH = path.join(REPO_ROOT, 'public/data/status/deploy-proof-latest.json');
 const BUNDLE_META_PATH   = path.join(REPO_ROOT, 'var/private/ops/build-bundle-meta.json');
+const CODE_SYNC_META_PATH = path.join(REPO_ROOT, 'var/private/ops/code-sync-latest.json');
 const BUILD_META_PATH    = path.join(REPO_ROOT, 'public/data/ops/build-meta.json');
 const PAGE_CORE_ACTIVE_LATEST_PATH = path.join(REPO_ROOT, 'public/data/page-core/latest.json');
 const PAGE_CORE_CANDIDATE_LATEST_PATH = path.join(REPO_ROOT, 'public/data/page-core/candidates/latest.candidate.json');
@@ -187,11 +188,70 @@ function readTextMaybe(filePath) {
 }
 
 function getCurrentGitSha() {
+  for (const gitBin of ['/usr/bin/git', 'git']) {
+    try {
+      const sha = execFileSync(gitBin, ['rev-parse', 'HEAD'], {
+        cwd: REPO_ROOT, encoding: 'utf8', timeout: 5000,
+      }).trim();
+      if (/^[a-f0-9]{40}$/i.test(sha)) return sha;
+    } catch {}
+  }
+  return null;
+}
+
+function firstValidSha(...values) {
+  for (const value of values) {
+    const sha = String(value || '').trim();
+    if (/^[a-f0-9]{40}$/i.test(sha)) return sha;
+  }
+  return null;
+}
+
+function readCommitFromJson(filePath, paths) {
+  const payload = readJson(filePath);
+  if (!payload) return null;
+  for (const dotted of paths) {
+    const value = dotted.split('.').reduce((current, key) => current?.[key], payload);
+    const sha = firstValidSha(value);
+    if (sha) return sha;
+  }
+  return null;
+}
+
+function getGitHubBranchSha() {
+  const repo = process.env.RV_TARBALL_REPO || process.env.GITHUB_REPOSITORY || 'RubikVault/rubikvault-site';
+  const branch = process.env.RV_TARBALL_BRANCH
+    || process.env.TARGET_BRANCH
+    || process.env.CLOUDFLARE_PAGES_BRANCH
+    || process.env.CF_PAGES_BRANCH
+    || 'main';
+  const url = `https://api.github.com/repos/${repo}/commits/${branch}`;
   try {
-    return execFileSync('/usr/bin/git', ['rev-parse', 'HEAD'], {
-      cwd: REPO_ROOT, encoding: 'utf8', timeout: 5000,
-    }).trim();
-  } catch { return null; }
+    const r = spawnSync('curl', [
+      '-fsSL',
+      '--retry', '2',
+      '--retry-delay', '2',
+      '--max-time', '15',
+      url,
+    ], { encoding: 'utf8', timeout: 30000 });
+    if (r.status !== 0) return null;
+    return firstValidSha(JSON.parse(r.stdout || '{}')?.sha);
+  } catch {
+    return null;
+  }
+}
+
+function resolveCurrentCommitSha() {
+  return firstValidSha(
+    getCurrentGitSha(),
+    process.env.RV_DEPLOY_COMMIT_SHA,
+    process.env.GITHUB_SHA,
+    process.env.CF_PAGES_COMMIT_SHA,
+    process.env.CLOUDFLARE_PAGES_COMMIT_SHA,
+    readCommitFromJson(CODE_SYNC_META_PATH, ['head_sha', 'git_commit_sha', 'commit', 'data.head_sha']),
+    getGitHubBranchSha(),
+    readCommitFromJson(BUILD_META_PATH, ['meta.commit', 'data.commit'])
+  );
 }
 
 function checkCleanWorkingTree() {
@@ -766,7 +826,10 @@ log('═══ Release Gate Check ═══');
 log(`Dry run: ${isDryRun} | Force: ${isForce} | Skip smokes: ${skipSmokes}`);
 
 const requestedAt = utcNow();
-const currentGitSha = getCurrentGitSha();
+const currentGitSha = resolveCurrentCommitSha();
+if (!currentGitSha && !isDryRun) {
+  fail('Could not resolve deploy git commit SHA. Set RV_DEPLOY_COMMIT_SHA or run safe-code-sync before release.');
+}
 checkCleanWorkingTree();
 
 // 1. Gate checks

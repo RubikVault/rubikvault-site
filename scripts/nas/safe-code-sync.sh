@@ -12,6 +12,7 @@ SYNC_ROOT="${SYNC_ROOT:-$NAS_DEV_ROOT}"
 # Synology NAS without git installed). Keeps Mac off the critical path.
 TARBALL_REPO="${RV_TARBALL_REPO:-RubikVault/rubikvault-site}"
 TARBALL_BRANCH="${RV_TARBALL_BRANCH:-$TARGET_BRANCH}"
+CODE_SYNC_META_PATH="${CODE_SYNC_META_PATH:-$SYNC_ROOT/var/private/ops/code-sync-latest.json}"
 
 PUBLIC_DATA_CODE_ALLOWLIST=(
   public/data/universe/all.json
@@ -68,6 +69,40 @@ run_manifest_guard() {
   "$node_bin" "$SYNC_ROOT/scripts/nas/verify-code-manifest.mjs"
 }
 
+resolve_tarball_head_sha() {
+  local url sha
+  url="https://api.github.com/repos/${TARBALL_REPO}/commits/${TARBALL_BRANCH}"
+  sha="$(curl -fsSL --retry 2 --retry-delay 2 --max-time 15 "$url" 2>/dev/null \
+    | python3 -c 'import json,sys; print((json.load(sys.stdin).get("sha") or "").strip())' 2>/dev/null || true)"
+  if [[ "$sha" =~ ^[a-fA-F0-9]{40}$ ]]; then
+    printf '%s\n' "$sha"
+  fi
+}
+
+write_code_sync_meta() {
+  local mode="$1"
+  local head_sha="$2"
+  mkdir -p "$(dirname "$CODE_SYNC_META_PATH")"
+  python3 - "$CODE_SYNC_META_PATH" "$mode" "$TARGET_BRANCH" "$TARBALL_REPO" "$TARBALL_BRANCH" "$head_sha" <<'PY'
+import json, sys
+from datetime import datetime, timezone
+
+path, mode, target_branch, repo, tarball_branch, head_sha = sys.argv[1:7]
+payload = {
+    "schema": "rv_code_sync_meta_v1",
+    "generated_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+    "mode": mode,
+    "target_branch": target_branch,
+    "repo": repo,
+    "tarball_branch": tarball_branch,
+    "head_sha": head_sha if len(head_sha) == 40 else None,
+}
+with open(path, "w", encoding="utf-8") as fh:
+    json.dump(payload, fh, indent=2)
+    fh.write("\n")
+PY
+}
+
 sync_public_data_code_allowlist() {
   local src_root="$1"
   local copied=0
@@ -83,11 +118,12 @@ sync_public_data_code_allowlist() {
 }
 
 tarball_sync() {
-  local tmp head_short
+  local tmp head_sha head_short
   tmp="$(mktemp -d)"
   trap 'rm -rf "$tmp"' RETURN
 
   local url="https://github.com/${TARBALL_REPO}/tarball/${TARBALL_BRANCH}"
+  head_sha="$(resolve_tarball_head_sha || true)"
   printf 'safe_code_sync_mode=tarball repo=%s branch=%s url=%s\n' \
     "$TARBALL_REPO" "$TARBALL_BRANCH" "$url"
 
@@ -136,10 +172,15 @@ tarball_sync() {
     \( -path "$SYNC_ROOT/public/data" -o -path "$SYNC_ROOT/node_modules" \) -prune \
     -o -name "._*" -type f -print -delete >/dev/null 2>&1 || true
 
-  head_short="$(head -c 12 "$tmp/extract/.git_head_sha" 2>/dev/null || true)"
+  head_short="${head_sha:0:12}"
+  if [[ -z "$head_short" ]]; then
+    head_short="$(head -c 12 "$tmp/extract/.git_head_sha" 2>/dev/null || true)"
+  fi
   if [[ -z "$head_short" ]]; then
     head_short="tarball"
   fi
+
+  write_code_sync_meta "tarball" "$head_sha"
 
   printf 'safe_code_sync_ok branch=%s head=%s mode=tarball\n' \
     "$TARBALL_BRANCH" "$head_short"
@@ -148,6 +189,7 @@ tarball_sync() {
 }
 
 git_sync() {
+  local head_sha
   if [[ -n "$(git -C "$SYNC_ROOT" status --porcelain --untracked-files=no 2>/dev/null)" ]]; then
     echo "safe_code_sync_dirty_worktree=$SYNC_ROOT" >&2
     exit 1
@@ -156,10 +198,12 @@ git_sync() {
   git -C "$SYNC_ROOT" fetch origin
   git -C "$SYNC_ROOT" checkout "$TARGET_BRANCH" >/dev/null 2>&1 || true
   git -C "$SYNC_ROOT" merge --ff-only "origin/$TARGET_BRANCH"
+  head_sha="$(git -C "$SYNC_ROOT" rev-parse HEAD)"
+  write_code_sync_meta "git" "$head_sha"
 
   printf 'safe_code_sync_ok branch=%s head=%s mode=git\n' \
     "$TARGET_BRANCH" \
-    "$(git -C "$SYNC_ROOT" rev-parse --short HEAD)"
+    "${head_sha:0:12}"
 
   run_manifest_guard
 }
