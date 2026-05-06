@@ -131,8 +131,9 @@ function loadHistoryTouchReport(filePath) {
   const report = readJsonIfExists(filePath);
   const byPack = new Map();
   if (!report || !Array.isArray(report.packs)) return { report, byPack };
+  const normalizePackKey = (pack) => String(pack || '').trim().replace(/^history\//, '');
   const addTouched = (pack, ids) => {
-    const cleanPack = String(pack || '').trim();
+    const cleanPack = normalizePackKey(pack);
     if (!cleanPack || !ids || ids.length <= 0) return;
     if (!byPack.has(cleanPack)) byPack.set(cleanPack, new Set());
     const target = byPack.get(cleanPack);

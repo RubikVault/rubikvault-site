@@ -140,6 +140,7 @@ test('public history shards support incremental touched-pack rebuilds with stric
   assert.match(builder, /RV_PUBLIC_HISTORY_INCREMENTAL/);
   assert.match(builder, /String\(next\)\.startsWith\('--'\) \? true : next/);
   assert.match(builder, /history_touch_report\.json/);
+  assert.ok(builder.includes("replace(/^history\\//, '')"));
   assert.match(builder, /Array\.isArray\(report\.entries\)/);
   assert.match(builder, /addTouched\(row\?\.history_pack, \[row\?\.canonical_id\]\)/);
   assert.match(builder, /changed_shards/);
