@@ -51,6 +51,13 @@ test('runtime manifest allowlists public breakout v12 artifacts', () => {
   assert.equal(patterns.has('data/breakout/runs/**/shards/**/*.json'), true);
 });
 
+test('runtime manifest allowlists public decision module scorecard only through status path', () => {
+  const manifest = JSON.parse(fs.readFileSync(path.join(ROOT, 'config/runtime-manifest.json'), 'utf8'));
+  const patterns = new Set((manifest.allow || []).map((rule) => rule.pattern));
+  assert.equal(patterns.has('data/status/decision-module-scorecard-latest.json'), true);
+  assert.equal(patterns.has('data/decisions/module-scorecard-latest.json'), false);
+});
+
 test('release gate captures large wrangler output and falls back to branch URL', () => {
   const content = fs.readFileSync(path.join(ROOT, 'scripts/ops/release-gate-check.mjs'), 'utf8');
   assert.match(content, /WRANGLER_DEPLOY_MAX_BUFFER/);
