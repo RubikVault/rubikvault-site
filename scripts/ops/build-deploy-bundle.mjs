@@ -123,6 +123,10 @@ const RUNTIME_SERIES_ALLOWLIST = [
 ];
 
 const RUNTIME_HISTORICAL_CACHE_LIMIT = Number(process.env.RV_RUNTIME_HISTORICAL_CACHE_LIMIT || 750);
+const RUNTIME_HISTORICAL_CANONICAL_IDS = String(process.env.RV_RUNTIME_HISTORICAL_CANONICAL_IDS || 'US:F,US:AAPL,US:HOOD,US:SPY')
+  .split(',')
+  .map((item) => item.trim().toUpperCase())
+  .filter(Boolean);
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -284,6 +288,73 @@ function readAdjustedSeriesRows(filePath) {
     .sort((a, b) => a.date.localeCompare(b.date));
 }
 
+function buildRuntimeHistoricalPayload(key, rows, source) {
+  const bars = rows.length > RUNTIME_HISTORICAL_CACHE_LIMIT
+    ? rows.slice(-RUNTIME_HISTORICAL_CACHE_LIMIT)
+    : rows;
+  const ticker = key.includes('__') ? key.split('__').slice(1).join('__') : key;
+  const latest = bars[bars.length - 1] || null;
+  return {
+    ok: true,
+    data: {
+      ticker,
+      bars,
+      indicators: [],
+      indicator_issues: [],
+      breakout_v12: {
+        status: 'not_generated',
+        source: 'runtime_historical_cache',
+        reason: 'Historical endpoint cache returns chart bars only.',
+      },
+      breakout_v2: null,
+      breakout_v2_legacy: null,
+    },
+    meta: {
+      status: 'fresh',
+      generated_at: utcNow(),
+      data_date: latest?.date || null,
+      provider: 'runtime_historical_cache',
+      source,
+      quality_flags: ['RUNTIME_HISTORICAL_CACHE', `BAR_LIMIT_${RUNTIME_HISTORICAL_CACHE_LIMIT}`],
+      version: 'v2',
+    },
+    error: null,
+  };
+}
+
+function writeRuntimeHistoricalPayload(outputDir, key, rows, source) {
+  if (!Array.isArray(rows) || rows.length < 60) return 0;
+  const body = JSON.stringify(buildRuntimeHistoricalPayload(key, rows, source));
+  fs.writeFileSync(path.join(outputDir, `${key}.json`), body);
+  return Buffer.byteLength(body);
+}
+
+function readHistoryShardRows(symbol) {
+  const cleanSymbol = String(symbol || '').trim().toUpperCase().replace(/[^A-Z0-9.\-]/g, '');
+  if (!cleanSymbol) return [];
+  const shardKey = cleanSymbol[0] || '_';
+  const shardDir = path.join(PUBLIC_DIR, 'data/eod/history/shards');
+  for (const name of [`${shardKey}.json.gz`, `${shardKey}.json`]) {
+    const filePath = path.join(shardDir, name);
+    if (!fs.existsSync(filePath)) continue;
+    try {
+      const text = name.endsWith('.gz')
+        ? gunzipSync(fs.readFileSync(filePath)).toString('utf8')
+        : fs.readFileSync(filePath, 'utf8');
+      const shard = JSON.parse(text);
+      const rawRows = shard?.[cleanSymbol];
+      if (!Array.isArray(rawRows)) return [];
+      return rawRows
+        .map((row) => normalizeHistoricalRow(row))
+        .filter(Boolean)
+        .sort((a, b) => a.date.localeCompare(b.date));
+    } catch {
+      return [];
+    }
+  }
+  return [];
+}
+
 function materializeRuntimeHistoricalCache() {
   const sourceDir = path.join(PUBLIC_DIR, 'data/v3/series/adjusted');
   if (!fs.existsSync(sourceDir)) return { written: 0, skipped: 0, bytes: 0 };
@@ -304,41 +375,26 @@ function materializeRuntimeHistoricalCache() {
         skipped += 1;
         continue;
       }
-      const bars = rows.length > RUNTIME_HISTORICAL_CACHE_LIMIT
-        ? rows.slice(-RUNTIME_HISTORICAL_CACHE_LIMIT)
-        : rows;
-      const ticker = key.includes('__') ? key.split('__').slice(1).join('__') : key;
-      const latest = bars[bars.length - 1] || null;
-      const payload = {
-        ok: true,
-        data: {
-          ticker,
-          bars,
-          indicators: [],
-          indicator_issues: [],
-          breakout_v12: {
-            status: 'not_generated',
-            source: 'runtime_historical_cache',
-            reason: 'Historical endpoint cache returns chart bars only.',
-          },
-          breakout_v2: null,
-          breakout_v2_legacy: null,
-        },
-        meta: {
-          status: 'fresh',
-          generated_at: utcNow(),
-          data_date: latest?.date || null,
-          provider: 'runtime_historical_cache',
-          quality_flags: ['RUNTIME_HISTORICAL_CACHE', `BAR_LIMIT_${RUNTIME_HISTORICAL_CACHE_LIMIT}`],
-          version: 'v2',
-        },
-        error: null,
-      };
-      const dest = path.join(outputDir, `${key}.json`);
-      const body = JSON.stringify(payload);
-      fs.writeFileSync(dest, body);
+      const writtenBytes = writeRuntimeHistoricalPayload(outputDir, key, rows, 'adjusted_series');
       written += 1;
-      bytes += Buffer.byteLength(body);
+      bytes += writtenBytes;
+    } catch {
+      skipped += 1;
+    }
+  }
+  for (const canonicalId of RUNTIME_HISTORICAL_CANONICAL_IDS) {
+    const [exchange, symbol] = canonicalId.split(':');
+    const key = `${exchange}__${symbol}`.replace(/[^A-Z0-9_.-]/g, '');
+    if (!key || fs.existsSync(path.join(outputDir, `${key}.json`))) continue;
+    try {
+      const rows = readHistoryShardRows(symbol);
+      const writtenBytes = writeRuntimeHistoricalPayload(outputDir, key, rows, 'public_history_shard');
+      if (writtenBytes > 0) {
+        written += 1;
+        bytes += writtenBytes;
+      } else {
+        skipped += 1;
+      }
     } catch {
       skipped += 1;
     }
