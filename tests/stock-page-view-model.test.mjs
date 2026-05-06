@@ -247,7 +247,7 @@ describe('buildModelConsensusPresentation', () => {
       missingModels: ['forecast', 'scientific'],
     });
     assert.equal(view.coverageCount, 1);
-    assert.match(view.actionableText, /Consensus not actionable/i);
+    assert.match(view.actionableText, /Model evidence not actionable/i);
     assert.match(view.availabilityText, /Only 1 of 3 models available/i);
   });
 });

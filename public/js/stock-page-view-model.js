@@ -722,7 +722,7 @@ export function buildWaitStatePresentation({ decision = {}, states = {}, explana
     whyBullets: why.slice(0, 4),
     nextActions,
     signalBalanceText: 'Signal balance: no strong bullish or bearish trigger',
-    reboundTitle: why.includes('absolute volatility remains high') ? 'Recovery watch' : 'Rebound conditions not yet met',
+    reboundTitle: why.includes('absolute volatility remains high') ? 'Recovery watch' : 'Entry trigger not confirmed',
     setupQualityText: Number.isFinite(toNumber(decision?.scores?.composite))
       ? `Setup quality: Moderate (${toNumber(decision?.scores?.composite).toFixed(0)}/100)`
       : 'Setup quality: Moderate',
@@ -795,7 +795,7 @@ export function buildActiveModelConsensusPresentation({ evaluation = null, decis
     activeModels,
     isolatedSignal,
     actionableText: coverageCount >= 3 ? 'Actionable alignment available' : 'Not actionable',
-    availabilityText: coverageCount >= 3 ? 'Broad model confirmation available' : `Coverage incomplete (${coverageCount}/4 models)`,
+    availabilityText: coverageCount >= 3 ? 'Broad model confirmation available' : `Coverage incomplete (${coverageCount}/3 models)`,
     finalInterpretation,
     primaryVerdict: decision?.verdict || null,
   };
@@ -817,9 +817,9 @@ export function buildModelConsensusPresentation({ evaluation = null, decision = 
   });
   return {
     ...view,
-    title: view.coverageCount < 3 ? `${view.coverageCount}-model view` : '3-model consensus',
-    compactTitle: view.coverageCount < 3 ? `${view.coverageCount}-model view` : '3-model consensus',
-    actionableText: view.coverageCount >= 3 ? 'Model alignment available' : 'Consensus not actionable',
+    title: view.coverageCount < 3 ? `${view.coverageCount}-model evidence` : 'Model evidence',
+    compactTitle: view.coverageCount < 3 ? `${view.coverageCount}-model evidence` : 'Model evidence',
+    actionableText: view.coverageCount >= 3 ? 'Model alignment available' : 'Model evidence not actionable',
     availabilityText: view.coverageCount >= 3 ? 'Broad model confirmation available' : `Only ${view.coverageCount} of 3 models available`,
   };
 }

@@ -483,7 +483,7 @@ test('Live stock.html sharpens trend vs rebound wording', async () => {
   const fs = await import('node:fs');
   const content = fs.readFileSync(new URL('../public/stock.html', import.meta.url), 'utf-8');
   assert.ok(content.includes('Signal balance'), 'Signal balance section is missing');
-  assert.ok(content.includes('Recovery watch') || content.includes('Rebound conditions not yet met'), 'Rebound watch wording is missing');
+  assert.ok(content.includes('Recovery watch') || content.includes('Entry trigger not confirmed'), 'Entry trigger wording is missing');
 });
 
 test('Live stock.html uses compact breakout none wording', async () => {
