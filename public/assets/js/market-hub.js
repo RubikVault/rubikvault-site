@@ -314,6 +314,49 @@
     function getGDoc() { return doc?.data || {}; }
     function getAsOf() { return doc?.meta?.data_date || ''; }
 
+    function numericOrNull(value) {
+        const n = Number(value);
+        return Number.isFinite(n) ? n : null;
+    }
+
+    function trendToScore(value) {
+        const text = String(value || '').toLowerCase();
+        if (text === 'bullish' || text === 'risk-on') return 70;
+        if (text === 'bearish' || text === 'risk-off') return 35;
+        return 50;
+    }
+
+    function deriveInvestmentCompass(gDoc) {
+        const compass = gDoc?.investment_compass || {};
+        const cards = Object.values(gDoc?.cards || {});
+        const cardScores = cards.map(c => numericOrNull(c?.score)).filter(n => n != null);
+        const avgCardScore = cardScores.length
+            ? Math.round(cardScores.reduce((sum, n) => sum + n, 0) / cardScores.length)
+            : 50;
+        const flowRows = Array.isArray(gDoc?.money_flow?.all_flows) ? gDoc.money_flow.all_flows : [];
+        const flowBalance = flowRows.reduce((sum, row) => {
+            const direction = String(row?.direction || '').toLowerCase();
+            if (direction === 'bullish') return sum + 1;
+            if (direction === 'bearish') return sum - 1;
+            return sum;
+        }, 0);
+        const derivedTrend = Math.round(clamp((avgCardScore + trendToScore(compass.crypto_trend) + trendToScore(compass.commodity_trend)) / 3, 0, 100));
+        const derivedRisk = trendToScore(compass.risk_mode || gDoc?.us_pulse?.risk_mode);
+        const derivedFlow = Math.round(clamp(50 + flowBalance * 6, 0, 100));
+        const trendScore = numericOrNull(compass.trend_score) ?? derivedTrend;
+        const riskScore = numericOrNull(compass.risk_score) ?? derivedRisk;
+        const flowScore = numericOrNull(compass.flow_score) ?? derivedFlow;
+        const compositeScore = numericOrNull(compass.composite_score) ?? Math.round((trendScore + riskScore + flowScore) / 3);
+        return {
+            ...compass,
+            composite_score: compositeScore,
+            trend_score: trendScore,
+            risk_score: riskScore,
+            flow_score: flowScore,
+            summary: compass.summary || gDoc?.money_flow?.summary || 'Compass derived from live market cards and flow proxies.'
+        };
+    }
+
     function filterCards(prefix) {
         return Object.entries(getCards()).filter(([k]) => k.startsWith(prefix)).map(([, v]) => v).sort((a, b) => b.score - a.score);
     }
@@ -332,6 +375,7 @@
         // ═══ ROW 1: Regime + Exhaustion Gauge + Breadth ═══
         const gauge = computeExhaustionGauge(cards);
         const pulse = gDoc?.us_pulse;
+        const compass = deriveInvestmentCompass(gDoc);
         const pulseTotal = (pulse?.breadth_up || 0) + (pulse?.breadth_down || 0);
         const upPct = pulseTotal > 0 ? ((pulse.breadth_up / pulseTotal) * 100).toFixed(0) : '—';
 
@@ -343,7 +387,7 @@
       <div style="font-size:0.72rem;color:${MH.muted};text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.4rem">Market Regime</div>
       <div style="font-size:1.6rem;font-weight:800;color:${regCol}"${regTip ? ` title="${esc(regTip)}"` : ''}>${dictLabel('regime', regime, regime)}</div>
       <div style="font-size:0.72rem;color:${MH.muted};margin-top:0.3rem">Breadth Z: ${rd.breadth_z?.toFixed(2) || '—'} · Credit Z: ${rd.credit_z?.toFixed(2) || '—'} · Vol Z: ${rd.vol_z?.toFixed(2) || '—'}</div>
-      <div style="margin-top:0.5rem">${scorePill(gDoc.investment_compass?.composite_score || 50)} <span style="font-size:0.72rem;color:${MH.muted}">Composite</span></div>
+      <div style="margin-top:0.5rem">${scorePill(compass.composite_score)} <span style="font-size:0.72rem;color:${MH.muted}">Composite</span></div>
     </article>`;
 
         // Widget 2: Exhaustion Gauge
@@ -398,7 +442,6 @@
         h += '</div>';
 
         // ═══ Compass ═══
-        const compass = gDoc.investment_compass;
         if (compass) {
             h += card(`${secTitle('Investment Compass')}
         <div class="mh-grid-auto">
