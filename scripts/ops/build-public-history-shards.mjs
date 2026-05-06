@@ -176,7 +176,7 @@ async function main() {
   const incrementalRequested = boolArg(argValue('--incremental', process.env.RV_PUBLIC_HISTORY_INCREMENTAL || '0'));
   const touchReportPath = path.resolve(String(argValue('--history-touch-report', process.env.RV_HISTORY_TOUCH_REPORT_PATH || 'mirrors/universe-v7/reports/history_touch_report.json')));
   const shardMaxBytes = Number.parseInt(String(argValue('--max-shard-bytes', process.env.RV_PUBLIC_HISTORY_SHARD_MAX_BYTES || String(25 * 1024 * 1024))), 10) || (25 * 1024 * 1024);
-  const canarySymbols = String(argValue('--canaries', process.env.RV_PUBLIC_HISTORY_CANARIES || 'AAPL,HOOD,SPY,ASML.AS,^GSPC'))
+  const canarySymbols = String(argValue('--canaries', process.env.RV_PUBLIC_HISTORY_CANARIES || 'AAPL,HOOD,SPY,ASML,BASM,000220'))
     .split(',')
     .map((item) => item.trim().toUpperCase())
     .filter(Boolean);

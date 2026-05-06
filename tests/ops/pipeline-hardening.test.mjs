@@ -146,6 +146,7 @@ test('public history shards support incremental touched-pack rebuilds with stric
   assert.match(builder, /changed_shards/);
   assert.match(builder, /oversized_shards/);
   assert.match(builder, /RV_PUBLIC_HISTORY_SHARD_MAX_BYTES/);
+  assert.match(builder, /AAPL,HOOD,SPY,ASML,BASM,000220/);
   assert.match(builder, /canaries/);
   assert.match(builder, /incremental_fallback_reason/);
 
