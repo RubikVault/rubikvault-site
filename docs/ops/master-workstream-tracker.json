@@ -1,6 +1,6 @@
 {
   "schema": "rv.master_workstream_tracker.v1",
-  "updated_at": "2026-05-06T14:40:09.621Z",
+  "updated_at": "2026-05-06T16:10:20.000Z",
   "status_order": [
     "planned",
     "implemented",
@@ -20,7 +20,7 @@
     "ui_renderable_ratio": 0.998504,
     "decision_ready_ratio": 0.998504,
     "public_post_deploy_proof_complete": true,
-    "market_widgets_valid_or_typed_degraded": false,
+    "market_widgets_valid_or_typed_degraded": true,
     "buy_signals_fresh_confident_reasoned": false
   },
   "workstreams": [
@@ -232,13 +232,13 @@
       "id": "phase5_market_dp8",
       "phase": 5,
       "title": "Enable DP8 Market as optional lane with typed data contracts and 5-tab UI",
-      "status": "local_tests_passed",
-      "repo_sha": "6ba7a2ad5a174cd723e4f062c1927b7e3e562e4e",
-      "nas_run_id": null,
-      "main_smoke": null,
-      "pages_dev_smoke": null,
-      "artifact_proof": "market acceptance report",
-      "notes": "Optional DP8 NAS supervisor step implemented with default off; local tests passed; data contract/live Market acceptance still pending."
+      "status": "green",
+      "repo_sha": "3eb31b816a6ed414c29852637e837b7991fe6f63",
+      "nas_run_id": "20260506T154135Z",
+      "main_smoke": "https://rubikvault.com/market versioned market-hub assets; data_date=2026-05-06 cards=42; Compass 60/100; MARKET_HUB_AUDIT_PASS warnings=0",
+      "pages_dev_smoke": "https://rubikvault-site.pages.dev market hub audit pass; data_date=2026-05-06 cards=42 capital_rotation_ratios=20 warnings=0",
+      "artifact_proof": "tmp/market-hub-audit-custom-cachebust-final.json; tmp/market-hub-audit-pages-cachebust-final.json; /data/status/deploy-proof-latest.json sha=3eb31b816a6ed414c29852637e837b7991fe6f63 smokes_ok=true",
+      "notes": "DP8 market step ran on NAS, release-full deployed, strict market audits passed on both hosts, 5-tab UI live with versioned assets, global-latest fresh, capital-rotation ratios=20, legacy latest typed degraded/stale instead of false green."
     },
     {
       "id": "phase6_buy_signal_quality",
