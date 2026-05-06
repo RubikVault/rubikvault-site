@@ -55,6 +55,7 @@ test('history refresh supports merge default plus shadow delta artifacts', () =>
   assert.match(refresh, /default=os\.environ\.get\("RV_HISTORY_WRITE_MODE", "merge"\)/);
   assert.match(refresh, /def write_delta_pack/);
   assert.match(refresh, /history_effective_sha256/);
+  assert.match(refresh, /def load_json\(path: Path, default: Any = None\)/);
   assert.match(refresh, /exchange-checkpoint-path/);
   assert.match(refresh, /resume-exchange-checkpoint/);
   assert.match(refresh, /rv_v7_market_refresh_exchange_checkpoint_v1/);

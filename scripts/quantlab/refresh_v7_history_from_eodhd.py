@@ -50,6 +50,15 @@ def atomic_write_json(path: Path, data: dict[str, Any]) -> None:
     tmp.replace(path)
 
 
+def load_json(path: Path, default: Any = None) -> Any:
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        return default
+    except json.JSONDecodeError:
+        return default
+
+
 def write_ndjson_gz(path: Path, rows: list[dict[str, Any]]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.parent / f".{path.name}.{os.getpid()}.{uuid.uuid4().hex}.tmp"
