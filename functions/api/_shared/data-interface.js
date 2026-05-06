@@ -237,6 +237,37 @@ function resolveHistoricalBarLimit(request) {
   return isLocalDevRequest(request) ? 1500 : 750;
 }
 
+function requestAssetId(request) {
+  try {
+    const raw = new URL(request.url).searchParams.get('asset_id');
+    const value = String(raw || '').trim().toUpperCase();
+    return /^[A-Z0-9_.-]+:[A-Z0-9_.-]+$/.test(value) ? value : null;
+  } catch {
+    return null;
+  }
+}
+
+function contextFromAssetId(assetId, fallbackTicker) {
+  if (!assetId) return null;
+  const [exchange, symbol] = assetId.split(':');
+  const resolvedTicker = normalizeTickerStrict(symbol) || normalizeTicker(symbol) || normalizeTicker(fallbackTicker);
+  if (!resolvedTicker) return null;
+  return {
+    ok: true,
+    ticker: resolvedTicker,
+    name: null,
+    exchange: exchange || null,
+    country: exchange === 'US' ? 'US' : null,
+    canonicalId: assetId,
+    resolution: {
+      ticker: resolvedTicker,
+      canonical_id: assetId,
+      exchange: exchange || null,
+      provider_ids: null,
+    },
+  };
+}
+
 function pageCoreLatestBar(row) {
   const marketStatsMin = row?.market_stats_min && typeof row.market_stats_min === 'object'
     ? row.market_stats_min
@@ -573,6 +604,9 @@ async function fetchSnapshotJson(moduleName, request, env) {
 async function resolveTickerContext(ticker, request) {
   const normalized = normalizeTicker(ticker);
   if (!normalized) return { ok: false, error: { code: 'INVALID_TICKER', message: 'Invalid ticker format' } };
+
+  const assetContext = contextFromAssetId(requestAssetId(request), normalized);
+  if (assetContext) return assetContext;
 
   let resolvedTicker = normalized;
   let name = null;

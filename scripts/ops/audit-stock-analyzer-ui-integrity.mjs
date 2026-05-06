@@ -38,10 +38,16 @@ function normalizeBaseUrl(value) {
 }
 
 async function fetchJsonMaybeGzip(url) {
-  const response = await fetch(url, { cache: 'no-store' });
+  const response = await fetch(url);
   if (!response.ok) throw new Error(`FETCH_FAILED:${url}:${response.status}`);
   const buffer = Buffer.from(await response.arrayBuffer());
-  const text = url.endsWith('.gz') ? gunzipSync(buffer).toString('utf8') : buffer.toString('utf8');
+  let pathname = String(url || '');
+  try {
+    pathname = new URL(url).pathname;
+  } catch {
+    // keep raw value
+  }
+  const text = pathname.endsWith('.gz') ? gunzipSync(buffer).toString('utf8') : buffer.toString('utf8');
   return JSON.parse(text);
 }
 
@@ -66,6 +72,12 @@ function arrayAtPath(...values) {
 
 function endpointStatus(payload) {
   return String(payload?.meta?.status || payload?.data?.status || payload?.status || '').trim().toLowerCase();
+}
+
+function withCacheBust(url) {
+  const parsed = new URL(url);
+  parsed.searchParams.set('rv', `${Date.now()}-${Math.random().toString(16).slice(2)}`);
+  return parsed.toString();
 }
 
 export function bucketReason(reason) {
@@ -193,7 +205,7 @@ function pickProbeRows(rows, auditResults, sampleSize) {
 async function probeHistorical(baseUrl, row, minBars = 60) {
   const ticker = encodeURIComponent(row?.display_ticker || row?.canonical_asset_id || '');
   const assetId = row?.canonical_asset_id ? `?asset_id=${encodeURIComponent(row.canonical_asset_id)}` : '';
-  const payload = await fetchJsonOrNull(`${baseUrl}/api/v2/stocks/${ticker}/historical${assetId}`);
+  const payload = await fetchJsonOrNull(withCacheBust(`${baseUrl}/api/v2/stocks/${ticker}/historical${assetId}`));
   const bars = arrayAtPath(payload?.data?.bars, payload?.bars, payload?.data?.history);
   const provider = String(payload?.meta?.provider || payload?.data?.provider || payload?.provider || '').trim();
   const ok = bars.length >= minBars && provider !== 'page-core-minimal-history';
@@ -212,7 +224,7 @@ async function probeHistorical(baseUrl, row, minBars = 60) {
 async function probeGovernance(baseUrl, row) {
   const ticker = encodeURIComponent(row?.display_ticker || row?.canonical_asset_id || '');
   const assetId = row?.canonical_asset_id ? `?asset_id=${encodeURIComponent(row.canonical_asset_id)}` : '';
-  const payload = await fetchJsonOrNull(`${baseUrl}/api/v2/stocks/${ticker}/governance${assetId}`);
+  const payload = await fetchJsonOrNull(withCacheBust(`${baseUrl}/api/v2/stocks/${ticker}/governance${assetId}`));
   const evaluation = payload?.data?.evaluation_v4;
   const ok = evaluation && typeof evaluation === 'object' && Object.keys(evaluation).length > 0;
   return {
@@ -227,7 +239,7 @@ async function probeGovernance(baseUrl, row) {
 }
 
 async function probeBenchmark(baseUrl, ticker) {
-  const payload = await fetchJsonOrNull(`${baseUrl}/api/v2/stocks/${encodeURIComponent(ticker)}/historical`);
+  const payload = await fetchJsonOrNull(withCacheBust(`${baseUrl}/api/v2/stocks/${encodeURIComponent(ticker)}/historical`));
   const bars = arrayAtPath(payload?.data?.bars, payload?.bars, payload?.data?.history);
   return {
     ok: bars.length >= 252,
@@ -262,7 +274,7 @@ async function runLiveProbes(baseUrl, rows, auditResults, sampleSize) {
       probes.push(await probeBenchmark(baseUrl, ticker));
     }
   }
-  const breakout = await fetchJsonOrNull(`${baseUrl}/data/breakout/manifests/latest.json`);
+  const breakout = await fetchJsonOrNull(withCacheBust(`${baseUrl}/data/breakout/manifests/latest.json`));
   probes.push({
     ok: Boolean(breakout && typeof breakout === 'object'),
     check: 'breakout_manifest',
