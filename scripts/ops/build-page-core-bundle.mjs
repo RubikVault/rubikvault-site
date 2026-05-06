@@ -149,7 +149,13 @@ function loadHistoryTouchIds(filePath) {
   }
   if (Array.isArray(report.packs)) {
     for (const row of report.packs) {
-      for (const value of row?.touched_assets || []) {
+      const rawTouched = row?.touched_assets;
+      const values = Array.isArray(rawTouched)
+        ? rawTouched
+        : rawTouched && typeof rawTouched === 'object'
+          ? Object.values(rawTouched).flat()
+          : [];
+      for (const value of values) {
         const canonical = normalizePageCoreAlias(value);
         if (canonical) ids.add(canonical);
       }

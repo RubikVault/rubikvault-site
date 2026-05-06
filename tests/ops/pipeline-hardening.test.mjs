@@ -288,6 +288,7 @@ test('page core bundle has conservative incremental same-target reuse with stric
   assert.match(builder, /previousRowReusable/);
   assert.match(builder, /reusePageCoreRow/);
   assert.match(builder, /finalizePageCoreRow/);
+  assert.match(builder, /Object\.values\(rawTouched\)\.flat\(\)/);
   assert.match(builder, /pageCoreStrictOperationalReasons/);
 
   const supervisor = fs.readFileSync(path.join(ROOT, 'scripts/nas/rv-nas-night-supervisor.sh'), 'utf8');
