@@ -16,6 +16,41 @@ function historicalLimitForRequest(request) {
   return 750;
 }
 
+function runtimeHistoricalKey({ ticker, request }) {
+  try {
+    const params = new URL(request.url).searchParams;
+    const assetId = String(params.get('asset_id') || '').trim().toUpperCase();
+    const match = assetId.match(/^([A-Z0-9_.-]+):([A-Z0-9_.-]+)$/);
+    if (match) return `${match[1]}__${match[2]}`.replace(/[^A-Z0-9_.-]/g, '');
+  } catch { /* fall back */ }
+  return `US__${String(ticker || '').trim().toUpperCase()}`.replace(/[^A-Z0-9_.-]/g, '');
+}
+
+async function fastRuntimeHistoricalCacheResponse({ ticker, request, env }) {
+  const key = runtimeHistoricalKey({ ticker, request });
+  if (!key) return null;
+  try {
+    const origin = new URL(request.url).origin;
+    const url = new URL(`/data/v3/runtime/historical/${encodeURIComponent(key)}.json`, origin);
+    const assetFetcher = env?.ASSETS || null;
+    const response = assetFetcher
+      ? await assetFetcher.fetch(url.toString())
+      : await fetch(url.toString());
+    if (!response?.ok || !response.body) return null;
+    return new Response(response.body, {
+      status: 200,
+      headers: {
+        'Content-Type': 'application/json; charset=utf-8',
+        'Cache-Control': 'public, max-age=300',
+        'X-RV-API-Version': '2',
+        'X-RV-Historical-Provider': 'runtime_historical_cache',
+      },
+    });
+  } catch {
+    return null;
+  }
+}
+
 function fastStaticHistoricalResponse({ ticker, request, env }) {
   return getStaticBars(ticker, new URL(request.url).origin, env?.ASSETS || null)
     .then((bars) => {
@@ -74,6 +109,20 @@ export async function onRequestGet(context) {
       status: 400,
       headers: { 'Content-Type': 'application/json; charset=utf-8' },
     });
+  }
+
+  const cachedResponse = await fastRuntimeHistoricalCacheResponse({ ticker, request, env });
+  if (cachedResponse) {
+    logV2Request({
+      endpoint: endpointId,
+      ticker,
+      durationMs: Date.now() - start,
+      status: 'fresh',
+      stale: false,
+      fallbackUsed: false,
+      source: 'runtime_historical_cache',
+    });
+    return cachedResponse;
   }
 
   let result = null;

@@ -21,6 +21,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { gunzipSync } from 'node:zlib';
 
 const REPO_ROOT      = path.resolve(fileURLToPath(new URL('.', import.meta.url)), '../..');
 const PUBLIC_DIR     = path.join(REPO_ROOT, 'public');
@@ -120,6 +121,8 @@ const RUNTIME_SERIES_ALLOWLIST = [
   'data/v3/series/adjusted/US__SPY.ndjson.gz',
   'data/v3/series/adjusted/US__F.ndjson.gz',
 ];
+
+const RUNTIME_HISTORICAL_CACHE_LIMIT = Number(process.env.RV_RUNTIME_HISTORICAL_CACHE_LIMIT || 750);
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -228,6 +231,119 @@ function utcNow() { return new Date().toISOString(); }
 
 function readJson(p) {
   try { return JSON.parse(fs.readFileSync(p, 'utf8')); } catch { return null; }
+}
+
+function normalizeHistoricalRow(row) {
+  if (Array.isArray(row)) {
+    const date = String(row[0] || '').slice(0, 10);
+    const close = Number(row[4] ?? row[5]);
+    if (!date || !Number.isFinite(close)) return null;
+    const open = Number(row[1]);
+    const high = Number(row[2]);
+    const low = Number(row[3]);
+    const adjClose = Number(row[5]);
+    const volume = Number(row[6]);
+    return {
+      date,
+      open: Number.isFinite(open) ? open : close,
+      high: Number.isFinite(high) ? high : close,
+      low: Number.isFinite(low) ? low : close,
+      close,
+      adjClose: Number.isFinite(adjClose) ? adjClose : close,
+      volume: Number.isFinite(volume) ? volume : 0,
+    };
+  }
+  const date = String(row?.date || row?.trading_date || '').slice(0, 10);
+  const close = Number(row?.close ?? row?.adjusted_close ?? row?.adj_close);
+  if (!date || !Number.isFinite(close)) return null;
+  const open = Number(row?.open);
+  const high = Number(row?.high);
+  const low = Number(row?.low);
+  const volume = Number(row?.volume);
+  return {
+    date,
+    open: Number.isFinite(open) ? open : close,
+    high: Number.isFinite(high) ? high : close,
+    low: Number.isFinite(low) ? low : close,
+    close,
+    adjClose: close,
+    volume: Number.isFinite(volume) ? volume : 0,
+  };
+}
+
+function readAdjustedSeriesRows(filePath) {
+  const text = gunzipSync(fs.readFileSync(filePath)).toString('utf8');
+  return text
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => {
+      try { return normalizeHistoricalRow(JSON.parse(line)); } catch { return null; }
+    })
+    .filter(Boolean)
+    .sort((a, b) => a.date.localeCompare(b.date));
+}
+
+function materializeRuntimeHistoricalCache() {
+  const sourceDir = path.join(PUBLIC_DIR, 'data/v3/series/adjusted');
+  if (!fs.existsSync(sourceDir)) return { written: 0, skipped: 0, bytes: 0 };
+  const outputDir = path.join(DIST_DIR, 'data/v3/runtime/historical');
+  fs.rmSync(outputDir, { recursive: true, force: true });
+  fs.mkdirSync(outputDir, { recursive: true });
+
+  let written = 0;
+  let skipped = 0;
+  let bytes = 0;
+  for (const name of fs.readdirSync(sourceDir)) {
+    if (!/^.+\.ndjson\.gz$/.test(name)) continue;
+    const sourcePath = path.join(sourceDir, name);
+    const key = name.replace(/\.ndjson\.gz$/, '');
+    try {
+      const rows = readAdjustedSeriesRows(sourcePath);
+      if (rows.length < 60) {
+        skipped += 1;
+        continue;
+      }
+      const bars = rows.length > RUNTIME_HISTORICAL_CACHE_LIMIT
+        ? rows.slice(-RUNTIME_HISTORICAL_CACHE_LIMIT)
+        : rows;
+      const ticker = key.includes('__') ? key.split('__').slice(1).join('__') : key;
+      const latest = bars[bars.length - 1] || null;
+      const payload = {
+        ok: true,
+        data: {
+          ticker,
+          bars,
+          indicators: [],
+          indicator_issues: [],
+          breakout_v12: {
+            status: 'not_generated',
+            source: 'runtime_historical_cache',
+            reason: 'Historical endpoint cache returns chart bars only.',
+          },
+          breakout_v2: null,
+          breakout_v2_legacy: null,
+        },
+        meta: {
+          status: 'fresh',
+          generated_at: utcNow(),
+          data_date: latest?.date || null,
+          provider: 'runtime_historical_cache',
+          quality_flags: ['RUNTIME_HISTORICAL_CACHE', `BAR_LIMIT_${RUNTIME_HISTORICAL_CACHE_LIMIT}`],
+          version: 'v2',
+        },
+        error: null,
+      };
+      const dest = path.join(outputDir, `${key}.json`);
+      const body = JSON.stringify(payload);
+      fs.writeFileSync(dest, body);
+      written += 1;
+      bytes += Buffer.byteLength(body);
+    } catch {
+      skipped += 1;
+    }
+  }
+  return { written, skipped, bytes };
 }
 
 function escapeRegexChar(ch) {
@@ -550,6 +666,9 @@ if (!isDryRun) {
     copiedRuntimeSeries += 1;
   }
   if (copiedRuntimeSeries > 0) log(`Copied ${copiedRuntimeSeries} runtime chart series files to dist/`);
+
+  const runtimeHistoricalCache = materializeRuntimeHistoricalCache();
+  log(`Runtime historical cache: wrote ${runtimeHistoricalCache.written} files, skipped ${runtimeHistoricalCache.skipped}, ${Math.round(runtimeHistoricalCache.bytes / 1024 / 1024)} MB`);
 
   fs.rmSync(path.join(DIST_DIR, 'data/runtime'), { recursive: true, force: true });
 }
