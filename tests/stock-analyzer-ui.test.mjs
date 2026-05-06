@@ -587,6 +587,8 @@ test('Live stock.html adds a single trust bar with consolidated timing', async (
   assert.ok(content.includes('stockUiState.trustSummary'), 'Normalized trust summary is missing');
   assert.ok(content.includes('stockUiState.trustChips'), 'Normalized trust chips are missing');
   assert.ok(viewModel.includes('Price/Tech:'), 'Canonical price/technical chip is missing');
+  assert.ok(viewModel.includes('Data scope:'), 'Trust summary must use scoped data wording');
+  assert.ok(!viewModel.includes('Coverage: full'), 'Trust summary must not present global FULL coverage');
 });
 
 test('Live stock.html removes outdated dashboard copy', async () => {
@@ -614,6 +616,7 @@ test('Live stock.html includes mobile-safe targets and skeleton states', async (
   assert.ok(content.includes('skeleton-line'), 'Skeleton loading state is missing');
   assert.ok(content.includes('Current price sits between near support and near resistance.'), 'Mobile key levels summary is missing');
   assert.ok(content.includes('mobile-segments'), 'Mobile segmented navigation is missing');
+  assert.ok(content.includes('display: flex !important'), 'Mobile segmented navigation must be visible on phones');
   assert.ok(content.includes('bottom-sheet'), 'Historical detail bottom sheet is missing');
 });
 
@@ -621,6 +624,8 @@ test('Live stock.html separates decision, evidence, and background layers', asyn
   const fs = await import('node:fs');
   const content = fs.readFileSync(new URL('../public/stock.html', import.meta.url), 'utf-8');
   assert.ok(content.includes('dash-grid'), 'Three-column dashboard grid is missing');
+  assert.ok(content.includes('grid-template-columns: repeat(3, minmax(0, 1fr))'), 'Desktop grid must keep three equal columns');
+  assert.ok(!content.includes('height: 100%;'), 'Sections must not force equal-height stretching');
   assert.ok(content.includes('id="brk-section"'), 'Lower breakout section is missing');
   assert.ok(content.includes('id="rv-hist-intel"'), 'Lower historical section is missing');
 });

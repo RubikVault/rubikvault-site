@@ -28,6 +28,7 @@ const DIST_DIR       = path.join(REPO_ROOT, 'dist/pages-prod');
 const MANIFEST_PATH  = path.join(REPO_ROOT, 'config/runtime-manifest.json');
 const PRIVATE_OPS_DIR = path.join(REPO_ROOT, 'var/private/ops');
 const DECISION_RETENTION_REPORT_PATH = path.join(REPO_ROOT, 'public/data/reports/decision-bundle-retention-latest.json');
+const DEPLOY_BUNDLE_SIZE_REPORT_PATH = path.join(PRIVATE_OPS_DIR, 'deploy-bundle-size-report.json');
 
 // Cloudflare Pages hard limit: 20k files. We use 18k as safety margin.
 // Note: Cloudflare Pages now supports 20,000 files (as of 2024 pricing tier change).
@@ -135,6 +136,68 @@ function dirSizeMb(dir) {
   if (!fs.existsSync(dir)) return 0;
   const r = spawnSync('du', ['-sm', dir], { encoding: 'utf8', timeout: 30000 });
   return parseInt(r.stdout?.split('\t')[0] || '0', 10);
+}
+
+function buildBundleSizeReport(bundleDir, {
+  bundleFileCount,
+  bundleSizeMb,
+  bundleMaxFileBytes,
+  bundleHeadroom,
+  manifestResult,
+} = {}) {
+  const files = [];
+  const dirBytes = new Map();
+  function addDirBytes(relPath, bytes) {
+    const parts = relPath.split('/').filter(Boolean);
+    for (let i = 1; i < parts.length; i += 1) {
+      const dir = parts.slice(0, i).join('/');
+      dirBytes.set(dir, (dirBytes.get(dir) || 0) + bytes);
+    }
+  }
+  function walk(current) {
+    for (const entry of fs.readdirSync(current, { withFileTypes: true })) {
+      const full = path.join(current, entry.name);
+      if (entry.isDirectory()) {
+        walk(full);
+        continue;
+      }
+      const rel = path.relative(bundleDir, full).replace(/\\/g, '/');
+      const bytes = fs.statSync(full).size;
+      files.push({ file: rel, size_bytes: bytes, size_mb: +(bytes / 1024 / 1024).toFixed(3) });
+      addDirBytes(rel, bytes);
+    }
+  }
+  if (fs.existsSync(bundleDir)) walk(bundleDir);
+  files.sort((a, b) => b.size_bytes - a.size_bytes || a.file.localeCompare(b.file));
+  const topDirs = [...dirBytes.entries()]
+    .map(([dir, sizeBytes]) => ({ dir, size_bytes: sizeBytes, size_mb: +(sizeBytes / 1024 / 1024).toFixed(3) }))
+    .sort((a, b) => b.size_bytes - a.size_bytes || a.dir.localeCompare(b.dir))
+    .slice(0, 50);
+
+  const previous = readJson(DEPLOY_BUNDLE_SIZE_REPORT_PATH);
+  const previousSummary = previous?.summary || {};
+  const summary = {
+    generated_at: utcNow(),
+    bundle_file_count: bundleFileCount,
+    bundle_size_mb: bundleSizeMb,
+    bundle_max_file_bytes: bundleMaxFileBytes,
+    bundle_headroom: bundleHeadroom,
+    bundle_size_warning: bundleSizeMb > Number(process.env.RV_DEPLOY_BUNDLE_SIZE_WARN_MB || 1500),
+    file_count_delta: Number.isFinite(Number(previousSummary.bundle_file_count))
+      ? bundleFileCount - Number(previousSummary.bundle_file_count)
+      : null,
+    size_mb_delta: Number.isFinite(Number(previousSummary.bundle_size_mb))
+      ? bundleSizeMb - Number(previousSummary.bundle_size_mb)
+      : null,
+    manifest_check: manifestResult?.manifest_check ?? 'skipped',
+  };
+
+  return {
+    schema: 'rv.deploy_bundle_size_report.v1',
+    summary,
+    top_files: files.slice(0, 50),
+    top_dirs: topDirs,
+  };
 }
 
 function removeAppleDoubleArtifacts(dir) {
@@ -611,6 +674,15 @@ if (!isDryRun && fs.existsSync(DIST_DIR) && fs.existsSync(MANIFEST_PATH)) {
 if (!isDryRun) {
   const metaDir = PRIVATE_OPS_DIR;
   fs.mkdirSync(metaDir, { recursive: true });
+  const sizeReport = buildBundleSizeReport(DIST_DIR, {
+    bundleFileCount,
+    bundleSizeMb,
+    bundleMaxFileBytes,
+    bundleHeadroom,
+    manifestResult,
+  });
+  fs.writeFileSync(DEPLOY_BUNDLE_SIZE_REPORT_PATH, JSON.stringify(sizeReport, null, 2) + '\n');
+  log(`Bundle size report written: ${DEPLOY_BUNDLE_SIZE_REPORT_PATH}`);
   const metaPath = path.join(metaDir, 'build-bundle-meta.json');
   fs.writeFileSync(metaPath, JSON.stringify({
     schema: 'rv_build_bundle_meta_v2',
@@ -621,6 +693,8 @@ if (!isDryRun) {
     bundle_file_count: bundleFileCount,
     bundle_size_mb: bundleSizeMb,
     bundle_max_file_bytes: bundleMaxFileBytes,
+    bundle_size_warning: sizeReport.summary.bundle_size_warning,
+    top_files_report_path: 'var/private/ops/deploy-bundle-size-report.json',
     budget_limit: BUNDLE_FILE_LIMIT,
     budget_headroom: bundleHeadroom,
     headroom_critical: headroomCritical,

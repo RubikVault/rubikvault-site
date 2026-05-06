@@ -507,7 +507,7 @@ export function buildTrustPresentation({
     || moduleFreshness.some((item) => item.state === 'stale' || item.state === 'delayed');
   const coverageLabel = isPartial ? 'partial' : 'full';
   const canonicalDate = normalizeAsOf(priceAsOf || decisionAsOf);
-  const summaryText = `Analysis & Price as-of: ${canonicalDate || 'latest available'} · Historical context: ${historicalState} · Coverage: ${coverageLabel}`;
+  const summaryText = `Analysis & Price as-of: ${canonicalDate || 'latest available'} · Historical context: ${historicalState} · Data scope: ${isPartial ? 'partial' : 'complete'}`;
   return {
     decisionDate: normalizeAsOf(decisionAsOf || priceAsOf),
     priceDate: normalizeAsOf(priceAsOf || decisionAsOf),
@@ -594,10 +594,19 @@ export function buildStockUiState({
   close = payload?.data?.market_prices?.close || null,
 } = {}) {
   const rawAction = normalizeUiAction(decision?.verdict || decision?.final_verdict || 'WAIT');
-  const confidence = normalizeUiConfidence(decision?.confidence_bucket ?? decision?.confidence);
+  const rawConfidence = normalizeUiConfidence(decision?.confidence_bucket ?? decision?.confidence);
   const rawHorizons = Array.isArray(horizons) ? horizons : [];
   const horizonVerdicts = rawHorizons.map((item) => normalizeUiAction(item?.v?.l || item?.verdict || item?.label)).filter(Boolean);
   const allHorizonsWait = horizonVerdicts.length > 0 && horizonVerdicts.every((value) => value === 'WAIT' || value === 'UNAVAILABLE');
+  const horizonConfidences = rawHorizons.map((item) => normalizeUiConfidence(item?.v?.cf ?? item?.confidence ?? rawConfidence));
+  const modelTotal = 3;
+  const missingCount = Array.isArray(missingModels) ? new Set(missingModels).size : 0;
+  const modelCount = modelEvidenceLimited ? Math.max(0, modelTotal - missingCount) : modelTotal;
+  let confidence = rawConfidence;
+  if (allHorizonsWait) confidence = 'LOW';
+  if (modelEvidenceLimited && missingCount >= 2) confidence = 'LOW';
+  else if (modelEvidenceLimited && confidence === 'HIGH') confidence = 'MEDIUM';
+  if (horizonConfidences.length && horizonConfidences.every((value) => value === 'LOW')) confidence = 'LOW';
   const tacticalAction = String(decision?.tactical_action || '').toUpperCase();
   const confirmedEntry = (rawAction === 'BUY' && tacticalAction === 'ENTER_LONG') || (rawAction === 'SELL' && tacticalAction === 'ENTER_SHORT');
   const breakoutStatus = String(breakout?.status || breakout?.state || breakout?.label || '').toLowerCase();
@@ -641,9 +650,6 @@ export function buildStockUiState({
       : blockers.length
         ? 'BLOCKED'
         : 'PENDING';
-  const modelTotal = 3;
-  const missingCount = Array.isArray(missingModels) ? new Set(missingModels).size : 0;
-  const modelCount = modelEvidenceLimited ? Math.max(0, modelTotal - missingCount) : modelTotal;
   const historical = moduleFreshness.find((item) => item.label === 'Historical');
   const historyChip = historical?.state
     ? `History: ${historical.state}${Number.isFinite(historical.ageDays) ? ` ${historical.ageDays}d` : ''}`

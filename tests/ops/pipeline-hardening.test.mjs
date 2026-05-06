@@ -55,9 +55,17 @@ test('history refresh supports merge default plus shadow delta artifacts', () =>
   assert.match(refresh, /default=os\.environ\.get\("RV_HISTORY_WRITE_MODE", "merge"\)/);
   assert.match(refresh, /def write_delta_pack/);
   assert.match(refresh, /history_effective_sha256/);
+  assert.match(refresh, /exchange-checkpoint-path/);
+  assert.match(refresh, /resume-exchange-checkpoint/);
+  assert.match(refresh, /rv_v7_market_refresh_exchange_checkpoint_v1/);
+  assert.match(refresh, /completed_exchanges/);
+  assert.match(refresh, /skipped_completed_exchanges/);
 
   const apply = fs.readFileSync(path.join(ROOT, 'scripts/ops/apply-history-touch-report-to-registry.mjs'), 'utf8');
   assert.match(apply, /history_effective_sha256/);
+
+  const supervisor = fs.readFileSync(path.join(ROOT, 'scripts/nas/rv-nas-night-supervisor.sh'), 'utf8');
+  assert.match(supervisor, /market-refresh-exchange-checkpoint\.json/);
 });
 
 test('q1 ingest keeps worker rollout serial by default and can opt into delta reads', () => {
@@ -67,6 +75,19 @@ test('q1 ingest keeps worker rollout serial by default and can opt into delta re
   assert.match(content, /serial_parent_writes/);
   assert.match(content, /--read-history-deltas/);
   assert.match(content, /iter_history_pack_records/);
+});
+
+test('q1 delta proof report exposes touched packs assets rows and delta-only verdict', () => {
+  const script = fs.readFileSync(path.join(ROOT, 'scripts/ops/build-q1-delta-proof-report.mjs'), 'utf8');
+  assert.match(script, /rv\.q1_delta_proof_report\.v1/);
+  assert.match(script, /delta_only_ok/);
+  assert.match(script, /packs_selected/);
+  assert.match(script, /assets_emitted_delta/);
+  assert.match(script, /rows_emitted_delta/);
+
+  const supervisor = fs.readFileSync(path.join(ROOT, 'scripts/nas/rv-nas-night-supervisor.sh'), 'utf8');
+  assert.match(supervisor, /q1_delta_proof_report/);
+  assert.match(supervisor, /q1-delta-proof-latest\.json/);
 });
 
 test('forecast generate phase records load/generate/write timings', () => {
@@ -98,6 +119,137 @@ test('hist probs rescue flags support freshness budget and tiered catchup', () =
   assert.match(freshness, /budget_fresh_count/);
 });
 
+test('stock UI hard gate is not swallowed by optional-step handling', () => {
+  const supervisor = fs.readFileSync(path.join(ROOT, 'scripts/nas/rv-nas-night-supervisor.sh'), 'utf8');
+  assert.match(supervisor, /stock_ui_integrity_audit_hard_gate_failed/);
+  assert.match(supervisor, /RV_STOCK_UI_AUDIT_HARD_GATE:-0/);
+  assert.match(supervisor, /optional_step_degraded/);
+});
+
+test('deploy bundle writes private top-file size report', () => {
+  const builder = fs.readFileSync(path.join(ROOT, 'scripts/ops/build-deploy-bundle.mjs'), 'utf8');
+  assert.match(builder, /DEPLOY_BUNDLE_SIZE_REPORT_PATH/);
+  assert.match(builder, /rv\.deploy_bundle_size_report\.v1/);
+  assert.match(builder, /top_files/);
+  assert.match(builder, /top_dirs/);
+  assert.match(builder, /RV_DEPLOY_BUNDLE_SIZE_WARN_MB/);
+});
+
+test('public history shards support incremental touched-pack rebuilds with strict budgets and canaries', () => {
+  const builder = fs.readFileSync(path.join(ROOT, 'scripts/ops/build-public-history-shards.mjs'), 'utf8');
+  assert.match(builder, /RV_PUBLIC_HISTORY_INCREMENTAL/);
+  assert.match(builder, /history_touch_report\.json/);
+  assert.match(builder, /changed_shards/);
+  assert.match(builder, /oversized_shards/);
+  assert.match(builder, /RV_PUBLIC_HISTORY_SHARD_MAX_BYTES/);
+  assert.match(builder, /canaries/);
+  assert.match(builder, /incremental_fallback_reason/);
+
+  const supervisor = fs.readFileSync(path.join(ROOT, 'scripts/nas/rv-nas-night-supervisor.sh'), 'utf8');
+  assert.match(supervisor, /build-public-history-shards\.mjs .*--incremental/);
+});
+
+test('morning acceptance covers dual hosts, proof, historical probes, locks, and rogue processes', () => {
+  const script = fs.readFileSync(path.join(ROOT, 'scripts/ops/build-morning-acceptance-report.mjs'), 'utf8');
+  assert.match(script, /rv\.morning_acceptance_report\.v1/);
+  assert.match(script, /rubikvault\.com/);
+  assert.match(script, /rubikvault-site\.pages\.dev/);
+  assert.match(script, /deploy-proof-latest\.json/);
+  assert.match(script, /HISTORICAL_TICKERS = \['F', 'AAPL', 'HOOD'\]/);
+  assert.match(script, /ROGUE_PATTERNS/);
+  assert.match(script, /page-core-minimal-history/);
+});
+
+test('step resource budgets are centralized and reported by supervisor', () => {
+  const config = JSON.parse(fs.readFileSync(path.join(ROOT, 'config/nas-step-resource-budgets.json'), 'utf8'));
+  assert.equal(config.schema, 'rv.nas_step_resource_budgets.v1');
+  assert.ok(config.steps.market_data_refresh);
+  assert.ok(config.steps.page_core_bundle);
+  assert.ok(config.steps.wrangler_deploy);
+
+  const checker = fs.readFileSync(path.join(ROOT, 'scripts/ops/check-step-resource-budgets.mjs'), 'utf8');
+  assert.match(checker, /rv\.step_resource_budget_report\.v1/);
+  assert.match(checker, /peak_rss_mb_fail/);
+  assert.match(checker, /RV_STEP_RESOURCE_BUDGET_HARD_GATE/);
+
+  const supervisor = fs.readFileSync(path.join(ROOT, 'scripts/nas/rv-nas-night-supervisor.sh'), 'utf8');
+  assert.match(supervisor, /resource_budget_report/);
+  assert.match(supervisor, /check-step-resource-budgets\.mjs/);
+});
+
+test('weekly hist probs full catchup is separate locked off-hours entrypoint', () => {
+  const script = fs.readFileSync(path.join(ROOT, 'scripts/nas/run-weekly-hist-probs-full-catchup.sh'), 'utf8');
+  assert.match(script, /hist-probs-weekly-full/);
+  assert.match(script, /nas_lock_is_active "night-pipeline"/);
+  assert.match(script, /nas_acquire_global_lock "\$LOCK_NAME"/);
+  assert.match(script, /RV_HIST_PROBS_WEEKLY_ALLOW_NIGHT_WINDOW/);
+  assert.match(script, /HIST_PROBS_MAX_TICKERS=\\"0\\"/);
+  assert.match(script, /measure-command\.py/);
+});
+
+test('dirty scope guard blocks staged Market and generated runtime artifacts', () => {
+  const script = fs.readFileSync(path.join(ROOT, 'scripts/ops/check-dirty-scope.mjs'), 'utf8');
+  assert.match(script, /rv\.dirty_scope_report\.v1/);
+  assert.match(script, /public\\\/assets\\\/css\\\/market-/);
+  assert.match(script, /public\\\/data\\\/public-status\\\.json/);
+  assert.match(script, /staged Market\/generated runtime files detected/);
+  assert.match(script, /RV_DIRTY_SCOPE_STRICT/);
+});
+
+test('provider health preflight classifies EODHD auth, live probe, and daily cap before refresh', () => {
+  const script = fs.readFileSync(path.join(ROOT, 'scripts/ops/provider-health-preflight.mjs'), 'utf8');
+  assert.match(script, /rv\.provider_health_preflight\.v1/);
+  assert.match(script, /missing_api_key/);
+  assert.match(script, /daily_cap_below_floor/);
+  assert.match(script, /rate_limited/);
+  assert.match(script, /provider_unavailable/);
+  assert.match(script, /RV_PROVIDER_HEALTH_LIVE/);
+
+  const supervisor = fs.readFileSync(path.join(ROOT, 'scripts/nas/rv-nas-night-supervisor.sh'), 'utf8');
+  assert.match(supervisor, /provider_health_preflight/);
+  assert.match(supervisor, /provider-health-preflight\.mjs/);
+  assert.match(supervisor, /provider-health-latest\.json/);
+});
+
+test('NAS locks carry owner metadata and audit report classifies stale locks', () => {
+  const env = fs.readFileSync(path.join(ROOT, 'scripts/nas/nas-env.sh'), 'utf8');
+  assert.match(env, /created_at/);
+  assert.match(env, /stale_policy/);
+  assert.match(env, /dead_pid_cleanup_allowed/);
+
+  const audit = fs.readFileSync(path.join(ROOT, 'scripts/ops/audit-nas-locks.mjs'), 'utf8');
+  assert.match(audit, /rv\.nas_lock_audit\.v1/);
+  assert.match(audit, /stale_dead_pid/);
+  assert.match(audit, /stale_missing_pid/);
+  assert.match(audit, /cleanup-stale/);
+
+  const supervisor = fs.readFileSync(path.join(ROOT, 'scripts/nas/rv-nas-night-supervisor.sh'), 'utf8');
+  assert.match(supervisor, /lock_policy_report/);
+  assert.match(supervisor, /nas-lock-audit-latest\.json/);
+});
+
+test('night pipeline watchdog emits typed alert artifact without owning recovery', () => {
+  const watchdog = fs.readFileSync(path.join(ROOT, 'scripts/nas/rv-nas-night-pipeline-watchdog.sh'), 'utf8');
+  assert.match(watchdog, /watchdog-alert-latest\.json/);
+  assert.match(watchdog, /rv\.nas\.pipeline_watchdog_alert\.v1/);
+  assert.match(watchdog, /typed_failure_reason/);
+  assert.match(watchdog, /resource_samples_stale/);
+  assert.match(watchdog, /step_status_no_progress/);
+  assert.match(watchdog, /no_parallel_recovery_owner/);
+  assert.match(watchdog, /do_not_start_legacy_pipeline_master/);
+});
+
+test('DP8 Market is optional and feature-flagged in NAS supervisor', () => {
+  const supervisor = fs.readFileSync(path.join(ROOT, 'scripts/nas/rv-nas-night-supervisor.sh'), 'utf8');
+  assert.match(supervisor, /dp8_market/);
+  assert.match(supervisor, /RV_DP8_MARKET_ENABLED:-0/);
+  assert.match(supervisor, /npm run dp8:market-hub/);
+  assert.match(supervisor, /npm run dp8:market-hub:global/);
+  assert.match(supervisor, /npm run dp8:capital-rotation/);
+  assert.match(supervisor, /validate-v3-artifacts\.mjs/);
+  assert.match(supervisor, /optional_step_degraded/);
+});
+
 test('page core smoke validates candidate artifacts without localhost runtime', () => {
   const supervisor = fs.readFileSync(path.join(ROOT, 'scripts/nas/rv-nas-night-supervisor.sh'), 'utf8');
   assert.match(supervisor, /--page-core-only/);
@@ -121,4 +273,18 @@ test('page core smoke validates candidate artifacts without localhost runtime', 
   const manifest = JSON.parse(fs.readFileSync(path.join(ROOT, 'config/runtime-manifest.json'), 'utf8'));
   const pageCoreManifest = manifest.allow.find((entry) => entry.class === 'page-core-manifest');
   assert.ok(pageCoreManifest.maxFileSizeBytes >= 65536);
+});
+
+test('page core bundle has conservative incremental same-target reuse with strict recheck', () => {
+  const builder = fs.readFileSync(path.join(ROOT, 'scripts/ops/build-page-core-bundle.mjs'), 'utf8');
+  assert.match(builder, /RV_PAGE_CORE_INCREMENTAL/);
+  assert.match(builder, /incremental_same_target/);
+  assert.match(builder, /target_market_date_changed_full_fallback/);
+  assert.match(builder, /previousRowReusable/);
+  assert.match(builder, /reusePageCoreRow/);
+  assert.match(builder, /finalizePageCoreRow/);
+  assert.match(builder, /pageCoreStrictOperationalReasons/);
+
+  const supervisor = fs.readFileSync(path.join(ROOT, 'scripts/nas/rv-nas-night-supervisor.sh'), 'utf8');
+  assert.match(supervisor, /build-page-core-bundle\.mjs .*--incremental/);
 });

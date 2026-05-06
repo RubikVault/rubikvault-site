@@ -375,6 +375,83 @@ test('final seal ignores stale publish crash blockers once publish is green agai
   assert.equal(seal.status, 'OK');
 });
 
+test('final seal warns on stale crash seals from older target dates instead of blocking current release', () => {
+  const targetMarketDate = '2026-04-17';
+  const seal = buildFinalIntegritySeal({
+    runId: 'r1',
+    targetMarketDate,
+    phase: 'VERIFY',
+    system: {
+      run_id: 'r1',
+      summary: { target_market_date: targetMarketDate, local_data_green: true },
+      steps: {},
+    },
+    runtime: {
+      run_id: 'r1',
+      generated_at: '2026-04-17T20:10:00Z',
+      target_market_date: targetMarketDate,
+    },
+    epoch: {
+      run_id: 'r1',
+      generated_at: '2026-04-17T20:10:00Z',
+      target_market_date: targetMarketDate,
+      pipeline_ok: true,
+      modules: {},
+      blocking_gaps: [],
+    },
+    recovery: {
+      generated_at: '2026-04-17T20:15:00Z',
+      target_market_date: targetMarketDate,
+      next_step: 'dashboard_meta',
+    },
+    release: {
+      run_id: 'r1',
+      target_date: targetMarketDate,
+      phase: 'VERIFY',
+    },
+    publish: { ok: true, steps: [] },
+    runtimePreflight: {
+      ok: true,
+      generated_at: '2026-04-17T20:16:00Z',
+      failure_reasons: [],
+      diag_ok: true,
+      canary_ok: true,
+    },
+    stockAnalyzerAudit: {
+      summary: {
+        full_universe: true,
+        artifact_release_ready: true,
+        artifact_critical_issue_count: 0,
+        critical_failure_family_count: 0,
+        live_endpoint_mode: 'full',
+      },
+    },
+    uiFieldTruth: {
+      target_market_date: targetMarketDate,
+      summary: { ui_field_truth_ok: true },
+    },
+    launchd: { allowed_launchd_only: true },
+    storage: { disk: { heavy_jobs_allowed: true }, nas: { reachable: true } },
+    decisionBundle: validDecisionBundle(targetMarketDate),
+    histProbsStatus: validHistStatus(),
+    stockAnalyzerUiState: validStockAnalyzerUiState(),
+    searchRegistrySync: validSearchRegistrySync(),
+    crashSeal: {
+      status: 'FAILED',
+      run_id: 'old-run',
+      target_market_date: '2026-04-16',
+      failed_step: 'UPSTREAM_REFRESH',
+      failure_class: 'step_failed',
+    },
+    heartbeat: { last_seen: '2026-04-17T20:55:00Z' },
+    previousFinal: { generated_at: '2026-04-17T20:30:00Z' },
+    requiredLeafFailed: false,
+    now: new Date('2026-04-17T21:00:00Z'),
+  });
+  assert.equal(seal.blocking_reasons.some((item) => item.id === 'crash_unresolved'), false);
+  assert.equal(seal.warnings.some((item) => item.id === 'stale_crash_seal_ignored'), true);
+});
+
 test('final seal keeps decision bundle coverage warnings advisory-only', () => {
   const targetMarketDate = '2026-04-17';
   const seal = buildFinalIntegritySeal({

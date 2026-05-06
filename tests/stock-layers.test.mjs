@@ -198,6 +198,18 @@ describe('LOW_LIQUIDITY gate', () => {
   });
 });
 
+describe('Generic oversold pullback rule', () => {
+  it('creates a WAIT-floor and bias signal without creating BUY by itself', () => {
+    const states = { trend: 'UP', momentum: 'OVERSOLD', volatility: 'NORMAL', volume: 'NORMAL', liquidity: 'HIGH' };
+    const stats = { sma20: 110, sma50: 100, sma200: 90, rsi14: 28, macd_hist: -0.5, volatility_percentile: 35 };
+    const decision = makeDecision(states, stats, 95);
+    assert.equal(decision.verdict, 'WAIT');
+    assert.equal(decision.wait_subtype, 'OVERSOLD_PULLBACK_WATCH');
+    assert.equal(decision.scores.contributors.generic_oversold_pullback, true);
+    assert.notEqual(decision.buy_eligible, true, 'Oversold pullback must not create BUY without confirmation');
+  });
+});
+
 // ═══════════════════════════════════════════════════════════════
 // P0-6: CONTRACT FIELDS — new fields present
 // ═══════════════════════════════════════════════════════════════

@@ -234,15 +234,28 @@ export function evaluateDecisionBundleHealth(decisionBundle, {
   return { status, blocking_reasons: blocking, warnings, summary };
 }
 
-function evaluateCrashAndHeartbeat({ crashSeal = null, heartbeat = null, previousFinal = null, now = new Date() } = {}) {
+function evaluateCrashAndHeartbeat({ crashSeal = null, heartbeat = null, previousFinal = null, targetMarketDate = null, now = new Date() } = {}) {
   const blocking = [];
   const warnings = [];
   if (crashSeal?.status === 'FAILED') {
-    blocking.push(reason('crash_unresolved', 'critical', {
-      run_id: crashSeal.run_id || null,
-      failed_step: crashSeal.failed_step || null,
-      failure_class: crashSeal.failure_class || null,
-    }));
+    const crashTarget = normalizeDate(crashSeal.target_market_date || null);
+    const currentTarget = normalizeDate(targetMarketDate || null);
+    if (crashTarget && currentTarget && crashTarget < currentTarget) {
+      warnings.push(reason('stale_crash_seal_ignored', 'warning', {
+        run_id: crashSeal.run_id || null,
+        failed_step: crashSeal.failed_step || null,
+        failure_class: crashSeal.failure_class || null,
+        crash_target_market_date: crashTarget,
+        current_target_market_date: currentTarget,
+      }));
+    } else {
+      blocking.push(reason('crash_unresolved', 'critical', {
+        run_id: crashSeal.run_id || null,
+        failed_step: crashSeal.failed_step || null,
+        failure_class: crashSeal.failure_class || null,
+        target_market_date: crashTarget || null,
+      }));
+    }
   }
   const heartbeatMs = parseTimeMs(heartbeat?.last_seen);
   const heartbeatStale = heartbeatMs == null || (now.getTime() - heartbeatMs) > 45 * 60 * 1000;
@@ -789,6 +802,7 @@ export function buildFinalIntegritySeal({
     crashSeal,
     heartbeat,
     previousFinal,
+    targetMarketDate: expectedTargetDate,
     now,
   });
   const runtimeCrashBlockers = runtimeLiveness.blocking_reasons.filter((item) => {

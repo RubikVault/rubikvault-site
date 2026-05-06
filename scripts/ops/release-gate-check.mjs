@@ -52,9 +52,12 @@ const DEFAULT_CLOUDFLARE_ENV_PATH = process.env.RV_CLOUDFLARE_ENV_FILE
 // ─── Config ────────────────────────────────────────────────────────────────────
 // Smoke test URLs (production endpoints)
 const PROD_BASE = 'https://rubikvault.com';
+const PAGES_DEV_BASE = process.env.RV_PAGES_DEV_BASE || 'https://rubikvault-site.pages.dev';
 const PAGES_DEPLOY_BRANCH = process.env.CLOUDFLARE_PAGES_BRANCH || process.env.CF_PAGES_BRANCH || 'main';
 const PAGE_CORE_STAGING_BRANCH = process.env.RV_PAGE_CORE_STAGING_BRANCH || 'page-core-staging';
 const WRANGLER_SKIP_CACHING = process.env.RV_WRANGLER_SKIP_CACHING !== '0';
+const PUBLIC_DEPLOY_PROOF_FINALIZE = process.env.RV_PUBLIC_DEPLOY_PROOF_FINALIZE !== '0';
+const PUBLIC_DEPLOY_PROOF_FINALIZE_WAIT_SEC = Number(process.env.RV_PUBLIC_DEPLOY_PROOF_FINALIZE_WAIT_SEC || 15);
 const WRANGLER_DEPLOY_TIMEOUT_MS = Number(process.env.RV_WRANGLER_DEPLOY_TIMEOUT_MS || 2_700_000);
 const WRANGLER_DEPLOY_MAX_BUFFER = Number(process.env.RV_WRANGLER_DEPLOY_MAX_BUFFER || 128 * 1024 * 1024);
 const PRODUCTION_ARTIFACT_SMOKE_ATTEMPTS = Number(process.env.RV_PRODUCTION_ARTIFACT_SMOKE_ATTEMPTS || 3);
@@ -285,11 +288,19 @@ function targetDateOf(doc) {
   return doc?.target_market_date || doc?.target_date || null;
 }
 
-function verifyProductionArtifactsOnce(targetDate) {
+function isPostDeployPublicProof(publicProof) {
+  return String(publicProof?.proof_mode || '').startsWith('post_deploy')
+    && publicProof?.smokes_ok === true
+    && Boolean(publicProof?.verified_at)
+    && Boolean(publicProof?.git_commit_sha);
+}
+
+function verifyProductionArtifactsOnce(targetDate, { baseUrl = PROD_BASE, requirePostDeployProof = false } = {}) {
+  const clean = String(baseUrl || PROD_BASE).replace(/\/+$/, '');
   const cacheBust = `rv=${Date.now()}`;
   const checks = {
-    public_status: fetchJsonSmoke(`${PROD_BASE}/data/public-status.json?${cacheBust}`),
-    deploy_proof: fetchJsonSmoke(`${PROD_BASE}/data/status/deploy-proof-latest.json?${cacheBust}`),
+    public_status: fetchJsonSmoke(`${clean}/data/public-status.json?${cacheBust}`),
+    deploy_proof: fetchJsonSmoke(`${clean}/data/status/deploy-proof-latest.json?${cacheBust}`),
   };
   const failures = [];
   const publicStatus = checks.public_status.json || {};
@@ -303,6 +314,9 @@ function verifyProductionArtifactsOnce(targetDate) {
   const publicProof = checks.deploy_proof.json || {};
   if (!checks.deploy_proof.ok || targetDateOf(publicProof) !== targetDate || publicProof.release_ready !== true) {
     failures.push(`deploy_proof target=${targetDateOf(publicProof) || 'missing'} release_ready=${publicProof.release_ready}`);
+  }
+  if (requirePostDeployProof && !isPostDeployPublicProof(publicProof)) {
+    failures.push(`deploy_proof_not_post_deploy proof_mode=${publicProof.proof_mode || 'missing'} smokes_ok=${publicProof.smokes_ok} verified_at=${publicProof.verified_at || 'missing'} git_commit_sha=${publicProof.git_commit_sha || 'missing'}`);
   }
   return { ok: failures.length === 0, failures, checks };
 }
@@ -376,10 +390,10 @@ function verifyRuntimeContractsWithRetry(baseUrl, targetDate = null, options = {
   return { ...last, attempts };
 }
 
-function verifyProductionArtifacts(targetDate) {
+function verifyProductionArtifacts(targetDate, options = {}) {
   let latest = null;
   for (let attempt = 1; attempt <= PRODUCTION_ARTIFACT_SMOKE_ATTEMPTS; attempt += 1) {
-    latest = verifyProductionArtifactsOnce(targetDate);
+    latest = verifyProductionArtifactsOnce(targetDate, options);
     if (latest.ok) {
       if (attempt > 1) log(`Production artifact smoke OK on attempt ${attempt}.`);
       return latest;
@@ -390,6 +404,20 @@ function verifyProductionArtifacts(targetDate) {
     }
   }
   return latest || { ok: false, failures: ['production_artifact_smoke_not_run'], checks: {} };
+}
+
+function verifyDualHostProductionArtifacts(targetDate, options = {}) {
+  const customDomain = verifyProductionArtifacts(targetDate, { ...options, baseUrl: PROD_BASE });
+  const pagesDev = verifyProductionArtifacts(targetDate, { ...options, baseUrl: PAGES_DEV_BASE });
+  return {
+    ok: customDomain.ok && pagesDev.ok,
+    custom_domain: customDomain,
+    pages_dev: pagesDev,
+    failures: [
+      ...customDomain.failures.map((failure) => `custom_domain:${failure}`),
+      ...pagesDev.failures.map((failure) => `pages_dev:${failure}`),
+    ],
+  };
 }
 
 function checkStockAnalyzerTargets(seal) {
@@ -546,6 +574,8 @@ function writeDeployProof({
   deploymentUrl = PROD_BASE,
   smokes = {},
   smokesOk = null,
+  customDomainSmoke = null,
+  pagesDevSmoke = null,
   requestedAt,
   verifiedAt = null,
   bundleMeta = null,
@@ -560,6 +590,8 @@ function writeDeployProof({
     deployment_url: deploymentUrl,
     smokes,
     smokes_ok: smokesOk,
+    custom_domain_smoke: customDomainSmoke,
+    pages_dev_smoke: pagesDevSmoke,
     requested_at: requestedAt,
     verified_at: verifiedAt,
     bundle_file_count: bundleMeta?.bundle_file_count ?? null,
@@ -579,6 +611,8 @@ function writeDeployProof({
     deployment_id: deploymentId,
     deployment_url: deploymentUrl,
     smokes_ok: smokesOk,
+    custom_domain_smoke: customDomainSmoke,
+    pages_dev_smoke: pagesDevSmoke,
     release_ready: contractCheck === 'failed' ? false : true,
     bundle_file_count: bundleMeta?.bundle_file_count ?? null,
     bundle_size_mb: bundleMeta?.bundle_size_mb ?? null,
@@ -618,8 +652,19 @@ function buildDeployBundle() {
   log('Deploy bundle built.');
 }
 
-function runWranglerDeploy(branch = PAGES_DEPLOY_BRANCH) {
-  log(`Running wrangler pages deploy dist/pages-prod/ (branch=${branch})...`);
+function deploymentIdFromUrl(url) {
+  try {
+    const host = new URL(url).hostname;
+    if (!host.endsWith('.pages.dev')) return null;
+    const firstLabel = host.split('.')[0];
+    return firstLabel && firstLabel !== 'rubikvault-site' ? firstLabel : null;
+  } catch {
+    return null;
+  }
+}
+
+function runWranglerDeploy(branch = PAGES_DEPLOY_BRANCH, { skipCaching = WRANGLER_SKIP_CACHING, purpose = 'deploy' } = {}) {
+  log(`Running wrangler pages deploy dist/pages-prod/ (branch=${branch}, purpose=${purpose}, skip_caching=${skipCaching})...`);
   loadSecretEnvFile();
   if (!process.env.CLOUDFLARE_API_TOKEN) {
     fail(`CLOUDFLARE_API_TOKEN missing; store it in ${DEFAULT_CLOUDFLARE_ENV_PATH} or export it before deploy.`);
@@ -633,7 +678,7 @@ function runWranglerDeploy(branch = PAGES_DEPLOY_BRANCH) {
     + removeAppleDoubleArtifacts(DIST_DIR);
   if (removedAppleDouble > 0) log(`Removed ${removedAppleDouble} AppleDouble metadata artifacts before wrangler deploy.`);
   const deployArgs = ['pages', 'deploy', 'dist/pages-prod/', '--project-name', 'rubikvault-site', '--branch', branch];
-  if (WRANGLER_SKIP_CACHING) deployArgs.push('--skip-caching');
+  if (skipCaching) deployArgs.push('--skip-caching');
   fs.mkdirSync(path.dirname(DEPLOY_PROOF_PATH), { recursive: true });
   const wranglerLogPath = path.join(path.dirname(DEPLOY_PROOF_PATH), `wrangler-deploy-${branch}-${Date.now()}.log`);
   const wranglerLogFd = fs.openSync(wranglerLogPath, 'w');
@@ -666,9 +711,10 @@ function runWranglerDeploy(branch = PAGES_DEPLOY_BRANCH) {
     ? `https://${branch}.rubikvault-site.pages.dev`
     : PROD_BASE;
   if (!urlMatch) warn(`Wrangler output did not include deployment URL; using fallback ${fallbackUrl}.`);
+  const deploymentUrl = urlMatch?.[0] || fallbackUrl;
   return {
-    deployment_url: urlMatch?.[0] || fallbackUrl,
-    deployment_id: idMatch?.[1] || null,
+    deployment_url: deploymentUrl,
+    deployment_id: idMatch?.[1] || deploymentIdFromUrl(deploymentUrl),
     raw_output: output,
   };
 }
@@ -796,6 +842,8 @@ log(`Deployed: url=${deployResult.deployment_url} id=${deployResult.deployment_i
 
 // 4. Smokes
 let smokeResults = { smokes: {}, smokes_ok: true };
+let customDomainContracts = null;
+let pagesDevContracts = null;
 if (!skipSmokes) {
   // Wait a moment for the deploy to propagate
   log('Waiting 15s for deploy propagation...');
@@ -808,6 +856,14 @@ if (!skipSmokes) {
   if (!runtimeContracts.ok) {
     fail(`Production runtime contract smoke failed: ${runtimeContracts.failures.join('; ')}`);
   }
+  customDomainContracts = verifyRuntimeContractsWithRetry(PROD_BASE, proofTargetDate, { requirePublicStatus: true });
+  if (!customDomainContracts.ok) {
+    fail(`Custom domain runtime contract smoke failed: ${customDomainContracts.failures.join('; ')}`);
+  }
+  pagesDevContracts = verifyRuntimeContractsWithRetry(PAGES_DEV_BASE, proofTargetDate, { requirePublicStatus: true });
+  if (!pagesDevContracts.ok) {
+    fail(`pages.dev runtime contract smoke failed: ${pagesDevContracts.failures.join('; ')}`);
+  }
 }
 
 // 5. Write deploy proof
@@ -817,7 +873,9 @@ writeDeployProof({
   deploymentId: deployResult.deployment_id,
   deploymentUrl: deployResult.deployment_url || PROD_BASE,
   smokes: smokeResults.smokes,
-  smokesOk: smokeResults.smokes_ok,
+  smokesOk: smokeResults.smokes_ok && (skipSmokes || (customDomainContracts?.ok === true && pagesDevContracts?.ok === true)),
+  customDomainSmoke: customDomainContracts ? { ok: customDomainContracts.ok, failures: customDomainContracts.failures, attempts: customDomainContracts.attempts } : null,
+  pagesDevSmoke: pagesDevContracts ? { ok: pagesDevContracts.ok, failures: pagesDevContracts.failures, attempts: pagesDevContracts.attempts } : null,
   requestedAt,
   verifiedAt: smokeResults.smokes_ok ? verifiedAt : null,
   bundleMeta,
@@ -827,12 +885,29 @@ writeDeployProof({
 });
 log(`Deploy proof written: ${DEPLOY_PROOF_PATH}`);
 
-// 6. Verify production serves the sanitized visitor status, not private proofs.
-const productionArtifacts = verifyProductionArtifacts(proofTargetDate);
+// 6. Publish the finalized public proof. Static Pages cannot update one file after
+// deploy, so this performs a proof-only finalization deploy of the same bundle
+// with the post-deploy proof overlaid. Caching stays enabled here to avoid a full
+// re-upload when Cloudflare can reuse unchanged assets.
+if (!skipSmokes && PUBLIC_DEPLOY_PROOF_FINALIZE) {
+  log('Publishing finalized public post-deploy proof...');
+  const proofPublish = runWranglerDeploy(PAGES_DEPLOY_BRANCH, {
+    skipCaching: false,
+    purpose: 'public_deploy_proof_finalize',
+  });
+  log(`Public proof finalized: url=${proofPublish.deployment_url} id=${proofPublish.deployment_id}`);
+  log(`Waiting ${PUBLIC_DEPLOY_PROOF_FINALIZE_WAIT_SEC}s for public proof propagation...`);
+  sleepSeconds(PUBLIC_DEPLOY_PROOF_FINALIZE_WAIT_SEC);
+}
+
+// 7. Verify production serves the sanitized visitor status/proof, not private proofs.
+const productionArtifacts = verifyDualHostProductionArtifacts(proofTargetDate, {
+  requirePostDeployProof: !skipSmokes && PUBLIC_DEPLOY_PROOF_FINALIZE,
+});
 if (!productionArtifacts.ok) {
   fail(`Production artifact smoke failed: ${productionArtifacts.failures.join('; ')}`);
 }
-log('Production artifact smoke OK.');
+log('Production artifact smoke OK on custom domain and pages.dev.');
 
 log('');
 log('═══ Release Gate Summary ═══');

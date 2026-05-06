@@ -151,6 +151,13 @@ function computeExpectedEdge(scores, stats = {}) {
   return Number((compositeEdge * Math.max(0.25, riskMultiplier) + ret20 * 0.35 + ret5 * 0.15).toFixed(4));
 }
 
+function isGenericOversoldPullback(stats = {}, close = null) {
+  const rsi = fin(stats?.rsi14);
+  const sma200 = fin(stats?.sma200);
+  const c = fin(close);
+  return rsi != null && rsi < 30 && c != null && sma200 != null && c > sma200;
+}
+
 function applyMetaLabeler({ horizon, verdict, confidence, gates, scores, regimeTag, contributorAgreement, expectedEdge, stats = {}, states = {} }) {
   const rawProbability = Number((scores.composite / 100).toFixed(4));
   const liquidityScore = fin(stats?.liquidity_score);
@@ -369,6 +376,7 @@ function computeBaseScores({ stats = {}, close = null, states = {}, scientific =
   const lag1Autocorrelation = fin(stats?.lag1_autocorrelation);
   const c = fin(close);
   const reversionHint = boolish(stats?.reversion_hint);
+  const oversoldPullback = isGenericOversoldPullback(stats, close);
 
   let trend = 50;
   if (c != null && sma50 != null && sma200 != null) {
@@ -386,6 +394,7 @@ function computeBaseScores({ stats = {}, close = null, states = {}, scientific =
   if (c != null && sma20 != null) entry += c > sma20 ? 6 : -6;
   if (breakoutEnergy != null && breakoutEnergy > 0.7) entry += 6;
   if (reversionHint && (states?.trend === 'UP' || states?.trend === 'STRONG_UP')) entry += 4;
+  if (oversoldPullback) entry += 6;
 
   let risk = 60;
   if (volPct != null) {
@@ -405,6 +414,7 @@ function computeBaseScores({ stats = {}, close = null, states = {}, scientific =
   if (trendDurationDays != null && trendDurationDays > 20) context += 4;
   if (lag1Autocorrelation != null && lag1Autocorrelation > 0.35) context += 3;
   if (lag1Autocorrelation != null && lag1Autocorrelation < -0.35) context -= 3;
+  if (oversoldPullback) context += 3;
 
   const buyExperts = fin(quantlab?.consensus?.buyExperts);
   const avoidExperts = fin(quantlab?.consensus?.avoidExperts);
@@ -446,6 +456,7 @@ function computeBaseScores({ stats = {}, close = null, states = {}, scientific =
       quantlab_strong_experts: strongExperts,
       scientific_setup_score: setupScore,
       scientific_trigger_score: triggerScore,
+      generic_oversold_pullback: oversoldPullback,
     },
   };
 }
@@ -518,10 +529,14 @@ function buildDecisionSlice({ horizon, scores, gates, states, stats, scientific,
   const sellThres = horizonPolicy?.sell || sellDef;
 
   let verdict = VERDICT.WAIT;
+  const oversoldPullback = Boolean(scores?.contributors?.generic_oversold_pullback);
   if (scores.trend >= thres.trend && scores.entry >= thres.entry && scores.risk >= thres.risk && scores.context >= thres.context) {
     verdict = VERDICT.BUY;
   } else if (scores.trend <= sellThres.trend && scores.entry <= sellThres.entry && scores.risk <= sellThres.risk) {
     verdict = VERDICT.SELL;
+  }
+  if (oversoldPullback && verdict === VERDICT.SELL) {
+    verdict = VERDICT.WAIT;
   }
 
   if (gates.includes('DOWNTREND_WEAK_VOLUME') && verdict === VERDICT.BUY) {
@@ -606,6 +621,13 @@ function buildOverallDecision(horizonSlices, states, runtimeControl, scientific 
     risk: clamp(((short?.scores?.risk || 0) + (medium?.scores?.risk || 0) + (long?.scores?.risk || 0)) / 3, 0, 100),
     context: clamp(((short?.scores?.context || 0) + (medium?.scores?.context || 0) + (long?.scores?.context || 0)) / 3, 0, 100),
     composite: clamp(((short?.scores?.composite || 0) + (medium?.scores?.composite || 0) + (long?.scores?.composite || 0)) / 3, 0, 100),
+    contributors: {
+      generic_oversold_pullback: Boolean(
+        short?.scores?.contributors?.generic_oversold_pullback
+        || medium?.scores?.contributors?.generic_oversold_pullback
+        || long?.scores?.contributors?.generic_oversold_pullback
+      ),
+    },
   };
 
   const setupType = deriveSetupType(states, breakoutState);
@@ -665,6 +687,9 @@ function buildOverallDecision(horizonSlices, states, runtimeControl, scientific 
     if (accumulationStage) {
       wait_subtype = 'ACCUMULATION';
       wait_reason = `Setup accumulation phase (${accumulationStage}) — high setup score but trigger not yet confirmed.`;
+    } else if (averagedScores.contributors?.generic_oversold_pullback) {
+      wait_subtype = 'OVERSOLD_PULLBACK_WATCH';
+      wait_reason = 'Generic oversold pullback watch — RSI is below 30 while price remains above SMA200, but entry confirmation is still required.';
     } else if (allGates.length > 0) {
       wait_subtype = 'GATE_BLOCKED';
       wait_reason = `Blocked by gate${allGates.length > 1 ? 's' : ''}: ${allGates.join(', ')}.`;

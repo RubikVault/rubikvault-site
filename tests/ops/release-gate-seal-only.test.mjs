@@ -60,3 +60,13 @@ test('release gate captures large wrangler output and falls back to branch URL',
   assert.match(content, /wrangler pages deploy error/);
   assert.match(content, /using fallback/);
 });
+
+test('release gate publishes finalized public post-deploy proof', () => {
+  const content = fs.readFileSync(path.join(ROOT, 'scripts/ops/release-gate-check.mjs'), 'utf8');
+  assert.match(content, /PUBLIC_DEPLOY_PROOF_FINALIZE/);
+  assert.match(content, /public_deploy_proof_finalize/);
+  assert.match(content, /requirePostDeployProof/);
+  assert.match(content, /custom_domain_smoke/);
+  assert.match(content, /pages_dev_smoke/);
+  assert.match(content, /PAGES_DEV_BASE/);
+});

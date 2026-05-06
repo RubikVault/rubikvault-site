@@ -30,6 +30,7 @@ export const DECISION_REASON_CODES = new Set([
   'inactive_asset',
   'macro_index_only',
   'score_buy_threshold_met',
+  'buy_suppressed_by_stale_data',
   'zero_buy_anomaly',
   'crash_unresolved',
   'heartbeat_stale',
@@ -203,15 +204,64 @@ export function buildAssetDecision(row, {
   const normalizedBuyThreshold = Number.isFinite(Number(buyScoreThreshold))
     ? Math.max(0, Math.min(100, Number(buyScoreThreshold)))
     : DEFAULT_BUY_SCORE_THRESHOLD;
+  const staleFlags = [...new Set(classified.warnings.filter((code) => String(code || '').includes('stale')))];
   const buyEligible = classified.coverageClass === 'eligible'
     && pipelineStatus === 'OK'
     && riskKnown
     && Number(score) >= normalizedBuyThreshold
+    && staleFlags.length === 0
     && blockingReasons.length === 0;
   if (buyEligible) {
     verdict = 'BUY';
     reasonCodes.push('score_buy_threshold_met');
+  } else if (classified.coverageClass === 'eligible' && pipelineStatus === 'OK' && Number(score) >= normalizedBuyThreshold && staleFlags.length > 0) {
+    reasonCodes.push('buy_suppressed_by_stale_data');
   }
+
+  const confidence = pipelineStatus !== 'OK'
+    ? 'LOW'
+    : !riskKnown
+    ? 'LOW'
+    : buyEligible && Number(score) >= normalizedBuyThreshold + 5
+    ? 'HIGH'
+    : buyEligible
+    ? 'MEDIUM'
+    : Number(score) >= Math.max(0, normalizedBuyThreshold - 10)
+    ? 'LOW'
+    : 'LOW';
+  const reasons = [...new Set(reasonCodes)].map((code) => ({
+    code,
+    severity: blockingReasons.includes(code) ? 'blocking' : staleFlags.includes(code) ? 'stale' : 'info',
+  }));
+  const moduleContributions = {
+    bars: {
+      status: classified.coverageClass === 'eligible' ? (pipelineStatus === 'OK' ? 'available' : 'degraded') : 'missing',
+      as_of: classified.lastTradeDate,
+      bars_count: classified.barsCount,
+      contribution: riskKnown ? 'required_basis' : 'blocked',
+    },
+    risk: {
+      status: riskKnown ? 'available' : 'unknown',
+      level: riskKnown ? (riskScore >= 70 ? 'HIGH' : riskScore >= 40 ? 'MODERATE' : 'LOW') : operationalCoverageKnown ? 'UNSCORED' : 'UNKNOWN',
+      score: riskKnown ? Number(riskScore.toFixed(2)) : null,
+      contribution: riskKnown ? 'required_basis' : 'blocked',
+    },
+    registry_score: {
+      status: Number.isFinite(Number(score)) ? 'available' : 'missing',
+      score,
+      threshold: normalizedBuyThreshold,
+      contribution: buyEligible ? 'buy_threshold_met' : 'context',
+    },
+    hist_probs: { status: 'optional_v1', contribution: 'not_release_blocking' },
+    quantlab: { status: 'optional_v1', contribution: 'not_release_blocking' },
+    forecast: { status: 'optional_v1', contribution: 'not_release_blocking' },
+    scientific: { status: 'optional_v1', contribution: 'not_release_blocking' },
+    breakout: { status: 'optional_v1', contribution: 'not_release_blocking' },
+    fundamentals: {
+      status: classified.assetClass === 'ETF' ? 'not_applicable' : 'optional_v1',
+      contribution: 'not_release_blocking',
+    },
+  };
 
   const decision = {
     schema: DECISION_SCHEMA,
@@ -228,6 +278,12 @@ export function buildAssetDecision(row, {
     coverage_class: classified.coverageClass,
     pipeline_status: pipelineStatus,
     verdict,
+    confidence,
+    reasons,
+    stale_flags: staleFlags,
+    module_contributions: moduleContributions,
+    as_of: classified.lastTradeDate,
+    price_basis: row?.price_basis || row?.pointers?.price_basis || 'raw',
     reason_codes: reasonCodes,
     blocking_reasons: [...new Set(blockingReasons)],
     warnings: [...new Set(classified.warnings)],

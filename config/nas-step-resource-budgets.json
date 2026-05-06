@@ -1,0 +1,19 @@
+{
+  "schema": "rv.nas_step_resource_budgets.v1",
+  "defaults": {
+    "duration_sec_warn": 1800,
+    "peak_rss_mb_warn": 1024,
+    "peak_rss_mb_fail": 8192
+  },
+  "steps": {
+    "market_data_refresh": { "duration_sec_warn": 14400, "peak_rss_mb_warn": 2048, "peak_rss_mb_fail": 4096 },
+    "q1_delta_ingest": { "duration_sec_warn": 7200, "peak_rss_mb_warn": 2048, "peak_rss_mb_fail": 4096 },
+    "public_history_shards": { "duration_sec_warn": 3600, "peak_rss_mb_warn": 3072, "peak_rss_mb_fail": 5120 },
+    "page_core_bundle": { "duration_sec_warn": 3600, "peak_rss_mb_warn": 3072, "peak_rss_mb_fail": 8192 },
+    "hist_probs": { "duration_sec_warn": 7200, "peak_rss_mb_warn": 4096, "peak_rss_mb_fail": 7168 },
+    "hist_probs_catchup": { "duration_sec_warn": 21600, "peak_rss_mb_warn": 3072, "peak_rss_mb_fail": 4096 },
+    "forecast_daily": { "duration_sec_warn": 7200, "peak_rss_mb_warn": 3072, "peak_rss_mb_fail": 4096 },
+    "wrangler_deploy": { "duration_sec_warn": 1800, "peak_rss_mb_warn": 2048, "peak_rss_mb_fail": 3072 },
+    "build_deploy_bundle": { "duration_sec_warn": 1800, "peak_rss_mb_warn": 2048, "peak_rss_mb_fail": 4096 }
+  }
+}

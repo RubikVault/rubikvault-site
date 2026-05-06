@@ -57,6 +57,12 @@ test('eligible scored assets produce BUY only when daily score clears threshold'
   });
   assert.equal(buy.pipeline_status, 'OK');
   assert.equal(buy.verdict, 'BUY');
+  assert.equal(buy.confidence, 'MEDIUM');
+  assert.deepEqual(buy.stale_flags, []);
+  assert.equal(buy.as_of, '2026-04-16');
+  assert.equal(buy.price_basis, 'raw');
+  assert.equal(buy.module_contributions.registry_score.contribution, 'buy_threshold_met');
+  assert.ok(buy.reasons.some((item) => item.code === 'score_buy_threshold_met'));
   assert.equal(buy.buy_eligibility.eligible, true);
   assert.equal(buy.buy_eligibility.threshold, 90);
   assert.ok(buy.reason_codes.includes('score_buy_threshold_met'));
@@ -69,6 +75,22 @@ test('eligible scored assets produce BUY only when daily score clears threshold'
   assert.equal(wait.pipeline_status, 'OK');
   assert.equal(wait.verdict, 'WAIT');
   assert.equal(wait.buy_eligibility.eligible, false);
+});
+
+test('stale bars suppress otherwise eligible BUY signals', () => {
+  const stale = buildAssetDecision(row('US:STALE', {
+    computed: { score_0_100: 95 },
+    last_trade_date: '2026-04-15',
+  }), {
+    runId: 'run',
+    snapshotId: 'snap',
+    targetMarketDate: '2026-04-16',
+  });
+  assert.equal(stale.pipeline_status, 'OK');
+  assert.equal(stale.verdict, 'WAIT');
+  assert.equal(stale.buy_eligibility.eligible, false);
+  assert.deepEqual(stale.stale_flags, ['bars_stale']);
+  assert.ok(stale.reason_codes.includes('buy_suppressed_by_stale_data'));
 });
 
 test('unclassified missing fails, while eligible unknown risk degrades as a bounded structural gap', () => {

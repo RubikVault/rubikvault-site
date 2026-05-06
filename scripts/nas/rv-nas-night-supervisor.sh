@@ -356,7 +356,7 @@ step_resource_class() {
     hist_probs|hist_probs_catchup|snapshot|learning_daily)
       printf '%s\n' "heavy"
       ;;
-    build_global_scope|forecast_daily|build_fundamentals|quantlab_daily_report|breakout_v12|scientific_summary|v1_audit|cutover_readiness|etf_diagnostic|page_core_bundle|public_history_shards|hist_probs_v2_shadow)
+    build_global_scope|forecast_daily|build_fundamentals|quantlab_daily_report|breakout_v12|scientific_summary|decision_module_scorecard|v1_audit|cutover_readiness|etf_diagnostic|page_core_bundle|public_history_shards|hist_probs_v2_shadow)
       printf '%s\n' "medium"
       ;;
     *)
@@ -368,9 +368,12 @@ step_resource_class() {
 step_timeout_sec() {
   case "$1" in
     safe_code_sync) printf '%s\n' 600 ;;
+    lock_policy_report) printf '%s\n' 120 ;;
     build_global_scope) printf '%s\n' 1800 ;;
+    provider_health_preflight) printf '%s\n' 120 ;;
     market_data_refresh) printf '%s\n' "${RV_MARKET_REFRESH_TIMEOUT_SEC:-28800}" ;;
     q1_delta_ingest) printf '%s\n' "${RV_Q1_DELTA_INGEST_TIMEOUT_SEC:-21600}" ;;
+    q1_delta_proof_report) printf '%s\n' 300 ;;
     build_fundamentals) printf '%s\n' 3600 ;;
     quantlab_daily_report) printf '%s\n' 1800 ;;
     breakout_v12) printf '%s\n' "${RV_BREAKOUT_V12_TIMEOUT_SEC:-3600}" ;;
@@ -385,16 +388,19 @@ step_timeout_sec() {
     page_core_smoke) printf '%s\n' 2400 ;;
     etf_diagnostic) printf '%s\n' 1800 ;;
     learning_daily) printf '%s\n' 5400 ;;
+    decision_module_scorecard) printf '%s\n' 600 ;;
     v1_audit) printf '%s\n' 1800 ;;
     cutover_readiness) printf '%s\n' 1800 ;;
     stage1_ops_pack) printf '%s\n' 1800 ;;
     system_status_report|data_freshness_report|pipeline_epoch|generate_meta_dashboard_data) printf '%s\n' 1800 ;;
     runtime_preflight|stock_ui_integrity_audit) printf '%s\n' 1800 ;;
+    resource_budget_report) printf '%s\n' 300 ;;
     stock_analyzer_universe_audit) printf '%s\n' 5400 ;;
     ui_field_truth_report) printf '%s\n' 2400 ;;
     final_integrity_seal) printf '%s\n' 1800 ;;
     build_deploy_bundle) printf '%s\n' 1800 ;;
     pre_deploy_smoke) printf '%s\n' 120 ;;
+    dp8_market) printf '%s\n' "${RV_DP8_MARKET_TIMEOUT_SEC:-3600}" ;;
     wrangler_deploy) printf '%s\n' 3600 ;;
     *) printf '%s\n' 1800 ;;
   esac
@@ -451,6 +457,9 @@ step_heap_mb() {
       ;;
     build_fundamentals|quantlab_daily_report|breakout_v12|scientific_summary|etf_diagnostic|signal_performance_report)
       printf '%s\n' 512
+      ;;
+    dp8_market)
+      printf '%s\n' "${RV_DP8_MARKET_HEAP_MB:-1536}"
       ;;
     wrangler_deploy)
       printf '%s\n' "${RV_WRANGLER_DEPLOY_HEAP_MB:-2048}"
@@ -523,16 +532,25 @@ step_command() {
     code_manifest_guard)
       printf '%s\n' "node scripts/nas/verify-code-manifest.mjs"
       ;;
+    lock_policy_report)
+      printf '%s\n' "node scripts/ops/audit-nas-locks.mjs --root '$NAS_LOCK_ROOT' --output '${NAS_OPS_ROOT:-$REPO_ROOT/var/private}/pipeline-artifacts/nas-lock-audit-latest.json'"
+      ;;
     build_global_scope)
       # pack-manifest.global goes to RV_GLOBAL_MANIFEST_DIR, not public/
       printf '%s\n' "node scripts/universe-v7/build-global-scope.mjs --asset-classes '$GLOBAL_ASSET_CLASSES' && node scripts/universe-v7/rebuild-search-exact-from-registry.mjs && node scripts/universe-v7/build-index-memberships.mjs && node scripts/ops/build-history-pack-manifest.mjs --scope global --asset-classes '$GLOBAL_ASSET_CLASSES'"
       ;;
+    provider_health_preflight)
+      printf '%s\n' "node scripts/ops/provider-health-preflight.mjs --env-file '$RV_EODHD_ENV_FILE' --min-available-calls '${RV_MARKET_REFRESH_MIN_EODHD_AVAILABLE_CALLS:-10000}' --output '${NAS_OPS_ROOT:-$REPO_ROOT/var/private}/pipeline-artifacts/provider-health-latest.json'"
+      ;;
     market_data_refresh)
       # pack-manifest.global goes to RV_GLOBAL_MANIFEST_DIR via env var (set in nas-env.sh)
-      printf '%s\n' "python3 scripts/quantlab/refresh_v7_history_from_eodhd.py --env-file '$RV_EODHD_ENV_FILE' --allowlist-path public/data/universe/v7/ssot/assets.global.canonical.ids.json --from-date '$TARGET_MARKET_DATE' --to-date '$TARGET_MARKET_DATE' --bulk-last-day --bulk-exchange-cost '${RV_EODHD_BULK_EXCHANGE_COST:-100}' --global-lock-path '$NAS_LOCK_ROOT/eodhd.lock' --max-eodhd-calls '${RV_MARKET_REFRESH_MAX_EODHD_CALLS:-0}' --max-retries '${RV_MARKET_REFRESH_MAX_RETRIES:-1}' --timeout-sec '${RV_MARKET_REFRESH_TIMEOUT_PER_REQUEST_SEC:-60}' --flush-every '${RV_MARKET_REFRESH_FLUSH_EVERY:-250}' --concurrency '$MARKET_REFRESH_CONCURRENCY' --progress-every '$MARKET_REFRESH_PROGRESS_EVERY' --write-mode '${RV_HISTORY_WRITE_MODE:-merge}' --reset-state-on-start --bulk-min-yield-ratio '${RV_EODHD_BULK_MIN_YIELD_RATIO:-0}' --bulk-min-rows-matched '${RV_EODHD_BULK_MIN_ROWS_MATCHED:-25000}' --hard-daily-cap-calls '${RV_EODHD_HARD_DAILY_CAP:-90000}' && node scripts/ops/apply-history-touch-report-to-registry.mjs --scan-existing-packs && node scripts/ops/build-history-pack-manifest.mjs --scope global --asset-classes '$GLOBAL_ASSET_CLASSES' && node scripts/ops/report-history-coverage.mjs --asset-classes '$GLOBAL_ASSET_CLASSES' --target-market-date '$TARGET_MARKET_DATE'"
+      printf '%s\n' "python3 scripts/quantlab/refresh_v7_history_from_eodhd.py --env-file '$RV_EODHD_ENV_FILE' --allowlist-path public/data/universe/v7/ssot/assets.global.canonical.ids.json --from-date '$TARGET_MARKET_DATE' --to-date '$TARGET_MARKET_DATE' --bulk-last-day --bulk-exchange-cost '${RV_EODHD_BULK_EXCHANGE_COST:-100}' --exchange-checkpoint-path '${NAS_OPS_ROOT:-$REPO_ROOT/var/private}/pipeline-artifacts/market-refresh-exchange-checkpoint.json' --resume-exchange-checkpoint --global-lock-path '$NAS_LOCK_ROOT/eodhd.lock' --max-eodhd-calls '${RV_MARKET_REFRESH_MAX_EODHD_CALLS:-0}' --max-retries '${RV_MARKET_REFRESH_MAX_RETRIES:-1}' --timeout-sec '${RV_MARKET_REFRESH_TIMEOUT_PER_REQUEST_SEC:-60}' --flush-every '${RV_MARKET_REFRESH_FLUSH_EVERY:-250}' --concurrency '$MARKET_REFRESH_CONCURRENCY' --progress-every '$MARKET_REFRESH_PROGRESS_EVERY' --write-mode '${RV_HISTORY_WRITE_MODE:-merge}' --reset-state-on-start --bulk-min-yield-ratio '${RV_EODHD_BULK_MIN_YIELD_RATIO:-0}' --bulk-min-rows-matched '${RV_EODHD_BULK_MIN_ROWS_MATCHED:-25000}' --hard-daily-cap-calls '${RV_EODHD_HARD_DAILY_CAP:-90000}' && node scripts/ops/apply-history-touch-report-to-registry.mjs --scan-existing-packs && node scripts/ops/build-history-pack-manifest.mjs --scope global --asset-classes '$GLOBAL_ASSET_CLASSES' && node scripts/ops/report-history-coverage.mjs --asset-classes '$GLOBAL_ASSET_CLASSES' --target-market-date '$TARGET_MARKET_DATE'"
       ;;
     q1_delta_ingest)
       printf '%s\n' "${RV_Q1_PYTHON_BIN:-python3} scripts/quantlab/run_daily_delta_ingest_q1.py --ingest-date '$TARGET_MARKET_DATE' --workers '${RV_Q1_WORKERS:-1}'"
+      ;;
+    q1_delta_proof_report)
+      printf '%s\n' "node scripts/ops/build-q1-delta-proof-report.mjs --quant-root '$NAS_QUANT_ROOT' --output '${NAS_OPS_ROOT:-$REPO_ROOT/var/private}/pipeline-artifacts/q1-delta-proof-latest.json'"
       ;;
     build_fundamentals)
       if [ "${RV_FUNDAMENTALS_METADATA_ONLY:-0}" = "1" ] || [ "${RV_PROVIDER_BUDGET_MODE:-}" = "degraded" ] || [ "${RV_FUNDAMENTALS_PROVIDER_FETCHES:-0}" != "1" ]; then
@@ -574,10 +592,10 @@ step_command() {
       printf '%s\n' "node scripts/ops/build-full-universe-decisions.mjs --target-market-date '$TARGET_MARKET_DATE' --replace && ALLOW_REMOTE_BAR_FETCH=0 BEST_SETUPS_DISABLE_NETWORK=1 node scripts/build-best-setups-v4.mjs"
       ;;
     page_core_bundle)
-      printf '%s\n' "NODE_OPTIONS='--max-old-space-size=${RV_PAGE_CORE_HEAP_MB:-8192}' node scripts/ops/build-page-core-bundle.mjs --target-market-date '$TARGET_MARKET_DATE' --replace && node scripts/ops/build-stock-analyzer-provider-exceptions.mjs --target-market-date '$TARGET_MARKET_DATE' && node scripts/ops/build-stock-analyzer-ui-state-summary.mjs --latest public/data/page-core/candidates/latest.candidate.json && node scripts/universe-v7/rebuild-search-exact-from-registry.mjs && node scripts/universe-v7/verify-search-registry-sync.mjs && node scripts/ops/retention-page-core-bundles.mjs"
+      printf '%s\n' "NODE_OPTIONS='--max-old-space-size=${RV_PAGE_CORE_HEAP_MB:-8192}' node scripts/ops/build-page-core-bundle.mjs --target-market-date '$TARGET_MARKET_DATE' --replace --incremental && node scripts/ops/build-stock-analyzer-provider-exceptions.mjs --target-market-date '$TARGET_MARKET_DATE' && node scripts/ops/build-stock-analyzer-ui-state-summary.mjs --latest public/data/page-core/candidates/latest.candidate.json && node scripts/universe-v7/rebuild-search-exact-from-registry.mjs && node scripts/universe-v7/verify-search-registry-sync.mjs && node scripts/ops/retention-page-core-bundles.mjs"
       ;;
     public_history_shards)
-      printf '%s\n' "NODE_OPTIONS='--max-old-space-size=${RV_PUBLIC_HISTORY_SHARDS_HEAP_MB:-4096}' node scripts/ops/build-public-history-shards.mjs --manifest '$RV_GLOBAL_MANIFEST_DIR/pack-manifest.global.json' --target-market-date='$TARGET_MARKET_DATE'"
+      printf '%s\n' "NODE_OPTIONS='--max-old-space-size=${RV_PUBLIC_HISTORY_SHARDS_HEAP_MB:-4096}' node scripts/ops/build-public-history-shards.mjs --manifest '$RV_GLOBAL_MANIFEST_DIR/pack-manifest.global.json' --target-market-date='$TARGET_MARKET_DATE' --incremental"
       ;;
     stock_ui_integrity_audit)
       printf '%s\n' "node scripts/ops/audit-stock-analyzer-ui-integrity.mjs --base-url='${RV_STOCK_UI_AUDIT_BASE_URL:-${RV_PUBLIC_BASE_URL:-https://rubikvault-site.pages.dev}}' --gate=ui_renderable --min-pass-rate='${RV_STOCK_UI_AUDIT_MIN_PASS_RATE:-0.90}' --min-operational-rate='${RV_STOCK_UI_AUDIT_MIN_OPERATIONAL_RATE:-0.90}' || { audit_status=\$?; if [ \"${RV_STOCK_UI_AUDIT_HARD_GATE:-0}\" = \"1\" ]; then exit \"\$audit_status\"; fi; echo \"stock_ui_integrity_audit_warn_only exit_code=\$audit_status\" >&2; exit 0; }"
@@ -587,6 +605,9 @@ step_command() {
       ;;
     learning_daily)
       printf '%s\n' "node scripts/learning/run-daily-learning-cycle.mjs --date='$TARGET_MARKET_DATE'"
+      ;;
+    decision_module_scorecard)
+      printf '%s\n' "node scripts/ops/build-decision-module-scorecard.mjs"
       ;;
     v1_audit)
       printf '%s\n' "node scripts/learning/quantlab-v1/daily-audit-report.mjs"
@@ -600,6 +621,9 @@ step_command() {
     system_status_report)
       printf '%s\n' "node scripts/ops/build-system-status-report.mjs --lane='$ACTIVE_LANE'"
       ;;
+    resource_budget_report)
+      printf '%s\n' "node scripts/ops/check-step-resource-budgets.mjs --runs-root '$PIPELINE_ROOT/runs' --campaign '$CAMPAIGN_STAMP' --output '${NAS_OPS_ROOT:-$REPO_ROOT/var/private}/pipeline-artifacts/step-resource-budget-latest.json'"
+      ;;
     data_freshness_report)
       printf '%s\n' "node scripts/ops/build-data-freshness-report.mjs --lane='$ACTIVE_LANE'"
       ;;
@@ -611,6 +635,13 @@ step_command() {
       ;;
     signal_performance_report)
       printf '%s\n' "node scripts/ops/build-signal-performance-report.mjs --lane='$ACTIVE_LANE'"
+      ;;
+    dp8_market)
+      if [[ "${RV_DP8_MARKET_ENABLED:-0}" == "1" ]]; then
+        printf '%s\n' "npm run dp8:market-hub && npm run dp8:market-hub:global && npm run dp8:capital-rotation && node scripts/contracts/validate-v3-artifacts.mjs"
+      else
+        printf '%s\n' "node -e \"console.log(JSON.stringify({schema:'rv.dp8_market_step.v1',ok:true,skipped:true,reason:'RV_DP8_MARKET_ENABLED_not_1'}))\""
+      fi
       ;;
     runtime_preflight)
       printf '%s\n' "ulimit -n 8192 >/dev/null 2>&1 || true; node scripts/ops/runtime-preflight.mjs --ensure-runtime --mode=hard --timeout-ms '${RV_RUNTIME_PREFLIGHT_TIMEOUT_MS:-30000}' --min-fd-limit '${RV_RUNTIME_PREFLIGHT_MIN_FD_LIMIT:-4096}' && jq -e '.ok == true' public/data/ops/runtime-preflight-latest.json >/dev/null"
@@ -872,7 +903,7 @@ run_step() {
   fi
 
   case "$step_id" in
-    build_global_scope|hist_probs|hist_probs_catchup|hist_probs_v2_shadow|snapshot|page_core_bundle|public_history_shards|learning_daily|forecast_daily|build_fundamentals|quantlab_daily_report|breakout_v12|scientific_summary|v1_audit|cutover_readiness|etf_diagnostic|stage1_ops_pack|system_status_report|data_freshness_report|pipeline_epoch|generate_meta_dashboard_data|signal_performance_report|runtime_preflight|stock_analyzer_universe_audit|ui_field_truth_report|stock_ui_integrity_audit|page_core_smoke|final_integrity_seal|build_deploy_bundle|pre_deploy_smoke|wrangler_deploy|code_manifest_guard)
+    build_global_scope|provider_health_preflight|q1_delta_proof_report|hist_probs|hist_probs_catchup|hist_probs_v2_shadow|snapshot|page_core_bundle|public_history_shards|learning_daily|decision_module_scorecard|forecast_daily|build_fundamentals|quantlab_daily_report|breakout_v12|scientific_summary|v1_audit|cutover_readiness|etf_diagnostic|stage1_ops_pack|system_status_report|resource_budget_report|data_freshness_report|pipeline_epoch|generate_meta_dashboard_data|signal_performance_report|dp8_market|runtime_preflight|stock_analyzer_universe_audit|ui_field_truth_report|stock_ui_integrity_audit|page_core_smoke|final_integrity_seal|build_deploy_bundle|pre_deploy_smoke|wrangler_deploy|code_manifest_guard|lock_policy_report)
       measure_args+=(--set-env "NODE_OPTIONS=--max-old-space-size=$heap_mb")
       ;;
   esac
@@ -943,9 +974,12 @@ lane_steps() {
     local steps=(
       safe_code_sync \
       code_manifest_guard \
+      lock_policy_report \
       build_global_scope \
+      provider_health_preflight \
       market_data_refresh \
       q1_delta_ingest \
+      q1_delta_proof_report \
       build_fundamentals \
       quantlab_daily_report \
       breakout_v12 \
@@ -963,22 +997,27 @@ lane_steps() {
       public_history_shards \
       etf_diagnostic \
       learning_daily \
+      decision_module_scorecard \
       v1_audit \
       cutover_readiness \
       stage1_ops_pack \
       data_freshness_report \
       system_status_report \
+      resource_budget_report \
       pipeline_epoch \
       generate_meta_dashboard_data \
-      signal_performance_report
+      signal_performance_report \
+      dp8_market
     )
     printf '%s\n' "${steps[@]}"
   else
     printf '%s\n' \
       code_manifest_guard \
+      lock_policy_report \
       stock_analyzer_universe_audit \
       data_freshness_report \
       system_status_report \
+      resource_budget_report \
       pipeline_epoch \
       page_core_smoke \
       final_integrity_seal \
@@ -1039,12 +1078,16 @@ while IFS= read -r step_id; do
   step_status="$?"
   set -e
   if [[ "$step_status" -ne 0 ]]; then
+    if [[ "$step_id" == "stock_ui_integrity_audit" && "${RV_STOCK_UI_AUDIT_HARD_GATE:-0}" == "1" ]]; then
+      echo "stock_ui_integrity_audit_hard_gate_failed exit_code=$step_status" >&2
+      exit "$step_status"
+    fi
     # P10: optional-step list. These are decision-only modules per W10/W11 split —
     # their failure must NOT kill the lane because UI-renderable doesn't depend on
     # them. Tonight 2026-05-05 hist_probs deferred (exit 23) and lost the entire
     # data-plane lane + release-full + wrangler_deploy. Treat the same family as
     # breakout_v12: log degraded, continue.
-    OPTIONAL_STEPS_LIST="${RV_OPTIONAL_STEPS:-breakout_v12 hist_probs hist_probs_catchup hist_probs_v2_shadow scientific_summary etf_diagnostic stock_ui_integrity_audit}"
+    OPTIONAL_STEPS_LIST="${RV_OPTIONAL_STEPS:-breakout_v12 hist_probs hist_probs_catchup hist_probs_v2_shadow scientific_summary etf_diagnostic dp8_market stock_ui_integrity_audit}"
     if [[ " $OPTIONAL_STEPS_LIST " == *" $step_id "* ]]; then
       echo "optional_step_degraded=$step_id exit_code=$step_status latest_unchanged=1" >&2
       write_status "running" "optional_step_degraded" "$step_id"

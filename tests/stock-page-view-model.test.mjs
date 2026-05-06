@@ -155,6 +155,8 @@ describe('buildTrustPresentation', () => {
     assert.equal(trust.coverageLabel, 'partial');
     assert.match(trust.historicalState, /delayed by 4 trading days/i);
     assert.match(trust.summaryText, /Analysis & Price as-of: 2026-03-31/i);
+    assert.match(trust.summaryText, /Data scope: partial/i);
+    assert.doesNotMatch(trust.summaryText, /Coverage: full/i);
   });
 });
 
@@ -173,10 +175,11 @@ describe('buildStockUiState', () => {
       pageAsOf: '2026-05-04',
     });
     assert.equal(view.action, 'WAIT');
-    assert.equal(view.confidence, 'HIGH');
+    assert.equal(view.confidence, 'LOW');
     assert.equal(view.tradePlanStatus, 'PENDING');
     assert.match(view.trustChips.join(' | '), /Models: 1\/3/);
     assert.match(view.trustChips.join(' | '), /History: delayed 4d/);
+    assert.match(view.trustChips.join(' | '), /Signal: LOW/);
   });
 
   it('keeps LOW confidence as single source and blocks active trade plan', () => {

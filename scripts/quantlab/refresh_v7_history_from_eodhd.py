@@ -341,6 +341,17 @@ def parse_args(argv: Iterable[str]) -> argparse.Namespace:
     )
     p.add_argument("--bulk-last-day", action="store_true", default=os.environ.get("RV_EODHD_BULK_LAST_DAY", "0") == "1")
     p.add_argument("--bulk-exchange-cost", type=int, default=100)
+    p.add_argument(
+        "--exchange-checkpoint-path",
+        default=os.environ.get("RV_MARKET_REFRESH_EXCHANGE_CHECKPOINT_PATH", ""),
+        help="Optional JSON checkpoint for completed bulk exchanges; enables resume after partial failure.",
+    )
+    p.add_argument(
+        "--resume-exchange-checkpoint",
+        action="store_true",
+        default=os.environ.get("RV_MARKET_REFRESH_RESUME_EXCHANGE_CHECKPOINT", "1") == "1",
+        help="Skip completed bulk exchanges from a matching checkpoint.",
+    )
     p.add_argument("--global-lock-path", default=os.environ.get("RV_EODHD_GLOBAL_LOCK_PATH", ""))
     p.add_argument(
         "--us-provider-mode",
@@ -395,6 +406,39 @@ def load_allowlist(path: Path, max_assets: int) -> list[str]:
     if max_assets > 0:
         ids = ids[: max_assets]
     return ids
+
+
+def load_or_init_exchange_checkpoint(
+    path: Path,
+    *,
+    job_name: str,
+    from_date: str,
+    to_date: str,
+) -> dict[str, Any]:
+    doc = load_json(path, {})
+    if (
+        doc.get("job_name") == job_name
+        and doc.get("from_date") == from_date
+        and doc.get("to_date") == to_date
+        and isinstance(doc.get("completed_exchanges"), dict)
+    ):
+        return doc
+    return {
+        "schema": "rv_v7_market_refresh_exchange_checkpoint_v1",
+        "created_at": utc_now_iso(),
+        "updated_at": utc_now_iso(),
+        "job_name": job_name,
+        "from_date": from_date,
+        "to_date": to_date,
+        "status": "running",
+        "completed_exchanges": {},
+        "failed_exchanges": {},
+    }
+
+
+def write_exchange_checkpoint(path: Path, doc: dict[str, Any]) -> None:
+    doc["updated_at"] = utc_now_iso()
+    atomic_write_json(path, doc)
 
 
 def build_registry_index(registry_path: Path, allowlist: set[str]) -> dict[str, AssetMeta]:
@@ -951,6 +995,11 @@ def main(argv: Iterable[str]) -> int:
         if str(args.report_path).strip()
         else state_root / f"{args.job_name}.report.json"
     )
+    exchange_checkpoint_path = (
+        Path(str(args.exchange_checkpoint_path)).expanduser().resolve()
+        if str(args.exchange_checkpoint_path).strip()
+        else state_root / f"{args.job_name}.exchange-checkpoint.json"
+    )
     from_date = parse_iso_date(args.from_date).isoformat()
     to_date = parse_iso_date(args.to_date).isoformat() if str(args.to_date).strip() else local_today_iso()
     api_key = load_env_value(env_file, str(args.api_key_env).split(","))
@@ -1272,6 +1321,17 @@ def main(argv: Iterable[str]) -> int:
 
         if args.bulk_last_day:
             bulk_exchange_cost = max(1, int(args.bulk_exchange_cost or 100))
+            exchange_checkpoint = load_or_init_exchange_checkpoint(
+                exchange_checkpoint_path,
+                job_name=args.job_name,
+                from_date=from_date,
+                to_date=to_date,
+            )
+            exchange_checkpoint["status"] = "running"
+            exchange_checkpoint["resume_enabled"] = bool(args.resume_exchange_checkpoint)
+            write_exchange_checkpoint(exchange_checkpoint_path, exchange_checkpoint)
+            completed_exchange_checkpoint = set((exchange_checkpoint.get("completed_exchanges") or {}).keys())
+            skipped_completed_exchanges: list[str] = []
             index_by_id = {canonical_id: index for index, canonical_id, _ in indexed_registry}
             lookup: dict[tuple[str, str], AssetMeta] = {}
             for _, _, meta in indexed_registry:
@@ -1290,6 +1350,9 @@ def main(argv: Iterable[str]) -> int:
             bulk_exchange_errors: list[dict[str, Any]] = []
             bulk_seen_ids: set[str] = set()
             for ex in exchanges:
+                if bool(args.resume_exchange_checkpoint) and ex in completed_exchange_checkpoint:
+                    skipped_completed_exchanges.append(ex)
+                    continue
                 if STOP_REQUESTED:
                     break
                 if _hard_cap_reached():
@@ -1314,12 +1377,22 @@ def main(argv: Iterable[str]) -> int:
                         globals()["EODHD_DISABLED_REASON"] = f"eodhd_http_{exc.code}"
                     bulk_exchange_errors.append({"exchange": ex, "error": f"HTTPError:{exc.code}"})
                     fetch_errors.append({"exchange": ex, "error": f"bulk_exchange_failed:HTTPError:{exc.code}"})
+                    exchange_checkpoint.setdefault("failed_exchanges", {})[ex] = {
+                        "error": f"HTTPError:{exc.code}",
+                        "failed_at": utc_now_iso(),
+                    }
+                    write_exchange_checkpoint(exchange_checkpoint_path, exchange_checkpoint)
                     if exc.code in {401, 402, 403, 429}:
                         break
                     continue
                 except Exception as exc:
                     bulk_exchange_errors.append({"exchange": ex, "error": f"{type(exc).__name__}:{exc}"})
                     fetch_errors.append({"exchange": ex, "error": f"bulk_exchange_failed:{type(exc).__name__}:{exc}"})
+                    exchange_checkpoint.setdefault("failed_exchanges", {})[ex] = {
+                        "error": f"{type(exc).__name__}:{exc}",
+                        "failed_at": utc_now_iso(),
+                    }
+                    write_exchange_checkpoint(exchange_checkpoint_path, exchange_checkpoint)
                     continue
                 rows = list(bulk.get("rows") or [])
                 bulk_rows_total += len(rows)
@@ -1353,6 +1426,17 @@ def main(argv: Iterable[str]) -> int:
                     }
                 completed_fetches = len(bulk_seen_ids)
                 _flush_pack_updates(f"bulk_exchange_flush:{ex}")
+                exchange_checkpoint.setdefault("completed_exchanges", {})[ex] = {
+                    "completed_at": utc_now_iso(),
+                    "rows_total_cumulative": bulk_rows_total,
+                    "rows_matched_cumulative": bulk_rows_matched,
+                    "rows_wrong_date_cumulative": bulk_rows_wrong_date,
+                    "assets_seen_cumulative": len(bulk_seen_ids),
+                    "api_attempts_total": eodhd_attempts_total,
+                    "last_successful_write": last_successful_write or None,
+                }
+                exchange_checkpoint.setdefault("failed_exchanges", {}).pop(ex, None)
+                write_exchange_checkpoint(exchange_checkpoint_path, exchange_checkpoint)
                 if progress_every > 0:
                     print(
                         json.dumps(
@@ -1375,6 +1459,9 @@ def main(argv: Iterable[str]) -> int:
                         ),
                         flush=True,
                     )
+            exchange_checkpoint["status"] = "complete" if not STOP_REQUESTED and not EODHD_DISABLED_REASON else "partial"
+            exchange_checkpoint["skipped_completed_exchanges"] = skipped_completed_exchanges
+            write_exchange_checkpoint(exchange_checkpoint_path, exchange_checkpoint)
             if bulk_exchange_errors:
                 fetch_errors.extend(bulk_exchange_errors[:50])
             bulk_min_yield_ratio = float(getattr(args, "bulk_min_yield_ratio", 0.0) or 0.0)
@@ -1598,6 +1685,9 @@ def main(argv: Iterable[str]) -> int:
                 "us_provider_mode": args.us_provider_mode,
                 "write_mode": args.write_mode,
                 "history_delta_manifest_path": str(delta_manifest_path) if delta_manifest_entries else None,
+                "exchange_checkpoint_path": str(exchange_checkpoint_path),
+                "exchange_checkpoint_resume_enabled": bool(args.resume_exchange_checkpoint),
+                "exchange_checkpoint_skipped_completed_count": len(locals().get("skipped_completed_exchanges", [])),
             },
         }
         atomic_write_json(reports_root / "history_touch_report.json", history_touch_report)
@@ -1632,6 +1722,9 @@ def main(argv: Iterable[str]) -> int:
             "write_mode": args.write_mode,
             "history_touch_report_path": str(reports_root / "history_touch_report.json"),
             "history_delta_manifest_path": str(delta_manifest_path) if delta_manifest_entries else None,
+            "exchange_checkpoint_path": str(exchange_checkpoint_path),
+            "exchange_checkpoint_resume_enabled": bool(args.resume_exchange_checkpoint),
+            "exchange_checkpoint_skipped_completed_count": len(locals().get("skipped_completed_exchanges", [])),
             "fetched_assets_path": str(fetched_assets_path),
             "changed_packs": changed_packs[:50],
             "fetched_assets_sample": fetched_assets[:50],
@@ -1660,6 +1753,9 @@ def main(argv: Iterable[str]) -> int:
                 "provider_blocked_reason": EODHD_DISABLED_REASON,
                 "write_mode": args.write_mode,
                 "history_delta_manifest_path": str(delta_manifest_path) if delta_manifest_entries else None,
+                "exchange_checkpoint_path": str(exchange_checkpoint_path),
+                "exchange_checkpoint_resume_enabled": bool(args.resume_exchange_checkpoint),
+                "exchange_checkpoint_skipped_completed_count": len(locals().get("skipped_completed_exchanges", [])),
                 "fetched_assets_path": str(fetched_assets_path),
             },
         )

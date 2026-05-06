@@ -327,7 +327,13 @@ nas_refresh_global_lock() {
   lock_dir="$(nas_global_lock_path "$name")"
   [[ -d "$lock_dir" ]] || return 0
   mkdir -p "$lock_dir"
+  if [[ ! -f "$lock_dir/created_at" ]]; then
+    nas_now_utc > "$lock_dir/created_at"
+  fi
+  printf '%s\n' "$name" > "$lock_dir/owner"
   printf '%s\n' "$$" > "$lock_dir/pid"
+  ps -p "$$" -o command= > "$lock_dir/command" 2>/dev/null || true
+  printf '%s\n' "dead_pid_cleanup_allowed" > "$lock_dir/stale_policy"
   nas_now_utc > "$lock_dir/heartbeat"
 }
 

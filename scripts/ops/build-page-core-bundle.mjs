@@ -111,6 +111,8 @@ function parseArgs(argv) {
     replace: argv.includes('--replace'),
     promote: argv.includes('--promote'),
     dryRun: argv.includes('--dry-run'),
+    incremental: argv.includes('--incremental') || process.env.RV_PAGE_CORE_INCREMENTAL === '1',
+    historyTouchReport: path.resolve(ROOT, get('history-touch-report') || process.env.RV_HISTORY_TOUCH_REPORT_PATH || 'mirrors/universe-v7/reports/history_touch_report.json'),
     maxAssets: Number.isFinite(Number(get('max-assets'))) ? Number(get('max-assets')) : null,
   };
 }
@@ -129,6 +131,48 @@ function readJsonMaybe(filePath) {
 
 function readGzipText(filePath) {
   return zlib.gunzipSync(fs.readFileSync(filePath)).toString('utf8');
+}
+
+function readGzipJson(filePath) {
+  return JSON.parse(readGzipText(filePath));
+}
+
+function loadHistoryTouchIds(filePath) {
+  const report = readJsonMaybe(filePath);
+  const ids = new Set();
+  if (!report) return { report, ids };
+  if (Array.isArray(report.entries)) {
+    for (const row of report.entries) {
+      const canonical = normalizePageCoreAlias(row?.canonical_id);
+      if (canonical) ids.add(canonical);
+    }
+  }
+  if (Array.isArray(report.packs)) {
+    for (const row of report.packs) {
+      for (const value of row?.touched_assets || []) {
+        const canonical = normalizePageCoreAlias(value);
+        if (canonical) ids.add(canonical);
+      }
+    }
+  }
+  return { report, ids };
+}
+
+function readPreviousPageCoreRows(pageCoreRoot) {
+  const pointer = readJsonMaybe(path.join(pageCoreRoot, 'latest.json')) || readJsonMaybe(path.join(pageCoreRoot, 'candidates/latest.candidate.json'));
+  const snapshotPath = pointer?.snapshot_path ? path.join(pageCoreRoot, pointer.snapshot_path.replace(/^\/?data\/page-core\/?/, '')) : null;
+  const pageDir = snapshotPath ? path.join(snapshotPath, 'page-shards') : null;
+  const rows = new Map();
+  if (!pageDir || !fs.existsSync(pageDir)) return { pointer, rows };
+  for (const name of fs.readdirSync(pageDir)) {
+    if (!name.endsWith('.json.gz')) continue;
+    const shard = readGzipJson(path.join(pageDir, name));
+    for (const [canonical, row] of Object.entries(shard || {})) {
+      const id = normalizePageCoreAlias(canonical);
+      if (id) rows.set(id, row);
+    }
+  }
+  return { pointer, rows };
 }
 
 function readScopeIds() {
@@ -805,6 +849,10 @@ function buildPageCoreRow({ canonicalId, registryRow, decisionRow, lookupValue, 
       warnings: uniqueStrings([...warnings, ...moduleWarnings]),
     },
   };
+  return finalizePageCoreRow(row, { targetMarketDate, canonicalId });
+}
+
+function finalizePageCoreRow(row, { targetMarketDate, canonicalId = null } = {}) {
   const strictReasons = pageCoreStrictOperationalReasons(row, {
     latest: { target_market_date: targetMarketDate || null },
     freshnessStatus: row.freshness?.status || null,
@@ -843,8 +891,38 @@ function buildPageCoreRow({ canonicalId, registryRow, decisionRow, lookupValue, 
   const bytes = Buffer.byteLength(JSON.stringify(row), 'utf8');
   if (bytes > PAGE_CORE_TARGET_BYTES) row.meta.warnings = Array.from(new Set([...row.meta.warnings, 'row_over_target_size']));
   const hardBytes = Buffer.byteLength(JSON.stringify(row), 'utf8');
-  if (hardBytes > PAGE_CORE_HARD_BYTES) throw new Error(`PAGE_CORE_ROW_TOO_LARGE:${canonicalId}:${hardBytes}`);
+  if (hardBytes > PAGE_CORE_HARD_BYTES) throw new Error(`PAGE_CORE_ROW_TOO_LARGE:${canonicalId || row.canonical_asset_id || 'unknown'}:${hardBytes}`);
   return row;
+}
+
+function reusePageCoreRow(previousRow, { targetMarketDate, generatedAt, runId, snapshotId }) {
+  const row = {
+    ...previousRow,
+    run_id: runId,
+    snapshot_id: snapshotId,
+    target_market_date: targetMarketDate || null,
+    freshness: {
+      ...(previousRow.freshness || {}),
+      generated_at: generatedAt,
+    },
+    meta: {
+      ...(previousRow.meta || {}),
+      source: 'page-core-builder',
+      reuse_mode: 'incremental_same_target',
+      reused_from_snapshot_id: previousRow.snapshot_id || null,
+      price_basis: previousRow?.meta?.price_basis || previousRow?.price_basis || 'adjusted_close',
+    },
+  };
+  return finalizePageCoreRow(row, { targetMarketDate, canonicalId: row.canonical_asset_id });
+}
+
+function previousRowReusable(previousRow, { targetMarketDate }) {
+  if (!previousRow || typeof previousRow !== 'object') return false;
+  if (previousRow.schema_version !== PAGE_CORE_SCHEMA) return false;
+  if (normalizeIsoDate(previousRow.target_market_date) !== targetMarketDate) return false;
+  const priceBasis = previousRow?.meta?.price_basis || previousRow?.price_basis || 'adjusted_close';
+  if (!['adjusted_close', 'adjusted', 'raw'].includes(String(priceBasis))) return false;
+  return true;
 }
 
 function basicValidateRow(row) {
@@ -910,14 +988,43 @@ function buildBundle(opts) {
     return a.localeCompare(b);
   });
   if (opts.maxAssets) canonicalIds = canonicalIds.slice(0, opts.maxAssets);
+  const { report: touchReport, ids: touchedIds } = loadHistoryTouchIds(opts.historyTouchReport);
+  const previous = opts.incremental && !opts.maxAssets ? readPreviousPageCoreRows(opts.pageCoreRoot) : { pointer: null, rows: new Map() };
+  const incrementalMode = Boolean(
+    opts.incremental
+    && !opts.maxAssets
+    && previous.pointer
+    && normalizeIsoDate(previous.pointer.target_market_date) === opts.targetMarketDate
+    && previous.pointer.schema_version_payload === PAGE_CORE_SCHEMA
+    && previous.rows.size > 0
+  );
+  const incrementalFallbackReason = opts.incremental && !incrementalMode
+    ? (!previous.pointer ? 'previous_pointer_missing' : normalizeIsoDate(previous.pointer.target_market_date) !== opts.targetMarketDate ? 'target_market_date_changed_full_fallback' : previous.pointer.schema_version_payload !== PAGE_CORE_SCHEMA ? 'schema_changed_full_fallback' : previous.rows.size <= 0 ? 'previous_rows_missing' : 'unknown')
+    : null;
 
   const rows = [];
+  let reusedRows = 0;
+  let rebuiltRows = 0;
   const lookupByCanonical = new Map();
   for (const value of Object.values(lookupExact)) {
     const canonical = maybeCanonicalFromLookup(value);
     if (canonical) lookupByCanonical.set(canonical, value);
   }
   for (const canonicalId of canonicalIds) {
+    if (
+      incrementalMode
+      && !touchedIds.has(canonicalId)
+      && previousRowReusable(previous.rows.get(canonicalId), { targetMarketDate: opts.targetMarketDate })
+    ) {
+      rows.push(reusePageCoreRow(previous.rows.get(canonicalId), {
+        targetMarketDate: opts.targetMarketDate,
+        generatedAt,
+        runId: opts.runId,
+        snapshotId,
+      }));
+      reusedRows += 1;
+      continue;
+    }
     const row = buildPageCoreRow({
       canonicalId,
       registryRow: registryById.get(canonicalId) || null,
@@ -930,6 +1037,7 @@ function buildBundle(opts) {
       moduleContext,
     });
     rows.push(row);
+    rebuiltRows += 1;
   }
 
   const validateSchema = buildSchemaValidator();
@@ -982,6 +1090,21 @@ function buildBundle(opts) {
       ok: schemaValidRate >= 0.999 && overHard === 0,
       schema_valid_rate: schemaValidRate,
       protected_aliases: Object.fromEntries(Array.from(PROTECTED_ALIASES.entries()).map(([alias, expected]) => [alias, aliases[alias] || null])),
+    },
+    incremental: {
+      requested: Boolean(opts.incremental),
+      mode: incrementalMode ? 'incremental_same_target' : 'full',
+      fallback_reason: incrementalFallbackReason,
+      history_touch_report_path: path.relative(ROOT, opts.historyTouchReport).split(path.sep).join('/'),
+      history_touch_report_run_id: touchReport?.run_id || null,
+      changed_ids_count: touchedIds.size,
+      reused_rows: reusedRows,
+      rebuilt_rows: rebuiltRows,
+      compatibility: {
+        schema_version_payload: PAGE_CORE_SCHEMA,
+        target_market_date: opts.targetMarketDate,
+        price_basis: 'adjusted_close',
+      },
     },
     paths: {
       latest_candidate: '/data/page-core/candidates/latest.candidate.json',
