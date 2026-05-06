@@ -31,3 +31,8 @@ test('SQLite history shadow builds raw and adjusted tables without changing prim
   assert.ok(payload.raw_rows > 0);
   assert.equal(payload.raw_rows, payload.adjusted_rows);
 });
+
+test('SQLite shadow writes temp database on target volume for NAS-safe atomic replace', () => {
+  const script = fs.readFileSync(path.join(ROOT, 'scripts/ops/build-sqlite-shadow-history.py'), 'utf8');
+  assert.match(script, /tempfile\.mkdtemp\(prefix="rv-sqlite-shadow-", dir=str\(output\.parent\)\)/);
+});

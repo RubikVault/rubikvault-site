@@ -149,7 +149,8 @@ def main() -> int:
     if not shards_dir.exists():
       raise SystemExit(f"SHARDS_DIR_MISSING:{shards_dir}")
 
-    tmp_dir = Path(tempfile.mkdtemp(prefix="rv-sqlite-shadow-"))
+    output.parent.mkdir(parents=True, exist_ok=True)
+    tmp_dir = Path(tempfile.mkdtemp(prefix="rv-sqlite-shadow-", dir=str(output.parent)))
     tmp_db = tmp_dir / "history-shadow.sqlite"
     conn = sqlite3.connect(tmp_db)
     conn.execute("PRAGMA journal_mode=WAL")
