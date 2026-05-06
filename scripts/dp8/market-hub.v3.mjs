@@ -166,6 +166,15 @@ function avg(values) {
   return nums.reduce((sum, n) => sum + n, 0) / nums.length;
 }
 
+function dateAgeDays(date, nowIso) {
+  const text = String(date || '').slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(text)) return null;
+  const then = new Date(`${text}T12:00:00Z`);
+  const now = new Date(`${String(nowIso || new Date().toISOString()).slice(0, 10)}T12:00:00Z`);
+  if (!Number.isFinite(then.getTime()) || !Number.isFinite(now.getTime())) return null;
+  return Math.max(0, Math.floor((now - then) / 86400000));
+}
+
 function buildSectorCounts(rows) {
   const counts = new Map();
   for (const row of Array.isArray(rows) ? rows : []) {
@@ -281,11 +290,23 @@ async function main() {
     || rawSectorRows.find((row) => row?.as_of && !row.unavailable)?.as_of
     || defaultAsOf;
   const etfSources = [...proxyRows, ...rawSectorRows].map((r) => r.source).filter(Boolean);
+  const available = [...proxyRows, ...rawSectorRows].filter((r) => !r.unavailable).length;
+  const total = proxyRows.length + rawSectorRows.length;
+  const sourceAgeDays = dateAgeDays(dataDate, runContext.generatedAt);
+  const freshnessStatus = sourceAgeDays == null ? 'unknown' : sourceAgeDays <= 3 ? 'fresh' : 'stale';
+  const status = freshnessStatus === 'fresh' && available > 0 ? 'available' : 'degraded';
+  const staleFlags = freshnessStatus === 'stale' ? ['source_eod_us_latest_stale'] : [];
   const doc = {
     meta: {
       schema_version: 'rv.derived.market.v1',
       generated_at: runContext.generatedAt,
       data_date: dataDate,
+      status,
+      freshness_status: freshnessStatus,
+      source_data_age_days: sourceAgeDays,
+      stale_flags: staleFlags,
+      degraded_reason: status === 'degraded' ? (freshnessStatus === 'stale' ? 'source_eod_us_latest_stale' : 'market_rows_unavailable') : null,
+      source_fallback: status === 'degraded' ? '/data/v3/derived/market/global-latest.json' : null,
       provider: 'derived-local',
       source_chain: [
         '/data/v3/pulse/market-health/latest.json',
@@ -295,6 +316,8 @@ async function main() {
         '/data/v3/eod/US/etf-proxies.json'
       ],
       etf_sources: [...new Set(etfSources)],
+      etf_available: available,
+      etf_total: total,
       run_id: runContext.runId,
       commit: runContext.commit
     },
@@ -308,8 +331,6 @@ async function main() {
 
   await writeJsonArtifact(rootDir, 'public/data/v3/derived/market/latest.json', doc);
   // Promote to last-known-good on successful build
-  const available = [...proxyRows, ...rawSectorRows].filter((r) => !r.unavailable).length;
-  const total = proxyRows.length + rawSectorRows.length;
   if (available > 0) {
     await promoteToLastGood(rootDir, 'public/data/v3/derived/market/latest.json', 'public/data/v3/derived/market/latest.last-good.json');
   }

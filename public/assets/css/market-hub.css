@@ -397,9 +397,59 @@
     font-size: 0.82rem;
 }
 
+/* ── Hero Grid (Dashboard 3-widget row) ── */
+.mh-hero-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.8rem;
+    margin-bottom: 0.8rem;
+}
+
+.mh-hero-widget {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+/* ── Filter Strip (Asset Classes) ── */
+.mh-filter-strip {
+    display: flex;
+    gap: 0.3rem;
+    flex-wrap: wrap;
+    margin-bottom: 1rem;
+}
+
+.mh-filter-btn {
+    padding: 0.35rem 0.8rem;
+    font-size: 0.78rem;
+    border: 1px solid rgba(100, 116, 139, 0.25);
+    border-radius: 6px;
+    cursor: pointer;
+    background: transparent;
+    color: #94a3b8;
+    font-family: inherit;
+    font-weight: 600;
+    transition: all 0.15s;
+}
+
+.mh-filter-btn:hover {
+    background: rgba(51, 65, 85, 0.5);
+    color: #e2e8f0;
+}
+
+.mh-filter-btn.mh-filter-active {
+    background: rgba(59, 130, 246, 0.15);
+    border-color: rgba(59, 130, 246, 0.3);
+    color: #60a5fa;
+}
+
 /* ── Responsive ── */
 @media (max-width: 768px) {
     .mh-grid-2 {
+        grid-template-columns: 1fr;
+    }
+
+    .mh-hero-grid {
         grid-template-columns: 1fr;
     }
 

@@ -27,32 +27,18 @@
     let narrativeDict = null;
 
     const TABS = [
-        { id: 'snapshot', label: 'Snapshot' },
-        { id: 'flows', label: 'Money Flow' },
-        { id: 'sectors', label: 'Sectors' },
-        { id: 'commodities', label: 'Commodities' },
-        { id: 'crypto', label: 'Crypto' },
-        { id: 'countries', label: 'Countries & FX' },
-        { id: 'risks', label: 'Risks' },
-        { id: 'playbook', label: 'Playbooks' },
-        { id: 'alerts', label: 'Alerts' },
-        { id: 'methodology', label: 'Methodology' },
-        { id: 'glossary', label: 'Glossary' }
+        { id: 'dashboard', label: 'Dashboard' },
+        { id: 'flows', label: 'Capital Rotation' },
+        { id: 'assets', label: 'Asset Classes' },
+        { id: 'riskmonitor', label: 'Risk Monitor' },
+        { id: 'help', label: 'Help' }
     ];
 
     let doc = null;
     let rotationDoc = null;
     const ROTATION_SUMMARY_URL = '/data/v3/derived/market/capital-rotation/latest.json';
-    let currentTab = 'snapshot';
+    let currentTab = 'dashboard';
     let proMode = false;
-    let alertsState = [];
-    try {
-        const raw = localStorage.getItem('mh_alerts');
-        const parsed = raw ? JSON.parse(raw) : [];
-        alertsState = Array.isArray(parsed) ? parsed : [];
-    } catch {
-        alertsState = [];
-    }
 
     // ═══ HELPERS ═══
     function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
@@ -161,6 +147,61 @@
         const n = Number(v);
         if (!Number.isFinite(n)) return min;
         return Math.min(max, Math.max(min, n));
+    }
+
+    // ═══ EXHAUSTION GAUGE ═══
+    function computeExhaustionGauge(cards) {
+        const validCards = Object.values(cards).filter(c =>
+            c.momentum?.m20 != null && c.phase !== 'NEUTRAL'
+        );
+        if (!validCards.length) return { score: 50, label: 'No Data', color: MH.muted };
+        let totalScore = 0;
+        for (const c of validCards) {
+            const m = c.momentum;
+            let cardExhaustion = 0;
+            // 1. Momentum divergence: short vs long
+            if (m.m200 != null && m.m20 != null) {
+                cardExhaustion += Math.sign(m.m200) !== Math.sign(m.m20) ? 25 : 0;
+            }
+            // 2. Magnitude: extended m20 beyond ±8% = overheated
+            cardExhaustion += Math.min(25, (Math.abs(m.m20 || 0) / 8) * 25);
+            // 3. Phase penalty
+            const phasePenalty = { EARLY: 0, MID: 5, LATE: 15, EXHAUSTED: 25, REVERSAL_RISK: 25 };
+            cardExhaustion += phasePenalty[c.phase] || 0;
+            // 4. Weak flow in trending market = exhaustion signal
+            const flowPenalty = c.flow?.strength === 'weak' ? 15 : c.flow?.strength === 'moderate' ? 5 : 0;
+            cardExhaustion += flowPenalty;
+            totalScore += Math.min(100, cardExhaustion);
+        }
+        const avg = totalScore / validCards.length;
+        const continuation = Math.max(0, Math.min(100, Math.round(100 - avg)));
+        const label = continuation >= 70 ? 'Strong Trend' : continuation >= 45 ? 'Active' : continuation >= 25 ? 'Weakening' : 'Near Reversal';
+        const color = continuation >= 70 ? MH.bull : continuation >= 45 ? MH.blue : continuation >= 25 ? MH.warn : MH.bear;
+        return { score: continuation, label, color };
+    }
+
+    // Render semicircular gauge SVG
+    function renderExhaustionGaugeSVG(gauge) {
+        const { score, label, color } = gauge;
+        const W = 200, H = 120;
+        const cx = W / 2, cy = H - 10, r = 80;
+        const startAngle = Math.PI;
+        const endAngle = startAngle + (score / 100) * Math.PI;
+        const x1 = cx + r * Math.cos(startAngle), y1 = cy + r * Math.sin(startAngle);
+        const x2 = cx + r * Math.cos(endAngle), y2 = cy + r * Math.sin(endAngle);
+        const largeArc = score > 50 ? 1 : 0;
+        let svg = `<svg viewBox="0 0 ${W} ${H}" style="width:100%;max-width:${W}px;height:auto">`;
+        // Background arc
+        svg += `<path d="M ${cx - r} ${cy} A ${r} ${r} 0 1 1 ${cx + r} ${cy}" fill="none" stroke="${MH.dim}" stroke-width="12" stroke-linecap="round"/>`;
+        // Filled arc
+        if (score > 0) {
+            svg += `<path d="M ${x1} ${y1} A ${r} ${r} 0 ${largeArc} 1 ${x2} ${y2}" fill="none" stroke="${color}" stroke-width="12" stroke-linecap="round"/>`;
+        }
+        // Score text
+        svg += `<text x="${cx}" y="${cy - 28}" fill="${color}" font-size="28" font-weight="800" text-anchor="middle" dominant-baseline="middle">${score}</text>`;
+        svg += `<text x="${cx}" y="${cy - 6}" fill="${MH.muted}" font-size="11" text-anchor="middle">${esc(label)}</text>`;
+        svg += '</svg>';
+        return svg;
     }
 
     function normalizeMarketDoc(raw, sourceUrl) {
@@ -279,7 +320,8 @@
 
     // ═══ TAB RENDERERS ═══
 
-    function renderSnapshot(panel) {
+    // ── DASHBOARD (Hero — answer in 3 seconds) ──
+    function renderDashboard(panel) {
         const gDoc = getGDoc(), cards = getCards(), asOf = getAsOf();
         if (!gDoc) { panel.innerHTML = card('<span style="color:#64748b">No data available.</span>'); return; }
         let h = '';
@@ -287,21 +329,42 @@
         const rd = gDoc.regime_details || {};
         const regCol = regime === 'CRISIS' ? MH.bear : regime === 'STRESS' ? MH.warn : MH.bull;
 
-        // Regime + Composite
-        const regTip = dictTooltip('regime', regime);
-        h += card(`<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:0.6rem">
-      <div>
-        <div style="font-size:1.1rem;color:${regCol};font-weight:700"${regTip ? ` title="${esc(regTip)}"` : ''}>Regime: ${dictLabel('regime', regime, regime)}</div>
-        <div style="font-size:0.78rem;color:${MH.muted};margin-top:0.2rem">
-          Breadth Z: ${rd.breadth_z?.toFixed(2) || '—'} | Credit Z: ${rd.credit_z?.toFixed(2) || '—'} | Vol Z: ${rd.vol_z?.toFixed(2) || '—'}
-        </div>
-      </div>
-      <div style="display:flex;gap:0.5rem">${scorePill(gDoc.investment_compass?.composite_score || 50)}
-        <span style="font-size:0.78rem;color:${MH.muted};align-self:center">Composite</span>
-      </div>
-    </div>`);
+        // ═══ ROW 1: Regime + Exhaustion Gauge + Breadth ═══
+        const gauge = computeExhaustionGauge(cards);
+        const pulse = gDoc?.us_pulse;
+        const pulseTotal = (pulse?.breadth_up || 0) + (pulse?.breadth_down || 0);
+        const upPct = pulseTotal > 0 ? ((pulse.breadth_up / pulseTotal) * 100).toFixed(0) : '—';
 
-        // Sessions
+        h += '<div class="mh-hero-grid">';
+
+        // Widget 1: Regime
+        const regTip = dictTooltip('regime', regime);
+        h += `<article class="mh-card mh-hero-widget">
+      <div style="font-size:0.72rem;color:${MH.muted};text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.4rem">Market Regime</div>
+      <div style="font-size:1.6rem;font-weight:800;color:${regCol}"${regTip ? ` title="${esc(regTip)}"` : ''}>${dictLabel('regime', regime, regime)}</div>
+      <div style="font-size:0.72rem;color:${MH.muted};margin-top:0.3rem">Breadth Z: ${rd.breadth_z?.toFixed(2) || '—'} · Credit Z: ${rd.credit_z?.toFixed(2) || '—'} · Vol Z: ${rd.vol_z?.toFixed(2) || '—'}</div>
+      <div style="margin-top:0.5rem">${scorePill(gDoc.investment_compass?.composite_score || 50)} <span style="font-size:0.72rem;color:${MH.muted}">Composite</span></div>
+    </article>`;
+
+        // Widget 2: Exhaustion Gauge
+        h += `<article class="mh-card mh-hero-widget" style="text-align:center">
+      <div style="font-size:0.72rem;color:${MH.muted};text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.3rem">Trend Fuel</div>
+      ${renderExhaustionGaugeSVG(gauge)}
+    </article>`;
+
+        // Widget 3: Breadth Bar
+        h += `<article class="mh-card mh-hero-widget">
+      <div style="font-size:0.72rem;color:${MH.muted};text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.4rem">Market Breadth</div>
+      <div class="mh-breadth-bar" style="height:28px;margin-bottom:0.5rem">
+        <div style="flex:${pulse?.breadth_up || 1};background:${MH.bull};display:flex;align-items:center;justify-content:center;font-size:0.72rem;color:#fff;font-weight:600">▲ ${pulse?.breadth_up || 0}</div>
+        <div style="flex:${pulse?.breadth_down || 1};background:${MH.bear};display:flex;align-items:center;justify-content:center;font-size:0.72rem;color:#fff;font-weight:600">▼ ${pulse?.breadth_down || 0}</div>
+      </div>
+      <div style="font-size:0.78rem;color:${MH.muted}">${upPct}% advancing</div>
+      <div style="font-size:0.72rem;color:${pulse?.risk_mode === 'risk-on' ? MH.bull : MH.bear};font-weight:600;margin-top:0.2rem">${esc(pulse?.risk_mode || '—')} · ${Number(pulse?.symbols_covered || 0).toLocaleString()} stocks</div>
+    </article>`;
+        h += '</div>';
+
+        // ═══ ROW 2: Session Strip ═══
         h += '<div class="mh-grid-3">';
         for (const region of ['asia', 'europe', 'americas']) {
             const st = sessionStatus(region);
@@ -310,17 +373,11 @@
                 const c = (idx.change_pct || 0) >= 0 ? MH.bull : MH.bear;
                 return `<span style="color:${c};font-size:0.82rem">${esc(idx.display || idx.symbol)} ${fmtPct(idx.change_pct)}</span>`;
             }).join(' &nbsp; ') : '<span style="color:#64748b">No data</span>';
-            h += `<article class="mh-card">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.4rem">
-          <span style="font-weight:700;color:${MH.text}">${region.charAt(0).toUpperCase() + region.slice(1)}</span>
-          <span style="font-size:0.72rem;padding:0.1rem 0.4rem;border-radius:5px;background:${st.bg};color:${st.color}">${st.text}</span>
-        </div>
-        <div>${idxH}</div>
-      </article>`;
+            h += `<article class="mh-card"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.4rem"><span style="font-weight:700;color:${MH.text}">${region.charAt(0).toUpperCase() + region.slice(1)}</span><span style="font-size:0.72rem;padding:0.1rem 0.4rem;border-radius:5px;background:${st.bg};color:${st.color}">${st.text}</span></div><div>${idxH}</div></article>`;
         }
         h += '</div>';
 
-        // Phase Distribution
+        // ═══ Phase Distribution ═══
         const phaseG = { EARLY: [], MID: [], LATE: [], EXHAUSTED: [], REVERSAL_RISK: [], NEUTRAL: [] };
         Object.values(cards).forEach(c => { if (phaseG[c.phase]) phaseG[c.phase].push(c); });
         const total = Object.keys(cards).length || 1;
@@ -333,14 +390,14 @@
             `<span style="color:${PHASE_COLORS[k]}">${phaseLabel(k)}: ${v.length}</span>`).join('')}
       </div>`);
 
-        // Top/Bottom
+        // ═══ Leaders / Laggards ═══
         const sorted = Object.values(cards).sort((a, b) => b.score - a.score);
         h += '<div class="mh-grid-2">';
-        h += card(`${secTitle('Highest Scores')}${sorted.slice(0, 5).map(c => cardRow(c)).join('')}`);
-        h += card(`${secTitle('Lowest Scores')}${sorted.slice(-5).reverse().map(c => cardRow(c)).join('')}`);
+        h += card(`${secTitle('Leaders')}${sorted.slice(0, 3).map(c => cardRow(c)).join('')}`);
+        h += card(`${secTitle('Laggards')}${sorted.slice(-3).reverse().map(c => cardRow(c)).join('')}`);
         h += '</div>';
 
-        // Compass
+        // ═══ Compass ═══
         const compass = gDoc.investment_compass;
         if (compass) {
             h += card(`${secTitle('Investment Compass')}
@@ -350,93 +407,78 @@
           <div><span style="color:${MH.muted};font-size:0.78rem">Risk</span><div style="color:${(compass.risk_score || 0) >= 50 ? MH.bull : MH.bear};font-weight:600">${compass.risk_score ?? '—'}</div></div>
           <div><span style="color:${MH.muted};font-size:0.78rem">Flows</span><div style="color:${(compass.flow_score || 0) >= 50 ? MH.bull : MH.bear};font-weight:600">${compass.flow_score ?? '—'}</div></div>
         </div>
-        ${compass.summary ? `<div style="margin-top:0.5rem;font-size:0.82rem;color:${MH.muted}">${esc(compass.summary)}</div>` : ''}
-        ${sourcesFooter('EODHD (derived)', asOf)}`);
+        ${compass.summary ? `<div style="margin-top:0.5rem;font-size:0.82rem;color:${MH.muted}">${esc(compass.summary)}</div>` : ''}`);
         }
+
+        // ═══ Inline Playbook (Opps + Danger) ═══
+        const opps = Object.values(cards).filter(c => (c.phase === 'EARLY' || c.phase === 'MID') && c.score >= 50).sort((a, b) => b.score - a.score).slice(0, 5);
+        const danger = Object.values(cards).filter(c => c.phase === 'REVERSAL_RISK' || c.phase === 'EXHAUSTED' || c.score < 35).sort((a, b) => a.score - b.score).slice(0, 5);
+        h += '<div class="mh-grid-2">';
+        h += card(`<div style="font-size:0.82rem;font-weight:700;color:${MH.bull};margin-bottom:0.4rem">Opportunities (${opps.length})</div>${opps.length ? opps.map(c => cardRow(c)).join('') : '<span style="color:#64748b">None in current regime.</span>'}`);
+        h += card(`<div style="font-size:0.82rem;font-weight:700;color:${MH.bear};margin-bottom:0.4rem">Danger Zones (${danger.length})</div>${danger.length ? danger.map(c => cardRow(c)).join('') : '<span style="color:#64748b">None flagged.</span>'}`);
+        h += '</div>';
+
+        h += sourcesFooter('EODHD (derived)', asOf);
         panel.innerHTML = h;
     }
 
-    function renderSectors(panel) {
-        const sc = filterCards('SECTOR:'), asOf = getAsOf();
-        if (!sc.length) { panel.innerHTML = card('<span style="color:#64748b">No sector data.</span>'); return; }
-        let h = secTitle(`US Sectors (${sc.length})`);
-        h += '<div style="overflow-x:auto"><table class="mh-table"><thead><tr>';
-        h += `<th>Sector</th><th class="mh-center">Score</th><th class="mh-center">Phase</th><th class="mh-center">Conf</th><th class="mh-right">Mom (20d)</th><th class="mh-right">Vol Z</th><th>Drivers</th>`;
+    // ── ASSET CLASSES (unified filterable table) ──
+    function renderAssetClasses(panel) {
+        const cards = getCards(), asOf = getAsOf();
+        const allCards = Object.entries(cards).map(([k, v]) => ({ key: k, ...v }));
+        if (!allCards.length) { panel.innerHTML = card('<span style="color:#64748b">No asset data.</span>'); return; }
+
+        const filters = [
+            { id: 'all', label: 'All', prefix: '' },
+            { id: 'sectors', label: 'Sectors', prefix: 'SECTOR:' },
+            { id: 'cmdty', label: 'Commodities', prefix: 'CMDTY:' },
+            { id: 'crypto', label: 'Crypto', prefix: 'CRYPTO:' },
+            { id: 'indices', label: 'Indices & FX', prefix: 'INDEX:', altPrefix: 'FX:' }
+        ];
+
+        let h = secTitle(`Asset Classes (${allCards.length})`);
+
+        // Filter strip
+        h += '<div class="mh-filter-strip">';
+        filters.forEach((f, i) => {
+            h += `<button class="mh-filter-btn${i === 0 ? ' mh-filter-active' : ''}" data-prefix="${esc(f.prefix)}" data-alt="${esc(f.altPrefix || '')}" onclick="window._mhFilterAssets(this)">${esc(f.label)}</button>`;
+        });
+        h += '</div>';
+
+        // Unified table
+        h += '<div style="overflow-x:auto"><table class="mh-table" id="mh-asset-table"><thead><tr>';
+        h += '<th>Asset</th><th class="mh-center">Type</th><th class="mh-center">Score</th><th class="mh-center">Phase</th><th class="mh-center">Conf</th><th class="mh-right">Mom 20d</th><th class="mh-right">Vol Z</th>';
         h += '</tr></thead><tbody>';
-        sc.forEach(c => {
+
+        allCards.sort((a, b) => b.score - a.score).forEach(c => {
             const mc = (c.momentum?.m20 || 0) >= 0 ? MH.bull : MH.bear;
-            h += `<tr>
-        <td style="color:${MH.text};font-weight:600">${esc(c.name)}</td>
+            const typeLabel = c.key.split(':')[0].toLowerCase();
+            h += `<tr class="mh-asset-row" data-key="${esc(c.key)}">
+        <td style="color:${MH.text};font-weight:600">${esc(c.name || c.key)}</td>
+        <td class="mh-center" style="font-size:0.72rem;color:${MH.muted}">${esc(typeLabel)}</td>
         <td class="mh-center">${scorePill(c.score)}</td>
         <td class="mh-center">${phaseBadge(c.phase)}</td>
         <td class="mh-center">${confBadge(c.confidence)}</td>
         <td class="mh-right" style="color:${mc};font-weight:600">${(c.momentum?.m20 || 0).toFixed(2)}%</td>
         <td class="mh-right" style="color:${(c.vol_z || 0) > 1 ? MH.bear : MH.muted}">${(c.vol_z || 0).toFixed(2)}</td>
-        <td>${driverChips(c.drivers_top3)}</td>
       </tr>`;
         });
         h += '</tbody></table></div>';
-        h += sourcesFooter('SPDR Sector ETFs via EODHD', asOf);
+        h += sourcesFooter('EODHD (ETFs, Indices, Crypto, Forex)', asOf);
         panel.innerHTML = h;
     }
 
-    function renderCommodities(panel) {
-        const cc = filterCards('CMDTY:'), asOf = getAsOf();
-        if (!cc.length) { panel.innerHTML = card('<span style="color:#64748b">No commodity data.</span>'); return; }
-        let h = secTitle(`Commodities (${cc.length})`);
-        h += cc.map(c => cardRow(c)).join('');
-        h += sourcesFooter('ETF proxies (GLD, SLV, USO, UNG, CPER) via EODHD', asOf);
-        panel.innerHTML = h;
-    }
-
-    function renderCrypto(panel) {
-        const cc = filterCards('CRYPTO:'), asOf = getAsOf();
-        if (!cc.length) { panel.innerHTML = card('<span style="color:#64748b">No crypto data.</span>'); return; }
-        let h = secTitle(`Crypto (${cc.length})`);
-        const avg = cc.reduce((s, c) => s + c.score, 0) / cc.length;
-        const appetite = avg >= 60 ? 'Risk-On' : avg >= 45 ? 'Neutral' : 'Risk-Off';
-        const appC = avg >= 60 ? MH.bull : avg >= 45 ? MH.warn : MH.bear;
-        h += card(`<div style="display:flex;justify-content:space-between;align-items:center">
-      <div><div style="font-size:0.82rem;color:${MH.muted}">Crypto Risk Appetite</div>
-        <div style="font-size:1.2rem;font-weight:700;color:${appC}">${appetite}</div></div>
-      <div style="text-align:right"><div style="font-size:0.78rem;color:${MH.muted}">Avg Score</div>${scorePill(Math.round(avg))}</div>
-    </div>`);
-        h += cc.map(c => cardRow(c)).join('');
-        h += sourcesFooter('EODHD Crypto (CC exchange)', asOf);
-        panel.innerHTML = h;
-    }
-
-    function renderCountries(panel) {
-        const fxCards = filterCards('FX:');
-        const idxCards = filterCards('INDEX:');
-        const asOf = getAsOf();
-        let h = '';
-
-        if (idxCards.length) {
-            h += secTitle(`Global Indices (${idxCards.length})`);
-            h += '<div style="overflow-x:auto"><table class="mh-table"><thead><tr>';
-            h += '<th>Index</th><th class="mh-center">Score</th><th class="mh-center">Phase</th><th class="mh-center">Conf</th><th class="mh-right">Mom 20d</th><th class="mh-right">Vol Z</th>';
-            h += '</tr></thead><tbody>';
-            idxCards.forEach(c => {
-                const mc = (c.momentum?.m20 || 0) >= 0 ? MH.bull : MH.bear;
-                h += `<tr><td style="color:${MH.text};font-weight:600">${esc(c.name)}</td>
-          <td class="mh-center">${scorePill(c.score)}</td><td class="mh-center">${phaseBadge(c.phase)}</td>
-          <td class="mh-center">${confBadge(c.confidence)}</td>
-          <td class="mh-right" style="color:${mc};font-weight:600">${(c.momentum?.m20 || 0).toFixed(2)}%</td>
-          <td class="mh-right" style="color:${(c.vol_z || 0) > 1 ? MH.bear : MH.muted}">${(c.vol_z || 0).toFixed(2)}</td></tr>`;
-            });
-            h += '</tbody></table></div>';
-        }
-
-        if (fxCards.length) {
-            h += secTitle(`Forex (${fxCards.length})`);
-            h += fxCards.map(c => cardRow(c)).join('');
-        }
-
-        if (!h) h = card('<span style="color:#64748b">No country/FX data.</span>');
-        h += sourcesFooter('EODHD Global Indices + Forex', asOf);
-        panel.innerHTML = h;
-    }
+    window._mhFilterAssets = function (btn) {
+        document.querySelectorAll('.mh-filter-btn').forEach(b => b.classList.remove('mh-filter-active'));
+        btn.classList.add('mh-filter-active');
+        const prefix = btn.dataset.prefix;
+        const alt = btn.dataset.alt;
+        document.querySelectorAll('.mh-asset-row').forEach(row => {
+            const key = row.dataset.key;
+            const show = !prefix || key.startsWith(prefix) || (alt && key.startsWith(alt));
+            row.style.display = show ? '' : 'none';
+        });
+    };
 
     function renderFlows(panel) {
         const gDoc = getGDoc(), cards = getCards(), asOf = getAsOf();
@@ -465,14 +507,15 @@
         panel.innerHTML = h;
     }
 
-    function renderRisks(panel) {
+    // ── RISK MONITOR (Regime + Breadth + Danger Zone) ──
+    function renderRiskMonitor(panel) {
         const gDoc = getGDoc(), cards = getCards(), asOf = getAsOf();
         const rd = gDoc?.regime_details || {};
         const regime = gDoc?.regime_mode || 'NORMAL';
         const regCol = regime === 'CRISIS' ? MH.bear : regime === 'STRESS' ? MH.warn : MH.bull;
-        let h = secTitle('Risk Radar');
+        let h = secTitle('Risk Monitor');
 
-        // Regime
+        // Regime detail
         h += card(`<div style="display:flex;justify-content:space-between;align-items:center">
       <div><div style="font-size:0.82rem;color:${MH.muted}">Market Regime</div>
         <div style="font-size:1.4rem;font-weight:700;color:${regCol}" title="${esc(dictTooltip('regime', regime))}">${dictLabel('regime', regime, regime)}</div></div>
@@ -480,8 +523,7 @@
         <div style="font-size:0.78rem"><span style="color:${MH.muted}">Breadth Z:</span> <span style="color:${(rd.breadth_z || 0) < -1 ? MH.bear : MH.text};font-weight:600">${rd.breadth_z?.toFixed(2) || '—'}</span></div>
         <div style="font-size:0.78rem"><span style="color:${MH.muted}">Credit Z:</span> <span style="color:${(rd.credit_z || 0) > 1.5 ? MH.bear : MH.text};font-weight:600">${rd.credit_z?.toFixed(2) || '—'}</span></div>
         <div style="font-size:0.78rem"><span style="color:${MH.muted}">Vol Z:</span> <span style="color:${(rd.vol_z || 0) > 1.5 ? MH.bear : MH.text};font-weight:600">${rd.vol_z?.toFixed(2) || '—'}</span></div>
-      </div>
-    </div>`);
+      </div></div>`);
 
         // Breadth
         const pulse = gDoc?.us_pulse;
@@ -489,10 +531,7 @@
             const total = (pulse.breadth_up || 0) + (pulse.breadth_down || 0);
             const upPct = total > 0 ? ((pulse.breadth_up / total) * 100).toFixed(0) : 50;
             h += card(`${secTitle('Market Breadth')}
-        <div class="mh-breadth-bar">
-          <div style="flex:${pulse.breadth_up || 1};background:${MH.bull};display:flex;align-items:center;justify-content:center;font-size:0.65rem;color:#fff">▲ ${pulse.breadth_up || 0}</div>
-          <div style="flex:${pulse.breadth_down || 1};background:${MH.bear};display:flex;align-items:center;justify-content:center;font-size:0.65rem;color:#fff">▼ ${pulse.breadth_down || 0}</div>
-        </div>
+        <div class="mh-breadth-bar"><div style="flex:${pulse.breadth_up || 1};background:${MH.bull};display:flex;align-items:center;justify-content:center;font-size:0.65rem;color:#fff">▲ ${pulse.breadth_up || 0}</div><div style="flex:${pulse.breadth_down || 1};background:${MH.bear};display:flex;align-items:center;justify-content:center;font-size:0.65rem;color:#fff">▼ ${pulse.breadth_down || 0}</div></div>
         <div style="font-size:0.78rem;color:${MH.muted}">${upPct}% advancing | Risk Mode: <span style="color:${pulse.risk_mode === 'risk-on' ? MH.bull : MH.bear};font-weight:600">${esc(pulse.risk_mode || '—')}</span> | Coverage: ${Number(pulse.symbols_covered || 0).toLocaleString()}</div>`);
         }
 
@@ -501,28 +540,6 @@
         if (riskAssets.length) {
             h += card(`${secTitle('Danger Zone — Exhausted / Reversal Risk')}${riskAssets.map(c => cardRow(c)).join('')}`);
         }
-        h += sourcesFooter('EODHD + Derived breadth', asOf);
-        panel.innerHTML = h;
-    }
-
-    function renderPlaybook(panel) {
-        const gDoc = getGDoc(), cards = getCards(), asOf = getAsOf();
-        const regime = gDoc?.regime_mode || 'NORMAL';
-        let h = secTitle('Playbook — Actionable Observations');
-
-        const opps = Object.values(cards).filter(c => (c.phase === 'EARLY' || c.phase === 'MID') && c.score >= 50).sort((a, b) => b.score - a.score).slice(0, 8);
-        const danger = Object.values(cards).filter(c => c.phase === 'REVERSAL_RISK' || c.phase === 'EXHAUSTED' || c.score < 35).sort((a, b) => a.score - b.score).slice(0, 5);
-
-        h += '<div class="mh-grid-2">';
-        h += card(`<div style="font-size:0.88rem;font-weight:700;color:${MH.bull};margin-bottom:0.5rem">Opportunities (${opps.length})</div>
-      ${opps.length ? opps.map(c => cardRow(c)).join('') : '<span style="color:#64748b">No strong opportunities.</span>'}`);
-        h += card(`<div style="font-size:0.88rem;font-weight:700;color:${MH.bear};margin-bottom:0.5rem">Danger Zones (${danger.length})</div>
-      ${danger.length ? danger.map(c => cardRow(c)).join('') : '<span style="color:#64748b">None flagged.</span>'}`);
-        h += '</div>';
-
-        if (regime !== 'NORMAL') {
-            h += card(`<div style="color:${MH.warn};font-size:0.82rem">Regime is <strong>${regime}</strong> — all scores dampened. Reduce exposure and favor hedges.</div>`);
-        }
 
         // Hedges
         const hedges = Object.values(cards).filter(c => c.type === 'commodity' || c.id?.startsWith('FX:')).filter(c => c.score >= 55).sort((a, b) => b.score - a.score).slice(0, 5);
@@ -530,135 +547,55 @@
             h += card(`${secTitle('Potential Hedges (Score ≥ 55)')}${hedges.map(c => cardRow(c)).join('')}`);
         }
 
-        h += `<div style="font-size:0.72rem;color:${MH.muted};margin-top:0.5rem;font-style:italic">This is not financial advice. All observations are based on quantitative signals and intended for informational purposes only.</div>`;
-        h += sourcesFooter('EODHD (derived)', asOf);
+        if (regime !== 'NORMAL') {
+            h += card(`<div style="color:${MH.warn};font-size:0.82rem">Regime is <strong>${regime}</strong> — all scores dampened. Reduce exposure and favor hedges.</div>`);
+        }
+
+        h += `<div style="font-size:0.72rem;color:${MH.muted};margin-top:0.5rem;font-style:italic">Not financial advice. Quantitative signals for informational purposes only.</div>`;
+        h += sourcesFooter('EODHD + Derived breadth', asOf);
         panel.innerHTML = h;
     }
 
-    function renderAlerts(panel) {
-        const cards = getCards();
-        let h = secTitle('Watchlist & Alerts');
-        h += card(`<div style="font-size:0.85rem;color:${MH.text};margin-bottom:0.6rem">Track assets and get notified when phase/score changes significantly.</div>
-      <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:0.8rem">
-        <input id="mh-alert-input" type="text" placeholder="Add asset ID (e.g. SECTOR:XLK)" style="flex:1;min-width:200px;padding:0.5rem;background:${MH.surface};border:1px solid ${MH.border};border-radius:6px;color:${MH.text};font-size:0.85rem"/>
-        <button onclick="window._mhAddAlert()" style="padding:0.5rem 1rem;background:rgba(59,130,246,0.15);border:1px solid rgba(59,130,246,0.3);border-radius:6px;color:#60a5fa;font-weight:600;cursor:pointer;font-size:0.85rem">+ Add</button>
-      </div>
-      <div id="mh-alert-list">${renderAlertList(cards)}</div>`);
-        panel.innerHTML = h;
-    }
-
-    function renderAlertList(cards) {
-        if (!alertsState.length) return '<div style="color:#64748b;font-size:0.82rem">No alerts set. Add asset IDs above.</div>';
-        return alertsState.map(id => {
-            const c = cards[id];
-            if (!c) return `<div class="mh-card-row"><span style="color:${MH.muted}">${esc(id)} — no data</span>
-        <button onclick="window._mhRemoveAlert('${esc(id)}')" style="background:none;border:none;color:${MH.bear};cursor:pointer;font-size:0.8rem">✕</button></div>`;
-            return `<div class="mh-card-row">${cardRow(c)}<button onclick="window._mhRemoveAlert('${esc(id)}')" style="background:none;border:none;color:${MH.bear};cursor:pointer;font-size:0.8rem;position:absolute;right:0.5rem">✕</button></div>`;
-        }).join('');
-    }
-
-    window._mhAddAlert = function () {
-        const inp = document.getElementById('mh-alert-input');
-        const val = (inp?.value || '').trim().toUpperCase();
-        if (!val || alertsState.includes(val)) return;
-        alertsState.push(val);
-        localStorage.setItem('mh_alerts', JSON.stringify(alertsState));
-        const list = document.getElementById('mh-alert-list');
-        if (list) list.innerHTML = renderAlertList(getCards());
-        if (inp) inp.value = '';
-    };
-
-    window._mhRemoveAlert = function (id) {
-        alertsState = alertsState.filter(a => a !== id);
-        localStorage.setItem('mh_alerts', JSON.stringify(alertsState));
-        const list = document.getElementById('mh-alert-list');
-        if (list) list.innerHTML = renderAlertList(getCards());
-    };
-
-    function renderMethodology(panel) {
-        panel.innerHTML = `
-      ${secTitle('Methodology — How Scores Are Computed')}
-      ${card(`<div style="font-size:0.88rem;font-weight:700;color:${MH.text};margin-bottom:0.6rem">Score Schema (0-100)</div>
+    // ── HELP (Methodology + Glossary combined) ──
+    function renderHelp(panel) {
+        let h = secTitle('Methodology & Glossary');
+        h += card(`<div style="font-size:0.88rem;font-weight:700;color:${MH.text};margin-bottom:0.6rem">Score Schema (0-100)</div>
         <div style="font-size:0.8rem;color:${MH.muted};line-height:1.6">
           <p><strong>Formula:</strong> <span class="mh-code">score = clamp(50 + 50 × weighted_sum, 0, 100)</span></p>
           <p><strong>Components:</strong> Momentum (m20/m60/m200), Flow Direction, Volatility Z-score, Macro proxy, Valuation proxy</p>
-          <p><strong>Weights by type:</strong></p>
-          <table class="mh-table" style="font-size:0.78rem">
-            <tr><th>Type</th><th class="mh-center">Mom</th><th class="mh-center">Flow</th><th class="mh-center">Val</th><th class="mh-center">Macro</th><th class="mh-center">Risk</th></tr>
-            <tr><td>Default</td><td class="mh-center">35%</td><td class="mh-center">20%</td><td class="mh-center">15%</td><td class="mh-center">20%</td><td class="mh-center">10%</td></tr>
-            <tr><td>Crypto</td><td class="mh-center">25%</td><td class="mh-center">30%</td><td class="mh-center">10%</td><td class="mh-center">15%</td><td class="mh-center">20%</td></tr>
-            <tr><td>Country</td><td class="mh-center">25%</td><td class="mh-center">20%</td><td class="mh-center">15%</td><td class="mh-center">30%</td><td class="mh-center">10%</td></tr>
-          </table>
-        </div>`)}
-      ${card(`<div style="font-size:0.88rem;font-weight:700;color:${MH.text};margin-bottom:0.6rem">Phase Classification (Trend Lifecycle)</div>
+        </div>`);
+        h += card(`<div style="font-size:0.88rem;font-weight:700;color:${MH.text};margin-bottom:0.6rem">Phase Classification</div>
         <div style="font-size:0.8rem;color:${MH.muted};line-height:1.6;display:grid;gap:0.3rem">
           ${['EARLY', 'MID', 'LATE', 'EXHAUSTED', 'REVERSAL_RISK', 'NEUTRAL'].map(p =>
-            `<div>${phaseBadge(p)} ${esc(dictTooltip('phase', p) || p)}</div>`
-          ).join('\n          ')}
-        </div>`)}
-      ${card(`<div style="font-size:0.88rem;font-weight:700;color:${MH.text};margin-bottom:0.6rem">Confidence Calculation</div>
-        <div style="font-size:0.8rem;color:${MH.muted};line-height:1.6">
-          <p><span class="mh-code">confidence = signal_agreement × data_quality</span></p>
-          <p>Data quality = coverage × freshness × source reliability</p>
-          ${['HIGH', 'MEDIUM', 'LOW'].map(c =>
-            `<p><strong>${c}</strong>: ${esc(dictTooltip('confidence', c) || c)}</p>`
-          ).join('\n          ')}
-        </div>`)}
-      ${card(`<div style="font-size:0.88rem;font-weight:700;color:${MH.text};margin-bottom:0.6rem">Regime Engine</div>
+            `<div>${phaseBadge(p)} ${esc(dictTooltip('phase', p) || p)}</div>`).join('\n          ')}
+        </div>`);
+        h += card(`<div style="font-size:0.88rem;font-weight:700;color:${MH.text};margin-bottom:0.6rem">Regime Engine</div>
         <div style="font-size:0.8rem;color:${MH.muted};line-height:1.6">
           ${['NORMAL', 'STRESS', 'CRISIS'].map(r =>
-            `<p><strong>${dictLabel('regime', r, r)}:</strong> ${esc(dictTooltip('regime', r) || r)}</p>`
-          ).join('\n          ')}
-        </div>`)}
-      ${card(`<div style="font-size:0.88rem;font-weight:700;color:${MH.text};margin-bottom:0.6rem">Data Sources & Limitations</div>
-        <div style="font-size:0.8rem;color:${MH.muted};line-height:1.6">
-          <p><strong>Tier A:</strong> FRED, BIS, IMF, CFTC, EIA — <em>not yet integrated</em></p>
-          <p><strong>Tier B:</strong> EODHD — all prices, ETF proxies, indices</p>
-          <p><strong>Tier C:</strong> Derived — ETF AUM proxies, price-derived flows, computed breadth</p>
-          <div style="margin-top:0.5rem;padding:0.5rem;background:${MH.surface};border-radius:6px;border-left:3px solid ${MH.warn}">
-            <strong style="color:${MH.warn}">Known Limitations:</strong>
-            <ul style="margin:0.3rem 0 0 1rem;padding:0">
-              <li>No real fund-flow data — flows from price trends only</li>
-              <li>No options/skew data — vol from realized returns</li>
-              <li>No COT positioning, no on-chain crypto</li>
-              <li>Breadth from ~2,450 US stocks only</li>
-            </ul>
-          </div>
-        </div>`)}`;
-    }
-
-    function renderGlossary(panel) {
+            `<p><strong>${dictLabel('regime', r, r)}:</strong> ${esc(dictTooltip('regime', r) || r)}</p>`).join('\n          ')}
+        </div>`);
+        // Glossary
         const terms = [
-            ['Score (0-100)', '0-30 = bearish, 30-70 = neutral, 70-100 = bullish. Composite of momentum, flows, risk, macro.'],
-            ['Phase', 'EARLY (new trend) → MID (confirmed) → LATE (fading) → EXHAUSTED (overheated) → REVERSAL_RISK (breaking).'],
-            ['Confidence', 'HIGH/MEDIUM/LOW — computed from signal agreement × data quality. Never manually set.'],
-            ['Regime', 'NORMAL (no stress) / STRESS (elevated vol/credit) / CRISIS (multiple stress triggers). Dampens scores.'],
-            ['Momentum (m20/m60/m200)', 'Price change over 20/60/200 days in %. Positive = uptrend.'],
-            ['Vol Z', 'Volatility z-score. >1.5 = elevated volatility, contributes to STRESS regime.'],
-            ['Breadth Z', 'Market breadth z-score. Negative = more stocks declining than advancing.'],
-            ['Credit Z', 'Credit spread z-score. >1.5 = credit deterioration.'],
-            ['Flow Direction', 'Inflow/Outflow derived from multi-day price trends. Proxy only.'],
-            ['CardPayload', 'Universal data object for every asset. Contains score, phase, confidence, drivers, risks, sources, data_status.'],
-            ['Coverage Ratio', 'How many inputs are available vs expected. <0.6 → Score forced near 50, Confidence LOW.'],
-            ['Freshness Days', 'Days since last data update. Stale data > 2 days reduces confidence.'],
-            ['Anti-Noise', 'Phase cannot flip unless confirmed for 2+ consecutive days. Prevents flicker.'],
-            ['Regime Damping', 'In STRESS: scores ×0.6, confidence ×0.85. In CRISIS: scores ×0.3, confidence ×0.7.'],
-            ['Capital Rotation Score', 'Global 0-100 score aggregating macro regime, risk appetite, sector breadth, and confirmation signals. EOD-based, not real fund flows.'],
-            ['Relative Rotation', 'Comparing the price ratio of two assets over time to detect shifts in relative strength. Rising ratio = numerator gaining strength.'],
-            ['Risk-Adjusted Momentum (RAM)', 'Return divided by rolling volatility across multiple windows (1M/3M/6M/12M), weighted to produce a composite momentum signal.'],
-            ['Confirmation Layer', 'Independent checks (Credit, Dollar, Real Rates, VIX) that either support or contradict the rotation signal.'],
-            ['Cycle Position', 'Estimated position in the rotation cycle (Early/Mid/Late/Exhausted/Reversal Watch) based on percentile rank and momentum.'],
-            ['Divergence', 'When two related signals disagree — e.g., equities rising but credit spreads widening. Reduces confidence.'],
-            ['Neutral Mode', 'When score is 40-60: "quiet" (low conflict) or "conflicted" (blocks disagree strongly).'],
-            ['Sector Relative Momentum Map', 'Scatter plot showing each sector\'s relative strength (X) vs momentum (Y). NOT RRG™; uses risk-adjusted momentum.'],
+            ['Score (0-100)', '0-30 bearish, 30-70 neutral, 70-100 bullish. Composite of momentum, flows, risk, macro.'],
+            ['Phase', 'EARLY → MID → LATE → EXHAUSTED → REVERSAL_RISK. Trend lifecycle.'],
+            ['Confidence', 'HIGH/MEDIUM/LOW — signal agreement × data quality.'],
+            ['Regime', 'NORMAL / STRESS / CRISIS. Dampens scores in stress conditions.'],
+            ['Momentum', 'Price change over 20/60/200 days. Positive = uptrend.'],
+            ['Vol Z', 'Volatility z-score. >1.5 = elevated.'],
+            ['Breadth Z', 'Market breadth z-score. Negative = more decliners.'],
+            ['Flow Direction', 'Inflow/Outflow from multi-day price trends. Proxy only.'],
+            ['Capital Rotation Score', 'Global 0-100 aggregate of macro regime, risk appetite, sector breadth.'],
+            ['RAM', 'Risk-Adjusted Momentum — return / rolling volatility.'],
+            ['Divergence', 'When related signals disagree. Reduces confidence.'],
+            ['Exhaustion Gauge', 'Composite measure of trend fuel remaining. 100=strong, 0=near reversal.'],
         ];
-        let h = secTitle('Glossary');
-        terms.forEach(([term, desc]) => {
-            h += `<div style="padding:0.5rem 0;border-bottom:1px solid ${MH.border}">
-        <div style="font-weight:700;color:${MH.text};font-size:0.88rem">${esc(term)}</div>
-        <div style="font-size:0.8rem;color:${MH.muted};margin-top:0.15rem">${esc(desc)}</div>
-      </div>`;
-        });
+        h += card(`${secTitle('Glossary')}${terms.map(([term, desc]) =>
+            `<div style="padding:0.4rem 0;border-bottom:1px solid ${MH.border}"><div style="font-weight:700;color:${MH.text};font-size:0.85rem">${esc(term)}</div><div style="font-size:0.78rem;color:${MH.muted};margin-top:0.1rem">${esc(desc)}</div></div>`
+        ).join('')}`);
+        h += card(`<div style="font-size:0.8rem;color:${MH.muted};line-height:1.6">
+          <strong>Data Sources:</strong> EODHD (prices, ETFs, indices). Derived: price-flows, breadth (~2,450 US stocks).
+          <br><strong>Limitations:</strong> No real fund-flows, no options/skew data, no COT positioning.
+        </div>`);
         panel.innerHTML = h;
     }
 
@@ -808,9 +745,9 @@
 
     // ── Traffic-light keyword coloring ──
     function _colorKeywords(text) {
-        const green = ['buy', 'bullish', 'ueberkauft', 'overbought', 'staerke', 'strong', 'gaining', 'leading', 'positiv', 'stuetzend', 'risk-on'];
-        const red = ['sell', 'bearish', 'ueberverkauft', 'oversold', 'schwaeche', 'weak', 'losing', 'lagging', 'negativ', 'widersprechend', 'risk-off', 'erosion', 'verschlechtert', 'vorsicht'];
-        const yellow = ['wait', 'neutral', 'abwarten', 'gemischt', 'mixed', 'seitwaerts', 'unklar', 'conflicted', 'quiet'];
+        const green = ['buy', 'bullish', 'overbought', 'strength', 'strong', 'gaining', 'leading', 'positive', 'supporting', 'risk-on'];
+        const red = ['sell', 'bearish', 'oversold', 'weakness', 'weak', 'losing', 'lagging', 'negative', 'conflicting', 'risk-off', 'erosion', 'deteriorating', 'caution'];
+        const yellow = ['wait', 'neutral', 'mixed', 'sideways', 'unclear', 'conflicted', 'quiet'];
         let out = text;
         green.forEach(w => { out = out.replace(new RegExp(`(\\b)(${w})(\\b)`, 'gi'), `$1<span style="color:${MH.bull};font-weight:700">$2</span>$3`); });
         red.forEach(w => { out = out.replace(new RegExp(`(\\b)(${w})(\\b)`, 'gi'), `$1<span style="color:${MH.bear};font-weight:700">$2</span>$3`); });
@@ -832,18 +769,18 @@
         const topR = top[1], botR = bot[1];
         // Trend duration estimate
         const ret6m = topR.returns?.['126'], ret3m = topR.returns?.['63'], ret1m = topR.returns?.['21'];
-        let duration = 'kurzfristig (< 1 Monat)';
-        if (ret6m != null && ret6m > 0.03 && ret3m != null && ret3m > 0.02) duration = 'seit ~3-6 Monaten aufgebaut';
-        else if (ret3m != null && ret3m > 0.01) duration = 'seit ~1-3 Monaten im Aufbau';
+        let duration = 'short term (< 1 month)';
+        if (ret6m != null && ret6m > 0.03 && ret3m != null && ret3m > 0.02) duration = 'built over ~3-6 months';
+        else if (ret3m != null && ret3m > 0.01) duration = 'building for ~1-3 months';
         // Trend maturity
         const zAbs = Math.abs(topR.zScore || 0);
-        let maturity = 'frueh im Trend';
-        if (zAbs > 2) maturity = 'bereits fortgeschritten (erhoehtes Reversalrisiko)';
-        else if (zAbs > 1.2) maturity = 'im mittleren Bereich';
+        let maturity = 'early in trend';
+        if (zAbs > 2) maturity = 'extended (elevated reversal risk)';
+        else if (zAbs > 1.2) maturity = 'mid-cycle';
         // Weak side
         const botZ = Math.abs(botR.zScore || 0);
-        const botWatch = botZ > 1.5 ? ` — ${botName} ist ueberverkauft und koennte der naechste Rotationskandidat sein` : '';
-        return _insightBox(`Staerkste Rotation: <strong>${esc(topName)}</strong> (Score ${topR.composite}), Trend ${duration}, ${maturity}.<br>Schwaechste: <strong>${esc(botName)}</strong> (${botR.composite})${botWatch}.`);
+        const botWatch = botZ > 1.5 ? ` — ${botName} is oversold and may become the next rotation candidate` : '';
+        return _insightBox(`Strongest rotation: <strong>${esc(topName)}</strong> (Score ${topR.composite}), trend ${duration}, ${maturity}.<br>Weakest: <strong>${esc(botName)}</strong> (${botR.composite})${botWatch}.`);
     }
 
     function _narrativeInsight(rd) {
@@ -851,36 +788,36 @@
         const divs = rd.divergences || [];
         const sc = gs.value ?? 50;
         let phase = sc >= 65 ? 'bullish' : sc <= 35 ? 'bearish' : 'neutral';
-        let signal = divs.length ? ` Achtung: ${divs.length} Divergenz(en) aktiv — das Bild ist nicht eindeutig.` : ' Keine Divergenzen aktiv.';
-        return _insightBox(`Gesamtbild: Der Markt ist aktuell <strong>${phase}</strong> (${sc}/100).${signal} Historisch dauern neutrale Phasen 2-8 Wochen, bevor eine klare Richtung entsteht.`);
+        let signal = divs.length ? ` Warning: ${divs.length} divergence(s) active — signal picture is not clean.` : ' No active divergences.';
+        return _insightBox(`Big picture: market is currently <strong>${phase}</strong> (${sc}/100).${signal} Historically, neutral phases often last 2-8 weeks before direction firms.`);
     }
 
     function _cycleInsight(rd) {
         const cyc = rd.cycle || {};
         const conf = cyc.confidence ?? 0;
         const state = cyc.state || 'Undefined';
-        if (state.includes('Neutral') || state.includes('Undefined')) return _insightBox('Kein klares Zyklussignal — der Markt zeigt gemischte Positionierung ohne dominante Rotationsrichtung.');
+        if (state.includes('Neutral') || state.includes('Undefined')) return _insightBox('No clear cycle signal — market positioning is mixed with no dominant rotation direction.');
         const early = state.includes('Early');
         const late = state.includes('Late') || state.includes('Exhausted');
-        if (early) return _insightBox(`Fruehe Rotationsphase (Conf: ${conf}) — historisch folgen nach fruehen Signalen oft 2-4 Monate Trendfortsetzung, falls Breadth-Bestaetigung eintritt.`);
-        if (late) return _insightBox(`Spaete Phase / Erschoepfung (Conf: ${conf}) — historisch endet die Rotation innerhalb von 2-6 Wochen. Beobachte Watch-Kandidaten als naechste Fuehrung.`);
-        return _insightBox(`Zyklus: ${esc(state)} (Conf: ${conf}) — Trend ist aktiv, aber beobachte Divergenzen als Warnsignal fuer einen moeglichen Phasenwechsel.`);
+        if (early) return _insightBox(`Early rotation phase (Conf: ${conf}) — early signals often precede 2-4 months of trend continuation if breadth confirms.`);
+        if (late) return _insightBox(`Late phase / exhaustion (Conf: ${conf}) — rotations often resolve within 2-6 weeks. Watch candidates may become next leadership.`);
+        return _insightBox(`Cycle: ${esc(state)} (Conf: ${conf}) — trend is active, but divergences can warn of a phase shift.`);
     }
 
     function _confirmInsight(rd) {
         const confs = rd.confirmations || {};
         const supporting = Object.entries(confs).filter(([, c]) => c.supportsRotation === 'yes');
         const against = Object.entries(confs).filter(([, c]) => c.supportsRotation === 'no');
-        if (supporting.length > against.length) return _insightBox(`Bestaetigung ueberwiegend positiv (${supporting.length} von ${Object.keys(confs).length} Signale stuetzend) — das Umfeld unterstuetzt die aktuelle Rotation.`);
-        if (against.length > supporting.length) return _insightBox(`Bestaetigung ueberwiegend negativ (${against.length} widersprechend) — Vorsicht, das Makro-Umfeld arbeitet gegen die Rotation.`);
-        return _insightBox('Bestaetigung gemischt — keine klare Unterstuetzung oder Widerspruch durch Credit, Dollar, VIX. Abwarten empfohlen.');
+        if (supporting.length > against.length) return _insightBox(`Confirmation mostly positive (${supporting.length} of ${Object.keys(confs).length} signals supportive) — backdrop supports current rotation.`);
+        if (against.length > supporting.length) return _insightBox(`Confirmation mostly negative (${against.length} conflicting) — caution, macro backdrop works against rotation.`);
+        return _insightBox('Confirmation mixed — no clear support or conflict from credit, dollar, or volatility. Wait recommended.');
     }
 
     function _divInsight(rd) {
         const divs = rd.divergences || [];
-        if (!divs.length) return _insightBox('Keine Divergenzen — alle Signale sind konsistent, was die Zuverlaessigkeit des aktuellen Scores erhoeht.');
+        if (!divs.length) return _insightBox('No divergences — signals are aligned, improving score reliability.');
         const titles = divs.map(d => d.title).join(', ');
-        return _insightBox(`${divs.length} aktive Divergenz(en): ${esc(titles)} — unter der Oberflaeche bricht etwas auf. Historisch folgen nach Breadth-Erosion oft 4-8 Wochen spaeter Trendwechsel.`);
+        return _insightBox(`${divs.length} active divergence(s): ${esc(titles)} — pressure is building under the surface. Breadth erosion often precedes trend shifts by 4-8 weeks.`);
     }
 
     // ── Leadership Ladder ──
@@ -1134,14 +1071,14 @@
         const leading = unifiedEntries.filter(e => e.quadrant === 'Leading');
         const lagging = unifiedEntries.filter(e => e.quadrant === 'Lagging');
         const watchCandidates = unifiedEntries.filter(e => e.rs < 40 && Math.abs(e.zScore) > 1.2);
-        let insight = `${leading.length} Sektoren/Ratios fuehren (Leading), ${lagging.length} hinken hinterher (Lagging).`;
+        let insight = `${leading.length} sectors/ratios lead, ${lagging.length} lag.`;
         if (watchCandidates.length) {
-            insight += ` Beobachtenswert: ${watchCandidates.map(e => e.label).join(', ')} — schwach aber mit erhoehtem Reversalpotenzial (gestrichelte Ringe).`;
+            insight += ` Watch: ${watchCandidates.map(e => e.label).join(', ')} — weak, but with elevated reversal potential (dashed rings).`;
         }
 
         let h = secTitle('Rotation & Opportunity Map');
         h += _insightBox(insight);
-        h += `<div style="font-size:0.62rem;color:${MH.muted};margin-bottom:0.3rem">Sektoren (grosse Punkte) + Macro/Style Ratios (kleine Punkte) | Gestrichelter Ring = hohes Reversalpotenzial</div>` + svg;
+        h += `<div style="font-size:0.62rem;color:${MH.muted};margin-bottom:0.3rem">Sectors (large dots) + macro/style ratios (small dots) | Dashed ring = high reversal potential</div>` + svg;
         return h;
     }
 
@@ -1205,10 +1142,10 @@
         const weak = axes.filter(a => a.value < 40).map(a => a.label);
         const strong = axes.filter(a => a.value >= 60).map(a => a.label);
         let insight = '';
-        if (weak.length && strong.length) insight = `Staerke bei ${strong.join(', ')} — aber Schwaeche bei ${weak.join(', ')} zeigt innere Konflikte unter der Oberflaeche.`;
-        else if (weak.length) insight = `Breite Schwaeche bei ${weak.join(', ')} — das Risikobild verschlechtert sich, auch wenn der Score noch neutral wirkt.`;
-        else if (strong.length) insight = `Breite Staerke bei ${strong.join(', ')} — alle Dimensionen stuetzen den aktuellen Trend.`;
-        else insight = 'Alle Dimensionen nahe neutral — kein klarer Ausreisser, abwartende Haltung empfohlen.';
+        if (weak.length && strong.length) insight = `Strength in ${strong.join(', ')} — but weakness in ${weak.join(', ')} shows internal conflict below the surface.`;
+        else if (weak.length) insight = `Broad weakness in ${weak.join(', ')} — risk backdrop is deteriorating even if score still looks neutral.`;
+        else if (strong.length) insight = `Broad strength in ${strong.join(', ')} — all dimensions support current trend.`;
+        else insight = 'All dimensions near neutral — no clear outlier, wait stance preferred.';
 
         let h = secTitle('Divergence Radar');
         h += _insightBox(insight);
@@ -1277,12 +1214,12 @@
         const botScore2 = sorted.length ? sorted[sorted.length - 1][1]?.composite ?? 50 : 50;
         const topR2 = sorted[0]?.[1];
         const ret6t = topR2?.returns?.['126'], ret3t = topR2?.returns?.['63'];
-        let trendNote2 = 'kurzfristiger Trend';
-        if (ret6t != null && ret6t > 0.03) trendNote2 = 'Trend laeuft seit 3-6 Monaten';
-        else if (ret3t != null && ret3t > 0.01) trendNote2 = 'Trend seit 1-3 Monaten im Aufbau';
+        let trendNote2 = 'short-term trend';
+        if (ret6t != null && ret6t > 0.03) trendNote2 = 'trend running for 3-6 months';
+        else if (ret3t != null && ret3t > 0.01) trendNote2 = 'trend building for 1-3 months';
 
         let h = secTitle('Flow Story Timeline');
-        h += _insightBox(`${esc(topName)} fuehrt mit Score ${topScore} (${trendNote2}), waehrend ${esc(botName)} bei ${botScore2} am schwaechsten ist — ${divs.length ? 'aktive Divergenzen deuten auf moegliche Verschiebung hin' : 'keine Warnsignale fuer eine baldige Aenderung'}.`);
+        h += _insightBox(`${esc(topName)} leads with score ${topScore} (${trendNote2}), while ${esc(botName)} is weakest at ${botScore2} — ${divs.length ? 'active divergences point to possible rotation shift' : 'no warning signals for near-term change'}.`);
         h += `<div style="font-size:0.62rem;color:${MH.muted};margin-bottom:0.4rem">Current snapshot — historical timeline requires time-series data</div>`;
         h += '<div class="mh-viz-timeline-tracks">';
 
@@ -1452,7 +1389,7 @@
                     // Expanded: related ratios, confirmation context, historical framing
                     const relatedRatios = Object.entries(ratios).filter(([, r]) => r.category === 'sector' && (r.composite < 42 || Math.abs(r.zScore || 0) > 1.3));
                     if (relatedRatios.length) {
-                        divHtml += `<div style="font-size:0.72rem;color:${MH.text};margin-bottom:0.3rem"><strong>Betroffene Ratios:</strong></div>`;
+                        divHtml += `<div style="font-size:0.72rem;color:${MH.text};margin-bottom:0.3rem"><strong>Related ratios:</strong></div>`;
                         divHtml += `<div style="display:flex;gap:0.3rem;flex-wrap:wrap;margin-bottom:0.3rem">`;
                         relatedRatios.forEach(([id, r]) => {
                             const nm = RATIO_NAMES[id] || id.replace(/_/g, '/');
@@ -1468,28 +1405,28 @@
                         const supporting = confEntries.filter(([, c]) => c.supportsRotation === 'yes').map(([k]) => k);
                         const against = confEntries.filter(([, c]) => c.supportsRotation === 'no').map(([k]) => k);
                         divHtml += `<div style="font-size:0.72rem;margin-top:0.2rem">`;
-                        if (supporting.length) divHtml += `<span style="color:${MH.bull}">Stuetzend: ${supporting.join(', ')}</span> `;
-                        if (against.length) divHtml += `<span style="color:${MH.bear}">Dagegen: ${against.join(', ')}</span>`;
+                        if (supporting.length) divHtml += `<span style="color:${MH.bull}">Supporting: ${supporting.join(', ')}</span> `;
+                        if (against.length) divHtml += `<span style="color:${MH.bear}">Against: ${against.join(', ')}</span>`;
                         divHtml += `</div>`;
                     }
                     // Historical context
                     divHtml += `<div style="font-size:0.68rem;color:${MH.muted};margin-top:0.3rem;padding-top:0.3rem;border-top:1px solid ${MH.dim}">`;
-                    divHtml += `Historischer Kontext: Breadth-Erosion tritt typischerweise 4-8 Wochen vor groesseren Trendwechseln auf. `;
+                    divHtml += `Historical context: breadth erosion often appears 4-8 weeks before major trend changes. `;
                     const sectorAvg = Object.values(ratios).filter(r => r.category === 'sector').reduce((s, r) => ({ sum: s.sum + (r.composite || 50), n: s.n + 1 }), { sum: 0, n: 0 });
                     const avgScore = sectorAvg.n ? (sectorAvg.sum / sectorAvg.n).toFixed(0) : 50;
-                    divHtml += `Aktueller Sektor-Durchschnitt: ${avgScore}/100. `;
+                    divHtml += `Current sector average: ${avgScore}/100. `;
                     const weakCount = Object.values(ratios).filter(r => r.category === 'sector' && (r.composite || 50) < 45).length;
                     const totalSec = Object.values(ratios).filter(r => r.category === 'sector').length;
-                    divHtml += `${weakCount} von ${totalSec} Sektoren unter 45 — ${weakCount > totalSec / 2 ? 'Mehrheit schwach, erhoehte Vorsicht' : 'begrenzte Schwaeche, noch kein Flaechenbrand'}.`;
+                    divHtml += `${weakCount} of ${totalSec} sectors below 45 — ${weakCount > totalSec / 2 ? 'majority weak, elevated caution' : 'limited weakness, no broad stress yet'}.`;
                     divHtml += `</div>`;
                     divHtml += `</div>`;
                 });
             } else {
-                divHtml += `<div style="color:${MH.bull};font-size:0.78rem;padding:0.4rem 0">Keine Divergenzen erkannt — alle Signale konsistent.</div>`;
+                divHtml += `<div style="color:${MH.bull};font-size:0.78rem;padding:0.4rem 0">No divergences detected — signals are aligned.</div>`;
                 // Still show summary stats
                 const sectorAvg = Object.values(ratios).filter(r => r.category === 'sector').reduce((s, r) => ({ sum: s.sum + (r.composite || 50), n: s.n + 1 }), { sum: 0, n: 0 });
                 const avgScore = sectorAvg.n ? (sectorAvg.sum / sectorAvg.n).toFixed(0) : 50;
-                divHtml += `<div style="font-size:0.72rem;color:${MH.muted}">Sektor-Durchschnitt: ${avgScore}/100 | Alle Konfirmationen und Ratios in Einklang.</div>`;
+                divHtml += `<div style="font-size:0.72rem;color:${MH.muted}">Sector average: ${avgScore}/100 | Confirmations and ratios aligned.</div>`;
             }
             h += card(divHtml);
         }
@@ -1509,7 +1446,7 @@
         });
 
         h += '<div id="mh-ratio-drilldown" style="display:none"></div>';
-        h += `<div style="font-size:0.68rem;color:${MH.muted};margin-top:0.6rem;font-style:italic">Relative rotation derived from EOD price ratios — not fund-flow data. Price return only. <a href="#" onclick="window._mhSwitchTab('methodology');return false" style="color:${MH.blue}">Methodology</a></div>`;
+        h += `<div style="font-size:0.68rem;color:${MH.muted};margin-top:0.6rem;font-style:italic">Relative rotation derived from EOD price ratios — not fund-flow data. Price return only. <a href="#" onclick="window._mhSwitchTab('help');return false" style="color:${MH.blue}">Methodology</a></div>`;
         h += sourcesFooter('EODHD (derived ratios)', meta.asOfDate);
         panel.innerHTML = h;
 
@@ -1628,10 +1565,11 @@
     };
 
     const RENDERERS = {
-        snapshot: renderSnapshot, sectors: renderSectors, commodities: renderCommodities,
-        crypto: renderCrypto, countries: renderCountries, flows: renderCapitalRotation,
-        risks: renderRisks, playbook: renderPlaybook, alerts: renderAlerts,
-        methodology: renderMethodology, glossary: renderGlossary
+        dashboard: renderDashboard,
+        flows: renderCapitalRotation,
+        assets: renderAssetClasses,
+        riskmonitor: renderRiskMonitor,
+        help: renderHelp
     };
 
     function renderPanelError(tabId, reason) {
@@ -1714,18 +1652,18 @@
     </div>`;
 
         // Demo warning
-        html += `<div class="mh-demo-warn">All scores based on End of The Day Data and Flows are price-proxies, not real fund-flows. Confidence is computed from data availability. <a href="#" onclick="window._mhSwitchTab('methodology');return false">Full methodology</a></div>`;
+        html += `<div class="mh-demo-warn">All scores based on End of The Day Data. Flows are price-proxies, not real fund-flows. <a href="#" onclick="window._mhSwitchTab('help');return false">Methodology & Glossary</a></div>`;
 
         // Tab bar
         html += '<div class="mh-tab-bar">';
         TABS.forEach(t => {
-            html += `<button class="mh-tab${t.id === 'snapshot' ? ' mh-tab-active' : ''}" data-tab="${t.id}" onclick="window._mhSwitchTab('${t.id}')">${t.label}</button>`;
+            html += `<button class="mh-tab${t.id === 'dashboard' ? ' mh-tab-active' : ''}" data-tab="${t.id}" onclick="window._mhSwitchTab('${t.id}')">${t.label}</button>`;
         });
         html += '</div>';
 
         // Panels
         TABS.forEach(t => {
-            html += `<div id="mh-panel-${t.id}" class="mh-panel${t.id === 'snapshot' ? ' mh-panel-active' : ''}"></div>`;
+            html += `<div id="mh-panel-${t.id}" class="mh-panel${t.id === 'dashboard' ? ' mh-panel-active' : ''}"></div>`;
         });
 
         root.innerHTML = html;
@@ -1744,17 +1682,11 @@
             return true;
         };
         const checks = {
-            snapshot: has(gDoc?.regime_mode) && has(gDoc?.investment_compass),
+            dashboard: has(gDoc?.regime_mode) && has(gDoc?.investment_compass),
             flows: has(cards),
-            sectors: filterCards('SECTOR:').length > 0,
-            commodities: filterCards('CMDTY:').length > 0,
-            crypto: filterCards('CRYPTO:').length > 0,
-            countries: filterCards('INDEX:').length > 0 || filterCards('FX:').length > 0,
-            risks: has(gDoc?.regime_details),
-            playbook: has(cards),
-            alerts: true,
-            methodology: true,
-            glossary: true
+            assets: Object.keys(cards).length > 0,
+            riskmonitor: has(gDoc?.regime_details),
+            help: true
         };
         return Object.fromEntries(
             Object.entries(checks).map(([tab, ok]) => [tab, {
