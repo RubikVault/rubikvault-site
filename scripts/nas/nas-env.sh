@@ -41,6 +41,7 @@ export RV_EODHD_HARD_DAILY_CAP="${RV_EODHD_HARD_DAILY_CAP:-90000}"
 # extends the budget while still finishing well before the next EODHD daily-cap reset
 # at midnight UTC. Override per-environment if your bulk rate differs.
 export RV_MARKET_REFRESH_TIMEOUT_SEC="${RV_MARKET_REFRESH_TIMEOUT_SEC:-43200}"
+export RV_STOCK_UI_AUDIT_HARD_GATE="${RV_STOCK_UI_AUDIT_HARD_GATE:-1}"
 
 export NAS_RUNTIME_ROOT="${NAS_RUNTIME_ROOT:-$NAS_OPS_ROOT/runtime}"
 export NAS_LOCK_ROOT="${NAS_LOCK_ROOT:-$NAS_RUNTIME_ROOT/locks}"
