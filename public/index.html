@@ -1763,11 +1763,14 @@
         const asOf = homeSetupsByHorizon?.asOf || topSetupsDoc?.meta?.data_date || topSetupsDoc?.meta?.generated_at || 'n/a';
         const source = homeSetupsByHorizon?.source || 'n/a';
         const verified = isAnalyzerVerifiedSource(source);
+        const total = counts.short + counts.medium + counts.long;
         noteEl.textContent = verified
-          ? (isQuantLabVerifiedSource(source)
+          ? (total === 0
+            ? `No analyzer-verified BUY rows in current snapshot. Source: ${source}. asOf=${asOf}.`
+            : isQuantLabVerifiedSource(source)
             ? `Analyzer-verified BUY/HIGH rows ranked by Quant Lab strength (max 10 each). Source: ${source}. asOf=${asOf}. Click a number to inspect rows.`
             : `Analyzer-verified BUY/HIGH rows by horizon (max 10 each). Source: ${source}. asOf=${asOf}. Click a number to inspect rows.`)
-          : `Best setups by horizon (max 10 each). Source: ${source}. asOf=${asOf}. Click a number to inspect rows.`;
+          : `No analyzer-verified BUY snapshot available. Source: ${source}. asOf=${asOf}.`;
       }
       window.__rvUiAudit = window.__rvUiAudit || {};
       window.__rvUiAudit.analyze = {
@@ -2861,7 +2864,10 @@
 
     function isAnalyzerVerifiedSource(source) {
       const value = String(source || '');
-      return value.includes('stock_api_verified') || value.includes('quantlab_ranked');
+      return value.includes('stock_api_verified')
+        || value.includes('quantlab_ranked')
+        || value.includes('decision_bundle_consumer')
+        || value.includes('verified_decision_bundle');
     }
 
     function bestSetupMetricLabel(source) {
@@ -3155,26 +3161,22 @@
     async function renderBestSetups() {
       if (!bestSetupsByHorizonWrap || !bestSetupsMeta) return;
       const verifiedDoc = await loadVerifiedBestSetupsDoc();
-      const verifiedDocHasRows = verifiedDoc && ['short', 'medium', 'long'].some((h) =>
-        (verifiedDoc?.data?.stocks?.[h]?.length || 0) + (verifiedDoc?.data?.etfs?.[h]?.length || 0) > 0);
-      let horizonRows;
-      if (verifiedDocHasRows) {
-        horizonRows = buildVerifiedBestSetupsByHorizon(verifiedDoc);
-      } else {
-        await loadForecastLatestDoc();
-        const forecastRows = buildForecastHorizonFallback();
-        horizonRows = buildBestSetupsByHorizon(forecastRows);
-      }
+      const verifiedDocSource = verifiedDoc?.meta?.source || verifiedDoc?.source || '';
+      const verifiedDocUsable = verifiedDoc && isAnalyzerVerifiedSource(verifiedDocSource);
+      const verifiedFallbackDoc = {
+        meta: { source: 'verified_decision_bundle_unavailable', generated_at: null },
+        data: { stocks: {}, etfs: {} }
+      };
+      const horizonRows = buildVerifiedBestSetupsByHorizon(verifiedDocUsable ? verifiedDoc : verifiedFallbackDoc);
       const source = horizonRows.source || 'none';
       const metricLabel = bestSetupMetricLabel(source);
       const generatedAt = verifiedDoc?.meta?.quantlab_asof || verifiedDoc?.meta?.forecast_asof || verifiedDoc?.generated_at || topSetupsDoc?.meta?.generated_at || horizonRows?.asOf || 'n/a';
       const totalRows = ['short', 'medium', 'long'].reduce((sum, h) => sum + (horizonRows[h]?.length || 0), 0);
       bestSetupsMeta.textContent = `Rows=${totalRows} • source=${source} • asOf=${generatedAt}`;
 
-      const isVerifiedMode = verifiedDocHasRows;
-      const signalClassBanner = isVerifiedMode
-        ? '<div style="margin-bottom:0.6rem; padding:0.35rem 0.6rem; background:rgba(34,197,94,0.12); border:1px solid rgba(34,197,94,0.3); border-radius:6px; font-size:0.78rem; color:#22c55e; font-weight:600;">✓ Verified BUY — Decision Bundle validated</div>'
-        : '<div style="margin-bottom:0.6rem; padding:0.35rem 0.6rem; background:rgba(59,130,246,0.10); border:1px solid rgba(59,130,246,0.3); border-radius:6px; font-size:0.78rem; color:#60a5fa;">⚡ High-Probability Bullish Candidates — not verified BUY decisions. Thresholds: Short ≥60%, Mid ≥62%, Long ≥55% (≥68% = confirmed).</div>';
+      const signalClassBanner = totalRows > 0
+        ? '<div style="margin-bottom:0.6rem; padding:0.35rem 0.6rem; background:rgba(34,197,94,0.12); border:1px solid rgba(34,197,94,0.3); border-radius:6px; font-size:0.78rem; color:#22c55e; font-weight:600;">Verified BUY - Decision Bundle validated</div>'
+        : '<div style="margin-bottom:0.6rem; padding:0.35rem 0.6rem; background:rgba(100,116,139,0.10); border:1px solid rgba(100,116,139,0.28); border-radius:6px; font-size:0.78rem; color:#94a3b8;">No analyzer-verified BUY rows in current snapshot. No fallback candidates are counted as BUY.</div>';
       const titles = {
         short: 'Short (1-5d) Top 10',
         medium: 'Mid (5-20d) Top 10',

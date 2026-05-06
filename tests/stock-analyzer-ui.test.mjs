@@ -443,6 +443,16 @@ test('No "Macro context not yet available" in stock-features.js', async () => {
   assert.ok(!content.includes('Macro context not yet available'), 'Found dead macro placeholder');
 });
 
+test('Frontpage BUY counters use verified decision rows only', async () => {
+  const fs = await import('node:fs');
+  const content = fs.readFileSync(new URL('../public/index.html', import.meta.url), 'utf-8');
+  assert.ok(content.includes('No fallback candidates are counted as BUY.'), 'Verified BUY empty-state copy is missing');
+  assert.ok(content.includes('verified_decision_bundle_unavailable'), 'Verified BUY unavailable source is missing');
+  assert.ok(content.includes('decision_bundle_consumer'), 'Decision-bundle source must be treated as verified');
+  assert.ok(!content.includes('High-Probability Bullish Candidates'), 'Unverified bullish candidates must not render inside BUY counters');
+  assert.ok(!content.includes('Best setups by horizon (max 10 each)'), 'Unverified best-setups fallback must not be counted as BUY');
+});
+
 test('Live stock.html loads stock-features.js', async () => {
   const fs = await import('node:fs');
   const content = fs.readFileSync(new URL('../public/stock.html', import.meta.url), 'utf-8');

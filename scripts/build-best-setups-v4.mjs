@@ -137,13 +137,19 @@ async function readDecisionBundleBuyRows(targetMarketDate = null) {
       ) {
         continue;
       }
+      const confidence = String(decision?.confidence || '').toUpperCase();
+      const staleFlags = Array.isArray(decision?.stale_flags) ? decision.stale_flags.filter(Boolean) : [];
+      const blockingReasons = Array.isArray(decision?.blocking_reasons) ? decision.blocking_reasons.filter(Boolean) : [];
+      if (!['MEDIUM', 'HIGH'].includes(confidence)) continue;
+      if (staleFlags.length > 0 || blockingReasons.length > 0) continue;
+      if (decision?.buy_eligibility?.eligible !== true) continue;
       const scores = decision.scores || {};
       rows.push({
         ticker: decision.symbol,
         canonical_id: decision.canonical_id,
         asset_class: String(decision.asset_class || '').toUpperCase() === 'ETF' ? 'etf' : 'stock',
         verdict: 'BUY',
-        confidence: 'HIGH',
+        confidence,
         buy_eligible: true,
         trigger_fulfilled: true,
         analyzer_composite: num(scores.composite) ?? 0,
@@ -152,7 +158,12 @@ async function readDecisionBundleBuyRows(targetMarketDate = null) {
         analyzer_risk_score: num(scores.risk) ?? num(scores.composite) ?? 0,
         analyzer_context_score: num(scores.context) ?? num(scores.composite) ?? 0,
         decision_snapshot_id: latest.snapshot_id,
+        decision_as_of: decision.as_of || null,
+        price_basis: decision.price_basis || null,
         decision_reason_codes: decision.reason_codes || [],
+        decision_reasons: Array.isArray(decision.reasons) ? decision.reasons : [],
+        stale_flags: staleFlags,
+        module_contributions: decision.module_contributions || null,
       });
     }
   }
@@ -497,7 +508,7 @@ async function main() {
   const decisionBundleMode = process.env.BEST_SETUPS_USE_DECISION_BUNDLE !== '0'
     ? await readDecisionBundleBuyRows(requestedTargetDate)
     : null;
-  if (decisionBundleMode && (decisionBundleMode.rows || []).length > 0) {
+  if (decisionBundleMode) {
     const buyRows = decisionBundleMode.rows || [];
     const horizonsByClass = { stocks: {}, etfs: {} };
     for (const horizon of ['short', 'medium', 'long']) {
@@ -571,10 +582,6 @@ async function main() {
     });
     console.log(`[best-setups-v4] decision-bundle consumer mode snapshot=${decisionBundleMode.latest?.snapshot_id || 'unknown'} buys=${buyRows.length}`);
     return;
-  }
-
-  if (decisionBundleMode) {
-    console.log(`[best-setups-v4] decision-bundle has 0 BUY rows (status=${decisionBundleMode.latest?.status || 'unknown'}), falling through to QuantLab/forecast path`);
   }
 
   const [quantlabResult, forecastDoc] = await Promise.all([
