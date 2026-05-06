@@ -115,6 +115,12 @@ const RSYNC_EXCLUDES = [
   '/proof.html',      // internal verification
 ];
 
+const RUNTIME_SERIES_ALLOWLIST = [
+  'data/v3/series/adjusted/US__AAPL.ndjson.gz',
+  'data/v3/series/adjusted/US__SPY.ndjson.gz',
+  'data/v3/series/adjusted/US__F.ndjson.gz',
+];
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function log(msg) { console.log(`[build-deploy-bundle] ${msg}`); }
@@ -533,6 +539,17 @@ if (!isDryRun) {
     }
     log(`Copied ${bucketFiles.length} git-tracked search bucket files to dist/`);
   }
+
+  let copiedRuntimeSeries = 0;
+  for (const relPath of RUNTIME_SERIES_ALLOWLIST) {
+    const src = path.join(PUBLIC_DIR, relPath);
+    const dest = path.join(DIST_DIR, relPath);
+    if (!fs.existsSync(src)) continue;
+    fs.mkdirSync(path.dirname(dest), { recursive: true });
+    fs.copyFileSync(src, dest);
+    copiedRuntimeSeries += 1;
+  }
+  if (copiedRuntimeSeries > 0) log(`Copied ${copiedRuntimeSeries} runtime chart series files to dist/`);
 
   fs.rmSync(path.join(DIST_DIR, 'data/runtime'), { recursive: true, force: true });
 }
