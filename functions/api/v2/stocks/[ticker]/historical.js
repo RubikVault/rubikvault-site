@@ -1,8 +1,56 @@
 import { isV2Enabled, v2GateResponse } from '../../../_shared/v2-gate.js';
-import { fetchStockHistorical } from '../../../_shared/data-interface.js';
+import { getStaticBars } from '../../../_shared/history-store.mjs';
 import { normalizeTicker } from '../../../_shared/stock-helpers.js';
 import { logV2Request, logV2Gate } from '../../../_shared/v2-observability.js';
 import { errorEnvelope } from '../../../_shared/envelope.js';
+
+function pickLatestBar(bars) {
+  return Array.isArray(bars) && bars.length ? bars[bars.length - 1] : null;
+}
+
+function historicalLimitForRequest(request) {
+  try {
+    const host = new URL(request.url).hostname;
+    if (host === 'localhost' || host === '127.0.0.1') return 1500;
+  } catch { /* keep default */ }
+  return 750;
+}
+
+function fastStaticHistoricalResponse({ ticker, request, env }) {
+  return getStaticBars(ticker, new URL(request.url).origin, env?.ASSETS || null)
+    .then((bars) => {
+      if (!Array.isArray(bars) || bars.length < 60) return null;
+      const limit = historicalLimitForRequest(request);
+      const limitedBars = bars.length > limit ? bars.slice(-limit) : bars;
+      const latest = pickLatestBar(limitedBars);
+      return {
+        ok: true,
+        data: {
+          ticker,
+          bars: limitedBars,
+          indicators: [],
+          indicator_issues: [],
+          breakout_v12: {
+            status: 'not_generated',
+            source: 'historical_fast_static_store',
+            reason: 'Historical endpoint fast path returns chart bars only.',
+          },
+          breakout_v2: null,
+          breakout_v2_legacy: null,
+        },
+        meta: {
+          status: 'fresh',
+          generated_at: new Date().toISOString(),
+          data_date: latest?.date || new Date().toISOString().slice(0, 10),
+          provider: 'static_store',
+          quality_flags: ['STATIC_FAST_HISTORY', `BAR_LIMIT_${limit}`],
+          version: 'v2',
+        },
+        error: null,
+      };
+    })
+    .catch(() => null);
+}
 
 export async function onRequestGet(context) {
   const { env, params, request } = context;
@@ -30,7 +78,11 @@ export async function onRequestGet(context) {
 
   let result = null;
   try {
-    result = await fetchStockHistorical(ticker, env, request);
+    result = await fastStaticHistoricalResponse({ ticker, request, env });
+    if (!result) {
+      const { fetchStockHistorical } = await import('../../../_shared/data-interface.js');
+      result = await fetchStockHistorical(ticker, env, request);
+    }
   } catch (err) {
     const todayUtc = new Date().toISOString().slice(0, 10);
     result = {
