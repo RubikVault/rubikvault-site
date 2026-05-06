@@ -128,11 +128,30 @@ function loadHistoryTouchReport(filePath) {
   const report = readJsonIfExists(filePath);
   const byPack = new Map();
   if (!report || !Array.isArray(report.packs)) return { report, byPack };
+  const addTouched = (pack, ids) => {
+    const cleanPack = String(pack || '').trim();
+    if (!cleanPack || !ids || ids.length <= 0) return;
+    if (!byPack.has(cleanPack)) byPack.set(cleanPack, new Set());
+    const target = byPack.get(cleanPack);
+    for (const id of ids) {
+      const canonicalId = String(id || '').trim().toUpperCase();
+      if (canonicalId) target.add(canonicalId);
+    }
+  };
+  if (Array.isArray(report.entries)) {
+    for (const row of report.entries) {
+      addTouched(row?.history_pack, [row?.canonical_id]);
+    }
+  }
   for (const row of report.packs) {
     const pack = String(row?.history_pack || '').trim();
     if (!pack) continue;
-    const touched = new Set((row?.touched_assets || []).map((item) => String(item || '').trim().toUpperCase()).filter(Boolean));
-    if (touched.size > 0) byPack.set(pack, touched);
+    const rawTouched = row?.touched_assets;
+    if (Array.isArray(rawTouched)) {
+      addTouched(pack, rawTouched);
+    } else if (rawTouched && typeof rawTouched === 'object') {
+      addTouched(pack, Object.values(rawTouched).flat());
+    }
   }
   return { report, byPack };
 }
