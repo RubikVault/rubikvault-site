@@ -1,6 +1,6 @@
 {
   "schema": "rv.master_workstream_tracker.v1",
-  "updated_at": "2026-05-06T18:05:00.000Z",
+  "updated_at": "2026-05-06T18:45:00.000Z",
   "status_order": [
     "planned",
     "implemented",
@@ -21,7 +21,7 @@
     "decision_ready_ratio": 0.998504,
     "public_post_deploy_proof_complete": true,
     "market_widgets_valid_or_typed_degraded": true,
-    "buy_signals_fresh_confident_reasoned": false
+    "buy_signals_fresh_confident_reasoned": true
   },
   "workstreams": [
     {
@@ -244,13 +244,13 @@
       "id": "phase6_buy_signal_quality",
       "phase": 6,
       "title": "Make BUY signals fresh, confidence-scored, reasoned, and scorecard-backed",
-      "status": "MAIN_smoke_passed",
-      "repo_sha": "bf7d9bc860611402b51e995257d6f0c85f5eccfa",
-      "nas_run_id": "20260506T143357Z",
-      "main_smoke": "https://rubikvault.com/data/status/decision-module-scorecard-latest.json status=200 modules=7",
-      "pages_dev_smoke": "https://rubikvault-site.pages.dev/data/status/decision-module-scorecard-latest.json status=200 modules=7",
-      "artifact_proof": "public/data/status/decision-module-scorecard-latest.json",
-      "notes": "decision-module-scorecard live both hosts; modules=7; adaptive=ready_for_review; BUY freshness/confidence runtime work still pending"
+      "status": "green",
+      "repo_sha": "2e6b7b21407acd5861504a4a9d1cf64af7cd2e3b",
+      "nas_run_id": "20260506T181201Z",
+      "main_smoke": "https://rubikvault.com/data/snapshots/best-setups-v4.json source=decision_bundle_consumer rows=60 stale_rows=0 with_evidence=60; deploy-proof sha=2e6b7b21407acd5861504a4a9d1cf64af7cd2e3b smokes_ok=true",
+      "pages_dev_smoke": "https://rubikvault-site.pages.dev/data/snapshots/best-setups-v4.json source=decision_bundle_consumer rows=60 stale_rows=0 with_evidence=60; deploy-proof sha=2e6b7b21407acd5861504a4a9d1cf64af7cd2e3b smokes_ok=true",
+      "artifact_proof": "decision bundle snapshot dec-20260505-852ac8ab2c85; tmp/stock-ui-audit-custom-phase6-2e6b7b.json PASS; tmp/stock-ui-audit-pages-phase6-2e6b7b.json PASS; browser frontpage verified decision source with no old fallback headlines",
+      "notes": "Frontpage BUY rows now require verified decision bundle rows with MEDIUM/HIGH confidence, empty stale_flags, no blocking_reasons, eligible BUY status, decision reasons, module contributions, decision_as_of, and price_basis. NAS rebuilt decision bundle and best-setups snapshot, then release-full wrangler_deploy succeeded on both hosts."
     }
   ]
 }
