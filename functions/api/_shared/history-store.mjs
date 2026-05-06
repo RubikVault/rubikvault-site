@@ -63,6 +63,10 @@ function latestMergedDate(rows) {
     return typeof latest?.date === 'string' ? latest.date : null;
 }
 
+function hasRenderableHistory(rows, minBars = 60) {
+    return Array.isArray(rows) && rows.length >= minBars;
+}
+
 async function responseTextMaybeGzip(response, relPath) {
     const contentEncoding = String(response.headers.get('content-encoding') || '').toLowerCase();
     const contentType = String(response.headers.get('content-type') || '').toLowerCase();
@@ -320,24 +324,6 @@ export async function getStaticBars(symbol, baseUrl, assetFetcher = null) {
             return indexed.get(String(canonicalId).trim().toUpperCase()) || [];
         }
 
-        const packLookup = await loadHistoryPackLookup();
-        const lookupEntries = candidates
-            .map((candidate) => normalizePackEntry(
-                packLookup?.by_symbol?.[candidate]
-                || packLookup?.by_canonical_id?.[candidate]
-                || null
-            ))
-            .filter(Boolean);
-
-        const packManifest = await loadHistoryPackManifest();
-        const manifestEntries = candidates
-            .map((candidate) => normalizePackEntry(
-                packManifest?.by_symbol?.[candidate]
-                || packManifest?.by_canonical_id?.[candidate]
-                || null
-            ))
-            .filter(Boolean);
-
         const seriesCandidates = [
             `/data/v3/series/adjusted/US__${cleanSymbol}.ndjson.gz`
         ];
@@ -386,6 +372,28 @@ export async function getStaticBars(symbol, baseUrl, assetFetcher = null) {
                 }
             } catch { /* ignore */ }
         }
+
+        if (hasRenderableHistory(mergedBars)) {
+            return mergedBars;
+        }
+
+        const packLookup = await loadHistoryPackLookup();
+        const lookupEntries = candidates
+            .map((candidate) => normalizePackEntry(
+                packLookup?.by_symbol?.[candidate]
+                || packLookup?.by_canonical_id?.[candidate]
+                || null
+            ))
+            .filter(Boolean);
+
+        const packManifest = await loadHistoryPackManifest();
+        const manifestEntries = candidates
+            .map((candidate) => normalizePackEntry(
+                packManifest?.by_symbol?.[candidate]
+                || packManifest?.by_canonical_id?.[candidate]
+                || null
+            ))
+            .filter(Boolean);
 
         const packEntries = [...lookupEntries, ...manifestEntries]
             .filter(Boolean)

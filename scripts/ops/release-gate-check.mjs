@@ -604,7 +604,7 @@ function checkReleaseState() {
 function checkBuildMeta() {
   const meta = readJson(BUILD_META_PATH);
   if (meta?.meta?.commit) {
-    log(`Current build commit: ${meta.meta.commit.slice(0, 8)}`);
+    log(`Public build-meta commit: ${meta.meta.commit.slice(0, 8)}`);
   }
   return meta;
 }
@@ -830,6 +830,7 @@ const currentGitSha = resolveCurrentCommitSha();
 if (!currentGitSha && !isDryRun) {
   fail('Could not resolve deploy git commit SHA. Set RV_DEPLOY_COMMIT_SHA or run safe-code-sync before release.');
 }
+if (currentGitSha) log(`Resolved deploy commit: ${currentGitSha.slice(0, 12)}`);
 checkCleanWorkingTree();
 
 // 1. Gate checks

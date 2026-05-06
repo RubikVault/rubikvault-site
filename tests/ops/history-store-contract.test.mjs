@@ -29,9 +29,11 @@ test('history store reads compact gzip public history shards before legacy json 
     1000 + index,
   ]);
   const gzPayload = gzipSync(Buffer.from(JSON.stringify({ HOOD: bars })));
+  const requested = [];
   const assetFetcher = {
     async fetch(url) {
       const pathname = new URL(url).pathname;
+      requested.push(pathname);
       if (pathname === '/data/eod/history/shards/H.json.gz') {
         return new Response(gzPayload, {
           status: 200,
@@ -48,6 +50,8 @@ test('history store reads compact gzip public history shards before legacy json 
   const resolved = await getStaticBars('HOOD', 'https://example.test', assetFetcher);
   assert.equal(resolved.length, 65);
   assert.equal(resolved.at(-1).close, 164.5);
+  assert.ok(!requested.includes('/data/eod/history/pack-manifest.us-eu.lookup.json'));
+  assert.ok(!requested.includes('/data/eod/history/pack-manifest.us-eu.json'));
 });
 
 test('history store resolves known exchange suffixes to shard symbols', async () => {
