@@ -1,6 +1,6 @@
 {
   "schema": "rv.master_workstream_tracker.v1",
-  "updated_at": "2026-05-06T16:10:20.000Z",
+  "updated_at": "2026-05-06T18:05:00.000Z",
   "status_order": [
     "planned",
     "implemented",
@@ -220,13 +220,13 @@
       "id": "phase4_stock_ui_semantics",
       "phase": 4,
       "title": "Complete Stock Analyzer UI semantics, layout, empty states, and tests",
-      "status": "local_tests_passed",
-      "repo_sha": "6ba7a2ad5a174cd723e4f062c1927b7e3e562e4e",
-      "nas_run_id": null,
-      "main_smoke": null,
-      "pages_dev_smoke": null,
-      "artifact_proof": "Stock UI test and smoke report",
-      "notes": "Central buildStockUiState remains the UI semantic source; partial model coverage downgrades signal confidence, pending setups suppress active R/R, Trust summary avoids global FULL coverage, mobile segments are visible, equal-height forcing removed; local Stock UI tests passed."
+      "status": "green",
+      "repo_sha": "be5c18b85303c7a6f6a11a7e8a05c7aeafdab6f5",
+      "nas_run_id": "20260506T174528Z",
+      "main_smoke": "https://rubikvault.com stock UI audit PASS pass_rate=100.00% operational_rate=99.85%; browser Z WAIT/LOW/no active R-R/no Coverage FULL",
+      "pages_dev_smoke": "https://rubikvault-site.pages.dev stock UI audit PASS pass_rate=100.00% operational_rate=99.85%",
+      "artifact_proof": "tmp/stock-ui-audit-custom-phase4-be5c18b.json; tmp/stock-ui-audit-pages-phase4-be5c18b.json; /data/status/deploy-proof-latest.json sha=be5c18b85303c7a6f6a11a7e8a05c7aeafdab6f5 smokes_ok=true deploy_id=a7ad0f2e",
+      "notes": "Central buildStockUiState remains the UI semantic source; horizons capped by signal confidence; Z browser smoke proves WAIT/LOW, pending setup without active R/R, no Coverage FULL, no rebound copy, no HIGH CONF contradiction."
     },
     {
       "id": "phase5_market_dp8",
