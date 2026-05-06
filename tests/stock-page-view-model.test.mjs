@@ -194,6 +194,23 @@ describe('buildStockUiState', () => {
     assert.ok(view.blockers.includes('Signal confidence is low'));
   });
 
+  it('caps horizon confidence at the normalized signal confidence', () => {
+    const view = buildStockUiState({
+      decision: { verdict: 'BUY', confidence_bucket: 'HIGH', tactical_action: 'ENTER_LONG' },
+      horizons: [
+        { key: 'short', label: 'SHORT', v: { l: 'BUY', cf: 'HIGH' } },
+        { key: 'medium', label: 'MID', v: { l: 'BUY', cf: 'HIGH' } },
+      ],
+      modelEvidenceLimited: true,
+      missingModels: ['forecast', 'scientific'],
+      tradePlan: { status: 'ready', entry: 44, stop: 42, target: 48, rr: 2 },
+    });
+    assert.equal(view.action, 'WAIT');
+    assert.equal(view.confidence, 'LOW');
+    assert.deepEqual(view.horizons.map((item) => item.v.cf), ['LOW', 'LOW']);
+    assert.match(view.trustChips.join(' | '), /Signal: LOW/);
+  });
+
   it('allows active BUY only with confirmed entry, valid geometry, and no blockers', () => {
     const view = buildStockUiState({
       decision: { verdict: 'BUY', confidence_bucket: 'MEDIUM', tactical_action: 'ENTER_LONG' },

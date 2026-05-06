@@ -535,6 +535,13 @@ function normalizeUiConfidence(value) {
   return 'LOW';
 }
 
+function capUiConfidence(value, cap) {
+  const rank = { LOW: 0, MEDIUM: 1, HIGH: 2 };
+  const normalized = normalizeUiConfidence(value);
+  const normalizedCap = normalizeUiConfidence(cap);
+  return rank[normalized] <= rank[normalizedCap] ? normalized : normalizedCap;
+}
+
 function actionBias(action, horizons = [], states = {}) {
   const normalized = normalizeUiAction(action);
   if (normalized === 'BUY') return 'CONSTRUCTIVE';
@@ -557,7 +564,7 @@ function horizonDisplayLabel(verdict, action) {
 
 function normalizeStockHorizon(item, action, defaultConfidence) {
   const verdict = normalizeUiAction(item?.v?.l || item?.verdict || item?.label || action);
-  const confidence = normalizeUiConfidence(item?.v?.cf ?? item?.confidence ?? defaultConfidence);
+  const confidence = capUiConfidence(item?.v?.cf ?? item?.confidence ?? defaultConfidence, defaultConfidence);
   const tone = verdict === 'BUY'
     ? 'bullish'
     : (verdict === 'SELL' || verdict === 'AVOID')
