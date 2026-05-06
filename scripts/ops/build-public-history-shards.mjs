@@ -25,7 +25,10 @@ function argValue(name, fallback = null) {
   const index = args.findIndex((arg) => arg === name || arg.startsWith(prefix));
   if (index < 0) return fallback;
   const hit = args[index];
-  if (hit === name) return args[index + 1] ?? true;
+  if (hit === name) {
+    const next = args[index + 1];
+    return !next || String(next).startsWith('--') ? true : next;
+  }
   return hit.slice(prefix.length);
 }
 

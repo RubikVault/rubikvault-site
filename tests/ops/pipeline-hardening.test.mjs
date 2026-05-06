@@ -138,6 +138,7 @@ test('deploy bundle writes private top-file size report', () => {
 test('public history shards support incremental touched-pack rebuilds with strict budgets and canaries', () => {
   const builder = fs.readFileSync(path.join(ROOT, 'scripts/ops/build-public-history-shards.mjs'), 'utf8');
   assert.match(builder, /RV_PUBLIC_HISTORY_INCREMENTAL/);
+  assert.match(builder, /String\(next\)\.startsWith\('--'\) \? true : next/);
   assert.match(builder, /history_touch_report\.json/);
   assert.match(builder, /Array\.isArray\(report\.entries\)/);
   assert.match(builder, /addTouched\(row\?\.history_pack, \[row\?\.canonical_id\]\)/);
