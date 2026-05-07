@@ -13,6 +13,16 @@ function assertHasMetaStatus(result) {
   assert(result.meta && typeof result.meta.status === 'string', 'meta.status missing');
 }
 
+function testPageCoreFastPathContractFields() {
+  const source = fs.readFileSync(path.join(process.cwd(), 'functions/api/stock.js'), 'utf-8');
+  assert(source.includes('function pageCoreLatestBar'), 'page-core fast path latest_bar builder missing');
+  assert(source.includes('latest_bar: latestBar'), 'page-core fast path must expose data.latest_bar');
+  assert(source.includes('bars: latestBar ? [latestBar] : []'), 'page-core fast path must expose a compatible bars array');
+  assert(source.includes('market_prices: marketPrices'), 'page-core fast path must expose compatible market_prices');
+  assert(source.includes('market_stats: marketStats'), 'page-core fast path must expose compatible market_stats');
+  console.log('✅ page-core fast path exposes /api/stock contract fields');
+}
+
 function loadFixture(name) {
   return JSON.parse(fs.readFileSync(path.join(process.cwd(), 'tests', 'fixtures', name), 'utf-8'));
 }
@@ -339,6 +349,7 @@ async function testQualityRejectDoesNotPersistCircuitState() {
 }
 
 async function main() {
+  testPageCoreFastPathContractFields();
   await testKnownTicker();
   await testUnknownTicker();
   await testMissingStats();

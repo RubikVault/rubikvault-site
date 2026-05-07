@@ -191,6 +191,21 @@ function buildStockApiPayloadFromPageCore({
   });
   if (!publicDecision) return null;
   const dataDate = freshness.as_of || row.target_market_date || summary.as_of || null;
+  const latestBar = pageCoreLatestBar(row);
+  const change = {
+    abs: Number.isFinite(Number(summary.daily_change_abs)) ? Number(summary.daily_change_abs) : null,
+    pct: Number.isFinite(Number(summary.daily_change_pct)) ? Number(summary.daily_change_pct) : null,
+  };
+  const marketPrices = latestBar
+    ? buildMarketPricesFromLatestBar(latestBar, effectiveTicker, row.price_source || 'page-core-market-stats-min')
+    : null;
+  const marketStats = buildMarketStatsPayload({
+    symbol: effectiveTicker,
+    as_of: row.market_stats_min?.as_of || row.stats_date || latestBar?.date || dataDate,
+    stats: row.market_stats_min?.stats || null,
+    coverage: null,
+    warnings: Array.isArray(row.market_stats_min?.issues) ? row.market_stats_min.issues : [],
+  }, effectiveTicker);
   const generatedAt = nowUtcIso();
   const payload = {
     ok: true,
@@ -291,6 +306,12 @@ function buildStockApiPayloadFromPageCore({
       canonical_id: row.canonical_asset_id || pageCoreResult.canonical_id || null,
       name: identity.name || summary.name || row.display_name || null,
       asset_class: identity.asset_class || row.asset_class || null,
+      bars: latestBar ? [latestBar] : [],
+      latest_bar: latestBar,
+      change,
+      market_prices: marketPrices,
+      market_stats: marketStats,
+      indicators: [],
       summary_min: summary,
       governance_summary: row.governance_summary || null,
       coverage: row.coverage || null,
@@ -303,6 +324,29 @@ function buildStockApiPayloadFromPageCore({
     error: null,
   };
   return payload;
+}
+
+function pageCoreLatestBar(row) {
+  const summary = row?.summary_min && typeof row.summary_min === 'object' ? row.summary_min : {};
+  const marketStatsMin = row?.market_stats_min && typeof row.market_stats_min === 'object' ? row.market_stats_min : {};
+  const date = parseIsoDay(
+    marketStatsMin.latest_bar_date
+    || marketStatsMin.price_date
+    || row?.latest_bar_date
+    || row?.freshness?.as_of
+    || row?.target_market_date
+  );
+  const close = Number(summary.last_close);
+  if (!date || !Number.isFinite(close)) return null;
+  return {
+    date,
+    open: close,
+    high: close,
+    low: close,
+    close,
+    adjClose: close,
+    volume: 0,
+  };
 }
 
 function buildSourceChainMetadata(chain) {
