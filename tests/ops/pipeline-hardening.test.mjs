@@ -258,6 +258,18 @@ test('DP8 Market is optional and feature-flagged in NAS supervisor', () => {
   assert.match(supervisor, /optional_step_degraded/);
 });
 
+test('DP8 Market hub rejects stale source rows before using target-date fallbacks', () => {
+  const marketHub = fs.readFileSync(path.join(ROOT, 'scripts/dp8/market-hub.v3.mjs'), 'utf8');
+  assert.match(marketHub, /function isFreshEnough/);
+  assert.match(marketHub, /normalizeDateText\(process\.env\.RV_TARGET_MARKET_DATE\)/);
+  assert.match(marketHub, /normalizeDateText\(process\.env\.TARGET_MARKET_DATE\)/);
+  assert.match(marketHub, /fromNdjson && isFreshEnough\(fromNdjson\.as_of, defaultAsOf, 3\)/);
+  assert.match(marketHub, /cacheAgeDays <= 3/);
+  assert.match(marketHub, /isFreshEnough\(bar\.date, defaultAsOf, 3\)/);
+  assert.match(marketHub, /target_market_date: defaultAsOf/);
+  assert.match(marketHub, /source_eod_us_latest_date: ndjsonDataDate/);
+});
+
 test('page core smoke validates candidate artifacts without localhost runtime', () => {
   const supervisor = fs.readFileSync(path.join(ROOT, 'scripts/nas/rv-nas-night-supervisor.sh'), 'utf8');
   assert.match(supervisor, /--page-core-only/);

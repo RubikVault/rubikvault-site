@@ -62,6 +62,26 @@ function metricsFromNdjsonRow(row) {
   };
 }
 
+function normalizeDateText(value) {
+  const text = String(value || '').slice(0, 10);
+  return /^\d{4}-\d{2}-\d{2}$/.test(text) ? text : '';
+}
+
+function ageDaysBetween(olderDate, newerDate) {
+  const older = normalizeDateText(olderDate);
+  const newer = normalizeDateText(newerDate);
+  if (!older || !newer) return null;
+  const olderTs = new Date(`${older}T12:00:00Z`).getTime();
+  const newerTs = new Date(`${newer}T12:00:00Z`).getTime();
+  if (!Number.isFinite(olderTs) || !Number.isFinite(newerTs)) return null;
+  return Math.max(0, Math.floor((newerTs - olderTs) / 86400000));
+}
+
+function isFreshEnough(asOf, targetAsOf, maxAgeDays = 3) {
+  const age = ageDaysBetween(asOf, targetAsOf);
+  return Number.isFinite(age) && age <= maxAgeDays;
+}
+
 async function fetchEodhdEod(symbol, date, apiKey) {
   // Query last 5 trading days to handle weekends/holidays
   const d = new Date(date);
@@ -91,21 +111,17 @@ async function saveEtfProxyCache(rootDir, cache) {
 
 async function collectProxyRows(symbols, ndjsonMap, defaultAsOf, apiKey, proxyCache) {
   const rows = [];
-  const runDate = new Date(`${defaultAsOf}T00:00:00Z`);
   for (const symbol of symbols) {
     const fromNdjson = metricsFromNdjsonRow(ndjsonMap.get(symbol));
-    if (fromNdjson) {
+    if (fromNdjson && isFreshEnough(fromNdjson.as_of, defaultAsOf, 3)) {
       rows.push({ symbol, ...fromNdjson, unavailable: false, source: 'ndjson' });
       continue;
     }
 
-    // Use persisted ETF cache (same-day preferred, <=7d stale accepted).
+    // Use persisted ETF cache when aligned with target market date.
     const cached = proxyCache[symbol];
     const cacheDate = String(cached?.date || '').slice(0, 10);
-    const cacheTs = cacheDate ? new Date(`${cacheDate}T00:00:00Z`) : null;
-    const cacheAgeDays = cacheTs && Number.isFinite(cacheTs.getTime()) && Number.isFinite(runDate.getTime())
-      ? Math.max(0, Math.round((runDate - cacheTs) / 86400000))
-      : null;
+    const cacheAgeDays = ageDaysBetween(cacheDate, defaultAsOf);
 
     if (cacheDate === defaultAsOf && cached?.close) {
       const metrics = metricsFromNdjsonRow({
@@ -118,7 +134,7 @@ async function collectProxyRows(symbols, ndjsonMap, defaultAsOf, apiKey, proxyCa
       }
     }
 
-    if (cached?.close && Number.isFinite(cacheAgeDays) && cacheAgeDays <= 7) {
+    if (cached?.close && Number.isFinite(cacheAgeDays) && cacheAgeDays <= 3) {
       const metrics = metricsFromNdjsonRow({
         open: cached.open, close: cached.close, volume: cached.volume,
         trading_date: cached.date
@@ -139,7 +155,7 @@ async function collectProxyRows(symbols, ndjsonMap, defaultAsOf, apiKey, proxyCa
     if (apiKey) {
 
       const bar = await fetchEodhdEod(`${symbol}.US`, defaultAsOf, apiKey);
-      if (bar && Number.isFinite(bar.close) && bar.close > 0) {
+      if (bar && Number.isFinite(bar.close) && bar.close > 0 && isFreshEnough(bar.date, defaultAsOf, 3)) {
         proxyCache[symbol] = bar;
         const metrics = metricsFromNdjsonRow({
           open: bar.open, close: bar.close, volume: bar.volume,
@@ -231,7 +247,10 @@ async function main() {
       }, '')
     : '';
   const buildDate = String(runContext.generatedAt).slice(0, 10);
-  const defaultAsOf = ndjsonDataDate || buildDate;
+  const requestedAsOf = normalizeDateText(process.env.RV_TARGET_MARKET_DATE)
+    || normalizeDateText(process.env.TARGET_MARKET_DATE)
+    || normalizeDateText(process.env.RV_MARKET_TARGET_DATE);
+  const defaultAsOf = requestedAsOf || ndjsonDataDate || buildDate;
   const proxyRows = await collectProxyRows(INDEX_PROXIES, ndjsonMap, defaultAsOf, apiKey, proxyCache);
   const rawSectorRows = await collectProxyRows(SECTOR_ETFS, ndjsonMap, defaultAsOf, apiKey, proxyCache);
 
@@ -300,6 +319,8 @@ async function main() {
     meta: {
       schema_version: 'rv.derived.market.v1',
       generated_at: runContext.generatedAt,
+      target_market_date: defaultAsOf,
+      source_eod_us_latest_date: ndjsonDataDate || null,
       data_date: dataDate,
       status,
       freshness_status: freshnessStatus,
