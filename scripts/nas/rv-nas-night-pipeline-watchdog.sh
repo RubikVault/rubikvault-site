@@ -216,6 +216,29 @@ if severity in {"warning", "critical"}:
         json.dump(alert, fh, indent=2, sort_keys=True)
         fh.write("\n")
     os.replace(tmp_alert, alert_json)
+else:
+    previous_alert = read_json(alert_json)
+    resolved = {
+        "schema": "rv.nas.pipeline_watchdog_alert.v1",
+        "generated_at": doc["generated_at"],
+        "severity": "ok",
+        "typed_failure_reason": None,
+        "reasons": [],
+        "campaign_stamp": stamp,
+        "step": step,
+        "status": status,
+        "resolved": True,
+        "resolved_reason": "watchdog_ok",
+        "no_parallel_recovery_owner": True,
+        "recovery_policy": doc["recovery_policy"],
+        "artifact": out_json,
+        "previous_alert": previous_alert if previous_alert and previous_alert.get("severity") in {"warning", "critical"} else None,
+    }
+    tmp_alert = f"{alert_json}.{os.getpid()}.tmp"
+    with open(tmp_alert, "w", encoding="utf-8") as fh:
+        json.dump(resolved, fh, indent=2, sort_keys=True)
+        fh.write("\n")
+    os.replace(tmp_alert, alert_json)
 
 journal_path = os.path.join(journal_dir, f"watchdog-{datetime.now(timezone.utc).date().isoformat()}.ndjson")
 with open(journal_path, "a", encoding="utf-8") as fh:

@@ -256,6 +256,9 @@ test('night pipeline watchdog emits typed alert artifact without owning recovery
   assert.match(watchdog, /typed_failure_reason/);
   assert.match(watchdog, /resource_samples_stale/);
   assert.match(watchdog, /step_status_no_progress/);
+  assert.match(watchdog, /resolved_reason/);
+  assert.match(watchdog, /watchdog_ok/);
+  assert.match(watchdog, /previous_alert/);
   assert.match(watchdog, /no_parallel_recovery_owner/);
   assert.match(watchdog, /do_not_start_legacy_pipeline_master/);
 });
