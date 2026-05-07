@@ -279,6 +279,7 @@
     "release:gate": "node scripts/ops/release-gate-check.mjs",
     "release:gate:dry-run": "node scripts/ops/release-gate-check.mjs --dry-run",
     "ops:workstream-tracker": "node scripts/ops/check-master-workstream-tracker.mjs",
+    "ops:master-acceptance": "node scripts/ops/run-master-plan-acceptance.mjs",
     "ops:dirty-scope": "node scripts/ops/check-dirty-scope.mjs",
     "ops:provider-health": "node scripts/ops/provider-health-preflight.mjs",
     "ops:lock-audit": "node scripts/ops/audit-nas-locks.mjs",
