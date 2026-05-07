@@ -168,6 +168,19 @@ test('morning acceptance covers dual hosts, proof, historical probes, locks, and
   assert.match(script, /page-core-minimal-history/);
 });
 
+test('nightly wrappers expose help and reject unknown args before starting pipeline', () => {
+  const guarded = fs.readFileSync(path.join(ROOT, 'scripts/nas/run-nightly-full-pipeline-if-no-backfill.sh'), 'utf8');
+  const full = fs.readFileSync(path.join(ROOT, 'scripts/nas/run-nightly-full-pipeline.sh'), 'utf8');
+  for (const script of [guarded, full]) {
+    assert.match(script, /Usage: run-nightly-full-pipeline/);
+    assert.match(script, /-h\|--help\)/);
+    assert.match(script, /unknown_arg=\$arg/);
+    assert.match(script, /exit 64/);
+  }
+  assert.ok(guarded.indexOf('-h|--help)') < guarded.indexOf('nas_ensure_runtime_roots'));
+  assert.ok(full.indexOf('-h|--help)') < full.indexOf('nas_ensure_runtime_roots'));
+});
+
 test('step resource budgets are centralized and reported by supervisor', () => {
   const config = JSON.parse(fs.readFileSync(path.join(ROOT, 'config/nas-step-resource-budgets.json'), 'utf8'));
   assert.equal(config.schema, 'rv.nas_step_resource_budgets.v1');

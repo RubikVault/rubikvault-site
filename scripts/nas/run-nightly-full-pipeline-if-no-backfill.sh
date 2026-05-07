@@ -2,6 +2,29 @@
 set -euo pipefail
 
 REPO_ROOT="${REPO_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)}"
+
+usage() {
+  cat <<'EOF'
+Usage: run-nightly-full-pipeline-if-no-backfill.sh [--dry-run]
+
+Starts the NAS nightly full pipeline only when schedule, backfill, pipeline,
+and rogue-process guards pass.
+
+Options:
+  --dry-run   Run guards, write dry-run state, do not start pipeline.
+  -h, --help  Show this help.
+EOF
+}
+
+for arg in "$@"; do
+  case "$arg" in
+    -h|--help)
+      usage
+      exit 0
+      ;;
+  esac
+done
+
 # shellcheck source=scripts/nas/nas-env.sh
 . "$REPO_ROOT/scripts/nas/nas-env.sh"
 
@@ -10,6 +33,13 @@ for arg in "$@"; do
   case "$arg" in
     --dry-run)
       DRY_RUN=1
+      ;;
+    -h|--help)
+      ;;
+    *)
+      echo "unknown_arg=$arg"
+      usage
+      exit 64
       ;;
   esac
 done

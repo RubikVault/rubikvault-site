@@ -2,6 +2,30 @@
 set -euo pipefail
 
 REPO_ROOT="${REPO_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)}"
+
+usage() {
+  cat <<'EOF'
+Usage: run-nightly-full-pipeline.sh
+
+Runs the NAS full nightly chain: data-plane, then release-full.
+No arguments are accepted.
+EOF
+}
+
+for arg in "$@"; do
+  case "$arg" in
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    *)
+      echo "unknown_arg=$arg"
+      usage
+      exit 64
+      ;;
+  esac
+done
+
 # shellcheck source=scripts/nas/nas-env.sh
 . "$REPO_ROOT/scripts/nas/nas-env.sh"
 # shellcheck source=scripts/nas/node-env.sh
