@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 
 const REPO_ROOT = path.resolve(fileURLToPath(new URL('.', import.meta.url)), '../..');
 const TRACKER_PATH = path.join(REPO_ROOT, 'docs/ops/master-workstream-tracker.json');
+const REQUIRE_ALL_GREEN = process.argv.includes('--require-all-green') || process.env.RV_REQUIRE_ALL_WORKSTREAMS_GREEN === '1';
 const VALID_STATUSES = new Set([
   'planned',
   'implemented',
@@ -60,11 +61,18 @@ if (incompleteGreen.length > 0) {
   fail(`green rows missing required evidence: ${incompleteGreen.join(', ')}`);
 }
 
+const incompleteTotal = tracker.workstreams.length - byStatus.green;
+if (REQUIRE_ALL_GREEN && incompleteTotal > 0) {
+  fail(`workstreams not green: ${incompleteTotal}`);
+}
+
 console.log(JSON.stringify({
   ok: true,
   schema: tracker.schema,
   total: tracker.workstreams.length,
   by_status: byStatus,
   green_total: byStatus.green,
-  incomplete_total: tracker.workstreams.length - byStatus.green,
+  incomplete_total: incompleteTotal,
+  require_all_green: REQUIRE_ALL_GREEN,
+  all_green: incompleteTotal === 0,
 }, null, 2));

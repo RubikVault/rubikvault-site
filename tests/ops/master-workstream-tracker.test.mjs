@@ -21,4 +21,17 @@ test('master workstream tracker is valid and covers all phases', () => {
   const summary = JSON.parse(result.stdout);
   assert.equal(summary.ok, true);
   assert.equal(summary.total, tracker.workstreams.length);
+  assert.equal(summary.require_all_green, false);
+  assert.equal(summary.all_green, summary.incomplete_total === 0);
+
+  const strictResult = spawnSync(process.execPath, ['scripts/ops/check-master-workstream-tracker.mjs', '--require-all-green'], {
+    cwd: ROOT,
+    encoding: 'utf8',
+  });
+  if (summary.incomplete_total === 0) {
+    assert.equal(strictResult.status, 0, strictResult.stderr);
+  } else {
+    assert.notEqual(strictResult.status, 0, 'strict tracker check must fail while workstreams remain incomplete');
+    assert.match(strictResult.stderr, /workstreams not green/);
+  }
 });
