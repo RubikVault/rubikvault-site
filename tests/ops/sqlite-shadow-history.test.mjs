@@ -30,6 +30,12 @@ test('SQLite history shadow builds raw and adjusted tables without changing prim
   assert.equal(payload.primary_runtime_changed, false);
   assert.ok(payload.raw_rows > 0);
   assert.equal(payload.raw_rows, payload.adjusted_rows);
+  assert.equal(payload.validation.raw_adjusted_row_count_match, true);
+  assert.ok(Array.isArray(payload.validation.last20_checksums));
+  assert.ok(payload.validation.last20_checksums.length > 0);
+  assert.ok(payload.validation.last20_checksums[0].last20_sha256);
+  assert.equal(payload.validation.benchmark.engine, 'python_sqlite3');
+  assert.ok(payload.validation.benchmark.rows_read > 0);
 });
 
 test('SQLite shadow writes temp database on target volume for NAS-safe atomic replace', () => {

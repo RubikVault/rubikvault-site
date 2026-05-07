@@ -8,13 +8,16 @@ from __future__ import annotations
 
 import argparse
 import gzip
+import hashlib
 import json
 import os
 import sqlite3
 import sys
 import tempfile
+import time
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Optional
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -134,6 +137,94 @@ def scalar(conn: sqlite3.Connection, sql: str):
     return conn.execute(sql).fetchone()[0]
 
 
+def checksum_rows(rows: list[tuple]) -> str:
+    payload = "\n".join(json.dumps(row, separators=(",", ":"), ensure_ascii=False) for row in rows)
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
+
+def pick_sample_symbols(conn: sqlite3.Connection, max_count: int = 12) -> list[str]:
+    preferred = ["AAPL", "US:AAPL", "HOOD", "US:HOOD", "SPY", "US:SPY", "QQQ", "US:QQQ", "ASML.AS", "NL:ASML"]
+    available = {
+        row[0]
+        for row in conn.execute(
+            "SELECT symbol FROM bars_raw WHERE symbol IN ({})".format(",".join("?" for _ in preferred)),
+            preferred,
+        ).fetchall()
+    }
+    samples = [symbol for symbol in preferred if symbol in available]
+    for (symbol,) in conn.execute("SELECT DISTINCT symbol FROM bars_raw ORDER BY symbol LIMIT ?", (max_count * 2,)):
+        if symbol not in samples:
+            samples.append(symbol)
+        if len(samples) >= max_count:
+            break
+    return samples[:max_count]
+
+
+def build_validation_report(conn: sqlite3.Connection, target_market_date: Optional[str]) -> dict:
+    samples = pick_sample_symbols(conn)
+    checksums = []
+    benchmark_rows = 0
+    bench_start = time.perf_counter()
+    for symbol in samples:
+        rows = conn.execute(
+            """
+            SELECT date, open, high, low, close, volume
+            FROM bars_raw
+            WHERE symbol=?
+            ORDER BY date DESC
+            LIMIT 120
+            """,
+            (symbol,),
+        ).fetchall()
+        benchmark_rows += len(rows)
+        last20 = rows[:20]
+        checksums.append({
+            "symbol": symbol,
+            "rows_checked": len(last20),
+            "latest_date": last20[0][0] if last20 else None,
+            "last20_sha256": checksum_rows(last20),
+        })
+    read_120_bars_ms = round((time.perf_counter() - bench_start) * 1000, 3)
+
+    corporate_action_samples = [
+        {
+            "symbol": row[0],
+            "adjusted_rows": row[1],
+            "first_date": row[2],
+            "last_date": row[3],
+            "min_adjustment_factor": row[4],
+            "max_adjustment_factor": row[5],
+        }
+        for row in conn.execute(
+            """
+            SELECT symbol, COUNT(*), MIN(date), MAX(date), MIN(adjustment_factor), MAX(adjustment_factor)
+            FROM bars_adjusted
+            WHERE ABS(COALESCE(adjustment_factor, 1.0) - 1.0) > 0.000001
+            GROUP BY symbol
+            ORDER BY COUNT(*) DESC, symbol
+            LIMIT 10
+            """
+        ).fetchall()
+    ]
+    raw_count = scalar(conn, "SELECT COUNT(*) FROM bars_raw")
+    adjusted_count = scalar(conn, "SELECT COUNT(*) FROM bars_adjusted")
+    latest_raw = scalar(conn, "SELECT MAX(date) FROM bars_raw")
+    target = str(target_market_date or "")[:10] or None
+    return {
+        "raw_adjusted_row_count_match": raw_count == adjusted_count,
+        "latest_date_matches_target": (latest_raw == target) if target else None,
+        "sample_symbol_count": len(samples),
+        "last20_checksums": checksums,
+        "corporate_action_samples": corporate_action_samples,
+        "benchmark": {
+            "engine": "python_sqlite3",
+            "sample_symbol_count": len(samples),
+            "rows_read": benchmark_rows,
+            "read_120_bars_ms": read_120_bars_ms,
+        },
+    }
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--shards-dir", default=str(DEFAULT_SHARDS_DIR))
@@ -194,6 +285,7 @@ def main() -> int:
     raw_count = scalar(conn, "SELECT COUNT(*) FROM bars_raw")
     adjusted_count = scalar(conn, "SELECT COUNT(*) FROM bars_adjusted")
     latest_raw = scalar(conn, "SELECT MAX(date) FROM bars_raw")
+    validation = build_validation_report(conn, args.target_market_date)
     conn.close()
 
     atomic_replace(tmp_db, output)
@@ -217,6 +309,7 @@ def main() -> int:
         "adjusted_rows": adjusted_count,
         "latest_date": latest_raw,
         "integrity_check": integrity,
+        "validation": validation,
         "cutover_allowed": False,
         "primary_runtime_changed": False,
     }
