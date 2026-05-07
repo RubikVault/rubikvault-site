@@ -19,6 +19,7 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
+import crypto from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { gunzipSync } from 'node:zlib';
@@ -182,6 +183,7 @@ function buildBundleSizeReport(bundleDir, {
   }
   if (fs.existsSync(bundleDir)) walk(bundleDir);
   files.sort((a, b) => b.size_bytes - a.size_bytes || a.file.localeCompare(b.file));
+  const bundleHash = computeBundleHash(bundleDir, files);
   const topDirs = [...dirBytes.entries()]
     .map(([dir, sizeBytes]) => ({ dir, size_bytes: sizeBytes, size_mb: +(sizeBytes / 1024 / 1024).toFixed(3) }))
     .sort((a, b) => b.size_bytes - a.size_bytes || a.dir.localeCompare(b.dir))
@@ -196,6 +198,7 @@ function buildBundleSizeReport(bundleDir, {
     bundle_max_file_bytes: bundleMaxFileBytes,
     bundle_headroom: bundleHeadroom,
     bundle_size_warning: bundleSizeMb > Number(process.env.RV_DEPLOY_BUNDLE_SIZE_WARN_MB || 1500),
+    bundle_hash: bundleHash,
     file_count_delta: Number.isFinite(Number(previousSummary.bundle_file_count))
       ? bundleFileCount - Number(previousSummary.bundle_file_count)
       : null,
@@ -211,6 +214,21 @@ function buildBundleSizeReport(bundleDir, {
     top_files: files.slice(0, 50),
     top_dirs: topDirs,
   };
+}
+
+function computeBundleHash(bundleDir, files) {
+  const hash = crypto.createHash('sha256');
+  const sorted = [...files].sort((a, b) => a.file.localeCompare(b.file));
+  for (const file of sorted) {
+    const full = path.join(bundleDir, file.file);
+    hash.update(file.file);
+    hash.update('\0');
+    hash.update(String(file.size_bytes));
+    hash.update('\0');
+    hash.update(fs.readFileSync(full));
+    hash.update('\0');
+  }
+  return `sha256:${hash.digest('hex')}`;
 }
 
 function removeAppleDoubleArtifacts(dir) {
@@ -907,6 +925,7 @@ if (!isDryRun) {
     bundle_file_count: bundleFileCount,
     bundle_size_mb: bundleSizeMb,
     bundle_max_file_bytes: bundleMaxFileBytes,
+    bundle_hash: sizeReport.summary.bundle_hash,
     bundle_size_warning: sizeReport.summary.bundle_size_warning,
     top_files_report_path: 'var/private/ops/deploy-bundle-size-report.json',
     budget_limit: BUNDLE_FILE_LIMIT,

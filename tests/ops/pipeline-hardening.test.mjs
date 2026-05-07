@@ -133,6 +133,8 @@ test('deploy bundle writes private top-file size report', () => {
   assert.match(builder, /rv\.deploy_bundle_size_report\.v1/);
   assert.match(builder, /top_files/);
   assert.match(builder, /top_dirs/);
+  assert.match(builder, /computeBundleHash/);
+  assert.match(builder, /bundle_hash/);
   assert.match(builder, /RV_DEPLOY_BUNDLE_SIZE_WARN_MB/);
 });
 

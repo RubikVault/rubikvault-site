@@ -75,5 +75,8 @@ test('release gate publishes finalized public post-deploy proof', () => {
   assert.match(content, /requirePostDeployProof/);
   assert.match(content, /custom_domain_smoke/);
   assert.match(content, /pages_dev_smoke/);
+  assert.match(content, /deploy_id: deploymentId/);
+  assert.match(content, /deploy_url: deploymentUrl/);
+  assert.match(content, /bundle_hash: bundleMeta\?\.bundle_hash/);
   assert.match(content, /PAGES_DEV_BASE/);
 });
