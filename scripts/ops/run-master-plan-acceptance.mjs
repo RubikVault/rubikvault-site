@@ -81,10 +81,17 @@ function buyRows(doc) {
 
 function summarizeBuySnapshot(doc) {
   const rows = buyRows(doc);
+  const hasReasons = (row) => (
+    Array.isArray(row?.reasons) && row.reasons.length > 0
+  ) || (
+    Array.isArray(row?.decision_reasons) && row.decision_reasons.length > 0
+  ) || (
+    Array.isArray(row?.decision_reason_codes) && row.decision_reason_codes.length > 0
+  );
   return {
     rows: rows.length,
     stale_rows: rows.filter((row) => Array.isArray(row?.stale_flags) && row.stale_flags.length > 0).length,
-    with_evidence: rows.filter((row) => row?.reasons && row?.module_contributions && row?.decision_as_of && row?.price_basis).length,
+    with_evidence: rows.filter((row) => hasReasons(row) && row?.module_contributions && row?.decision_as_of && row?.price_basis).length,
     confidences: [...new Set(rows.map((row) => row?.confidence).filter(Boolean))].sort(),
   };
 }
