@@ -994,7 +994,7 @@ lane_steps() {
       forecast_daily \
       hist_probs
     )
-    if [[ "${RV_INCLUDE_HIST_PROBS_CATCHUP:-0}" == "1" ]]; then
+    if [[ "${RV_INCLUDE_HIST_PROBS_CATCHUP:-1}" == "1" ]]; then
       steps+=(hist_probs_catchup)
     fi
     steps+=( \
