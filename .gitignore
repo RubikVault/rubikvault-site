@@ -28,6 +28,11 @@ public/data/features-v2/
 public/data/forecast/v6/
 public/data/forecast/reports/**
 public/data/forecast/scorecards/tickers.json.gz
+public/data/decision-core/core/parts/*.ndjson.gz
+public/data/decision-core/shadow/parts/*.ndjson.gz
+public/data/decision-core/last_good/parts/*.ndjson.gz
+public/data/page-core/candidates/
+public/data/page-core/snapshots/
 public/data/eod/bars/*.json
 public/data/universe_spy50.json
 public/data/v3/derived/market/flow-learning.json
@@ -42,6 +47,8 @@ test-results/**
 tmp/
 .tmp/
 logs/
+runtime/decision-runs/
+runtime/outcomes/
 var/pipeline/
 mirrors/.locks/
 proof.html

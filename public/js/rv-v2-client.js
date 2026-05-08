@@ -257,9 +257,9 @@ function pageCoreToSummary(pageCore) {
   const pageCoreOperational = strictReasons.length === 0;
   const pipelineStatus = pageCoreOperational ? 'OK' : 'DEGRADED';
   const decisionVerdict = String(pageCore?.summary_min?.decision_verdict || '').toUpperCase();
-  const verdict = ['BUY', 'WAIT', 'SELL', 'AVOID'].includes(decisionVerdict)
+  const verdict = ['BUY', 'WAIT', 'SELL', 'AVOID', 'UNAVAILABLE', 'INCUBATING'].includes(decisionVerdict)
     ? decisionVerdict
-    : (pageCoreOperational ? 'WAIT' : 'WAIT_PIPELINE_INCOMPLETE');
+    : 'UNAVAILABLE';
   const rawRiskLevel = String(pageCore?.summary_min?.risk_level || pageCore?.governance_summary?.risk_level || '').toUpperCase();
   const riskLevel = rawRiskLevel || 'UNKNOWN';
   const blockingReasons = Array.isArray(pageCore?.governance_summary?.blocking_reasons)
@@ -304,9 +304,15 @@ function pageCoreToSummary(pageCore) {
       daily_change_abs: pageCore?.summary_min?.daily_change_abs ?? null,
     },
     decision: {
-      verdict: pageCore?.summary_min?.decision_verdict || null,
+      verdict: pageCore?.summary_min?.decision_verdict || pageCore?.decision_core_min?.decision?.primary_action || null,
       confidence_bucket: pageCore?.summary_min?.decision_confidence_bucket || null,
+      analysis_reliability: pageCore?.summary_min?.decision_analysis_reliability || pageCore?.decision_core_min?.decision?.analysis_reliability || null,
+      wait_subtype: pageCore?.summary_min?.decision_wait_subtype || pageCore?.decision_core_min?.decision?.wait_subtype || null,
+      primary_setup: pageCore?.summary_min?.decision_primary_setup || pageCore?.decision_core_min?.decision?.primary_setup || null,
+      max_entry_price: pageCore?.summary_min?.decision_max_entry_price ?? pageCore?.decision_core_min?.trade_guard?.max_entry_price ?? null,
+      invalidation_level: pageCore?.summary_min?.decision_invalidation_level ?? pageCore?.decision_core_min?.trade_guard?.invalidation_level ?? null,
     },
+    decision_core_min: pageCore?.decision_core_min || null,
     daily_decision: dailyDecision,
     analysis_readiness: {
       status: pageCoreOperational ? 'READY' : 'FAILED',
@@ -407,7 +413,7 @@ function buildEmptyStatePayload(ticker) {
     decision: {},
     daily_decision: {
       pipeline_status: 'FAILED',
-      verdict: 'WAIT_PIPELINE_INCOMPLETE',
+      verdict: 'UNAVAILABLE',
       blocking_reasons: ['bundle_missing'],
       risk_assessment: { level: 'UNKNOWN' },
     },
@@ -766,8 +772,19 @@ function pickLatestMarketPrices(summaryPrices, latestBar) {
 }
 
 export function transformV2ToStockShape(v2Data, v2Meta, historicalData = null, governanceData = null, fundamentalsData = null, metaBundle = null, legacyPayload = null, historicalProfileData = null) {
-  const bars = historicalData?.bars || (v2Data.latest_bar ? [v2Data.latest_bar] : []);
-  const latestBar = historicalData?.bars?.length ? historicalData.bars[historicalData.bars.length - 1] : v2Data.latest_bar;
+  const decisionCoreMin = v2Data?.decision_core_min || null;
+  const historicalBars = Array.isArray(historicalData?.bars) ? historicalData.bars : [];
+  const summaryPriceDate = toIsoDate(v2Data?.market_prices?.date);
+  const historicalLatestDate = historicalBars.length ? toIsoDate(historicalBars[historicalBars.length - 1]?.date) : null;
+  const decisionCoreHasPageCoreBasis = Boolean(decisionCoreMin && summaryPriceDate);
+  const historicalBarsCurrentEnough = Boolean(
+    historicalBars.length
+    && (!summaryPriceDate
+      || !historicalLatestDate
+      || (decisionCoreHasPageCoreBasis ? historicalLatestDate === summaryPriceDate : historicalLatestDate >= summaryPriceDate))
+  );
+  const bars = historicalBarsCurrentEnough ? historicalBars : (v2Data.latest_bar ? [v2Data.latest_bar] : []);
+  const latestBar = bars.length ? bars[bars.length - 1] : v2Data.latest_bar;
   const canonicalMarket = buildCanonicalMarketContext({
     ticker: v2Data.ticker,
     summaryPrices: v2Data.market_prices || null,
@@ -866,6 +883,7 @@ export function transformV2ToStockShape(v2Data, v2Meta, historicalData = null, g
       module_freshness: moduleFreshness,
       daily_decision: v2Data.daily_decision || null,
       analysis_readiness: v2Data.analysis_readiness || null,
+      decision_core_min: decisionCoreMin,
     },
     metadata: {
       request: {
@@ -884,7 +902,8 @@ export function transformV2ToStockShape(v2Data, v2Meta, historicalData = null, g
       legacy: null,
     },
     states: Object.keys(v2Data.states || {}).length ? v2Data.states : derivedStates,
-    decision: v2Data.decision || {},
+    decision: decisionCoreMin ? { ...(v2Data.decision || {}), decision_core_min: decisionCoreMin } : (v2Data.decision || {}),
+    decision_core_min: decisionCoreMin,
     daily_decision: v2Data.daily_decision || null,
     analysis_readiness: v2Data.analysis_readiness || null,
     explanation: v2Data.explanation || {},

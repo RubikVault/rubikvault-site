@@ -647,8 +647,35 @@
 
       // Read backend layers (states, decision, explanation)
       const _states = payload.states || {};
-      const _decision = payload.decision || {};
       const _dailyDecision = payload.daily_decision || data.daily_decision || {};
+      const _decisionCoreMin = payload.decision_core_min || data.decision_core_min || payload.data?.decision_core_min || null;
+      const _baseDecision = payload.decision || {};
+      const _decision = _decisionCoreMin ? {
+        ..._baseDecision,
+        verdict: _decisionCoreMin.decision?.primary_action || 'UNAVAILABLE',
+        confidence_bucket: String(_decisionCoreMin.decision?.analysis_reliability || 'LOW').toLowerCase(),
+        analysis_reliability: _decisionCoreMin.decision?.analysis_reliability || 'LOW',
+        wait_subtype: _decisionCoreMin.decision?.wait_subtype || null,
+        primary_setup: _decisionCoreMin.decision?.primary_setup || 'none',
+        blocking_reasons: _decisionCoreMin.decision?.reason_codes || [],
+        max_entry_price: _decisionCoreMin.trade_guard?.max_entry_price ?? _baseDecision.max_entry_price ?? null,
+        invalidation_level: _decisionCoreMin.trade_guard?.invalidation_level ?? _baseDecision.invalidation_level ?? null,
+        decision_core_min: _decisionCoreMin,
+        horizons: {
+          short: {
+            verdict: _decisionCoreMin.horizons?.short_term?.horizon_action || 'UNAVAILABLE',
+            confidence_bucket: String(_decisionCoreMin.horizons?.short_term?.horizon_reliability || 'LOW').toLowerCase(),
+          },
+          medium: {
+            verdict: _decisionCoreMin.horizons?.mid_term?.horizon_action || 'UNAVAILABLE',
+            confidence_bucket: String(_decisionCoreMin.horizons?.mid_term?.horizon_reliability || 'LOW').toLowerCase(),
+          },
+          long: {
+            verdict: _decisionCoreMin.horizons?.long_term?.horizon_action || 'UNAVAILABLE',
+            confidence_bucket: String(_decisionCoreMin.horizons?.long_term?.horizon_reliability || 'LOW').toLowerCase(),
+          },
+        },
+      } : _baseDecision;
       const _analysisReadiness = payload.analysis_readiness || data.analysis_readiness || {};
       const _explanation = payload.explanation || {};
       const _v6 = payload.v6 || {};
@@ -871,6 +898,7 @@
         };
       });
       const stockUiStateBase = buildStockUiState({
+        payload,
         decision: _decision,
         states: _states,
         stats: s,
@@ -905,6 +933,9 @@
       const effectiveText = _decisionBlockedByIntegrity ? 'Input data integrity check failed. Decision-grade analysis is temporarily unavailable.' : effectiveVerdict === 'WAIT' ? waitStateView.subheadline
         : hasHorizonSplit && baseVerdict === 'WAIT' ? 'Split consensus — no clear directional edge'
           : overallText;
+      window._rvVisibleAction = effectiveVerdict;
+      window._rvEffectiveDecisionLabel = effectiveLabel;
+      window._rvDecisionIntegrityBlocked = Boolean(_decisionBlockedByIntegrity);
       const executiveDecisionView = _decisionBlockedByIntegrity
         ? {
           headline: 'Decision unavailable',
@@ -1486,6 +1517,7 @@
       const stopPr = tradePlan.stop ?? null;
       const rrRatio = Number.isFinite(tradePlan.rr) ? tradePlan.rr.toFixed(1) : '—';
       const stockUiState = buildStockUiState({
+        payload,
         decision: _decision,
         states: _states,
         stats: s,
@@ -1548,7 +1580,7 @@
         ? 'Input data integrity check failed'
         : humanizeDecisionBasis(_decision.wait_reason || _explanation.headline || _explanation.synthesis || effectiveText);
       const executiveGridItems = [
-        ['Confidence', confidencePct || '—'],
+        ['Reliability', confidencePct || '—'],
         ['Flags', decisionFlags],
         ['Setup', setupType],
         ['Decision Basis', decisionReason || '—'],
@@ -1613,6 +1645,9 @@
       const _waitWhy = executiveDecisionView.whyNotNow.length ? `<div style="margin-top:.5rem"><div style="font-size:.56rem;color:var(--text-muted);text-transform:uppercase;font-weight:700;margin-bottom:.25rem">Why not now</div><div style="display:grid;gap:3px">${executiveDecisionView.whyNotNow.map((item) => `<div style="font-size:.64rem;color:var(--text-dim);display:flex;gap:5px"><span style="color:var(--yellow)">•</span><span>${_esc(item)}</span></div>`).join('')}</div></div>` : '';
       const _whatMustChange = executiveDecisionView.whatMustChange.length ? `<div style="margin-top:.6rem"><div style="font-size:.56rem;color:var(--text-muted);text-transform:uppercase;font-weight:700;margin-bottom:.25rem">What must change</div><div style="display:grid;gap:3px">${executiveDecisionView.whatMustChange.map((item) => `<div style="font-size:.64rem;color:var(--text-dim);display:flex;gap:5px"><span style="color:var(--accent)">•</span><span>${_esc(item)}</span></div>`).join('')}</div></div>` : '';
       const _nextActionCard = effectiveVerdict === 'WAIT' ? `<div style="margin-bottom:.75rem;padding:.65rem;border-radius:8px;background:rgba(255,255,255,0.01);border:1px solid rgba(255,255,255,0.04)"><div style="font-size:.58rem;color:var(--text-muted);text-transform:uppercase;font-weight:700;margin-bottom:.3rem">Next action</div><div style="display:grid;gap:6px"><div class="tap-row"><span style="color:var(--text);font-weight:700">Primary next action: ${_esc(executiveDecisionView.primaryNextAction)}</span><span style="color:var(--text-muted)">Primary</span></div><div class="tap-row"><span style="color:var(--text);font-weight:600">Secondary watch: ${_esc(executiveDecisionView.secondaryWatch)}</span><span style="color:var(--text-muted)">Secondary</span></div><div class="tap-row"><span style="color:var(--text);font-weight:600">Trigger to upgrade: ${_esc(executiveDecisionView.upgradeTrigger)}</span><span style="color:var(--text-muted)">Upgrade</span></div></div></div>` : '';
+      const _coreTradePlan = (_decision.max_entry_price != null || _decision.invalidation_level != null)
+        ? `<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;margin-bottom:.75rem;padding:8px 10px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.05);border-radius:6px"><div style="font-size:.6rem;color:var(--text-muted)">Max entry <span style="font-weight:800;color:var(--text)">${_decision.max_entry_price != null ? '$' + Number(_decision.max_entry_price).toFixed(2) : 'n/a'}</span></div><div style="font-size:.6rem;color:var(--text-muted)">Invalidation <span style="font-weight:800;color:var(--text)">${_decision.invalidation_level != null ? '$' + Number(_decision.invalidation_level).toFixed(2) : 'n/a'}</span></div><div style="grid-column:1/-1;font-size:.56rem;color:var(--text-dim);line-height:1.35">${effectiveVerdict === 'BUY' ? 'Conditional BUY: valid only below max entry. Cancel if next open is above the limit.' : 'No action until the next trigger confirms.'}</div></div>`
+        : '';
       const _decisionFirstNav = `<div class="mobile-segments" id="rv-mobile-segments">${mobileNavView.tabs.map((tab, index) => `<button class="segment-btn ${index === 0 ? 'active' : ''}" data-segment="${tab.key}" onclick="window._switchMobilePanel(this)">${_esc(tab.label)}</button>`).join('')}</div>`;
 
       const layout = `
@@ -1655,7 +1690,7 @@
                 <div style="font-size:.58rem;color:var(--text-muted);text-transform:uppercase">${h.label}</div>
                 <div style="font-weight:700;color:${c};font-size:1rem">${_esc(h.displayLabel || h.v.l)}</div>
                 <div style="font-size:.52rem;color:var(--text-muted);margin-top:2px;opacity:.75">${timeStr}</div>
-                <div style="font-size:.55rem;color:var(--text-muted);background:rgba(255,255,255,0.04);border-radius:3px;margin:3px 4px;padding:1px 0">${cfLabel} CONF.</div>
+                <div style="font-size:.55rem;color:var(--text-muted);background:rgba(255,255,255,0.04);border-radius:3px;margin:3px 4px;padding:1px 0" title="Analysis reliability describes data and method strength, not probability of profit.">${cfLabel} REL.</div>
                 <div style="font-size:.55rem;color:${pc};font-weight:600;margin-top:4px">${info}</div>
               </div>`;
       }).join('')}
@@ -1678,6 +1713,7 @@
         </div>
         ${effectiveVerdict === 'WAIT' ? `<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.5rem;margin-bottom:.75rem"><div style="padding:.65rem;border-radius:8px;background:rgba(255,255,255,0.01);border:1px solid rgba(255,255,255,0.04)"><div style="font-size:.56rem;color:var(--text-muted);text-transform:uppercase;font-weight:700;margin-bottom:.25rem">Risk blocker</div><div style="font-size:.66rem;color:var(--text);font-weight:700">${_esc(executiveDecisionView.blocker)}</div></div><div style="padding:.65rem;border-radius:8px;background:rgba(255,255,255,0.01);border:1px solid rgba(255,255,255,0.04)"><div style="font-size:.56rem;color:var(--text-muted);text-transform:uppercase;font-weight:700;margin-bottom:.25rem">Data health</div><div style="font-size:.66rem;color:var(--text);font-weight:700">${_esc(trustView.coverageLabel === 'partial' ? 'Data health is being monitored' : 'Coverage supports the live verdict')}</div></div></div>` : ''}
         ${_nextActionCard}
+        ${_coreTradePlan}
         <!-- Trade Plan -->
         ${stockUiState.tradePlanStatus === 'ACTIVE' && tradePlan.status === 'ready' ? `<div style="display: flex; justify-content: space-between; font-size: 0.62rem; margin-bottom: 0.35rem; padding: 6px 10px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.04); border-radius: 6px;">
             <div><span style="color:var(--text-muted)">Entry:</span> <span style="font-weight:600;">${tradePlan.entry != null ? '$' + tradePlan.entry.toFixed(2) : '—'}</span></div>

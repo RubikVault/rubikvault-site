@@ -187,6 +187,89 @@ describe('transformV2ToStockShape', () => {
     assert.equal(payload.data.ssot.market_context.key_levels_ready, true);
   });
 
+  it('does not let stale historical bars override newer page-core price basis', () => {
+    const payload = transformV2ToStockShape(
+      {
+        ticker: 'AFL',
+        name: 'Aflac Incorporated',
+        latest_bar: { date: '2026-05-07', close: 113.6 },
+        market_prices: { close: 113.6, date: '2026-05-07', source_provider: 'page-core' },
+        market_stats: {
+          as_of: '2026-05-07',
+          source_provider: 'page-core',
+          stats: {
+            rsi14: 52,
+            atr14: 2.4,
+            volatility_20d: 0.18,
+            volatility_percentile: 48,
+            bb_upper: 116,
+            bb_lower: 106,
+            high_52w: 120,
+            low_52w: 92,
+            range_52w_pct: 0.76,
+            sma20: 112,
+            sma50: 110,
+            sma200: 104,
+          },
+        },
+        decision_core_min: {
+          decision: { primary_action: 'BUY', analysis_reliability: 'MEDIUM' },
+          trade_guard: { max_entry_price: 114, invalidation_level: 108 },
+        },
+      },
+      { data_date: '2026-05-07', provider: 'page-core' },
+      {
+        bars: [{ date: '2026-03-19', close: 106 }, { date: '2026-03-20', close: 106.22 }],
+      },
+      { universe: { name: 'Aflac Incorporated', asset_class: 'STOCK' } },
+    );
+
+    assert.equal(payload.data.market_prices.close, 113.6);
+    assert.equal(payload.data.market_prices.date, '2026-05-07');
+    assert.equal(payload.metadata.as_of, '2026-05-07');
+    assert.equal(payload.data.module_freshness.price_as_of, '2026-05-07');
+    assert.equal(payload.data.ssot.market_context.latest_bar_date, '2026-05-07');
+    assert.equal(payload.data.ssot.market_context.key_levels_ready, true);
+  });
+
+  it('does not let newer historical bars override decision-core page-core price basis', () => {
+    const payload = transformV2ToStockShape(
+      {
+        ticker: 'AFL',
+        latest_bar: { date: '2026-05-07', close: 113.6 },
+        market_prices: { close: 113.6, date: '2026-05-07', source_provider: 'page-core' },
+        market_stats: {
+          as_of: '2026-05-07',
+          source_provider: 'page-core',
+          stats: {
+            rsi14: 52,
+            atr14: 2.4,
+            volatility_percentile: 48,
+            high_52w: 120,
+            low_52w: 92,
+            sma20: 112,
+            sma50: 110,
+            sma200: 104,
+          },
+        },
+        decision_core_min: {
+          decision: { primary_action: 'BUY', analysis_reliability: 'MEDIUM' },
+          trade_guard: { max_entry_price: 114, invalidation_level: 108 },
+        },
+      },
+      { data_date: '2026-05-07', provider: 'page-core' },
+      {
+        bars: [{ date: '2026-05-07', close: 113.6 }, { date: '2026-05-08', close: 117.5 }],
+      },
+      { universe: { name: 'Aflac Incorporated', asset_class: 'STOCK' } },
+    );
+
+    assert.equal(payload.data.market_prices.close, 113.6);
+    assert.equal(payload.data.market_prices.date, '2026-05-07');
+    assert.equal(payload.metadata.as_of, '2026-05-07');
+    assert.equal(payload.data.ssot.market_context.latest_bar_date, '2026-05-07');
+  });
+
   it('passes historical-profile payload through the transformed stock shape', () => {
     const payload = transformV2ToStockShape(
       {

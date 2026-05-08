@@ -17,6 +17,8 @@ const RELEASE_STATE_PATH = path.join(REPO_ROOT, 'public/data/ops/release-state-l
 const PAGE_CORE_LATEST_PATH = path.join(REPO_ROOT, 'public/data/page-core/latest.json');
 const PAGE_CORE_CANDIDATE_LATEST_PATH = path.join(REPO_ROOT, 'public/data/page-core/candidates/latest.candidate.json');
 const STOCK_UI_STATE_PATH = path.join(REPO_ROOT, 'public/data/runtime/stock-analyzer-ui-state-summary-latest.json');
+const DECISION_CORE_ACCELERATED_CERTIFICATION_PATH = path.join(REPO_ROOT, 'public/data/decision-core/status/accelerated-certification-latest.json');
+const DECISION_CORE_BUY_BREADTH_PATH = path.join(REPO_ROOT, 'public/data/reports/decision-core-buy-breadth-latest.json');
 const HIST_PROBS_STATUS_PATHS = [
   path.join(REPO_ROOT, 'public/data/runtime/hist-probs-status-summary.json'),
   path.join(REPO_ROOT, 'public/data/hist-probs/status-summary.json'),
@@ -39,6 +41,8 @@ const releaseState = readJson(RELEASE_STATE_PATH);
 const activePageCoreLatest = readJson(PAGE_CORE_LATEST_PATH);
 const candidatePageCoreLatest = readJson(PAGE_CORE_CANDIDATE_LATEST_PATH);
 const stockUiState = readJson(STOCK_UI_STATE_PATH);
+const decisionCoreAcceleratedCertification = readJson(DECISION_CORE_ACCELERATED_CERTIFICATION_PATH);
+const decisionCoreBuyBreadth = readJson(DECISION_CORE_BUY_BREADTH_PATH);
 const histStatus = HIST_PROBS_STATUS_PATHS.map(readJson).find(Boolean) || null;
 const releaseEvidenceTarget = seal?.target_market_date || seal?.target_date || releaseState?.target_market_date || releaseState?.target_date || null;
 const candidateMatchesRelease = Boolean(
@@ -151,6 +155,13 @@ const doc = {
   page_core_freshness_max_hours: MAX_STALENESS_HOURS,
   stock_analyzer_ui_state_green: stockUiStateGreen,
   decision_public_green: decisionPublicGreen,
+  decision_core_switch_mode: seal?.decision_core?.switch_mode || decisionCoreAcceleratedCertification?.switch_mode || null,
+  decision_core_accelerated_certification_status: decisionCoreAcceleratedCertification?.status || null,
+  decision_core_live_shadow_days: decisionCoreAcceleratedCertification?.live_shadow_days ?? null,
+  decision_core_historical_replay_days: decisionCoreAcceleratedCertification?.historical_replay_valid_days ?? null,
+  decision_core_us_stock_etf_buy_count: decisionCoreBuyBreadth?.us_stock_etf_buy_count ?? null,
+  decision_core_eu_stock_etf_buy_count: decisionCoreBuyBreadth?.eu_stock_etf_buy_count ?? null,
+  decision_core_buy_breadth_status: decisionCoreBuyBreadth?.status || null,
   data_plane_green: dataPlaneGreen,
   hist_probs_green: histGreen,
   hist_probs_mode: histProbsMode,

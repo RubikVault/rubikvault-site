@@ -1,16 +1,16 @@
 {
   "schema": "rv.nas.release_truth_chain_code_manifest.v1",
-  "generated_at": "2026-05-08T20:14:18.665Z",
-  "git_head": "dee689247f1004d4becbb6b078f6cffb95c70e86",
+  "generated_at": "2026-05-08T21:26:13.036Z",
+  "git_head": "33ba1d46489afb1980183463f867a2af3a8fa4a0",
   "paths_file": "scripts/nas/inputs/release-truth-chain.paths",
-  "file_count": 61,
-  "combined_hash": "df77282d4a6705f83d2570768be0b1edf7b82d1dda8c07819f99cde31051c83c",
+  "file_count": 87,
+  "combined_hash": "0a700184be587a39f0a5be0a124369c158e94b8490da2d9cdf07e6695da7e6ec",
   "missing": [],
   "files": [
     {
       "path": "config/runtime-manifest.json",
-      "size_bytes": 11858,
-      "sha256": "c6c1202782250e59055cea2d74b1c717fbdd02c2e7460d3cfa6b5e058cdcd570"
+      "size_bytes": 12171,
+      "sha256": "fc38079840bc4847aa1c9d8c0305d53df40e6441286929466e91e633b164e375"
     },
     {
       "path": "extract_buys.py",
@@ -43,9 +43,129 @@
       "sha256": "05e3718e3852bd41ae9153531ae4885f47dff5b63cbe55e6370f3ba09bbf2d43"
     },
     {
+      "path": "public/dashboard_v7.html",
+      "size_bytes": 307509,
+      "sha256": "450ec06ce99acfbd67aed68a6d9af1577f9db65169793f47de876d102ec2b77f"
+    },
+    {
+      "path": "public/index.html",
+      "size_bytes": 275799,
+      "sha256": "f96c8f777519121cbc2e6cd444e1f8232aefdf32abd4c3596e939bd6a855f198"
+    },
+    {
+      "path": "public/js/decision-core-ui-map.js",
+      "size_bytes": 5760,
+      "sha256": "af56aeec585ebae7d78264a4c18bad7cf56027582a11746c416dfc1c5808c26a"
+    },
+    {
+      "path": "public/js/rv-v2-client.js",
+      "size_bytes": 42015,
+      "sha256": "2f1a8330fb32cb58b35d7a8e26d480c244d765c2568df32b1bbc30521d99ea7b"
+    },
+    {
+      "path": "public/js/stock-data-guard.js",
+      "size_bytes": 22877,
+      "sha256": "b5deafaa8908d8887f5cd87e03e75bc53914497d85d491a715704126882c5e07"
+    },
+    {
+      "path": "public/js/stock-page-view-model.js",
+      "size_bytes": 45885,
+      "sha256": "682be788ab12ecf770f56d55105c2944ad914abbe6f75b5136c0692bc15160b2"
+    },
+    {
       "path": "schemas/stock-analyzer/page-core.v1.schema.json",
       "size_bytes": 5550,
       "sha256": "332debea1342e10f214fed6af0ce91ca547b48aeeea572e3dae89a2a9f72f6ce"
+    },
+    {
+      "path": "scripts/audit/classifier/_lib/audit-core.mjs",
+      "size_bytes": 27204,
+      "sha256": "7fd8dd257d3c5182bc9f68af19f668ee9c6ca2703b657f8b6798502c4425e216"
+    },
+    {
+      "path": "scripts/audit/classifier/_lib/canbuy-port.mjs",
+      "size_bytes": 78,
+      "sha256": "ddb8fbd2af770342270ba21119e988c5f5ae029cc741776f9582379d861ae37e"
+    },
+    {
+      "path": "scripts/audit/classifier/_lib/client-classifiers-port.mjs",
+      "size_bytes": 57,
+      "sha256": "6e4074434c0de4a36d9f85a4cc3bea085a545f37c5ee0a6cb24d003c93fc36da"
+    },
+    {
+      "path": "scripts/audit/classifier/_lib/decision-bundle-iterator.mjs",
+      "size_bytes": 53,
+      "sha256": "831b3d6123d617dc5997d2e6607adbb97d5aaa2f1458b2c48464c028f084ad4d"
+    },
+    {
+      "path": "scripts/audit/classifier/_lib/invariants.mjs",
+      "size_bytes": 231,
+      "sha256": "379ba587535be63afe1cda9e7546fcb769ece520bc2fbbfcb7c3f8385916fc78"
+    },
+    {
+      "path": "scripts/audit/classifier/_lib/reason-code-demotion.mjs",
+      "size_bytes": 142,
+      "sha256": "0756d545f9e7dd10ca4be6eb572946b0e8add377a5273171aad63b82766438bd"
+    },
+    {
+      "path": "scripts/audit/classifier/_lib/universe-iterator.mjs",
+      "size_bytes": 68,
+      "sha256": "f4c8c101d94ad30aface9de6de303b0fcfcbdde67f0d9c35c8184412fffc3c19"
+    },
+    {
+      "path": "scripts/audit/classifier/01-cross-classifier-disagreement.mjs",
+      "size_bytes": 240,
+      "sha256": "454dbe6c425757311c60c60472647fedae62739771b68f5d1489c433c81e0870"
+    },
+    {
+      "path": "scripts/audit/classifier/02-server-vs-client-oracle.mjs",
+      "size_bytes": 234,
+      "sha256": "085b12aac917f4022e4b667585588483ac7642fd662499c5c043c478e5d245d9"
+    },
+    {
+      "path": "scripts/audit/classifier/03-invariant-violations.mjs",
+      "size_bytes": 231,
+      "sha256": "fa67ac6752ed3b3463d1b38844738affb7e1e83bcfe085dd2a6e2b78b6c1cecc"
+    },
+    {
+      "path": "scripts/audit/classifier/04-boundary-mutation.mjs",
+      "size_bytes": 228,
+      "sha256": "97461b5bbd3a6d85e58699763587872960f262971cfe49a089c08f78408a8419"
+    },
+    {
+      "path": "scripts/audit/classifier/05-coverage-distribution.mjs",
+      "size_bytes": 263,
+      "sha256": "cf85dbdff1ff1b29dde76f61cb6944f80caaf6fac1fe62b0e238e5982efbf6c7"
+    },
+    {
+      "path": "scripts/audit/classifier/06-threshold-lint.mjs",
+      "size_bytes": 225,
+      "sha256": "448d60e768f50037bac8344cebc3ebd71f7b9b2951a4b12ce91d578feb149c16"
+    },
+    {
+      "path": "scripts/audit/classifier/07-reason-code-coverage.mjs",
+      "size_bytes": 231,
+      "sha256": "64c0c70bad0fd6ac58a8a1547c4f7ca39ca50e1b85651e0c0a1e779c39ba694a"
+    },
+    {
+      "path": "scripts/audit/classifier/08-canbuy-gate-cliff.mjs",
+      "size_bytes": 228,
+      "sha256": "b550713359309ee9c34b459cef7a74b210054bb7d56823e8a0f7eb93eda521fd"
+    },
+    {
+      "path": "scripts/audit/classifier/09-buy-end-to-end-consistency.mjs",
+      "size_bytes": 237,
+      "sha256": "1c932243b0ec58758e19e8ba7ee8ff624e51bcd789f0d65590437d23c6b12c4f"
+    },
+    {
+      "path": "scripts/audit/classifier/run-all.mjs",
+      "size_bytes": 246,
+      "sha256": "a1cdecf6ef1bdc156da8e77590a192add43513734806cbb649b109b91fda426b"
+    },
+    {
+      "path": "scripts/build-best-setups-v4.mjs",
+      "size_bytes": 39762,
+      "sha256": "5b47213273e3633047333ab030d4cfe69c755351326519455b5366496e0384da"
     },
     {
       "path": "scripts/decision-core/analysis-reliability.mjs",
@@ -194,8 +314,8 @@
     },
     {
       "path": "scripts/nas/inputs/release-truth-chain.paths",
-      "size_bytes": 2728,
-      "sha256": "9d4aefe5043f0be5fbcab8a6de3b76b0684ae855c426a26cc3b9d776bfb7c633"
+      "size_bytes": 3891,
+      "sha256": "577c658e872954da21692ff3aec456a8dc941e7c8aa111271332a0753589194e"
     },
     {
       "path": "scripts/nas/nas-env.sh",
@@ -229,8 +349,8 @@
     },
     {
       "path": "scripts/ops/build-deploy-bundle.mjs",
-      "size_bytes": 39327,
-      "sha256": "0e4d3cf79295ca03653547b8c2c110c376e989786fcd1f90598e3d5a9129ddeb"
+      "size_bytes": 39388,
+      "sha256": "b984f607ad6263fd8e70494b6d5662f43048b221814c5dc491bf1075f1840d88"
     },
     {
       "path": "scripts/ops/build-full-universe-decisions.mjs",
@@ -278,6 +398,11 @@
       "sha256": "295cd669ce8d0c51872cefd4048ec666408bf6080db5cf12a18ae252079205a7"
     },
     {
+      "path": "scripts/ops/privacy-gate.mjs",
+      "size_bytes": 8315,
+      "sha256": "ac21dbd738bbf6036d209ab73e88956a4cadd3c47b41ae4ad062a1d52542148d"
+    },
+    {
       "path": "scripts/ops/release-gate-check.mjs",
       "size_bytes": 47962,
       "sha256": "6415ea1b63a2caa44d2a6f4928feaddf933af086984ecd52a05a4b3e9ea78159"
@@ -293,9 +418,14 @@
       "sha256": "88661c02f3ae575ce4a125bfeeeeee9ba4ee4ebe4fec34cf25e66861f083de53"
     },
     {
+      "path": "scripts/validate/frontpage-best-setups-ui-proof.mjs",
+      "size_bytes": 9890,
+      "sha256": "7d29c8cbcd1e28617bfa470ec15517852c3a4ffa2d89186a0314837ee9873e0c"
+    },
+    {
       "path": "scripts/validate/stock-decision-core-ui-buy-breadth.mjs",
-      "size_bytes": 8673,
-      "sha256": "14d45e6fa1925dd7147b8d663358149198aee1a8d327f25d39ea72831115cc34"
+      "size_bytes": 8799,
+      "sha256": "3b1655cca4780a479683a0e1b77f4682a38d161d97a191ceb1e00a0644ca2bda"
     },
     {
       "path": "scripts/validate/stock-decision-core-ui-fixtures.mjs",

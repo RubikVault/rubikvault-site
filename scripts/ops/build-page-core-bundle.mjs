@@ -41,6 +41,7 @@ const COMPAT_SCOPE_PATH = path.join(ROOT, 'public/data/universe/v7/ssot/stocks_e
 const OPERABILITY_PATH = path.join(ROOT, 'public/data/ops/stock-analyzer-operability-summary-latest.json');
 const OPERABILITY_FULL_PATH = path.join(ROOT, 'public/data/ops/stock-analyzer-operability-latest.json');
 const DECISIONS_LATEST_PATH = path.join(ROOT, 'public/data/decisions/latest.json');
+const DECISION_CORE_ROOT = path.join(ROOT, 'public/data/decision-core');
 const FUNDAMENTALS_SCOPE_PATH = path.join(ROOT, 'public/data/fundamentals/_scope.json');
 const FORECAST_LATEST_PATH = path.join(ROOT, 'public/data/forecast/latest.json');
 const BREAKOUT_LATEST_MANIFEST_PATHS = [
@@ -102,7 +103,12 @@ const historyPackCache = new Map();
 const historyShardCache = new Map();
 
 function parseArgs(argv) {
-  const get = (name) => argv.find((arg) => arg.startsWith(`--${name}=`))?.split('=').slice(1).join('=') || null;
+  const get = (name) => {
+    const inline = argv.find((arg) => arg.startsWith(`--${name}=`));
+    if (inline) return inline.split('=').slice(1).join('=');
+    const index = argv.indexOf(`--${name}`);
+    return index >= 0 ? argv[index + 1] || null : null;
+  };
   return {
     targetMarketDate: normalizeIsoDate(get('target-market-date') || process.env.RV_TARGET_MARKET_DATE || process.env.TARGET_MARKET_DATE || new Date().toISOString().slice(0, 10)),
     runId: get('run-id') || process.env.RV_RUN_ID || process.env.RUN_ID || `page-core-${new Date().toISOString().replace(/[:.]/g, '')}`,
@@ -258,7 +264,131 @@ function maybeCanonicalFromLookup(value) {
   return '';
 }
 
+function readDecisionCoreRows(source = process.env.RV_DECISION_CORE_SOURCE || 'legacy') {
+  const normalizedSource = String(source || 'legacy').toLowerCase();
+  if (!['core', 'shadow'].includes(normalizedSource)) return null;
+  const root = path.join(DECISION_CORE_ROOT, normalizedSource);
+  const manifest = readJsonMaybe(path.join(root, 'manifest.json'));
+  const partsDir = path.join(root, 'parts');
+  const out = new Map();
+  if (!manifest || !fs.existsSync(partsDir)) return out;
+  for (const name of fs.readdirSync(partsDir)) {
+    if (!/^part-\d{3}\.ndjson\.gz$/.test(name)) continue;
+    const text = readGzipText(path.join(partsDir, name));
+    for (const line of text.split('\n')) {
+      if (!line.trim()) continue;
+      try {
+        const row = JSON.parse(line);
+        const canonical = normalizePageCoreAlias(row?.meta?.asset_id);
+        if (!canonical) continue;
+        const action = String(row?.decision?.primary_action || 'UNAVAILABLE').toUpperCase();
+        const blocking = [
+          ...(Array.isArray(row?.eligibility?.vetos) ? row.eligibility.vetos : []),
+          row?.decision?.main_blocker,
+        ].filter(Boolean);
+        out.set(canonical, {
+          canonical_id: canonical,
+          schema: 'rv.decision_core_public_bridge.v1',
+          source: 'decision-core',
+          pipeline_status: ['BUY', 'WAIT', 'AVOID'].includes(action) ? 'OK' : 'DEGRADED',
+          verdict: action,
+          confidence: row?.decision?.analysis_reliability || 'LOW',
+          confidence_bucket: String(row?.decision?.analysis_reliability || 'LOW').toLowerCase(),
+          wait_subtype: row?.decision?.wait_subtype || null,
+          primary_setup: row?.decision?.primary_setup || 'none',
+          evaluation_role: row?.meta?.asset_type === 'INDEX' ? 'macro' : 'tradable',
+          blocking_reasons: blocking,
+          warnings: Array.isArray(row?.eligibility?.warnings) ? row.eligibility.warnings : [],
+          risk_assessment: {
+            level: row?.evidence_summary?.tail_risk_bucket === 'HIGH' ? 'HIGH' : row?.evidence_summary?.tail_risk_bucket === 'UNKNOWN' ? 'UNKNOWN' : 'MODERATE',
+            source: 'decision-core-tail-risk-bucket',
+            score: null,
+          },
+          decision_core_min: compactDecisionCoreForPageCore(row),
+        });
+      } catch {
+        // Keep page-core tolerant; decision core validation fails separately.
+      }
+    }
+  }
+  return out;
+}
+
+function compactDecisionCoreForPageCore(row) {
+  if (!row || typeof row !== 'object') return null;
+  const horizons = {};
+  for (const key of ['short_term', 'mid_term', 'long_term']) {
+    const horizon = row?.horizons?.[key];
+    horizons[key] = horizon ? {
+      horizon_action: horizon.horizon_action || null,
+      horizon_reliability: horizon.horizon_reliability || null,
+      horizon_setup: horizon.horizon_setup || null,
+      horizon_blockers: Array.isArray(horizon.horizon_blockers) ? horizon.horizon_blockers.slice(0, 3) : [],
+    } : null;
+  }
+  return {
+    meta: {
+      decision_id: row?.meta?.decision_id || null,
+      asset_id: row?.meta?.asset_id || null,
+      asset_type: row?.meta?.asset_type || null,
+      as_of_date: row?.meta?.as_of_date || null,
+      target_market_date: row?.meta?.target_market_date || null,
+      policy_bundle_version: row?.meta?.policy_bundle_version || null,
+      model_version: row?.meta?.model_version || null,
+    },
+    eligibility: {
+      eligibility_status: row?.eligibility?.eligibility_status || null,
+      decision_grade: row?.eligibility?.decision_grade === true,
+      vetos: Array.isArray(row?.eligibility?.vetos) ? row.eligibility.vetos.slice(0, 5) : [],
+      warnings: Array.isArray(row?.eligibility?.warnings) ? row.eligibility.warnings.slice(0, 5) : [],
+    },
+    decision: {
+      primary_action: row?.decision?.primary_action || null,
+      wait_subtype: row?.decision?.wait_subtype || null,
+      bias: row?.decision?.bias || null,
+      analysis_reliability: row?.decision?.analysis_reliability || null,
+      primary_setup: row?.decision?.primary_setup || null,
+      main_blocker: row?.decision?.main_blocker || null,
+      next_trigger: row?.decision?.next_trigger || null,
+      reason_codes: Array.isArray(row?.decision?.reason_codes) ? row.decision.reason_codes.slice(0, 5) : [],
+    },
+    evidence_summary: {
+      evidence_raw_n: row?.evidence_summary?.evidence_raw_n ?? null,
+      evidence_effective_n: row?.evidence_summary?.evidence_effective_n ?? null,
+      evidence_scope: row?.evidence_summary?.evidence_scope || null,
+      ev_proxy_bucket: row?.evidence_summary?.ev_proxy_bucket || null,
+      tail_risk_bucket: row?.evidence_summary?.tail_risk_bucket || null,
+    },
+    trade_guard: {
+      entry_policy: row?.trade_guard?.entry_policy || null,
+      max_entry_price: row?.trade_guard?.max_entry_price ?? null,
+      gap_tolerance_pct: row?.trade_guard?.gap_tolerance_pct ?? null,
+      cancel_if_open_above: row?.trade_guard?.cancel_if_open_above ?? null,
+      entry_valid_until: row?.trade_guard?.entry_valid_until || null,
+      invalidation_level: row?.trade_guard?.invalidation_level ?? null,
+      invalidation_reason: row?.trade_guard?.invalidation_reason || null,
+      setup_failed_if: row?.trade_guard?.setup_failed_if || null,
+    },
+    evaluation: {
+      evaluation_horizon_days: row?.evaluation?.evaluation_horizon_days ?? null,
+      evaluation_policy: row?.evaluation?.evaluation_policy || null,
+    },
+    rank_summary: {
+      rank_percentile: row?.rank_summary?.rank_percentile ?? null,
+      rank_scope: row?.rank_summary?.rank_scope || null,
+    },
+    horizons,
+    ui: {
+      severity: row?.ui?.severity || null,
+      show_override_banner: row?.ui?.show_override_banner === true,
+      disclaimer_policy_version: row?.ui?.disclaimer_policy_version || null,
+    },
+  };
+}
+
 function readDecisionRows() {
+  const decisionCoreRows = readDecisionCoreRows();
+  if (decisionCoreRows) return decisionCoreRows;
   const latest = readJsonMaybe(DECISIONS_LATEST_PATH);
   const snapshotPath = latest?.snapshot_path ? path.join(ROOT, 'public', latest.snapshot_path.replace(/^\/+/, '')) : null;
   const out = new Map();
@@ -709,12 +839,13 @@ function buildPageCoreRow({ canonicalId, registryRow, decisionRow, lookupValue, 
   const effectiveWarnings = freshnessOk
     ? warnings.filter((reason) => String(reason || '') !== 'bars_stale')
     : warnings;
+  const isDecisionCoreRow = decisionRow?.source === 'decision-core' || Boolean(decisionRow?.decision_core_min);
   const decisionOperational = Boolean(
     decisionRow
     && decisionRow.pipeline_status === 'OK'
-    && ['BUY', 'WAIT'].includes(effectiveVerdict)
-    && effectiveBlockingReasons.length === 0
-    && riskLevel !== 'UNKNOWN'
+    && ['BUY', 'WAIT', 'AVOID'].includes(effectiveVerdict)
+    && (isDecisionCoreRow || effectiveBlockingReasons.length === 0)
+    && (isDecisionCoreRow || riskLevel !== 'UNKNOWN')
   );
   const keyLevelsReady = historyContext.consistency?.keyLevelsReady === true;
   const historicalBasisOk = Boolean(
@@ -724,7 +855,7 @@ function buildPageCoreRow({ canonicalId, registryRow, decisionRow, lookupValue, 
     && historyContext.marketStatsMin
     && keyLevelsReady
   );
-  const primaryBlocker = effectiveBlockingReasons[0]
+  const primaryBlocker = (!isDecisionCoreRow ? effectiveBlockingReasons[0] : null)
     || (!OPERATIONAL_ASSET_CLASSES.has(assetClass) ? 'asset_class_out_of_scope' : null)
     || (barsCount < 200 ? 'insufficient_history' : null)
     || (!historyContext.latestBar ? 'missing_historical_bar_basis' : null)
@@ -791,7 +922,12 @@ function buildPageCoreRow({ canonicalId, registryRow, decisionRow, lookupValue, 
       daily_change_abs: dailyChangeAbs,
       market_cap: null,
       decision_verdict: effectiveVerdict || (registryRow ? 'WAIT' : 'WAIT_PIPELINE_INCOMPLETE'),
-      decision_confidence_bucket: confidenceBucket(registryRow?.computed?.score_0_100 || riskScore),
+      decision_confidence_bucket: decisionRow?.confidence_bucket || String(decisionRow?.confidence || '').toLowerCase() || confidenceBucket(riskScore),
+      decision_analysis_reliability: decisionRow?.decision_core_min?.decision?.analysis_reliability || decisionRow?.confidence || null,
+      decision_wait_subtype: decisionRow?.wait_subtype || decisionRow?.decision_core_min?.decision?.wait_subtype || null,
+      decision_primary_setup: decisionRow?.primary_setup || decisionRow?.decision_core_min?.decision?.primary_setup || null,
+      decision_max_entry_price: decisionRow?.decision_core_min?.trade_guard?.max_entry_price ?? null,
+      decision_invalidation_level: decisionRow?.decision_core_min?.trade_guard?.invalidation_level ?? null,
       risk_level: riskLevel || null,
       risk_source: riskSource,
       learning_status: null,
@@ -807,6 +943,7 @@ function buildPageCoreRow({ canonicalId, registryRow, decisionRow, lookupValue, 
       blocking_reasons: effectiveBlockingReasons,
       warnings: uniqueStrings([...effectiveWarnings, ...moduleWarnings]),
     },
+    decision_core_min: decisionRow?.decision_core_min || null,
     coverage: {
       bars: barsCount || numberOrNull(registryRow?.bars_count),
       derived_daily: Boolean(decisionRow),

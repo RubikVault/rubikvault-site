@@ -171,11 +171,15 @@ function splitBlockingReasons(reasons) {
   return { ui, decision };
 }
 
-function classifyRow(row, providerExceptions = new Map()) {
+const DECISION_CORE_VALID_ACTIONS = new Set(['BUY', 'WAIT', 'AVOID', 'UNAVAILABLE', 'INCUBATING']);
+
+export function classifyRow(row, providerExceptions = new Map()) {
   const canonicalId = String(row?.canonical_asset_id || '').toUpperCase();
   const assetClass = String(row?.identity?.asset_class || 'UNKNOWN').toUpperCase();
   const bars = num(row?.coverage?.bars);
   const verdict = String(row?.summary_min?.decision_verdict || '').toUpperCase();
+  const decisionCoreAction = String(row?.decision_core_min?.decision?.primary_action || '').toUpperCase();
+  const hasDecisionCoreState = DECISION_CORE_VALID_ACTIONS.has(decisionCoreAction);
   const quality = String(row?.summary_min?.quality_status || '').toUpperCase();
   const govStatus = String(row?.governance_summary?.status || '').toLowerCase();
   const riskLevel = String(row?.summary_min?.risk_level || row?.governance_summary?.risk_level || '').toUpperCase();
@@ -199,13 +203,20 @@ function classifyRow(row, providerExceptions = new Map()) {
       reasons.push(`contract_green_strict_${reason}`);
     }
   }
-  if (warnings.includes('decision_bundle_missing')) reasons.push('decision_bundle_missing');
+  if (warnings.includes('decision_bundle_missing') && !hasDecisionCoreState) reasons.push('decision_bundle_missing');
   if (warnings.includes('bars_stale')) reasons.push('bars_stale');
-  if (!['BUY', 'WAIT'].includes(verdict)) reasons.push('decision_not_buy_or_wait');
-  if (quality !== 'OK') reasons.push(`quality_${quality.toLowerCase() || 'missing'}`);
-  if (!['ok', 'available'].includes(govStatus)) reasons.push(`governance_${govStatus || 'missing'}`);
-  if (!riskLevel || riskLevel === 'UNKNOWN') reasons.push('risk_unknown');
-  if (blockers.length) reasons.push(blockers[0] || 'governance_blocked');
+  if (hasDecisionCoreState) {
+    if (decisionCoreAction === 'BUY') {
+      if (row?.decision_core_min?.trade_guard?.max_entry_price == null) reasons.push('decision_core_buy_entry_guard_missing');
+      if (row?.decision_core_min?.trade_guard?.invalidation_level == null) reasons.push('decision_core_buy_invalidation_missing');
+    }
+  } else {
+    if (!['BUY', 'WAIT'].includes(verdict)) reasons.push('decision_not_buy_or_wait');
+    if (quality !== 'OK') reasons.push(`quality_${quality.toLowerCase() || 'missing'}`);
+    if (!['ok', 'available'].includes(govStatus)) reasons.push(`governance_${govStatus || 'missing'}`);
+    if (!riskLevel || riskLevel === 'UNKNOWN') reasons.push('risk_unknown');
+    if (blockers.length) reasons.push(blockers[0] || 'governance_blocked');
+  }
   const historicalLink = String(row?.module_links?.historical || '');
   if (!historicalLink.includes('asset_id=')) reasons.push('historical_link_not_canonical_safe');
   reasons.push(...uiModuleCompletenessReasons(row));
@@ -355,4 +366,6 @@ function main() {
   if (!doc.core_release_eligible) process.exitCode = 1;
 }
 
-main();
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  main();
+}

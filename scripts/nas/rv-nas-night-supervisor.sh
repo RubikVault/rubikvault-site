@@ -356,7 +356,7 @@ step_resource_class() {
     hist_probs|hist_probs_catchup|snapshot|learning_daily)
       printf '%s\n' "heavy"
       ;;
-    build_global_scope|forecast_daily|build_fundamentals|quantlab_daily_report|breakout_v12|scientific_summary|decision_module_scorecard|v1_audit|cutover_readiness|etf_diagnostic|page_core_bundle|public_history_shards|hist_probs_v2_shadow)
+    build_global_scope|forecast_daily|build_fundamentals|quantlab_daily_report|breakout_v12|scientific_summary|decision_module_scorecard|decision_core_outcome_bootstrap|v1_audit|cutover_readiness|etf_diagnostic|page_core_bundle|public_history_shards|hist_probs_v2_shadow)
       printf '%s\n' "medium"
       ;;
     *)
@@ -389,6 +389,7 @@ step_timeout_sec() {
     etf_diagnostic) printf '%s\n' 1800 ;;
     learning_daily) printf '%s\n' 5400 ;;
     decision_module_scorecard) printf '%s\n' 600 ;;
+    decision_core_outcome_bootstrap) printf '%s\n' 600 ;;
     v1_audit) printf '%s\n' 1800 ;;
     cutover_readiness) printf '%s\n' 1800 ;;
     stage1_ops_pack) printf '%s\n' 1800 ;;
@@ -583,16 +584,22 @@ step_command() {
       # to keep RSS under control — skip-existing + checkpoint-store (already in turbo.mjs)
       # let the next nightly continue from where this one stopped.
       # ALLOW_DEFER_SUCCESS=1: if turbo decides to defer (queue too large), exit 0 instead of 23.
-      printf '%s\n' "set +e; HIST_PROBS_WORKERS='${RV_HIST_PROBS_CATCHUP_WORKERS:-2}' HIST_PROBS_WORKER_BATCH_SIZE='${RV_HIST_PROBS_CATCHUP_BATCH_SIZE:-25}' HIST_PROBS_SKIP_EXISTING='1' HIST_PROBS_WRITE_MODE='bucket_only' HIST_PROBS_TIER='all' HIST_PROBS_MAX_TICKERS='${RV_HIST_PROBS_CATCHUP_MAX_TICKERS:-1500}' HIST_PROBS_FRESHNESS_BUDGET_TRADING_DAYS='${RV_HIST_PROBS_FRESHNESS_BUDGET_TRADING_DAYS:-2}' HIST_PROBS_RSS_BUDGET_MB='${RV_HIST_PROBS_CATCHUP_RSS_BUDGET_MB:-3072}' HIST_PROBS_RESPECT_CHECKPOINT_VERSION='1' HIST_PROBS_FAIL_ON_SOFT_ERRORS='0' HIST_PROBS_MIN_COVERAGE_RATIO='${RV_HIST_PROBS_CATCHUP_MIN_COVERAGE_RATIO:-0.95}' HIST_PROBS_DEFER_IF_REMAINING_OVER='0' HIST_PROBS_ALLOW_DEFER_SUCCESS='${RV_HIST_PROBS_CATCHUP_ALLOW_DEFER_SUCCESS:-1}' node scripts/ops/nas-hist-probs-worker-guard.mjs --mode all -- node run-hist-probs-turbo.mjs --asset-classes '$GLOBAL_ASSET_CLASSES'; hist_status=\$?; post_status=0; node scripts/ops/build-hist-probs-status-summary.mjs || post_status=\$?; node scripts/ops/build-hist-probs-public-projection.mjs || post_status=\$?; node scripts/ops/triage-hist-probs-errors.mjs || post_status=\$?; node scripts/hist-probs/classify-hist-errors.mjs || post_status=\$?; node scripts/hist-probs/audit-current-state.mjs || post_status=\$?; if [ \"\$hist_status\" -ne 0 ]; then exit \"\$hist_status\"; fi; exit \"\$post_status\""
+      printf '%s\n' "set +e; if [ \"\${RV_HIST_PROBS_CATCHUP_REGION_AWARE:-1}\" = \"1\" ]; then HIST_PROBS_WORKERS='${RV_HIST_PROBS_CATCHUP_WORKERS:-2}' HIST_PROBS_WORKER_BATCH_SIZE='${RV_HIST_PROBS_CATCHUP_BATCH_SIZE:-25}' HIST_PROBS_SKIP_EXISTING='1' HIST_PROBS_WRITE_MODE='bucket_only' HIST_PROBS_FRESHNESS_BUDGET_TRADING_DAYS='${RV_HIST_PROBS_FRESHNESS_BUDGET_TRADING_DAYS:-2}' HIST_PROBS_RSS_BUDGET_MB='${RV_HIST_PROBS_CATCHUP_RSS_BUDGET_MB:-4096}' HIST_PROBS_RESPECT_CHECKPOINT_VERSION='1' HIST_PROBS_FAIL_ON_SOFT_ERRORS='0' HIST_PROBS_MIN_COVERAGE_RATIO='0' node scripts/hist-probs/run-region-aware-catchup.mjs --target-market-date '$TARGET_MARKET_DATE' --per-region '${RV_HIST_PROBS_CATCHUP_PER_REGION:-500}' --max-total '${RV_HIST_PROBS_CATCHUP_MAX_TICKERS:-1500}' --execute; hist_status=\$?; else HIST_PROBS_WORKERS='${RV_HIST_PROBS_CATCHUP_WORKERS:-2}' HIST_PROBS_WORKER_BATCH_SIZE='${RV_HIST_PROBS_CATCHUP_BATCH_SIZE:-25}' HIST_PROBS_SKIP_EXISTING='1' HIST_PROBS_WRITE_MODE='bucket_only' HIST_PROBS_TIER='all' HIST_PROBS_MAX_TICKERS='${RV_HIST_PROBS_CATCHUP_MAX_TICKERS:-1500}' HIST_PROBS_FRESHNESS_BUDGET_TRADING_DAYS='${RV_HIST_PROBS_FRESHNESS_BUDGET_TRADING_DAYS:-2}' HIST_PROBS_RSS_BUDGET_MB='${RV_HIST_PROBS_CATCHUP_RSS_BUDGET_MB:-3072}' HIST_PROBS_RESPECT_CHECKPOINT_VERSION='1' HIST_PROBS_FAIL_ON_SOFT_ERRORS='0' HIST_PROBS_MIN_COVERAGE_RATIO='${RV_HIST_PROBS_CATCHUP_MIN_COVERAGE_RATIO:-0.95}' HIST_PROBS_DEFER_IF_REMAINING_OVER='0' HIST_PROBS_ALLOW_DEFER_SUCCESS='${RV_HIST_PROBS_CATCHUP_ALLOW_DEFER_SUCCESS:-1}' node scripts/ops/nas-hist-probs-worker-guard.mjs --mode all -- node run-hist-probs-turbo.mjs --asset-classes '$GLOBAL_ASSET_CLASSES'; hist_status=\$?; post_status=0; node scripts/ops/build-hist-probs-status-summary.mjs || post_status=\$?; node scripts/ops/build-hist-probs-public-projection.mjs || post_status=\$?; node scripts/ops/triage-hist-probs-errors.mjs || post_status=\$?; node scripts/hist-probs/classify-hist-errors.mjs || post_status=\$?; node scripts/hist-probs/audit-current-state.mjs || post_status=\$?; if [ \"\$post_status\" -ne 0 ]; then hist_status=\"\$post_status\"; fi; fi; if [ \"\$hist_status\" -ne 0 ]; then exit \"\$hist_status\"; fi; exit 0"
       ;;
     hist_probs_v2_shadow)
       printf '%s\n' "node scripts/hist-probs-v2/run-daily-shadow-step.mjs --date='$TARGET_MARKET_DATE' --max-assets='${RV_HIST_PROBS_V2_MAX_ASSETS:-300}' --error-assets='${RV_HIST_PROBS_V2_ERROR_ASSETS:-200}' --timeout-ms='${RV_HIST_PROBS_V2_TIMEOUT_MS:-600000}'"
       ;;
+    decision_core_shadow)
+      printf '%s\n' "node scripts/decision-core/build-minimal-decision-bundles.mjs --mode shadow --target-market-date '$TARGET_MARKET_DATE' --replace && node scripts/decision-core/validate-decision-bundles.mjs --root public/data/decision-core/shadow --target-market-date '$TARGET_MARKET_DATE' && node scripts/decision-core/shadow-diff-logger.mjs --target-market-date '$TARGET_MARKET_DATE' && node scripts/validate/stock-decision-core-ui-fixtures.mjs && { node scripts/decision-core/update-shadow-day-ledger.mjs --target-market-date '$TARGET_MARKET_DATE' || { ledger_status=\$?; if [ \"\${RV_DECISION_CORE_SHADOW_LEDGER_HARD_GATE:-0}\" = \"1\" ]; then exit \"\$ledger_status\"; fi; echo \"decision_core_shadow_ledger_warn exit_code=\$ledger_status\" >&2; exit 0; }; }"
+      ;;
+    decision_core_outcome_bootstrap)
+      printf '%s\n' "node scripts/decision-core/build-outcome-store-bootstrap.mjs --root=public/data/decision-core/shadow --target-market-date '$TARGET_MARKET_DATE'"
+      ;;
     snapshot)
-      printf '%s\n' "node scripts/ops/build-full-universe-decisions.mjs --target-market-date '$TARGET_MARKET_DATE' --replace && ALLOW_REMOTE_BAR_FETCH=0 BEST_SETUPS_DISABLE_NETWORK=1 node scripts/build-best-setups-v4.mjs"
+      printf '%s\n' "if [ \"\${RV_DECISION_CORE_SOURCE:-legacy}\" = \"core\" ]; then node scripts/decision-core/build-minimal-decision-bundles.mjs --mode production --target-market-date '$TARGET_MARKET_DATE' --replace && node scripts/decision-core/validate-decision-bundles.mjs --root public/data/decision-core/core --target-market-date '$TARGET_MARKET_DATE' && ALLOW_REMOTE_BAR_FETCH=0 BEST_SETUPS_DISABLE_NETWORK=1 BEST_SETUPS_DECISION_SOURCE=decision-core node scripts/build-best-setups-v4.mjs && node scripts/decision-core/build-buy-breadth-proof.mjs --target-market-date '$TARGET_MARKET_DATE'; else node scripts/ops/build-full-universe-decisions.mjs --target-market-date '$TARGET_MARKET_DATE' --replace && ALLOW_REMOTE_BAR_FETCH=0 BEST_SETUPS_DISABLE_NETWORK=1 node scripts/build-best-setups-v4.mjs; fi"
       ;;
     page_core_bundle)
-      printf '%s\n' "NODE_OPTIONS='--max-old-space-size=${RV_PAGE_CORE_HEAP_MB:-8192}' node scripts/ops/build-page-core-bundle.mjs --target-market-date '$TARGET_MARKET_DATE' --replace --incremental && node scripts/ops/build-stock-analyzer-provider-exceptions.mjs --target-market-date '$TARGET_MARKET_DATE' && node scripts/ops/build-stock-analyzer-ui-state-summary.mjs --latest public/data/page-core/candidates/latest.candidate.json && node scripts/universe-v7/rebuild-search-exact-from-registry.mjs && node scripts/universe-v7/verify-search-registry-sync.mjs && node scripts/ops/retention-page-core-bundles.mjs"
+      printf '%s\n' "RV_DECISION_CORE_SOURCE='\${RV_DECISION_CORE_SOURCE:-legacy}' NODE_OPTIONS='--max-old-space-size=${RV_PAGE_CORE_HEAP_MB:-8192}' node scripts/ops/build-page-core-bundle.mjs --target-market-date '$TARGET_MARKET_DATE' --replace --incremental && node scripts/ops/build-stock-analyzer-provider-exceptions.mjs --target-market-date '$TARGET_MARKET_DATE' && node scripts/ops/build-stock-analyzer-ui-state-summary.mjs --latest public/data/page-core/candidates/latest.candidate.json && node scripts/universe-v7/rebuild-search-exact-from-registry.mjs && node scripts/universe-v7/verify-search-registry-sync.mjs && node scripts/ops/retention-page-core-bundles.mjs"
       ;;
     public_history_shards)
       printf '%s\n' "NODE_OPTIONS='--max-old-space-size=${RV_PUBLIC_HISTORY_SHARDS_HEAP_MB:-4096}' node scripts/ops/build-public-history-shards.mjs --manifest '$RV_GLOBAL_MANIFEST_DIR/pack-manifest.global.json' --target-market-date='$TARGET_MARKET_DATE' --incremental"
@@ -903,7 +910,7 @@ run_step() {
   fi
 
   case "$step_id" in
-    build_global_scope|provider_health_preflight|q1_delta_proof_report|hist_probs|hist_probs_catchup|hist_probs_v2_shadow|snapshot|page_core_bundle|public_history_shards|learning_daily|decision_module_scorecard|forecast_daily|build_fundamentals|quantlab_daily_report|breakout_v12|scientific_summary|v1_audit|cutover_readiness|etf_diagnostic|stage1_ops_pack|system_status_report|resource_budget_report|data_freshness_report|pipeline_epoch|generate_meta_dashboard_data|signal_performance_report|dp8_market|runtime_preflight|stock_analyzer_universe_audit|ui_field_truth_report|stock_ui_integrity_audit|page_core_smoke|final_integrity_seal|build_deploy_bundle|pre_deploy_smoke|wrangler_deploy|code_manifest_guard|lock_policy_report)
+    build_global_scope|provider_health_preflight|q1_delta_proof_report|hist_probs|hist_probs_catchup|hist_probs_v2_shadow|snapshot|page_core_bundle|public_history_shards|learning_daily|decision_module_scorecard|decision_core_outcome_bootstrap|forecast_daily|build_fundamentals|quantlab_daily_report|breakout_v12|scientific_summary|v1_audit|cutover_readiness|etf_diagnostic|stage1_ops_pack|system_status_report|resource_budget_report|data_freshness_report|pipeline_epoch|generate_meta_dashboard_data|signal_performance_report|dp8_market|runtime_preflight|stock_analyzer_universe_audit|ui_field_truth_report|stock_ui_integrity_audit|page_core_smoke|final_integrity_seal|build_deploy_bundle|pre_deploy_smoke|wrangler_deploy|code_manifest_guard|lock_policy_report)
       measure_args+=(--set-env "NODE_OPTIONS=--max-old-space-size=$heap_mb")
       ;;
   esac
@@ -992,6 +999,8 @@ lane_steps() {
     fi
     steps+=( \
       hist_probs_v2_shadow \
+      decision_core_shadow \
+      decision_core_outcome_bootstrap \
       snapshot \
       page_core_bundle \
       public_history_shards \

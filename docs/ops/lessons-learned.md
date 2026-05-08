@@ -21,6 +21,30 @@
 
 ---
 
+### 2026-05-07 · Decision Core · Accelerated historical certification must not inflate live shadow ledgers
+
+**What:** V3.3 needed a one-time faster production gate than 20 live shadow trading days.
+
+**Why:** Historical NAS data can prove PIT/replay safety faster, but counting replay days as live shadow days would hide rollout risk and make later audits ambiguous.
+
+**Fix:** Added a separate accelerated certification path with explicit `switch_mode=accelerated_historical_certification`, historical replay counts, BUY breadth proof, and `alpha_proof=false`. The live `valid_shadow_trading_days` ledger remains real-only.
+
+**Prevention:** Any future accelerated gate must write its own report and must never mutate live shadow-day counts. Release gates must show the switch basis publicly.
+
+---
+
+### 2026-05-07 · Stock Analyzer · Mobile overflow can come from status chrome, not main cards
+
+**What:** Decision-Core browser smoke passed desktop pages but failed mobile `no_horizontal_overflow` for Z, AAPL, F, and HOOD.
+
+**Why:** The page-level `.rv-data-updated` snapshot line inherited `white-space: nowrap`; long `Snapshot ... Price as-of ...` text pushed document width past the mobile viewport even though main decision cards were bounded.
+
+**Fix:** `.rv-data-updated` now allows wrapping with `overflow-wrap:anywhere` and `white-space:normal`. Added `scripts/validate/stock-decision-core-ui-smoke-tickers.mjs` for desktop+mobile Z/AAPL/F/HOOD proof.
+
+**Prevention:** Mobile overflow checks must include header/status chrome, not just the three Stock Analyzer decision blocks.
+
+---
+
 ### 2026-05-04 · NAS · Exported env defaults can override safer supervisor fallbacks
 
 **What:** The 2026-05-04 DSM auto-run failed in `market_data_refresh` with `provider_blocked_partial` although EODHD preflight passed, fetch errors were zero, and 31,623 valid rows for `2026-05-01` were fetched. The command still used `--bulk-min-yield-ratio 0.80 --bulk-min-rows-matched 50000`.

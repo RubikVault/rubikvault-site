@@ -177,8 +177,10 @@ export function buildUiIntegrity(payload, { ticker = null, priceStack = null } =
     ? field(true, 'VALID', null, true, priceAsOf)
     : field(null, 'BLOCK', readinessReasons[0] || 'decision contract failed', true, priceAsOf);
 
-  const decisionCritical = ['current_price', 'asset_return_1d', 'price_series', 'chart', 'decision_contract'];
-  const criticalBlocks = decisionCritical.filter((key) => fields[key]?.status === 'BLOCK');
+  const decisionCritical = ['current_price', 'asset_return_1d', 'price_series', 'decision_contract'];
+  const pageCritical = [...decisionCritical, 'chart'];
+  const decisionBlocks = decisionCritical.filter((key) => fields[key]?.status === 'BLOCK');
+  const criticalBlocks = pageCritical.filter((key) => fields[key]?.status === 'BLOCK');
   const allBlocks = Object.entries(fields).filter(([, value]) => value?.status === 'BLOCK');
   const pageState = criticalBlocks.length > 0
     ? (criticalBlocks.length / decisionCritical.length > 0.5 ? 'GLOBAL_OUTAGE' : 'DATA_ISSUE')
@@ -193,7 +195,7 @@ export function buildUiIntegrity(payload, { ticker = null, priceStack = null } =
     pageState,
     dataQuality: pageState === 'OK' ? 'OK' : 'FAILED',
     coverage: fields.chart.status === 'BLOCK' || fields.price_series.status === 'BLOCK' ? 'PARTIAL' : 'FULL',
-    decisionReadiness: criticalBlocks.length ? 'UNAVAILABLE' : 'READY',
+    decisionReadiness: decisionBlocks.length ? 'UNAVAILABLE' : 'READY',
     flags: unique(flags),
     blockingReasons: unique(criticalBlocks.map((key) => fields[key]?.reason)),
     issueCount: allBlocks.length,

@@ -179,7 +179,7 @@ describe('buildStockUiState', () => {
     assert.equal(view.tradePlanStatus, 'PENDING');
     assert.match(view.trustChips.join(' | '), /Models: 1\/3/);
     assert.match(view.trustChips.join(' | '), /History: delayed 4d/);
-    assert.match(view.trustChips.join(' | '), /Signal: LOW/);
+    assert.match(view.trustChips.join(' | '), /Reliability: LOW/);
   });
 
   it('keeps LOW confidence as single source and blocks active trade plan', () => {
@@ -208,7 +208,7 @@ describe('buildStockUiState', () => {
     assert.equal(view.action, 'WAIT');
     assert.equal(view.confidence, 'LOW');
     assert.deepEqual(view.horizons.map((item) => item.v.cf), ['LOW', 'LOW']);
-    assert.match(view.trustChips.join(' | '), /Signal: LOW/);
+    assert.match(view.trustChips.join(' | '), /Reliability: LOW/);
   });
 
   it('allows active BUY only with confirmed entry, valid geometry, and no blockers', () => {

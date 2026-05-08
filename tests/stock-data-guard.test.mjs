@@ -74,6 +74,7 @@ describe('UI integrity resolver', () => {
     assert.equal(integrity.fields.chart.status, 'BLOCK');
     assert.equal(integrity.pageState, 'DATA_ISSUE');
     assert.equal(integrity.dataQuality, 'FAILED');
+    assert.equal(integrity.decisionReadiness, 'READY');
   });
 
   it('renders model evidence panel as degraded instead of blank when evaluation is missing', () => {

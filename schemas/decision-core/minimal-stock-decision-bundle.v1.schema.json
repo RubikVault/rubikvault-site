@@ -1,0 +1,237 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://rubikvault.com/schemas/decision-core/minimal-stock-decision-bundle.v1.schema.json",
+  "title": "RubikVault Minimal Stock Decision Bundle v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "meta",
+    "eligibility",
+    "decision",
+    "evidence_summary",
+    "method_status",
+    "trade_guard",
+    "evaluation",
+    "rank_summary",
+    "horizons",
+    "ui"
+  ],
+  "properties": {
+    "meta": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "decision_id",
+        "asset_id",
+        "asset_type",
+        "as_of_date",
+        "target_market_date",
+        "bundle_version",
+        "policy_bundle_version",
+        "model_version",
+        "feature_manifest_id"
+      ],
+      "properties": {
+        "decision_id": { "type": "string", "minLength": 1 },
+        "asset_id": { "type": "string", "minLength": 1 },
+        "asset_type": { "enum": ["STOCK", "ETF", "INDEX"] },
+        "as_of_date": { "$ref": "#/$defs/dateOrNull" },
+        "target_market_date": { "$ref": "#/$defs/date" },
+        "bundle_version": { "const": "decision-core-v1" },
+        "policy_bundle_version": { "type": "string", "minLength": 1 },
+        "model_version": { "type": "string", "minLength": 1 },
+        "feature_manifest_id": { "type": "string", "minLength": 1 }
+      }
+    },
+    "eligibility": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["eligibility_status", "decision_grade", "vetos", "warnings"],
+      "properties": {
+        "eligibility_status": {
+          "enum": ["ELIGIBLE", "INCUBATING", "LIMITED_HISTORY", "NOT_DECISION_GRADE", "EXCLUDED"]
+        },
+        "decision_grade": { "type": "boolean" },
+        "vetos": { "$ref": "#/$defs/stringArray" },
+        "warnings": { "$ref": "#/$defs/stringArray" }
+      }
+    },
+    "decision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "primary_action",
+        "wait_subtype",
+        "bias",
+        "analysis_reliability",
+        "reliability_rule_version",
+        "primary_setup",
+        "main_blocker",
+        "next_trigger",
+        "reason_codes"
+      ],
+      "properties": {
+        "primary_action": { "enum": ["BUY", "WAIT", "AVOID", "UNAVAILABLE", "INCUBATING"] },
+        "wait_subtype": {
+          "enum": [
+            "WAIT_ENTRY_BAD",
+            "WAIT_TRIGGER_PENDING",
+            "WAIT_PULLBACK_WATCH",
+            "WAIT_LOW_EVIDENCE",
+            "WAIT_RISK_BLOCKER",
+            "WAIT_LOW_RANK",
+            "WAIT_EVENT_RISK",
+            "WAIT_NO_SETUP",
+            "WAIT_CONFLICTING_SIGNALS",
+            null
+          ]
+        },
+        "bias": { "enum": ["BULLISH", "NEUTRAL", "BEARISH"] },
+        "analysis_reliability": { "enum": ["LOW", "MEDIUM", "HIGH"] },
+        "reliability_rule_version": { "type": "string", "minLength": 1 },
+        "primary_setup": { "enum": ["trend_continuation", "pullback", "mean_reversion", "none"] },
+        "main_blocker": { "type": ["string", "null"] },
+        "next_trigger": { "type": ["string", "null"] },
+        "reason_codes": {
+          "type": "array",
+          "maxItems": 5,
+          "items": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "evidence_summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "evidence_raw_n",
+        "evidence_effective_n",
+        "evidence_scope",
+        "evidence_method",
+        "ev_proxy_bucket",
+        "tail_risk_bucket"
+      ],
+      "properties": {
+        "evidence_raw_n": { "type": ["number", "null"], "minimum": 0 },
+        "evidence_effective_n": { "type": ["number", "null"], "minimum": 0 },
+        "evidence_scope": { "enum": ["asset", "peer_group", "asset_type", "global_pool", "none"] },
+        "evidence_method": { "enum": ["hist_probs_v2_bootstrap", "hist_probs_v1_long_bootstrap", "unavailable"] },
+        "ev_proxy_bucket": { "enum": ["positive", "neutral", "negative", "unavailable"] },
+        "tail_risk_bucket": { "enum": ["LOW", "MEDIUM", "HIGH", "UNKNOWN"] }
+      }
+    },
+    "method_status": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["data_method_risk", "evidence_method_risk"],
+      "properties": {
+        "data_method_risk": { "$ref": "#/$defs/riskBucket" },
+        "evidence_method_risk": { "$ref": "#/$defs/riskBucket" },
+        "pit_risk": { "$ref": "#/$defs/riskBucket" },
+        "survivorship_risk": { "$ref": "#/$defs/riskBucket" }
+      }
+    },
+    "trade_guard": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "entry_policy",
+        "max_entry_price",
+        "gap_tolerance_pct",
+        "cancel_if_open_above",
+        "entry_valid_until",
+        "invalidation_level",
+        "invalidation_reason",
+        "setup_failed_if"
+      ],
+      "properties": {
+        "entry_policy": { "enum": ["next_session_limit_or_cancel", "not_actionable"] },
+        "max_entry_price": { "type": ["number", "null"] },
+        "gap_tolerance_pct": { "type": ["number", "null"], "minimum": 0 },
+        "cancel_if_open_above": { "type": ["number", "null"] },
+        "entry_valid_until": { "$ref": "#/$defs/dateOrNull" },
+        "invalidation_level": { "type": ["number", "null"] },
+        "invalidation_reason": { "type": ["string", "null"] },
+        "setup_failed_if": { "type": ["string", "null"] }
+      }
+    },
+    "evaluation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["evaluation_horizon_days", "evaluation_policy"],
+      "properties": {
+        "evaluation_horizon_days": { "type": ["integer", "null"], "minimum": 1 },
+        "evaluation_policy": { "enum": ["fixed_eod_horizon_no_auto_exit", "not_evaluated"] }
+      }
+    },
+    "rank_summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["rank_percentile", "rank_scope"],
+      "properties": {
+        "rank_percentile": { "type": ["number", "null"], "minimum": 0, "maximum": 100 },
+        "rank_scope": { "type": ["string", "null"] }
+      }
+    },
+    "horizons": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["short_term", "mid_term", "long_term"],
+      "properties": {
+        "short_term": { "$ref": "#/$defs/horizon" },
+        "mid_term": { "$ref": "#/$defs/horizon" },
+        "long_term": { "$ref": "#/$defs/horizon" }
+      }
+    },
+    "ui": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["severity", "show_override_banner", "disclaimer_policy_version"],
+      "properties": {
+        "severity": { "enum": ["positive", "caution", "danger", "neutral", "unavailable"] },
+        "show_override_banner": { "type": "boolean" },
+        "disclaimer_policy_version": { "type": "string", "minLength": 1 }
+      }
+    }
+  },
+  "$defs": {
+    "date": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+    },
+    "dateOrNull": {
+      "anyOf": [
+        { "$ref": "#/$defs/date" },
+        { "type": "null" }
+      ]
+    },
+    "stringArray": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "riskBucket": {
+      "enum": ["LOW", "MEDIUM", "HIGH", "UNKNOWN"]
+    },
+    "horizon": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "horizon_action",
+        "horizon_reason",
+        "horizon_reliability",
+        "horizon_setup",
+        "horizon_blockers"
+      ],
+      "properties": {
+        "horizon_action": { "enum": ["BUY", "WAIT", "AVOID", "UNAVAILABLE", "INCUBATING"] },
+        "horizon_reason": { "type": ["string", "null"] },
+        "horizon_reliability": { "enum": ["LOW", "MEDIUM", "HIGH"] },
+        "horizon_setup": { "enum": ["trend_continuation", "pullback", "mean_reversion", "none"] },
+        "horizon_blockers": {
+          "type": "array",
+          "maxItems": 3,
+          "items": { "type": "string", "minLength": 1 }
+        }
+      }
+    }
+  }
+}

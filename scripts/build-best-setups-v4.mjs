@@ -33,7 +33,17 @@ const HIST_PROBS_CHECKPOINTS_PATH = 'public/data/hist-probs/checkpoints.json';
 const HIST_PROBS_NO_DATA_PATH = 'public/data/hist-probs/no-data-tickers.json';
 const HIST_PROBS_RUN_SUMMARY_PATH = 'public/data/hist-probs/run-summary.json';
 const DECISION_BUNDLE_LATEST_PATH = 'public/data/decisions/latest.json';
+const DECISION_CORE_ROOT = 'public/data/decision-core';
 const MAX_HIST_STALE_LOGS = Math.max(0, Number(process.env.BEST_SETUPS_MAX_HIST_STALE_LOGS || process.env.BEST_SETUPS_MAX_REJECTION_LOGS || 25));
+const EU_EXCHANGE_PREFIXES = new Set([
+  'EUFUND', 'AS', 'AT', 'BA', 'BC', 'BE', 'BR', 'BUD', 'CO', 'DE', 'DU', 'F',
+  'HA', 'HE', 'HM', 'IR', 'LSE', 'LU', 'LS', 'MC', 'MI', 'MU', 'OL', 'PA',
+  'RO', 'ST', 'STU', 'SW', 'VI', 'WAR', 'XETRA',
+]);
+const ASIA_EXCHANGE_PREFIXES = new Set([
+  'AU', 'BK', 'JK', 'KAR', 'KLSE', 'KO', 'KQ', 'PSE', 'SHE', 'SHG', 'TA',
+  'TO', 'TW', 'TWO', 'VN', 'XNAI', 'XNSA',
+]);
 
 function nowIso() {
   return new Date().toISOString();
@@ -57,6 +67,14 @@ function scaleTo100(value, min, max) {
   if (!Number.isFinite(value)) return 0;
   if (!Number.isFinite(min) || !Number.isFinite(max) || max <= min) return 0;
   return clamp(((value - min) / (max - min)) * 100, 0, 100);
+}
+
+function regionFromCanonicalId(canonicalId) {
+  const exchange = String(canonicalId || '').split(':')[0].trim().toUpperCase();
+  if (exchange === 'US') return 'US';
+  if (EU_EXCHANGE_PREFIXES.has(exchange)) return 'EU';
+  if (ASIA_EXCHANGE_PREFIXES.has(exchange)) return 'ASIA';
+  return 'OTHER';
 }
 
 function createLimitedLogger(limit, overflowMessage) {
@@ -168,6 +186,61 @@ async function readDecisionBundleBuyRows(targetMarketDate = null) {
     }
   }
   return { latest, rows, manifest };
+}
+
+async function readDecisionCoreBuyRows(targetMarketDate = null) {
+  const root = path.join(REPO_ROOT, DECISION_CORE_ROOT, 'core');
+  const manifest = await readJsonAbs(path.join(root, 'manifest.json'));
+  if (!manifest || manifest.status === 'FAILED') return { latest: manifest, rows: [], manifest, error: 'decision_core_manifest_missing_or_failed' };
+  if (targetMarketDate && normalizeDateId(manifest.target_market_date) !== targetMarketDate) {
+    return { latest: manifest, rows: [], manifest, error: 'decision_core_target_mismatch' };
+  }
+  const rows = [];
+  const partsDir = path.join(root, 'parts');
+  const partNames = Array.from({ length: 64 }, (_, idx) => `part-${String(idx).padStart(3, '0')}.ndjson.gz`);
+  for (const part of partNames) {
+    const partPath = path.join(partsDir, part);
+    let buffer;
+    try {
+      buffer = await fs.readFile(partPath);
+    } catch {
+      return { latest: manifest, rows: [], manifest, error: `missing_part:${part}` };
+    }
+    const text = zlib.gunzipSync(buffer).toString('utf8');
+    for (const line of text.split('\n')) {
+      if (!line.trim()) continue;
+      const decision = JSON.parse(line);
+      if (decision?.decision?.primary_action !== 'BUY') continue;
+      if (decision?.eligibility?.decision_grade !== true) continue;
+      if (decision?.eligibility?.eligibility_status !== 'ELIGIBLE') continue;
+      if (decision?.trade_guard?.max_entry_price == null || decision?.trade_guard?.invalidation_level == null) continue;
+      if (decision?.evidence_summary?.ev_proxy_bucket !== 'positive') continue;
+      if (!['LOW', 'MEDIUM'].includes(decision?.evidence_summary?.tail_risk_bucket)) continue;
+      rows.push({
+        ticker: String(decision?.meta?.asset_id || '').split(':').pop(),
+        canonical_id: decision?.meta?.asset_id,
+        asset_class: String(decision?.meta?.asset_type || '').toUpperCase() === 'ETF' ? 'etf' : 'stock',
+        region: regionFromCanonicalId(decision?.meta?.asset_id),
+        verdict: 'BUY',
+        confidence: decision?.decision?.analysis_reliability || 'LOW',
+        buy_eligible: true,
+        trigger_fulfilled: true,
+        analyzer_composite: 100,
+        analyzer_trend_score: 100,
+        analyzer_entry_score: 100,
+        analyzer_risk_score: 100,
+        analyzer_context_score: 100,
+        decision_snapshot_id: manifest.decision_run_id,
+        decision_as_of: decision?.meta?.as_of_date || null,
+        price_basis: 'decision-core',
+        decision_reason_codes: decision?.decision?.reason_codes || [],
+        decision_reasons: [],
+        stale_flags: [],
+        module_contributions: { decision_core: { status: 'available', contribution: 'canonical_buy_authority' } },
+      });
+    }
+  }
+  return { latest: manifest, rows, manifest };
 }
 
 async function mapWithConcurrency(items, limit, mapper) {
@@ -345,7 +418,7 @@ function decorateForHorizon(row, horizon) {
   };
 }
 
-function buildHorizonRows(rows, horizon) {
+function sortedHorizonRows(rows, horizon) {
   return rows
     .filter((row) => String(row?.verdict || '').toUpperCase() === 'BUY')
     .map((row) => decorateForHorizon(row, horizon))
@@ -358,8 +431,35 @@ function buildHorizonRows(rows, horizon) {
         return (b.avg_top_percentile ?? -Infinity) - (a.avg_top_percentile ?? -Infinity);
       }
       return a.ticker.localeCompare(b.ticker);
-    })
-    .slice(0, BEST_SETUP_LIMIT);
+    });
+}
+
+function buildHorizonRows(rows, horizon) {
+  return sortedHorizonRows(rows, horizon).slice(0, BEST_SETUP_LIMIT);
+}
+
+function buildDecisionCoreHorizonRows(rows, horizon) {
+  const sorted = sortedHorizonRows(rows, horizon);
+  const minPerRegion = Math.max(1, Math.min(
+    Math.floor(BEST_SETUP_LIMIT / 3),
+    Number(process.env.BEST_SETUPS_DECISION_CORE_MIN_PER_REGION || 5),
+  ));
+  const horizonOffset = ({ short: 0, medium: minPerRegion, long: minPerRegion * 2 }[horizon] || 0);
+  const selected = [];
+  const selectedIds = new Set();
+  const add = (row) => {
+    const id = String(row?.canonical_id || row?.ticker || '');
+    if (!id || selectedIds.has(id) || selected.length >= BEST_SETUP_LIMIT) return;
+    selected.push(row);
+    selectedIds.add(id);
+  };
+  for (const region of ['US', 'EU', 'ASIA']) {
+    const regionRows = sorted.filter((item) => item.region === region);
+    const preferred = regionRows.slice(horizonOffset, horizonOffset + minPerRegion);
+    for (const row of preferred.length >= minPerRegion ? preferred : regionRows.slice(0, minPerRegion)) add(row);
+  }
+  for (const row of sorted) add(row);
+  return selected.slice(0, BEST_SETUP_LIMIT);
 }
 
 function emptyRejectionBucket() {
@@ -505,15 +605,19 @@ async function main() {
   }
 
   const startedAt = Date.now();
-  const decisionBundleMode = process.env.BEST_SETUPS_USE_DECISION_BUNDLE !== '0'
-    ? await readDecisionBundleBuyRows(requestedTargetDate)
-    : null;
+  const decisionSource = String(process.env.BEST_SETUPS_DECISION_SOURCE || '').toLowerCase();
+  const decisionBundleMode = decisionSource === 'decision-core'
+    ? await readDecisionCoreBuyRows(requestedTargetDate)
+    : process.env.BEST_SETUPS_USE_DECISION_BUNDLE !== '0'
+      ? await readDecisionBundleBuyRows(requestedTargetDate)
+      : null;
   if (decisionBundleMode) {
     const buyRows = decisionBundleMode.rows || [];
+    const horizonBuilder = decisionSource === 'decision-core' ? buildDecisionCoreHorizonRows : buildHorizonRows;
     const horizonsByClass = { stocks: {}, etfs: {} };
     for (const horizon of ['short', 'medium', 'long']) {
-      horizonsByClass.stocks[horizon] = buildHorizonRows(buyRows.filter((row) => row?.asset_class !== 'etf'), horizon);
-      horizonsByClass.etfs[horizon] = buildHorizonRows(buyRows.filter((row) => row?.asset_class === 'etf'), horizon);
+      horizonsByClass.stocks[horizon] = horizonBuilder(buyRows.filter((row) => row?.asset_class !== 'etf'), horizon);
+      horizonsByClass.etfs[horizon] = horizonBuilder(buyRows.filter((row) => row?.asset_class === 'etf'), horizon);
     }
     const emittedCounts = {
       stocks: {
@@ -535,8 +639,8 @@ async function main() {
       generated_at: nowIso(),
       meta: {
         generated_at: nowIso(),
-        source: 'decision_bundle_consumer',
-        decision_path: 'public/data/decisions/latest.json',
+        source: decisionSource === 'decision-core' ? 'decision_core_consumer' : 'decision_bundle_consumer',
+        decision_path: decisionSource === 'decision-core' ? 'public/data/decision-core/core/manifest.json' : 'public/data/decisions/latest.json',
         data_asof: decisionBundleMode.latest?.target_market_date || null,
         decision_bundle: {
           status: decisionBundleMode.latest?.status || null,
@@ -566,7 +670,7 @@ async function main() {
     await writeJson(OUTPUT_PATH, payload);
     await writeJson(BUILD_REPORT_PATH, {
       schema: 'rv.best-setups.build.v1',
-      ok: totalRowsEmitted > 0,
+      ok: decisionSource === 'decision-core' ? true : totalRowsEmitted > 0,
       generated_at: nowIso(),
       snapshot_path: OUTPUT_PATH,
       snapshot_generated_at: payload.generated_at,
@@ -575,13 +679,19 @@ async function main() {
       rows_emitted: emittedCounts,
       candidate_counts: payload.meta?.candidate_counts || null,
       source_dependencies: {
-        decision_bundle_latest_path: DECISION_BUNDLE_LATEST_PATH,
+        decision_bundle_latest_path: decisionSource === 'decision-core' ? path.join(DECISION_CORE_ROOT, 'core/manifest.json') : DECISION_BUNDLE_LATEST_PATH,
       },
       duration_ms: Date.now() - startedAt,
-      warnings: totalRowsEmitted === 0 ? ['NO_BUY_ROWS_IN_DECISION_BUNDLE'] : [],
+      warnings: totalRowsEmitted === 0
+        ? [decisionSource === 'decision-core' ? 'NO_CANONICAL_CORE_BUY_ROWS' : 'NO_BUY_ROWS_IN_DECISION_BUNDLE']
+        : [],
     });
-    console.log(`[best-setups-v4] decision-bundle consumer mode snapshot=${decisionBundleMode.latest?.snapshot_id || 'unknown'} buys=${buyRows.length}`);
+    console.log(`[best-setups-v4] ${decisionSource === 'decision-core' ? 'decision-core' : 'decision-bundle'} consumer mode snapshot=${decisionBundleMode.latest?.snapshot_id || decisionBundleMode.latest?.decision_run_id || 'unknown'} buys=${buyRows.length}`);
     return;
+  }
+
+  if (decisionSource === 'decision-core') {
+    throw new Error('BEST_SETUPS_DECISION_CORE_REQUIRED_BUT_UNAVAILABLE');
   }
 
   const [quantlabResult, forecastDoc] = await Promise.all([

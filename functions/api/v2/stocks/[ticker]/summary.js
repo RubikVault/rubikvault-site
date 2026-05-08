@@ -22,9 +22,9 @@ function buildSummaryFromPageCore(pageCore) {
   const pageCoreOperational = strictReasons.length === 0;
   const pipelineStatus = pageCoreOperational ? 'OK' : 'DEGRADED';
   const decisionVerdict = String(pageCore?.summary_min?.decision_verdict || '').toUpperCase();
-  const verdict = ['BUY', 'WAIT', 'SELL', 'AVOID'].includes(decisionVerdict)
+  const verdict = ['BUY', 'WAIT', 'SELL', 'AVOID', 'UNAVAILABLE', 'INCUBATING'].includes(decisionVerdict)
     ? decisionVerdict
-    : (pageCoreOperational ? 'WAIT' : 'WAIT_PIPELINE_INCOMPLETE');
+    : 'UNAVAILABLE';
   const rawRiskLevel = String(pageCore?.summary_min?.risk_level || pageCore?.governance_summary?.risk_level || '').toUpperCase();
   const riskLevel = rawRiskLevel || 'UNKNOWN';
   const blockingReasons = Array.isArray(pageCore?.governance_summary?.blocking_reasons)
@@ -55,9 +55,15 @@ function buildSummaryFromPageCore(pageCore) {
       _rv_return_integrity: returnIntegrity,
     },
     decision: {
-      verdict: pageCore?.summary_min?.decision_verdict || null,
+      verdict: pageCore?.summary_min?.decision_verdict || pageCore?.decision_core_min?.decision?.primary_action || null,
       confidence_bucket: pageCore?.summary_min?.decision_confidence_bucket || null,
+      analysis_reliability: pageCore?.summary_min?.decision_analysis_reliability || pageCore?.decision_core_min?.decision?.analysis_reliability || null,
+      wait_subtype: pageCore?.summary_min?.decision_wait_subtype || pageCore?.decision_core_min?.decision?.wait_subtype || null,
+      primary_setup: pageCore?.summary_min?.decision_primary_setup || pageCore?.decision_core_min?.decision?.primary_setup || null,
+      max_entry_price: pageCore?.summary_min?.decision_max_entry_price ?? pageCore?.decision_core_min?.trade_guard?.max_entry_price ?? null,
+      invalidation_level: pageCore?.summary_min?.decision_invalidation_level ?? pageCore?.decision_core_min?.trade_guard?.invalidation_level ?? null,
     },
+    decision_core_min: pageCore?.decision_core_min || null,
     daily_decision: {
       schema: 'rv.asset_daily_decision.v1',
       source: 'page-core-summary-bridge',

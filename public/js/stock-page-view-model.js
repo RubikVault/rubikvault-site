@@ -519,9 +519,9 @@ export function buildTrustPresentation({
 
 function normalizeUiAction(value) {
   const raw = String(value || '').toUpperCase();
-  if (raw === 'BUY' || raw === 'WATCH' || raw === 'WAIT' || raw === 'SELL' || raw === 'AVOID' || raw === 'UNAVAILABLE') return raw;
+  if (raw === 'BUY' || raw === 'WATCH' || raw === 'WAIT' || raw === 'SELL' || raw === 'AVOID' || raw === 'UNAVAILABLE' || raw === 'INCUBATING') return raw;
   if (raw === 'N/A' || raw === 'NA' || raw === 'INSUFFICIENT_DATA' || raw === 'WAIT_PIPELINE_INCOMPLETE') return 'UNAVAILABLE';
-  return 'WAIT';
+  return 'UNAVAILABLE';
 }
 
 function normalizeUiConfidence(value) {
@@ -600,8 +600,11 @@ export function buildStockUiState({
   tradePlan = null,
   close = payload?.data?.market_prices?.close || null,
 } = {}) {
-  const rawAction = normalizeUiAction(decision?.verdict || decision?.final_verdict || 'WAIT');
-  const rawConfidence = normalizeUiConfidence(decision?.confidence_bucket ?? decision?.confidence);
+  const decisionCore = payload?.decision_core_min || payload?.data?.decision_core_min || decision?.decision_core_min || null;
+  const coreDecision = decisionCore?.decision || null;
+  const coreTradeGuard = decisionCore?.trade_guard || null;
+  const rawAction = normalizeUiAction(coreDecision?.primary_action || decision?.verdict || decision?.final_verdict || 'UNAVAILABLE');
+  const rawConfidence = normalizeUiConfidence(coreDecision?.analysis_reliability ?? decision?.analysis_reliability ?? decision?.confidence_bucket ?? decision?.confidence);
   const rawHorizons = Array.isArray(horizons) ? horizons : [];
   const horizonVerdicts = rawHorizons.map((item) => normalizeUiAction(item?.v?.l || item?.verdict || item?.label)).filter(Boolean);
   const allHorizonsWait = horizonVerdicts.length > 0 && horizonVerdicts.every((value) => value === 'WAIT' || value === 'UNAVAILABLE');
@@ -610,10 +613,10 @@ export function buildStockUiState({
   const missingCount = Array.isArray(missingModels) ? new Set(missingModels).size : 0;
   const modelCount = modelEvidenceLimited ? Math.max(0, modelTotal - missingCount) : modelTotal;
   let confidence = rawConfidence;
-  if (allHorizonsWait) confidence = 'LOW';
-  if (modelEvidenceLimited && missingCount >= 2) confidence = 'LOW';
-  else if (modelEvidenceLimited && confidence === 'HIGH') confidence = 'MEDIUM';
-  if (horizonConfidences.length && horizonConfidences.every((value) => value === 'LOW')) confidence = 'LOW';
+  if (!decisionCore && allHorizonsWait) confidence = 'LOW';
+  if (!decisionCore && modelEvidenceLimited && missingCount >= 2) confidence = 'LOW';
+  else if (!decisionCore && modelEvidenceLimited && confidence === 'HIGH') confidence = 'MEDIUM';
+  if (!decisionCore && horizonConfidences.length && horizonConfidences.every((value) => value === 'LOW')) confidence = 'LOW';
   const tacticalAction = String(decision?.tactical_action || '').toUpperCase();
   const confirmedEntry = (rawAction === 'BUY' && tacticalAction === 'ENTER_LONG') || (rawAction === 'SELL' && tacticalAction === 'ENTER_SHORT');
   const breakoutStatus = String(breakout?.status || breakout?.state || breakout?.label || '').toLowerCase();
@@ -630,6 +633,10 @@ export function buildStockUiState({
     const clean = sanitizeReason(reason);
     if (clean && !blockers.includes(clean)) blockers.push(clean);
   }
+  for (const reason of coreDecision?.reason_codes || []) {
+    const clean = sanitizeReason(reason);
+    if (clean && !blockers.includes(clean) && blockers.length < 5) blockers.push(clean);
+  }
   if ((rawAction === 'BUY' || rawAction === 'SELL') && !confirmedEntry) blockers.push('Entry confirmation pending');
   if ((rawAction === 'BUY' || rawAction === 'SELL') && confidence === 'LOW') blockers.push('Signal confidence is low');
   if (modelEvidenceLimited) blockers.push('Model coverage limited');
@@ -638,16 +645,18 @@ export function buildStockUiState({
   let action = rawAction;
   if (integrityBlocked) {
     action = 'UNAVAILABLE';
-  } else if (allHorizonsWait) {
+  } else if (!decisionCore && allHorizonsWait) {
     action = 'WAIT';
-  } else if ((rawAction === 'BUY' || rawAction === 'SELL') && blockers.length > 0) {
+  } else if (!decisionCore && (rawAction === 'BUY' || rawAction === 'SELL') && blockers.length > 0) {
     action = 'WAIT';
   }
 
   const normalizedHorizons = rawHorizons.map((item) => normalizeStockHorizon(item, action, confidence));
   const tradePlanStatus = action === 'UNAVAILABLE'
     ? 'UNAVAILABLE'
-    : ((action === 'BUY' || action === 'SELL') && confirmedEntry && tradePlan?.status === 'ready' && blockers.length === 0)
+    : (decisionCore && action === 'BUY' && coreTradeGuard?.max_entry_price != null && coreTradeGuard?.invalidation_level != null)
+      ? 'ACTIVE'
+      : ((action === 'BUY' || action === 'SELL') && confirmedEntry && tradePlan?.status === 'ready' && blockers.length === 0)
       ? 'ACTIVE'
       : 'PENDING';
   const setupStatus = tradePlanStatus === 'ACTIVE'
@@ -667,19 +676,31 @@ export function buildStockUiState({
     `Price/Tech: ${canonicalDate ? `OK · ${canonicalDate} EOD` : 'Pending'}`,
     `Models: ${modelCount}/${modelTotal}`,
     historyChip,
-    `Signal: ${confidence}`,
+    `Reliability: ${confidence}`,
   ];
+  if (decisionCore?.evidence_summary?.ev_proxy_bucket) trustChips.push(`Edge proxy: ${decisionCore.evidence_summary.ev_proxy_bucket}`);
+  if (decisionCore?.evidence_summary?.tail_risk_bucket) trustChips.push(`Tail risk: ${decisionCore.evidence_summary.tail_risk_bucket}`);
   if (fundamentalsStatus && fundamentalsStatus !== 'ready') trustChips.push(`Fundamentals: ${String(fundamentalsStatus).replace(/_/g, ' ')}`);
   const triggerLevel = toNumber(decision?.trigger_price ?? decision?.entry_trigger ?? stats?.sma20 ?? close);
-  const triggers = triggerLevel != null
+  const triggers = decisionCore && action === 'BUY'
+    ? [
+      `Valid only below $${toNumber(coreTradeGuard?.max_entry_price)?.toFixed(2) || 'n/a'}`,
+      `Invalidated below $${toNumber(coreTradeGuard?.invalidation_level)?.toFixed(2) || 'n/a'}`,
+    ]
+    : triggerLevel != null
     ? [`Close above $${triggerLevel.toFixed(2)}`]
     : ['Wait for confirmed entry trigger'];
 
   return {
     action,
     rawAction,
-    bias: actionBias(action, normalizedHorizons, states),
+    bias: decisionCore?.decision?.bias || actionBias(action, normalizedHorizons, states),
     confidence,
+    analysisReliability: confidence,
+    reliabilityTooltip: 'Analysis reliability describes data and method strength, not probability of profit.',
+    waitSubtype: coreDecision?.wait_subtype || decision?.wait_subtype || null,
+    maxEntryPrice: coreTradeGuard?.max_entry_price ?? decision?.max_entry_price ?? null,
+    invalidationLevel: coreTradeGuard?.invalidation_level ?? decision?.invalidation_level ?? null,
     setupStatus,
     tradePlanStatus,
     blockers,

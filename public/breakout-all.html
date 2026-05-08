@@ -462,7 +462,7 @@
                 allDataItems = items;
                 currentPage = 1;
                 
-                // Default-Sortierung: Score absteigend (Höchste Wahrscheinlichkeit oben)
+                // Default sort: score descending (highest probability first)
                 sortDirection[2] = 'asc'; 
                 sortTable(2);
 
@@ -544,7 +544,7 @@
 
                 return `
                     <tr>
-                        <td class="ticker-col" style="cursor: pointer; position: relative;" onclick="window.open('/analyze/${encodeURIComponent(item.ticker.includes(':') ? item.ticker.split(':').reverse().join('.') : item.ticker)}', '_blank')" title="Öffne Stock Analyzer">
+                        <td class="ticker-col" style="cursor: pointer; position: relative;" onclick="window.open('/analyze/${encodeURIComponent(item.ticker.includes(':') ? item.ticker.split(':').reverse().join('.') : item.ticker)}', '_blank')" title="Open Stock Analyzer">
                             ${item.ticker} ${suppressedBadge}
                             <span class="asset-name">${item.name || ''}</span>
                         </td>

@@ -1994,7 +1994,7 @@
     function normalizeTicker(raw) {
       const s = String(raw || '').trim().toUpperCase();
       if (!s) return '';
-      if (!/^[A-Z0-9\-\.]{1,15}$/.test(s)) return '';
+      if (!/^[A-Z0-9\-\.:\^]{1,24}$/.test(s)) return '';
       return s;
     }
 
@@ -3206,7 +3206,7 @@
                   return `
                   <tr>
                     <td style="padding:0.35rem 0.25rem; border-top:1px solid rgba(100,116,139,0.18);">
-                      <a class="best-setup-link" href="/analyze/${encodeURIComponent(row.ticker)}" data-open-ticker="${escapeHtml(row.ticker)}" data-canonical-id="${escapeHtml(row.canonical_id || '')}" title="${escapeHtml(row.canonical_id || 'canonical_id: n/a')}">${escapeHtml(row.ticker)}</a>${row.exchange && row.exchange !== 'US' ? `<span style="font-size:0.7rem;color:#f59e0b;margin-left:3px" title="Non-US exchange — analysis data may be limited">${escapeHtml(row.exchange)}</span>` : ''}
+                      <a class="best-setup-link" href="/analyze/${encodeURIComponent(row.canonical_id || row.ticker).replace(/%3A/gi, ':')}" data-open-ticker="${escapeHtml(row.ticker)}" data-canonical-id="${escapeHtml(row.canonical_id || '')}" title="${escapeHtml(row.canonical_id || 'canonical_id: n/a')}">${escapeHtml(row.ticker)}</a>${row.exchange && row.exchange !== 'US' ? `<span style="font-size:0.7rem;color:#f59e0b;margin-left:3px" title="Non-US exchange — analysis data may be limited">${escapeHtml(row.exchange)}</span>` : ''}
                     </td>
                     <td style="padding:0.35rem 0.25rem; border-top:1px solid rgba(100,116,139,0.18); color:#cbd5e1;">${escapeHtml(row.name || '—')}</td>
                     <td style="padding:0.35rem 0.25rem; border-top:1px solid rgba(100,116,139,0.18); text-align:right; color:#e5e7eb;">${formatBestSetupMetric(row, source)}</td>
@@ -3235,7 +3235,12 @@
         link.addEventListener('click', async (ev) => {
           ev.preventDefault();
           const ticker = link.getAttribute('data-open-ticker');
+          const canonicalId = link.getAttribute('data-canonical-id');
           if (!ticker) return;
+          if (canonicalId) {
+            window.location.assign(`/analyze/${encodeURIComponent(canonicalId).replace(/%3A/gi, ':')}`);
+            return;
+          }
           await selectSymbol(ticker, universeByTicker.get(ticker) || null, { push: true });
         });
       });

@@ -39,6 +39,10 @@ const RELEASE_STATE_PATH = path.join(REPO_ROOT, 'public/data/ops/release-state-l
 const FINAL_INTEGRITY_SEAL_PATH = path.join(REPO_ROOT, 'public/data/ops/final-integrity-seal-latest.json');
 const PUBLIC_STATUS_PATH = path.join(REPO_ROOT, 'public/data/public-status.json');
 const STOCK_UI_STATE_PATH = path.join(REPO_ROOT, 'public/data/runtime/stock-analyzer-ui-state-summary-latest.json');
+const DECISION_CORE_STATUS_PATH = path.join(REPO_ROOT, 'public/data/decision-core/status/latest.json');
+const DECISION_CORE_ACCELERATED_CERTIFICATION_PATH = path.join(REPO_ROOT, 'public/data/decision-core/status/accelerated-certification-latest.json');
+const DECISION_CORE_BUY_BREADTH_PATH = path.join(REPO_ROOT, 'public/data/reports/decision-core-buy-breadth-latest.json');
+const DECISION_CORE_BUY_BREADTH_UI_PATH = path.join(REPO_ROOT, 'public/data/reports/stock-decision-core-ui-buy-breadth-latest.json');
 const DEPLOY_PROOF_PATH  = path.join(REPO_ROOT, 'var/private/ops/deploy-proof-latest.json');
 const PUBLIC_DEPLOY_PROOF_PATH = path.join(REPO_ROOT, 'public/data/status/deploy-proof-latest.json');
 const BUNDLE_META_PATH   = path.join(REPO_ROOT, 'var/private/ops/build-bundle-meta.json');
@@ -565,6 +569,46 @@ function checkLocalPublicStatus(seal) {
   }
 }
 
+function checkDecisionCore(seal) {
+  if (String(process.env.RV_DECISION_CORE_SOURCE || '').toLowerCase() !== 'core') return;
+  const status = readJson(DECISION_CORE_STATUS_PATH);
+  if (!status && !isForce) fail(`Decision Core status missing at ${DECISION_CORE_STATUS_PATH}.`);
+  if (!status) return;
+  const expectedTargetDate = targetDateOf(seal);
+  if (expectedTargetDate && targetDateOf(status) !== expectedTargetDate && !isForce) {
+    fail(`Decision Core target mismatch: expected ${expectedTargetDate}, got ${targetDateOf(status) || 'missing'}.`);
+  }
+  const blockers = [];
+  for (const field of [
+    'schema_error_count',
+    'unknown_blocking_reason_code_count',
+    'legacy_buy_fallback_count',
+    'missing_manifest_count',
+    'missing_reason_registry_count',
+  ]) {
+    if (Number(status[field] || 0) > 0) blockers.push(`${field}=${status[field]}`);
+  }
+  if (status.policy_manifest_loaded !== true) blockers.push('policy_manifest_loaded=false');
+  if (status.reason_code_registry_loaded !== true) blockers.push('reason_code_registry_loaded=false');
+  if (status.feature_manifest_loaded !== true) blockers.push('feature_manifest_loaded=false');
+  if (status.adjusted_data_policy_declared !== true) blockers.push('adjusted_data_policy_declared=false');
+  if (status.no_partial_bundle !== true) blockers.push('no_partial_bundle=false');
+  if (status.atomic_publish_ok !== true) blockers.push('atomic_publish_ok=false');
+  if (String(process.env.RV_DECISION_CORE_SWITCH_MODE || '').toLowerCase() === 'accelerated_historical_certification') {
+    const accelerated = readJson(DECISION_CORE_ACCELERATED_CERTIFICATION_PATH);
+    const breadth = readJson(DECISION_CORE_BUY_BREADTH_PATH);
+    const breadthUi = readJson(DECISION_CORE_BUY_BREADTH_UI_PATH);
+    if (accelerated?.status !== 'OK') blockers.push('accelerated_certification_status_not_ok');
+    if (Number(accelerated?.historical_replay_valid_days || 0) < 60) blockers.push(`historical_replay_valid_days=${accelerated?.historical_replay_valid_days || 0}`);
+    if (Number(accelerated?.live_shadow_days || 0) < 1) blockers.push(`live_shadow_days=${accelerated?.live_shadow_days || 0}`);
+    if (breadth?.status !== 'OK') blockers.push('buy_breadth_status_not_ok');
+    if (Number(breadth?.us_stock_etf_buy_count || 0) < 10) blockers.push(`us_stock_etf_buy_count=${breadth?.us_stock_etf_buy_count || 0}`);
+    if (Number(breadth?.eu_stock_etf_buy_count || 0) < 10) blockers.push(`eu_stock_etf_buy_count=${breadth?.eu_stock_etf_buy_count || 0}`);
+    if (breadthUi?.status !== 'OK') blockers.push('buy_breadth_ui_status_not_ok');
+  }
+  if (blockers.length && !isForce) fail(`Decision Core invalid: ${blockers.join(', ')}`);
+}
+
 // ─── Gate Checks ───────────────────────────────────────────────────────────────
 
 function checkReleaseState() {
@@ -595,6 +639,7 @@ function checkReleaseState() {
   checkStockAnalyzerTargets(seal);
   checkStockAnalyzerUiState(seal);
   checkLocalPublicStatus(seal);
+  checkDecisionCore(seal);
 
   return state
     ? { ...state, final_integrity_seal: seal || null, final_integrity_seal_verification: sealVerification }
@@ -731,14 +776,26 @@ function deploymentIdFromUrl(url) {
 
 function runWranglerDeploy(branch = PAGES_DEPLOY_BRANCH, { skipCaching = WRANGLER_SKIP_CACHING, purpose = 'deploy' } = {}) {
   log(`Running wrangler pages deploy dist/pages-prod/ (branch=${branch}, purpose=${purpose}, skip_caching=${skipCaching})...`);
-  loadSecretEnvFile();
-  if (!process.env.CLOUDFLARE_API_TOKEN) {
-    fail(`CLOUDFLARE_API_TOKEN missing; store it in ${DEFAULT_CLOUDFLARE_ENV_PATH} or export it before deploy.`);
-  }
   // Use the project-local Wrangler binary so deploys do not depend on host CLI PATH setup.
   const localWrangler = path.join(REPO_ROOT, 'node_modules/.bin/wrangler');
   if (!fs.existsSync(localWrangler)) {
     fail(`local wrangler binary missing at ${path.relative(REPO_ROOT, localWrangler)}; run npm install/npm ci in the repo before release deploy.`);
+  }
+  loadSecretEnvFile();
+  if (!process.env.CLOUDFLARE_API_TOKEN) {
+    const allowOAuth = process.env.RV_ALLOW_WRANGLER_OAUTH === '1';
+    const whoami = allowOAuth
+      ? spawnSync(localWrangler, ['whoami'], {
+        cwd: REPO_ROOT,
+        encoding: 'utf8',
+        timeout: 30000,
+        maxBuffer: 1024 * 1024,
+      })
+      : { status: 1 };
+    if (whoami.status !== 0) {
+      fail(`CLOUDFLARE_API_TOKEN missing; store it in ${DEFAULT_CLOUDFLARE_ENV_PATH} or export it before deploy.`);
+    }
+    log('Using existing Wrangler OAuth session for deploy because RV_ALLOW_WRANGLER_OAUTH=1.');
   }
   const removedAppleDouble = removeAppleDoubleArtifacts(path.join(REPO_ROOT, 'functions'))
     + removeAppleDoubleArtifacts(DIST_DIR);

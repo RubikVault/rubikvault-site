@@ -4,14 +4,14 @@ Dieses Debug-System sammelt Client‑seitige Informationen (Assets, API‑Checks
 
 ## Schnellstart (Browser)
 
-1. Öffne die Seite und filtere die Konsole auf `RV:` (z.B. `[RV:rv-price-snapshot]`).
-2. Öffne die DevTools → Network und filtere nach `/api/`.
+1.  Open the page and filter the console for `RV:` (z.B. `[RV:rv-price-snapshot]`).
+2.  Open DevTools → Network und filtere nach `/api/`.
 3. Prüfe, dass jede Antwort das Standard‑Schema enthält (`ok`, `feature`, `ts`, `traceId`, `schemaVersion`).
 
 ## Aktivierung
 
 1. Setze `DEBUG_ENABLED: true` in `rv-config.js`.
-2. Öffne die Seite mit `?debug=1` oder setze `localStorage.debug = "true"`.
+2. Open the page with `?debug=1` oder setze `localStorage.debug = "true"`.
 3. Optional: Setze `RV_CONFIG.debugAuthToken` und `localStorage.debugAuth` auf denselben Wert, um Debug zu schützen.
 
 ## Debug-Panel
@@ -74,9 +74,9 @@ Das Panel lädt `/data/snapshots/build-info/latest.json` (kanonische Build-Info)
 - Wrangler:
   - `npx wrangler pages deployment list --project-name rubikvault-site`
   - `npx wrangler pages deployment tail --project-name rubikvault-site DEPLOYMENT_ID`
-- Erwartetes Log‑Format: `{"feature":"top-movers","traceId":"abcd1234","kv":"kv|none","upstreamStatus":200,"durationMs":123}`
+- Expected log format: `{"feature":"top-movers","traceId":"abcd1234","kv":"kv|none","upstreamStatus":200,"durationMs":123}`
 
-## Erwartete Status‑Beispiele
+## Expected status examples
 
 - OK: `ok=true`, `isStale=false`, Daten werden normal gerendert.
 - FAIL: `ok=false`, Fehler‑UI erscheint mit `error.code` und `error.message`.

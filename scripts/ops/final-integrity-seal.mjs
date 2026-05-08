@@ -41,6 +41,11 @@ const PATHS = {
   storage: path.join(ROOT, 'public/data/reports/storage-budget-latest.json'),
   decisionBundle: path.join(ROOT, 'public/data/decisions/latest.json'),
   decisionBundleOps: path.join(ROOT, 'public/data/ops/decision-bundle-latest.json'),
+  decisionCoreStatus: path.join(ROOT, 'public/data/decision-core/status/latest.json'),
+  decisionCoreManifest: path.join(ROOT, 'public/data/decision-core/core/manifest.json'),
+  decisionCoreAcceleratedCertification: path.join(ROOT, 'public/data/decision-core/status/accelerated-certification-latest.json'),
+  decisionCoreBuyBreadth: path.join(ROOT, 'public/data/reports/decision-core-buy-breadth-latest.json'),
+  decisionCoreBuyBreadthUi: path.join(ROOT, 'public/data/reports/stock-decision-core-ui-buy-breadth-latest.json'),
   histProbsStatus: path.join(ROOT, 'public/data/runtime/hist-probs-status-summary.json'),
   histProbsStatusLegacy: path.join(ROOT, 'public/data/hist-probs/status-summary.json'),
   heartbeat: path.join(ROOT, 'mirrors/ops/pipeline-master/supervisor-heartbeat.json'),
@@ -234,6 +239,52 @@ export function evaluateDecisionBundleHealth(decisionBundle, {
   return { status, blocking_reasons: blocking, warnings, summary };
 }
 
+export function evaluateDecisionCoreHealth(decisionCoreStatus, decisionCoreManifest, {
+  expectedTargetDate = null,
+  source = process.env.RV_DECISION_CORE_SOURCE || 'legacy',
+  switchMode = process.env.RV_DECISION_CORE_SWITCH_MODE || '',
+  acceleratedCertification = null,
+  buyBreadth = null,
+  buyBreadthUi = null,
+} = {}) {
+  const enabled = String(source || '').toLowerCase() === 'core';
+  if (!enabled) return { enabled: false, status: 'NOT_REQUIRED', blocking_reasons: [], warnings: [], summary: decisionCoreStatus || null };
+  const blocking = [];
+  const warnings = [];
+  if (!decisionCoreStatus || typeof decisionCoreStatus !== 'object') blocking.push(reason('decision_core_status_missing'));
+  if (!decisionCoreManifest || typeof decisionCoreManifest !== 'object') blocking.push(reason('decision_core_manifest_missing'));
+  const target = normalizeDate(expectedTargetDate);
+  const statusTarget = normalizeDate(decisionCoreStatus?.target_market_date);
+  const manifestTarget = normalizeDate(decisionCoreManifest?.target_market_date);
+  if (target && statusTarget && target !== statusTarget) blocking.push(reason('decision_core_target_mismatch', 'critical', { expected: target, actual: statusTarget }));
+  if (target && manifestTarget && target !== manifestTarget) blocking.push(reason('decision_core_manifest_target_mismatch', 'critical', { expected: target, actual: manifestTarget }));
+  const requiredZero = [
+    'schema_error_count',
+    'legacy_buy_fallback_count',
+    'unknown_blocking_reason_code_count',
+  ];
+  for (const field of requiredZero) {
+    if (Number(decisionCoreStatus?.[field] || 0) > 0) blocking.push(reason(`decision_core_${field}`, 'critical', { value: decisionCoreStatus[field] }));
+  }
+  if (decisionCoreStatus?.policy_manifest_loaded !== true) blocking.push(reason('decision_core_policy_manifest_missing'));
+  if (decisionCoreStatus?.reason_code_registry_loaded !== true) blocking.push(reason('decision_core_reason_registry_missing'));
+  if (decisionCoreStatus?.feature_manifest_loaded !== true) blocking.push(reason('decision_core_feature_manifest_missing'));
+  if (decisionCoreStatus?.adjusted_data_policy_declared !== true) blocking.push(reason('decision_core_adjusted_data_policy_missing'));
+  if (decisionCoreStatus?.noncandidate_audit_sample_exists !== true) warnings.push(reason('decision_core_non_candidate_sample_missing', 'warning'));
+  if (decisionCoreStatus?.zero_buy_cause === 'ZERO_BUY_CAUSE_UNCLASSIFIED') blocking.push(reason('decision_core_zero_buy_unclassified'));
+  if (String(switchMode || '').toLowerCase() === 'accelerated_historical_certification') {
+    if (acceleratedCertification?.status !== 'OK') blocking.push(reason('decision_core_accelerated_certification_failed', 'critical', acceleratedCertification || null));
+    if (Number(acceleratedCertification?.historical_replay_valid_days || 0) < 60) blocking.push(reason('decision_core_historical_replay_below_60', 'critical', { value: acceleratedCertification?.historical_replay_valid_days || 0 }));
+    if (Number(acceleratedCertification?.live_shadow_days || 0) < 1) blocking.push(reason('decision_core_live_shadow_below_1', 'critical', { value: acceleratedCertification?.live_shadow_days || 0 }));
+    if (buyBreadth?.status !== 'OK') blocking.push(reason('decision_core_buy_breadth_failed', 'critical', buyBreadth || null));
+    if (Number(buyBreadth?.us_stock_etf_buy_count || 0) < 10) blocking.push(reason('decision_core_us_buy_breadth_below_10', 'critical', { value: buyBreadth?.us_stock_etf_buy_count || 0 }));
+    if (Number(buyBreadth?.eu_stock_etf_buy_count || 0) < 10) blocking.push(reason('decision_core_eu_buy_breadth_below_10', 'critical', { value: buyBreadth?.eu_stock_etf_buy_count || 0 }));
+    if (buyBreadthUi?.status !== 'OK') blocking.push(reason('decision_core_buy_breadth_ui_failed', 'critical', buyBreadthUi || null));
+  }
+  const status = blocking.length ? 'FAILED' : warnings.length ? 'DEGRADED' : 'OK';
+  return { enabled: true, status, blocking_reasons: blocking, warnings, summary: decisionCoreStatus || null };
+}
+
 function evaluateCrashAndHeartbeat({ crashSeal = null, heartbeat = null, previousFinal = null, targetMarketDate = null, now = new Date() } = {}) {
   const blocking = [];
   const warnings = [];
@@ -378,6 +429,11 @@ export function buildFinalIntegritySeal({
   launchd = null,
   storage = null,
   decisionBundle = null,
+  decisionCoreStatus = null,
+  decisionCoreManifest = null,
+  decisionCoreAcceleratedCertification = null,
+  decisionCoreBuyBreadth = null,
+  decisionCoreBuyBreadthUi = null,
   histProbsStatus = null,
   heartbeat = null,
   crashSeal = null,
@@ -753,6 +809,16 @@ export function buildFinalIntegritySeal({
     now,
     requiredLeafFailed,
   });
+  const decisionCoreHealth = evaluateDecisionCoreHealth(decisionCoreStatus, decisionCoreManifest, {
+    expectedTargetDate,
+    acceleratedCertification: decisionCoreAcceleratedCertification,
+    buyBreadth: decisionCoreBuyBreadth,
+    buyBreadthUi: decisionCoreBuyBreadthUi,
+  });
+  if (decisionCoreHealth.enabled && decisionCoreHealth.status !== 'OK') {
+    blockingReasons.push(...decisionCoreHealth.blocking_reasons);
+    warningReasons.push(...decisionCoreHealth.warnings);
+  }
   const strictFullCoverageRatio = strictDecisionCoverageRatio(decisionBundleHealth.summary);
   const decisionPublicGreen = pageCoreGateOk && dataPlaneGreen && strictFullCoverageRatio >= 0.90;
   const signalQuality = signalQualityForCoverage(strictFullCoverageRatio);
@@ -850,7 +916,9 @@ export function buildFinalIntegritySeal({
   const pageCoreReady = pageCoreGateOk && uiFieldTruthOk;
   const searchReady = searchRegistrySync?.status === 'PASS';
   const universeReady = Boolean(summary && !sampledMode && artifactReleaseReady && auditCriticalIssueCount === 0);
-  const decisionReady = decisionPublicGreen && decisionBundleHealth.status === 'OK';
+  const decisionReady = decisionCoreHealth.enabled
+    ? decisionCoreHealth.status === 'OK'
+    : decisionPublicGreen && decisionBundleHealth.status === 'OK';
   const riskReady = decisionReady;
   const histReady = histStatus.green;
   const breakoutReady = null;
@@ -915,8 +983,8 @@ export function buildFinalIntegritySeal({
     nas_required_for_release: nasRequiredForRelease,
     calendar_ok: calendarOk,
     data_plane_green: dataPlaneGreen,
-    decision_internal_green: decisionBundleHealth.status === 'OK',
-    decision_public_green: decisionPublicGreen,
+    decision_internal_green: decisionCoreHealth.enabled ? decisionCoreHealth.status === 'OK' : decisionBundleHealth.status === 'OK',
+    decision_public_green: decisionCoreHealth.enabled ? decisionCoreHealth.status === 'OK' : decisionPublicGreen,
     decision_public_coverage_ratio: strictFullCoverageRatio,
     signal_quality: signalQuality,
     hist_probs_green: histStatus.green,
@@ -945,6 +1013,16 @@ export function buildFinalIntegritySeal({
       snapshot_id: decisionBundle?.snapshot_id || null,
       target_market_date: decisionBundle?.target_market_date || null,
       summary: decisionBundleHealth.summary,
+    },
+    decision_core: {
+      enabled: decisionCoreHealth.enabled,
+      status: decisionCoreHealth.status,
+      target_market_date: decisionCoreManifest?.target_market_date || decisionCoreStatus?.target_market_date || null,
+      summary: decisionCoreHealth.summary,
+      switch_mode: process.env.RV_DECISION_CORE_SWITCH_MODE || null,
+      accelerated_certification: decisionCoreAcceleratedCertification || null,
+      buy_breadth: decisionCoreBuyBreadth || null,
+      buy_breadth_ui: decisionCoreBuyBreadthUi || null,
     },
     zero_buy_anomaly_status: zeroBuyAnomaly,
     leaf_seals: evaluateRequiredLeafSeals().details,
@@ -1083,6 +1161,11 @@ async function main() {
   const launchd = readJson(PATHS.launchd) || null;
   const storage = readJson(PATHS.storage) || null;
   const decisionBundle = readJson(PATHS.decisionBundle) || readJson(PATHS.decisionBundleOps) || null;
+  const decisionCoreStatus = readJson(PATHS.decisionCoreStatus) || null;
+  const decisionCoreManifest = readJson(PATHS.decisionCoreManifest) || null;
+  const decisionCoreAcceleratedCertification = readJson(PATHS.decisionCoreAcceleratedCertification) || null;
+  const decisionCoreBuyBreadth = readJson(PATHS.decisionCoreBuyBreadth) || null;
+  const decisionCoreBuyBreadthUi = readJson(PATHS.decisionCoreBuyBreadthUi) || null;
   const histProbsStatus = readJson(PATHS.histProbsStatus) || readJson(PATHS.histProbsStatusLegacy) || null;
   const heartbeat = readJson(PATHS.heartbeat) || null;
   const crashSeal = readJson(PATHS.crashSeal) || null;
@@ -1132,6 +1215,11 @@ async function main() {
     launchd,
     storage,
     decisionBundle,
+    decisionCoreStatus,
+    decisionCoreManifest,
+    decisionCoreAcceleratedCertification,
+    decisionCoreBuyBreadth,
+    decisionCoreBuyBreadthUi,
     histProbsStatus,
     heartbeat,
     crashSeal,
