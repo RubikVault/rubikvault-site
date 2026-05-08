@@ -1,16 +1,21 @@
 {
   "schema": "rv.nas.release_truth_chain_code_manifest.v1",
-  "generated_at": "2026-05-07T01:03:33.953Z",
-  "git_head": "bd9026438e27b79886b69af4863ee876f2ba03b4",
+  "generated_at": "2026-05-08T20:14:18.665Z",
+  "git_head": "dee689247f1004d4becbb6b078f6cffb95c70e86",
   "paths_file": "scripts/nas/inputs/release-truth-chain.paths",
-  "file_count": 26,
-  "combined_hash": "3119d8d77c2f96500ee045cd27b3aa6911fabe4c0e3936c35f5dc50212d0967d",
+  "file_count": 61,
+  "combined_hash": "df77282d4a6705f83d2570768be0b1edf7b82d1dda8c07819f99cde31051c83c",
   "missing": [],
   "files": [
     {
       "path": "config/runtime-manifest.json",
-      "size_bytes": 8851,
-      "sha256": "1ab284d869be59bbcaa2e2bbca9b8610fefcd369ffd29be3ddbf6969f97fdb5b"
+      "size_bytes": 11858,
+      "sha256": "c6c1202782250e59055cea2d74b1c717fbdd02c2e7460d3cfa6b5e058cdcd570"
+    },
+    {
+      "path": "extract_buys.py",
+      "size_bytes": 5855,
+      "sha256": "2fc2daa0725b41aa243d8c7b167b3ef4f15a175b199b8e22910fe50629c06ad7"
     },
     {
       "path": "functions/api/_shared/fundamentals-scope.mjs",
@@ -38,9 +43,159 @@
       "sha256": "05e3718e3852bd41ae9153531ae4885f47dff5b63cbe55e6370f3ba09bbf2d43"
     },
     {
+      "path": "schemas/stock-analyzer/page-core.v1.schema.json",
+      "size_bytes": 5550,
+      "sha256": "332debea1342e10f214fed6af0ce91ca547b48aeeea572e3dae89a2a9f72f6ce"
+    },
+    {
+      "path": "scripts/decision-core/analysis-reliability.mjs",
+      "size_bytes": 3036,
+      "sha256": "ebaecbd6426b1d3314ef32a9ce5d0e1d67856c447ec005c8af7ecc90e8f7b50c"
+    },
+    {
+      "path": "scripts/decision-core/build-accelerated-certification.mjs",
+      "size_bytes": 5183,
+      "sha256": "0a105a3eb73a9ef3a8cc0bbf99e96b5b0f1260172aa4029d3f0efc61fcff2165"
+    },
+    {
+      "path": "scripts/decision-core/build-buy-breadth-proof.mjs",
+      "size_bytes": 10996,
+      "sha256": "21f75489ecd3073c47acafe1626f8814e67a1fef7ddc5e6fa92a252f038d6caf"
+    },
+    {
+      "path": "scripts/decision-core/build-candidate-pool.mjs",
+      "size_bytes": 986,
+      "sha256": "8c5f7b3bc3273b96ff7742dbcb555be3e58ad848f8c470a08afa44ec965b8164"
+    },
+    {
+      "path": "scripts/decision-core/build-fast-features.mjs",
+      "size_bytes": 4705,
+      "sha256": "8e05c43cfbb26f0a6b485812095121325387980e510ce431aed3120211364ca6"
+    },
+    {
+      "path": "scripts/decision-core/build-historical-date-set.mjs",
+      "size_bytes": 2720,
+      "sha256": "4a8b6f86af58cd68249196855d8ee6b047927318fbacad2ac40bcd178942568c"
+    },
+    {
+      "path": "scripts/decision-core/build-minimal-decision-bundles.mjs",
+      "size_bytes": 22480,
+      "sha256": "93cad3204efabd0b667cac89eec21b21c302ba84c61a6654b1296309d21f2193"
+    },
+    {
+      "path": "scripts/decision-core/build-module-scorecard.mjs",
+      "size_bytes": 424,
+      "sha256": "bbf7334b2df861af0b4e987ea64485ddee5632f05e65ecb9036977fcf2e79fdb"
+    },
+    {
+      "path": "scripts/decision-core/build-outcome-store-bootstrap.mjs",
+      "size_bytes": 4676,
+      "sha256": "c75d3b847a7c1a2597d5d28372a50bdf24a6faf614b882a01449dd4dde29cd4a"
+    },
+    {
+      "path": "scripts/decision-core/classify-p0-regime.mjs",
+      "size_bytes": 1148,
+      "sha256": "a3b48633a050f5a547b0071d7601a3494d5590fb985d7e63c8e154f7e6378295"
+    },
+    {
+      "path": "scripts/decision-core/decision-grade.mjs",
+      "size_bytes": 1661,
+      "sha256": "788a9f8ef818f2bf416b9c532ae4f26fc324a29c67b2b4d6f1304fdd0c523b3a"
+    },
+    {
+      "path": "scripts/decision-core/eligibility.mjs",
+      "size_bytes": 3940,
+      "sha256": "5defb72c0824f1c220ce7896e06b788f03fe6aa5c0d3986248e3a64d55b99d06"
+    },
+    {
+      "path": "scripts/decision-core/entry-gap-guard.mjs",
+      "size_bytes": 1007,
+      "sha256": "39561073ec9710b6b6c1cefc3b381eceffcec91d4ee248e1470a111e1c9a880d"
+    },
+    {
+      "path": "scripts/decision-core/evaluate-p0-ev-risk.mjs",
+      "size_bytes": 3711,
+      "sha256": "7351308b989bced52126f4e975c493bb620023c4e91832f7c9daa7fda2d331e1"
+    },
+    {
+      "path": "scripts/decision-core/evidence-bootstrap-v1.mjs",
+      "size_bytes": 2690,
+      "sha256": "bf115279d59954522c1223de3fc81b0b7aa2b41792af0cb92ed9acd342afc513"
+    },
+    {
+      "path": "scripts/decision-core/hard-vetos.mjs",
+      "size_bytes": 585,
+      "sha256": "b70a27b00bb69236dbed1f189b86b342231dfac68a6339359a185fc0aaf6872e"
+    },
+    {
+      "path": "scripts/decision-core/invalidation-level.mjs",
+      "size_bytes": 1104,
+      "sha256": "53bfe8fb5ddab77c59bb3d3569af66111b1e40641294edc2694062944b739480"
+    },
+    {
+      "path": "scripts/decision-core/load-historical-bars-asof.mjs",
+      "size_bytes": 20564,
+      "sha256": "f0566db22943301c98390573147fa25be916b9da5d01f450603aba4822127117"
+    },
+    {
+      "path": "scripts/decision-core/map-bundle-to-ui.mjs",
+      "size_bytes": 164,
+      "sha256": "d0dfe725eed8521492cc2ac18ea185c39f8ed5479c9bfa1d7765bd7983129498"
+    },
+    {
+      "path": "scripts/decision-core/noncandidate-audit.mjs",
+      "size_bytes": 3379,
+      "sha256": "2a8d29ba771582cb0a1c0b08536cd008b0f5f788215c94a9060e1b73f1bd8aab"
+    },
+    {
+      "path": "scripts/decision-core/resolve-horizon-state.mjs",
+      "size_bytes": 3551,
+      "sha256": "63509ad18a1ee40e3410c3da1401218a6f981c87501d85aa2a443be9665aa5a8"
+    },
+    {
+      "path": "scripts/decision-core/resolve-p0-setup.mjs",
+      "size_bytes": 1626,
+      "sha256": "a5ac8fde06f5fafce8b6c219ebddbfe91d8214f1b8f129208621f495fe53538a"
+    },
+    {
+      "path": "scripts/decision-core/run-historical-certification.mjs",
+      "size_bytes": 9013,
+      "sha256": "86c446e3ff4d6b752a83bee2b760875e71222c60e9d6ba75960981f8387a644e"
+    },
+    {
+      "path": "scripts/decision-core/shadow-diff-logger.mjs",
+      "size_bytes": 9492,
+      "sha256": "082b6eddfba9e98e93cf4ce500a3f51807453ff132545d9891d1af9e40772030"
+    },
+    {
+      "path": "scripts/decision-core/shared.mjs",
+      "size_bytes": 9286,
+      "sha256": "97803dc9e12fffd032ae1029bd19189794e9506d8d03d2a1151c8ff42561bfea"
+    },
+    {
+      "path": "scripts/decision-core/update-shadow-day-ledger.mjs",
+      "size_bytes": 5470,
+      "sha256": "859a5445880d6796203fbc5bfc517fddea9a50e27364cc545390408b8a27a07d"
+    },
+    {
+      "path": "scripts/decision-core/validate-decision-bundles.mjs",
+      "size_bytes": 6809,
+      "sha256": "a5770a4f40c0b0133937dd78823b359f0c4cb0a44cea9ff6f3aa7360820dec10"
+    },
+    {
+      "path": "scripts/decision-core/zero-buy-classifier.mjs",
+      "size_bytes": 1045,
+      "sha256": "415f334b53261ac674f1a1fd14fcef58063babee0c579f2c30dbcccacc0e15aa"
+    },
+    {
+      "path": "scripts/hist-probs/run-region-aware-catchup.mjs",
+      "size_bytes": 9850,
+      "sha256": "9ff26774a6976a6b02dc55936cf62e8f645fc89d80810469216230764208730a"
+    },
+    {
       "path": "scripts/nas/inputs/release-truth-chain.paths",
-      "size_bytes": 1079,
-      "sha256": "fbe7d432b0ceac7e3a8e967d9a6e411a6c9a738aff118f34cbbae9425693253f"
+      "size_bytes": 2728,
+      "sha256": "9d4aefe5043f0be5fbcab8a6de3b76b0684ae855c426a26cc3b9d776bfb7c633"
     },
     {
       "path": "scripts/nas/nas-env.sh",
@@ -49,8 +204,8 @@
     },
     {
       "path": "scripts/nas/rv-nas-night-supervisor.sh",
-      "size_bytes": 52336,
-      "sha256": "58b8b6dc1526fca6118f4506f163d0e2cf03a9453bff99b6350a956c731a4d73"
+      "size_bytes": 55029,
+      "sha256": "39e9aa5f5d231335db7981b79b27f76cb505f0873d149a5dedec48b54ddf9cea"
     },
     {
       "path": "scripts/nas/safe-code-sync.sh",
@@ -74,8 +229,8 @@
     },
     {
       "path": "scripts/ops/build-deploy-bundle.mjs",
-      "size_bytes": 38461,
-      "sha256": "e91ff7a7ae2c4a3c795ec674556525f5262ea79e012bd776409f43e6603d0437"
+      "size_bytes": 39327,
+      "sha256": "0e4d3cf79295ca03653547b8c2c110c376e989786fcd1f90598e3d5a9129ddeb"
     },
     {
       "path": "scripts/ops/build-full-universe-decisions.mjs",
@@ -84,8 +239,8 @@
     },
     {
       "path": "scripts/ops/build-page-core-bundle.mjs",
-      "size_bytes": 51121,
-      "sha256": "0ef121b4fae0f839397b17f93e6dc39562b33c3fa5c774a2e32a7b32eb7f516b"
+      "size_bytes": 58164,
+      "sha256": "0597853823af6d525821f4e3e58006f231443cc63be679479b97de4dc7dcc347"
     },
     {
       "path": "scripts/ops/build-public-history-shards.mjs",
@@ -94,8 +249,8 @@
     },
     {
       "path": "scripts/ops/build-public-status.mjs",
-      "size_bytes": 9009,
-      "sha256": "e603f752e34d31402c1463365792a8d7398ff16c72b6499e381c897843ac7b65"
+      "size_bytes": 10164,
+      "sha256": "3abc20670ca6aabb1b735ea39e6a12bf66218aef991484a0746094a4d9c9e5bc"
     },
     {
       "path": "scripts/ops/build-stock-analyzer-operability.mjs",
@@ -109,13 +264,13 @@
     },
     {
       "path": "scripts/ops/build-stock-analyzer-ui-state-summary.mjs",
-      "size_bytes": 16391,
-      "sha256": "7fb79821018c2e0d22326885ed28dd811a9e0c49e3c222cd76a56d240660980d"
+      "size_bytes": 17169,
+      "sha256": "43f1afc4ca5d157ce3b44d69a5a7fbbf49f495a9202165b5089f555566168aa5"
     },
     {
       "path": "scripts/ops/final-integrity-seal.mjs",
-      "size_bytes": 49609,
-      "sha256": "a78b0b43b6b424757ed3ad800e882e33f18a1657dad0a886ea85d982f66bc026"
+      "size_bytes": 56163,
+      "sha256": "0c081a08a7cfc3321b060311e6a4ff2a0d9f0ddff8e9382f424992945298079a"
     },
     {
       "path": "scripts/ops/lib/release-gate-model.mjs",
@@ -124,8 +279,8 @@
     },
     {
       "path": "scripts/ops/release-gate-check.mjs",
-      "size_bytes": 44317,
-      "sha256": "82a381898b75605634298c9d9583c73bfbe080fc248966c0d8fae5f077a08821"
+      "size_bytes": 47962,
+      "sha256": "6415ea1b63a2caa44d2a6f4928feaddf933af086984ecd52a05a4b3e9ea78159"
     },
     {
       "path": "scripts/ops/report-history-coverage.mjs",
@@ -136,6 +291,26 @@
       "path": "scripts/quantlab/refresh_v7_history_from_eodhd.py",
       "size_bytes": 75803,
       "sha256": "88661c02f3ae575ce4a125bfeeeeee9ba4ee4ebe4fec34cf25e66861f083de53"
+    },
+    {
+      "path": "scripts/validate/stock-decision-core-ui-buy-breadth.mjs",
+      "size_bytes": 8673,
+      "sha256": "14d45e6fa1925dd7147b8d663358149198aee1a8d327f25d39ea72831115cc34"
+    },
+    {
+      "path": "scripts/validate/stock-decision-core-ui-fixtures.mjs",
+      "size_bytes": 8866,
+      "sha256": "d55530a3d520ac6ca085f4c543b73a441650bd3ed53c57410b09757b76a89f85"
+    },
+    {
+      "path": "scripts/validate/stock-decision-core-ui-random20.mjs",
+      "size_bytes": 14681,
+      "sha256": "f3f4c4bc65581747853e9a44a47702f02d858d8342cd8bf265aa4fddba73426d"
+    },
+    {
+      "path": "scripts/validate/stock-decision-core-ui-smoke-tickers.mjs",
+      "size_bytes": 4600,
+      "sha256": "c9bd2df8f046adf79c1a6b1d924f8c0c3fb2d00ffe86a0f5ae2db44eac1c5e31"
     }
   ]
 }
