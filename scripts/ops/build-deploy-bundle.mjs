@@ -123,6 +123,14 @@ const RUNTIME_SERIES_ALLOWLIST = [
   'data/v3/series/adjusted/US__F.ndjson.gz',
 ];
 
+const DECISION_CORE_PUBLIC_PROOF_REPORTS = [
+  'data/reports/decision-core-buy-breadth-latest.json',
+  'data/reports/stock-decision-core-ui-buy-breadth-latest.json',
+  'data/reports/stock-decision-core-ui-random20-latest.json',
+  'data/reports/decision-core-historical-replay-latest.json',
+  'data/reports/decision-core-outcome-bootstrap-latest.json',
+];
+
 const RUNTIME_HISTORICAL_CACHE_LIMIT = Number(process.env.RV_RUNTIME_HISTORICAL_CACHE_LIMIT || 750);
 const RUNTIME_HISTORICAL_CANONICAL_IDS = String(process.env.RV_RUNTIME_HISTORICAL_CANONICAL_IDS || 'US:F,US:AAPL,US:HOOD,US:SPY')
   .split(',')
@@ -762,6 +770,17 @@ if (!isDryRun) {
     copiedRuntimeSeries += 1;
   }
   if (copiedRuntimeSeries > 0) log(`Copied ${copiedRuntimeSeries} runtime chart series files to dist/`);
+
+  let copiedDecisionCoreProofReports = 0;
+  for (const relPath of DECISION_CORE_PUBLIC_PROOF_REPORTS) {
+    const src = path.join(PUBLIC_DIR, relPath);
+    if (!fs.existsSync(src)) continue;
+    const dest = path.join(DIST_DIR, relPath);
+    fs.mkdirSync(path.dirname(dest), { recursive: true });
+    fs.copyFileSync(src, dest);
+    copiedDecisionCoreProofReports += 1;
+  }
+  if (copiedDecisionCoreProofReports > 0) log(`Copied ${copiedDecisionCoreProofReports} Decision-Core public proof reports to dist/`);
 
   const runtimeHistoricalCache = materializeRuntimeHistoricalCache();
   log(`Runtime historical cache: wrote ${runtimeHistoricalCache.written} files, skipped ${runtimeHistoricalCache.skipped}, ${Math.round(runtimeHistoricalCache.bytes / 1024 / 1024)} MB`);

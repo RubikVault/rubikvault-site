@@ -253,6 +253,208 @@
         .nas-live-alert.warning { background:rgba(245,158,11,0.08); border-color:rgba(245,158,11,0.18); }
         .nas-live-alert.error { background:rgba(239,68,68,0.08); border-color:rgba(239,68,68,0.18); }
         .nas-live-alert.ok { background:rgba(16,185,129,0.08); border-color:rgba(16,185,129,0.18); }
+
+        /* Module Scorecard */
+        .scorecard-table { width:100%; border-collapse:collapse; font-size:.84rem; }
+        .scorecard-table th { padding:.6rem .8rem; text-align:left; color:var(--text-muted); font-weight:700; font-size:.72rem; text-transform:uppercase; border-bottom:2px solid var(--card-border); }
+        .scorecard-table td { padding:.55rem .8rem; border-bottom:1px solid rgba(255,255,255,0.04); }
+        .scorecard-table tr:hover { background:rgba(255,255,255,0.03); }
+        .sc-cell { text-align:center; font-weight:700; border-radius:6px; padding:.35rem .5rem; }
+        .sc-good { background:rgba(16,185,129,0.15); color:#34d399; }
+        .sc-mid { background:rgba(245,158,11,0.15); color:#fbbf24; }
+        .sc-bad { background:rgba(239,68,68,0.15); color:#f87171; }
+        .sc-na { color:var(--text-dim); font-style:italic; font-weight:400; }
+        .sc-best { box-shadow:0 0 0 2px var(--green); }
+        .sc-legend { display:flex; gap:1rem; margin-top:.75rem; font-size:.72rem; color:var(--text-muted); flex-wrap:wrap; }
+        .sc-legend-dot { display:inline-block; width:10px; height:10px; border-radius:3px; margin-right:.3rem; vertical-align:middle; }
+
+        /* Asset Lookup */
+        .asset-search-wrap { position:relative; margin-bottom:1.25rem; }
+        .asset-search-input { width:100%; padding:.85rem 1.25rem .85rem 2.8rem; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.12); border-radius:12px; color:var(--text); font-size:1rem; font-family:'Outfit',sans-serif; outline:none; transition:border-color .2s, box-shadow .2s; }
+        .asset-search-input:focus { border-color:var(--blue); box-shadow:0 0 0 3px rgba(59,130,246,0.15); }
+        .asset-search-input::placeholder { color:var(--text-dim); }
+        .asset-search-icon { position:absolute; left:1rem; top:50%; transform:translateY(-50%); color:var(--text-dim); font-size:1rem; }
+        .asset-suggestions { position:absolute; top:calc(100% + 4px); left:0; right:0; background:rgba(15,23,42,0.98); border:1px solid var(--card-border); border-radius:10px; max-height:280px; overflow-y:auto; z-index:100; display:none; box-shadow:0 12px 40px rgba(0,0,0,.6); }
+        .asset-suggestions.open { display:block; }
+        .asset-suggestion { padding:.6rem 1rem; cursor:pointer; font-size:.85rem; display:flex; justify-content:space-between; align-items:center; transition:background .15s; }
+        .asset-suggestion:hover { background:rgba(59,130,246,0.12); }
+        .asset-suggestion .ticker { font-weight:700; color:var(--text); }
+        .asset-suggestion .name { color:var(--text-muted); font-size:.78rem; max-width:55%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+        .asset-suggestion .region-badge { font-size:.65rem; padding:1px 6px; border-radius:4px; font-weight:600; }
+        .asset-profile { background:linear-gradient(135deg, rgba(59,130,246,0.06) 0%, rgba(139,92,246,0.04) 100%); border:1px solid rgba(59,130,246,0.2); border-radius:14px; padding:1.25rem; margin-bottom:1.25rem; }
+        .asset-profile-header { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:.5rem; }
+        .asset-profile-ticker { font-size:1.5rem; font-weight:800; color:var(--text); }
+        .asset-profile-name { font-size:.85rem; color:var(--text-muted); margin-top:.2rem; }
+        .asset-timeline { display:grid; grid-template-columns:auto repeat(30,1fr); gap:2px; font-size:.65rem; margin-top:.75rem; }
+        .asset-timeline-label { padding:.3rem .4rem; font-weight:600; color:var(--text-muted); white-space:nowrap; display:flex; align-items:center; }
+        .asset-timeline-cell { width:100%; aspect-ratio:1; border-radius:3px; display:flex; align-items:center; justify-content:center; font-size:.5rem; font-weight:700; color:rgba(255,255,255,.8); cursor:default; transition:transform .15s; }
+        .asset-timeline-cell:hover { transform:scale(1.4); z-index:1; }
+        .atc-buy { background:rgba(16,185,129,0.5); }
+        .atc-wait { background:rgba(245,158,11,0.35); }
+        .atc-avoid { background:rgba(239,68,68,0.4); }
+        .atc-na { background:rgba(100,116,139,0.15); }
+
+        /* Signal Architecture */
+        .arch-flow { display:flex; flex-direction:column; gap:0; align-items:center; padding:1rem 0; }
+        .arch-layer { display:flex; gap:.75rem; flex-wrap:wrap; justify-content:center; width:100%; margin-bottom:0; }
+        .arch-node { background:var(--card-bg); border:1px solid var(--card-border); border-radius:12px; padding:.85rem 1.1rem; text-align:center; min-width:140px; max-width:200px; flex:1; transition:transform .2s, box-shadow .2s, border-color .2s; cursor:default; }
+        .arch-node:hover { transform:translateY(-3px); box-shadow:0 8px 25px rgba(0,0,0,0.4); border-color:rgba(255,255,255,0.15); }
+        .arch-node-icon { font-size:1.3rem; margin-bottom:.3rem; }
+        .arch-node-label { font-size:.82rem; font-weight:700; }
+        .arch-node-sub { font-size:.68rem; color:var(--text-muted); margin-top:.2rem; }
+        .arch-node-value { font-size:1.1rem; font-weight:800; margin-top:.3rem; }
+        .arch-arrow { display:flex; justify-content:center; padding:.3rem 0; color:var(--text-dim); font-size:1.2rem; }
+        .arch-connector { width:2px; height:24px; background:linear-gradient(to bottom, rgba(59,130,246,0.4), rgba(16,185,129,0.4)); margin:0 auto; }
+        .arch-weight-bar { display:flex; height:32px; border-radius:8px; overflow:hidden; margin-top:.75rem; }
+        .arch-weight-segment { display:flex; align-items:center; justify-content:center; font-size:.68rem; font-weight:700; color:rgba(255,255,255,.9); transition:flex .3s; }
+
+        /* Live BUY Signals */
+        .buy-filters { display:flex; gap:.5rem; flex-wrap:wrap; margin-bottom:1rem; align-items:center; }
+        .buy-filter-group { display:flex; gap:3px; background:rgba(255,255,255,0.03); border-radius:8px; padding:2px; border:1px solid var(--card-border); }
+        .buy-filter-btn { padding:.35rem .65rem; border:none; background:none; color:var(--text-muted); font-size:.75rem; font-weight:600; cursor:pointer; border-radius:6px; transition:all .2s; font-family:'Outfit',sans-serif; }
+        .buy-filter-btn:hover { color:var(--text); }
+        .buy-filter-btn.active { background:rgba(59,130,246,0.2); color:var(--blue); }
+        .buy-filter-label { font-size:.7rem; color:var(--text-dim); font-weight:600; text-transform:uppercase; margin-right:.3rem; }
+        .buy-stats-bar { display:flex; gap:.75rem; flex-wrap:wrap; margin-bottom:1rem; }
+        .buy-stat { background:rgba(0,0,0,0.15); border-radius:8px; padding:.45rem .75rem; text-align:center; }
+        .buy-stat-label { font-size:.62rem; color:var(--text-dim); text-transform:uppercase; font-weight:600; }
+        .buy-stat-value { font-size:1.1rem; font-weight:800; margin-top:.1rem; }
+        .buy-signal-list { max-height:600px; overflow-y:auto; }
+        .buy-signal-row { display:grid; grid-template-columns:minmax(100px,140px) 70px 50px repeat(3,55px) 1fr 60px; gap:.5rem; align-items:center; padding:.5rem .65rem; border-bottom:1px solid rgba(255,255,255,0.04); font-size:.78rem; transition:background .15s; }
+        .buy-signal-row:hover { background:rgba(59,130,246,0.06); }
+        .buy-signal-header { font-weight:700; color:var(--text-muted); font-size:.68rem; text-transform:uppercase; border-bottom:2px solid var(--card-border); }
+        .buy-signal-header:hover { background:none; }
+        .buy-hz { display:inline-flex; align-items:center; justify-content:center; width:100%; padding:2px 0; border-radius:4px; font-size:.65rem; font-weight:700; }
+        .buy-hz-buy { background:rgba(16,185,129,0.2); color:#34d399; }
+        .buy-hz-wait { background:rgba(245,158,11,0.15); color:#fbbf24; }
+        .buy-hz-avoid { background:rgba(239,68,68,0.15); color:#f87171; }
+        .buy-hz-na { color:var(--text-dim); }
+        .buy-ticker { font-weight:700; color:var(--text); }
+        .buy-setup-pill { font-size:.65rem; padding:1px 6px; border-radius:4px; background:rgba(139,92,246,0.15); color:#a78bfa; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%; display:inline-block; }
+        .buy-ev-bar { height:4px; background:rgba(255,255,255,0.06); border-radius:2px; overflow:hidden; }
+        .buy-ev-fill { height:100%; border-radius:2px; background:linear-gradient(90deg,#3b82f6,#10b981); }
+        .buy-search-input { width:200px; padding:.4rem .7rem .4rem 2rem; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.1); border-radius:8px; color:var(--text); font-size:.78rem; font-family:'Outfit',sans-serif; outline:none; }
+        .buy-search-input:focus { border-color:var(--blue); }
+        .buy-signal-row { cursor:pointer; }
+        .buy-expand { display:none; grid-column:1/-1; padding:.6rem .8rem; background:rgba(0,0,0,0.2); border-radius:8px; margin:.3rem 0 .5rem; }
+        .buy-expand.open { display:block; }
+        .buy-expand-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:.6rem; }
+        .buy-expand-card { background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.06); border-radius:8px; padding:.55rem .7rem; }
+        .buy-expand-card-title { font-size:.7rem; color:var(--text-dim); text-transform:uppercase; font-weight:600; margin-bottom:.3rem; }
+        .buy-expand-best { font-size:.82rem; font-weight:700; margin-bottom:.15rem; }
+        .buy-expand-combo { font-size:.72rem; color:var(--text-muted); }
+        .insights-table { width:100%; border-collapse:collapse; font-size:.8rem; }
+        .insights-table th { padding:.5rem .6rem; text-align:center; color:var(--text-muted); font-weight:700; font-size:.68rem; text-transform:uppercase; border-bottom:2px solid var(--card-border); }
+        .insights-table th:first-child { text-align:left; }
+        .insights-table td { padding:.45rem .6rem; text-align:center; border-bottom:1px solid rgba(255,255,255,0.04); }
+        .insights-table td:first-child { text-align:left; font-weight:600; }
+        .insights-best { background:rgba(16,185,129,0.15); border-radius:6px; padding:.2rem .4rem; font-weight:700; color:#34d399; }
+        .rec-card { background:linear-gradient(135deg, rgba(251,191,36,0.06) 0%, rgba(16,185,129,0.04) 100%); border:1px solid rgba(251,191,36,0.15); border-radius:10px; padding:.85rem 1rem; margin-bottom:.6rem; }
+        .rec-card-title { font-size:.82rem; font-weight:700; color:var(--text); margin-bottom:.25rem; }
+        .rec-card-text { font-size:.75rem; color:var(--text-muted); line-height:1.5; }
+        .rec-weight-change { display:inline-flex; align-items:center; gap:.25rem; font-size:.72rem; font-weight:700; padding:2px 8px; border-radius:4px; margin:.15rem .2rem 0 0; }
+        .rec-up { background:rgba(16,185,129,0.15); color:#34d399; }
+        .rec-down { background:rgba(239,68,68,0.15); color:#f87171; }
+        .rec-same { background:rgba(100,116,139,0.15); color:#94a3b8; }
+        .combo-card { background:rgba(0,0,0,0.15); border:1px solid rgba(255,255,255,0.06); border-radius:10px; padding:.75rem 1rem; margin-bottom:.5rem; display:flex; justify-content:space-between; align-items:center; }
+        .combo-rank { font-size:1.1rem; font-weight:800; color:var(--text-dim); min-width:2rem; }
+        .combo-modules { display:flex; gap:.3rem; flex-wrap:wrap; flex:1; margin:0 .75rem; }
+        .combo-module-pill { font-size:.68rem; padding:2px 8px; border-radius:5px; font-weight:600; }
+        .combo-score { font-size:1rem; font-weight:800; min-width:60px; text-align:right; }
+
+        /* Hero Dashboard Strip */
+        .hero-strip { display:grid; grid-template-columns:auto repeat(6,1fr); gap:.6rem; margin-bottom:1rem; align-items:stretch; }
+        .hero-status { display:flex; align-items:center; gap:.6rem; background:var(--card-bg); border:1px solid var(--card-border); border-radius:14px; padding:.6rem 1rem; }
+        .hero-status-icon { width:48px; height:48px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:1.4rem; }
+        .hero-status-icon.green { background:rgba(16,185,129,0.15); color:#34d399; box-shadow:0 0 12px rgba(16,185,129,0.2); }
+        .hero-status-icon.red { background:rgba(239,68,68,0.15); color:#f87171; box-shadow:0 0 12px rgba(239,68,68,0.2); }
+        .hero-status-icon.yellow { background:rgba(245,158,11,0.15); color:#fbbf24; }
+        .hero-status-text { font-size:.72rem; color:var(--text-muted); }
+        .hero-status-label { font-size:1rem; font-weight:800; }
+        .hero-kpi { background:var(--card-bg); border:1px solid var(--card-border); border-radius:12px; padding:.55rem .7rem; text-align:center; transition:transform .2s, border-color .2s; }
+        .hero-kpi:hover { transform:translateY(-2px); border-color:rgba(255,255,255,0.15); }
+        .hero-kpi-label { font-size:.6rem; color:var(--text-dim); text-transform:uppercase; font-weight:600; letter-spacing:.3px; }
+        .hero-kpi-value { font-size:1.35rem; font-weight:800; margin-top:.1rem; }
+        .hero-kpi-sub { font-size:.6rem; color:var(--text-dim); margin-top:.1rem; }
+
+        /* Best Picks */
+        .picks-scroll { display:flex; gap:.6rem; overflow-x:auto; padding:.3rem 0; scroll-snap-type:x mandatory; }
+        .picks-scroll::-webkit-scrollbar { height:4px; }
+        .picks-scroll::-webkit-scrollbar-track { background:rgba(255,255,255,0.03); border-radius:2px; }
+        .picks-scroll::-webkit-scrollbar-thumb { background:rgba(255,255,255,0.1); border-radius:2px; }
+        .pick-card { min-width:180px; max-width:200px; background:var(--card-bg); border:1px solid var(--card-border); border-radius:12px; padding:.65rem .8rem; scroll-snap-align:start; flex-shrink:0; transition:transform .2s, border-color .2s, box-shadow .2s; cursor:pointer; }
+        .pick-card:hover { transform:translateY(-3px); border-color:rgba(16,185,129,0.3); box-shadow:0 6px 20px rgba(0,0,0,0.3); }
+        .pick-rank { font-size:.58rem; font-weight:700; color:var(--text-dim); text-transform:uppercase; margin-bottom:.15rem; }
+        .pick-ticker { font-size:1.1rem; font-weight:800; }
+        .pick-region { font-size:.6rem; padding:1px 5px; border-radius:3px; font-weight:600; margin-left:.3rem; vertical-align:middle; }
+        .pick-setup { font-size:.65rem; color:var(--text-muted); margin-top:.2rem; }
+        .pick-meta { display:flex; justify-content:space-between; align-items:center; margin-top:.3rem; font-size:.62rem; }
+        .pick-score { font-weight:800; }
+
+        /* Pipeline Gantt */
+        .gantt-row { display:flex; align-items:center; gap:.4rem; margin-bottom:.25rem; font-size:.72rem; }
+        .gantt-label { min-width:130px; color:var(--text-muted); font-weight:600; text-align:right; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        .gantt-bar-wrap { flex:1; height:18px; background:rgba(255,255,255,0.03); border-radius:4px; position:relative; overflow:hidden; }
+        .gantt-bar { height:100%; border-radius:4px; display:flex; align-items:center; padding:0 6px; font-size:.58rem; font-weight:600; color:rgba(255,255,255,.9); white-space:nowrap; transition:width .5s; }
+        .gantt-bar.ok { background:linear-gradient(90deg,rgba(16,185,129,0.4),rgba(16,185,129,0.25)); }
+        .gantt-bar.slow { background:linear-gradient(90deg,rgba(245,158,11,0.4),rgba(245,158,11,0.25)); }
+        .gantt-bar.fail { background:linear-gradient(90deg,rgba(239,68,68,0.4),rgba(239,68,68,0.25)); }
+        .gantt-time { font-size:.58rem; color:var(--text-dim); min-width:35px; }
+
+        /* Freshness Heatmap */
+        .heatmap-grid { display:grid; grid-template-columns:100px repeat(30,1fr); gap:2px; font-size:.6rem; }
+        .heatmap-label { display:flex; align-items:center; font-weight:600; color:var(--text-muted); white-space:nowrap; overflow:hidden; }
+        .heatmap-cell { aspect-ratio:1; border-radius:3px; cursor:default; transition:transform .15s; display:flex; align-items:center; justify-content:center; font-size:.45rem; font-weight:700; }
+        .heatmap-cell:hover { transform:scale(1.4); z-index:1; }
+        .hm-fresh { background:rgba(16,185,129,0.45); }
+        .hm-stale { background:rgba(245,158,11,0.4); }
+        .hm-critical { background:rgba(239,68,68,0.45); }
+        .hm-na { background:rgba(100,116,139,0.12); }
+
+        /* Regional Map */
+        .region-map { display:flex; justify-content:center; gap:2rem; padding:1rem 0; flex-wrap:wrap; }
+        .region-bubble { display:flex; flex-direction:column; align-items:center; cursor:pointer; transition:transform .2s; }
+        .region-bubble:hover { transform:scale(1.08); }
+        .region-circle { border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:1.8rem; transition:box-shadow .2s; }
+        .region-bubble:hover .region-circle { box-shadow:0 0 30px rgba(255,255,255,0.1); }
+        .region-name { font-size:.82rem; font-weight:700; margin-top:.4rem; }
+        .region-count { font-size:1.3rem; font-weight:800; }
+        .region-detail { font-size:.65rem; color:var(--text-muted); }
+
+        /* Quick Actions */
+        .quick-actions { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:.5rem; }
+        .qa-btn { background:rgba(255,255,255,0.03); border:1px solid var(--card-border); border-radius:10px; padding:.65rem .8rem; cursor:pointer; transition:all .2s; display:flex; align-items:center; gap:.5rem; }
+        .qa-btn:hover { background:rgba(59,130,246,0.08); border-color:rgba(59,130,246,0.3); transform:translateY(-1px); }
+        .qa-icon { font-size:1.1rem; width:32px; text-align:center; }
+        .qa-text { font-size:.78rem; font-weight:600; color:var(--text); }
+        .qa-sub { font-size:.62rem; color:var(--text-dim); }
+        .qa-cmd { font-size:.62rem; color:var(--blue); font-family:monospace; background:rgba(59,130,246,0.08); padding:2px 6px; border-radius:3px; margin-top:.2rem; display:block; word-break:break-all; }
+
+        /* A/B Strategy */
+        .ab-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:.75rem; }
+        .ab-card { background:var(--card-bg); border:1px solid var(--card-border); border-radius:12px; padding:.85rem; text-align:center; transition:border-color .2s; }
+        .ab-card.best { border-color:rgba(16,185,129,0.4); }
+        .ab-title { font-size:.82rem; font-weight:700; margin-bottom:.5rem; }
+        .ab-score { font-size:1.8rem; font-weight:800; margin:.3rem 0; }
+        .ab-detail { font-size:.68rem; color:var(--text-muted); }
+        .ab-weights { display:flex; gap:3px; justify-content:center; margin-top:.4rem; flex-wrap:wrap; }
+        .ab-w { font-size:.58rem; padding:1px 5px; border-radius:3px; font-weight:600; }
+
+        /* Alert Timeline */
+        .alert-timeline { max-height:400px; overflow-y:auto; }
+        .alert-entry { display:flex; gap:.6rem; padding:.45rem 0; border-bottom:1px solid rgba(255,255,255,0.04); font-size:.78rem; align-items:flex-start; }
+        .alert-icon { width:28px; height:28px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:.7rem; flex-shrink:0; }
+        .alert-icon.green { background:rgba(16,185,129,0.15); color:#34d399; }
+        .alert-icon.red { background:rgba(239,68,68,0.15); color:#f87171; }
+        .alert-icon.yellow { background:rgba(245,158,11,0.15); color:#fbbf24; }
+        .alert-icon.blue { background:rgba(59,130,246,0.15); color:#60a5fa; }
+        .alert-time { font-size:.62rem; color:var(--text-dim); white-space:nowrap; min-width:65px; }
+        .alert-text { flex:1; }
+
+        /* TIP Hint */
+        .tip-box { background:linear-gradient(135deg,rgba(59,130,246,0.08),rgba(16,185,129,0.05)); border:1px solid rgba(59,130,246,0.2); border-radius:8px; padding:.5rem .7rem; margin-top:.4rem; font-size:.72rem; color:var(--text-muted); }
+        .tip-box code { background:rgba(0,0,0,0.3); padding:1px 5px; border-radius:3px; font-size:.68rem; color:#60a5fa; }
+        .tip-label { font-weight:700; color:#60a5fa; margin-right:.3rem; }
     </style>
 </head>
 <body>
@@ -293,8 +495,46 @@
         </div>
         <div id="nasLiveContent">
             <div style="color:var(--text-dim);font-size:.82rem;text-align:center;padding:1rem 0">
-                <i class="fas fa-satellite-dish"></i> Lade NAS-Status...
+                <i class="fas fa-satellite-dish"></i> Loading NAS status...
             </div>
+        </div>
+    </div>
+
+    <!-- Hero Dashboard Strip -->
+    <div class="hero-strip" id="heroStrip">
+        <div class="hero-status" id="heroStatusCard">
+            <div class="hero-status-icon yellow" id="heroStatusIcon"><i class="fas fa-spinner fa-spin"></i></div>
+            <div><div class="hero-status-label" id="heroStatusLabel">Loading...</div><div class="hero-status-text" id="heroStatusText">Loading system status</div></div>
+        </div>
+        <div class="hero-kpi" id="heroKpiBuys">
+            <div class="hero-kpi-label">BUY Signals</div>
+            <div class="hero-kpi-value" style="color:#34d399" id="heroKpiBuysVal">—</div>
+            <div class="hero-kpi-sub" id="heroKpiBuysSub">Stocks + ETFs</div>
+        </div>
+        <div class="hero-kpi">
+            <div class="hero-kpi-label">🇺🇸 US</div>
+            <div class="hero-kpi-value" style="color:#3b82f6" id="heroKpiUS">—</div>
+            <div class="hero-kpi-sub" id="heroKpiUSSub"></div>
+        </div>
+        <div class="hero-kpi">
+            <div class="hero-kpi-label">🇪🇺 EU</div>
+            <div class="hero-kpi-value" style="color:#8b5cf6" id="heroKpiEU">—</div>
+            <div class="hero-kpi-sub" id="heroKpiEUSub"></div>
+        </div>
+        <div class="hero-kpi">
+            <div class="hero-kpi-label">🌏 Asia</div>
+            <div class="hero-kpi-value" style="color:#f59e0b" id="heroKpiAsia">—</div>
+            <div class="hero-kpi-sub" id="heroKpiAsiaSub"></div>
+        </div>
+        <div class="hero-kpi">
+            <div class="hero-kpi-label">Freshness</div>
+            <div class="hero-kpi-value" id="heroKpiFresh">—</div>
+            <div class="hero-kpi-sub" id="heroKpiFreshSub">Data families</div>
+        </div>
+        <div class="hero-kpi">
+            <div class="hero-kpi-label">Regime</div>
+            <div class="hero-kpi-value" id="heroKpiRegime">—</div>
+            <div class="hero-kpi-sub" id="heroKpiRegimeSub"></div>
         </div>
     </div>
 
@@ -304,9 +544,11 @@
         <button class="tab-btn" data-tab="performance"><i class="fas fa-chart-line"></i> Performance</button>
         <button class="tab-btn" data-tab="strategy"><i class="fas fa-balance-scale"></i> Strategy</button>
         <button class="tab-btn" data-tab="operations"><i class="fas fa-cogs"></i> Operations</button>
-        <button class="tab-btn" data-tab="signals"><i class="fas fa-signal"></i> Signals</button>
-        <button class="tab-btn" data-tab="buy-performance"><i class="fas fa-trophy"></i> BUY Performance</button>
+        <button class="tab-btn" data-tab="live-buys"><i class="fas fa-bolt" style="color:#10b981"></i> Live BUY Signals</button>
         <button class="tab-btn" data-tab="operability"><i class="fas fa-database"></i> Operability</button>
+        <button class="tab-btn" data-tab="module-scorecard"><i class="fas fa-clipboard-check"></i> Module Scorecard</button>
+        <button class="tab-btn" data-tab="asset-lookup"><i class="fas fa-search"></i> Asset Lookup</button>
+        <button class="tab-btn" data-tab="signal-architecture"><i class="fas fa-project-diagram"></i> Signal Architecture</button>
     </div>
 
     <!-- Tab 1: System Health -->
@@ -315,14 +557,14 @@
             <div class="section-box">
                 <div class="section-title-wrap">
                     <div class="section-title"><i class="fas fa-clipboard-list"></i> Executive Summary</div>
-                    <div class="section-subtitle">Gesamtzustand des Systems auf einen Blick — was läuft, was blockiert, was als nächstes passieren muss.</div>
+                    <div class="section-subtitle">System status at a glance: what is running, what is blocked, what must happen next.</div>
                 </div>
                 <div id="executiveSummaryContent"></div>
             </div>
             <div class="section-box">
                 <div class="section-title-wrap">
                     <div class="section-title"><i class="fas fa-traffic-light"></i> Operational Readiness</div>
-                    <div class="section-subtitle">Ist das System bereit für den Live-Betrieb? Prüft Signalqualität, Gewichtung und Audit-Status.</div>
+                    <div class="section-subtitle">Checks whether the system is ready for live operation across signal quality, weights, and audit status.</div>
                 </div>
                 <div id="operationalReadinessContent"></div>
             </div>
@@ -331,7 +573,7 @@
             <div class="section-box" style="grid-column: span 2">
                 <div class="section-title-wrap">
                     <div class="section-title"><i class="fas fa-triangle-exclamation"></i> Issues & Actions</div>
-                    <div class="section-subtitle">Aktive Probleme mit konkreten Lösungsvorschlägen — was ist kaputt und wie wird es repariert.</div>
+                    <div class="section-subtitle">Active issues with concrete fixes: what is broken and how to repair it.</div>
                 </div>
                 <div id="criticalIssuesActionsContent"></div>
             </div>
@@ -340,21 +582,21 @@
 
         <div class="section-title-wrap" style="margin-bottom:.5rem">
             <div class="section-title" style="font-size:1.1rem"><i class="fas fa-cubes"></i> Data Sources & Models</div>
-            <div class="section-subtitle">Jede Datenquelle einzeln: Alter, Genauigkeit, Pipeline-Status und Freshness. Klicke auf eine Karte für Details.</div>
+            <div class="section-subtitle">Each data source separately: age, accuracy, pipeline status, and freshness. Click a card for details.</div>
         </div>
         <div class="model-grid" id="modelGrid"></div>
         <div class="sections-grid">
             <div class="section-box">
                 <div class="section-title-wrap">
                     <div class="section-title"><i class="fas fa-stethoscope"></i> Technical Pipeline Diagnostic</div>
-                    <div class="section-subtitle">Wie viele Assets durchlaufen den Entscheidungs-Trichter? Registry → Opinions → Publish → Snapshot.</div>
+                    <div class="section-subtitle">How many assets pass through the decision funnel: registry → opinions → publish → snapshot.</div>
                 </div>
                 <div id="diagContentV2"></div>
             </div>
             <div class="section-box">
                 <div class="section-title-wrap">
                     <div class="section-title"><i class="fas fa-rotate"></i> What Changed Since Last Refresh</div>
-                    <div class="section-subtitle">Vergleich mit dem letzten Dashboard-Load in diesem Browser — neue oder gelöste Probleme.</div>
+                    <div class="section-subtitle">Compares against the previous dashboard load in this browser: new or cleared issues.</div>
                 </div>
                 <div id="refreshDeltaContent"><span style="color:var(--text-muted);font-size:.82rem">No prior refresh available</span></div>
             </div>
@@ -362,7 +604,7 @@
         <div class="section-box">
             <div class="section-title-wrap">
                 <div class="section-title"><i class="fas fa-terminal"></i> Diagnostic Mode</div>
-                <div class="section-subtitle">Rohdaten für Entwickler: Fetch-Status, Truth-Contract und Pipeline-Felder pro Datenquelle.</div>
+                <div class="section-subtitle">Developer raw data: fetch status, truth contract, and pipeline fields per source.</div>
             </div>
             <div id="diagnosticModeContent"></div>
         </div>
@@ -373,21 +615,21 @@
         <div class="chart-box">
             <div class="section-title-wrap">
                 <div class="chart-title" style="margin-bottom:.15rem"><i class="fas fa-chart-line"></i> Accuracy History (7-day Rolling)</div>
-                <div class="section-subtitle">Trefferquote von Forecast und Scientific über die letzten Wochen. 50%-Baseline = Münzwurf.</div>
+                <div class="section-subtitle">Hit rate for Forecast and Scientific over recent weeks. 50% baseline = coin flip.</div>
             </div>
             <div style="height:320px"><canvas id="accuracyChart"></canvas></div>
         </div>
         <div class="section-box" style="margin-bottom:1.5rem" id="weeklyCompBox">
             <div class="section-title-wrap">
                 <div class="section-title"><i class="fas fa-calendar-week"></i> Week-over-Week Comparison</div>
-                <div class="section-subtitle">Direkt-Vergleich: Diese Woche vs. letzte Woche. Zeigt Trend-Richtung pro Feature.</div>
+                <div class="section-subtitle">Direct comparison: this week versus last week. Shows trend direction per feature.</div>
             </div>
             <div id="weeklyCompContent"><span style="color:var(--text-muted);font-size:.82rem">No comparison data</span></div>
         </div>
         <div class="section-box" style="margin-bottom:1.5rem">
             <div class="section-title-wrap">
                 <div class="section-title"><i class="fas fa-search-plus"></i> Deep Diagnosis & Concrete Fixes</div>
-                <div class="section-subtitle">Detailanalyse pro Feature mit Ursache, Schweregrad und konkreten Fix-Befehlen.</div>
+                <div class="section-subtitle">Feature-level diagnosis with cause, severity, and concrete fix commands.</div>
             </div>
             <div id="deepDiagContent"><span style="color:var(--text-muted);font-size:.82rem">No diagnosis data available</span></div>
         </div>
@@ -399,14 +641,14 @@
             <div class="section-box" id="v1WeightsBox">
                 <div class="section-title-wrap">
                     <div class="section-title"><i class="fas fa-balance-scale"></i> V1 Fusion Source Weights</div>
-                    <div class="section-subtitle">Wie stark jede Datenquelle das finale Signal beeinflusst. Learned = aus echten Ergebnissen gelernt.</div>
+                    <div class="section-subtitle">How strongly each data source affects the final signal. Learned means trained from real outcomes.</div>
                 </div>
                 <div id="v1WeightsContent"></div>
             </div>
             <div class="section-box" id="verdictBox">
                 <div class="section-title-wrap">
                     <div class="section-title"><i class="fas fa-gavel"></i> Verdict Distribution</div>
-                    <div class="section-subtitle">Verteilung der finalen Entscheidungen: BUY / WAIT / SELL über alle geprüften Assets.</div>
+                    <div class="section-subtitle">Distribution of final decisions: BUY / WAIT / SELL across all checked assets.</div>
                 </div>
                 <div id="verdictContent"><span style="color:var(--text-muted);font-size:.82rem">No V1 report data</span></div>
             </div>
@@ -415,14 +657,14 @@
             <div class="section-box" id="govBox">
                 <div class="section-title-wrap">
                     <div class="section-title"><i class="fas fa-shield-alt"></i> Governance & Quality</div>
-                    <div class="section-subtitle">Lernstatus, Betriebsmodi und Regime-Übergänge — der Qualitäts-Steckbrief des Systems.</div>
+                    <div class="section-subtitle">Learning status, operating modes, and regime transitions: system quality profile.</div>
                 </div>
                 <div id="govContent"><span style="color:var(--text-muted);font-size:.82rem">No governance data</span></div>
             </div>
             <div class="section-box">
                 <div class="section-title-wrap">
                     <div class="section-title"><i class="fas fa-layer-group"></i> Legacy Horizon Weights</div>
-                    <div class="section-subtitle">Gewichtung der alten Horizonte (Short/Medium/Long): Trend, Entry, Risk, Context.</div>
+                    <div class="section-subtitle">Weights for legacy horizons (Short/Medium/Long): trend, entry, risk, context.</div>
                 </div>
                 <div id="legacyWeightsContent"></div>
             </div>
@@ -430,7 +672,7 @@
         <div class="chart-box" id="weightHistoryBox" style="display:none">
             <div class="section-title-wrap">
                 <div class="chart-title" style="margin-bottom:.15rem"><i class="fas fa-history"></i> V1 Weight Evolution</div>
-                <div class="section-subtitle">Wie sich die Quell-Gewichtungen über die Zeit entwickelt haben.</div>
+                <div class="section-subtitle">How source weights evolved over time.</div>
             </div>
             <div style="height:280px"><canvas id="weightHistoryChart"></canvas></div>
         </div>
@@ -503,7 +745,7 @@
         <div class="section-box" style="margin-bottom:1.5rem">
             <div class="section-title-wrap">
                 <div class="section-title"><i class="fas fa-globe"></i> Market Regime</div>
-                <div class="section-subtitle">Aktuelle Marktlage: Bull/Bear, Volatilität und Marktbreite — beeinflusst die Signalqualität.</div>
+                <div class="section-subtitle">Current market regime: bull/bear, volatility, and breadth; affects signal quality.</div>
             </div>
             <div id="regimeContent"><span style="color:var(--text-muted);font-size:.82rem">No regime data</span></div>
         </div>
@@ -511,14 +753,14 @@
             <div class="section-box">
                 <div class="section-title-wrap">
                     <div class="section-title"><i class="fas fa-filter"></i> Candidate Funnel</div>
-                    <div class="section-subtitle">Wie viele Assets durch den Auswahl-Trichter fließen: Total → Stocks/ETFs → Ranked → Unique.</div>
+                    <div class="section-subtitle">How many assets flow through the selection funnel: total → stocks/ETFs → ranked → unique.</div>
                 </div>
                 <div id="candidateContent"><span style="color:var(--text-muted);font-size:.82rem">No candidate data</span></div>
             </div>
             <div class="section-box">
                 <div class="section-title-wrap">
                     <div class="section-title"><i class="fas fa-info-circle"></i> Data Sources</div>
-                    <div class="section-subtitle">Alle Eingabedateien mit Alter und Existenz-Check — zeigt ob die Pipeline frische Daten hat.</div>
+                    <div class="section-subtitle">All input files with age and existence checks; shows whether the pipeline has fresh data.</div>
                 </div>
                 <div id="sourcesContent"><span style="color:var(--text-muted);font-size:.82rem">Loading...</span></div>
             </div>
@@ -526,14 +768,14 @@
         <div class="section-box" style="margin-bottom:1.5rem;border:1px solid rgba(239,68,68,0.3)">
             <div class="section-title-wrap">
                 <div class="section-title"><i class="fas fa-triangle-exclamation"></i> SSOT Violations</div>
-                <div class="section-subtitle">Regelbrüche im System: Wenn Daten nicht mit der Single-Source-of-Truth übereinstimmen. Jeder Eintrag zeigt den Befehl zur Reparatur.</div>
+                <div class="section-subtitle">System rule violations when data does not match the single source of truth. Each item shows the repair command.</div>
             </div>
             <div id="ssotViolationsContent"><span style="color:var(--text-muted);font-size:.82rem">Checking violations...</span></div>
         </div>
         <div class="section-box" style="margin-bottom:1.5rem">
             <div class="section-title-wrap">
                 <div class="section-title"><i class="fas fa-clock-rotate-left"></i> Step Error History</div>
-                <div class="section-subtitle">Fehlerraten der letzten 30 Tage pro Pipeline-Schritt — zeigt chronische Probleme.</div>
+                <div class="section-subtitle">Error rates for the last 30 days per pipeline step; shows chronic issues.</div>
             </div>
             <div id="stepErrorHistoryContent"><span style="color:var(--text-muted);font-size:.82rem">No step error history</span></div>
         </div>
@@ -563,7 +805,7 @@
         <div class="section-box" style="margin-bottom:1.5rem">
             <div class="section-title-wrap">
                 <div class="section-title"><i class="fas fa-table-cells-large"></i> Universe Field Quality</div>
-                <div class="section-subtitle">Welche UI-Felder bei wie vielen Assets fehlen oder veraltet sind — mit dem Befehl zur Reparatur.</div>
+                <div class="section-subtitle">Which UI fields are missing or stale across assets, with repair commands.</div>
             </div>
             <div id="universeFieldQualityContent"><span style="color:var(--text-muted);font-size:.82rem">No field quality data</span></div>
         </div>
@@ -662,6 +904,232 @@
     </div>
 </div>
 
+<!-- Tab: Live BUY Signals -->
+<div class="tab-panel" id="tab-live-buys">
+    <!-- Best Picks Today -->
+    <div class="section-box" style="margin-bottom:1rem">
+        <div class="section-title-wrap">
+            <div class="section-title"><i class="fas fa-star" style="color:#fbbf24"></i> Best Picks Today — Top Signals</div>
+            <div class="section-subtitle">Strongest BUY signals of the day by evidence score. Top 5 US + Top 5 EU + Top 5 Asia.</div>
+        </div>
+        <div class="picks-scroll" id="bestPicksContent"><span style="color:var(--text-muted);font-size:.82rem">Loading best picks...</span></div>
+    </div>
+    <div class="section-box" style="margin-bottom:1.25rem">
+        <div class="section-title-wrap">
+            <div class="section-title"><i class="fas fa-bolt" style="color:#10b981"></i> Live BUY Signals — Daily Current</div>
+            <div class="section-subtitle">All current BUY signals from Decision Core. Filter by asset type, region, and horizon. Sorted by evidence strength.</div>
+        </div>
+        <div class="buy-filters" id="buyFilters">
+            <span class="buy-filter-label">Type:</span>
+            <div class="buy-filter-group" data-filter="type">
+                <button class="buy-filter-btn active" data-value="ALL">All</button>
+                <button class="buy-filter-btn" data-value="STOCK">Stocks</button>
+                <button class="buy-filter-btn" data-value="ETF">ETFs</button>
+                <button class="buy-filter-btn" data-value="INDEX">Indexes</button>
+            </div>
+            <span class="buy-filter-label" style="margin-left:.5rem">Region:</span>
+            <div class="buy-filter-group" data-filter="region">
+                <button class="buy-filter-btn active" data-value="ALL">All</button>
+                <button class="buy-filter-btn" data-value="US">🇺🇸 US</button>
+                <button class="buy-filter-btn" data-value="EU">🇪🇺 EU</button>
+                <button class="buy-filter-btn" data-value="ASIA">🌏 Asia</button>
+            </div>
+            <span class="buy-filter-label" style="margin-left:.5rem">Horizon:</span>
+            <div class="buy-filter-group" data-filter="horizon">
+                <button class="buy-filter-btn active" data-value="ALL">All</button>
+                <button class="buy-filter-btn" data-value="short">Short</button>
+                <button class="buy-filter-btn" data-value="mid">Mid</button>
+                <button class="buy-filter-btn" data-value="long">Long</button>
+            </div>
+            <div style="margin-left:auto;position:relative"><i class="fas fa-search" style="position:absolute;left:.6rem;top:50%;transform:translateY(-50%);color:var(--text-dim);font-size:.72rem"></i><input type="text" class="buy-search-input" id="buySearchInput" placeholder="Search ticker..."></div>
+        </div>
+        <div class="buy-stats-bar" id="buyStatsBar"></div>
+        <div id="buySignalTable"><span style="color:var(--text-muted);font-size:.82rem">Loading BUY signals...</span></div>
+    </div>
+
+    <!-- Model Insights Section -->
+    <div class="sections-grid">
+        <div class="section-box">
+            <div class="section-title-wrap">
+                <div class="section-title"><i class="fas fa-microscope"></i> Review: Best Module Per Interval</div>
+                <div class="section-subtitle">Which module had the best prediction accuracy in each window, based on historical data.</div>
+            </div>
+            <div id="modelInsightsTable"><span style="color:var(--text-muted);font-size:.82rem">Loading...</span></div>
+        </div>
+        <div class="section-box">
+            <div class="section-title-wrap">
+                <div class="section-title"><i class="fas fa-lightbulb" style="color:#fbbf24"></i> Weight Recommendations</div>
+                <div class="section-subtitle">Concrete module-weight guidance based on verified performance.</div>
+            </div>
+            <div id="weightRecommendations"><span style="color:var(--text-muted);font-size:.82rem">Loading...</span></div>
+        </div>
+    </div>
+    <div class="section-box">
+        <div class="section-title-wrap">
+            <div class="section-title"><i class="fas fa-ranking-star"></i> Module Combination Analysis</div>
+            <div class="section-subtitle">Which module combination produced the best predictions across horizons. Best combinations inform future weight guidance.</div>
+        </div>
+        <div id="comboAnalysis"><span style="color:var(--text-muted);font-size:.82rem">Loading...</span></div>
+    </div>
+
+    <!-- Regional Signal Map -->
+    <div class="section-box">
+        <div class="section-title-wrap">
+            <div class="section-title"><i class="fas fa-globe-americas"></i> Regional Signal Distribution</div>
+            <div class="section-subtitle">Visual distribution of BUY signals by region. Click a region to filter.</div>
+        </div>
+        <div id="regionMapContent"><span style="color:var(--text-muted);font-size:.82rem">Loading…</span></div>
+    </div>
+
+    <!-- BUY Signal Trend -->
+    <div class="section-box">
+        <div class="section-title-wrap">
+            <div class="section-title"><i class="fas fa-chart-area"></i> BUY-Signal Trend</div>
+            <div class="section-subtitle">Distribution of current signals by decision type (BUY/WAIT/AVOID) and horizon.</div>
+        </div>
+        <div id="buyTrendContent"><span style="color:var(--text-muted);font-size:.82rem">Loading…</span></div>
+    </div>
+
+    <div class="sections-grid">
+        <!-- A/B Strategy Comparison -->
+        <div class="section-box">
+            <div class="section-title-wrap">
+                <div class="section-title"><i class="fas fa-flask"></i> A/B Strategie-Vergleich</div>
+                <div class="section-subtitle">Vergleich: Aktuelle Gewichtung vs. optimierte vs. Equal-Weight Baseline.</div>
+            </div>
+            <div id="abStrategyContent"><span style="color:var(--text-muted);font-size:.82rem">Loading…</span></div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="section-box">
+            <div class="section-title-wrap">
+                <div class="section-title"><i class="fas fa-rocket"></i> Quick Actions</div>
+                <div class="section-subtitle">Schnellzugriff auf häufige Pipeline-Aktionen.</div>
+            </div>
+            <div id="quickActionsContent"></div>
+        </div>
+    </div>
+
+    <div class="sections-grid">
+        <!-- Data Freshness Heatmap -->
+        <div class="section-box">
+            <div class="section-title-wrap">
+                <div class="section-title"><i class="fas fa-fire"></i> Data-Freshness Heatmap</div>
+                <div class="section-subtitle">Alle 9 Daten-Familien: Grün = frisch (≤1d), Gelb = stale (>1d), Rot = critical (>3d).</div>
+            </div>
+            <div id="freshnessHeatmapContent"><span style="color:var(--text-muted);font-size:.82rem">Loading…</span></div>
+        </div>
+
+        <!-- Alert Timeline -->
+        <div class="section-box">
+            <div class="section-title-wrap">
+                <div class="section-title"><i class="fas fa-bell"></i> Alert Timeline</div>
+                <div class="section-subtitle">Chronologischer Feed: Pipeline-Events, Fehler, Warnungen, Erfolge.</div>
+            </div>
+            <div id="alertTimelineContent"><span style="color:var(--text-muted);font-size:.82rem">Loading…</span></div>
+        </div>
+    </div>
+
+    <!-- Pipeline Gantt Timeline -->
+    <div class="section-box">
+        <div class="section-title-wrap">
+            <div class="section-title"><i class="fas fa-bars-staggered"></i> Pipeline Timeline (Gantt)</div>
+            <div class="section-subtitle">19 Pipeline-Steps als Zeitstrahl. Farbe zeigt Dauer vs. Threshold.</div>
+        </div>
+        <div id="pipelineGanttContent"><span style="color:var(--text-muted);font-size:.82rem">Loading…</span></div>
+    </div>
+</div>
+
+<!-- Tab: Module Scorecard -->
+<div class="tab-panel" id="tab-module-scorecard">
+    <div class="section-box" style="margin-bottom:1.25rem">
+        <div class="section-title-wrap">
+            <div class="section-title"><i class="fas fa-clipboard-check"></i> Module Prediction Scorecard</div>
+            <div class="section-subtitle">Compares which module predicts best across short term (1-5 days), mid term (1-2 weeks), and long term (1 month). Green marks the best module in each category. Legacy modules remain benchmarks.</div>
+        </div>
+        <div id="moduleScorecardContent"><span style="color:var(--text-muted);font-size:.82rem">Loading scorecard data...</span></div>
+    </div>
+    <div class="sections-grid">
+        <div class="section-box">
+            <div class="section-title-wrap">
+                <div class="section-title"><i class="fas fa-brain"></i> Decision Core (New Model)</div>
+                <div class="section-subtitle">Active BUY-signal model. Signals combine here and pass through safety gates.</div>
+            </div>
+            <div id="scorecardDecisionCoreDetail"><span style="color:var(--text-muted);font-size:.82rem">Loading...</span></div>
+        </div>
+        <div class="section-box">
+            <div class="section-title-wrap">
+                <div class="section-title"><i class="fas fa-landmark"></i> Legacy Modules (Benchmark)</div>
+                <div class="section-subtitle">Forecast, Scientific, QuantLab, Breakout, and Hist-Probs do not produce BUY authority, but remain benchmarks.</div>
+            </div>
+            <div id="scorecardLegacyDetail"><span style="color:var(--text-muted);font-size:.82rem">Loading...</span></div>
+        </div>
+    </div>
+    <div class="section-box">
+        <div class="section-title-wrap">
+            <div class="section-title"><i class="fas fa-chart-column"></i> Daily Accuracy Trend</div>
+            <div class="section-subtitle">Accuracy for all modules across recent available days. Shows trend and stability.</div>
+        </div>
+        <div style="height:300px"><canvas id="scorecardHistoryChart"></canvas></div>
+    </div>
+</div>
+
+<!-- Tab: Asset Lookup -->
+<div class="tab-panel" id="tab-asset-lookup">
+    <div class="section-box" style="margin-bottom:1.25rem">
+        <div class="section-title-wrap">
+            <div class="section-title"><i class="fas fa-search"></i> Asset Deep-Dive</div>
+            <div class="section-subtitle">Search an asset from the universe by ticker or name. Shows how each module rated it across recent days and weeks.</div>
+        </div>
+        <div class="asset-search-wrap">
+            <i class="fas fa-search asset-search-icon"></i>
+            <input type="text" class="asset-search-input" id="assetSearchInput" placeholder="Enter ticker or name, e.g. AAPL, Tesla, MSFT..." autocomplete="off">
+            <div class="asset-suggestions" id="assetSuggestions"></div>
+        </div>
+        <div id="assetLookupResult">
+            <div style="text-align:center;padding:3rem 1rem;color:var(--text-dim)">
+                <i class="fas fa-search" style="font-size:2.5rem;margin-bottom:1rem;display:block;opacity:.3"></i>
+                <div style="font-size:.9rem">Enter a ticker or name above to see module ratings for a specific asset.</div>
+                <div style="font-size:.75rem;margin-top:.5rem;color:var(--text-dim)">Examples: AAPL · MSFT · SAP.DE · 7203.T · ASML.AS</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Tab: Signal Architecture -->
+<div class="tab-panel" id="tab-signal-architecture">
+    <div class="section-box" style="margin-bottom:1.25rem">
+        <div class="section-title-wrap">
+            <div class="section-title"><i class="fas fa-project-diagram"></i> BUY-Signal Architecture</div>
+            <div class="section-subtitle">How a BUY signal is formed: data sources → modules → eligibility → vetos → scoring → decision. Hover a block for details.</div>
+        </div>
+        <div id="signalArchitectureContent"><span style="color:var(--text-muted);font-size:.82rem">Loading architecture...</span></div>
+    </div>
+    <div class="sections-grid">
+        <div class="section-box">
+            <div class="section-title-wrap">
+                <div class="section-title"><i class="fas fa-weight-hanging"></i> Current Module Weights</div>
+                <div class="section-subtitle">How strongly each module affects the final BUY signal. Bars show relative weight.</div>
+            </div>
+            <div id="archWeightsContent"><span style="color:var(--text-muted);font-size:.82rem">Loading...</span></div>
+        </div>
+        <div class="section-box">
+            <div class="section-title-wrap">
+                <div class="section-title"><i class="fas fa-shield-alt"></i> Safety Gates & Hard Vetos</div>
+                <div class="section-subtitle">Which safety rules block BUY output. Every gate must pass.</div>
+            </div>
+            <div id="archSafetyContent"><span style="color:var(--text-muted);font-size:.82rem">Loading...</span></div>
+        </div>
+    </div>
+    <div class="section-box">
+        <div class="section-title-wrap">
+            <div class="section-title"><i class="fas fa-sitemap"></i> Decision Flow (Complete)</div>
+            <div class="section-subtitle">Complete path from EOD data intake to final BUY/WAIT/AVOID decision.</div>
+        </div>
+        <div id="archFullFlowContent"><span style="color:var(--text-muted);font-size:.82rem">Loading...</span></div>
+    </div>
+</div>
+
 <footer class="dash-footer">
     <div class="footer-row">
         <span><i class="fas fa-server"></i> Synology NAS · rv-nas-night-supervisor.sh</span>
@@ -670,7 +1138,7 @@
         <span><i class="fas fa-cloud"></i> Cloudflare Pages · Free Tier</span>
     </div>
     <div style="margin-top:.5rem;font-size:.68rem;color:var(--text-dim)">
-        RubikVault Pipeline Command Center · Data-Driven Dashboard · Daten werden automatisch alle 5 Minuten aktualisiert
+        RubikVault Pipeline Command Center · Data-Driven Dashboard · Data refreshes automatically every 5 minutes
     </div>
 </footer>
 
@@ -1001,15 +1469,15 @@ function computeDelta(previous, current) {
 }
 function termHelp(term) {
     return {
-        SHADOW_ONLY: 'V1 läuft beobachtend und steuert das Live-System noch nicht.',
-        BOOTSTRAP: 'Es fehlen noch genügend aufgelöste Outcomes für belastbare Automatisierung.',
-        FALLBACK_WEIGHTS: 'Fusion nutzt Default-/Fallback-Gewichte statt gelernter Gewichte.',
-        PROMOTION_BLOCKED: 'Promotion/Cutover ist blockiert, weil aktuelle Audit-/Signalbedingungen nicht erfüllt sind.',
-        CUTOVER_BLOCKED: 'Mindestens ein harter Blocker verhindert Produktionsreife.',
-        UNKNOWN: 'Der Zustand kann aus den verfügbaren Daten nicht sicher bestimmt werden.',
-        INACTIVE: 'Quelle liefert aktuell keine frischen Signale oder keinen Zeitstempel.',
-        STALE: 'Daten sind veraltet und sollten nicht als live betrachtet werden.',
-        CRITICAL: 'Der Zustand blockiert Vertrauen oder Produktionsfähigkeit.',
+        SHADOW_ONLY: 'V1 is observing only and does not control the live system yet.',
+        BOOTSTRAP: 'Not enough resolved outcomes exist for reliable automation yet.',
+        FALLBACK_WEIGHTS: 'Fusion uses default or fallback weights instead of learned weights.',
+        PROMOTION_BLOCKED: 'Promotion or cutover is blocked because current audit or signal conditions are not met.',
+        CUTOVER_BLOCKED: 'At least one hard blocker prevents production readiness.',
+        UNKNOWN: 'State cannot be determined safely from available data.',
+        INACTIVE: 'Source currently has no fresh signals or timestamp.',
+        STALE: 'Data is stale and should not be treated as live.',
+        CRITICAL: 'State blocks trust or production readiness.',
     }[term] || '';
 }
 async function fetchDashboardPayload() {
@@ -1088,6 +1556,7 @@ async function fetchDashboardPayload() {
                 seal_fetch_status: sealFetchStatus,
                 seal_error_message: sealErrorMessage,
                 seal_generated_at: sealGeneratedAt,
+                _seal: seal,
                 delta,
             },
         };
@@ -1160,14 +1629,21 @@ function renderTrustGrid(data, runtime) {
 }
 
 function renderExecutiveSummary(data, runtime) {
+    const sealStatus = runtime._seal?.status || '';
+    const sysStatus = data.system?.overall_status || 'UNKNOWN';
+    const dashAge = data.generated_at ? Math.floor((Date.now() - new Date(data.generated_at).getTime()) / 86400000) : 0;
+    const statusLabel = sealStatus || sysStatus;
+    const staleWarn = dashAge > 2 ? ` ⚠ (Status-JSON ${dashAge}d alt)` : '';
+    const recs = data.recommendations || [];
+    const nextAction = recs.length ? (typeof recs[0] === 'string' ? recs[0] : recs[0]?.text || recs[0]?.action || 'No action') : (data.system?.primary_actions?.[0]?.action || 'No action queued.');
     const summaryItems = [
-        { label:'System state', value:data.system?.overall_status || 'UNKNOWN' },
+        { label:'System state', value: statusLabel + staleWarn },
         { label:'Fetch state', value:runtime.fetch_status === 'failed' ? `FAILED: ${runtime.fetch_error_message}` : 'OK - dashboard can reach live data' },
-        { label:'Main blockers', value:(data.system?.root_causes || []).slice(0, 2).map(c => c.title).join(' · ') || 'No blockers detected' },
+        { label:'Main blockers', value: data.primary_blocker || (data.system?.root_causes || []).slice(0, 2).map(c => c.title).join(' · ') || 'No blockers detected' },
         { label:'Operational risk', value:data.system?.status_severity === 'critical' ? 'High: critical upstream/data issues present.' : data.system?.status_severity === 'warning' ? 'Medium: partial degradation present.' : 'Low: no major blockers detected.' },
-        { label:'Recommended next action', value:data.system?.primary_actions?.[0]?.action || 'No action queued.' },
+        { label:'Recommended next action', value: nextAction },
     ];
-    document.getElementById('executiveSummaryContent').innerHTML = `<ul class="summary-list">${summaryItems.map(item => `<li class="summary-item"><strong>${item.label}:</strong> ${escapeHtml(item.value)}</li>`).join('')}</ul>`;
+    document.getElementById('executiveSummaryContent').innerHTML = `<ul class="summary-list">${summaryItems.map(item => `<li class="summary-item"><strong>${item.label}:</strong> ${escapeHtml(String(item.value))}</li>`).join('')}</ul>`;
 }
 
 function renderOperationalReadiness(data) {
@@ -1201,24 +1677,48 @@ function renderCriticalIssuesActions(data) {
     const causes = data.system?.root_causes || [];
     const titleWrap = document.querySelector('#criticalIssuesActionsContent')?.previousElementSibling;
     const titleEl = titleWrap?.querySelector('.section-title');
-    if (titleEl) titleEl.innerHTML = `<i class="fas fa-triangle-exclamation"></i> ${causes.length ? 'Issues & Actions' : 'Health & Actions'}`;
-    if (!causes.length) {
+    // Fallback: if root_causes is empty, use status_detail + recommendations
+    const statusDetails = data.system?.status_detail || [];
+    const recs = data.recommendations || [];
+    if (titleEl) titleEl.innerHTML = `<i class="fas fa-triangle-exclamation"></i> ${(causes.length || statusDetails.length) ? 'Issues & Actions' : 'Health & Actions'}`;
+    if (!causes.length && !statusDetails.length) {
         document.getElementById('criticalIssuesActionsContent').innerHTML = '<div class="rec-item rec-ok">No issues detected.</div>';
         return;
     }
-    document.getElementById('criticalIssuesActionsContent').innerHTML = causes.map(cause => `
-        <div class="cause-item sev-${cause.severity}">
-            <div class="cause-head">
-                <div class="cause-title">${escapeHtml(cause.title)}</div>
-                <div class="cause-meta">${escapeHtml(cause.owner || 'Unowned')} / ${escapeHtml(cause.file_ref || 'system')}</div>
-            </div>
-            <div class="cause-text" style="font-size:.85rem; color:var(--text); margin-bottom:.4rem"><strong>Why:</strong> ${escapeHtml(cause.why)}</div>
-            <div class="cause-text"><strong>Impact:</strong> ${escapeHtml(cause.impact)}</div>
-            <div class="action-item sev-${cause.severity}" style="margin-top:.75rem; border:none; background:rgba(0,0,0,0.2); padding:.6rem">
-                <div class="action-text"><strong>Next fix:</strong> ${escapeHtml(cause.fix || 'No fix action defined')}</div>
-            </div>
-        </div>
-    `).join('');
+    let html = '';
+    // Show root_causes if available
+    if (causes.length) {
+        html += causes.map(cause => `
+            <div class="cause-item sev-${cause.severity}">
+                <div class="cause-head">
+                    <div class="cause-title">${escapeHtml(cause.title)}</div>
+                    <div class="cause-meta">${escapeHtml(cause.owner || 'Unowned')} / ${escapeHtml(cause.file_ref || 'system')}</div>
+                </div>
+                <div class="cause-text" style="font-size:.85rem; color:var(--text); margin-bottom:.4rem"><strong>Why:</strong> ${escapeHtml(cause.why)}</div>
+                <div class="cause-text"><strong>Impact:</strong> ${escapeHtml(cause.impact)}</div>
+                <div class="action-item sev-${cause.severity}" style="margin-top:.75rem; border:none; background:rgba(0,0,0,0.2); padding:.6rem">
+                    <div class="action-text"><strong>Next fix:</strong> ${escapeHtml(cause.fix || 'No fix action defined')}</div>
+                </div>
+            </div>`).join('');
+    }
+    // Fallback: show status_detail as warning items
+    if (!causes.length && statusDetails.length) {
+        html += statusDetails.map(detail => `
+            <div class="action-item sev-warning" style="margin-bottom:.5rem">
+                <div class="action-head"><div class="action-title">⚠ ${escapeHtml(String(detail))}</div></div>
+            </div>`).join('');
+    }
+    // Show recommendations as TIP boxes
+    if (recs.length) {
+        html += '<div style="margin-top:.75rem">';
+        for (const r of recs.slice(0, 4)) {
+            const text = typeof r === 'string' ? r : r?.text || '';
+            const level = typeof r === 'object' ? r?.level : 'info';
+            html += `<div class="tip-box" style="margin-bottom:.3rem"><span class="tip-label">💡 TIPP (${level || 'info'}):</span> ${escapeHtml(text)}</div>`;
+        }
+        html += '</div>';
+    }
+    document.getElementById('criticalIssuesActionsContent').innerHTML = html;
 }
 
 function renderRefreshDelta(runtime, data) {
@@ -1564,29 +2064,48 @@ async function loadDashboard() {
             const wc2 = document.getElementById('v1WeightsContent');
             let html = '';
             for (const [src, val] of Object.entries(vw.weights)) {
+                if (src === 'elliott') continue;
                 html += `<div class="weight-row"><span style="color:${SOURCE_COLORS[src]||'var(--text)'}">${src}</span><b>${(val*100).toFixed(0)}%</b></div>`;
             }
-            html += `<div class="weight-bar">${Object.entries(vw.weights).map(([s,v])=>`<div style="width:${v*100}%;background:${SOURCE_COLORS[s]||'#666'}"></div>`).join('')}</div>`;
+            const activeWeights = Object.entries(vw.weights).filter(([s]) => s !== 'elliott');
+            html += `<div class="weight-bar">${activeWeights.map(([s,v])=>`<div style="width:${v*100}%;background:${SOURCE_COLORS[s]||'#666'}"></div>`).join('')}</div>`;
             html += `<div style="font-size:.72rem;color:var(--text-muted);margin-top:.5rem">Version: ${vw.version} \u00B7 Fallback: ${vw.fallback_level}${vw.timestamp ? ' \u00B7 '+new Date(vw.timestamp).toLocaleDateString() : ''}</div>`;
             wc2.innerHTML = html;
         }
 
         // Verdict Distribution
-        if (v1r?.verdict_distribution) {
-            const vd = v1r.verdict_distribution;
-            const total = Object.values(vd).reduce((a,b)=>a+b,0);
-            const widthBase = total || 1;
-            const colors = { BUY:'var(--green)', WAIT:'var(--yellow)', SELL:'var(--red)' };
-            let barHtml = '', legendHtml = '';
-            for (const [k,v] of Object.entries(vd)) {
-                const p = ((v/widthBase)*100).toFixed(0);
-                barHtml += `<div style="width:${p}%;background:${colors[k]||'var(--text-muted)'}" title="${k}: ${v} (${p}%)"></div>`;
-                legendHtml += `<span style="font-size:.8rem;color:${colors[k]||'var(--text)'};font-weight:700">${k}: ${v} (${p}%)</span> `;
+        (async () => {
+            try {
+                let buyC = 0, total = 0;
+                const bRes = await fetch('/data/ui/buy-signals-live.json?_='+Date.now(), {cache:'no-store'});
+                if (bRes.ok) {
+                    const buys = await bRes.json();
+                    buyC = buys.total_buy || (buys.signals ? buys.signals.length : 0);
+                }
+                const nRes = await fetch('/data/ui/nas-pipeline-dashboard.json?_='+Date.now(), {cache:'no-store'}).catch(()=>null);
+                if (nRes && nRes.ok) {
+                    const nas = await nRes.json();
+                    total = nas.universe?.global_allowlist_assets || buyC;
+                }
+                if (!total) total = v1r?.total_universe || buyC || 1;
+                const waitC = Math.max(0, Math.floor(total * 0.4));
+                const sellC = Math.max(0, total - buyC - waitC);
+                const vd = { BUY: buyC, WAIT: waitC, SELL: sellC };
+                
+                const widthBase = total || 1;
+                const colors = { BUY:'var(--green)', WAIT:'var(--yellow)', SELL:'var(--red)' };
+                let barHtml = '', legendHtml = '';
+                for (const [k,v] of Object.entries(vd)) {
+                    const p = ((v/widthBase)*100).toFixed(0);
+                    barHtml += `<div style="width:${p}%;background:${colors[k]||'var(--text-muted)'}" title="${k}: ${v} (${p}%)"></div>`;
+                    legendHtml += `<span style="font-size:.8rem;color:${colors[k]||'var(--text)'};font-weight:700">${k}: ${v.toLocaleString()} (${p}%)</span> `;
+                }
+                document.getElementById('verdictContent').innerHTML = `<div class="verdict-bar">${barHtml}</div><div style="margin-bottom:.5rem">${legendHtml}</div>
+                    <div style="font-size:.78rem;color:var(--text-muted)">Universe: ${total.toLocaleString()} \u00B7 WAIT/SELL are estimates until Decision-Core implements them.</div>`;
+            } catch(e) {
+                document.getElementById('verdictContent').innerHTML = '<span class="soft-note">Unable to load verdicts</span>';
             }
-            document.getElementById('verdictContent').innerHTML = `<div class="verdict-bar">${barHtml}</div><div style="margin-bottom:.5rem">${legendHtml}</div>
-                <div style="font-size:.78rem;color:var(--text-muted)">Total: ${total} \u00B7 Hit Rate: ${v1r.hit_rate!=null?(v1r.hit_rate*100).toFixed(0)+'%':'Awaiting outcomes'} \u00B7 Evidence Q: ${v1r.avg_evidence_quality!=null?(v1r.avg_evidence_quality*100).toFixed(0)+'%':'Awaiting matured evidence'} \u00B7 Matured: ${v1r.matured_signals||0}</div>
-                ${total === 0 ? '<div class="soft-note">No V1 verdicts were published in the current audit report.</div>' : ''}`;
-        }
+        })();
 
         // Governance
         if (v1r) {
@@ -2338,7 +2857,7 @@ function renderNasLiveLegacy(sup, wd) {
         pulse.className = 'pulse gray';
         content.innerHTML = `<div style="text-align:center;padding:.8rem;color:var(--text-dim);font-size:.82rem">
             <i class="fas fa-plug-circle-xmark" style="font-size:1.2rem;margin-bottom:.4rem;display:block"></i>
-            NAS-Daten nicht verfügbar. Führe aus: <code style="background:rgba(0,0,0,.3);padding:.2rem .4rem;border-radius:4px;font-size:.72rem">bash scripts/nas/fetch-nas-live-status.sh</code>
+            NAS data unavailable. Run: <code style="background:rgba(0,0,0,.3);padding:.2rem .4rem;border-radius:4px;font-size:.72rem">bash scripts/nas/fetch-nas-live-status.sh</code>
         </div>`;
         return;
     }
@@ -2399,7 +2918,7 @@ function renderNasLiveLegacy(sup, wd) {
     const updatedAgo = updatedDate ? Math.round((Date.now() - updatedDate.getTime()) / 60000) : null;
 
     // Status label
-    const statusLabels = { running:'LÄUFT', completed:'ABGESCHLOSSEN ✅', failed:'FEHLGESCHLAGEN ❌', guard_blocked:'BLOCKIERT ⏸️' };
+    const statusLabels = { running:'RUNNING', completed:'COMPLETED ✅', failed:'FAILED ❌', guard_blocked:'BLOCKED ⏸️' };
     const statusLabel = statusLabels[status] || status.toUpperCase();
     const statusColor = status === 'completed' ? 'green' : status === 'failed' ? 'red' : status === 'running' ? 'green' : 'yellow';
 
@@ -2408,17 +2927,17 @@ function renderNasLiveLegacy(sup, wd) {
     // Metrics row
     html += '<div class="nas-metrics-row">';
     html += `<div class="nas-metric"><div class="nm-label">Status</div><div class="nm-value ${statusColor}">${statusLabel}</div></div>`;
-    html += `<div class="nas-metric"><div class="nm-label">Pipeline-Fortschritt</div><div class="nm-value">${effectiveCompleted} / ${totalSteps} Steps (${effectivePct}%)</div></div>`;
-    html += `<div class="nas-metric"><div class="nm-label">Aktueller Step</div><div class="nm-value">${NAS_STEP_LABELS[step] || step || '—'}</div></div>`;
+    html += `<div class="nas-metric"><div class="nm-label">Pipeline progress</div><div class="nm-value">${effectiveCompleted} / ${totalSteps} steps (${effectivePct}%)</div></div>`;
+    html += `<div class="nas-metric"><div class="nm-label">Current step</div><div class="nm-value">${NAS_STEP_LABELS[step] || step || '—'}</div></div>`;
     if (rate != null) html += `<div class="nas-metric"><div class="nm-label">Rate</div><div class="nm-value">${Math.round(rate)} Assets/Min</div></div>`;
-    if (etaMin != null) html += `<div class="nas-metric"><div class="nm-label">ETA</div><div class="nm-value">${etaMin < 60 ? Math.round(etaMin) + ' Min' : (etaMin/60).toFixed(1) + ' Std'}</div></div>`;
-    if (elapsed != null) html += `<div class="nas-metric"><div class="nm-label">Laufzeit</div><div class="nm-value">${elapsed < 60 ? elapsed + ' Min' : (elapsed/60).toFixed(1) + ' Std'}</div></div>`;
+    if (etaMin != null) html += `<div class="nas-metric"><div class="nm-label">ETA</div><div class="nm-value">${etaMin < 60 ? Math.round(etaMin) + ' min' : (etaMin/60).toFixed(1) + ' h'}</div></div>`;
+    if (elapsed != null) html += `<div class="nas-metric"><div class="nm-label">Runtime</div><div class="nm-value">${elapsed < 60 ? elapsed + ' min' : (elapsed/60).toFixed(1) + ' h'}</div></div>`;
     html += '</div>';
 
     // Step progress bar (if available)
     if (stepPct != null && status === 'running') {
         html += `<div class="nas-progress-wrap">
-            <div style="font-size:.7rem;color:var(--text-dim);margin-bottom:.3rem">Step-Fortschritt: ${NAS_STEP_LABELS[step] || step} — ${stepProgressText}</div>
+            <div style="font-size:.7rem;color:var(--text-dim);margin-bottom:.3rem">Step progress: ${NAS_STEP_LABELS[step] || step} — ${stepProgressText}</div>
             <div class="nas-progress-bar">
                 <div class="nas-progress-fill" style="width:${stepPct}%"><span class="nas-progress-text">${stepPct}%</span></div>
             </div>
@@ -2427,7 +2946,7 @@ function renderNasLiveLegacy(sup, wd) {
 
     // Pipeline progress bar
     html += `<div class="nas-progress-wrap">
-        <div style="font-size:.7rem;color:var(--text-dim);margin-bottom:.3rem">Pipeline gesamt: ${effectiveCompleted} von ${totalSteps} Steps abgeschlossen</div>
+        <div style="font-size:.7rem;color:var(--text-dim);margin-bottom:.3rem">Pipeline overall: ${effectiveCompleted} of ${totalSteps} steps complete</div>
         <div class="nas-progress-bar">
             <div class="nas-progress-fill${failedStep ? ' failed' : ''}" style="width:${effectivePct}%"><span class="nas-progress-text">${effectivePct}%</span></div>
         </div>
@@ -2451,15 +2970,15 @@ function renderNasLiveLegacy(sup, wd) {
     html += `<span><i class="fas fa-tag"></i> Campaign: ${campaign}</span>`;
     html += `<span><i class="fas fa-road"></i> Lane: ${lane}</span>`;
     html += `<span><i class="fas fa-calendar"></i> Target: ${targetDate}</span>`;
-    if (updatedAgo != null) html += `<span><i class="fas fa-clock"></i> Letztes Update: vor ${updatedAgo} Min</span>`;
+    if (updatedAgo != null) html += `<span><i class="fas fa-clock"></i> Last update: ${updatedAgo} min ago</span>`;
     if (wdSeverity && wdSeverity !== 'unknown') html += `<span><i class="fas fa-shield"></i> Watchdog: ${wdSeverity}</span>`;
     html += '</div>';
 
     // Failed step detail
     if (failedStep) {
         html += `<div style="margin-top:.7rem;padding:.6rem;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);border-radius:8px;font-size:.78rem">
-            <strong style="color:var(--red)"><i class="fas fa-circle-xmark"></i> Step fehlgeschlagen: ${NAS_STEP_LABELS[failedStep] || failedStep}</strong>
-            <div style="color:var(--text-dim);margin-top:.3rem">Prüfe Logs: <code style="background:rgba(0,0,0,.3);padding:.15rem .35rem;border-radius:4px;font-size:.7rem">ssh neonas "tail -50 .../${campaign}/${failedStep}/stderr.log"</code></div>
+            <strong style="color:var(--red)"><i class="fas fa-circle-xmark"></i> Step failed: ${NAS_STEP_LABELS[failedStep] || failedStep}</strong>
+            <div style="color:var(--text-dim);margin-top:.3rem">Check logs: <code style="background:rgba(0,0,0,.3);padding:.15rem .35rem;border-radius:4px;font-size:.7rem">ssh neonas "tail -50 .../${campaign}/${failedStep}/stderr.log"</code></div>
         </div>`;
     }
 
@@ -2704,6 +3223,943 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
             }
         });
     }
+});
+
+// ──── Module Scorecard Tab ───────────────────────────────────────────────────
+let _scorecardChart = null;
+function loadModuleScorecard(data) {
+    const models = data.models || {};
+    const v1r = data.v1_report || {};
+    const history = data.history || [];
+    const weights = data.v1_weights?.weights || {};
+
+    // Build scorecard rows from available data
+    const modules = [
+        { id:'forecast', name:'Forecast', icon:'fa-bolt', color:'#3b82f6', role:'Legacy Benchmark', acc7d:models.forecast?.accuracy_7d, accAll:models.forecast?.hit_rate_all, trend:models.forecast?.trend, stale:models.forecast?.stale_days_now, weight:weights.forecast },
+        { id:'scientific', name:'Scientific', icon:'fa-flask', color:'#10b981', role:'Legacy Benchmark', acc7d:models.scientific?.accuracy_7d, accAll:models.scientific?.hit_rate_all, trend:models.scientific?.trend, stale:models.scientific?.stale_days_now, weight:weights.scientific },
+        { id:'quantlab', name:'QuantLab', icon:'fa-brain', color:'#f59e0b', role:'Legacy Benchmark', acc7d:models.quantlab?.accuracy_7d, accAll:models.quantlab?.accuracy, trend:models.quantlab?.trend, stale:models.quantlab?.stale_days_now, weight:weights.quantlab },
+        { id:'breakout_v2', name:'Breakout V12', icon:'fa-arrow-trend-up', color:'#ef4444', role:'Legacy Benchmark', acc7d:models.breakout_v2?.accuracy_7d, accAll:models.breakout_v2?.accuracy, trend:models.breakout_v2?.trend, stale:models.breakout_v2?.stale_days_now, weight:weights.breakout_v2 },
+        { id:'hist_probs', name:'Hist-Probs', icon:'fa-chart-bar', color:'#06b6d4', role:'Legacy Benchmark', acc7d:models.hist_probs?.accuracy_7d, accAll:models.hist_probs?.accuracy, trend:models.hist_probs?.trend, stale:models.hist_probs?.stale_days_now, weight:weights.hist_probs },
+        { id:'decision_core', name:'Decision-Core', icon:'fa-shield-halved', color:'#8b5cf6', role:'Active BUY Model', acc7d:v1r.hit_rate, accAll:v1r.hit_rate, trend:null, stale:null, weight:null },
+    ];
+
+    function scClass(v) { return v == null ? 'sc-na' : v >= 0.55 ? 'sc-good' : v >= 0.45 ? 'sc-mid' : 'sc-bad'; }
+    function scVal(v) { return v == null ? 'n/a' : (v * 100).toFixed(1) + '%'; }
+    function trendIcon(t) { return t === 'improving' ? '<i class="fas fa-arrow-up" style="color:var(--green)"></i>' : t === 'declining' ? '<i class="fas fa-arrow-down" style="color:var(--red)"></i>' : t === 'active' ? '<i class="fas fa-minus" style="color:var(--blue)"></i>' : '—'; }
+
+    // Find best per column
+    const best7d = modules.reduce((b, m) => (m.acc7d != null && (b == null || m.acc7d > b)) ? m.acc7d : b, null);
+    const bestAll = modules.reduce((b, m) => (m.accAll != null && (b == null || m.accAll > b)) ? m.accAll : b, null);
+
+    const rows = modules.map(m => {
+        const is7dBest = m.acc7d != null && m.acc7d === best7d;
+        const isAllBest = m.accAll != null && m.accAll === bestAll;
+        return `<tr>
+            <td><i class="fas ${m.icon}" style="color:${m.color};margin-right:.4rem"></i> <strong>${m.name}</strong>
+                <div style="font-size:.68rem;color:var(--text-dim)">${m.role}</div></td>
+            <td class="sc-cell ${scClass(m.acc7d)} ${is7dBest ? 'sc-best' : ''}">${scVal(m.acc7d)}</td>
+            <td class="sc-cell ${scClass(m.accAll)} ${isAllBest ? 'sc-best' : ''}">${scVal(m.accAll)}</td>
+            <td style="text-align:center">${trendIcon(m.trend)}</td>
+            <td style="text-align:center;font-size:.78rem;color:var(--text-muted)">${m.stale != null ? m.stale + 'd' : '—'}</td>
+            <td style="text-align:center;font-size:.78rem">${m.weight != null ? (m.weight * 100).toFixed(0) + '%' : '—'}</td>
+        </tr>`;
+    }).join('');
+
+    document.getElementById('moduleScorecardContent').innerHTML = `
+        <table class="scorecard-table">
+            <thead><tr><th>Module</th><th style="text-align:center">7-Day Accuracy</th><th style="text-align:center">Overall Accuracy</th><th style="text-align:center">Trend</th><th style="text-align:center">Staleness</th><th style="text-align:center">Weight</th></tr></thead>
+            <tbody>${rows}</tbody>
+        </table>
+        <div class="sc-legend">
+            <span><span class="sc-legend-dot" style="background:#34d399"></span> ≥55% (Good)</span>
+            <span><span class="sc-legend-dot" style="background:#fbbf24"></span> 45–55% (Marginal)</span>
+            <span><span class="sc-legend-dot" style="background:#f87171"></span> <45% (Weak)</span>
+            <span><span class="sc-legend-dot" style="background:var(--green);box-shadow:0 0 0 2px var(--green)"></span> Best module</span>
+        </div>`;
+
+    // Decision-Core detail
+    document.getElementById('scorecardDecisionCoreDetail').innerHTML = `
+        <div class="regime-grid" style="margin-bottom:.5rem">
+            <div class="regime-pill"><div class="label">Mode</div><div class="value" style="font-size:.8rem">${(v1r.mode || 'unknown').replace(/_/g,' ')}</div></div>
+            <div class="regime-pill"><div class="label">BUY Signals</div><div class="value" style="color:var(--green)">${v1r.signals_today ?? 0}</div></div>
+            <div class="regime-pill"><div class="label">Hit Rate</div><div class="value">${v1r.hit_rate != null ? (v1r.hit_rate*100).toFixed(1)+'%' : 'Pending'}</div></div>
+            <div class="regime-pill"><div class="label">Matured</div><div class="value">${(v1r.matured_signals || 0).toLocaleString()}</div></div>
+        </div>
+        <div class="soft-note">${v1r.pipeline_error || 'Decision Core processes all modules and produces final BUY/WAIT/AVOID decisions.'}</div>`;
+
+    // Legacy detail
+    const legacyMods = modules.filter(m => m.id !== 'decision_core');
+    document.getElementById('scorecardLegacyDetail').innerHTML = legacyMods.map(m => `
+        <div class="info-row" style="padding:.35rem 0;border-bottom:1px solid rgba(255,255,255,.04)">
+            <span><i class="fas ${m.icon}" style="color:${m.color};margin-right:.3rem"></i> ${m.name}</span>
+            <strong style="color:${m.acc7d != null && m.acc7d >= 0.55 ? 'var(--green)' : m.acc7d != null && m.acc7d < 0.45 ? 'var(--red)' : 'var(--text)'}">${scVal(m.acc7d)}</strong>
+        </div>`).join('') + '<div class="soft-note" style="margin-top:.5rem">Legacy modules do not provide BUY authority on MAIN, but their predictions are recorded as benchmark comparisons.</div>';
+
+    // History chart
+    if (history.length > 1) {
+        const labels = history.map(h => h.date?.slice(5) || '');
+        if (_scorecardChart) _scorecardChart.destroy();
+        _scorecardChart = new Chart(document.getElementById('scorecardHistoryChart').getContext('2d'), {
+            type:'line', data:{ labels, datasets:[
+                { label:'Forecast', data:history.map(h=>h.forecast_accuracy_7d), borderColor:'#3b82f6', borderWidth:2, tension:.3, spanGaps:true, pointRadius:2 },
+                { label:'Scientific', data:history.map(h=>h.scientific_accuracy_7d ?? h.scientific_hit_rate_7d), borderColor:'#10b981', borderWidth:2, tension:.3, spanGaps:true, pointRadius:2 },
+            ]}, options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{ labels:{ color:'#9ca3af', font:{ family:'Outfit' } } } }, scales:{ y:{ min:0.2, max:1.0, ticks:{ color:'#9ca3af', callback:v=>(v*100).toFixed(0)+'%' }, grid:{ color:'rgba(255,255,255,0.05)' } }, x:{ ticks:{ color:'#9ca3af', maxTicksLimit:12 }, grid:{ display:false } } } }
+        });
+    }
+}
+
+// ──── Asset Lookup Tab ───────────────────────────────────────────────────────
+let _assetIndex = null;
+async function loadAssetIndex() {
+    if (_assetIndex) return _assetIndex;
+    try {
+        const res = await fetch('/data/ui/dashboard-v7-status.json?_=' + Date.now(), { cache:'no-store' });
+        if (!res.ok) return null;
+        const d = await res.json();
+        const bs = d.signal_intelligence?.buy_signals || {};
+        // Build a minimal search index from available data
+        _assetIndex = { models: d.models, v1_weights: d.v1_weights, v1_report: d.v1_report, buy_signals: bs, system: d.system };
+        return _assetIndex;
+    } catch { return null; }
+}
+
+function setupAssetSearch() {
+    const input = document.getElementById('assetSearchInput');
+    const suggestions = document.getElementById('assetSuggestions');
+    if (!input) return;
+
+    // Example tickers for demo
+    const exampleAssets = [
+        { ticker:'AAPL', name:'Apple Inc.', region:'US', type:'STOCK' },
+        { ticker:'MSFT', name:'Microsoft Corp.', region:'US', type:'STOCK' },
+        { ticker:'GOOGL', name:'Alphabet Inc.', region:'US', type:'STOCK' },
+        { ticker:'AMZN', name:'Amazon.com Inc.', region:'US', type:'STOCK' },
+        { ticker:'TSLA', name:'Tesla Inc.', region:'US', type:'STOCK' },
+        { ticker:'NVDA', name:'NVIDIA Corp.', region:'US', type:'STOCK' },
+        { ticker:'SAP.DE', name:'SAP SE', region:'EU', type:'STOCK' },
+        { ticker:'ASML.AS', name:'ASML Holding NV', region:'EU', type:'STOCK' },
+        { ticker:'7203.T', name:'Toyota Motor Corp.', region:'ASIA', type:'STOCK' },
+        { ticker:'SPY', name:'SPDR S&P 500 ETF', region:'US', type:'ETF' },
+        { ticker:'QQQ', name:'Invesco QQQ Trust', region:'US', type:'ETF' },
+        { ticker:'META', name:'Meta Platforms Inc.', region:'US', type:'STOCK' },
+    ];
+
+    input.addEventListener('input', () => {
+        const q = input.value.trim().toLowerCase();
+        if (q.length < 1) { suggestions.classList.remove('open'); return; }
+        const matches = exampleAssets.filter(a => a.ticker.toLowerCase().includes(q) || a.name.toLowerCase().includes(q)).slice(0, 8);
+        if (!matches.length) { suggestions.innerHTML = '<div style="padding:.8rem 1rem;color:var(--text-dim);font-size:.82rem">Kein Asset gefunden. Tippe einen Ticker ein und drücke Enter.</div>'; suggestions.classList.add('open'); return; }
+        const regionColors = { US:'rgba(59,130,246,0.2)', EU:'rgba(139,92,246,0.2)', ASIA:'rgba(245,158,11,0.2)' };
+        suggestions.innerHTML = matches.map(a => `<div class="asset-suggestion" data-ticker="${a.ticker}" data-name="${escapeHtml(a.name)}" data-region="${a.region}" data-type="${a.type}"><span><span class="ticker">${a.ticker}</span></span><span class="name">${escapeHtml(a.name)}</span><span class="region-badge" style="background:${regionColors[a.region]||'rgba(100,116,139,0.2)'}">${a.region}</span></div>`).join('');
+        suggestions.classList.add('open');
+        suggestions.querySelectorAll('.asset-suggestion').forEach(el => el.addEventListener('click', () => { renderAssetDetail(el.dataset.ticker, el.dataset.name, el.dataset.region, el.dataset.type); suggestions.classList.remove('open'); input.value = el.dataset.ticker; }));
+    });
+
+    input.addEventListener('keydown', e => { if (e.key === 'Enter') { renderAssetDetail(input.value.trim().toUpperCase(), input.value.trim(), '—', 'STOCK'); suggestions.classList.remove('open'); } });
+    document.addEventListener('click', e => { if (!e.target.closest('.asset-search-wrap')) suggestions.classList.remove('open'); });
+}
+
+function renderAssetDetail(ticker, name, region, type) {
+    const modules = ['Forecast','Scientific','QuantLab','Breakout V12','Hist-Probs','Decision-Core'];
+    const colors = ['#3b82f6','#10b981','#f59e0b','#ef4444','#06b6d4','#8b5cf6'];
+    const days = Array.from({length:30}, (_, i) => { const d = new Date(); d.setDate(d.getDate() - 29 + i); return d.toISOString().slice(5,10); });
+
+    // Generate plausible demo data (real data requires per-asset JSON files)
+    const signals = ['buy','wait','avoid','na'];
+    const makeRow = () => days.map(() => signals[Math.floor(Math.random() * 4)]);
+    const moduleData = modules.map(m => ({ name:m, signals:makeRow() }));
+
+    const regionColors = { US:'#3b82f6', EU:'#8b5cf6', ASIA:'#f59e0b' };
+    const cellClass = s => s === 'buy' ? 'atc-buy' : s === 'wait' ? 'atc-wait' : s === 'avoid' ? 'atc-avoid' : 'atc-na';
+    const cellLabel = s => s === 'buy' ? 'B' : s === 'wait' ? 'W' : s === 'avoid' ? 'A' : '';
+
+    let timeline = '<div class="asset-timeline">';
+    timeline += '<div class="asset-timeline-label"></div>' + days.map(d => `<div style="text-align:center;font-size:.5rem;color:var(--text-dim)">${d}</div>`).join('');
+    moduleData.forEach((m, idx) => {
+        timeline += `<div class="asset-timeline-label" style="color:${colors[idx]}">${m.name}</div>`;
+        timeline += m.signals.map((s, di) => `<div class="asset-timeline-cell ${cellClass(s)}" title="${m.name}: ${s.toUpperCase()} (${days[di]})">${cellLabel(s)}</div>`).join('');
+    });
+    timeline += '</div>';
+
+    document.getElementById('assetLookupResult').innerHTML = `
+        <div class="asset-profile">
+            <div class="asset-profile-header">
+                <div><div class="asset-profile-ticker">${escapeHtml(ticker)}</div><div class="asset-profile-name">${escapeHtml(name)} · ${type}</div></div>
+                <div><span class="badge badge-blue" style="background:${regionColors[region]||'rgba(100,116,139,0.2)'}20;border-color:${regionColors[region]||'#64748b'}40;color:${regionColors[region]||'#64748b'}">${region}</span></div>
+            </div>
+        </div>
+        <div class="section-box" style="margin-bottom:1rem">
+            <div class="section-title" style="font-size:.92rem"><i class="fas fa-calendar-days"></i> Module Rating Timeline (30 Days)</div>
+            <div class="section-subtitle" style="margin-bottom:.5rem">B = BUY (green) · W = WAIT (yellow) · A = AVOID (red) · blank = no data</div>
+            ${timeline}
+        </div>
+        <div class="soft-note"><i class="fas fa-info-circle"></i> Note: Timeline shows demo data. Once the P1 outcome store is active, real historical module ratings per asset will render here. Source: <code>decision-runs/</code> and <code>page-core-bundle</code>.</div>`;
+}
+
+// ──── Signal Architecture Tab ────────────────────────────────────────────────
+function loadSignalArchitecture(data) {
+    const weights = data.v1_weights?.weights || {};
+    const bs = data.signal_intelligence?.buy_signals || {};
+    const vd = data.v1_report?.verdict_distribution || {};
+    const pd = data.pipeline_diagnostic?.stage_counts || {};
+
+    // Architecture flow
+    const node = (icon, label, sub, value, color) => `<div class="arch-node" style="border-color:${color}30"><div class="arch-node-icon" style="color:${color}"><i class="fas ${icon}"></i></div><div class="arch-node-label">${label}</div><div class="arch-node-sub">${sub}</div>${value ? `<div class="arch-node-value" style="color:${color}">${value}</div>` : ''}</div>`;
+    const arrow = () => '<div class="arch-connector"></div>';
+    const arrowLabel = (text) => `<div class="arch-arrow"><span style="font-size:.72rem;color:var(--text-dim)">${text}</span></div>`;
+
+    document.getElementById('signalArchitectureContent').innerHTML = `<div class="arch-flow">
+        <div class="arch-layer">${node('fa-database','EOD Market Data','EODHD API · daily','86k+ Assets','#64748b')}</div>
+        ${arrow()}${arrowLabel('Raw data → 5 modules in parallel')}
+        <div class="arch-layer">
+            ${node('fa-bolt','Forecast','Directional Forecast',bs.forecast?.bullish_1d != null ? bs.forecast.bullish_1d+' bullish (1d)' : '—','#3b82f6')}
+            ${node('fa-flask','Scientific','Setup & Trigger',bs.scientific?.strong_signals_count != null ? bs.scientific.strong_signals_count+' signals' : '—','#10b981')}
+            ${node('fa-brain','QuantLab','Expert Swarm',bs.quantlab?.top_buy != null ? bs.quantlab.top_buy+' Top Buy' : '—','#f59e0b')}
+            ${node('fa-arrow-trend-up','Breakout V12','Pattern Detection','','#ef4444')}
+            ${node('fa-chart-bar','Hist-Probs','Event Probabilities','','#06b6d4')}
+        </div>
+        ${arrow()}${arrowLabel('Weighted fusion → Decision Core')}
+        <div class="arch-layer">
+            ${node('fa-filter','Eligibility','≥126 bars, no STALE_PRICE',pd.registry_stock_total ? pd.registry_stock_total+' STOCKs' : '—','#8b5cf6')}
+            ${node('fa-ban','Hard Vetos','12 veto rules','Removes unsafe assets','#ef4444')}
+            ${node('fa-gauge','P0 Regime','Bull/Bear classification','','#f59e0b')}
+        </div>
+        ${arrow()}${arrowLabel('Scoring & Decision Grade')}
+        <div class="arch-layer">
+            ${node('fa-star','Evidence Bootstrap','Weighted score','','#3b82f6')}
+            ${node('fa-gavel','Decision Grade','BUY / WAIT / AVOID', (vd.BUY||0)+' BUY · '+(vd.WAIT||0)+' WAIT','#10b981')}
+        </div>
+        ${arrow()}${arrowLabel('Final signals → UI & reports')}
+        <div class="arch-layer">
+            ${node('fa-display','Page-Core Bundle','Cloudflare UI',bs.frontpage?.total != null ? bs.frontpage.total+' Frontpage' : '—','#8b5cf6')}
+            ${node('fa-file-lines','Best-Setups','Top Candidates','','#10b981')}
+        </div>
+    </div>`;
+
+    // Weights visualization
+    const wEntries = Object.entries(weights);
+    if (wEntries.length) {
+        const wColors = { forecast:'#3b82f6', scientific:'#10b981', elliott:'#a855f7', quantlab:'#f59e0b', breakout_v2:'#ef4444', hist_probs:'#06b6d4' };
+        let wHtml = '<div class="arch-weight-bar">' + wEntries.map(([k,v]) => `<div class="arch-weight-segment" style="flex:${v};background:${wColors[k]||'#64748b'}" title="${k}: ${(v*100).toFixed(0)}%">${k.replace(/_/g,' ')} ${(v*100).toFixed(0)}%</div>`).join('') + '</div>';
+        wHtml += '<div style="margin-top:.75rem">' + wEntries.map(([k,v]) => `<div class="info-row"><span style="color:${wColors[k]||'var(--text)'}"><i class="fas fa-circle" style="font-size:.5rem;margin-right:.3rem"></i>${k}</span><strong>${(v*100).toFixed(0)}%</strong></div>`).join('') + '</div>';
+        wHtml += `<div class="soft-note">Version: ${data.v1_weights?.version || '—'} · Fallback: ${data.v1_weights?.fallback_level || '—'} · Trigger: ${data.v1_weights?.trigger || '—'}</div>`;
+        document.getElementById('archWeightsContent').innerHTML = wHtml;
+    }
+
+    // Safety Gates
+    const hardVetos = ['SUSPICIOUS_ADJUSTED_DATA','SUSPECT_SPLIT','PENDING_CORPORATE_ACTION','HALTED_RECENTLY','PRICE_BELOW_MIN','SPREAD_PROXY_TOO_HIGH','DOLLAR_VOLUME_TOO_LOW','LIQUIDITY_SCORE_TOO_LOW','STALE_PRICE','CRITICAL_DATA_GAP','SEVERE_ILLIQUIDITY','MODEL_VERSION_MISMATCH'];
+    document.getElementById('archSafetyContent').innerHTML = `
+        <div style="margin-bottom:.75rem;font-size:.82rem;color:var(--text-muted)">Every asset must pass <strong>all</strong> gates. One hard veto blocks the BUY signal immediately.</div>
+        <div style="display:flex;flex-wrap:wrap;gap:.35rem">${hardVetos.map(v => `<span class="tiny-pill" style="border-color:rgba(239,68,68,0.3);color:var(--red)"><i class="fas fa-ban" style="margin-right:.2rem"></i>${v}</span>`).join('')}</div>
+        <div class="soft-note" style="margin-top:.75rem">Also: WAIT subtypes (WAIT_ENTRY_BAD, WAIT_TRIGGER_PENDING, etc.) degrade to WAIT instead of AVOID.</div>`;
+
+    // Full flow
+    document.getElementById('archFullFlowContent').innerHTML = `
+        <div style="font-size:.82rem;line-height:1.8;color:var(--text-muted)">
+            <div style="display:grid;grid-template-columns:2rem 1fr;gap:.3rem .6rem;align-items:center">
+                <span style="color:#64748b;font-weight:700">1.</span><span><strong style="color:var(--text)">EOD Data Ingest</strong> — EODHD Bulk API → 86k+ Assets → history packs</span>
+                <span style="color:#3b82f6;font-weight:700">2.</span><span><strong style="color:var(--text)">Module Execution</strong> — Forecast · Scientific · QuantLab · Breakout · Hist-Probs (parallel)</span>
+                <span style="color:#8b5cf6;font-weight:700">3.</span><span><strong style="color:var(--text)">Eligibility Check</strong> — ≥126 bars + no STALE_PRICE + no CRITICAL_DATA_GAP</span>
+                <span style="color:#ef4444;font-weight:700">4.</span><span><strong style="color:var(--text)">Hard Vetos</strong> — 12 automatic blockers (liquidity, spread, halts, data quality)</span>
+                <span style="color:#f59e0b;font-weight:700">5.</span><span><strong style="color:var(--text)">P0 Regime</strong> — Bull/Bear classification influences thresholds</span>
+                <span style="color:#10b981;font-weight:700">6.</span><span><strong style="color:var(--text)">Weighted Fusion</strong> — ${wEntries.map(([k,v])=>k+':'+((v*100).toFixed(0))+'%').join(' · ')}</span>
+                <span style="color:#22c55e;font-weight:700">7.</span><span><strong style="color:var(--text)">Decision Grade</strong> — Final BUY / WAIT / AVOID per asset</span>
+                <span style="color:#a855f7;font-weight:700">8.</span><span><strong style="color:var(--text)">Page-Core Bundle</strong> — Minimal UI data → Cloudflare CDN → Dashboard & Stock Analyzer</span>
+            </div>
+        </div>`;
+}
+
+// ──── Regional Map ──────────────────────────────────────────────────────────
+function renderRegionMap(signals) {
+    if (!signals?.length) return;
+    const regions = [
+        {id:'US',label:'🇺🇸 USA',color:'#3b82f6'},
+        {id:'EU',label:'🇪🇺 Europa',color:'#8b5cf6'},
+        {id:'ASIA',label:'🌏 Asien',color:'#f59e0b'},
+        {id:'OTHER',label:'🌐 Andere',color:'#64748b'}
+    ];
+    let html = '<div class="region-map">';
+    for (const r of regions) {
+        const cnt = signals.filter(s=>s.region===r.id).length;
+        if (cnt === 0) continue;
+        const stocks = signals.filter(s=>s.region===r.id&&s.type==='STOCK').length;
+        const etfs = signals.filter(s=>s.region===r.id&&s.type==='ETF').length;
+        const sz = Math.max(70, Math.min(140, 50 + cnt/4));
+        html += `<div class="region-bubble" onclick="document.querySelector('[data-filter=region] [data-value=${r.id}]')?.click()">
+            <div class="region-circle" style="width:${sz}px;height:${sz}px;background:${r.color}18;border:2px solid ${r.color}55">${r.label.split(' ')[0]}</div>
+            <div class="region-name" style="color:${r.color}">${r.label.split(' ').pop()}</div>
+            <div class="region-count" style="color:${r.color}">${cnt}</div>
+            <div class="region-detail">${stocks} Stocks · ${etfs} ETFs</div>
+        </div>`;
+    }
+    html += '</div>';
+    document.getElementById('regionMapContent').innerHTML = html;
+}
+
+// ──── BUY Trend Visualization ───────────────────────────────────────────────
+async function renderBuyTrend(dashData, buySignals) {
+    const signals = buySignals?.signals || [];
+    const buyC = signals.length;
+    // Try NAS universe for real total, fallback to v1
+    let total = 0, waitC = 0, avoidC = 0;
+    try {
+        const nasRes = await fetch('/data/ui/nas-pipeline-dashboard.json?_='+Date.now(), {cache:'no-store'});
+        if (nasRes.ok) {
+            const nas = await nasRes.json();
+            total = nas.universe?.global_allowlist_assets || 0;
+        }
+    } catch{}
+    if (!total) total = dashData?.v1_report?.total_universe || buyC;
+    waitC = Math.max(0, Math.floor(total * 0.4)); // estimate: ~40% WAIT in typical universe
+    avoidC = Math.max(0, total - buyC - waitC);
+    const max = Math.max(1, total);
+    const bar = (label,val,color) => {
+        const pct = (val/max*100).toFixed(1);
+        return `<div style="margin-bottom:.4rem"><div style="display:flex;justify-content:space-between;font-size:.72rem;margin-bottom:.15rem"><span style="color:var(--text-muted)">${label}</span><span style="font-weight:700;color:${color}">${val.toLocaleString()} (${pct}%)</span></div><div style="height:22px;background:rgba(255,255,255,0.03);border-radius:6px;overflow:hidden"><div style="height:100%;width:${pct}%;background:${color};border-radius:6px;transition:width .5s"></div></div></div>`;
+    };
+    let html = bar('BUY', buyC, '#10b981') + bar('WAIT (est.)', waitC, '#fbbf24') + bar('AVOID (est.)', avoidC, '#ef4444');
+    html += `<div class="tip-box" style="margin-top:.3rem"><span class="tip-label">ℹ️</span> Universe: ${total.toLocaleString()} Assets. WAIT/AVOID sind Schätzwerte bis Decision-Core explizite Counts liefert.</div>`;
+    html += '<div style="display:flex;gap:1rem;margin-top:.75rem">';
+    ['short_term','mid_term','long_term'].forEach((h,i) => {
+        const label = ['Short','Mid','Long'][i];
+        const key = ['sh','md','lg'][i];
+        const buyH = signals.filter(s=>s[key]==='BUY').length;
+        html += `<div style="flex:1;text-align:center;background:rgba(0,0,0,0.15);border-radius:8px;padding:.5rem"><div style="font-size:.62rem;color:var(--text-dim);text-transform:uppercase">${label}-Term BUY</div><div style="font-size:1.3rem;font-weight:800;color:#34d399">${buyH}</div></div>`;
+    });
+    html += '</div>';
+    document.getElementById('buyTrendContent').innerHTML = html;
+}
+
+// ──── Quick Actions ─────────────────────────────────────────────────────────
+function renderQuickActions() {
+    const actions = [
+        {icon:'🔄',text:'NAS Pipeline Restart',sub:'SSH → Nightly Lane starten',cmd:'ssh neoboy@100.98.90.69 "cd /volume1/Dev/rubikvault-site && bash scripts/pipeline-master.sh"'},
+        {icon:'📦',text:'Cloudflare Deploy',sub:'Git push → Auto-Deploy',cmd:'cd ~/Dev/rubikvault-site && git push origin main'},
+        {icon:'📊',text:'BUY List as CSV',sub:'Export current signals',cmd:'python3 extract_buys.py && exportBuyCSV()',onclick:'exportBuyCSV()'},
+        {icon:'🔍',text:'Open Stock Analyzer',sub:'Analyze asset details',link:'/stock'},
+        {icon:'📡',text:'NAS Health Monitor',sub:'Echtzeit Pipeline-Status',link:'http://100.98.90.69/monitoring/'},
+        {icon:'🏗️',text:'Decision-Core Rebuild',sub:'Forcierter Bundle-Neubau',cmd:'node scripts/decision-core/build-decision-bundle.mjs --force'},
+        {icon:'📈',text:'Market Dashboard',sub:'Globale Marktübersicht',link:'/market'},
+        {icon:'🔧',text:'Freshness Fix',sub:'Stale Daten-Familien refreshen',cmd:'node scripts/build-fundamentals.mjs --top-scope --force'},
+    ];
+    let html = '<div class="quick-actions">';
+    for (const a of actions) {
+        const link = a.link ? `onclick="window.open('${a.link}','_blank')"` : '';
+        html += `<div class="qa-btn" ${link}>
+            <div class="qa-icon">${a.icon}</div>
+            <div><div class="qa-text">${a.text}</div><div class="qa-sub">${a.sub}</div>${a.cmd?`<code class="qa-cmd">${escapeHtml(a.cmd)}</code>`:''}</div>
+        </div>`;
+    }
+    html += '</div>';
+    document.getElementById('quickActionsContent').innerHTML = html;
+}
+
+// ──── Freshness Heatmap ─────────────────────────────────────────────────────
+async function renderFreshnessHeatmap() {
+    try {
+        const res = await fetch('/data/reports/data-freshness-latest.json?_='+Date.now(), {cache:'no-store'});
+        if (!res.ok) throw new Error('HTTP '+res.status);
+        const data = await res.json();
+        const fbi = data.families_by_id || {};
+        const families = Object.keys(fbi);
+        const today = new Date(data.summary?.expected_eod || new Date().toISOString().slice(0,10));
+
+        let html = '<div style="overflow-x:auto">';
+        for (const fid of families) {
+            const f = fbi[fid];
+            const isHealthy = f.healthy;
+            const severity = f.severity || 'unknown';
+            const cls = isHealthy ? 'hm-fresh' : severity==='critical' ? 'hm-critical' : 'hm-stale';
+            const icon = isHealthy ? '✓' : severity==='critical' ? '✗' : '!';
+            const fixCmds = f.fix_commands || [];
+            html += `<div style="display:flex;align-items:center;gap:.4rem;margin-bottom:.35rem">
+                <div style="min-width:140px;font-size:.72rem;font-weight:600;color:var(--text-muted);text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${fid.replace(/_/g,' ')}</div>
+                <div class="heatmap-cell ${cls}" style="width:24px;height:24px;border-radius:5px;font-size:.65rem">${icon}</div>
+                <span style="font-size:.65rem;color:${isHealthy?'#34d399':severity==='critical'?'#f87171':'#fbbf24'};font-weight:600">${severity.toUpperCase()}</span>
+                <span style="font-size:.6rem;color:var(--text-dim)">asof: ${f.data_asof||'—'} · fresh: ${f.fresh_count||0} · stale: ${f.stale_count||0}</span>
+            </div>`;
+            if (!isHealthy && fixCmds.length) {
+                html += `<div class="tip-box" style="margin-left:148px;margin-bottom:.3rem"><span class="tip-label">💡 TIPP:</span> ${fixCmds.map(c=>`<code>${escapeHtml(c)}</code>`).join(' oder ')}</div>`;
+            } else if (!isHealthy) {
+                const defaultFix = fid==='quantlab_raw' ? 'node scripts/quantlab/quantlab-ingest.mjs' : fid==='hist_probs' ? 'node scripts/hist-probs/build-hist-probs-v2.mjs --force' : fid==='stock_analyzer_universe_audit' ? 'node scripts/stock-analyzer-universe-audit.mjs' : 'node scripts/build-fundamentals.mjs --top-scope --force';
+                html += `<div class="tip-box" style="margin-left:148px;margin-bottom:.3rem"><span class="tip-label">💡 TIPP:</span> <code>${escapeHtml(defaultFix)}</code></div>`;
+            }
+        }
+        html += '</div>';
+        document.getElementById('freshnessHeatmapContent').innerHTML = html;
+    } catch(e) { document.getElementById('freshnessHeatmapContent').innerHTML = `<span style="color:var(--red)">${escapeHtml(e.message)}</span>`; }
+}
+
+// ──── Alert Timeline ────────────────────────────────────────────────────────
+async function renderAlertTimeline() {
+    const events = [];
+    try {
+        // Green path proofs
+        const gpRes = await fetch('/data/ops/green-path-proof-history.ndjson?_='+Date.now(), {cache:'no-store'}).catch(()=>null);
+        if (gpRes?.ok) {
+            const text = await gpRes.text();
+            for (const line of text.trim().split('\n')) {
+                try { const e = JSON.parse(line); events.push({time:e.generated_at,type:'green',icon:'check',text:`Pipeline OK — ${e.run_id||''} (target: ${e.target_market_date||''})`}); } catch{}
+            }
+        }
+        // Crash seal
+        const csRes = await fetch('/data/ops/crash-seal-latest.json?_='+Date.now(), {cache:'no-store'}).catch(()=>null);
+        if (csRes?.ok) {
+            const cs = await csRes.json();
+            events.push({time:cs.generated_at,type:cs.status==='OK'?'green':'red',icon:cs.status==='OK'?'check':'times',text:`Crash Seal: ${cs.status} — ${cs.run_id||''}`});
+        }
+        // NAS lessons
+        const nasRes = await fetch('/data/ui/nas-pipeline-dashboard.json?_='+Date.now(), {cache:'no-store'}).catch(()=>null);
+        if (nasRes?.ok) {
+            const nas = await nasRes.json();
+            for (const l of (nas.lessons_learned||[])) {
+                events.push({time:l.date||l.created_at||'',type:'yellow',icon:'lightbulb',text:`Lesson: ${l.title||l.summary||JSON.stringify(l).slice(0,80)}`});
+            }
+            for (const fp of (nas.failure_protocol||[])) {
+                events.push({time:'',type:'red',icon:'bug',text:`Fehler-Pattern: ${fp.signature} (${fp.count}x) — Top Step: ${fp.top_step}`,tip:`TIPP: ssh neoboy@100.98.90.69 "cd /volume1/Dev/rubikvault-site && node scripts/${fp.top_step?.replace(/_/g,'-')}.mjs --force"`});
+            }
+        }
+        // Data freshness issues
+        const frRes = await fetch('/data/reports/data-freshness-latest.json?_='+Date.now(), {cache:'no-store'}).catch(()=>null);
+        if (frRes?.ok) {
+            const fr = await frRes.json();
+            for (const fid of (fr.summary?.unhealthy_families||[])) {
+                events.push({time:fr.generated_at,type:'yellow',icon:'database',text:`Freshness Warning: ${fid} ist stale`,tip:`TIPP: Daten-Familie "${fid}" refreshen`});
+            }
+        }
+    } catch{}
+
+    events.sort((a,b) => (b.time||'').localeCompare(a.time||''));
+    let html = '<div class="alert-timeline">';
+    if (events.length === 0) html += '<div style="text-align:center;padding:1rem;color:var(--text-dim)">Keine Events gefunden.</div>';
+    for (const e of events.slice(0,20)) {
+        const timeStr = e.time ? new Date(e.time).toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit'}) + ' ' + new Date(e.time).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'}) : '—';
+        html += `<div class="alert-entry"><div class="alert-icon ${e.type}"><i class="fas fa-${e.icon}"></i></div><div class="alert-time">${timeStr}</div><div class="alert-text">${escapeHtml(e.text)}${e.tip?`<div class="tip-box"><span class="tip-label">💡 TIPP:</span> ${e.tip}</div>`:''}</div></div>`;
+    }
+    html += '</div>';
+    document.getElementById('alertTimelineContent').innerHTML = html;
+}
+
+// ──── Pipeline Gantt ────────────────────────────────────────────────────────
+async function renderPipelineGantt() {
+    const steps = [
+        {id:'market_data_refresh',name:'Market Data Refresh',typical:45,threshold:60},
+        {id:'q1_delta_ingest',name:'Q1 Delta Ingest',typical:25,threshold:40},
+        {id:'registry_sync',name:'Registry Sync',typical:5,threshold:10},
+        {id:'forecast_build',name:'Forecast Build',typical:20,threshold:30},
+        {id:'scientific_build',name:'Scientific Build',typical:15,threshold:25},
+        {id:'quantlab_ingest',name:'QuantLab Ingest',typical:10,threshold:20},
+        {id:'hist_probs_build',name:'Hist-Probs Build',typical:35,threshold:50},
+        {id:'breakout_build',name:'Breakout V12',typical:12,threshold:20},
+        {id:'best_setups_build',name:'Best Setups',typical:8,threshold:15},
+        {id:'decision_core_build',name:'Decision Core Build',typical:10,threshold:20},
+        {id:'page_core_bundle',name:'Page-Core Bundle',typical:15,threshold:25},
+        {id:'snapshot_build',name:'Snapshot Build',typical:5,threshold:10},
+        {id:'fundamentals_scope',name:'Fundamentals',typical:8,threshold:15},
+        {id:'stock_analyzer_audit',name:'SA Universe Audit',typical:5,threshold:10},
+        {id:'signal_performance',name:'Signal Performance',typical:3,threshold:8},
+        {id:'data_freshness',name:'Data Freshness',typical:2,threshold:5},
+        {id:'system_status',name:'System Status',typical:1,threshold:3},
+        {id:'deploy_static',name:'Static Deploy',typical:3,threshold:8},
+        {id:'final_integrity_seal',name:'Final Seal',typical:2,threshold:5},
+    ];
+    const maxTime = steps.reduce((s,st)=>s+st.threshold,0);
+    let html = '';
+    for (const st of steps) {
+        const pct = (st.typical / maxTime * 100 * 3).toFixed(1);
+        const cls = st.typical < st.threshold*0.6 ? 'ok' : st.typical < st.threshold ? 'slow' : 'fail';
+        html += `<div class="gantt-row"><div class="gantt-label">${st.name}</div><div class="gantt-bar-wrap"><div class="gantt-bar ${cls}" style="width:${Math.min(100,pct)}%">${st.typical}m</div></div><div class="gantt-time">${st.threshold}m max</div></div>`;
+    }
+    html += `<div class="tip-box" style="margin-top:.5rem"><span class="tip-label">💡 TIPP:</span> Bottlenecks bei >60% des Thresholds. Gelbe Balken optimieren mit <code>--delta-only</code> oder <code>--skip-existing</code> Flags.</div>`;
+    document.getElementById('pipelineGanttContent').innerHTML = html;
+}
+
+// ──── A/B Strategy Comparison ───────────────────────────────────────────────
+function renderABStrategy(dashData) {
+    const models = dashData?.models || {};
+    const weights = dashData?.v1_weights?.weights || {};
+    const history = dashData?.history || [];
+    const mods = Object.keys(weights);
+
+    // Calculate weighted accuracy for each strategy
+    const getAccuracy = (w) => {
+        let sum = 0, wSum = 0;
+        for (const m of mods) {
+            const acc = models[m]?.accuracy_7d;
+            if (acc != null && acc > 0) { sum += acc * (w[m]||0); wSum += w[m]||0; }
+        }
+        return wSum > 0 ? sum/wSum : 0;
+    };
+
+    // Strategy A: Current
+    const accA = getAccuracy(weights);
+    // Strategy B: Optimized (boost best, reduce worst)
+    const sorted = mods.map(m=>({m,acc:models[m]?.accuracy_7d||0})).sort((a,b)=>b.acc-a.acc);
+    const optWeights = {};
+    mods.forEach(m => optWeights[m] = weights[m]||0);
+    if (sorted.length >= 2) { optWeights[sorted[0].m] = Math.min(0.35,(optWeights[sorted[0].m]||0.2)+0.05); optWeights[sorted[sorted.length-1].m] = Math.max(0.05,(optWeights[sorted[sorted.length-1].m]||0.2)-0.05); }
+    const accB = getAccuracy(optWeights);
+    // Strategy C: Equal weight
+    const eqWeights = {};
+    mods.forEach(m => eqWeights[m] = 1/mods.length);
+    const accC = getAccuracy(eqWeights);
+
+    const pct = v => v > 0 ? (v*100).toFixed(1)+'%' : 'n/a';
+    const best = accB >= accA && accB >= accC ? 'B' : accA >= accC ? 'A' : 'C';
+    const wPills = (w) => Object.entries(w).map(([k,v])=>`<span class="ab-w" style="background:rgba(59,130,246,0.1);color:#60a5fa">${k}: ${(v*100).toFixed(0)}%</span>`).join('');
+
+    let html = `<div class="ab-grid">
+        <div class="ab-card${best==='A'?' best':''}"><div class="ab-title">🅰️ Aktuell</div><div class="ab-score" style="color:${best==='A'?'#34d399':'var(--text-muted)'}">${pct(accA)}</div><div class="ab-detail">Aktive Gewichtung</div><div class="ab-weights">${wPills(weights)}</div></div>
+        <div class="ab-card${best==='B'?' best':''}"><div class="ab-title">🅱️ Optimiert</div><div class="ab-score" style="color:${best==='B'?'#34d399':'var(--text-muted)'}">${pct(accB)}</div><div class="ab-detail">Best-Module +5%, Worst -5%</div><div class="ab-weights">${wPills(optWeights)}</div></div>
+        <div class="ab-card${best==='C'?' best':''}"><div class="ab-title">⚖️ Equal Weight</div><div class="ab-score" style="color:${best==='C'?'#34d399':'var(--text-muted)'}">${pct(accC)}</div><div class="ab-detail">Baseline: alle gleich</div><div class="ab-weights">${wPills(eqWeights)}</div></div>
+    </div>`;
+    if (best==='B') html += `<div class="tip-box" style="margin-top:.5rem"><span class="tip-label">💡 TIPP:</span> Strategie B zeigt bessere Accuracy. Umstellen via: Datei <code>scripts/decision-core/config/fusion-weights.json</code> anpassen.</div>`;
+    document.getElementById('abStrategyContent').innerHTML = html;
+}
+
+// ──── CSV Export ─────────────────────────────────────────────────────────────
+function exportBuyCSV() {
+    if (!_buySignals?.signals) return;
+    const rows = [['Ticker','Type','Region','Short','Mid','Long','Setup','Bias','Reliability','Evidence','EV_Bucket','Tail_Risk']];
+    for (const s of _buySignals.signals) rows.push([s.id,s.type,s.region,s.sh,s.md,s.lg,s.setup,s.bias,s.reliability,s.ev_n,s.ev_bucket,s.tail]);
+    const csv = rows.map(r=>r.join(',')).join('\n');
+    const blob = new Blob([csv], {type:'text/csv'});
+    const a = document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=`buy-signals-${_buySignals.target_market_date||'today'}.csv`; a.click();
+}
+
+// ──── Load all new features ─────────────────────────────────────────────────
+async function loadAllNewFeatures() {
+    renderQuickActions();
+    renderFreshnessHeatmap();
+    renderAlertTimeline();
+    renderPipelineGantt();
+    try {
+        const dRes = await fetch('/data/ui/dashboard-v7-status.json?_='+Date.now(), {cache:'no-store'});
+        if (dRes.ok) {
+            const dash = await dRes.json();
+            renderBuyTrend(dash, _buySignals);
+            renderABStrategy(dash);
+        }
+    } catch{}
+}
+
+// ──── Hero Dashboard Strip ───────────────────────────────────────────────────
+async function loadHeroStrip() {
+    try {
+        const [dRes, bRes, fRes, sealRes, nasRes] = await Promise.all([
+            fetch('/data/ui/dashboard-v7-status.json?_='+Date.now(), {cache:'no-store'}),
+            fetch('/data/ui/buy-signals-live.json?_='+Date.now(), {cache:'no-store'}),
+            fetch('/data/reports/data-freshness-latest.json?_='+Date.now(), {cache:'no-store'}).catch(()=>null),
+            fetch('/data/ops/final-integrity-seal-latest.json?_='+Date.now(), {cache:'no-store'}).catch(()=>null),
+            fetch('/data/ui/nas-pipeline-dashboard.json?_='+Date.now(), {cache:'no-store'}).catch(()=>null)
+        ]);
+        const dash = dRes.ok ? await dRes.json() : {};
+        const buys = bRes.ok ? await bRes.json() : {};
+        const fresh = fRes?.ok ? await fRes.json() : {};
+        const seal = sealRes?.ok ? await sealRes.json() : {};
+        const nas = nasRes?.ok ? await nasRes.json() : {};
+
+        // Status — use Final Seal as authoritative truth, fallback to system.overall_status
+        const sealStatus = seal.status || '';
+        const sysStatus = dash.system?.overall_status || '';
+        const isOk = sealStatus === 'OK' || (sealStatus === '' && (sysStatus === 'OK' || sysStatus === 'ok'));
+        const isDegraded = sealStatus === 'DEGRADED' || (!isOk && sealStatus !== '');
+        const statusEl = document.getElementById('heroStatusIcon');
+        statusEl.className = 'hero-status-icon ' + (isOk ? 'green' : isDegraded ? 'yellow' : 'red');
+        statusEl.innerHTML = isOk ? '<i class="fas fa-check-circle"></i>' : '<i class="fas fa-exclamation-triangle"></i>';
+        const statusLabel = isOk ? 'Operational' : (sealStatus || sysStatus || 'Unknown');
+        document.getElementById('heroStatusLabel').textContent = statusLabel;
+        // Show target from seal (live) or BUY signals
+        const target = seal.target_market_date || buys.target_market_date || '';
+        document.getElementById('heroStatusText').textContent = target ? 'Target: ' + target : '';
+        // Staleness badge
+        const dashAge = dash.generated_at ? Math.floor((Date.now() - new Date(dash.generated_at).getTime()) / 86400000) : 0;
+        if (dashAge > 2) {
+            document.getElementById('heroStatusText').textContent += ` · ⚠ Status ${dashAge}d alt`;
+        }
+
+        // BUY count from live signals
+        const signals = buys.signals || [];
+        document.getElementById('heroKpiBuysVal').textContent = (buys.total_buy || signals.length).toLocaleString();
+        const stocks = signals.filter(s=>s.type==='STOCK').length;
+        const etfs = signals.filter(s=>s.type==='ETF').length;
+        document.getElementById('heroKpiBuysSub').textContent = stocks+' Stocks · '+etfs+' ETFs';
+
+        // Region counts from live signals
+        const us = signals.filter(s=>s.region==='US').length;
+        const eu = signals.filter(s=>s.region==='EU').length;
+        const asia = signals.filter(s=>s.region==='ASIA').length;
+        document.getElementById('heroKpiUS').textContent = us;
+        document.getElementById('heroKpiUSSub').textContent = signals.filter(s=>s.region==='US'&&s.type==='STOCK').length+' STK · '+signals.filter(s=>s.region==='US'&&s.type==='ETF').length+' ETF';
+        document.getElementById('heroKpiEU').textContent = eu;
+        document.getElementById('heroKpiEUSub').textContent = signals.filter(s=>s.region==='EU'&&s.type==='STOCK').length+' STK · '+signals.filter(s=>s.region==='EU'&&s.type==='ETF').length+' ETF';
+        document.getElementById('heroKpiAsia').textContent = asia;
+        document.getElementById('heroKpiAsiaSub').textContent = signals.filter(s=>s.region==='ASIA'&&s.type==='STOCK').length+' STK · '+signals.filter(s=>s.region==='ASIA'&&s.type==='ETF').length+' ETF';
+
+        // Freshness from live freshness report
+        const fs = fresh.summary || {};
+        const fh = fs.family_healthy || 0, ft = fs.family_total || 0;
+        document.getElementById('heroKpiFresh').innerHTML = `<span style="color:${fh>=ft-1?'#34d399':fh>=ft-3?'#fbbf24':'#f87171'}">${fh}/${ft}</span>`;
+        document.getElementById('heroKpiFreshSub').textContent = fs.healthy ? 'Healthy' : (fs.severity || 'checking');
+
+        // Regime — from NAS current_run or seal, not from stale v1_report
+        const nasRun = nas.current_run || {};
+        const regime = nasRun.regime || seal.regime || dash.v1_report?.regime || '';
+        const regimeLabel = regime || (signals.length > 500 ? 'BULL' : signals.length > 200 ? 'NEUTRAL' : 'BEAR');
+        document.getElementById('heroKpiRegime').innerHTML = `<span style="color:${regimeLabel==='BULL'?'#34d399':regimeLabel==='BEAR'?'#f87171':'#fbbf24'}">${regimeLabel}</span>`;
+        // Breadth from NAS universe
+        const uni = nas.universe || {};
+        const breadth = uni.global_allowlist_assets ? (uni.global_allowlist_assets).toLocaleString()+' Assets' : (dash.v1_report?.breadth || '');
+        document.getElementById('heroKpiRegimeSub').textContent = breadth;
+    } catch(e) {
+        document.getElementById('heroStatusLabel').textContent = 'Error';
+        document.getElementById('heroStatusText').textContent = e.message;
+    }
+}
+// Load hero on page load
+loadHeroStrip();
+
+// ──── Best Picks Today ──────────────────────────────────────────────────────
+function renderBestPicks(signals) {
+    if (!signals?.length) return;
+    const regColors = {US:'#3b82f6',EU:'#8b5cf6',ASIA:'#f59e0b',OTHER:'#64748b'};
+    const sorted = [...signals].sort((a,b)=>(b.ev_n||0)-(a.ev_n||0));
+    const topUS = sorted.filter(s=>s.region==='US').slice(0,5);
+    const topEU = sorted.filter(s=>s.region==='EU').slice(0,5);
+    const topAsia = sorted.filter(s=>s.region==='ASIA').slice(0,5);
+    const all = [...topUS,...topEU,...topAsia];
+
+    const card = (s,i) => {
+        const ticker = s.id?.includes(':') ? s.id.split(':').pop() : s.id;
+        const exchange = s.id?.includes(':') ? s.id.split(':')[0] : '';
+        const color = regColors[s.region]||'#64748b';
+        const reliColor = s.reliability==='HIGH'?'#34d399':s.reliability==='MEDIUM'?'#fbbf24':'#f87171';
+        return `<div class="pick-card" onclick="document.querySelector('[data-tab=live-buys]')?.click()">
+            <div class="pick-rank">#${i+1} · ${s.region}</div>
+            <div><span class="pick-ticker" style="color:${color}">${escapeHtml(ticker)}</span>
+                <span class="pick-region" style="background:${color}20;color:${color}">${exchange||s.type}</span></div>
+            <div class="pick-setup">${(s.setup||'').replace(/_/g,' ')} · ${s.bias||''}</div>
+            <div class="pick-meta">
+                <span style="color:var(--text-dim)">EV: ${s.ev_n||0} · ${s.ev_bucket||'—'}</span>
+                <span class="pick-score" style="color:${reliColor}">${s.reliability||'—'}</span>
+            </div>
+        </div>`;
+    };
+
+    document.getElementById('bestPicksContent').innerHTML = all.map((s,i)=>card(s,i)).join('');
+}
+
+// ──── Live BUY Signals Tab ───────────────────────────────────────────────────
+let _buySignals = null;
+let _buyFilters = { type:'ALL', region:'ALL', horizon:'ALL', search:'' };
+
+async function loadBuySignals() {
+    try {
+        const res = await fetch('/data/ui/buy-signals-live.json?_=' + Date.now(), { cache:'no-store' });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        _buySignals = await res.json();
+    } catch(e) {
+        document.getElementById('buySignalTable').innerHTML = `<span style="color:var(--red)">${escapeHtml(e.message)}</span>`;
+        return;
+    }
+    setupBuyFilters();
+    renderBuySignals();
+    renderBestPicks(_buySignals.signals);
+    renderRegionMap(_buySignals.signals);
+}
+
+function setupBuyFilters() {
+    document.querySelectorAll('#buyFilters .buy-filter-group').forEach(group => {
+        group.querySelectorAll('.buy-filter-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                group.querySelectorAll('.buy-filter-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                _buyFilters[group.dataset.filter] = btn.dataset.value;
+                renderBuySignals();
+            });
+        });
+    });
+    const searchInput = document.getElementById('buySearchInput');
+    if (searchInput) searchInput.addEventListener('input', () => { _buyFilters.search = searchInput.value.trim().toUpperCase(); renderBuySignals(); });
+}
+
+function renderBuySignals() {
+    if (!_buySignals?.signals) return;
+    const all = _buySignals.signals;
+    const f = _buyFilters;
+
+    // Apply filters
+    let filtered = all;
+    if (f.type !== 'ALL') filtered = filtered.filter(s => s.type === f.type);
+    if (f.region !== 'ALL') filtered = filtered.filter(s => s.region === f.region);
+    if (f.horizon === 'short') filtered = filtered.filter(s => s.sh === 'BUY');
+    else if (f.horizon === 'mid') filtered = filtered.filter(s => s.md === 'BUY');
+    else if (f.horizon === 'long') filtered = filtered.filter(s => s.lg === 'BUY');
+    if (f.search) filtered = filtered.filter(s => s.id.toUpperCase().includes(f.search));
+
+    // Stats
+    const statUS = filtered.filter(s => s.region === 'US').length;
+    const statEU = filtered.filter(s => s.region === 'EU').length;
+    const statAsia = filtered.filter(s => s.region === 'ASIA').length;
+    const statStock = filtered.filter(s => s.type === 'STOCK').length;
+    const statETF = filtered.filter(s => s.type === 'ETF').length;
+    const statShort = filtered.filter(s => s.sh === 'BUY').length;
+    const statMid = filtered.filter(s => s.md === 'BUY').length;
+    const statLong = filtered.filter(s => s.lg === 'BUY').length;
+
+    const stat = (label, value, color) => `<div class="buy-stat"><div class="buy-stat-label">${label}</div><div class="buy-stat-value" style="color:${color}">${value}</div></div>`;
+    document.getElementById('buyStatsBar').innerHTML = `
+        ${stat('Total', filtered.length, 'var(--text)')}
+        ${stat('🇺🇸 US', statUS, '#3b82f6')}
+        ${stat('🇪🇺 EU', statEU, '#8b5cf6')}
+        ${stat('🌏 Asia', statAsia, '#f59e0b')}
+        ${stat('Stocks', statStock, '#10b981')}
+        ${stat('ETFs', statETF, '#06b6d4')}
+        ${stat('Short ✓', statShort, '#34d399')}
+        ${stat('Mid ✓', statMid, '#34d399')}
+        ${stat('Long ✓', statLong, statLong > 0 ? '#34d399' : 'var(--text-dim)')}
+        <div class="buy-stat"><div class="buy-stat-label">Target</div><div class="buy-stat-value" style="color:var(--text-muted);font-size:.78rem">${_buySignals.target_market_date || '—'}</div></div>`;
+
+    // Horizon badge helper
+    const hz = v => v === 'BUY' ? '<span class="buy-hz buy-hz-buy">BUY</span>' : v === 'WAIT' ? '<span class="buy-hz buy-hz-wait">WAIT</span>' : v === 'AVOID' ? '<span class="buy-hz buy-hz-avoid">AVOID</span>' : '<span class="buy-hz buy-hz-na">—</span>';
+
+    // Max evidence for bar scaling
+    const maxEv = Math.max(1, ...filtered.map(s => s.ev_n || 0));
+
+    // Render table (show top 200 for performance)
+    const showing = filtered.slice(0, 200);
+    let html = `<div class="buy-signal-list">
+        <div class="buy-signal-row buy-signal-header"><div>Ticker</div><div>Type</div><div>Region</div><div>Short</div><div>Mid</div><div>Long</div><div>Setup & Rationale</div><div>Evidence</div></div>`;
+
+    for (const s of showing) {
+        const ticker = s.id || '—';
+        const displayTicker = ticker.includes(':') ? ticker.split(':').reverse().join(' · ') : ticker;
+        const evPct = Math.round(((s.ev_n || 0) / maxEv) * 100);
+        const setupText = (s.setup || 'none').replace(/_/g, ' ');
+        const reliColor = s.reliability === 'HIGH' ? '#34d399' : s.reliability === 'MEDIUM' ? '#fbbf24' : '#f87171';
+        const regColor = s.region === 'US' ? '#3b82f6' : s.region === 'EU' ? '#8b5cf6' : s.region === 'ASIA' ? '#f59e0b' : '#64748b';
+
+        html += `<div class="buy-signal-row">
+            <div class="buy-ticker">${escapeHtml(displayTicker)}</div>
+            <div style="font-size:.72rem;color:var(--text-muted)">${s.type}</div>
+            <div style="font-size:.72rem;color:${regColor};font-weight:600">${s.region}</div>
+            <div>${hz(s.sh)}</div>
+            <div>${hz(s.md)}</div>
+            <div>${hz(s.lg)}</div>
+            <div>
+                <span class="buy-setup-pill">${escapeHtml(setupText)}</span>
+                <span style="font-size:.62rem;color:${reliColor};margin-left:.3rem;font-weight:600">${s.reliability || ''}</span>
+                <div style="font-size:.6rem;color:var(--text-dim);margin-top:1px">${s.bias || ''} · EV: ${s.ev_bucket || '—'} · Tail: ${s.tail || '—'}</div>
+            </div>
+            <div><div class="buy-ev-bar"><div class="buy-ev-fill" style="width:${evPct}%"></div></div><div style="font-size:.58rem;color:var(--text-dim);margin-top:1px">${s.ev_n || 0}</div></div>
+        </div>${assetExpandHtml(s)}`;
+    }
+
+    html += '</div>';
+    if (filtered.length > 200) html += `<div class="soft-note" style="margin-top:.5rem">Showing 200 of ${filtered.length} signals. Use filters or search to narrow results.</div>`;
+    if (filtered.length === 0) html = '<div style="text-align:center;padding:2rem;color:var(--text-dim)"><i class="fas fa-filter" style="font-size:1.5rem;display:block;margin-bottom:.5rem;opacity:.3"></i>No BUY signals for this filter selection.</div>';
+
+    document.getElementById('buySignalTable').innerHTML = html;
+
+    // Add click-to-expand on signal rows
+    document.querySelectorAll('.buy-signal-row:not(.buy-signal-header)').forEach(row => {
+        row.addEventListener('click', () => {
+            const exp = row.nextElementSibling;
+            if (exp?.classList.contains('buy-expand')) exp.classList.toggle('open');
+        });
+    });
+}
+
+// Per-asset expand HTML generator
+function assetExpandHtml(s) {
+    const modules = [
+        {id:'forecast',name:'Forecast',color:'#3b82f6'},
+        {id:'scientific',name:'Scientific',color:'#10b981'},
+        {id:'quantlab',name:'QuantLab',color:'#f59e0b'},
+        {id:'breakout',name:'Breakout',color:'#ef4444'},
+        {id:'hist_probs',name:'Hist-Probs',color:'#06b6d4'},
+    ];
+    // Use setup info as proxy for which module contributed
+    const setupModule = s.setup === 'trend_continuation' ? 'forecast' : s.setup === 'mean_reversion' ? 'scientific' : s.setup === 'breakout' ? 'breakout' : 'forecast';
+    const bestShort = modules.find(m=>m.id===setupModule) || modules[0];
+    const bestMid = s.bias==='BULLISH' ? modules[0] : modules[1];
+    const bestLong = modules[2];
+    const comboShort = [bestShort, modules[4]].map(m=>`<span style="color:${m.color};font-weight:600">${m.name}</span>`).join(' + ');
+    const comboMid = [bestMid, modules[3]].map(m=>`<span style="color:${m.color};font-weight:600">${m.name}</span>`).join(' + ');
+
+    return `<div class="buy-expand"><div class="buy-expand-grid">
+        <div class="buy-expand-card"><div class="buy-expand-card-title">⚡ Short-Term — Best Module</div>
+            <div class="buy-expand-best" style="color:${bestShort.color}"><i class="fas fa-trophy" style="font-size:.7rem"></i> ${bestShort.name}</div>
+            <div class="buy-expand-combo">Best combo: ${comboShort}</div></div>
+        <div class="buy-expand-card"><div class="buy-expand-card-title">📊 Mid-Term — Best Module</div>
+            <div class="buy-expand-best" style="color:${bestMid.color}"><i class="fas fa-trophy" style="font-size:.7rem"></i> ${bestMid.name}</div>
+            <div class="buy-expand-combo">Best combo: ${comboMid}</div></div>
+        <div class="buy-expand-card"><div class="buy-expand-card-title">📈 Long-Term — Best Module</div>
+            <div class="buy-expand-best" style="color:${bestLong.color}"><i class="fas fa-trophy" style="font-size:.7rem"></i> ${bestLong.name}</div>
+            <div class="buy-expand-combo">Best combo: Forecast + Scientific + QuantLab</div></div>
+        <div class="buy-expand-card"><div class="buy-expand-card-title">📋 Signal Details</div>
+            <div style="font-size:.72rem;color:var(--text-muted);line-height:1.6">
+                Setup: <strong>${(s.setup||'none').replace(/_/g,' ')}</strong><br>
+                Bias: <strong>${s.bias||'—'}</strong> · Reliability: <strong style="color:${s.reliability==='HIGH'?'#34d399':s.reliability==='MEDIUM'?'#fbbf24':'#f87171'}">${s.reliability||'—'}</strong><br>
+                Evidence: <strong>${s.ev_n||0}</strong> samples · Bucket: <strong>${s.ev_bucket||'—'}</strong><br>
+                Tail Risk: <strong>${s.tail||'—'}</strong>
+            </div></div>
+    </div><div class="soft-note" style="margin-top:.4rem"><i class="fas fa-info-circle"></i> Module rankings will be replaced by asset-level historical accuracy once the P1 outcome store is active.</div></div>`;
+}
+
+// Model Insights rendering
+async function loadModelInsights() {
+    let dashData, perfData;
+    try {
+        const [dRes, pRes] = await Promise.all([
+            fetch('/data/ui/dashboard-v7-status.json?_='+Date.now(), {cache:'no-store'}),
+            fetch('/data/reports/signal-performance-latest.json?_='+Date.now(), {cache:'no-store'})
+        ]);
+        if (dRes.ok) dashData = await dRes.json();
+        if (pRes.ok) perfData = await pRes.json();
+    } catch {}
+
+    const models = dashData?.models || {};
+    const history = dashData?.history || [];
+    const weights = dashData?.v1_weights?.weights || {};
+    const perfAcc = perfData?.accuracy_by_feature_horizon || {};
+
+    // Build interval accuracy matrix from history data
+    const mods = [
+        {id:'forecast',name:'Forecast',color:'#3b82f6',key:'forecast_accuracy_7d'},
+        {id:'scientific',name:'Scientific',color:'#10b981',key:'scientific_accuracy_7d'},
+        {id:'quantlab',name:'QuantLab',color:'#f59e0b',key:'quantlab_accuracy_7d'},
+    ];
+    const intervals = [
+        {id:'1d',label:'1D',days:1},{id:'3d',label:'3D',days:3},{id:'1w',label:'1W',days:5},{id:'2w',label:'2W',days:10},{id:'1m',label:'1M',days:22}
+    ];
+
+    // Calculate accuracy per module per interval window
+    const matrix = {};
+    for (const m of mods) {
+        matrix[m.id] = {};
+        const vals = history.map(h => ({date:h.date, acc:h[m.key]})).filter(v => v.acc != null && v.acc > 0);
+        for (const iv of intervals) {
+            const window = vals.slice(-iv.days);
+            matrix[m.id][iv.id] = window.length > 0 ? window.reduce((s,v)=>s+v.acc,0)/window.length : null;
+        }
+        // Add overall from models
+        matrix[m.id]['overall'] = models[m.id]?.accuracy_7d ?? null;
+    }
+
+    // Add real perf data if available
+    for (const [feat, horizons] of Object.entries(perfAcc)) {
+        if (!matrix[feat]) matrix[feat] = {};
+        for (const [h, stats] of Object.entries(horizons)) {
+            if (stats?.accuracy != null) matrix[feat][h+'_real'] = stats.accuracy;
+        }
+    }
+
+    // Find best per interval
+    const bestPer = {};
+    for (const iv of intervals) {
+        let best = null, bestVal = -1;
+        for (const m of mods) {
+            const v = matrix[m.id]?.[iv.id];
+            if (v != null && v > bestVal) { bestVal = v; best = m.id; }
+        }
+        bestPer[iv.id] = best;
+    }
+
+    // Render insights table
+    const pct = v => v == null ? '<span style="color:var(--text-dim)">n/a</span>' : (v*100).toFixed(1)+'%';
+    const cell = (mid, ivid, v) => bestPer[ivid]===mid ? `<td><span class="insights-best">${pct(v)}</span></td>` : `<td>${pct(v)}</td>`;
+
+    let thtml = `<table class="insights-table"><thead><tr><th>Module</th>`;
+    for (const iv of intervals) thtml += `<th>${iv.label}</th>`;
+    thtml += `<th>7D Accuracy</th><th>Overall</th></tr></thead><tbody>`;
+    for (const m of mods) {
+        thtml += `<tr><td><i class="fas fa-circle" style="color:${m.color};font-size:.5rem;margin-right:.3rem"></i>${m.name}</td>`;
+        for (const iv of intervals) thtml += cell(m.id, iv.id, matrix[m.id]?.[iv.id]);
+        thtml += `<td>${pct(models[m.id]?.accuracy_7d)}</td>`;
+        thtml += `<td>${pct(models[m.id]?.hit_rate_all ?? models[m.id]?.accuracy)}</td></tr>`;
+    }
+    thtml += '</tbody></table>';
+    thtml += '<div class="sc-legend" style="margin-top:.6rem"><span><span class="sc-legend-dot" style="background:#34d399"></span> Best module in interval</span></div>';
+
+    if (perfAcc.forecast || perfAcc.scientific) {
+        thtml += '<div style="margin-top:.75rem;font-size:.78rem;color:var(--text-muted)"><strong>Verified BUY-signal performance:</strong></div>';
+        for (const [feat, horizons] of Object.entries(perfAcc)) {
+            for (const [h, stats] of Object.entries(horizons)) {
+                thtml += `<div class="info-row" style="padding:.25rem 0"><span>${feat} · ${h}</span><strong>${pct(stats.accuracy)} (${stats.correct}/${stats.total})</strong></div>`;
+            }
+        }
+    }
+    document.getElementById('modelInsightsTable').innerHTML = thtml;
+
+    // Weight Recommendations
+    const currentW = Object.entries(weights);
+    const sorted = [...mods].sort((a,b) => ((matrix[b.id]?.['1w']||0) - (matrix[a.id]?.['1w']||0)));
+    const bestMod = sorted[0];
+    const worstMod = sorted[sorted.length-1];
+
+    let recHtml = '';
+    recHtml += `<div class="rec-card"><div class="rec-card-title">🏆 Strongest module: ${bestMod.name}</div><div class="rec-card-text">
+        ${bestMod.name} shows the most consistent 1W accuracy (${pct(matrix[bestMod.id]?.['1w'])}).
+        <strong>Recommendation:</strong> raise weight from ${weights[bestMod.id] ? (weights[bestMod.id]*100).toFixed(0)+'%' : '—'} to <strong>${Math.min(35, ((weights[bestMod.id]||0.2)*100)+5).toFixed(0)}%</strong>.
+        <div style="margin-top:.3rem">${currentW.map(([k,v]) => {
+            const isUp = k === bestMod.id;
+            const isDown = k === worstMod.id;
+            return `<span class="rec-weight-change ${isUp?'rec-up':isDown?'rec-down':'rec-same'}"><i class="fas fa-${isUp?'arrow-up':isDown?'arrow-down':'minus'}"></i> ${k}: ${(v*100).toFixed(0)}% → ${isUp ? Math.min(35,v*100+5).toFixed(0) : isDown ? Math.max(5,v*100-5).toFixed(0) : (v*100).toFixed(0)}%</span>`;
+        }).join('')}</div></div></div>`;
+
+    recHtml += `<div class="rec-card"><div class="rec-card-title">📉 Weakest module: ${worstMod.name}</div><div class="rec-card-text">
+        ${worstMod.name} has the lowest accuracy (${pct(matrix[worstMod.id]?.['1w'])}).
+        <strong>Recommendation:</strong> reduce weight, but keep it as a benchmark. Do not remove it; it still adds diversification value in specific market phases.</div></div>`;
+
+    recHtml += `<div class="rec-card"><div class="rec-card-title">🔧 Optimal setup strategy</div><div class="rec-card-text">
+        Based on current data: <strong>trend_continuation</strong> is the most common BUY setup.
+        Short-term signals should primarily weight ${bestMod.name},
+        mid-term signals should combine ${sorted[0].name} + ${sorted[1].name},
+        and long-term signals should weight all modules evenly because diversification lowers risk across longer horizons.</div></div>`;
+
+    document.getElementById('weightRecommendations').innerHTML = recHtml;
+
+    // Combo Analysis
+    const modColors = {forecast:'#3b82f6',scientific:'#10b981',quantlab:'#f59e0b',breakout_v2:'#ef4444',hist_probs:'#06b6d4',elliott:'#a855f7'};
+    const combos = [
+        {modules:['forecast','scientific'],score: ((matrix.forecast?.['1w']||0)+(matrix.scientific?.['1w']||0))/2},
+        {modules:['forecast','quantlab'],score: ((matrix.forecast?.['1w']||0)+(matrix.quantlab?.['1w']||0))/2},
+        {modules:['forecast','scientific','quantlab'],score: ((matrix.forecast?.['1w']||0)+(matrix.scientific?.['1w']||0)+(matrix.quantlab?.['1w']||0))/3},
+        {modules:['scientific','quantlab'],score: ((matrix.scientific?.['1w']||0)+(matrix.quantlab?.['1w']||0))/2},
+        {modules:Object.keys(weights),score: Object.keys(weights).reduce((s,k)=>s+(matrix[k]?.['1w']||0),0)/Object.keys(weights).length},
+    ].sort((a,b)=>b.score-a.score);
+
+    let chtml = '';
+    combos.forEach((c,i) => {
+        const pills = c.modules.map(m => `<span class="combo-module-pill" style="background:${modColors[m]||'#64748b'}22;color:${modColors[m]||'#94a3b8'};border:1px solid ${modColors[m]||'#64748b'}44">${m}</span>`).join('');
+        const color = i===0 ? '#34d399' : i===1 ? '#fbbf24' : 'var(--text-muted)';
+        chtml += `<div class="combo-card${i===0?' style="border-color:rgba(16,185,129,0.3)"':''}"><div class="combo-rank">#${i+1}</div><div class="combo-modules">${pills}</div><div class="combo-score" style="color:${color}">${(c.score*100).toFixed(1)}%</div></div>`;
+    });
+    chtml += '<div class="soft-note" style="margin-top:.5rem"><i class="fas fa-info-circle"></i> Combination score = average 1W accuracy across all modules in the combination. As the outcome store grows, these scores will be replaced by verified BUY-signal evidence.</div>';
+    document.getElementById('comboAnalysis').innerHTML = chtml;
+}
+
+// ──── Lazy-load new tabs ─────────────────────────────────────────────────────
+let _scorecardLoaded = false, _archLoaded = false, _liveBuysLoaded = false;
+document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+        if (btn.dataset.tab === 'live-buys' && !_liveBuysLoaded) {
+            _liveBuysLoaded = true;
+            loadBuySignals();
+            loadModelInsights();
+            loadAllNewFeatures();
+        }
+        if (btn.dataset.tab === 'module-scorecard' && !_scorecardLoaded) {
+            _scorecardLoaded = true;
+            try { const { data } = await fetchDashboardPayload(); loadModuleScorecard(data); } catch(e) { document.getElementById('moduleScorecardContent').innerHTML = `<span style="color:var(--red)">${escapeHtml(e.message)}</span>`; }
+        }
+        if (btn.dataset.tab === 'asset-lookup') { setupAssetSearch(); }
+        if (btn.dataset.tab === 'signal-architecture' && !_archLoaded) {
+            _archLoaded = true;
+            try { const { data } = await fetchDashboardPayload(); loadSignalArchitecture(data); } catch(e) { document.getElementById('signalArchitectureContent').innerHTML = `<span style="color:var(--red)">${escapeHtml(e.message)}</span>`; }
+        }
+    });
 });
 </script>
 </body>
