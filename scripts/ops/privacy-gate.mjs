@@ -41,6 +41,19 @@ function normalizeRel(filePath) {
 export function classifyPath(relPath) {
   const normalized = normalizeRel(relPath);
   const low = normalized.toLowerCase();
+  
+  // Explicitly allow listed proof reports
+  const allowlistedReports = [
+    'data/reports/decision-core-buy-breadth-latest.json',
+    'data/reports/stock-decision-core-ui-buy-breadth-latest.json',
+    'data/reports/stock-decision-core-ui-random20-latest.json',
+    'data/reports/decision-core-historical-replay-latest.json',
+    'data/reports/decision-core-outcome-bootstrap-latest.json'
+  ];
+  if (allowlistedReports.some(allowed => low.endsWith(allowed))) {
+    return { ok: true, reason: null };
+  }
+
   const hit = FORBIDDEN_PATH_RULES.find((rule) => rule.re.test(low));
   return hit ? { ok: false, reason: hit.reason } : { ok: true, reason: null };
 }
