@@ -117,6 +117,9 @@ function buildStageHealth() {
   const completed = new Set(latest?.completed_steps || []);
   const current = latest?.current_step || null;
   const failed = latest?.failed_step || null;
+  const stepStates = latest?.step_states && typeof latest.step_states === 'object' ? latest.step_states : {};
+  const hasStepStates = Object.keys(stepStates).length > 0;
+  const finalSeal = latest?.final_integrity_seal || readJson('public/data/ops/final-integrity-seal-latest.json') || {};
   const steps = [
     'safe_code_sync', 'code_manifest_guard', 'lock_policy_report', 'build_global_scope', 'provider_health_preflight',
     'market_data_refresh', 'q1_delta_ingest', 'q1_delta_proof_report',
@@ -130,16 +133,43 @@ function buildStageHealth() {
   const stages = {};
   for (const step of steps) {
     const stage = stageForStep(step);
-    stages[stage] ||= { total: 0, completed: 0, failed_steps: [], current_steps: [] };
+    stages[stage] ||= { total: 0, completed: 0, warning_steps: [], critical_steps: [], failed_steps: [], current_steps: [] };
     stages[stage].total += 1;
-    if (completed.has(step)) stages[stage].completed += 1;
+    const state = stepStates[step] || null;
+    const severity = String(state?.severity || '').toLowerCase();
+    if (completed.has(step) || state) stages[stage].completed += 1;
+    if (severity === 'warning') stages[stage].warning_steps.push(step);
+    if (severity === 'critical') stages[stage].critical_steps.push(step);
     if (failed === step) stages[stage].failed_steps.push(step);
     if (current === step) stages[stage].current_steps.push(step);
   }
   for (const stage of Object.values(stages)) {
-    stage.status = stage.failed_steps.length ? 'FAILED' : stage.current_steps.length ? 'RUNNING' : stage.completed === stage.total ? 'OK' : 'PENDING';
+    stage.status = stage.failed_steps.length
+      ? 'FAILED'
+      : stage.critical_steps.length
+        ? 'DEGRADED'
+        : stage.warning_steps.length
+          ? 'DEGRADED'
+          : stage.current_steps.length
+            ? 'RUNNING'
+            : stage.completed === stage.total
+              ? 'OK'
+              : 'PENDING';
   }
-  const status = failed ? 'FAILED' : latest?.last_status === 'completed' ? 'OK' : latest?.last_status === 'running' ? 'RUNNING' : 'DEGRADED';
+  const criticalCount = Object.values(stages).reduce((sum, stage) => sum + stage.critical_steps.length, 0);
+  const warningCount = Object.values(stages).reduce((sum, stage) => sum + stage.warning_steps.length, 0);
+  const releaseReady = finalSeal?.release_ready === true;
+  const status = failed
+    ? 'FAILED'
+    : latest?.last_status === 'completed'
+      ? 'OK'
+      : latest?.last_status === 'running'
+        ? 'RUNNING'
+        : hasStepStates
+          ? criticalCount || warningCount || finalSeal?.status === 'DEGRADED' ? 'DEGRADED' : 'OK'
+          : releaseReady
+            ? 'OK'
+            : 'DEGRADED';
   return {
     schema: 'rv.nas_stage_health.v1',
     generated_at: isoNow(),
@@ -150,6 +180,11 @@ function buildStageHealth() {
     current_step: current,
     failed_step: failed,
     completed_steps: completed.size,
+    observed_step_states: hasStepStates ? Object.keys(stepStates).length : 0,
+    warning_step_count: warningCount,
+    critical_step_count: criticalCount,
+    release_ready: releaseReady,
+    release_blocking: releaseReady ? false : status === 'FAILED',
     stages,
   };
 }
