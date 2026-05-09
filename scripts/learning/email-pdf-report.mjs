@@ -57,9 +57,9 @@ function generateSelfCriticism(feature, metrics) {
     // No data yet
     if (!acc7d && !hitRate7d && feature.stability == null) {
         if (predsToday === 0) {
-            return `Keine Predictions extrahiert. Ursache: Datenpipeline hat heute keine Daten erzeugt. → Prüfen ob die Pipeline (Workflow/Cron) aktiv ist.`;
+            return `No predictions extracted. Cause: data pipeline produced no data today. Check whether the workflow/cron is active.`;
         }
-        return `${predsToday} Predictions geloggt. Outcomes werden nach ${feature.type === 'ranking_stability' ? '1' : feature.type === 'price_direction_probability' ? '1' : '5'} Trading-Tag(en) aufgelöst. Erste Metriken erscheinen dann.`;
+        return `${predsToday} predictions logged. Outcomes mature after ${feature.type === 'ranking_stability' ? '1' : feature.type === 'price_direction_probability' ? '1' : '5'} trading day(s). First metrics appear after maturity.`;
     }
 
     const lines = [];
@@ -67,45 +67,45 @@ function generateSelfCriticism(feature, metrics) {
     // Accuracy analysis
     if (acc7d != null) {
         if (acc7d < 0.50) {
-            lines.push(`Accuracy ${pct(acc7d)} unter 50% — Modell ist schlechter als Münzwurf. Logik der Feature-Gewichtung/Schwellenwerte muss überarbeitet werden.`);
+            lines.push(`Accuracy ${pct(acc7d)} below 50% - model is worse than a coin-flip baseline. Feature weighting or thresholds need review.`);
         } else if (acc7d < 0.55) {
-            lines.push(`Accuracy ${pct(acc7d)} knapp über Baseline. Verbesserungspotenzial bei Feature-Selektion und Calibration.`);
+            lines.push(`Accuracy ${pct(acc7d)} is only slightly above baseline. Feature selection and calibration need improvement.`);
         } else if (acc7d >= 0.60) {
-            lines.push(`Accuracy ${pct(acc7d)} — Gute Performance. Feature-Kombination funktioniert.`);
+            lines.push(`Accuracy ${pct(acc7d)} - good performance. Feature combination is working.`);
         }
     }
 
     // Brier analysis
     if (brier7d != null) {
         if (brier7d > 0.25) {
-            lines.push(`Brier Score ${num(brier7d)} zu hoch — Wahrscheinlichkeiten sind schlecht kalibriert. → Isotonische Calibration oder Platt Scaling anwenden.`);
+            lines.push(`Brier Score ${num(brier7d)} is too high - probabilities are poorly calibrated. Apply isotonic calibration or Platt scaling.`);
         } else if (brier7d < 0.20) {
-            lines.push(`Brier Score ${num(brier7d)} — Gute Calibration.`);
+            lines.push(`Brier Score ${num(brier7d)} - good calibration.`);
         }
     }
 
     // Hit rate analysis (scientific)
     if (hitRate7d != null && feature.type === 'setup_trigger_breakout') {
         if (hitRate7d < 0.30) {
-            lines.push(`Hit Rate ${pct(hitRate7d)} sehr niedrig. Setup/Trigger-Schwellen sind zu permissiv oder Breakout-Threshold (2%) zu hoch. → Trigger-Logik verschärfen.`);
+            lines.push(`Hit rate ${pct(hitRate7d)} is very low. Setup/trigger thresholds are too permissive or the breakout threshold (2%) is too high. Tighten trigger logic.`);
         } else if (hitRate7d >= 0.40) {
-            lines.push(`Hit Rate ${pct(hitRate7d)} — Setup/Trigger-Logik filtert effektiv.`);
+            lines.push(`Hit rate ${pct(hitRate7d)} - setup/trigger logic filters effectively.`);
         }
     }
 
     // Trend analysis
     if (trendAcc === 'declining') {
-        lines.push(`WARNUNG: Accuracy-Trend fallend. Mögliche Ursachen: Marktregime-Wechsel, Feature-Drift, oder Überanpassung an historische Muster. → Feature-Drift-Check durchführen.`);
+        lines.push(`WARNING: accuracy trend is declining. Possible causes: regime shift, feature drift, or overfitting to historical patterns. Run feature drift check.`);
     } else if (trendAcc === 'improving') {
-        lines.push(`Positiv: Trend zeigt Verbesserung. Calibrationsdaten akkumulieren sich.`);
+        lines.push(`Positive: trend is improving. Calibration data is accumulating.`);
     }
 
     // Prediction count
     if (predsToday > 0) {
-        lines.push(`${predsToday} Predictions heute geloggt.`);
+        lines.push(`${predsToday} predictions logged today.`);
     }
 
-    return lines.length ? lines.join(' ') : `Daten werden gesammelt. Noch keine ausreichende Basis für Analyse.`;
+    return lines.length ? lines.join(' ') : `Data is being collected. Analysis base is not sufficient yet.`;
 }
 
 // ─── PDF Generation ─────────────────────────────────────────────────────────
@@ -211,17 +211,17 @@ function drawFeatureSection(doc, key, feat, W, brandColor) {
             metrics.push(['Hit Rate (7d)', pct(feat.hit_rate_7d), '', '']);
         }
         const count = feat.predictions_today ?? 0;
-        metrics.push(['Predictions heute', String(count), '', '']);
+        metrics.push(['Predictions today', String(count), '', '']);
     } else {
         if (feat.stability != null) {
-            metrics.push(['Ranking-Stabilität', pct(feat.stability), '', '']);
-            metrics.push(['Churn (Wechsel)', String(feat.churn ?? '—'), '', '']);
+            metrics.push(['Ranking stability', pct(feat.stability), '', '']);
+            metrics.push(['Churn', String(feat.churn ?? '—'), '', '']);
         }
-        metrics.push(['Rankings heute', String(feat.rankings_today ?? 0), '', '']);
+        metrics.push(['Rankings today', String(feat.rankings_today ?? 0), '', '']);
     }
 
     if (metrics.length === 0) {
-        doc.fontSize(9).font('Helvetica').text('  Noch keine Daten', 40, doc.y);
+        doc.fontSize(9).font('Helvetica').text('  No data yet', 40, doc.y);
     }
 
     for (const [label, value, tText, tKey] of metrics) {
@@ -239,8 +239,8 @@ function drawFeatureSection(doc, key, feat, W, brandColor) {
 }
 
 function formatDate(dateStr) {
-    const months = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni',
-        'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'];
+    const months = ['January', 'February', 'March', 'April', 'May', 'June',
+        'July', 'August', 'September', 'October', 'November', 'December'];
     const [y, m, d] = dateStr.split('-');
     return `${parseInt(d)}. ${months[parseInt(m) - 1]} ${y}`;
 }

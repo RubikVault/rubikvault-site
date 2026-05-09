@@ -227,27 +227,27 @@ function buildSummary(results) {
 
 // ── Markdown report ───────────────────────────────────────────────────────────
 function buildMarkdown(report) {
-  const ts = new Date(report.generated_at).toLocaleString('de-DE', { timeZone: 'Europe/Berlin' });
+  const ts = new Date(report.generated_at).toLocaleString('en-GB', { timeZone: 'Europe/Berlin' });
 
-  let md = `# Historische Wahrscheinlichkeiten — Feature-Mehrwert Report\n\n`;
-  md += `**Generiert:** ${ts}  \n`;
-  md += `**Methodik:** Walk-Forward Backtest (70/30 Split) + HP-Qualitätsbewertung  \n`;
-  md += `**Min. Event-Beobachtungen:** ${MIN_EVENT_N}  \n`;
-  md += `**Tickers ausgewertet:** ${report.tickers_evaluated}  \n\n---\n\n`;
+  let md = `# Historical Probabilities - Feature Value Report\n\n`;
+  md += `**Generated:** ${ts}  \n`;
+  md += `**Method:** Walk-forward backtest (70/30 split) + hist-probs quality assessment  \n`;
+  md += `**Min. event observations:** ${MIN_EVENT_N}  \n`;
+  md += `**Tickers evaluated:** ${report.tickers_evaluated}  \n\n---\n\n`;
 
-  md += `## Zusammenfassung: Mehrwert pro Horizont\n\n`;
-  md += `| Horizont | WF-Ticker | Ø Brier-Verb. vs Naïve | Ø Acc.-Verb. | HP-Direktgenauigkeit | Naïve-Genauigkeit | HP-Precision | Bewertung |\n`;
+  md += `## Summary: Value By Horizon\n\n`;
+  md += `| Horizon | WF Tickers | Avg Brier Improvement vs Naive | Avg Accuracy Improvement | HP Directional Accuracy | Naive Accuracy | HP Precision | Verdict |\n`;
   md += `|----------|-----------|------------------------|--------------|----------------------|-------------------|--------------|----------|\n`;
 
   for (const hz of HORIZONS) {
     const s = report.summary[hz.key];
     if (!s) continue;
 
-    const verdictStr = s.verdict === 'SIGNIFICANT_VALUE' ? '✅ Signifikant'
-                     : s.verdict === 'MODERATE_VALUE'    ? '🟡 Moderat'
-                     : s.verdict === 'NO_VALUE'          ? '❌ Kein Mehrwert'
-                     : s.verdict === 'SIGNAL_STRONG'     ? '📈 Signal stark'
-                     : '📊 Signal schwach';
+    const verdictStr = s.verdict === 'SIGNIFICANT_VALUE' ? 'Significant'
+                     : s.verdict === 'MODERATE_VALUE'    ? 'Moderate'
+                     : s.verdict === 'NO_VALUE'          ? 'No value'
+                     : s.verdict === 'SIGNAL_STRONG'     ? 'Strong signal'
+                     : 'Weak signal';
 
     const bi  = s.avg_brier_improvement_vs_naive_pct != null ? `${s.avg_brier_improvement_vs_naive_pct > 0 ? '+' : ''}${s.avg_brier_improvement_vs_naive_pct.toFixed(1)}%` : '—';
     const acc = s.avg_accuracy_improvement_pp != null ? `+${s.avg_accuracy_improvement_pp.toFixed(1)}pp` : '—';
@@ -261,15 +261,15 @@ function buildMarkdown(report) {
   // Per-ticker walk-forward
   const wf = report.results.filter(r => r.mode === 'walk_forward');
   if (wf.length > 0) {
-    md += `\n---\n\n## Walk-Forward Backtest — Ticker-Detail (${wf.length} Tickers)\n\n`;
-    md += `| Ticker | Bars | Horizont | Brier HP | Brier Naïve | Brier MA | Acc HP | Acc Naïve | Δ Brier | Δ Acc |\n`;
+    md += `\n---\n\n## Walk-Forward Backtest - Ticker Detail (${wf.length} tickers)\n\n`;
+    md += `| Ticker | Bars | Horizon | Brier HP | Brier Naive | Brier MA | Acc HP | Acc Naive | Delta Brier | Delta Acc |\n`;
     md += `|--------|------|----------|----------|-------------|----------|--------|-----------|---------|-------|\n`;
 
     for (const r of wf) {
       for (const hz of HORIZONS) {
         const res = r.results[hz.key];
         if (!res) continue;
-        const badge = (res.brier_improvement_vs_naive_pct ?? 0) > 5 ? '✅' : (res.brier_improvement_vs_naive_pct ?? 0) > 0 ? '🟡' : '❌';
+        const badge = (res.brier_improvement_vs_naive_pct ?? 0) > 5 ? 'strong' : (res.brier_improvement_vs_naive_pct ?? 0) > 0 ? 'moderate' : 'weak';
         md += `| **${r.ticker}** | ${r.bars_count} | ${res.horizon} | ${res.hist_probs.brier?.toFixed(4) ?? '—'} | ${res.naive.brier?.toFixed(4) ?? '—'} | ${res.ma_only.brier?.toFixed(4) ?? '—'} | ${((res.hist_probs.directional_accuracy ?? 0) * 100).toFixed(1)}% | ${((res.naive.directional_accuracy ?? 0) * 100).toFixed(1)}% | ${badge} ${res.brier_improvement_vs_naive_pct?.toFixed(1) ?? '—'}% | +${res.accuracy_improvement_vs_naive_pp?.toFixed(1) ?? '—'}pp |\n`;
       }
     }
@@ -278,8 +278,8 @@ function buildMarkdown(report) {
   // Per-ticker HP quality
   const qo = report.results.filter(r => r.mode === 'hp_quality_only');
   if (qo.length > 0) {
-    md += `\n---\n\n## HP-Qualitätsbewertung (keine lokalen Bars — ${qo.length} Tickers)\n\n`;
-    md += `| Ticker | Bars | Horizont | Events | Ø Win-Rate | Bull ▲ | Bear ▼ | Neutral | Signal-Stärke | Synth. Brier-Verb. |\n`;
+    md += `\n---\n\n## HP Quality Assessment (no local bars - ${qo.length} tickers)\n\n`;
+    md += `| Ticker | Bars | Horizon | Events | Avg Win Rate | Bull Up | Bear Down | Neutral | Signal Strength | Synthetic Brier Improvement |\n`;
     md += `|--------|------|----------|--------|------------|--------|--------|---------|---------------|--------------------|\n`;
 
     for (const r of qo) {
@@ -294,13 +294,13 @@ function buildMarkdown(report) {
     }
   }
 
-  md += `\n---\n\n## Methodik\n\n`;
-  md += `**Brier Score:** MSE zwischen Wahrscheinlichkeitsvorhersage und Ergebnis (0=perfekt, 0.25=Zufall)\n\n`;
-  md += `| Modell | Beschreibung |\n|--------|-------------|\n`;
-  md += `| Naïve | Immer 50% (Zufallsbaseline) |\n`;
-  md += `| MA-Only | SMA20 > SMA50 → 62% bullish (klassisch-technisch) |\n`;
-  md += `| **Hist-Probs** | Log-gewichteter Ø der Win-Rates aktiver Events |\n\n`;
-  md += `**Mehrwert-Schwellen:** ✅ Brier >5% besser als Naïve | 🟡 0–5% besser | ❌ Nicht besser\n`;
+  md += `\n---\n\n## Method\n\n`;
+  md += `**Brier Score:** MSE between probability forecast and outcome (0=perfect, 0.25=random at 50/50)\n\n`;
+  md += `| Model | Description |\n|--------|-------------|\n`;
+  md += `| Naive | Always 50% random baseline |\n`;
+  md += `| MA-Only | SMA20 > SMA50 -> 62% bullish technical baseline |\n`;
+  md += `| **Hist-Probs** | Log-weighted average of active event win rates |\n\n`;
+  md += `**Value thresholds:** Brier >5% better than naive = strong | 0-5% better = moderate | not better = weak\n`;
 
   return md;
 }
@@ -352,16 +352,16 @@ async function main() {
     console.log(`\n  ${s.horizon.padEnd(15)} verdict=${s.verdict}`);
     if (wfN > 0) {
       console.log(`    [Walk-Forward, n=${wfN}]`);
-      console.log(`      Ø Brier-Verb. vs Naïve : ${s.avg_brier_improvement_vs_naive_pct?.toFixed(1) ?? '—'}%`);
-      console.log(`      Ø Brier-Verb. vs MA    : ${s.avg_brier_improvement_vs_ma_pct?.toFixed(1)    ?? '—'}%`);
-      console.log(`      Ø Acc-Verb. vs Naïve   : +${s.avg_accuracy_improvement_pp?.toFixed(1) ?? '—'}pp`);
-      console.log(`      HP Direktgenauigkeit    : ${((s.avg_hp_directional_accuracy ?? 0) * 100).toFixed(1)}%`);
+      console.log(`      Avg Brier improvement vs naive : ${s.avg_brier_improvement_vs_naive_pct?.toFixed(1) ?? '—'}%`);
+      console.log(`      Avg Brier improvement vs MA    : ${s.avg_brier_improvement_vs_ma_pct?.toFixed(1)    ?? '—'}%`);
+      console.log(`      Avg accuracy improvement       : +${s.avg_accuracy_improvement_pp?.toFixed(1) ?? '—'}pp`);
+      console.log(`      HP directional accuracy        : ${((s.avg_hp_directional_accuracy ?? 0) * 100).toFixed(1)}%`);
       console.log(`      HP Precision            : ${((s.avg_hp_precision ?? 0) * 100).toFixed(1)}%`);
     }
     if (qoN > 0) {
       console.log(`    [HP Quality, n=${qoN}]`);
-      console.log(`      Ø Signal-Stärke         : ${s.avg_signal_strength_pct?.toFixed(1) ?? '—'}%`);
-      console.log(`      Ø Synth. Brier-Verb.    : ${s.avg_synthetic_brier_improvement_pct?.toFixed(1) ?? '—'}%`);
+      console.log(`      Avg signal strength            : ${s.avg_signal_strength_pct?.toFixed(1) ?? '—'}%`);
+      console.log(`      Avg synthetic Brier improvement: ${s.avg_synthetic_brier_improvement_pct?.toFixed(1) ?? '—'}%`);
     }
   }
 

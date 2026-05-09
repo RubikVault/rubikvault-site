@@ -5,10 +5,10 @@ import { evaluateSetup, evaluateTrigger } from '../../scripts/scientific-analyze
 import { generateForecast } from '../../scripts/forecast/forecast_engine.mjs';
 
 // Absolute file paths
-const FEATURE_ROOT = '/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/features/store/feature_store_version=v4_q1panel_fullchunk_daily';
+const FEATURE_ROOT = process.env.QUANTLAB_FEATURE_ROOT || 'QuantLab/features/store/feature_store_version=v4_q1panel_fullchunk_daily';
 
 async function calculateFusionOverlap() {
-  console.log("=== 🔬 Calculating Fusion Overlap (1d / 3d Mature Win Rates) ===");
+  console.log("=== Calculating Fusion Overlap (1d / 3d Mature Win Rates) ===");
   const dates = ['2026-03-01', '2026-03-02', '2026-03-03', '2026-03-04', '2026-03-05'];
   
   let totalFusionWins = 0;
@@ -34,20 +34,20 @@ async function calculateFusionOverlap() {
   const fusionRate = (totalFusionWins / casesCount) * 100;
   const quantLabRate = (totalQuantLabWins / casesCount) * 100;
 
-  let report = `# 🔬 Fusion & Overlap Analyse (Kurzfrist-Returns)
+  let report = `# Fusion & Overlap Analysis (Short-Term Returns)
 
-Da die 20-Tage Returns für März noch in der Zukunft liegen, habe ich die **1-Tages- und 3-Tages-Verläufe** für die Overlap-Tage (01. März bis 05. März) ausgewertet.
+Because 20-day returns for March were not mature in this sample, this report evaluates **1-day and 3-day paths** for the overlap days (March 1 to March 5).
 
-| System | 📈 Signal-Typ | 🎯 Win-Rate (1d/3d) | 🛡️ Drawdown-Schutz |
+| System | Signal Type | Win Rate (1d/3d) | Drawdown Protection |
 |---|---|---|---|
-| **🤖 Quant Lab Only** | Momentum / Liq | ~${quantLabRate.toFixed(1)}% | Gering |
-| **🔬 Scientific Only** | Rules / Setup | 58.0% | Hoch |
-| **🔮 Forecast Only** | ML-Trend | 51.5% | Mittel |
-| **🧬 Fusion System** | Consensus | **~${fusionRate.toFixed(1)}%** | **Maximal** |
+| **Quant Lab Only** | Momentum / liquidity | ~${quantLabRate.toFixed(1)}% | Low |
+| **Scientific Only** | Rules / setup | 58.0% | High |
+| **Forecast Only** | ML trend | 51.5% | Medium |
+| **Fusion System** | Consensus | **~${fusionRate.toFixed(1)}%** | **Maximum** |
 
-### 💡 Mehrwert der Fusion:
-1. **Risiko-Absorber:** Scientific dämpft ca. **35%** der hoch-volatilen Signale von QuantLab weg, die am Folgetag zu Spikes neigen.
-2. **Qualitäts-Boost:** Wenn Quant Lab mit >30 Votes trifft **UND** Scientific grünes Licht gibt, liegt die 1d-Spike Wahrscheinlichkeit statistisch höher.
+### Fusion Value:
+1. **Risk absorber:** Scientific dampens about **35%** of Quant Lab high-volatility signals that tend to spike the next day.
+2. **Quality boost:** When Quant Lab has >30 votes and Scientific is constructive, historical 1d spike probability is higher.
 `;
 
   await fs.writeFile('QuantLab/reports/fusion_overlap_analysis.md', report);
