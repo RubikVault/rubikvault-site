@@ -134,13 +134,18 @@ async function main() {
   if (missingRegion) {
     throw new Error(`BUY_BREADTH_ASSET_COUNT_BELOW_10:${candidatesByRegion.US.length}:${candidatesByRegion.EU.length}:${candidatesByRegion.ASIA.length}`);
   }
-  const port = Number(process.env.PORT || await freePort());
-  const baseUrl = `http://127.0.0.1:${port}`;
-  const server = spawn('npm', ['run', 'dev:pages:port'], {
-    cwd: ROOT,
-    env: { ...process.env, PORT: String(port), RV_DECISION_CORE_SOURCE: 'core' },
-    stdio: ['ignore', 'pipe', 'pipe'],
-  });
+  const baseArg = cliValue('base-url') || process.env.RV_UI_PROOF_BASE_URL || '';
+  let server = null;
+  let baseUrl = String(baseArg || '').replace(/\/+$/, '');
+  if (!baseUrl) {
+    const port = Number(process.env.PORT || await freePort());
+    baseUrl = `http://127.0.0.1:${port}`;
+    server = spawn('npm', ['run', 'dev:pages:port'], {
+      cwd: ROOT,
+      env: { ...process.env, PORT: String(port), RV_DECISION_CORE_SOURCE: 'core' },
+      stdio: ['ignore', 'pipe', 'pipe'],
+    });
+  }
   let browser;
   try {
     await waitFor(`${baseUrl}/analyze`);
@@ -162,6 +167,7 @@ async function main() {
     const report = {
       schema: 'rv.decision_core_ui_buy_breadth.v1',
       generated_at: new Date().toISOString(),
+      base_url: baseUrl,
       input_report: path.relative(ROOT, INPUT_PATH),
       status: requiredRegions.every((region) => results.filter((row) => row.region === region).length >= 10) ? 'OK' : 'FAILED',
       us_assets: results.filter((row) => row.region === 'US').length,
@@ -178,7 +184,7 @@ async function main() {
     if (report.status !== 'OK') process.exitCode = 1;
   } finally {
     if (browser) await browser.close();
-    server.kill('SIGTERM');
+    if (server) server.kill('SIGTERM');
   }
 }
 
