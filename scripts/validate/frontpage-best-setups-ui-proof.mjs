@@ -31,10 +31,23 @@ function writeJsonAtomic(filePath, doc) {
   fs.renameSync(tmp, filePath);
 }
 
-async function fetchJson(url) {
-  const res = await fetch(url, { cache: 'no-store' });
-  if (!res.ok) throw new Error(`HTTP_${res.status}:${url}`);
-  return res.json();
+async function sleep(ms) {
+  await new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function fetchJson(url, attempts = 4) {
+  let lastError = null;
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    try {
+      const res = await fetch(url, { cache: 'no-store' });
+      if (res.ok) return res.json();
+      lastError = new Error(`HTTP_${res.status}:${url}`);
+    } catch (error) {
+      lastError = error;
+    }
+    if (attempt < attempts) await sleep(500 * attempt);
+  }
+  throw lastError || new Error(`HTTP_UNKNOWN:${url}`);
 }
 
 async function freePort() {
@@ -124,9 +137,14 @@ async function validateAnalyzerPage(browser, baseUrl, row) {
       asOfText: document.getElementById('rv-data-asof')?.textContent || '',
     }));
     const pageCore = await page.evaluate(async (symbol) => {
-      const res = await fetch(`/api/v2/page/${encodeURIComponent(symbol).replace(/%3A/gi, ':')}?rv_best_setup_ui_proof=${Date.now()}`, { cache: 'no-store' });
-      if (!res.ok) return { ok: false, status: res.status };
-      return res.json();
+      let last = { ok: false, status: 'NOT_ATTEMPTED' };
+      for (let attempt = 1; attempt <= 4; attempt += 1) {
+        const res = await fetch(`/api/v2/page/${encodeURIComponent(symbol).replace(/%3A/gi, ':')}?rv_best_setup_ui_proof=${Date.now()}_${attempt}`, { cache: 'no-store' });
+        if (res.ok) return res.json();
+        last = { ok: false, status: res.status };
+        await new Promise((resolve) => setTimeout(resolve, 500 * attempt));
+      }
+      return last;
     }, routeId);
     const data = pageCore?.data || {};
     const coreAction = String(data?.decision_core_min?.decision?.primary_action || data?.summary_min?.decision_verdict || '').toUpperCase();
