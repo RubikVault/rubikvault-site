@@ -3,7 +3,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import zlib from 'node:zlib';
-import { DECISION_CORE_PUBLIC_ROOT, ROOT, classifyRegion, isoNow, parseArgs, readJsonMaybe, readRegistryRows, writeGzipAtomic, writeJsonAtomic } from './shared.mjs';
+import { once } from 'node:events';
+import { DECISION_CORE_PUBLIC_ROOT, ROOT, classifyRegion, isoNow, parseArgs, readJsonMaybe, readRegistryRows, writeJsonAtomic } from './shared.mjs';
 
 const REPORT_PATH = path.join(ROOT, 'public/data/reports/decision-core-outcome-bootstrap-latest.json');
 const OUTCOME_RUNTIME_ROOT = path.resolve(
@@ -11,17 +12,6 @@ const OUTCOME_RUNTIME_ROOT = path.resolve(
     || (process.env.NAS_RUNTIME_ROOT ? path.join(process.env.NAS_RUNTIME_ROOT, 'outcomes') : '')
     || path.join(ROOT, 'runtime/outcomes')
 );
-
-function readRows(root = path.join(DECISION_CORE_PUBLIC_ROOT, 'core')) {
-  const rows = [];
-  const dir = path.join(root, 'parts');
-  if (!fs.existsSync(dir)) return rows;
-  for (const name of fs.readdirSync(dir).filter((item) => item.endsWith('.ndjson.gz')).sort()) {
-    const text = zlib.gunzipSync(fs.readFileSync(path.join(dir, name))).toString('utf8');
-    for (const line of text.split('\n')) if (line.trim()) rows.push(JSON.parse(line));
-  }
-  return rows;
-}
 
 function registryRegions() {
   const out = new Map();
@@ -50,24 +40,69 @@ function toSnapshot(row, regions) {
   };
 }
 
-export function buildOutcomeBootstrap({ root = path.join(DECISION_CORE_PUBLIC_ROOT, 'core'), targetMarketDate = null } = {}) {
-  const rows = readRows(root);
+async function writeSnapshotsFromParts({ root, snapshotPath, regions }) {
+  const dir = path.join(root, 'parts');
+  const counts = {
+    sample_n: 0,
+    stock_samples: 0,
+    etf_samples: 0,
+    us_samples: 0,
+    eu_samples: 0,
+    asia_samples: 0,
+    action_counts: {},
+  };
+  fs.mkdirSync(path.dirname(snapshotPath), { recursive: true });
+  const tmp = `${snapshotPath}.${process.pid}.${Date.now()}.tmp`;
+  const gzip = zlib.createGzip({ level: 9 });
+  const out = fs.createWriteStream(tmp);
+  const done = once(out, 'finish');
+  const error = new Promise((_, reject) => {
+    gzip.once('error', reject);
+    out.once('error', reject);
+  });
+  gzip.pipe(out);
+  try {
+    if (fs.existsSync(dir)) {
+      for (const name of fs.readdirSync(dir).filter((item) => item.endsWith('.ndjson.gz')).sort()) {
+        const text = zlib.gunzipSync(fs.readFileSync(path.join(dir, name))).toString('utf8');
+        for (const line of text.split('\n')) {
+          if (!line.trim()) continue;
+          const snapshot = toSnapshot(JSON.parse(line), regions);
+          counts.sample_n += 1;
+          if (snapshot.asset_type === 'STOCK') counts.stock_samples += 1;
+          if (snapshot.asset_type === 'ETF') counts.etf_samples += 1;
+          if (snapshot.region === 'US') counts.us_samples += 1;
+          if (snapshot.region === 'EU') counts.eu_samples += 1;
+          if (snapshot.region === 'ASIA') counts.asia_samples += 1;
+          counts.action_counts[snapshot.primary_action] = (counts.action_counts[snapshot.primary_action] || 0) + 1;
+          if (!gzip.write(`${JSON.stringify(snapshot)}\n`)) await once(gzip, 'drain');
+        }
+      }
+    }
+    gzip.end();
+    await Promise.race([done, error]);
+    fs.renameSync(tmp, snapshotPath);
+    return counts;
+  } catch (error_) {
+    gzip.destroy();
+    out.destroy();
+    try { fs.rmSync(tmp, { force: true }); } catch {}
+    throw error_;
+  }
+}
+
+export async function buildOutcomeBootstrap({ root = path.join(DECISION_CORE_PUBLIC_ROOT, 'core'), targetMarketDate = null } = {}) {
   const regions = registryRegions();
-  const snapshots = rows.map((row) => toSnapshot(row, regions));
   const outDir = path.join(OUTCOME_RUNTIME_ROOT, 'decision-snapshots');
   const target = targetMarketDate || readJsonMaybe(path.join(root, 'manifest.json'))?.target_market_date || 'unknown';
   const snapshotPath = path.join(outDir, `${target}.ndjson.gz`);
-  writeGzipAtomic(snapshotPath, snapshots.map((row) => JSON.stringify(row)).join('\n') + '\n');
-  const byAction = snapshots.reduce((acc, row) => {
-    acc[row.primary_action] = (acc[row.primary_action] || 0) + 1;
-    return acc;
-  }, {});
+  const counts = await writeSnapshotsFromParts({ root, snapshotPath, regions });
   const scorecard = {
     schema: 'rv.decision_core_scorecard_bootstrap.v1',
     generated_at: isoNow(),
     target_market_date: target,
-    sample_n: snapshots.length,
-    action_counts: byAction,
+    sample_n: counts.sample_n,
+    action_counts: counts.action_counts,
     technical_safety_validity: true,
     performance_evidence: 'not_matured',
     alpha_proof: false,
@@ -76,15 +111,15 @@ export function buildOutcomeBootstrap({ root = path.join(DECISION_CORE_PUBLIC_RO
   writeJsonAtomic(scorecardPath, scorecard);
   const report = {
     schema: 'rv.decision_core_outcome_bootstrap.v1',
-    status: snapshots.length > 0 ? 'OK' : 'FAILED',
+    status: counts.sample_n > 0 ? 'OK' : 'FAILED',
     generated_at: isoNow(),
     target_market_date: target,
-    sample_n: snapshots.length,
-    stock_samples: snapshots.filter((row) => row.asset_type === 'STOCK').length,
-    etf_samples: snapshots.filter((row) => row.asset_type === 'ETF').length,
-    us_samples: snapshots.filter((row) => row.region === 'US').length,
-    eu_samples: snapshots.filter((row) => row.region === 'EU').length,
-    asia_samples: snapshots.filter((row) => row.region === 'ASIA').length,
+    sample_n: counts.sample_n,
+    stock_samples: counts.stock_samples,
+    etf_samples: counts.etf_samples,
+    us_samples: counts.us_samples,
+    eu_samples: counts.eu_samples,
+    asia_samples: counts.asia_samples,
     technical_safety_validity: true,
     performance_evidence: 'not_matured',
     alpha_proof: false,
@@ -98,7 +133,7 @@ export function buildOutcomeBootstrap({ root = path.join(DECISION_CORE_PUBLIC_RO
 if (import.meta.url === `file://${process.argv[1]}`) {
   const opts = parseArgs(process.argv.slice(2));
   const rootArg = process.argv.find((arg) => arg.startsWith('--root='))?.split('=')[1];
-  const report = buildOutcomeBootstrap({
+  const report = await buildOutcomeBootstrap({
     root: path.resolve(ROOT, rootArg || 'public/data/decision-core/core'),
     targetMarketDate: opts.targetMarketDate,
   });

@@ -2,7 +2,7 @@
 
 import { buildOutcomeBootstrap } from './build-outcome-store-bootstrap.mjs';
 
-const report = buildOutcomeBootstrap();
+const report = await buildOutcomeBootstrap();
 console.log(JSON.stringify({
   schema: 'rv.decision_core_module_scorecard.v1',
   status: report.status,
