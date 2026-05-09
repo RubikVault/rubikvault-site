@@ -4,7 +4,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import zlib from 'node:zlib';
 import { once } from 'node:events';
-import { DECISION_CORE_PUBLIC_ROOT, ROOT, classifyRegion, isoNow, parseArgs, readJsonMaybe, readRegistryRows, writeJsonAtomic } from './shared.mjs';
+import readline from 'node:readline';
+import { DECISION_CORE_PUBLIC_ROOT, REGISTRY_PATH, ROOT, classifyRegion, isoNow, normalizeAssetType, parseArgs, readJsonMaybe, writeJsonAtomic } from './shared.mjs';
 
 const REPORT_PATH = path.join(ROOT, 'public/data/reports/decision-core-outcome-bootstrap-latest.json');
 const OUTCOME_RUNTIME_ROOT = path.resolve(
@@ -13,9 +14,24 @@ const OUTCOME_RUNTIME_ROOT = path.resolve(
     || path.join(ROOT, 'runtime/outcomes')
 );
 
-function registryRegions() {
+async function registryRegions() {
   const out = new Map();
-  for (const row of readRegistryRows()) out.set(String(row.canonical_id || '').toUpperCase(), classifyRegion(row));
+  const sourcePath = process.env.RV_DECISION_CORE_REGISTRY_OVERRIDE || REGISTRY_PATH;
+  if (!fs.existsSync(sourcePath)) return out;
+  const input = fs.createReadStream(sourcePath);
+  const stream = sourcePath.endsWith('.gz') ? input.pipe(zlib.createGunzip()) : input;
+  const lines = readline.createInterface({ input: stream, crlfDelay: Infinity });
+  for await (const line of lines) {
+    if (!line.trim()) continue;
+    try {
+      const row = JSON.parse(line);
+      const assetType = normalizeAssetType(row?.type_norm || row?.asset_class || row?.type);
+      if (!['STOCK', 'ETF', 'INDEX'].includes(assetType)) continue;
+      out.set(String(row.canonical_id || '').toUpperCase(), classifyRegion(row));
+    } catch {
+      // malformed registry rows are ignored here; bundle validators report registry issues elsewhere.
+    }
+  }
   return out;
 }
 
@@ -92,7 +108,7 @@ async function writeSnapshotsFromParts({ root, snapshotPath, regions }) {
 }
 
 export async function buildOutcomeBootstrap({ root = path.join(DECISION_CORE_PUBLIC_ROOT, 'core'), targetMarketDate = null } = {}) {
-  const regions = registryRegions();
+  const regions = await registryRegions();
   const outDir = path.join(OUTCOME_RUNTIME_ROOT, 'decision-snapshots');
   const target = targetMarketDate || readJsonMaybe(path.join(root, 'manifest.json'))?.target_market_date || 'unknown';
   const snapshotPath = path.join(outDir, `${target}.ndjson.gz`);
