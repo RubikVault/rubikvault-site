@@ -77,6 +77,34 @@ describe('UI integrity resolver', () => {
     assert.equal(integrity.decisionReadiness, 'READY');
   });
 
+  it('keeps decision-core page-core BUY actionable when only full chart history is missing', () => {
+    const payload = {
+      data: {
+        market_prices: { close: 86.04, date: '2026-05-08' },
+        change: { pct: 0.01, abs: 0.86 },
+        market_stats: { stats: { low_52w: 68, high_52w: 92, rsi14: 52, sma20: 84, sma50: 82, sma200: 78, atr14: 2.4 } },
+        bars: [{ date: '2026-05-08', close: 86.04 }],
+        ssot: { page_core: { coverage: { bars: 500 } } },
+        decision_core_min: {
+          decision: { primary_action: 'BUY', analysis_reliability: 'MEDIUM' },
+          trade_guard: { max_entry_price: 87, invalidation_level: 82 },
+        },
+      },
+      decision_core_min: {
+        decision: { primary_action: 'BUY', analysis_reliability: 'MEDIUM' },
+        trade_guard: { max_entry_price: 87, invalidation_level: 82 },
+      },
+      daily_decision: { schema: 'rv.asset_daily_decision.v1', pipeline_status: 'OK', verdict: 'BUY', blocking_reasons: [], risk_assessment: { level: 'MEDIUM' } },
+      analysis_readiness: { status: 'READY', decision_bundle_status: 'OK', blocking_reasons: [] },
+      meta: { historical: { provider: 'page-core-minimal-history' } },
+    };
+    const integrity = buildUiIntegrity(payload, { ticker: 'CP', priceStack: { valid: true } });
+    assert.equal(integrity.fields.chart.status, 'WARNING');
+    assert.equal(integrity.pageState, 'OK');
+    assert.equal(integrity.dataQuality, 'OK');
+    assert.equal(integrity.decisionReadiness, 'READY');
+  });
+
   it('renders model evidence panel as degraded instead of blank when evaluation is missing', () => {
     const gate = guardPanelGate('modelConsensus', { ev4: null, consensusValid: false, consensusDegraded: true });
     assert.equal(gate.show, true);

@@ -132,9 +132,16 @@ function chartContractStatus(payload) {
     ?? finiteNumber(payload?.coverage?.bars);
   const histProvider = String(payload?.meta?.historical?.provider || payload?.metadata?.historical?.provider || '').toLowerCase();
   const histAvailability = String(payload?.data?.historical?.availability?.status || payload?.data?.availability?.status || '').toLowerCase();
+  const hasDecisionCore = Boolean(payload?.decision_core_min || payload?.data?.decision_core_min);
+  const readiness = payload?.analysis_readiness || payload?.data?.analysis_readiness || {};
+  const readinessOk = String(readiness?.decision_bundle_status || readiness?.status || '').toUpperCase() === 'OK'
+    || String(readiness?.status || '').toUpperCase() === 'READY';
   const minimal = histProvider.includes('page-core-minimal') || histAvailability === 'page_core_minimal';
   if (bars.length >= 3) return field(true, 'VALID', null, false, bars[bars.length - 1]?.date || null);
   if (minimal || (ssotBars != null && ssotBars > 10)) {
+    if (hasDecisionCore && readinessOk) {
+      return field(null, 'WARNING', 'chart history unavailable', false, null);
+    }
     return field(null, 'BLOCK', 'chart contract failed', false, null);
   }
   return field(null, 'WARNING', 'chart history unavailable', false, null);

@@ -78,8 +78,15 @@ export async function fetchPageCore(ticker) {
   };
 }
 
+function canonicalAssetQuery(ticker) {
+  const assetId = String(ticker || '').trim().toUpperCase();
+  return /^[A-Z0-9_.-]+:[A-Z0-9_.-]+$/.test(assetId)
+    ? `?asset_id=${encodeURIComponent(assetId)}`
+    : '';
+}
+
 export async function fetchV2Historical(ticker) {
-  const payload = await fetchJsonWithTimeout(`/api/v2/stocks/${encodeURIComponent(ticker)}/historical`);
+  const payload = await fetchJsonWithTimeout(`/api/v2/stocks/${encodeURIComponent(ticker)}/historical${canonicalAssetQuery(ticker)}`);
   if (!payload.ok) throw new Error(payload.error?.message || 'V2 historical response not ok');
   return { ok: true, data: payload.data, meta: payload.meta, source: 'v2_historical' };
 }
@@ -91,7 +98,7 @@ export async function fetchV2Governance(ticker) {
 }
 
 export async function fetchV2HistoricalProfile(ticker) {
-  const payload = await fetchJsonWithTimeout(`/api/v2/stocks/${encodeURIComponent(ticker)}/historical-profile`);
+  const payload = await fetchJsonWithTimeout(`/api/v2/stocks/${encodeURIComponent(ticker)}/historical-profile${canonicalAssetQuery(ticker)}`);
   if (!payload.ok) throw new Error(payload.error?.message || 'V2 historical-profile response not ok');
   return { ok: true, data: payload.data, meta: payload.meta, source: 'v2_historical_profile' };
 }
@@ -130,6 +137,13 @@ function isoDate(value) {
 function finiteNumber(value) {
   const n = Number(value);
   return Number.isFinite(n) ? n : null;
+}
+
+function grossScaleMismatch(a, b) {
+  const left = finiteNumber(a);
+  const right = finiteNumber(b);
+  if (left == null || right == null || left <= 0 || right <= 0) return false;
+  return Math.max(left, right) / Math.min(left, right) >= 5;
 }
 
 function isoDay(date = new Date()) {
@@ -782,8 +796,12 @@ export function transformV2ToStockShape(v2Data, v2Meta, historicalData = null, g
   const summaryPriceDate = toIsoDate(v2Data?.market_prices?.date);
   const historicalLatestDate = historicalBars.length ? toIsoDate(historicalBars[historicalBars.length - 1]?.date) : null;
   const decisionCoreHasPageCoreBasis = Boolean(decisionCoreMin && summaryPriceDate);
+  const summaryClose = finiteNumber(v2Data?.market_prices?.close);
+  const historicalLatestClose = historicalBars.length ? finiteNumber(historicalBars[historicalBars.length - 1]?.close ?? historicalBars[historicalBars.length - 1]?.adjClose) : null;
+  const historicalBarsPriceCompatible = !decisionCoreHasPageCoreBasis || !grossScaleMismatch(summaryClose, historicalLatestClose);
   const historicalBarsCurrentEnough = Boolean(
     historicalBars.length
+    && historicalBarsPriceCompatible
     && (!summaryPriceDate
       || !historicalLatestDate
       || (decisionCoreHasPageCoreBasis ? historicalLatestDate === summaryPriceDate : historicalLatestDate >= summaryPriceDate))

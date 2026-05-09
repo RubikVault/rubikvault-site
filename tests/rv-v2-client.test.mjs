@@ -70,6 +70,22 @@ describe('fetchV2Historical', () => {
       global.fetch = originalFetch;
     }
   });
+
+  it('passes canonical asset_id for colon ids so runtime history cannot fall back to same-symbol US cache', async () => {
+    const seen = [];
+    global.fetch = async (url) => {
+      const href = String(url);
+      seen.push(href);
+      return { ok: true, json: async () => ({ ok: true, data: { bars: [] }, meta: {} }) };
+    };
+    try {
+      const result = await fetchV2Historical('US:CP');
+      assert.equal(result.ok, true);
+      assert.equal(seen[0], '/api/v2/stocks/US%3ACP/historical?asset_id=US%3ACP');
+    } finally {
+      global.fetch = originalFetch;
+    }
+  });
 });
 
 describe('transformV2ToStockShape', () => {
@@ -269,6 +285,44 @@ describe('transformV2ToStockShape', () => {
     assert.equal(payload.data.market_prices.date, '2026-05-07');
     assert.equal(payload.metadata.as_of, '2026-05-07');
     assert.equal(payload.data.ssot.market_context.latest_bar_date, '2026-05-07');
+  });
+
+  it('does not let same-date wrong-symbol historical cache override decision-core page-core price basis', () => {
+    const payload = transformV2ToStockShape(
+      {
+        ticker: 'CP',
+        latest_bar: { date: '2026-05-08', close: 86.04 },
+        market_prices: { close: 86.04, date: '2026-05-08', source_provider: 'page-core' },
+        market_stats: {
+          as_of: '2026-05-08',
+          source_provider: 'page-core',
+          stats: {
+            rsi14: 52,
+            atr14: 2.4,
+            volatility_percentile: 48,
+            high_52w: 92,
+            low_52w: 68,
+            sma20: 84,
+            sma50: 82,
+            sma200: 78,
+          },
+        },
+        decision_core_min: {
+          decision: { primary_action: 'BUY', analysis_reliability: 'MEDIUM' },
+          trade_guard: { max_entry_price: 87, invalidation_level: 82 },
+        },
+      },
+      { data_date: '2026-05-08', provider: 'page-core' },
+      {
+        bars: [{ date: '2026-05-08', close: 1408.4 }],
+      },
+      { universe: { name: 'Canadian Pacific Kansas City Limited', asset_class: 'STOCK' } },
+    );
+
+    assert.equal(payload.data.market_prices.close, 86.04);
+    assert.equal(payload.metadata.as_of, '2026-05-08');
+    assert.equal(payload.data.bars[payload.data.bars.length - 1].close, 86.04);
+    assert.equal(payload.data.ssot.market_context.use_historical_basis, false);
   });
 
   it('passes historical-profile payload through the transformed stock shape', () => {
