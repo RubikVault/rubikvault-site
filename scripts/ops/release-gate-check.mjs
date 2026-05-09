@@ -1014,12 +1014,13 @@ log(`Deploy proof written: ${DEPLOY_PROOF_PATH}`);
 
 // 6. Publish the finalized public proof. Static Pages cannot update one file after
 // deploy, so this performs a proof-only finalization deploy of the same bundle
-// with the post-deploy proof overlaid. Caching stays enabled here to avoid a full
-// re-upload when Cloudflare can reuse unchanged assets.
+// with the post-deploy proof overlaid. Keep skip-caching enabled here too:
+// cached finalization deploys have produced post-smoke 1102s on Functions while
+// the initial skip-caching deploy for the same bundle stayed healthy.
 if (!skipSmokes && PUBLIC_DEPLOY_PROOF_FINALIZE) {
   log('Publishing finalized public post-deploy proof...');
   const proofPublish = runWranglerDeploy(PAGES_DEPLOY_BRANCH, {
-    skipCaching: false,
+    skipCaching: true,
     purpose: 'public_deploy_proof_finalize',
   });
   log(`Public proof finalized: url=${proofPublish.deployment_url} id=${proofPublish.deployment_id}`);
