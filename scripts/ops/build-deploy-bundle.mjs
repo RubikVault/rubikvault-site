@@ -571,12 +571,20 @@ function buildHistProbsPublicProjection() {
     const latest = readJson(latestPath) || {};
     const shardCount = Number(latest.shard_count || 0);
     const profileCount = Number(latest.profile_count || 0);
+    const latestMtime = Math.max(fs.statSync(latestPath).mtimeMs, fs.statSync(manifestPath).mtimeMs);
+    const sourceMarkers = [
+      path.join(sourceDir, 'run-summary.json'),
+      path.join(sourceDir, 'regime-daily.json'),
+      path.join(sourceDir, 'deferred-latest.json'),
+    ].filter((item) => fs.existsSync(item));
+    const sourceChanged = sourceMarkers.some((item) => fs.statSync(item).mtimeMs > latestMtime);
     const hasShards = shardCount > 0
       && fs.existsSync(path.join(outputDir, 'shards', `${String(Math.max(0, shardCount - 1)).padStart(3, '0')}.json`));
-    if (profileCount > 0 && hasShards) {
+    if (profileCount > 0 && hasShards && !sourceChanged) {
       log(`Hist-probs public projection reused (${profileCount} profiles, ${shardCount} shards). Set RV_HIST_PROBS_PUBLIC_PROJECTION_FORCE=1 to rebuild.`);
       return;
     }
+    if (sourceChanged) log('Hist-probs public projection rebuild required: source markers newer than public projection.');
   }
   const r = spawnSync(process.execPath, [
     path.join(REPO_ROOT, 'scripts/ops/build-hist-probs-public-projection.mjs'),
