@@ -243,6 +243,70 @@ async function readDecisionCoreBuyRows(targetMarketDate = null) {
   return { latest: manifest, rows, manifest };
 }
 
+async function readPageCorePointer(targetMarketDate = null) {
+  const candidates = [
+    path.join(REPO_ROOT, 'public/data/page-core/latest.json'),
+    path.join(REPO_ROOT, 'public/data/page-core/candidates/latest.candidate.json'),
+  ];
+  for (const pointerPath of candidates) {
+    const pointer = await readJsonAbs(pointerPath);
+    if (!pointer) continue;
+    const pointerTarget = normalizeDateId(pointer.target_market_date);
+    if (targetMarketDate && pointerTarget !== targetMarketDate) continue;
+    const manifestPath = String(pointer.manifest_path || '').replace(/^\/data\//, 'public/data/');
+    if (!manifestPath || manifestPath === pointer.manifest_path) continue;
+    const manifest = await readJsonAbs(path.join(REPO_ROOT, manifestPath));
+    if (!manifest || normalizeDateId(manifest.target_market_date) !== pointerTarget) continue;
+    return { pointer, manifest, manifestPath };
+  }
+  return null;
+}
+
+async function buildPageCoreBuyGuard(targetMarketDate = null) {
+  const pageCore = await readPageCorePointer(targetMarketDate);
+  if (!pageCore) {
+    return {
+      available: false,
+      target_market_date: targetMarketDate || null,
+      buy_ids: new Set(),
+      confirmed_buy_total: 0,
+      rows_scanned: 0,
+      missing_core_total: 0,
+      source: null,
+    };
+  }
+  const snapshotPath = String(pageCore.pointer.snapshot_path || '').replace(/^\/data\//, 'public/data/');
+  const pageDir = path.join(REPO_ROOT, snapshotPath, 'page-shards');
+  const buyIds = new Set();
+  let rowsScanned = 0;
+  let missingCoreTotal = 0;
+  const files = (await fs.readdir(pageDir)).filter((name) => name.endsWith('.json.gz')).sort();
+  for (const file of files) {
+    const payload = JSON.parse(zlib.gunzipSync(await fs.readFile(path.join(pageDir, file))).toString('utf8'));
+    const entries = Array.isArray(payload)
+      ? payload.map((row) => [row?.asset_id || row?.canonical_id || '', row])
+      : Object.entries(payload || {});
+    for (const [key, row] of entries) {
+      rowsScanned += 1;
+      const id = String(row?.asset_id || row?.canonical_id || key || '').toUpperCase();
+      if (!id) continue;
+      const coreAction = String(row?.decision_core_min?.decision?.primary_action || '').toUpperCase();
+      if (!coreAction) missingCoreTotal += 1;
+      if (coreAction === 'BUY') buyIds.add(id);
+    }
+  }
+  return {
+    available: true,
+    target_market_date: normalizeDateId(pageCore.pointer.target_market_date),
+    snapshot_id: pageCore.pointer.snapshot_id || null,
+    buy_ids: buyIds,
+    confirmed_buy_total: buyIds.size,
+    rows_scanned: rowsScanned,
+    missing_core_total: missingCoreTotal,
+    source: pageCore.pointer.status || null,
+  };
+}
+
 async function mapWithConcurrency(items, limit, mapper) {
   const out = new Array(items.length);
   let cursor = 0;
@@ -612,7 +676,16 @@ async function main() {
       ? await readDecisionBundleBuyRows(requestedTargetDate)
       : null;
   if (decisionBundleMode) {
-    const buyRows = decisionBundleMode.rows || [];
+    let buyRows = decisionBundleMode.rows || [];
+    let pageCoreGuard = null;
+    if (decisionSource === 'decision-core') {
+      pageCoreGuard = await buildPageCoreBuyGuard(requestedTargetDate);
+      if (pageCoreGuard.available) {
+        const before = buyRows.length;
+        buyRows = buyRows.filter((row) => pageCoreGuard.buy_ids.has(String(row?.canonical_id || '').toUpperCase()));
+        pageCoreGuard.filtered_buy_rows = before - buyRows.length;
+      }
+    }
     const horizonBuilder = decisionSource === 'decision-core' ? buildDecisionCoreHorizonRows : buildHorizonRows;
     const horizonsByClass = { stocks: {}, etfs: {} };
     for (const horizon of ['short', 'medium', 'long']) {
@@ -651,6 +724,15 @@ async function main() {
           decision_bundle_buy_rows: buyRows.length,
           unique_tickers: new Set(buyRows.map((row) => row.ticker)).size,
         },
+        page_core_guard: pageCoreGuard ? {
+          available: pageCoreGuard.available,
+          target_market_date: pageCoreGuard.target_market_date || null,
+          snapshot_id: pageCoreGuard.snapshot_id || null,
+          confirmed_buy_total: pageCoreGuard.confirmed_buy_total || 0,
+          filtered_buy_rows: pageCoreGuard.filtered_buy_rows || 0,
+          rows_scanned: pageCoreGuard.rows_scanned || 0,
+          missing_core_total: pageCoreGuard.missing_core_total || 0,
+        } : null,
         verified_counts: emittedCounts,
         rows_emitted: {
           ...emittedCounts,

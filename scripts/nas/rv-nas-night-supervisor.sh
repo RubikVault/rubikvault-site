@@ -356,7 +356,7 @@ step_resource_class() {
     hist_probs|hist_probs_catchup|snapshot|learning_daily|decision_core_shadow)
       printf '%s\n' "heavy"
       ;;
-    build_global_scope|forecast_daily|build_fundamentals|quantlab_daily_report|breakout_v12|scientific_summary|decision_module_scorecard|decision_core_outcome_bootstrap|v1_audit|cutover_readiness|etf_diagnostic|page_core_bundle|public_history_shards|hist_probs_v2_shadow|classifier_audit)
+    build_global_scope|forecast_daily|build_fundamentals|quantlab_daily_report|breakout_v12|scientific_summary|decision_module_scorecard|decision_core_outcome_bootstrap|v1_audit|cutover_readiness|etf_diagnostic|page_core_bundle|best_setups_core|public_history_shards|hist_probs_v2_shadow|classifier_audit)
       printf '%s\n' "medium"
       ;;
     *)
@@ -449,6 +449,9 @@ step_heap_mb() {
       ;;
     decision_core_shadow)
       printf '%s\n' "${RV_DECISION_CORE_HEAP_MB:-8192}"
+      ;;
+    best_setups_core)
+      printf '%s\n' "${RV_BEST_SETUPS_CORE_HEAP_MB:-2048}"
       ;;
     learning_daily|v1_audit|cutover_readiness|stock_analyzer_universe_audit|ui_field_truth_report|page_core_bundle|page_core_smoke|final_integrity_seal|hist_probs_v2_shadow|classifier_audit)
       printf '%s\n' 1536
@@ -603,6 +606,9 @@ step_command() {
       ;;
     page_core_bundle)
       printf '%s\n' "RV_DECISION_CORE_SOURCE='\${RV_DECISION_CORE_SOURCE:-legacy}' NODE_OPTIONS='--max-old-space-size=${RV_PAGE_CORE_HEAP_MB:-8192}' node scripts/ops/build-page-core-bundle.mjs --target-market-date '$TARGET_MARKET_DATE' --replace --incremental && node scripts/ops/build-stock-analyzer-provider-exceptions.mjs --target-market-date '$TARGET_MARKET_DATE' && node scripts/ops/build-stock-analyzer-ui-state-summary.mjs --latest public/data/page-core/candidates/latest.candidate.json && node scripts/universe-v7/rebuild-search-exact-from-registry.mjs && node scripts/universe-v7/verify-search-registry-sync.mjs && node scripts/ops/retention-page-core-bundles.mjs"
+      ;;
+    best_setups_core)
+      printf '%s\n' "if [ \"\${RV_DECISION_CORE_SOURCE:-legacy}\" = \"core\" ]; then ALLOW_REMOTE_BAR_FETCH=0 BEST_SETUPS_DISABLE_NETWORK=1 BEST_SETUPS_DECISION_SOURCE=decision-core node scripts/build-best-setups-v4.mjs && node scripts/decision-core/build-buy-breadth-proof.mjs --target-market-date '$TARGET_MARKET_DATE'; else echo \"best_setups_core_skipped source=\${RV_DECISION_CORE_SOURCE:-legacy}\"; fi"
       ;;
     classifier_audit)
       printf '%s\n' "node scripts/audit/classifier/run-all.mjs --verbose"
@@ -916,7 +922,7 @@ run_step() {
   fi
 
   case "$step_id" in
-    build_global_scope|provider_health_preflight|q1_delta_proof_report|hist_probs|hist_probs_catchup|hist_probs_v2_shadow|snapshot|page_core_bundle|classifier_audit|public_history_shards|learning_daily|decision_module_scorecard|decision_core_outcome_bootstrap|forecast_daily|build_fundamentals|quantlab_daily_report|breakout_v12|scientific_summary|v1_audit|cutover_readiness|etf_diagnostic|stage1_ops_pack|system_status_report|resource_budget_report|data_freshness_report|pipeline_epoch|generate_meta_dashboard_data|signal_performance_report|dp8_market|runtime_preflight|stock_analyzer_universe_audit|ui_field_truth_report|stock_ui_integrity_audit|page_core_smoke|final_integrity_seal|build_deploy_bundle|pre_deploy_smoke|wrangler_deploy|code_manifest_guard|lock_policy_report)
+    build_global_scope|provider_health_preflight|q1_delta_proof_report|hist_probs|hist_probs_catchup|hist_probs_v2_shadow|snapshot|page_core_bundle|best_setups_core|classifier_audit|public_history_shards|learning_daily|decision_module_scorecard|decision_core_outcome_bootstrap|forecast_daily|build_fundamentals|quantlab_daily_report|breakout_v12|scientific_summary|v1_audit|cutover_readiness|etf_diagnostic|stage1_ops_pack|system_status_report|resource_budget_report|data_freshness_report|pipeline_epoch|generate_meta_dashboard_data|signal_performance_report|dp8_market|runtime_preflight|stock_analyzer_universe_audit|ui_field_truth_report|stock_ui_integrity_audit|page_core_smoke|final_integrity_seal|build_deploy_bundle|pre_deploy_smoke|wrangler_deploy|code_manifest_guard|lock_policy_report)
       measure_args+=(--set-env "NODE_OPTIONS=--max-old-space-size=$heap_mb")
       ;;
   esac
@@ -1009,6 +1015,7 @@ lane_steps() {
       decision_core_outcome_bootstrap \
       snapshot \
       page_core_bundle \
+      best_setups_core \
       classifier_audit \
       public_history_shards \
       etf_diagnostic \
