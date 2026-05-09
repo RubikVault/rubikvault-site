@@ -1,4 +1,6 @@
 scripts/nas/rv-nas-night-supervisor.sh
+scripts/nas/run-nightly-full-pipeline-if-no-backfill.sh
+scripts/nas/detect-new-eod-bars.mjs
 scripts/nas/nas-env.sh
 scripts/nas/safe-code-sync.sh
 scripts/nas/verify-code-manifest.mjs
@@ -6,11 +8,13 @@ scripts/nas/inputs/release-truth-chain.paths
 schemas/stock-analyzer/page-core.v1.schema.json
 extract_buys.py
 public/index.html
+public/stock.html
 public/dashboard_v7.html
 public/js/decision-core-ui-map.js
 public/js/rv-v2-client.js
 public/js/stock-data-guard.js
 public/js/stock-page-view-model.js
+public/js/stock-features.js
 scripts/build-best-setups-v4.mjs
 scripts/hist-probs/run-region-aware-catchup.mjs
 scripts/decision-core/analysis-reliability.mjs
@@ -79,6 +83,7 @@ scripts/ops/apply-history-touch-report-to-registry.mjs
 scripts/ops/report-history-coverage.mjs
 scripts/ops/release-gate-check.mjs
 scripts/quantlab/refresh_v7_history_from_eodhd.py
+functions/api/_shared/stock-states-v1.js
 functions/api/universe.js
 functions/api/_shared/history-store.mjs
 functions/api/_shared/fundamentals-scope.mjs

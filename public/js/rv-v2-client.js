@@ -628,24 +628,29 @@ function deriveStatesFromMarketContext({ stats = {}, close = null, latestBar = n
   const volPctile = Number(stats?.volatility_percentile);
   let trend = 'UNKNOWN';
   if (Number.isFinite(price) && Number.isFinite(sma20) && Number.isFinite(sma50) && Number.isFinite(sma200)) {
-    if (price > sma20 && sma20 > sma50 && sma50 > sma200) trend = 'STRONG_UP';
-    else if (price > sma50 && sma50 >= sma200) trend = 'UP';
-    else if (price < sma20 && sma20 < sma50 && sma50 < sma200) trend = 'STRONG_DOWN';
-    else if (price < sma50 && sma50 <= sma200) trend = 'DOWN';
+    const stackBullish = sma20 > sma50 && sma50 > sma200;
+    const stackBearish = sma20 < sma50 && sma50 < sma200;
+    if (stackBullish && price > sma20) trend = 'STRONG_UP';
+    else if (stackBullish && price > sma200) trend = 'UP';
+    else if (stackBullish) trend = 'RANGE';
+    else if (stackBearish && price < sma20) trend = 'STRONG_DOWN';
+    else if (stackBearish && price < sma200) trend = 'DOWN';
+    else if (stackBearish) trend = 'RANGE';
     else trend = 'RANGE';
   }
   let momentum = 'UNKNOWN';
   if (Number.isFinite(rsi14)) {
-    if (rsi14 < 30) momentum = 'OVERSOLD';
-    else if (rsi14 < 45) momentum = 'BEARISH';
-    else if (rsi14 <= 55) momentum = 'NEUTRAL';
-    else if (rsi14 <= 70) momentum = 'BULLISH';
-    else momentum = 'OVERBOUGHT';
+    const macdHist = Number(stats?.macd_hist);
+    if (rsi14 >= 80) momentum = 'OVERBOUGHT';
+    else if (rsi14 <= 20) momentum = 'OVERSOLD';
+    else if (rsi14 >= 60 || (rsi14 >= 50 && Number.isFinite(macdHist) && macdHist > 0)) momentum = 'BULLISH';
+    else if (rsi14 <= 40 || (rsi14 <= 50 && Number.isFinite(macdHist) && macdHist < 0)) momentum = 'BEARISH';
+    else momentum = 'NEUTRAL';
   }
   let volatility = 'UNKNOWN';
   if (Number.isFinite(volPctile)) {
     const normalizedVolPctile = volPctile <= 1 ? volPctile * 100 : volPctile;
-    volatility = normalizedVolPctile >= 90 ? 'EXTREME' : normalizedVolPctile >= 70 ? 'HIGH' : normalizedVolPctile <= 25 ? 'LOW' : 'NORMAL';
+    volatility = normalizedVolPctile > 90 ? 'EXTREME' : normalizedVolPctile > 75 ? 'HIGH' : normalizedVolPctile < 10 ? 'COMPRESSED' : normalizedVolPctile < 25 ? 'LOW' : 'NORMAL';
   }
   return {
     trend,

@@ -87,7 +87,8 @@ describe('transformV2ToStockShape', () => {
     ).states.volatility;
 
     assert.equal(base(42.86), 'NORMAL');
-    assert.equal(base(75), 'HIGH');
+    assert.equal(base(75), 'NORMAL');
+    assert.equal(base(76), 'HIGH');
     assert.equal(base(95), 'EXTREME');
     assert.equal(base(0.42), 'NORMAL');
   });

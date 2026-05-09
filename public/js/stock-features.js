@@ -479,10 +479,11 @@ function _analyzeTrendDuration(bars) {
     const sma200 = _computeSMA(closes.slice(0, i + 1), 200);
     if (!sma20 || !sma50 || !sma200 || c === 0) continue;
 
-    const slope20 = (sma20 - sma50) / sma50;
+    const stackBullish = sma20 > sma50 && sma50 > sma200;
+    const stackBearish = sma20 < sma50 && sma50 < sma200;
     let dayState = 'RANGE';
-    if (c > sma20 && c > sma50 && c > sma200 && slope20 > 0) dayState = 'UP';
-    else if (c < sma20 && c < sma50 && c < sma200 && slope20 < 0) dayState = 'DOWN';
+    if (stackBullish && c > sma200) dayState = 'UP';
+    else if (stackBearish && c < sma200) dayState = 'DOWN';
 
     if (!currentPhase || currentPhase.state !== dayState) {
       if (currentPhase) {

@@ -33,16 +33,17 @@ export function classifyTrend(stats, close) {
   const s20 = fin(stats?.sma20);
   const s50 = fin(stats?.sma50);
   const s200 = fin(stats?.sma200);
-  if (c == null || s50 == null || s200 == null) return TREND_STATE.UNKNOWN;
+  if (c == null || s20 == null || s50 == null || s200 == null) return TREND_STATE.UNKNOWN;
 
-  const slope = s50 !== 0 ? (s20 != null ? (s20 - s50) / s50 : 0) : 0;
-  const aboveAll = s20 != null && c > s20 && c > s50 && c > s200;
-  const belowAll = s20 != null && c < s20 && c < s50 && c < s200;
+  const stackBullish = s20 > s50 && s50 > s200;
+  const stackBearish = s20 < s50 && s50 < s200;
 
-  if (aboveAll && slope > 0.02) return TREND_STATE.STRONG_UP;
-  if (aboveAll || (c > s50 && s50 > s200)) return TREND_STATE.UP;
-  if (belowAll && slope < -0.02) return TREND_STATE.STRONG_DOWN;
-  if (belowAll || (c < s50 && s50 < s200)) return TREND_STATE.DOWN;
+  if (stackBullish && c > s20) return TREND_STATE.STRONG_UP;
+  if (stackBullish && c > s200) return TREND_STATE.UP;
+  if (stackBullish) return TREND_STATE.RANGE;
+  if (stackBearish && c < s20) return TREND_STATE.STRONG_DOWN;
+  if (stackBearish && c < s200) return TREND_STATE.DOWN;
+  if (stackBearish) return TREND_STATE.RANGE;
   return TREND_STATE.RANGE;
 }
 

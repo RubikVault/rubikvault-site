@@ -170,24 +170,29 @@ export function classifyClientStates(stats) {
   const volPctile = stats.volatility_percentile;
   let trend = 'UNKNOWN';
   if ([price, sma20, sma50, sma200].every(Number.isFinite)) {
-    if (price > sma20 && sma20 > sma50 && sma50 > sma200) trend = 'STRONG_UP';
-    else if (price > sma50 && sma50 >= sma200) trend = 'UP';
-    else if (price < sma20 && sma20 < sma50 && sma50 < sma200) trend = 'STRONG_DOWN';
-    else if (price < sma50 && sma50 <= sma200) trend = 'DOWN';
+    const stackBullish = sma20 > sma50 && sma50 > sma200;
+    const stackBearish = sma20 < sma50 && sma50 < sma200;
+    if (stackBullish && price > sma20) trend = 'STRONG_UP';
+    else if (stackBullish && price > sma200) trend = 'UP';
+    else if (stackBullish) trend = 'RANGE';
+    else if (stackBearish && price < sma20) trend = 'STRONG_DOWN';
+    else if (stackBearish && price < sma200) trend = 'DOWN';
+    else if (stackBearish) trend = 'RANGE';
     else trend = 'RANGE';
   }
   let momentum = 'UNKNOWN';
   if (Number.isFinite(rsi14)) {
-    if (rsi14 < 30) momentum = 'OVERSOLD';
-    else if (rsi14 < 45) momentum = 'BEARISH';
-    else if (rsi14 <= 55) momentum = 'NEUTRAL';
-    else if (rsi14 <= 70) momentum = 'BULLISH';
-    else momentum = 'OVERBOUGHT';
+    const macdHist = Number(stats.macd_hist);
+    if (rsi14 >= 80) momentum = 'OVERBOUGHT';
+    else if (rsi14 <= 20) momentum = 'OVERSOLD';
+    else if (rsi14 >= 60 || (rsi14 >= 50 && Number.isFinite(macdHist) && macdHist > 0)) momentum = 'BULLISH';
+    else if (rsi14 <= 40 || (rsi14 <= 50 && Number.isFinite(macdHist) && macdHist < 0)) momentum = 'BEARISH';
+    else momentum = 'NEUTRAL';
   }
   let volatility = 'UNKNOWN';
   if (Number.isFinite(volPctile)) {
     const normalized = volPctile <= 1 ? volPctile * 100 : volPctile;
-    volatility = normalized >= 90 ? 'EXTREME' : normalized >= 70 ? 'HIGH' : normalized <= 25 ? 'LOW' : 'NORMAL';
+    volatility = normalized > 90 ? 'EXTREME' : normalized > 75 ? 'HIGH' : normalized < 10 ? 'COMPRESSED' : normalized < 25 ? 'LOW' : 'NORMAL';
   }
   return { trend, momentum, volatility };
 }
@@ -333,11 +338,14 @@ export async function layer03InvariantViolations(options = {}) {
     if ([close, sma20, sma50, sma200].every(Number.isFinite) && close > sma20 && sma20 > sma50 && sma50 > sma200 && client.trend !== 'STRONG_UP') {
       violations.push('price_gt_sma20_gt_sma50_gt_sma200_requires_strong_up');
     }
+    if ([close, sma20, sma50, sma200].every(Number.isFinite) && sma20 > sma50 && sma50 > sma200 && close > sma200 && client.trend === 'RANGE') {
+      violations.push('bullish_stack_pullback_above_sma200_not_range');
+    }
     if ([close, sma50, sma200].every(Number.isFinite) && close > sma50 && sma50 > sma200 && client.trend === 'RANGE') {
       violations.push('bullish_stack_price_gt_sma50_not_range');
     }
-    if (Number.isFinite(rsi14) && rsi14 >= 45 && rsi14 <= 55 && client.momentum !== 'NEUTRAL') {
-      violations.push('rsi_45_55_requires_neutral');
+    if (Number.isFinite(rsi14) && rsi14 >= 45 && rsi14 <= 55 && !Number.isFinite(stats.macd_hist) && client.momentum !== 'NEUTRAL') {
+      violations.push('rsi_45_55_without_macd_requires_neutral');
     }
     const action = publicAction(row);
     if (action === 'BUY' && ['DOWN', 'STRONG_DOWN'].includes(client.trend)) violations.push('buy_with_downtrend_display');
@@ -355,14 +363,20 @@ export async function layer03InvariantViolations(options = {}) {
 export async function layer04BoundaryMutation(options = {}) {
   const rows = loadPageCoreRows(options);
   const thresholds = {
-    rsi14: [30, 45, 55, 70],
-    volatility_percentile: [25, 70, 90],
+    rsi14: [20, 30, 40, 45, 50, 55, 60, 70, 80],
+    volatility_percentile: [10, 25, 70, 75, 90],
   };
-  const counts = { scanned: rows.length, near_boundary: 0 };
+  const epsilon = 0.001;
+  const counts = { scanned: rows.length, near_boundary: 0, mutation_flips: 0, rendered_action_flips: 0 };
   const byThreshold = {};
+  const byMutationThreshold = {};
+  const byMutationClassifier = {};
+  const byMutationOperator = {};
   const samples = [];
+  const flipSamples = [];
   for (const { asset_id: assetId, row } of rows) {
     const stats = statsFromPageRow(row);
+    const original = classifyClientStates(stats);
     for (const [field, values] of Object.entries(thresholds)) {
       const value = stats[field];
       if (!Number.isFinite(value)) continue;
@@ -373,10 +387,45 @@ export async function layer04BoundaryMutation(options = {}) {
           inc(byThreshold, `${field}:${threshold}`);
           if (samples.length < 50) samples.push(samplePage(assetId, row, { field, value, threshold, distance }));
         }
+        const belowStats = { ...stats, [field]: threshold - epsilon };
+        const aboveStats = { ...stats, [field]: threshold + epsilon };
+        const below = classifyClientStates(belowStats);
+        const above = classifyClientStates(aboveStats);
+        for (const classifier of ['momentum', 'volatility']) {
+          if (below[classifier] !== above[classifier]) {
+            counts.mutation_flips += 1;
+            inc(byMutationThreshold, `${field}:${threshold}`);
+            inc(byMutationClassifier, classifier);
+            inc(byMutationOperator, `${field}:${threshold}:epsilon_cross`);
+            if (flipSamples.length < 50 && distance <= 1) {
+              flipSamples.push(samplePage(assetId, row, {
+                field,
+                value,
+                threshold,
+                classifier,
+                before: original[classifier],
+                below: below[classifier],
+                above: above[classifier],
+              }));
+            }
+          }
+        }
       }
     }
   }
-  return { layer: '04-boundary-mutation', status: 'OK', counts, by_threshold: topEntries(byThreshold), samples };
+  return {
+    layer: '04-boundary-mutation',
+    status: counts.rendered_action_flips ? 'FAIL' : 'OK',
+    counts,
+    epsilon,
+    by_threshold: topEntries(byThreshold),
+    flip_count_by_threshold: topEntries(byMutationThreshold),
+    flip_count_by_classifier: topEntries(byMutationClassifier),
+    flip_count_by_operator: topEntries(byMutationOperator),
+    samples,
+    top_flipping_assets: flipSamples,
+    daily_flicker_risk_assets: samples.slice(0, 50),
+  };
 }
 
 export async function layer05CoverageDistribution(options = {}) {
@@ -407,17 +456,26 @@ export async function layer06ThresholdLint() {
     'public/js/rv-v2-client.js',
     'public/js/stock-page-view-model.js',
     'public/js/stock-data-guard.js',
+    'public/js/stock-features.js',
+    'public/stock.html',
     'functions/api/_shared/stock-states-v1.js',
     'functions/api/_shared/stock-analyzer-contract.js',
     'scripts/decision-core/classify-p0-regime.mjs',
     'scripts/decision-core/resolve-horizon-state.mjs',
   ];
   const concepts = {
-    rsi: /\brsi\w*\b[^;\n]*(?:<=|>=|<|>)\s*(20|30|40|45|50|55|60|70|80)/ig,
-    volatility: /\b(?:volatility|volPctile|vp|vol)\w*\b[^;\n]*(?:<=|>=|<|>)\s*(10|25|70|75|90)/ig,
-    action_score: /\b(?:score|threshold)\w*\b[^;\n]*(?:<=|>=|<|>)\s*(1\.5|2|3|90|100)/ig,
+    rsi: /\brsi\w*\b[^;\n]*(<=|>=|<|>)\s*(20|30|40|45|50|55|60|70|80)/ig,
+    momentum: /\b(?:macd|momentum)\w*\b[^;\n]*(<=|>=|<|>)\s*(-?0|20|40|50|60|80)/ig,
+    volatility: /\b(?:volatility|volPctile|vp|vol)\w*\b[^;\n]*(<=|>=|<|>)\s*(10|25|70|75|90)/ig,
+    trend_ma_stack: /\b(?:sma20|sma50|sma200|close|price)\w*\b[^;\n]*(<=|>=|<|>)\s*(?:sma20|sma50|sma200|price|close)/ig,
+    action_score: /\b(?:score|threshold)\w*\b[^;\n]*(<=|>=|<|>)\s*(1\.5|2|3|90|100)/ig,
+    confidence_reliability: /\b(?:confidence|reliability)\w*\b[^;\n]*(<=|>=|<|>)\s*(0\.2|0\.4|0\.6|0\.8|20|40|60|80)/ig,
+    risk_label: /\b(?:risk|tail)\w*\b[^;\n]*(<=|>=|<|>)\s*(10|25|50|75|90)/ig,
+    bollinger_position: /\b(?:bbPctB|bb_pct|bollinger)\w*\b[^;\n]*(<=|>=|<|>)\s*(0\.2|0\.5|0\.8)/ig,
+    macd_label: /\bmacd\w*\b[^;\n]*(<=|>=|<|>)\s*(-?0(?:\.0+)?)/ig,
   };
   const findings = [];
+  const aggregation = {};
   for (const rel of files) {
     const abs = path.join(ROOT, rel);
     if (!fs.existsSync(abs)) continue;
@@ -426,11 +484,35 @@ export async function layer06ThresholdLint() {
       for (const match of text.matchAll(re)) {
         const before = text.slice(0, match.index);
         const line = before.split('\n').length;
-        findings.push({ concept, file: rel, line, snippet: match[0].trim().slice(0, 180) });
+        const operator = match[1] || null;
+        const threshold = match[2] || null;
+        const finding = { concept, file: rel, line, operator, threshold, snippet: match[0].trim().slice(0, 180) };
+        findings.push(finding);
+        aggregation[concept] ||= { concept, files: new Set(), operators: new Set(), thresholds: new Set(), findings: 0 };
+        aggregation[concept].files.add(rel);
+        if (operator) aggregation[concept].operators.add(operator);
+        if (threshold) aggregation[concept].thresholds.add(String(threshold));
+        aggregation[concept].findings += 1;
       }
     }
   }
-  return { layer: '06-threshold-lint', status: 'OK', counts: { findings: findings.length }, findings };
+  const conceptsOut = Object.values(aggregation).map((row) => {
+    const operators = [...row.operators].sort();
+    const thresholds = [...row.thresholds].sort((a, b) => Number(a) - Number(b) || a.localeCompare(b));
+    return {
+      concept: row.concept,
+      files: [...row.files].sort(),
+      operators,
+      thresholds,
+      output_classes: [],
+      mixed_operators: operators.length > 1,
+      divergent_thresholds: thresholds.length > 1,
+      findings: row.findings,
+      sot_recommendation: 'functions/api/_shared/stock-states-v1.js + mirrored browser adapter',
+    };
+  });
+  const driftCount = conceptsOut.filter((row) => row.mixed_operators || row.divergent_thresholds).length;
+  return { layer: '06-threshold-lint', status: driftCount ? 'WARN' : 'OK', counts: { findings: findings.length, concepts: conceptsOut.length, drift_concepts: driftCount }, concepts: conceptsOut, findings };
 }
 
 export async function layer07ReasonCodeCoverage() {
@@ -464,20 +546,40 @@ export async function layer07ReasonCodeCoverage() {
 
 export async function layer08CanBuyGateCliff() {
   const { rows, manifest } = loadDecisionRows();
-  const counts = { decision_rows: rows.length, buy_rows: 0, cliff_cases: 0, best_setups_filter_fail_for_server_buy: 0 };
+  const gateDefinitions = [
+    { gate: 'eligibility_status', description: 'eligibility_status must be ELIGIBLE' },
+    { gate: 'decision_grade', description: 'decision_grade must be true' },
+    { gate: 'candidate_rank', description: 'asset must pass candidate/rank eligibility; audited indirectly from emitted decision row' },
+    { gate: 'primary_setup', description: 'primary_setup must not be none' },
+    { gate: 'evidence_effective_n', description: 'effective evidence must be present' },
+    { gate: 'ev_proxy_bucket', description: 'EV proxy bucket must be positive' },
+    { gate: 'tail_risk_bucket', description: 'tail risk must be LOW or MEDIUM' },
+    { gate: 'cost_proxy', description: 'cost proxy must be available and not high' },
+    { gate: 'analysis_reliability', description: 'analysis reliability must not be LOW' },
+    { gate: 'entry_invalidation_guard', description: 'max entry and invalidation must be complete' },
+    { gate: 'blocking_reason_code', description: 'blocking reason codes must be absent' },
+  ];
+  const counts = { decision_rows: rows.length, buy_rows: 0, single_gate_cliffs: 0, two_gate_near_cliffs: 0, best_setups_filter_fail_for_server_buy: 0 };
   const gateFailures = {};
   const cliffByGate = {};
+  const twoCliffByGate = {};
   const bestFilterFailures = {};
   const cliff_samples = [];
+  const two_gate_samples = [];
   const filter_samples = [];
   for (const row of rows) {
     if (row?.decision?.primary_action === 'BUY') counts.buy_rows += 1;
     const failures = buyGateFailures(row);
     for (const failure of failures) inc(gateFailures, failure);
     if (failures.length === 1) {
-      counts.cliff_cases += 1;
+      counts.single_gate_cliffs += 1;
       inc(cliffByGate, failures[0]);
       if (cliff_samples.length < 50) cliff_samples.push(sampleDecision(row, { single_failure: failures[0] }));
+    }
+    if (failures.length === 2) {
+      counts.two_gate_near_cliffs += 1;
+      inc(twoCliffByGate, failures.join('|'));
+      if (two_gate_samples.length < 50) two_gate_samples.push(sampleDecision(row, { failures }));
     }
     if (row?.decision?.primary_action === 'BUY') {
       const filterFailures = bestSetupsFilterFailures(row);
@@ -488,15 +590,27 @@ export async function layer08CanBuyGateCliff() {
       }
     }
   }
+  const status = counts.best_setups_filter_fail_for_server_buy
+    ? 'FAIL'
+    : counts.single_gate_cliffs === 0
+      ? 'WARN'
+      : 'OK';
   return {
     layer: '08-canbuy-gate-cliff',
-    status: counts.best_setups_filter_fail_for_server_buy ? 'FAIL' : 'OK',
+    status,
     target_market_date: manifest.target_market_date,
+    gate_definitions: gateDefinitions,
     counts,
-    gate_failures: topEntries(gateFailures),
+    failure_histogram_all_assets: topEntries(gateFailures),
+    failure_histogram_candidates: topEntries(gateFailures),
     cliff_by_gate: topEntries(cliffByGate),
+    two_gate_near_cliffs: topEntries(twoCliffByGate),
     best_setups_filter_failures_for_server_buy: topEntries(bestFilterFailures),
+    explanation: counts.single_gate_cliffs === 0
+      ? 'No single-gate cliffs found. This is acceptable only if broad multi-gate rejection is expected for the universe; inspect failure_histogram_all_assets.'
+      : 'Single-gate cliff cases present for calibration review.',
     cliff_samples,
+    two_gate_samples,
     filter_samples,
   };
 }
@@ -515,32 +629,54 @@ export async function layer09BuyEndToEndConsistency() {
   }
   const bestSet = new Map(bestRows.map((row) => [row.canonical_id || row.canonical_asset_id, row]).filter(([id]) => id));
   const clientDemoted = [];
-  for (const [assetId, best] of bestSet.entries()) {
-    const core = serverBuy.get(assetId);
-    if (!core) continue;
+  const clientDemotedByCode = {};
+  for (const [assetId, core] of serverBuy.entries()) {
     const mapped = mapDecisionCoreToUi(core, registry);
-    if (mapped.action !== 'BUY') clientDemoted.push(sampleDecision(core, { mapped_action: mapped.action, warnings: mapped.warnings }));
+    if (mapped.action !== 'BUY') {
+      for (const code of decisionReasonCodes(core)) inc(clientDemotedByCode, code);
+      clientDemoted.push(sampleDecision(core, { mapped_action: mapped.action, warnings: mapped.warnings, in_best_setups: bestSet.has(assetId) }));
+    }
   }
   const droppedByBestSetups = [];
+  let droppedDueToCap = 0;
+  let droppedDueToFilter = 0;
+  let droppedUnexplained = 0;
   for (const [assetId, row] of serverBuy.entries()) {
     if (bestSet.has(assetId)) continue;
-    const reason = serverFilterPass.has(assetId) ? 'capacity_or_ranking_drop' : 'filter_predicate_drop';
+    const filterFailures = bestSetupsFilterFailures(row);
+    let reason = 'unexplained';
+    if (filterFailures.length) {
+      reason = 'filter_predicate_drop';
+      droppedDueToFilter += 1;
+    } else if (serverFilterPass.has(assetId)) {
+      reason = 'capacity_cap';
+      droppedDueToCap += 1;
+    } else {
+      droppedUnexplained += 1;
+    }
     if (droppedByBestSetups.length < 50) droppedByBestSetups.push(sampleDecision(row, { drop_reason: reason, filter_failures: bestSetupsFilterFailures(row) }));
   }
   const counts = {
     server_buy: serverBuy.size,
+    server_buy_client_demoted_total: clientDemoted.length,
     server_buy_filter_pass: serverFilterPass.size,
     best_setups_rows: bestSet.size,
     server_buy_in_best_setups: [...serverBuy.keys()].filter((id) => bestSet.has(id)).length,
     dropped_at_best_setups_total: [...serverBuy.keys()].filter((id) => !bestSet.has(id)).length,
+    dropped_at_best_setups_due_to_cap: droppedDueToCap,
+    dropped_at_best_setups_due_to_filter: droppedDueToFilter,
+    dropped_at_best_setups_unexplained: droppedUnexplained,
     client_demoted_buy_rows: clientDemoted.length,
   };
   return {
     layer: '09-buy-end-to-end-consistency',
-    status: clientDemoted.length ? 'FAIL' : 'OK',
+    status: clientDemoted.length || droppedUnexplained ? 'FAIL' : 'OK',
     target_market_date: manifest.target_market_date,
-    note: 'server BUY rows not emitted by Best-Setups are not automatically bugs because Best-Setups intentionally emits a capped top list.',
+    note: 'server BUY rows absent from Best-Setups v4 are treated as capacity cap when they pass explicit predicates; v5 must expose rank_position and cap_policy directly.',
+    cap_policy_version: 'best_setups_v4_cap_inferred',
+    best_setups_cap_transparency: false,
     counts,
+    server_buy_client_demoted_by_code: topEntries(clientDemotedByCode),
     client_demoted_samples: clientDemoted.slice(0, 50),
     dropped_at_best_setups_samples: droppedByBestSetups,
   };

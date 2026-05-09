@@ -346,11 +346,13 @@ export function guardStructure(states, stats, close) {
   const belowSma200 = Number.isFinite(sma200) && close < sma200;
   const belowSma50 = Number.isFinite(sma50) && close < sma50;
 
-  if (isUp && belowSma200 && belowSma50) {
+  if (isUp && belowSma200) {
     return {
       contradiction: true,
-      note: `Trend=${trend} but price ${close.toFixed(2)} is below SMA200 (${sma200.toFixed(2)}) and SMA50 (${sma50.toFixed(2)})`,
-      warning: `Structure: ${trend} claim contradicts price below SMA200/SMA50`,
+      note: `Trend=${trend} but price ${close.toFixed(2)} is below SMA200 (${sma200.toFixed(2)})${belowSma50 ? ` and SMA50 (${sma50.toFixed(2)})` : ''}`,
+      warning: belowSma50
+        ? `Structure: ${trend} claim contradicts price below SMA200/SMA50`
+        : `Structure: ${trend} claim contradicts price below SMA200`,
     };
   }
 
@@ -444,6 +446,9 @@ export function guardLabels(states, stats, close) {
   // Risk governance: detect backend volatility inconsistency
   if ((vol === 'LOW' || vol === 'COMPRESSED') && Number.isFinite(volPct) && volPct > 75) {
     labels.riskOverride = volPct > 90 ? 'Elevated' : 'Medium';
+    labels.correctedVolatility = volPct > 90 ? 'EXTREME' : 'HIGH';
+    labels.finalVolatility = labels.correctedVolatility;
+    labels.correctedVolatilityReason = 'backend_volatility_inconsistency';
     labels.riskReason = `Backend says ${vol} but volatility at ${volPct}th percentile`;
   }
 

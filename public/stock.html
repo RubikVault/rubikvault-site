@@ -777,11 +777,27 @@
       const trendLabel = trendStateMap[_states.trend] || 'Unknown';
       const maStack = trendWord === 'uptrend' ? 'Constructive' : trendWord === 'downtrend' ? 'Adverse' : 'Mixed';
       const momentumMap = { OVERBOUGHT: 'Overbought', BULLISH: 'Positive', NEUTRAL: 'Neutral', BEARISH: 'Negative', OVERSOLD: 'Oversold', UNKNOWN: 'Unknown' };
-      const rsiZone = momentumMap[_states.momentum] || 'Unknown';
+      const baseRsiZone = momentumMap[_states.momentum] || 'Unknown';
+      const rsiTrendContext = (() => {
+        const rsi = Number(s.rsi14);
+        if (trendWord === 'uptrend' && _states.momentum === 'BEARISH' && Number.isFinite(rsi) && rsi >= 40) return 'Pullback';
+        if (trendWord === 'downtrend' && _states.momentum === 'BULLISH' && Number.isFinite(rsi) && rsi <= 60) return 'Relief rally';
+        if (trendWord === 'mixed' && _states.momentum === 'BEARISH') return 'Soft weakness';
+        if (trendWord === 'mixed' && _states.momentum === 'BULLISH') return 'Soft strength';
+        return baseRsiZone;
+      })();
+      const rsiZone = rsiTrendContext;
       const _rsiSuffix = _guard.corrections.labels?.rsiSuffix || '';
       const rsiFullLabel = rsiZone + (_rsiSuffix ? ' \u00B7 ' + _rsiSuffix : '');
       const rsiColor = { OVERSOLD: 'var(--green)', BEARISH: '#fb923c', NEUTRAL: 'var(--text)', BULLISH: 'var(--accent)', OVERBOUGHT: 'var(--red)', UNKNOWN: 'var(--text-dim)' }[_states.momentum] || 'var(--text-dim)';
-      const macdLabel = s.macd_hist == null ? '—' : s.macd_hist > 0 ? 'Positive' : 'Negative';
+      const macdLabel = (() => {
+        const hist = Number(s.macd_hist);
+        if (!Number.isFinite(hist)) return '—';
+        const abs = Math.abs(hist);
+        if (abs < 0.01) return 'Flat';
+        if (hist > 0) return abs >= 0.1 ? 'Strongly positive' : 'Mildly positive';
+        return abs >= 0.1 ? 'Strongly negative' : 'Mildly negative';
+      })();
       const volPct = s.volatility_20d != null ? (s.volatility_20d * 100).toFixed(1) : null;
       const riskView = buildRiskPresentation({ decision: _decision, states: _states, stats: s });
       const waitStateView = buildWaitStatePresentation({ decision: _decision, states: _states, explanation: _explanation, stats: s, close });
@@ -995,7 +1011,16 @@
       }
 
       // What Changed Data (dynamic) — interpretive first
-      const _bbLabel = bbPctB != null && bbPctB <= 0.2 ? 'Near lower band' : bbPctB >= 0.8 ? 'Near upper band' : 'Range midbound';
+      const _bbLabel = (() => {
+        if (bbPctB == null) return 'Range midbound';
+        if (trendWord === 'uptrend' && bbPctB >= 0.8) return 'Trend strength';
+        if (trendWord === 'uptrend' && bbPctB <= 0.2) return 'Pullback zone';
+        if (trendWord === 'downtrend' && bbPctB >= 0.8) return 'Resistance test';
+        if (trendWord === 'downtrend' && bbPctB <= 0.2) return 'Breakdown risk';
+        if (bbPctB >= 0.8) return 'Range upper edge';
+        if (bbPctB <= 0.2) return 'Range lower edge';
+        return 'Range midbound';
+      })();
       window._whatChangedData = (_decisionBlockedByIntegrity || _assetReturnBlocked) ? {
         '1D': { summary: 'Return narrative unavailable due to data integrity issue.', items: [] },
         '3D': { summary: 'Return narrative unavailable due to data integrity issue.', items: [] },
@@ -1295,10 +1320,11 @@
         } else if (longV === 'BUY' && shortV === 'BUY' && midV === 'BUY') {
           rationale = 'Full alignment across all horizons. Trend, momentum, and structure confirm constructive posture. Standard trend-following setup with defined risk parameters.';
         } else if (longV === 'BUY' && shortV !== 'BUY') {
-          const aboveSma200 = close > (s.sma200 || Infinity);
-          rationale = aboveSma200
-            ? 'Price remains below short-term averages with weakened momentum. The current thesis relies on an oversold rebound within a long-term structural uptrend. Confirmation requires reclaim of short-term levels before expanding risk exposure.'
-            : 'Price is below all major moving averages. Short-term weakness dominates. Long-term models see potential value, but structural confirmation (price above SMA200) is missing. Wait for structural recovery before expanding risk exposure.';
+          const bullishStack = Number.isFinite(s.sma20) && Number.isFinite(s.sma50) && Number.isFinite(s.sma200) && s.sma20 > s.sma50 && s.sma50 > s.sma200;
+          const aboveSma200 = Number.isFinite(close) && Number.isFinite(s.sma200) && close > s.sma200;
+          rationale = bullishStack && aboveSma200
+            ? 'Price remains below short-term averages with weakened momentum. The current thesis relies on a pullback within a structural uptrend. Confirmation requires reclaim of short-term levels before expanding risk exposure.'
+            : 'Short-term weakness dominates. Long-term models see potential value, but a confirmed structural uptrend is missing. Wait for structural recovery before expanding risk exposure.';
         } else if (longV === 'AVOID') {
           rationale = 'Structural downtrend confirmed. All major moving averages signal adverse alignment. No trend-following setup available — wait for base formation and structural recovery before re-evaluation.';
         } else {

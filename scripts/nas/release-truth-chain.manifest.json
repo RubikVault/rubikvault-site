@@ -1,10 +1,10 @@
 {
   "schema": "rv.nas.release_truth_chain_code_manifest.v1",
-  "generated_at": "2026-05-08T22:04:45.282Z",
-  "git_head": "cc836798ef5fbf389597dce93427a3980b8ffdb1",
+  "generated_at": "2026-05-09T07:08:45.848Z",
+  "git_head": "660e75a1f3a4e0a204b166e02edd6f9d87d79952",
   "paths_file": "scripts/nas/inputs/release-truth-chain.paths",
-  "file_count": 87,
-  "combined_hash": "706df2c5ff783af067351c7ef2450e220ca51e073526fdbea1215ec5ce229e0c",
+  "file_count": 92,
+  "combined_hash": "acc91d79443d3febd75d36b00657c967dd86b11a51c2039636036a1a10e156f4",
   "missing": [],
   "files": [
     {
@@ -38,6 +38,11 @@
       "sha256": "22b659e3223664fba96d4c913c676b50f9fe69aa61c0774d96f47c40c7d88cf3"
     },
     {
+      "path": "functions/api/_shared/stock-states-v1.js",
+      "size_bytes": 3477,
+      "sha256": "b3bce9812545fb1f11670505daa63d79440206e3f92835601bcb34bcafdd06bb"
+    },
+    {
       "path": "functions/api/universe.js",
       "size_bytes": 25082,
       "sha256": "05e3718e3852bd41ae9153531ae4885f47dff5b63cbe55e6370f3ba09bbf2d43"
@@ -59,18 +64,28 @@
     },
     {
       "path": "public/js/rv-v2-client.js",
-      "size_bytes": 42015,
-      "sha256": "2f1a8330fb32cb58b35d7a8e26d480c244d765c2568df32b1bbc30521d99ea7b"
+      "size_bytes": 42389,
+      "sha256": "353a750abd0ea059499b4d17b90619d7e6acf6e6bc1a47d1c96ba164b0c3d135"
     },
     {
       "path": "public/js/stock-data-guard.js",
-      "size_bytes": 22877,
-      "sha256": "b5deafaa8908d8887f5cd87e03e75bc53914497d85d491a715704126882c5e07"
+      "size_bytes": 23175,
+      "sha256": "7b799fd92f28b4fa2c566f9752e68c3060f850fa083705f341fcd92ed2c6b21e"
+    },
+    {
+      "path": "public/js/stock-features.js",
+      "size_bytes": 119890,
+      "sha256": "370a5a2dcbbdfdc7b07afde058fe4ad514eb3a4fb2d2d04ff514608eac699585"
     },
     {
       "path": "public/js/stock-page-view-model.js",
       "size_bytes": 45885,
       "sha256": "682be788ab12ecf770f56d55105c2944ad914abbe6f75b5136c0692bc15160b2"
+    },
+    {
+      "path": "public/stock.html",
+      "size_bytes": 180765,
+      "sha256": "329464e8c8eb3c3ce51e40dd3167c43a1ea25ed96813c3de2e08f62a5e641c5c"
     },
     {
       "path": "schemas/stock-analyzer/page-core.v1.schema.json",
@@ -79,8 +94,8 @@
     },
     {
       "path": "scripts/audit/classifier/_lib/audit-core.mjs",
-      "size_bytes": 27204,
-      "sha256": "7fd8dd257d3c5182bc9f68af19f668ee9c6ca2703b657f8b6798502c4425e216"
+      "size_bytes": 34236,
+      "sha256": "493baba206c3a2370017e616856aca690e48bb49130331b515025bd16cf9822d"
     },
     {
       "path": "scripts/audit/classifier/_lib/canbuy-port.mjs",
@@ -159,8 +174,8 @@
     },
     {
       "path": "scripts/audit/classifier/run-all.mjs",
-      "size_bytes": 246,
-      "sha256": "a1cdecf6ef1bdc156da8e77590a192add43513734806cbb649b109b91fda426b"
+      "size_bytes": 299,
+      "sha256": "408fb729d054afe347b77385fbf9f1a54df46c3965aead78f8763c06763b26ea"
     },
     {
       "path": "scripts/build-best-setups-v4.mjs",
@@ -274,8 +289,8 @@
     },
     {
       "path": "scripts/decision-core/resolve-p0-setup.mjs",
-      "size_bytes": 1626,
-      "sha256": "a5ac8fde06f5fafce8b6c219ebddbfe91d8214f1b8f129208621f495fe53538a"
+      "size_bytes": 1939,
+      "sha256": "5a171ea07ed13f58bd57172866ad83b93a4f933c1cf35d28a17f317d635fba1e"
     },
     {
       "path": "scripts/decision-core/run-historical-certification.mjs",
@@ -313,9 +328,14 @@
       "sha256": "9ff26774a6976a6b02dc55936cf62e8f645fc89d80810469216230764208730a"
     },
     {
+      "path": "scripts/nas/detect-new-eod-bars.mjs",
+      "size_bytes": 7360,
+      "sha256": "42818d241d09ba642f9b59169fba7af5f41cca379308a43fa80b490e191084c0"
+    },
+    {
       "path": "scripts/nas/inputs/release-truth-chain.paths",
-      "size_bytes": 3891,
-      "sha256": "577c658e872954da21692ff3aec456a8dc941e7c8aa111271332a0753589194e"
+      "size_bytes": 4070,
+      "sha256": "392dba8cf24e0e67029286e85f25c69cefdad1bafd5d13a88e6d87d3919c49f3"
     },
     {
       "path": "scripts/nas/nas-env.sh",
@@ -323,9 +343,14 @@
       "sha256": "9becf8efc0634d1a09a09fb49da8a03e6c367e76b5e902207d67a6950afab036"
     },
     {
+      "path": "scripts/nas/run-nightly-full-pipeline-if-no-backfill.sh",
+      "size_bytes": 8644,
+      "sha256": "73c9d146bf712eec17c980e7aee2ea27c27f873892eddd6d2013d06700e9bc68"
+    },
+    {
       "path": "scripts/nas/rv-nas-night-supervisor.sh",
-      "size_bytes": 55029,
-      "sha256": "32cff16f44e9c90fbbc1270f12aa980af7cdc7bf16fd618764529bcfb7a7b61f"
+      "size_bytes": 55218,
+      "sha256": "23fb74c6e108af7b32027eaaddef489912e331be9f41d6a38729e231bbe4fcf1"
     },
     {
       "path": "scripts/nas/safe-code-sync.sh",
