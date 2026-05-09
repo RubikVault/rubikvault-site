@@ -13,10 +13,19 @@ test('trend continuation requires bullish MA stack and price above SMA200', () =
   assert.equal(setup.primary_setup, 'trend_continuation');
 });
 
-test('trend continuation is blocked when SMA200 is missing', () => {
+test('trend continuation can use fast-stack fallback when SMA200 is missing', () => {
   const setup = resolveP0Setup({
     eligibility: eligible,
-    regime: { vol_regime: 'normal' },
+    regime: { trend_regime: 'up', vol_regime: 'normal' },
+    features: { close: 105, sma20: 104, sma50: 100, sma200: null, rsi14: 55, ret_20d_pct: 0.04 },
+  });
+  assert.equal(setup.primary_setup, 'trend_continuation');
+});
+
+test('fast-stack fallback is blocked without up regime', () => {
+  const setup = resolveP0Setup({
+    eligibility: eligible,
+    regime: { trend_regime: 'sideways', vol_regime: 'normal' },
     features: { close: 105, sma20: 104, sma50: 100, sma200: null, rsi14: 55, ret_20d_pct: 0.04 },
   });
   assert.equal(setup.primary_setup, 'none');

@@ -1,21 +1,28 @@
-import { finiteNumber, normalizeId } from './shared.mjs';
+import fs from 'node:fs';
+import path from 'node:path';
+import zlib from 'node:zlib';
+import { ROOT, finiteNumber, normalizeId } from './shared.mjs';
+
+const HISTORY_SHARD_CACHE = new Map();
 
 export function buildFastFeatures({ row, indicators = null, eligibility } = {}) {
   const stats = indicatorListToMap(indicators);
-  const recentCloses = Array.isArray(row?._tmp_recent_closes) ? row._tmp_recent_closes.map(finiteNumber).filter((n) => n != null) : [];
+  const registryCloses = Array.isArray(row?._tmp_recent_closes) ? row._tmp_recent_closes.map(finiteNumber).filter((n) => n != null) : [];
+  const historyCloses = publicHistoryCloses(row);
+  const recentCloses = historyCloses.length >= registryCloses.length ? historyCloses : registryCloses;
   const close = eligibility?.close ?? recentCloses.at(-1) ?? finiteNumber(stats.close);
   const avgVolume = finiteNumber(row?.avg_volume_30d ?? row?.avg_volume_10d);
   const dollarVolume = close != null && avgVolume != null ? close * avgVolume : finiteNumber(stats.adv20_dollar);
   const volumeRatio20d = finiteNumber(stats.volume_ratio_20d) ?? ratioLastToAverage(row?._tmp_recent_volumes);
   const liquidityScore = finiteNumber(stats.liquidity_score) ?? liquidityScoreFromDollarVolume(dollarVolume);
   const ret5 = finiteNumber(stats.ret_5d_pct) ?? pctReturn(recentCloses, 5);
-  const ret20 = finiteNumber(stats.ret_20d_pct) ?? pctReturn(recentCloses, Math.min(9, Math.max(1, recentCloses.length - 1)));
+  const ret20 = finiteNumber(stats.ret_20d_pct) ?? pctReturn(recentCloses, Math.min(20, Math.max(1, recentCloses.length - 1)));
   const syntheticVolPct = recentCloses.length >= 6 ? Math.min(100, Math.max(0, volatilityPct(recentCloses) * 5000)) : null;
   const volatilityPercentile = finiteNumber(stats.volatility_percentile) ?? syntheticVolPct;
   const atr14 = finiteNumber(stats.atr14) ?? (close != null && volatilityPercentile != null ? close * Math.max(0.005, volatilityPercentile / 10000) : null);
-  const sma20 = finiteNumber(stats.sma20) ?? mean(recentCloses.slice(-10));
-  const sma50 = finiteNumber(stats.sma50) ?? mean(recentCloses.slice(-10));
-  const sma200 = finiteNumber(stats.sma200);
+  const sma20 = finiteNumber(stats.sma20) ?? mean(recentCloses.slice(-20));
+  const sma50 = finiteNumber(stats.sma50) ?? mean(recentCloses.slice(-50));
+  const sma200 = finiteNumber(stats.sma200) ?? (recentCloses.length >= 200 ? mean(recentCloses.slice(-200)) : null);
   const rsi14 = finiteNumber(stats.rsi14) ?? roughRsi(recentCloses);
 
   return {
@@ -38,6 +45,39 @@ export function buildFastFeatures({ row, indicators = null, eligibility } = {}) 
     close_to_sma20_pct: close != null && sma20 ? (close - sma20) / sma20 : null,
     close_to_sma200_pct: close != null && sma200 ? (close - sma200) / sma200 : null,
   };
+}
+
+function publicHistoryCloses(row) {
+  const canonical = normalizeId(row?.canonical_id);
+  const symbol = canonical.split(':').pop();
+  if (!symbol) return [];
+  const shardKey = symbol[0]?.toUpperCase();
+  const shard = readHistoryShard(shardKey);
+  const bars = shard?.[symbol] || shard?.[symbol.toUpperCase()] || shard?.[canonical] || [];
+  if (!Array.isArray(bars)) return [];
+  return bars.map((bar) => finiteNumber(Array.isArray(bar) ? (bar[4] ?? bar[5]) : (bar?.close ?? bar?.adjusted_close))).filter((n) => n != null);
+}
+
+function readHistoryShard(shardKey) {
+  const key = String(shardKey || '').toUpperCase();
+  if (!key) return null;
+  if (HISTORY_SHARD_CACHE.has(key)) return HISTORY_SHARD_CACHE.get(key);
+  const base = path.join(ROOT, 'public/data/eod/history/shards', `${key}.json`);
+  const candidates = [`${base}.gz`, base];
+  let doc = null;
+  for (const filePath of candidates) {
+    if (!fs.existsSync(filePath)) continue;
+    try {
+      const body = fs.readFileSync(filePath);
+      const text = filePath.endsWith('.gz') ? zlib.gunzipSync(body).toString('utf8') : body.toString('utf8');
+      doc = JSON.parse(text);
+      break;
+    } catch {
+      doc = null;
+    }
+  }
+  HISTORY_SHARD_CACHE.set(key, doc);
+  return doc;
 }
 
 export function buyCriticalFeaturesAvailable(features) {

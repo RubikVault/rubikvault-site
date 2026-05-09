@@ -12,16 +12,17 @@ export function resolveP0Setup({ features = {}, regime = {}, eligibility } = {})
   const ret20 = featureNumber(features.ret_20d_pct);
   const modifiers = [];
   const bullishStack = close != null && sma20 != null && sma50 != null && sma200 != null && sma20 > sma50 && sma50 > sma200 && close > sma200;
+  const bullishFastStack = close != null && sma20 != null && sma50 != null && sma20 > sma50 && close > sma50 && regime.trend_regime === 'up';
   const bearishStack = close != null && sma20 != null && sma50 != null && sma200 != null && sma20 < sma50 && sma50 < sma200 && close < sma200;
   if (features.close_to_sma20_pct != null && features.close_to_sma20_pct > 0.04) modifiers.push('overextended');
   if (features.close_to_sma20_pct != null && features.close_to_sma20_pct < -0.03) modifiers.push('pullback_watch');
   if (regime.vol_regime === 'high' || regime.vol_regime === 'stress') modifiers.push('event_risk');
 
-  if (bullishStack && ret20 != null && ret20 > 0.02) {
+  if ((bullishStack || (sma200 == null && bullishFastStack)) && ret20 != null && ret20 > 0.02) {
     if (rsi != null && rsi < 45 && sma20 != null && close < sma20) return build('pullback', modifiers, 'BULLISH');
     return build('trend_continuation', modifiers, 'BULLISH');
   }
-  if (bullishStack && rsi != null && rsi < 35) {
+  if ((bullishStack || (sma200 == null && bullishFastStack)) && rsi != null && rsi < 35) {
     return build('mean_reversion', modifiers, 'BULLISH');
   }
   if (bearishStack || (close != null && sma50 != null && close < sma50 && ret20 != null && ret20 < -0.03)) {
