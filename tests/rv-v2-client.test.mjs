@@ -325,6 +325,43 @@ describe('transformV2ToStockShape', () => {
     assert.equal(payload.data.ssot.market_context.use_historical_basis, false);
   });
 
+  it('does not let same-date material historical drift override decision-core page-core price basis', () => {
+    const payload = transformV2ToStockShape(
+      {
+        ticker: 'AASI',
+        latest_bar: { date: '2026-05-08', close: 57.1427 },
+        market_prices: { close: 57.1427, date: '2026-05-08', source_provider: 'page-core' },
+        market_stats: {
+          as_of: '2026-05-08',
+          source_provider: 'page-core',
+          stats: {
+            rsi14: 52,
+            atr14: 0.8,
+            volatility_percentile: 48,
+            high_52w: 65,
+            low_52w: 40,
+            sma20: 56,
+            sma50: 54,
+            sma200: 50,
+          },
+        },
+        decision_core_min: {
+          decision: { primary_action: 'BUY', analysis_reliability: 'MEDIUM' },
+          trade_guard: { max_entry_price: 58, invalidation_level: 54 },
+        },
+      },
+      { data_date: '2026-05-08', provider: 'page-core' },
+      {
+        bars: [{ date: '2026-05-08', close: 56.56 }],
+      },
+      { universe: { name: 'Amundi MSCI Asia ETF', asset_class: 'ETF' } },
+    );
+
+    assert.equal(payload.data.market_prices.close, 57.1427);
+    assert.equal(payload.data.bars[payload.data.bars.length - 1].close, 57.1427);
+    assert.equal(payload.data.ssot.market_context.use_historical_basis, false);
+  });
+
   it('passes historical-profile payload through the transformed stock shape', () => {
     const payload = transformV2ToStockShape(
       {

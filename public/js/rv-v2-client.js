@@ -139,11 +139,12 @@ function finiteNumber(value) {
   return Number.isFinite(n) ? n : null;
 }
 
-function grossScaleMismatch(a, b) {
+function materialPriceMismatch(a, b) {
   const left = finiteNumber(a);
   const right = finiteNumber(b);
   if (left == null || right == null || left <= 0 || right <= 0) return false;
-  return Math.max(left, right) / Math.min(left, right) >= 5;
+  const diff = Math.abs(left - right);
+  return diff > Math.max(0.01, Math.abs(left) * 0.001);
 }
 
 function isoDay(date = new Date()) {
@@ -798,7 +799,7 @@ export function transformV2ToStockShape(v2Data, v2Meta, historicalData = null, g
   const decisionCoreHasPageCoreBasis = Boolean(decisionCoreMin && summaryPriceDate);
   const summaryClose = finiteNumber(v2Data?.market_prices?.close);
   const historicalLatestClose = historicalBars.length ? finiteNumber(historicalBars[historicalBars.length - 1]?.close ?? historicalBars[historicalBars.length - 1]?.adjClose) : null;
-  const historicalBarsPriceCompatible = !decisionCoreHasPageCoreBasis || !grossScaleMismatch(summaryClose, historicalLatestClose);
+  const historicalBarsPriceCompatible = !decisionCoreHasPageCoreBasis || !materialPriceMismatch(summaryClose, historicalLatestClose);
   const historicalBarsCurrentEnough = Boolean(
     historicalBars.length
     && historicalBarsPriceCompatible
