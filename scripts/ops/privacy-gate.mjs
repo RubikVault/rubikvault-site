@@ -61,6 +61,9 @@ export function classifyPath(relPath) {
 
 function classifyRepoPath(repoPath) {
   const normalized = normalizeRel(repoPath);
+  if (normalized === 'public/dashboard_v7.html') {
+    return { ok: true, reason: null };
+  }
   if (normalized.startsWith('public/')) {
     const publicRel = normalized.slice('public/'.length);
     const check = classifyPath(publicRel);

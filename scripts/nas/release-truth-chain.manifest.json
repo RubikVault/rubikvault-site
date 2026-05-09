@@ -1,10 +1,10 @@
 {
   "schema": "rv.nas.release_truth_chain_code_manifest.v1",
-  "generated_at": "2026-05-09T07:08:45.848Z",
-  "git_head": "660e75a1f3a4e0a204b166e02edd6f9d87d79952",
+  "generated_at": "2026-05-09T07:24:48.894Z",
+  "git_head": "9400c286e73df2dc2145c0005b8a5dc3388bfddf",
   "paths_file": "scripts/nas/inputs/release-truth-chain.paths",
-  "file_count": 92,
-  "combined_hash": "acc91d79443d3febd75d36b00657c967dd86b11a51c2039636036a1a10e156f4",
+  "file_count": 94,
+  "combined_hash": "3dea885f46006f93f9de620015e4d2ff9ae79ea4c05865a3306704acf583a492",
   "missing": [],
   "files": [
     {
@@ -48,9 +48,14 @@
       "sha256": "05e3718e3852bd41ae9153531ae4885f47dff5b63cbe55e6370f3ba09bbf2d43"
     },
     {
+      "path": "public/breakout-all.html",
+      "size_bytes": 26690,
+      "sha256": "d08756f6ce71501d85a8e9b89eeea347b8f5541a029fdc0e7c5d4c5a9459c5d8"
+    },
+    {
       "path": "public/dashboard_v7.html",
-      "size_bytes": 307240,
-      "sha256": "d146f78261733c35731518c06e02898d188026677909fe435c1eac3d589f7985"
+      "size_bytes": 307238,
+      "sha256": "dc8bd2b21adf629eec069a8598c5b5972d54170cab84d481d0676f2e734170e5"
     },
     {
       "path": "public/index.html",
@@ -74,8 +79,8 @@
     },
     {
       "path": "public/js/stock-features.js",
-      "size_bytes": 119890,
-      "sha256": "370a5a2dcbbdfdc7b07afde058fe4ad514eb3a4fb2d2d04ff514608eac699585"
+      "size_bytes": 119904,
+      "sha256": "6da3b6a58fa2b793e3fd442a1012c9d3be25ba353b6e1adc3a6f79740aa96782"
     },
     {
       "path": "public/js/stock-page-view-model.js",
@@ -323,6 +328,11 @@
       "sha256": "415f334b53261ac674f1a1fd14fcef58063babee0c579f2c30dbcccacc0e15aa"
     },
     {
+      "path": "scripts/generate_meta_dashboard_data.mjs",
+      "size_bytes": 73529,
+      "sha256": "cad9595679f3b18cc2ccc3789d0ce25198279059685e2a96122c4d86dcc86bf4"
+    },
+    {
       "path": "scripts/hist-probs/run-region-aware-catchup.mjs",
       "size_bytes": 9850,
       "sha256": "9ff26774a6976a6b02dc55936cf62e8f645fc89d80810469216230764208730a"
@@ -334,8 +344,8 @@
     },
     {
       "path": "scripts/nas/inputs/release-truth-chain.paths",
-      "size_bytes": 4070,
-      "sha256": "392dba8cf24e0e67029286e85f25c69cefdad1bafd5d13a88e6d87d3919c49f3"
+      "size_bytes": 4136,
+      "sha256": "e0aad6dc8c076472205c73249194368d6e64b05bd8ac7b3d9a1a3e5e29e3f556"
     },
     {
       "path": "scripts/nas/nas-env.sh",
@@ -424,8 +434,8 @@
     },
     {
       "path": "scripts/ops/privacy-gate.mjs",
-      "size_bytes": 8315,
-      "sha256": "ac21dbd738bbf6036d209ab73e88956a4cadd3c47b41ae4ad062a1d52542148d"
+      "size_bytes": 8409,
+      "sha256": "fb925c8a80c1d96383b44580c8675eed541436e7ecdacf396ced137e85938176"
     },
     {
       "path": "scripts/ops/release-gate-check.mjs",
