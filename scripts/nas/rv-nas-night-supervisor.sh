@@ -356,7 +356,7 @@ step_resource_class() {
     hist_probs|hist_probs_catchup|snapshot|learning_daily)
       printf '%s\n' "heavy"
       ;;
-    build_global_scope|forecast_daily|build_fundamentals|quantlab_daily_report|breakout_v12|scientific_summary|decision_module_scorecard|decision_core_outcome_bootstrap|v1_audit|cutover_readiness|etf_diagnostic|page_core_bundle|public_history_shards|hist_probs_v2_shadow)
+    build_global_scope|forecast_daily|build_fundamentals|quantlab_daily_report|breakout_v12|scientific_summary|decision_module_scorecard|decision_core_outcome_bootstrap|v1_audit|cutover_readiness|etf_diagnostic|page_core_bundle|public_history_shards|hist_probs_v2_shadow|classifier_audit)
       printf '%s\n' "medium"
       ;;
     *)
@@ -447,7 +447,7 @@ step_heap_mb() {
     snapshot)
       printf '%s\n' 3072
       ;;
-    learning_daily|v1_audit|cutover_readiness|stock_analyzer_universe_audit|ui_field_truth_report|page_core_bundle|page_core_smoke|final_integrity_seal|hist_probs_v2_shadow)
+    learning_daily|v1_audit|cutover_readiness|stock_analyzer_universe_audit|ui_field_truth_report|page_core_bundle|page_core_smoke|final_integrity_seal|hist_probs_v2_shadow|classifier_audit)
       printf '%s\n' 1536
       ;;
     build_global_scope)
