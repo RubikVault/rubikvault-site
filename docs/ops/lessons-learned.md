@@ -21,6 +21,18 @@
 
 ---
 
+### 2026-05-09 · NAS · Early-morning schedule masks must match last-completed EOD, not wall-clock weekdays
+
+**What:** Friday EOD did not advance because the scheduler wrapper skipped the Saturday 03:10 run as `outside_market_pipeline_schedule`.
+
+**Why:** At 03:10 Europe/Berlin the run processes the last completed market day, not the same wall-clock day. A Monday-Friday guard allows a mostly useless Monday run and blocks the Saturday run that processes Friday EOD.
+
+**Fix:** The wrapper now uses a Tuesday-Saturday static guard (`2-6`) with explicit `schedule_policy=trading_eod_tue_sat_v1`, `dow`, `force`, `target_market_date`, and `expected_eod_lag_policy` metadata. The DSM task may run daily; the script remains authoritative.
+
+**Prevention:** Prefer a provider/data-freshness gate for long-term robustness. Never reason about NAS EOD runs from local calendar weekday alone; verify `target_market_date`, `skip_reason`, and latest provider bar before declaring the pipeline current.
+
+---
+
 ### 2026-05-07 · Decision Core · Accelerated historical certification must not inflate live shadow ledgers
 
 **What:** V3.3 needed a one-time faster production gate than 20 live shadow trading days.
