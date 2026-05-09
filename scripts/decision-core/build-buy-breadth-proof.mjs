@@ -196,10 +196,12 @@ export function buildBuyBreadthProof({ root = path.join(DECISION_CORE_PUBLIC_ROO
   const missingBestSetup = [
     ...availableUs.filter((row) => !row.best_setups_present).slice(0, 10),
     ...availableEu.filter((row) => !row.best_setups_present).slice(0, 10),
+    ...availableAsia.filter((row) => !row.best_setups_present).slice(0, 10),
   ];
   const failures = [];
   if (us.length < 10) failures.push('BUY_BREADTH_US_BELOW_10');
   if (eu.length < 10) failures.push('BUY_BREADTH_EU_BELOW_10');
+  if (asia.length < 10) failures.push('BUY_BREADTH_ASIA_BELOW_10');
   if (unsafe.length) failures.push('UNSAFE_BUY_ROWS');
   if (!bestSetupsCoreOnly) failures.push('BEST_SETUPS_NOT_CORE_ONLY');
   return {

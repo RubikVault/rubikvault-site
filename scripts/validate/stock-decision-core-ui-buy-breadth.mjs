@@ -127,9 +127,12 @@ async function main() {
   const candidatesByRegion = {
     US: proof.us_buy_assets || [],
     EU: proof.eu_buy_assets || [],
+    ASIA: proof.asia_buy_assets || [],
   };
-  if (candidatesByRegion.US.length < 10 || candidatesByRegion.EU.length < 10) {
-    throw new Error(`BUY_BREADTH_ASSET_COUNT_BELOW_10:${candidatesByRegion.US.length}:${candidatesByRegion.EU.length}`);
+  const requiredRegions = ['US', 'EU', 'ASIA'];
+  const missingRegion = requiredRegions.find((region) => candidatesByRegion[region].length < 10);
+  if (missingRegion) {
+    throw new Error(`BUY_BREADTH_ASSET_COUNT_BELOW_10:${candidatesByRegion.US.length}:${candidatesByRegion.EU.length}:${candidatesByRegion.ASIA.length}`);
   }
   const port = Number(process.env.PORT || await freePort());
   const baseUrl = `http://127.0.0.1:${port}`;
@@ -144,7 +147,7 @@ async function main() {
     browser = await chromium.launch({ headless: true });
     const results = [];
     const attempts = [];
-    for (const region of ['US', 'EU']) {
+    for (const region of requiredRegions) {
       let accepted = 0;
       for (const asset of candidatesByRegion[region]) {
         const result = await validateBuyPage({ browser, baseUrl, asset });
@@ -160,9 +163,10 @@ async function main() {
       schema: 'rv.decision_core_ui_buy_breadth.v1',
       generated_at: new Date().toISOString(),
       input_report: path.relative(ROOT, INPUT_PATH),
-      status: results.filter((row) => row.region === 'US').length >= 10 && results.filter((row) => row.region === 'EU').length >= 10 ? 'OK' : 'FAILED',
+      status: requiredRegions.every((region) => results.filter((row) => row.region === region).length >= 10) ? 'OK' : 'FAILED',
       us_assets: results.filter((row) => row.region === 'US').length,
       eu_assets: results.filter((row) => row.region === 'EU').length,
+      asia_assets: results.filter((row) => row.region === 'ASIA').length,
       total: results.length,
       ok: results.filter((row) => row.ok).length,
       attempted: attempts.length,
