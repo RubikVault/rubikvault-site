@@ -356,7 +356,7 @@ step_resource_class() {
     hist_probs|hist_probs_catchup|snapshot|learning_daily|decision_core_shadow)
       printf '%s\n' "heavy"
       ;;
-    build_global_scope|forecast_daily|build_fundamentals|quantlab_daily_report|breakout_v12|scientific_summary|decision_module_scorecard|decision_core_outcome_bootstrap|v1_audit|cutover_readiness|etf_diagnostic|page_core_bundle|best_setups_core|public_history_shards|hist_probs_v2_shadow|classifier_audit)
+    build_global_scope|forecast_daily|build_fundamentals|quantlab_daily_report|breakout_v12|scientific_summary|decision_module_scorecard|decision_core_outcome_bootstrap|v1_audit|cutover_readiness|etf_diagnostic|page_core_bundle|best_setups_core|public_history_shards|hist_probs_v2_shadow|classifier_audit|ops_health_reports)
       printf '%s\n' "medium"
       ;;
     *)
@@ -394,7 +394,7 @@ step_timeout_sec() {
     cutover_readiness) printf '%s\n' 1800 ;;
     stage1_ops_pack) printf '%s\n' 1800 ;;
     system_status_report|data_freshness_report|pipeline_epoch|generate_meta_dashboard_data) printf '%s\n' 1800 ;;
-    runtime_preflight|stock_ui_integrity_audit|classifier_audit) printf '%s\n' 1800 ;;
+    runtime_preflight|stock_ui_integrity_audit|classifier_audit|ops_health_reports) printf '%s\n' 1800 ;;
     resource_budget_report) printf '%s\n' 300 ;;
     stock_analyzer_universe_audit) printf '%s\n' 5400 ;;
     ui_field_truth_report) printf '%s\n' 2400 ;;
@@ -453,7 +453,7 @@ step_heap_mb() {
     best_setups_core)
       printf '%s\n' "${RV_BEST_SETUPS_CORE_HEAP_MB:-2048}"
       ;;
-    learning_daily|v1_audit|cutover_readiness|stock_analyzer_universe_audit|ui_field_truth_report|page_core_bundle|page_core_smoke|final_integrity_seal|hist_probs_v2_shadow|classifier_audit)
+    learning_daily|v1_audit|cutover_readiness|stock_analyzer_universe_audit|ui_field_truth_report|page_core_bundle|page_core_smoke|final_integrity_seal|hist_probs_v2_shadow|classifier_audit|ops_health_reports)
       printf '%s\n' 1536
       ;;
     build_global_scope)
@@ -612,6 +612,9 @@ step_command() {
       ;;
     classifier_audit)
       printf '%s\n' "node scripts/audit/classifier/run-all.mjs --verbose"
+      ;;
+    ops_health_reports)
+      printf '%s\n' "node scripts/ops/build-nas-ops-health-reports.mjs || { ops_status=\$?; if [ \"\${RV_OPS_HEALTH_REPORTS_HARD_GATE:-0}\" = \"1\" ]; then exit \"\$ops_status\"; fi; echo \"ops_health_reports_warn_only exit_code=\$ops_status\" >&2; exit 0; }"
       ;;
     public_history_shards)
       printf '%s\n' "NODE_OPTIONS='--max-old-space-size=${RV_PUBLIC_HISTORY_SHARDS_HEAP_MB:-4096}' node scripts/ops/build-public-history-shards.mjs --manifest '$RV_GLOBAL_MANIFEST_DIR/pack-manifest.global.json' --target-market-date='$TARGET_MARKET_DATE' --incremental"
@@ -922,7 +925,7 @@ run_step() {
   fi
 
   case "$step_id" in
-    build_global_scope|provider_health_preflight|q1_delta_proof_report|hist_probs|hist_probs_catchup|hist_probs_v2_shadow|snapshot|page_core_bundle|best_setups_core|classifier_audit|public_history_shards|learning_daily|decision_module_scorecard|decision_core_outcome_bootstrap|forecast_daily|build_fundamentals|quantlab_daily_report|breakout_v12|scientific_summary|v1_audit|cutover_readiness|etf_diagnostic|stage1_ops_pack|system_status_report|resource_budget_report|data_freshness_report|pipeline_epoch|generate_meta_dashboard_data|signal_performance_report|dp8_market|runtime_preflight|stock_analyzer_universe_audit|ui_field_truth_report|stock_ui_integrity_audit|page_core_smoke|final_integrity_seal|build_deploy_bundle|pre_deploy_smoke|wrangler_deploy|code_manifest_guard|lock_policy_report)
+    build_global_scope|provider_health_preflight|q1_delta_proof_report|hist_probs|hist_probs_catchup|hist_probs_v2_shadow|snapshot|page_core_bundle|best_setups_core|classifier_audit|ops_health_reports|public_history_shards|learning_daily|decision_module_scorecard|decision_core_outcome_bootstrap|forecast_daily|build_fundamentals|quantlab_daily_report|breakout_v12|scientific_summary|v1_audit|cutover_readiness|etf_diagnostic|stage1_ops_pack|system_status_report|resource_budget_report|data_freshness_report|pipeline_epoch|generate_meta_dashboard_data|signal_performance_report|dp8_market|runtime_preflight|stock_analyzer_universe_audit|ui_field_truth_report|stock_ui_integrity_audit|page_core_smoke|final_integrity_seal|build_deploy_bundle|pre_deploy_smoke|wrangler_deploy|code_manifest_guard|lock_policy_report)
       measure_args+=(--set-env "NODE_OPTIONS=--max-old-space-size=$heap_mb")
       ;;
   esac
@@ -1017,6 +1020,7 @@ lane_steps() {
       page_core_bundle \
       best_setups_core \
       classifier_audit \
+      ops_health_reports \
       public_history_shards \
       etf_diagnostic \
       learning_daily \
@@ -1044,6 +1048,7 @@ lane_steps() {
       pipeline_epoch \
       page_core_smoke \
       classifier_audit \
+      ops_health_reports \
       final_integrity_seal \
       system_status_report \
       generate_meta_dashboard_data \

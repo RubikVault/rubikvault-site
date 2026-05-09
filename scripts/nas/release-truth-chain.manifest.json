@@ -1,11 +1,10 @@
 {
-  "schema_version": "nas.input-manifest.v1",
-  "generated_at": "2026-05-09T18:16:24.223Z",
-  "stage": "release-truth-chain",
-  "run_id": null,
-  "file_count": 94,
-  "total_bytes": 2013812,
-  "combined_hash": "7ea39e6fb71e1932b7f9af267ba7988e605accd7da37eff31ce9dd1110fe1132",
+  "schema": "rv.nas.release_truth_chain_code_manifest.v1",
+  "generated_at": "2026-05-09T18:59:54.751Z",
+  "git_head": "fc50c77c021dabf745447d5c2870f571229383ce",
+  "paths_file": "scripts/nas/inputs/release-truth-chain.paths",
+  "file_count": 95,
+  "combined_hash": "d38ddcccb8dfc9ec5a363037993ab2d203b9668baee2a7a412224b62b9a3de1c",
   "missing": [],
   "files": [
     {
@@ -55,8 +54,8 @@
     },
     {
       "path": "public/dashboard_v7.html",
-      "size_bytes": 307238,
-      "sha256": "dc8bd2b21adf629eec069a8598c5b5972d54170cab84d481d0676f2e734170e5"
+      "size_bytes": 307220,
+      "sha256": "958662a5e1be5d073ca38677a796bddde8b02f9e54067acdb5a0fd38d93a8b74"
     },
     {
       "path": "public/index.html",
@@ -345,8 +344,8 @@
     },
     {
       "path": "scripts/nas/inputs/release-truth-chain.paths",
-      "size_bytes": 4136,
-      "sha256": "e0aad6dc8c076472205c73249194368d6e64b05bd8ac7b3d9a1a3e5e29e3f556"
+      "size_bytes": 4181,
+      "sha256": "13b6baef87e8697d22b59ae198a243881cdf1515bed54663525687713b76dc2d"
     },
     {
       "path": "scripts/nas/nas-env.sh",
@@ -360,8 +359,8 @@
     },
     {
       "path": "scripts/nas/rv-nas-night-supervisor.sh",
-      "size_bytes": 55968,
-      "sha256": "5ae073332b5990acd9bb4c09bb5c72c978d410f662425e2b7e221950dfff9150"
+      "size_bytes": 56391,
+      "sha256": "4907368affc8207bf5607a04d483431fca1e2376543bd3bfc5d53994424dd82e"
     },
     {
       "path": "scripts/nas/safe-code-sync.sh",
@@ -392,6 +391,11 @@
       "path": "scripts/ops/build-full-universe-decisions.mjs",
       "size_bytes": 13157,
       "sha256": "468e23c4dbf11b02c92372312393b6fdebd8ee79daab3f8461cbb981c6b1c5ef"
+    },
+    {
+      "path": "scripts/ops/build-nas-ops-health-reports.mjs",
+      "size_bytes": 18185,
+      "sha256": "3ecb2a5fae0dcfb86fc35d62c3b4864f0ecda0f43f1647842019f4e0f63967b0"
     },
     {
       "path": "scripts/ops/build-page-core-bundle.mjs",
