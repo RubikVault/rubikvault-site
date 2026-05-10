@@ -1102,6 +1102,18 @@ function writeGzipJson(filePath, payload) {
   return { bytes: gz.length, hash: sha256Prefix(gz) };
 }
 
+function summarizeShardFiles(files) {
+  const totalBytes = files.reduce((sum, file) => sum + Number(file?.bytes || 0), 0);
+  const maxFile = files.reduce((best, file) => (Number(file?.bytes || 0) > Number(best?.bytes || 0) ? file : best), null);
+  return {
+    count: files.length,
+    total_bytes_gzip: totalBytes,
+    max_bytes_gzip: Number(maxFile?.bytes || 0),
+    max_shard: maxFile?.shard ?? null,
+    files_hash: sha256Prefix(stableStringify(files)),
+  };
+}
+
 function buildBundle(opts) {
   const generatedAt = new Date().toISOString();
   const scopeIds = readScopeIds();
@@ -1305,11 +1317,11 @@ function writeBundle(opts, bundle) {
   const manifest = {
     ...bundle.manifest,
     alias_files: aliasFiles,
-    page_files: pageFiles,
+    page_files_summary: summarizeShardFiles(pageFiles),
     bundle_hash: sha256Prefix(stableStringify({
       pointer: bundle.pointer,
       alias_files: aliasFiles,
-      page_files: pageFiles,
+      page_files_summary: summarizeShardFiles(pageFiles),
     })),
   };
   writeJsonAtomic(path.join(snapshotDir, 'manifest.json'), manifest);
