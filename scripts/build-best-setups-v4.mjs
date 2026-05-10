@@ -678,7 +678,7 @@ async function main() {
   if (decisionBundleMode) {
     let buyRows = decisionBundleMode.rows || [];
     let pageCoreGuard = null;
-    if (decisionSource === 'decision-core') {
+    if (decisionSource === 'decision-core' && process.env.BEST_SETUPS_DISABLE_PAGE_CORE_GUARD !== '1') {
       pageCoreGuard = await buildPageCoreBuyGuard(requestedTargetDate);
       if (pageCoreGuard.available) {
         const before = buyRows.length;
