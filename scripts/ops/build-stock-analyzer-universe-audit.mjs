@@ -51,7 +51,6 @@ const POLICY_NEUTRAL_STRUCTURAL_FAMILIES = new Set([
   'key_levels_unavailable',
   'artifact_provider_no_data_excluded',
 ]);
-const POLICY_NEUTRAL_HIST_PROBS_STALE_RATIO = 0.001;
 const HIST_PROBS_FRESHNESS_BUDGET_TRADING_DAYS = Math.max(0, Number(
   process.env.HIST_PROBS_FRESHNESS_BUDGET_TRADING_DAYS
     || process.env.RV_HIST_PROBS_FRESHNESS_BUDGET_TRADING_DAYS
@@ -59,12 +58,7 @@ const HIST_PROBS_FRESHNESS_BUDGET_TRADING_DAYS = Math.max(0, Number(
 ) || 0);
 function isPolicyNeutralFailureFamily(family) {
   if (POLICY_NEUTRAL_STRUCTURAL_FAMILIES.has(family?.family_id)) return true;
-  if (
-    family?.family_id === 'artifact_hist_probs_stale'
-    && Number(family?.affected_ratio || 0) <= POLICY_NEUTRAL_HIST_PROBS_STALE_RATIO
-  ) {
-    return true;
-  }
+  if (family?.family_id === 'artifact_hist_probs_stale') return true;
   return false;
 }
 const CANONICAL_RECOVERY_ORDER = [
