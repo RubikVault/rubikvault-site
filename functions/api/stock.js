@@ -66,6 +66,7 @@ const DEFAULT_PENDING_WINDOW_MINUTES = 120;
 const V7_STOCK_SSOT_TTL_MS = 10 * 60 * 1000;
 const V7_SEARCH_EXACT_TTL_MS = 10 * 60 * 1000;
 const LOCAL_DEV_HISTORY_DAYS = 90;
+const PAGE_CORE_HISTORY_MAX_BARS = 520;
 const PRIVATE_DECISION_BLOCKERS = new Set([
   'bundle_missing',
   'bundle_stale',
@@ -201,12 +202,13 @@ async function buildStockApiPayloadFromPageCore({
       canonicalId: row.canonical_asset_id || pageCoreResult.canonical_id || null,
       displayTicker: row.display_ticker || null,
       ticker: normalizedTicker || null,
+      maxBars: PAGE_CORE_HISTORY_MAX_BARS,
     });
   } catch {
     historyBars = null;
   }
   const bars = Array.isArray(historyBars) && historyBars.length
-    ? historyBars
+    ? mergePageCoreHistoryBars(historyBars, fallbackLatestBar, PAGE_CORE_HISTORY_MAX_BARS)
     : (fallbackLatestBar ? [fallbackLatestBar] : []);
   const historyRenderable = bars.length >= 40;
   const latestBar = pickLatestBar(bars) || fallbackLatestBar;
@@ -388,6 +390,26 @@ function pageCoreLatestBar(row) {
     adjClose: close,
     volume: 0,
   };
+}
+
+function mergePageCoreHistoryBars(historyBars, latestBar, maxBars = PAGE_CORE_HISTORY_MAX_BARS) {
+  const rows = Array.isArray(historyBars) ? historyBars : [];
+  const byDate = new Map();
+  for (const row of rows) {
+    const date = String(row?.date || '').slice(0, 10);
+    if (!date) continue;
+    byDate.set(date, row);
+  }
+  const latestDate = String(latestBar?.date || '').slice(0, 10);
+  if (latestDate && !byDate.has(latestDate)) {
+    byDate.set(latestDate, latestBar);
+  }
+  const merged = Array.from(byDate.values())
+    .sort((a, b) => String(a?.date || '').localeCompare(String(b?.date || '')));
+  const limit = Number.isFinite(Number(maxBars)) && Number(maxBars) > 0
+    ? Math.floor(Number(maxBars))
+    : 0;
+  return limit && merged.length > limit ? merged.slice(-limit) : merged;
 }
 
 function buildSourceChainMetadata(chain) {

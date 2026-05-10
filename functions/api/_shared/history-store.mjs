@@ -29,6 +29,7 @@ const historyPackLookupCache = {
     value: null,
 };
 const historyPackRowsCache = new Map();
+const HISTORY_PACK_CACHE_LIMIT = 32;
 const KNOWN_EODHD_SUFFIXES = new Set([
     'AS', 'AT', 'AX', 'BE', 'BK', 'BO', 'BR', 'CO', 'DE', 'DU', 'F', 'HA', 'HE', 'HK', 'HM',
     'IR', 'IS', 'JK', 'JO', 'KL', 'KQ', 'KS', 'L', 'LS', 'MC', 'MI', 'MX', 'OL', 'PA', 'PR',
@@ -154,6 +155,9 @@ async function readLocalJsonMaybe(relPath) {
 export async function getStaticBars(symbol, baseUrl, assetFetcher = null, options = {}) {
     let mergedBars = [];
     try {
+        const maxBars = Number.isFinite(Number(options?.maxBars)) && Number(options.maxBars) > 0
+            ? Math.floor(Number(options.maxBars))
+            : null;
         const optionCandidates = [
             options?.canonicalId,
             options?.canonical_id,
@@ -260,6 +264,9 @@ export async function getStaticBars(symbol, baseUrl, assetFetcher = null, option
             const normalized = normalizeRows(rows);
             if (!normalized.length) return;
             mergedBars = mergeBars(mergedBars, normalized);
+            if (maxBars && mergedBars.length > maxBars) {
+                mergedBars = mergedBars.slice(-maxBars);
+            }
         }
 
         async function fetchJson(relPath) {
@@ -323,19 +330,22 @@ export async function getStaticBars(symbol, baseUrl, assetFetcher = null, option
 
         async function fetchHistoryPackBars(packPath, canonicalId) {
             if (!packPath || !canonicalId) return [];
-            let indexed = historyPackRowsCache.get(packPath);
-            if (!indexed) {
-                const rows = await fetchGzipNdjson(`/data/eod/history/packs/${packPath}`);
-                if (!Array.isArray(rows) || !rows.length) return [];
-                indexed = new Map();
-                for (const row of rows) {
-                    const rowCanonicalId = String(row?.canonical_id || '').trim().toUpperCase();
-                    if (!rowCanonicalId || indexed.has(rowCanonicalId)) continue;
-                    indexed.set(rowCanonicalId, normalizeRows(row?.bars || []));
-                }
-                historyPackRowsCache.set(packPath, indexed);
+            const cacheKey = `${packPath}#${String(canonicalId).trim().toUpperCase()}`;
+            if (historyPackRowsCache.has(cacheKey)) {
+                return historyPackRowsCache.get(cacheKey) || [];
             }
-            return indexed.get(String(canonicalId).trim().toUpperCase()) || [];
+            const rows = await fetchGzipNdjson(`/data/eod/history/packs/${packPath}`);
+            if (!Array.isArray(rows) || !rows.length) return [];
+            const wanted = String(canonicalId).trim().toUpperCase();
+            const hit = rows.find((row) => String(row?.canonical_id || '').trim().toUpperCase() === wanted);
+            const bars = normalizeRows(hit?.bars || []);
+            const compactBars = maxBars && bars.length > maxBars ? bars.slice(-maxBars) : bars;
+            if (historyPackRowsCache.size >= HISTORY_PACK_CACHE_LIMIT) {
+                const oldestKey = historyPackRowsCache.keys().next().value;
+                if (oldestKey) historyPackRowsCache.delete(oldestKey);
+            }
+            historyPackRowsCache.set(cacheKey, compactBars);
+            return compactBars;
         }
 
         const seriesCandidates = [
@@ -421,9 +431,9 @@ export async function getStaticBars(symbol, baseUrl, assetFetcher = null, option
             }
         }
 
-        return mergedBars.length ? mergedBars : null;
+        return mergedBars.length ? (maxBars && mergedBars.length > maxBars ? mergedBars.slice(-maxBars) : mergedBars) : null;
     } catch (err) {
-        return mergedBars.length ? mergedBars : null;
+        return mergedBars.length ? (Number.isFinite(Number(options?.maxBars)) && Number(options.maxBars) > 0 ? mergedBars.slice(-Math.floor(Number(options.maxBars))) : mergedBars) : null;
     }
 }
 
