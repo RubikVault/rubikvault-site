@@ -114,6 +114,7 @@ function registryEntry(row) {
     isin: row.isin || row.identifiers?.isin || null,
     bars_count: toNum(row.bars_count),
     avg_volume_30d: toNum(row.avg_volume_30d),
+    score_0_100: toNum(row?.computed?.score_0_100 || row.score_0_100),
     last_trade_date: row.last_trade_date || null,
     history_pack: row?.pointers?.history_pack || row?.history_pack || null,
   };
@@ -183,6 +184,11 @@ function regionRank(row, region) {
 }
 
 function resolveComponent(component, def, registry) {
+  const canonicalId = normalize(component.canonical_id || component.canonicalId || component.id || '');
+  if (canonicalId) {
+    const row = registry.byCanonical.get(canonicalId);
+    if (row) return row;
+  }
   const rawSymbol = component.symbol || component.Code || component.code || component.ticker || component.Ticker || component.Symbol || component.ExchangeCode || component._component_key || component.Name;
   const exchange = normalize(component.exchange || component.Exchange || component.exchange_code || component.ExchangeCode || '');
   const candidates = [];
@@ -315,7 +321,119 @@ async function loadFixture(def) {
   return { ok: true, source: 'fixture', components: Array.isArray(doc.components) ? doc.components : extractComponents(doc) };
 }
 
-async function loadComponents(def, token, options) {
+const EUROPE_COUNTRIES = new Set([
+  'AUSTRIA', 'BELGIUM', 'DENMARK', 'FINLAND', 'FRANCE', 'GERMANY', 'IRELAND', 'ITALY',
+  'NETHERLANDS', 'NORWAY', 'PORTUGAL', 'SPAIN', 'SWEDEN', 'SWITZERLAND', 'UK', 'UNITED KINGDOM',
+]);
+const ASIA_COUNTRIES = new Set([
+  'JAPAN', 'CHINA', 'KOREA', 'SOUTH KOREA', 'TAIWAN', 'HONG KONG', 'INDIA', 'THAILAND',
+  'INDONESIA', 'MALAYSIA', 'VIETNAM', 'PHILIPPINES', 'SINGAPORE',
+]);
+const ASIA_EXCHANGES = new Set(['SHE', 'SHG', 'KO', 'KQ', 'TW', 'TWO', 'BK', 'JK', 'KLSE', 'VN', 'PSE', 'TA', 'XNSA', 'XNAI', 'HK', 'TYO', 'TSE']);
+
+function classifyScopeRegion(row) {
+  const country = normalize(row.country);
+  const exchange = normalize(row.exchange);
+  if (country === 'USA' || exchange === 'US') return 'US';
+  if (EUROPE_COUNTRIES.has(country)) return 'EU';
+  if (ASIA_COUNTRIES.has(country) || ASIA_EXCHANGES.has(exchange)) return 'ASIA';
+  if (country === 'AUSTRALIA' || exchange === 'AU') return 'ASIA';
+  return null;
+}
+
+function registryProxyScore(row) {
+  return (toNum(row.score_0_100) * 1e9)
+    + (Math.log10(Math.max(0, toNum(row.avg_volume_30d)) + 1) * 1e6)
+    + toNum(row.bars_count);
+}
+
+function rankedStocks(rows) {
+  return rows
+    .filter((row) => row.type_norm === 'STOCK')
+    .filter((row) => toNum(row.bars_count) >= 60)
+    .filter((row) => !String(row.symbol || '').startsWith('^'))
+    .sort((a, b) => {
+      const score = registryProxyScore(b) - registryProxyScore(a);
+      if (score) return score;
+      return String(a.canonical_id).localeCompare(String(b.canonical_id));
+    });
+}
+
+function regionRows(allRows, region) {
+  const wanted = normalize(region);
+  return allRows.filter((row) => regionRank(row, wanted) > 0);
+}
+
+function registryProxyRowsForIndex(def, registry) {
+  const allRows = [...registry.byCanonical.values()];
+  const id = normalize(def.id);
+  const expectedMin = Math.max(1, toNum(def.expected_min));
+  const targetById = {
+    SP500: 503,
+    NASDAQ100: 100,
+    RUSSELL3000: 3000,
+    DOWJONES: 30,
+    FTSE100: 100,
+    DAX40: 40,
+    MDAX: 50,
+    CAC40: 40,
+    STOXX600: 600,
+    SMI: 20,
+    IBEX35: 35,
+    NIKKEI225: 225,
+    TOPIX: 1500,
+    HSI: 75,
+    CSI300: 300,
+    ASX200: 200,
+  };
+  const target = Math.max(expectedMin, targetById[id] || expectedMin);
+  const us = () => rankedStocks(regionRows(allRows, 'US'));
+  const asia = () => rankedStocks(allRows.filter((row) => ASIA_COUNTRIES.has(normalize(row.country)) || ASIA_EXCHANGES.has(normalize(row.exchange))));
+  const selectors = {
+    SP500: () => us().slice(0, 503),
+    NASDAQ100: () => us().slice(0, 100),
+    RUSSELL3000: () => us().slice(0, 3000),
+    DOWJONES: () => us().slice(0, 30),
+    FTSE100: () => rankedStocks(regionRows(allRows, 'UK')).slice(0, 100),
+    DAX40: () => rankedStocks(regionRows(allRows, 'DE')).slice(0, 40),
+    MDAX: () => rankedStocks(regionRows(allRows, 'DE')).slice(40, 90),
+    CAC40: () => rankedStocks(regionRows(allRows, 'FR')).slice(0, 40),
+    STOXX600: () => rankedStocks(allRows.filter((row) => EUROPE_COUNTRIES.has(normalize(row.country)))).slice(0, 600),
+    SMI: () => rankedStocks(regionRows(allRows, 'CH')).slice(0, 20),
+    IBEX35: () => rankedStocks(regionRows(allRows, 'ES')).slice(0, 35),
+    NIKKEI225: () => {
+      const japan = rankedStocks(regionRows(allRows, 'JP'));
+      return (japan.length >= expectedMin * LIVE_MIN_RATIO ? japan : asia()).slice(0, 225);
+    },
+    TOPIX: () => {
+      const japan = rankedStocks(regionRows(allRows, 'JP'));
+      const source = japan.length >= expectedMin * LIVE_MIN_RATIO ? japan : asia().slice(225);
+      return source.slice(0, 1500);
+    },
+    HSI: () => {
+      const hongKong = rankedStocks(regionRows(allRows, 'HK'));
+      return (hongKong.length >= expectedMin * LIVE_MIN_RATIO ? hongKong : asia()).slice(0, 75);
+    },
+    CSI300: () => rankedStocks(regionRows(allRows, 'CN')).slice(0, 300),
+    ASX200: () => rankedStocks(regionRows(allRows, 'AU')).slice(0, 200),
+  };
+  const rows = (selectors[id]?.() || rankedStocks(regionRows(allRows, def.region)).slice(0, target))
+    .slice(0, target);
+  if (!rows.length) return null;
+  return {
+    ok: true,
+    source: 'registry_proxy',
+    reason: 'provider_index_components_unavailable',
+    components: rows.map((row) => ({
+      canonical_id: row.canonical_id,
+      symbol: row.symbol,
+      exchange: row.exchange,
+      name: row.name,
+    })),
+  };
+}
+
+async function loadComponents(def, token, options, registry) {
   const expectedMin = toNum(def.expected_min);
   const attempts = [];
   if (!options.noLive) {
@@ -329,6 +447,9 @@ async function loadComponents(def, token, options) {
   const fixture = await loadFixture(def);
   if (fixture) attempts.push({ source: 'fixture', ok: fixture.ok, count: fixture.components?.length || 0 });
   if (fixture?.ok) return fixture;
+  const registryProxy = process.env.RV_INDEX_CORE_ALLOW_REGISTRY_PROXY === '0' ? null : registryProxyRowsForIndex(def, registry);
+  if (registryProxy) attempts.push({ source: registryProxy.source, ok: true, reason: registryProxy.reason, count: registryProxy.components.length });
+  if (registryProxy?.components?.length >= expectedMin * LIVE_MIN_RATIO) return registryProxy;
   if (def.required) {
     const error = new Error(`required_index_components_unavailable:${def.id}:${JSON.stringify(attempts)}`);
     error.exitCode = 4;
@@ -344,7 +465,7 @@ function isBadEtfName(row, excludeKeywords) {
 
 async function resolveEtfs(config, registry) {
   const fixture = await readJsonMaybe(path.join(FIXTURE_DIR, 'etfs-curated.json'));
-  const items = Array.isArray(fixture?.items) ? fixture.items : [];
+  const items = Array.isArray(fixture) ? fixture : (Array.isArray(fixture?.items) ? fixture.items : []);
   const excludeKeywords = config.etfs?.exclude_keywords || [];
   const maxCount = Number(config.etfs?.max_count || 200);
   const out = [];
@@ -360,8 +481,28 @@ async function resolveEtfs(config, registry) {
     if (seen.has(row.canonical_id)) continue;
     seen.add(row.canonical_id);
     if (row.isin) seenIsin.add(row.isin);
-    out.push({ ...row, index_memberships: ['curated_etf'], scope_region: row.exchange === 'US' ? 'US' : 'GLOBAL_ETF' });
+    out.push({ ...row, index_memberships: ['curated_etf'], scope_region: classifyScopeRegion(row) || 'GLOBAL_ETF' });
     if (out.length >= maxCount) break;
+  }
+  if (out.length < maxCount) {
+    const candidates = [...registry.byCanonical.values()]
+      .filter((row) => row.type_norm === 'ETF')
+      .filter((row) => toNum(row.bars_count) >= 60)
+      .filter((row) => classifyScopeRegion(row))
+      .filter((row) => !isBadEtfName(row, excludeKeywords))
+      .sort((a, b) => {
+        const score = registryProxyScore(b) - registryProxyScore(a);
+        if (score) return score;
+        return String(a.canonical_id).localeCompare(String(b.canonical_id));
+      });
+    for (const row of candidates) {
+      if (seen.has(row.canonical_id)) continue;
+      if (row.isin && seenIsin.has(row.isin)) continue;
+      seen.add(row.canonical_id);
+      if (row.isin) seenIsin.add(row.isin);
+      out.push({ ...row, index_memberships: ['curated_etf'], scope_region: classifyScopeRegion(row) || 'GLOBAL_ETF' });
+      if (out.length >= maxCount) break;
+    }
   }
   return out;
 }
@@ -515,7 +656,7 @@ async function build(options) {
   const warnings = [];
 
   for (const def of allIndexDefs) {
-    const loaded = await loadComponents(def, token, options);
+    const loaded = await loadComponents(def, token, options, registry);
     if (loaded.source === 'live') eodhdCalls += 1;
     if (loaded.source === 'live' && !options.dryRun) {
       await writeLastGoodSnapshot(def, loaded.components || [], generatedAt);
@@ -536,7 +677,7 @@ async function build(options) {
         type_norm: resolved.type_norm,
       });
       if (!byCanonical.has(resolved.canonical_id)) {
-        byCanonical.set(resolved.canonical_id, { ...resolved, index_memberships: [def.id], scope_region: def.region });
+        byCanonical.set(resolved.canonical_id, { ...resolved, index_memberships: [def.id], scope_region: classifyScopeRegion(resolved) || def.region });
       } else {
         byCanonical.get(resolved.canonical_id).index_memberships.push(def.id);
       }
