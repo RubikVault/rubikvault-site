@@ -56,6 +56,39 @@ function readJsonGz(path) {
   } catch (e) { return null; }
 }
 
+function readRegistryRowsById() {
+  const out = new Map();
+  const registryPath = 'public/data/universe/v7/registry/registry.ndjson.gz';
+  try {
+    const text = zlib.gunzipSync(fs.readFileSync(registryPath)).toString('utf8');
+    for (const line of text.split(/\r?\n/)) {
+      if (!line.trim()) continue;
+      try {
+        const row = JSON.parse(line);
+        const canonicalId = String(row?.canonical_id || '').trim().toUpperCase();
+        if (canonicalId) out.set(canonicalId, row);
+      } catch {}
+    }
+  } catch {}
+  return out;
+}
+
+function mergeFreshRegistryRow(snapshotRow, registryRow) {
+  if (!registryRow) return snapshotRow;
+  return {
+    ...snapshotRow,
+    ...registryRow,
+    computed: {
+      ...(snapshotRow?.computed || {}),
+      ...(registryRow?.computed || {}),
+    },
+    pointers: {
+      ...(snapshotRow?.pointers || {}),
+      ...(registryRow?.pointers || {}),
+    },
+  };
+}
+
 function buildPrefixBuckets(ranked, countPerBucket, maxDepth) {
   const buckets = {};
   for (const row of ranked) {
@@ -105,13 +138,18 @@ async function run() {
     console.error('Snapshot not found');
     process.exit(1);
   }
+  const registryById = readRegistryRowsById();
 
   console.log(`Processing ${snapshot.records.length} records...`);
 
-  const ranked = snapshot.records.map(r => ({
-    ...r,
-    _rank_score: rankScore(r)
-  }))
+  const ranked = snapshot.records.map((r) => {
+    const canonicalId = String(r?.canonical_id || '').trim().toUpperCase();
+    const row = mergeFreshRegistryRow(r, registryById.get(canonicalId));
+    return {
+      ...row,
+      _rank_score: rankScore(row)
+    };
+  })
     .filter((row) => !scopeSet || scopeSet.has(String(row?.canonical_id || '').trim().toUpperCase()))
     .filter((row) => isAllowedWebUniverseRecord(row))
     .sort((a, b) => b._rank_score - a._rank_score);
