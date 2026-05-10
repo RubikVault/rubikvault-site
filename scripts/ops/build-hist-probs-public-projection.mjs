@@ -9,8 +9,10 @@ import { gunzipSync } from 'node:zlib';
 const ROOT = path.resolve(fileURLToPath(new URL('.', import.meta.url)), '../..');
 const DEFAULT_INPUT_DIR = path.join(ROOT, 'public/data/hist-probs');
 const DEFAULT_OUTPUT_DIR = path.join(ROOT, 'public/data/hist-probs-public');
+const DEFAULT_SCOPE_FILE = path.join(ROOT, 'public/data/universe/v7/ssot/assets.global.canonical.ids.json');
 const SYMBOL_RESOLVE_PATH = path.join(ROOT, 'public/data/symbol-resolve.v1.json');
 const SEARCH_EXACT_PATH = path.join(ROOT, 'public/data/universe/v7/search/search_exact_by_symbol.json.gz');
+const SCOPE_ROWS_PATH = path.join(ROOT, 'mirrors/universe-v7/ssot/assets.global.rows.json');
 
 function parseArgs(argv) {
   const options = {
@@ -19,6 +21,8 @@ function parseArgs(argv) {
     shardCount: Math.max(1, Number(process.env.RV_HIST_PROBS_PUBLIC_SHARDS || 256)),
     maxEvents: Math.max(1, Number(process.env.RV_HIST_PROBS_PUBLIC_MAX_EVENTS || 12)),
     maxProfiles: Math.max(0, Number(process.env.RV_HIST_PROBS_PUBLIC_MAX_PROFILES || 0)),
+    scopeFile: process.env.RV_HIST_PROBS_SCOPE_FILE
+      || (String(process.env.RV_UNIVERSE_SCOPE_MODE || '').trim().toLowerCase() === 'index_core' ? DEFAULT_SCOPE_FILE : ''),
   };
   for (let i = 2; i < argv.length; i += 1) {
     const arg = argv[i];
@@ -39,6 +43,13 @@ function parseArgs(argv) {
       options.maxEvents = Math.max(1, Number(arg.split('=')[1]) || options.maxEvents);
     } else if (arg.startsWith('--max-profiles=')) {
       options.maxProfiles = Math.max(0, Number(arg.split('=')[1]) || 0);
+    } else if (arg === '--scope-file' && next) {
+      options.scopeFile = path.resolve(ROOT, next);
+      i += 1;
+    } else if (arg.startsWith('--scope-file=')) {
+      options.scopeFile = path.resolve(ROOT, arg.split('=').slice(1).join('='));
+    } else if (arg === '--no-scope') {
+      options.scopeFile = '';
     }
   }
   return options;
@@ -80,6 +91,17 @@ function normalizeKey(value) {
   return String(value || '').trim().toUpperCase();
 }
 
+function normalizeCanonicalId(value) {
+  return normalizeKey(value);
+}
+
+function addScopeKey(keys, value) {
+  const key = normalizeKey(value);
+  if (!isSymbolAlias(key)) return;
+  keys.add(key);
+  if (key.includes(':')) keys.add(key.split(':').pop());
+}
+
 function isSymbolAlias(value) {
   const normalized = normalizeKey(value);
   return Boolean(normalized)
@@ -119,6 +141,63 @@ function buildAliasCandidates() {
     addAlias(map, ticker, row?.exchange && ticker ? `${ticker}.${row.exchange}` : null);
   }
   return map;
+}
+
+function readScopeCanonicalIds(scopeFile) {
+  if (!scopeFile) return null;
+  const doc = readJson(scopeFile);
+  const ids = Array.isArray(doc?.canonical_ids)
+    ? doc.canonical_ids
+    : Array.isArray(doc?.ids)
+      ? doc.ids
+      : Array.isArray(doc?.entries)
+        ? doc.entries.map((entry) => entry?.canonical_id || entry?.id)
+        : [];
+  return new Set(ids.map(normalizeCanonicalId).filter(Boolean));
+}
+
+function rowsFromDoc(doc) {
+  if (Array.isArray(doc)) return doc;
+  if (Array.isArray(doc?.rows)) return doc.rows;
+  if (Array.isArray(doc?.assets)) return doc.assets;
+  if (Array.isArray(doc?.entries)) return doc.entries;
+  return [];
+}
+
+function addScopedRowKeys(keys, canonicalIds, row) {
+  const canonicalId = normalizeCanonicalId(row?.canonical_id || row?.id);
+  if (!canonicalIds.has(canonicalId)) return;
+  const symbol = row?.symbol || row?.ticker || row?.code || row?.display_symbol;
+  const exchange = row?.exchange || row?.exchange_code || row?.mic;
+  addScopeKey(keys, canonicalId);
+  addScopeKey(keys, symbol);
+  addScopeKey(keys, exchange && symbol ? `${exchange}:${symbol}` : null);
+  addScopeKey(keys, exchange && symbol ? `${symbol}.${exchange}` : null);
+}
+
+function buildScopeInfo(scopeFile) {
+  if (!scopeFile) return null;
+  const canonicalIds = readScopeCanonicalIds(scopeFile);
+  if (!canonicalIds?.size) {
+    throw new Error(`scope file has no canonical ids: ${scopeFile}`);
+  }
+  const keys = new Set();
+  for (const canonicalId of canonicalIds) addScopeKey(keys, canonicalId);
+
+  const exact = readJsonMaybeGzip(SEARCH_EXACT_PATH);
+  const exactRows = Array.isArray(exact?.rows)
+    ? exact.rows
+    : Object.values(exact?.by_symbol || {});
+  for (const row of exactRows) addScopedRowKeys(keys, canonicalIds, row);
+
+  const rowsDoc = readJson(SCOPE_ROWS_PATH);
+  for (const row of rowsFromDoc(rowsDoc)) addScopedRowKeys(keys, canonicalIds, row);
+
+  return {
+    file: scopeFile,
+    canonicalIds,
+    keys,
+  };
 }
 
 function compactHorizon(value) {
@@ -189,17 +268,23 @@ function main() {
   const options = parseArgs(process.argv);
   const generatedAt = new Date().toISOString();
   const files = listProfileFiles(options.inputDir);
+  const scopeInfo = buildScopeInfo(options.scopeFile);
   const shards = Array.from({ length: options.shardCount }, () => ({}));
   const aliasCandidates = buildAliasCandidates();
   const profiles = [];
   const aliasOwners = new Map();
   let read = 0;
   let skipped = 0;
+  let skippedOutOfScope = 0;
   for (const filePath of files) {
     if (options.maxProfiles > 0 && profiles.length >= options.maxProfiles) break;
+    const ticker = path.basename(filePath, '.json');
+    if (scopeInfo && !scopeInfo.keys.has(normalizeKey(ticker))) {
+      skippedOutOfScope += 1;
+      continue;
+    }
     read += 1;
     const doc = readJson(filePath);
-    const ticker = path.basename(filePath, '.json');
     const compact = compactProfile(doc, ticker, options.maxEvents);
     if (!compact) {
       skipped += 1;
@@ -251,6 +336,10 @@ function main() {
     runtime_key_count: written,
     alias_key_count: aliasWritten,
     skipped_count: skipped,
+    skipped_out_of_scope_count: skippedOutOfScope,
+    scope_file: scopeInfo ? path.relative(ROOT, scopeInfo.file).split(path.sep).join('/') : null,
+    scope_canonical_id_count: scopeInfo?.canonicalIds.size || null,
+    scope_key_count: scopeInfo?.keys.size || null,
     source: 'public/data/hist-probs',
     shards_path: 'shards',
   };
@@ -273,6 +362,8 @@ function main() {
     runtime_keys: written,
     alias_keys: aliasWritten,
     skipped,
+    skipped_out_of_scope: skippedOutOfScope,
+    scope_canonical_ids: scopeInfo?.canonicalIds.size || null,
     shards: options.shardCount,
     max_shard_bytes: Math.max(0, ...shardStats.map((item) => item.bytes)),
   }));
