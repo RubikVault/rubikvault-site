@@ -118,6 +118,22 @@ function settleModule(promise, source) {
   }));
 }
 
+function settleOptionalModuleWithBudget(promise, source, timeoutMs = 4500) {
+  let timer = null;
+  const timeout = new Promise((resolve) => {
+    timer = setTimeout(() => resolve({
+      ok: false,
+      data: null,
+      meta: {},
+      source,
+      error: `optional_module_timeout_${timeoutMs}ms`,
+    }), timeoutMs);
+  });
+  return Promise.race([settleModule(promise, source), timeout]).finally(() => {
+    if (timer) clearTimeout(timer);
+  });
+}
+
 function moduleMissingKeys({ summary, historical, governance, fundamentals, historicalProfile }) {
   return [
     !summary?.data?.ticker && 'summary',
@@ -454,9 +470,9 @@ export async function fetchV2StockPage(ticker) {
       const summary = pageCoreToSummary(pageCore.data);
       const governance = pageCoreToGovernance(pageCore.data);
       const [historicalResult, historicalProfileResult, fundamentalsResult] = await Promise.all([
-        settleModule(fetchV2Historical(ticker), 'v2_historical'),
-        settleModule(fetchV2HistoricalProfile(ticker), 'v2_historical_profile'),
-        settleModule(fetchFundamentals(ticker), 'fundamentals'),
+        settleOptionalModuleWithBudget(fetchV2Historical(ticker), 'v2_historical'),
+        settleOptionalModuleWithBudget(fetchV2HistoricalProfile(ticker), 'v2_historical_profile'),
+        settleOptionalModuleWithBudget(fetchFundamentals(ticker), 'fundamentals'),
       ]);
       const historical = historicalResult?.data || pageCoreToHistorical(pageCore.data);
       const historicalProfile = historicalProfileResult?.data || pageCoreToHistoricalProfile(pageCore.data);
