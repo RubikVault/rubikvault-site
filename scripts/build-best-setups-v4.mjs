@@ -513,11 +513,17 @@ function cyclicSlice(rows, offset, count) {
 
 function buildDecisionCoreHorizonRows(rows, horizon) {
   const sorted = sortedHorizonRows(rows, horizon);
+  const regions = ['US', 'EU', 'ASIA'];
   const minPerRegion = Math.max(1, Math.min(
     Math.floor(BEST_SETUP_LIMIT / 3),
     Number(process.env.BEST_SETUPS_DECISION_CORE_MIN_PER_REGION || 5),
   ));
   const horizonOffset = ({ short: 0, medium: minPerRegion, long: minPerRegion * 2 }[horizon] || 0);
+  const residualRegionOrder = {
+    short: ['US', 'EU', 'ASIA'],
+    medium: ['EU', 'ASIA', 'US'],
+    long: ['ASIA', 'US', 'EU'],
+  }[horizon] || regions;
   const selected = [];
   const selectedIds = new Set();
   const add = (row) => {
@@ -526,9 +532,13 @@ function buildDecisionCoreHorizonRows(rows, horizon) {
     selected.push(row);
     selectedIds.add(id);
   };
-  for (const region of ['US', 'EU', 'ASIA']) {
+  for (const region of regions) {
     const regionRows = sorted.filter((item) => item.region === region);
     for (const row of cyclicSlice(regionRows, horizonOffset, minPerRegion)) add(row);
+  }
+  for (const region of residualRegionOrder) {
+    const regionRows = sorted.filter((item) => item.region === region);
+    for (const row of cyclicSlice(regionRows, horizonOffset + minPerRegion, regionRows.length)) add(row);
   }
   for (const row of sorted) add(row);
   return selected.slice(0, BEST_SETUP_LIMIT);
