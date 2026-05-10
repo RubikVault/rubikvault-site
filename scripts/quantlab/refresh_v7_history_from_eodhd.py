@@ -1328,6 +1328,7 @@ def main(argv: Iterable[str]) -> int:
             pack_updates = {}
             _write_progress_state("running", reason)
 
+        bulk_checkpoint_noop = False
         if args.bulk_last_day:
             bulk_exchange_cost = max(1, int(args.bulk_exchange_cost or 100))
             exchange_checkpoint = load_or_init_exchange_checkpoint(
@@ -1478,8 +1479,29 @@ def main(argv: Iterable[str]) -> int:
             bulk_expected = max(1, len(indexed_registry))
             bulk_effective_min_rows_matched = min(bulk_min_rows_matched, bulk_expected) if bulk_min_rows_matched > 0 else 0
             bulk_yield_ratio = bulk_rows_matched / bulk_expected
-            yield_below_ratio = bulk_min_yield_ratio > 0 and bulk_yield_ratio < bulk_min_yield_ratio
-            yield_below_abs = bulk_effective_min_rows_matched > 0 and bulk_rows_matched < bulk_effective_min_rows_matched
+            bulk_checkpoint_noop = (
+                bool(args.resume_exchange_checkpoint)
+                and bool(exchanges)
+                and len(skipped_completed_exchanges) == len(exchanges)
+                and bulk_rows_total == 0
+                and bulk_rows_matched == 0
+                and not bulk_exchange_errors
+                and not STOP_REQUESTED
+            )
+            if bulk_checkpoint_noop:
+                print(
+                    json.dumps(
+                        {
+                            "warning": "bulk_checkpoint_noop",
+                            "reason": "all_exchanges_completed_in_checkpoint",
+                            "exchanges_skipped": len(skipped_completed_exchanges),
+                            "expected": bulk_expected,
+                        }
+                    ),
+                    flush=True,
+                )
+            yield_below_ratio = (not bulk_checkpoint_noop) and bulk_min_yield_ratio > 0 and bulk_yield_ratio < bulk_min_yield_ratio
+            yield_below_abs = (not bulk_checkpoint_noop) and bulk_effective_min_rows_matched > 0 and bulk_rows_matched < bulk_effective_min_rows_matched
             if (yield_below_ratio or yield_below_abs) and not STOP_REQUESTED:
                 if EODHD_DISABLED_REASON is None:
                     globals()["EODHD_DISABLED_REASON"] = "bulk_yield_below_threshold"
@@ -1699,6 +1721,7 @@ def main(argv: Iterable[str]) -> int:
                 "exchange_checkpoint_path": str(exchange_checkpoint_path),
                 "exchange_checkpoint_resume_enabled": bool(args.resume_exchange_checkpoint),
                 "exchange_checkpoint_skipped_completed_count": len(locals().get("skipped_completed_exchanges", [])),
+                "bulk_checkpoint_noop": bool(bulk_checkpoint_noop),
             },
         }
         atomic_write_json(reports_root / "history_touch_report.json", history_touch_report)
@@ -1736,6 +1759,7 @@ def main(argv: Iterable[str]) -> int:
             "exchange_checkpoint_path": str(exchange_checkpoint_path),
             "exchange_checkpoint_resume_enabled": bool(args.resume_exchange_checkpoint),
             "exchange_checkpoint_skipped_completed_count": len(locals().get("skipped_completed_exchanges", [])),
+            "bulk_checkpoint_noop": bool(bulk_checkpoint_noop),
             "fetched_assets_path": str(fetched_assets_path),
             "changed_packs": changed_packs[:50],
             "fetched_assets_sample": fetched_assets[:50],
