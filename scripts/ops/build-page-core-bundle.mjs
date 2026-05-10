@@ -77,9 +77,9 @@ const PROTECTED_ALIASES = new Map([
   ['SPY', 'US:SPY'],
   ['QQQ', 'US:QQQ'],
   ['BRK-B', 'US:BRK-B'],
-  ['BRK.B', 'US:BRK.B'],
+  ['BRK.B', 'US:BRK-B'],
   ['BF-B', 'US:BF-B'],
-  ['BF.B', 'US:BF.B'],
+  ['BF.B', 'US:BF-B'],
 ]);
 const ALIAS_SHARD_MAX_BYTES = 512 * 1024;
 const PAGE_SHARD_MAX_BYTES = 1024 * 1024;
@@ -558,6 +558,7 @@ function buildAliasMap({ lookupExact, searchExact, registryRows, scopeIds }) {
     if (!registryIds.has(expected) && !scopeIds.has(expected)) {
       throw new Error(`PROTECTED_ALIAS_TARGET_MISSING:${alias}:expected:${expected}`);
     }
+    if (!scopeIds.has(expected)) continue;
     addAlias(aliasMap, collisions, alias, expected, { authoritative: true });
     const actual = aliasMap.get(alias)?.canonical || null;
     if (actual !== expected) throw new Error(`PROTECTED_ALIAS_MISMATCH:${alias}:${actual}:expected:${expected}`);

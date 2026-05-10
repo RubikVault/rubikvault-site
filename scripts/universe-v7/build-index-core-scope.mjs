@@ -101,6 +101,14 @@ function readRegistryRows() {
 }
 
 function registryEntry(row) {
+  const recentCloses = Array.isArray(row._tmp_recent_closes) ? row._tmp_recent_closes : [];
+  const recentClose = toNum(
+    row.last_close
+    || row.close
+    || row.adjusted_close
+    || row.price
+    || recentCloses[recentCloses.length - 1],
+  );
   return {
     canonical_id: normalize(row.canonical_id),
     symbol: normalize(row.symbol),
@@ -114,6 +122,8 @@ function registryEntry(row) {
     isin: row.isin || row.identifiers?.isin || null,
     bars_count: toNum(row.bars_count),
     avg_volume_30d: toNum(row.avg_volume_30d),
+    recent_close: recentClose,
+    market_cap: toNum(row.market_cap || row.marketCapitalization || row.fundamentals?.market_cap),
     score_0_100: toNum(row?.computed?.score_0_100 || row.score_0_100),
     last_trade_date: row.last_trade_date || null,
     history_pack: row?.pointers?.history_pack || row?.history_pack || null,
@@ -169,7 +179,7 @@ function regionRank(row, region) {
   const country = normalize(row.country);
   const anyEx = new Set([ex, cidEx].filter(Boolean));
   const hasEx = (...values) => values.some((value) => anyEx.has(value));
-  if (expectedRegion === 'US' && (hasEx('US') || country === 'USA')) return 10;
+  if (expectedRegion === 'US' && hasEx('US')) return 10;
   if (expectedRegion === 'UK' && (hasEx('LSE', 'LON', 'XLON') || country === 'UK' || country === 'UNITED KINGDOM')) return 10;
   if (expectedRegion === 'DE' && (hasEx('XETR', 'XETRA', 'F', 'FWB') || country === 'GERMANY')) return 10;
   if (expectedRegion === 'FR' && (hasEx('PA', 'EPA') || country === 'FRANCE')) return 10;
@@ -342,8 +352,13 @@ function classifyScopeRegion(row) {
 }
 
 function registryProxyScore(row) {
-  return (toNum(row.score_0_100) * 1e9)
+  const marketCapScore = Math.log10(Math.max(0, toNum(row.market_cap)) + 1) * 1e12;
+  const dollarVolume = toNum(row.avg_volume_30d) * Math.max(0.01, toNum(row.recent_close));
+  const dollarVolumeScore = Math.log10(Math.max(0, dollarVolume) + 1) * 1e9;
+  return marketCapScore
+    + dollarVolumeScore
     + (Math.log10(Math.max(0, toNum(row.avg_volume_30d)) + 1) * 1e6)
+    + (toNum(row.score_0_100) * 1e4)
     + toNum(row.bars_count);
 }
 
