@@ -3,6 +3,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import zlib from 'node:zlib';
+import { fileURLToPath } from 'node:url';
 import { parseGlobalAssetClasses } from '../../functions/api/_shared/global-asset-classes.mjs';
 
 const REPO_ROOT = process.cwd();
@@ -68,6 +69,7 @@ const EU_EXCHANGES = new Set([
 const ASIA_COUNTRIES = new Set([
   'CHINA',
   'HONG KONG',
+  'INDIA',
   'INDONESIA',
   'JAPAN',
   'MALAYSIA',
@@ -79,10 +81,12 @@ const ASIA_COUNTRIES = new Set([
 ]);
 const ASIA_EXCHANGES = new Set([
   'BK',
+  'BSE',
   'JK',
   'KLSE',
   'KO',
   'KQ',
+  'NSE',
   'SHE',
   'SHG',
   'TO',
@@ -160,8 +164,16 @@ function sortRows(a, b) {
   return String(a.canonical_id || '').localeCompare(String(b.canonical_id || ''));
 }
 
-async function main() {
-  const options = parseArgs(process.argv.slice(2));
+export async function main({ argv = process.argv.slice(2) } = {}) {
+  const scopeMode = (process.env.RV_UNIVERSE_SCOPE_MODE || 'global_registry').trim().toLowerCase();
+  if (scopeMode === 'index_core') {
+    const { main: indexCoreMain } = await import('./build-index-core-scope.mjs');
+    return indexCoreMain({ argv });
+  }
+  if (scopeMode !== 'global_registry') {
+    throw new Error(`unsupported_universe_scope_mode:${scopeMode}`);
+  }
+  const options = parseArgs(argv);
   const allowedTypes = new Set(parseGlobalAssetClasses(options.assetClasses));
   const registryRows = await readRegistryEntries(SOURCE_REGISTRY);
   const selectedRows = registryRows
@@ -261,4 +273,6 @@ async function main() {
   process.stdout.write(`${JSON.stringify({ ok: true, scope: scopeName, asset_classes: [...allowedTypes].sort(), counts }, null, 2)}\n`);
 }
 
-await main();
+if (path.resolve(process.argv[1] || '') === fileURLToPath(import.meta.url)) {
+  await main();
+}

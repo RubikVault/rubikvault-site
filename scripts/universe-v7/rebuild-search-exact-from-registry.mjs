@@ -9,6 +9,14 @@ const ROOT = process.cwd();
 const REGISTRY_PATH = path.join(ROOT, 'public/data/universe/v7/registry/registry.ndjson.gz');
 const OUT_PATH = path.join(ROOT, 'public/data/universe/v7/search/search_exact_by_symbol.json.gz');
 
+function argValue(name, fallback = '') {
+  const args = process.argv.slice(2);
+  const inline = args.find((arg) => arg.startsWith(`${name}=`));
+  if (inline) return inline.slice(name.length + 1);
+  const idx = args.indexOf(name);
+  return idx >= 0 ? args[idx + 1] || fallback : fallback;
+}
+
 function normalizeTicker(raw) {
   return String(raw || '').trim().toUpperCase();
 }
@@ -61,13 +69,22 @@ function compareGlobalBestSearchCandidate(a, b) {
   return ac < bc ? 1 : -1;
 }
 
-function readRegistryRows() {
+function readScopeSet(scopeFile) {
+  if (!scopeFile) return null;
+  const doc = JSON.parse(fs.readFileSync(path.resolve(ROOT, scopeFile), 'utf8'));
+  const ids = Array.isArray(doc) ? doc : (doc.canonical_ids || doc.ids || []);
+  return new Set(ids.map((id) => String(id || '').trim().toUpperCase()).filter(Boolean));
+}
+
+function readRegistryRows(scopeSet = null) {
   const text = zlib.gunzipSync(fs.readFileSync(REGISTRY_PATH)).toString('utf8');
   const rows = [];
   for (const line of text.split(/\r?\n/)) {
     if (!line.trim()) continue;
     try {
       const row = JSON.parse(line);
+      const canonicalId = String(row?.canonical_id || '').trim().toUpperCase();
+      if (scopeSet && !scopeSet.has(canonicalId)) continue;
       if (isAllowedWebUniverseRecord(row)) rows.push(row);
     } catch {
       // Registry validator owns malformed-row reporting.
@@ -84,8 +101,10 @@ function writeGzipJsonAtomic(filePath, doc) {
 }
 
 function main() {
+  const scopeFile = argValue('--scope-file', '');
+  const scopeSet = readScopeSet(scopeFile);
   const bySymbolBest = new Map();
-  for (const row of readRegistryRows()) {
+  for (const row of readRegistryRows(scopeSet)) {
     const symbol = normalizeTicker(row?.symbol);
     if (!symbol) continue;
     const candidate = {
@@ -127,6 +146,8 @@ function main() {
   writeGzipJsonAtomic(OUT_PATH, {
     schema: 'rv_v7_search_exact_index_v1',
     generated_at: new Date().toISOString(),
+    scope_mode: scopeSet ? 'scoped' : 'global_registry',
+    scope_file: scopeFile || null,
     count: symbols.length,
     by_symbol: bySymbol,
     by_prefix_1: byPrefix1,

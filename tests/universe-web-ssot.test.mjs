@@ -10,10 +10,11 @@ import {
   parseUniverseAssetClassFilter,
 } from '../public/js/universe-ssot.js';
 
-test('web universe allows stock, etf, and whitelisted bond context only', () => {
+test('web universe allows stock, etf, and index only', () => {
   assert.equal(isAllowedWebUniverseRecord({ symbol: 'AAPL', type_norm: 'STOCK', canonical_id: 'US:AAPL' }), true);
   assert.equal(isAllowedWebUniverseRecord({ symbol: 'SPY', type_norm: 'ETF', canonical_id: 'US:SPY' }), true);
-  assert.equal(isAllowedWebUniverseRecord({ symbol: 'US10Y', type_norm: 'BOND', canonical_id: 'GBOND:US10Y' }), true);
+  assert.equal(isAllowedWebUniverseRecord({ symbol: 'GSPC', type_norm: 'INDEX', canonical_id: 'INDX:GSPC' }), true);
+  assert.equal(isAllowedWebUniverseRecord({ symbol: 'US10Y', type_norm: 'BOND', canonical_id: 'GBOND:US10Y' }), false);
   assert.equal(isAllowedWebUniverseRecord({ symbol: 'XYZBOND', type_norm: 'BOND', canonical_id: 'GBOND:XYZBOND' }), false);
   assert.equal(isAllowedWebUniverseRecord({ symbol: 'ABC', type_norm: 'FUND', canonical_id: 'EUFUND:ABC' }), false);
   assert.equal(isAllowedWebUniverseRecord({ symbol: 'BTC-USD', type_norm: 'CRYPTO', canonical_id: 'CC:BTC-USD' }), false);
@@ -35,6 +36,21 @@ test('preferred row selection favors US primary listing over foreign duplicates'
   const us = { symbol: 'AAPL', canonical_id: 'US:AAPL', type_norm: 'STOCK', exchange: 'US', name: 'Apple Inc', bars_count: 18, avg_volume_30d: 40000000 };
   const ba = { symbol: 'AAPL', canonical_id: 'BA:AAPL', type_norm: 'STOCK', exchange: 'BA', name: 'Apple Inc DRC', bars_count: 3536, avg_volume_30d: 55281 };
   assert.equal(comparePreferredUniverseRows(us, ba) > 0, true);
+});
+
+test('preferred row selection rejects known cross-list collisions', () => {
+  assert.equal(comparePreferredUniverseRows(
+    { symbol: 'SPY', canonical_id: 'US:SPY', type_norm: 'ETF', exchange: 'US' },
+    { symbol: 'SPY', canonical_id: 'BA:SPY', type_norm: 'STOCK', exchange: 'BA' }
+  ) > 0, true);
+  assert.equal(comparePreferredUniverseRows(
+    { symbol: 'QQQ', canonical_id: 'US:QQQ', type_norm: 'ETF', exchange: 'US' },
+    { symbol: 'QQQ', canonical_id: 'NEO:QQQ', type_norm: 'STOCK', exchange: 'NEO' }
+  ) > 0, true);
+  assert.equal(comparePreferredUniverseRows(
+    { symbol: '0050', canonical_id: 'TW:0050', type_norm: 'ETF', exchange: 'TW' },
+    { symbol: '0050', canonical_id: 'KLSE:0050', type_norm: 'STOCK', exchange: 'KLSE' }
+  ) > 0, true);
 });
 
 test('search ranking favors exact normalized issuer match over similarly named stocks', () => {
@@ -66,12 +82,13 @@ test('search ranking favors US Visa primary listing over foreign Visa symbol-pre
 test('asset class filter exposes only supported web classes', () => {
   assert.equal(normalizeUniverseAssetClassFilter('fund'), 'all');
   assert.equal(normalizeUniverseAssetClassFilter('crypto'), 'all');
-  assert.equal(normalizeUniverseAssetClassFilter('bond'), 'bond');
+  assert.equal(normalizeUniverseAssetClassFilter('bond'), 'all');
+  assert.equal(normalizeUniverseAssetClassFilter('index'), 'index');
   assert.equal(parseUniverseAssetClassFilter('fund').removed, true);
   assert.equal(parseUniverseAssetClassFilter('crypto').removed, true);
-  assert.equal(parseUniverseAssetClassFilter('bond').removed, false);
+  assert.equal(parseUniverseAssetClassFilter('bond').removed, true);
   assert.deepEqual(
     getUniverseAssetClassOptions().map((item) => item.value),
-    ['all', 'stock', 'etf', 'bond']
+    ['all', 'stock', 'etf', 'index']
   );
 });

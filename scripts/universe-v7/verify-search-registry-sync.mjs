@@ -94,6 +94,26 @@ function compareSearchToRegistry(bySymbol, registryById) {
   return { checked, outOfScopeTypes, mismatchCount, mismatchExamples: mismatches };
 }
 
+function expectedSearchGuards(bySymbol, scope) {
+  const ids = new Set((Array.isArray(scope?.canonical_ids) ? scope.canonical_ids : [])
+    .map((id) => String(id || '').trim().toUpperCase())
+    .filter(Boolean));
+  const guards = [
+    { symbol: 'SPY', canonical_id: 'US:SPY', rejects: ['BA:SPY'] },
+    { symbol: 'QQQ', canonical_id: 'US:QQQ', rejects: ['NEO:QQQ'] },
+    { symbol: '0050', canonical_id: 'TW:0050', rejects: ['KLSE:0050'] },
+  ];
+  const failures = [];
+  for (const guard of guards) {
+    if (!ids.has(guard.canonical_id)) continue;
+    const actual = String(bySymbol?.[guard.symbol]?.canonical_id || '').trim().toUpperCase();
+    if (actual !== guard.canonical_id || guard.rejects.includes(actual)) {
+      failures.push({ symbol: guard.symbol, expected: guard.canonical_id, actual: actual || null, rejects: guard.rejects });
+    }
+  }
+  return failures;
+}
+
 function main() {
   const search = readGzipJson(SEARCH_PATH);
   const registryById = readRegistryById();
@@ -104,12 +124,17 @@ function main() {
   const searchFreshAgainstRegistry = Number.isFinite(searchGeneratedMs) && searchGeneratedMs >= registryMtimeMs;
   const bySymbol = search?.by_symbol && typeof search.by_symbol === 'object' ? search.by_symbol : {};
   const compare = compareSearchToRegistry(bySymbol, registryById);
+  const guardFailures = expectedSearchGuards(bySymbol, scope);
   const scopeCount = Number(scope?.count ?? (Array.isArray(scope?.canonical_ids) ? scope.canonical_ids.length : 0));
   const pageCoreCount = pageCoreLatest ? Number(pageCoreLatest.asset_count || 0) : null;
-  const pageCoreScopedCountOk = pageCoreCount == null || pageCoreCount === scopeCount;
+  const transitionMode = process.env.RV_UNIVERSE_SCOPE_TRANSITION === '1';
+  const pageCoreScopedCountOk = pageCoreCount == null
+    || pageCoreCount === scopeCount
+    || (transitionMode && pageCoreCount > scopeCount && scopeCount > 0);
   const ok = searchFreshAgainstRegistry
     && compare.outOfScopeTypes === 0
     && compare.mismatchCount === 0
+    && guardFailures.length === 0
     && pageCoreScopedCountOk;
   const report = {
     schema: 'rv.search_registry_sync_report.v1',
@@ -123,6 +148,8 @@ function main() {
     scope_count: scopeCount,
     page_core_asset_count: pageCoreCount,
     page_core_scoped_count_ok: pageCoreScopedCountOk,
+    transition_mode: transitionMode,
+    search_guard_failures: guardFailures,
     ...compare,
   };
   writeJsonAtomic(OUT_PATH, report);

@@ -16,6 +16,7 @@ import { histProbsReadCandidates } from '../lib/hist-probs/path-resolver.mjs';
 
 const HIST_PROBS_DIR = path.join(ROOT, 'public/data/hist-probs');
 const REPORT_PATH = path.join(ROOT, 'public/data/reports/hist-probs-region-catchup-plan-latest.json');
+const SCOPE_IDS_PATH = path.join(ROOT, 'public/data/universe/v7/ssot/assets.global.canonical.ids.json');
 const DEFAULT_RUNTIME_ROOT = process.env.NAS_RUNTIME_ROOT
   ? path.join(process.env.NAS_RUNTIME_ROOT, 'hist-probs-region-catchup')
   : path.join(ROOT, 'runtime/hist-probs-region-catchup');
@@ -32,6 +33,12 @@ function boolArg(name) {
   return process.argv.includes(`--${name}`);
 }
 
+function readScopeIds() {
+  const doc = readJsonMaybe(SCOPE_IDS_PATH);
+  const ids = Array.isArray(doc?.canonical_ids) ? doc.canonical_ids : [];
+  return new Set(ids.map((value) => String(value || '').trim().toUpperCase()).filter(Boolean));
+}
+
 function readRegistryRows() {
   if (!fs.existsSync(REGISTRY_PATH)) return [];
   const text = zlib.gunzipSync(fs.readFileSync(REGISTRY_PATH)).toString('utf8');
@@ -46,10 +53,14 @@ function readRegistryRows() {
       rows.push({
         symbol,
         canonical_id: String(row?.canonical_id || '').trim().toUpperCase(),
+        exchange: String(row?.exchange || '').trim().toUpperCase() || null,
         asset_type: assetType,
+        type_norm: assetType,
         region: classifyRegion(row),
         bars_count: Number(row?.bars_count || 0),
         last_trade_date: isoDate(row?.last_trade_date),
+        expected_date: isoDate(row?.last_trade_date),
+        history_pack: String(row?.pointers?.history_pack || row?.history_pack || '').trim() || null,
       });
     } catch {
       // malformed registry rows excluded; registry audits cover source quality.
@@ -103,11 +114,17 @@ function collectPrioritySymbols() {
 
 function selectRows({ rows, targetDate, perRegion, maxTotal, minBars }) {
   const priority = collectPrioritySymbols();
-  const bySymbol = new Map();
+  const byCanonical = new Map();
   for (const row of rows) {
     if (!['US', 'EU', 'ASIA'].includes(row.region)) continue;
     if (!['STOCK', 'ETF', 'INDEX'].includes(row.asset_type)) continue;
     if (Number(row.bars_count || 0) < minBars) continue;
+    const key = row.canonical_id || row.symbol;
+    const current = byCanonical.get(key);
+    if (!current || row.bars_count > current.bars_count) byCanonical.set(key, row);
+  }
+  const bySymbol = new Map();
+  for (const row of byCanonical.values()) {
     const current = bySymbol.get(row.symbol);
     if (!current || row.bars_count > current.bars_count) bySymbol.set(row.symbol, row);
   }
@@ -145,6 +162,28 @@ function writeTickerFile({ selected, targetDate }) {
   return filePath;
 }
 
+function writeEntriesFile({ selected, targetDate }) {
+  fs.mkdirSync(DEFAULT_RUNTIME_ROOT, { recursive: true });
+  const filePath = path.join(DEFAULT_RUNTIME_ROOT, `entries-${targetDate || 'latest'}-${Date.now()}.json`);
+  const entries = selected.map((row) => ({
+    symbol: row.symbol,
+    canonical_id: row.canonical_id || null,
+    exchange: row.exchange || null,
+    type_norm: row.type_norm || row.asset_type || null,
+    bars_count: row.bars_count || 0,
+    expected_date: row.expected_date || row.last_trade_date || null,
+    history_pack: row.history_pack || null,
+    region: row.region || null,
+  }));
+  fs.writeFileSync(filePath, `${JSON.stringify({
+    schema: 'rv.hist_probs.catchup_entries.v1',
+    generated_at: new Date().toISOString(),
+    target_market_date: targetDate || null,
+    entries,
+  }, null, 2)}\n`, 'utf8');
+  return filePath;
+}
+
 function runPostSummaries() {
   const scripts = [
     'scripts/ops/build-hist-probs-status-summary.mjs',
@@ -152,6 +191,7 @@ function runPostSummaries() {
     'scripts/ops/triage-hist-probs-errors.mjs',
     'scripts/hist-probs/classify-hist-errors.mjs',
     'scripts/hist-probs/audit-current-state.mjs',
+    'scripts/hist-probs/diagnose-no-data.mjs',
   ];
   const results = [];
   for (const script of scripts) {
@@ -167,9 +207,11 @@ function main() {
   const maxTotal = Math.max(1, Number(arg('max-total', process.env.RV_HIST_PROBS_REGION_CATCHUP_MAX_TOTAL || perRegion * 3)) || perRegion * 3);
   const execute = boolArg('execute');
   const minBars = Math.max(1, Number(arg('min-bars', process.env.RV_HIST_PROBS_REGION_CATCHUP_MIN_BARS || 60)) || 60);
-  const registryRows = readRegistryRows();
+  const scopeIds = readScopeIds();
+  const registryRows = readRegistryRows().filter((row) => scopeIds.size === 0 || scopeIds.has(row.canonical_id));
   const selected = selectRows({ rows: registryRows, targetDate, perRegion, maxTotal, minBars });
   const tickerFile = writeTickerFile({ selected, targetDate });
+  const entriesFile = writeEntriesFile({ selected, targetDate });
   const byRegion = {};
   for (const region of ['US', 'EU', 'ASIA']) {
     const rows = selected.filter((row) => row.region === region);
@@ -191,11 +233,15 @@ function main() {
     execute,
     min_bars: minBars,
     registry_rows_scanned: registryRows.length,
+    scope_ids_count: scopeIds.size,
     selected_count: selected.length,
     ticker_file: path.relative(ROOT, tickerFile),
+    entries_file: path.relative(ROOT, entriesFile),
     by_region: byRegion,
     sample_tickers: selected.slice(0, 30).map((row) => ({
       symbol: row.symbol,
+      canonical_id: row.canonical_id || null,
+      exchange: row.exchange || null,
       region: row.region,
       asset_type: row.asset_type,
       priority: row.priority,
@@ -220,7 +266,7 @@ function main() {
   };
   const run = spawnSync(process.execPath, [
     'run-hist-probs-turbo.mjs',
-    '--tickers-file', tickerFile,
+    '--entries-file', entriesFile,
     '--target-market-date', targetDate,
     '--asset-classes', 'STOCK,ETF,INDEX',
     '--write-run-summary=false',

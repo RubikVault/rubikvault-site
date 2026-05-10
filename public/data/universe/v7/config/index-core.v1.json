@@ -1,0 +1,34 @@
+{
+  "schema": "rv.index_core_config.v1",
+  "version": "1.0.0",
+  "description": "16-index core scope. RUA=Russell 3000 (NOT RUT=Russell 2000-Futures, EODHD returns RUT.INDX with 0 components in observed runs). CSI300=China A-shares.",
+  "indices": [
+    { "id": "sp500", "eodhd": "GSPC.INDX", "region": "US", "required": true, "expected_min": 490 },
+    { "id": "nasdaq100", "eodhd": "NDX.INDX", "region": "US", "required": true, "expected_min": 95 },
+    { "id": "russell3000", "eodhd": "RUA.INDX", "region": "US", "required": true, "expected_min": 2800 },
+    { "id": "dowjones", "eodhd": "DJI.INDX", "region": "US", "required": true, "expected_min": 30 },
+    { "id": "ftse100", "eodhd": "FTSE.INDX", "region": "UK", "required": true, "expected_min": 95 },
+    { "id": "dax40", "eodhd": "GDAXI.INDX", "region": "DE", "required": true, "expected_min": 38 },
+    { "id": "mdax", "eodhd": "MDAXI.INDX", "region": "DE", "required": false, "expected_min": 48 },
+    { "id": "cac40", "eodhd": "FCHI.INDX", "region": "FR", "required": true, "expected_min": 38 },
+    { "id": "stoxx600", "eodhd": "STOXX.INDX", "region": "EU", "required": true, "expected_min": 580 },
+    { "id": "smi", "eodhd": "SSMI.INDX", "region": "CH", "required": false, "expected_min": 18 },
+    { "id": "ibex35", "eodhd": "IBEX.INDX", "region": "ES", "required": false, "expected_min": 33 },
+    { "id": "nikkei225", "eodhd": "N225.INDX", "region": "JP", "required": true, "expected_min": 220 },
+    { "id": "topix", "eodhd": "TOPX.INDX", "region": "JP", "required": false, "expected_min": 1500 },
+    { "id": "hsi", "eodhd": "HSI.INDX", "region": "HK", "required": true, "expected_min": 75 },
+    { "id": "csi300", "eodhd": "CSI300.INDX", "region": "CN", "required": true, "expected_min": 290 },
+    { "id": "asx200", "eodhd": "AXJO.INDX", "region": "AU", "required": false, "expected_min": 195 }
+  ],
+  "etfs": {
+    "policy": "curated_liquid_only",
+    "exclude_keywords": ["leveraged", "inverse", "2x", "3x", "-2x", "-3x", "short", "ultra", "bear", "bull", "etn", "etc", "covered call", "buffer"],
+    "dedup_by": ["isin", "underlying_index"],
+    "max_count": 200,
+    "include_categories": ["broad_market", "sector_us", "sector_eu", "country", "factor_value", "factor_momentum", "treasuries_long", "treasuries_short", "gold", "broad_commodities"]
+  },
+  "extended_when_RV_INDEX_CORE_INCLUDE_EXTENDED": {
+    "indexes": [{ "id": "nasdaq_composite", "eodhd": "IXIC.INDX", "region": "US" }],
+    "etf_categories": ["thematic_ai", "thematic_clean_energy", "em_country", "credit_ig", "credit_hy"]
+  }
+}

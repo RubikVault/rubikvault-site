@@ -390,7 +390,7 @@ def parse_args(argv: Iterable[str]) -> argparse.Namespace:
     p.add_argument(
         "--bulk-min-rows-matched",
         type=int,
-        default=int(os.environ.get("RV_EODHD_BULK_MIN_ROWS_MATCHED", "50000")),
+        default=int(os.environ.get("RV_EODHD_BULK_MIN_ROWS_MATCHED", "1000")),
         help="In --bulk-last-day mode, abort further EODHD use if absolute matched-rows count falls below this. 0 disables.",
     )
     p.add_argument(

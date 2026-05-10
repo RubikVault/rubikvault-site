@@ -3,6 +3,23 @@ import path from 'path';
 import zlib from 'zlib';
 import { comparePreferredUniverseRows, isAllowedWebUniverseRecord } from '../../public/js/universe-ssot.js';
 
+const ROOT = process.cwd();
+
+function argValue(name, fallback = '') {
+  const args = process.argv.slice(2);
+  const inline = args.find((arg) => arg.startsWith(`${name}=`));
+  if (inline) return inline.slice(name.length + 1);
+  const idx = args.indexOf(name);
+  return idx >= 0 ? args[idx + 1] || fallback : fallback;
+}
+
+function readScopeSet(scopeFile) {
+  if (!scopeFile) return null;
+  const doc = JSON.parse(fs.readFileSync(path.resolve(ROOT, scopeFile), 'utf8'));
+  const ids = Array.isArray(doc) ? doc : (doc.canonical_ids || doc.ids || []);
+  return new Set(ids.map((id) => String(id || '').trim().toUpperCase()).filter(Boolean));
+}
+
 function toSafeNum(v, fallback) {
   const n = Number(v);
   return Number.isFinite(n) ? n : fallback;
@@ -80,6 +97,8 @@ function buildPrefixBuckets(ranked, countPerBucket, maxDepth) {
 }
 
 async function run() {
+  const scopeFile = argValue('--scope-file', '');
+  const scopeSet = readScopeSet(scopeFile);
   const snapshotPath = 'public/data/universe/v7/registry/registry.snapshot.json.gz';
   const snapshot = readJsonGz(snapshotPath);
   if (!snapshot) {
@@ -93,6 +112,7 @@ async function run() {
     ...r,
     _rank_score: rankScore(r)
   }))
+    .filter((row) => !scopeSet || scopeSet.has(String(row?.canonical_id || '').trim().toUpperCase()))
     .filter((row) => isAllowedWebUniverseRecord(row))
     .sort((a, b) => b._rank_score - a._rank_score);
 
@@ -115,18 +135,27 @@ async function run() {
   await writeJsonGz(path.join(searchDir, 'search_global_top_30000.json.gz'), {
     schema: 'rv_v7_search_top_v1',
     generated_at: now,
+    scope_mode: scopeSet ? 'scoped' : 'global_registry',
+    scope_file: scopeFile || null,
+    total_count: ranked.length,
     items: topK
   });
 
   await writeJsonGz(path.join(searchDir, 'search_global_top_10000.json.gz'), {
     schema: 'rv_v7_search_top_v1',
     generated_at: now,
+    scope_mode: scopeSet ? 'scoped' : 'global_registry',
+    scope_file: scopeFile || null,
+    total_count: ranked.length,
     items: topK.slice(0, 10000)
   });
 
   await writeJsonGz(path.join(searchDir, 'search_global_top_2000.json.gz'), {
     schema: 'rv_v7_search_top_v1',
     generated_at: now,
+    scope_mode: scopeSet ? 'scoped' : 'global_registry',
+    scope_file: scopeFile || null,
+    total_count: ranked.length,
     items: topK.slice(0, 2000)
   });
 
@@ -136,6 +165,7 @@ async function run() {
     await writeJsonGz(path.join(bucketDir, `${prefix}.json.gz`), {
       schema: 'rv_v7_search_bucket_v1',
       generated_at: now,
+      scope_mode: scopeSet ? 'scoped' : 'global_registry',
       items
     });
   }
@@ -143,6 +173,9 @@ async function run() {
   const manifest = {
     schema: 'rv_v7_search_manifest_v1',
     generated_at: now,
+    scope_mode: scopeSet ? 'scoped' : 'global_registry',
+    scope_file: scopeFile || null,
+    total_count: ranked.length,
     buckets: Object.fromEntries(Object.keys(buckets).map(k => [k, true]))
   };
   fs.writeFileSync(path.join(searchDir, 'search_index_manifest.json'), JSON.stringify(manifest, null, 2));
@@ -191,6 +224,8 @@ async function run() {
   await writeJsonGz(path.join(searchDir, 'search_exact_by_symbol.json.gz'), {
     schema: 'rv_v7_search_exact_index_v1',
     generated_at: now,
+    scope_mode: scopeSet ? 'scoped' : 'global_registry',
+    scope_file: scopeFile || null,
     count: exactSymbols.length,
     by_symbol: bySymbolDoc,
     by_prefix_1: byPrefix1

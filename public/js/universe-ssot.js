@@ -31,6 +31,9 @@ export const CREDIT_PROXY_SYMBOLS = Object.freeze(['LQD', 'HYG']);
 export const CREDIT_PROXY_CANONICAL_IDS = Object.freeze(['US:LQD', 'US:HYG']);
 
 export const PREFERRED_CANONICAL_BY_SYMBOL = Object.freeze({
+  '0050': 'TW:0050',
+  QQQ: 'US:QQQ',
+  SPY: 'US:SPY',
   US2Y: 'GBOND:US2Y',
   US10Y: 'GBOND:US10Y',
   US30Y: 'GBOND:US30Y',

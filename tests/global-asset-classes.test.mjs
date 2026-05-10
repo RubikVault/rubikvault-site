@@ -6,8 +6,8 @@ import {
   resolveGlobalAssetClasses,
 } from '../functions/api/_shared/global-asset-classes.mjs';
 
-test('global asset classes default to STOCK and ETF', () => {
-  assert.deepEqual(parseGlobalAssetClasses(''), ['STOCK', 'ETF']);
+test('global asset classes default to STOCK, ETF, and INDEX', () => {
+  assert.deepEqual(parseGlobalAssetClasses(''), ['STOCK', 'ETF', 'INDEX']);
 });
 
 test('global asset classes accept INDEX aliases and de-duplicate', () => {

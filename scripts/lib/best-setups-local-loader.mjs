@@ -303,6 +303,7 @@ export async function resolveLocalAssetMeta(ticker) {
     : {};
   const preferredExchange = normalizeTicker(options.preferredExchange);
   const preferredCanonicalId = normalizeCanonicalId(options.preferredCanonicalId || options.canonicalId);
+  const preferredHistoryPack = String(options.preferredHistoryPack || options.historyPack || '').trim() || null;
   const [searchExactDoc, registryIndex] = await Promise.all([
     loadSearchExact(),
     loadRegistryIndex(),
@@ -329,8 +330,11 @@ export async function resolveLocalAssetMeta(ticker) {
     exchange: resolved?.exchange || normalizeTicker(searchExact?.exchange) || (canonicalId?.includes(':') ? canonicalId.split(':')[0] : null),
     type_norm: resolved?.type_norm || String(searchExact?.type_norm || '').trim().toUpperCase() || null,
     bars_count: Number(resolved?.bars_count || searchExact?.bars_count || 0),
-    history_pack: resolved?.history_pack || null,
-    history_pack_candidates: symbolCandidates.map((candidate) => candidate.history_pack).filter(Boolean),
+    history_pack: preferredHistoryPack || resolved?.history_pack || null,
+    history_pack_candidates: [
+      preferredHistoryPack,
+      ...symbolCandidates.map((candidate) => candidate.history_pack),
+    ].filter(Boolean),
     name: resolved?.name || (typeof searchExact?.name === 'string' && searchExact.name.trim() ? searchExact.name.trim() : null),
     country: typeof searchExact?.country === 'string' && searchExact.country.trim() ? searchExact.country.trim() : null,
     exists_in_universe: Boolean(resolved || searchExact),

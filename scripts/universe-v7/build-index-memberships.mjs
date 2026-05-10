@@ -134,6 +134,11 @@ function writeJsonAtomic(filePath, doc) {
 }
 
 function main() {
+  const scopeMode = (process.env.RV_UNIVERSE_SCOPE_MODE || 'global_registry').trim().toLowerCase();
+  if (scopeMode === 'index_core') {
+    console.log('[build-index-memberships] skipped: index_core mode writes memberships in builder');
+    return;
+  }
   const generatedAt = new Date().toISOString();
   const bySymbol = readSearchExact();
   const memberships = INDEX_DEFS.map((def) => buildMembership(def, bySymbol, generatedAt));

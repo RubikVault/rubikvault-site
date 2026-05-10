@@ -216,6 +216,43 @@ function readTickerListFile(filePath) {
   }
 }
 
+function normalizeEntryFileRow(row = {}) {
+  const symbol = normalizeTicker(row?.symbol || row?.ticker);
+  if (!symbol) return null;
+  const canonicalId = String(row?.canonical_id || row?.canonicalId || '').trim().toUpperCase() || null;
+  const exchange = String(row?.exchange || canonicalExchange(canonicalId) || '').trim().toUpperCase() || null;
+  const typeNorm = String(row?.type_norm || row?.asset_type || row?.asset_class || '').trim().toUpperCase() || null;
+  const barsCount = Number(row?.bars_count || row?.bars || 0);
+  const historyPack = String(row?.history_pack || row?.historyPack || row?.pointers?.history_pack || '').trim() || null;
+  return {
+    symbol,
+    canonical_id: canonicalId,
+    canonical_ids: canonicalId ? [canonicalId] : [],
+    exchange,
+    type_norm: typeNorm,
+    bars_count: Number.isFinite(barsCount) ? barsCount : 0,
+    expected_date: normalizeDateId(row?.expected_date || row?.last_trade_date || row?.required_date),
+    history_pack: historyPack,
+  };
+}
+
+function readEntriesFile(filePath) {
+  try {
+    const raw = fsSync.readFileSync(filePath, 'utf8');
+    const parsed = JSON.parse(raw);
+    const rows = Array.isArray(parsed)
+      ? parsed
+      : Array.isArray(parsed?.entries)
+        ? parsed.entries
+        : Array.isArray(parsed?.items)
+          ? parsed.items
+          : [];
+    return rows.map(normalizeEntryFileRow).filter(Boolean);
+  } catch {
+    return [];
+  }
+}
+
 function parseCliArgs(argv = process.argv.slice(2)) {
   const tickerArg = argv.find((arg) => arg.startsWith('--ticker='))?.split('=')[1]
     || (argv.includes('--ticker') ? argv[argv.indexOf('--ticker') + 1] : null);
@@ -223,6 +260,8 @@ function parseCliArgs(argv = process.argv.slice(2)) {
     || (argv.includes('--tickers') ? argv[argv.indexOf('--tickers') + 1] : null);
   const tickersFileArg = argv.find((arg) => arg.startsWith('--tickers-file='))?.split('=')[1]
     || (argv.includes('--tickers-file') ? argv[argv.indexOf('--tickers-file') + 1] : null);
+  const entriesFileArg = argv.find((arg) => arg.startsWith('--entries-file='))?.split('=')[1]
+    || (argv.includes('--entries-file') ? argv[argv.indexOf('--entries-file') + 1] : null);
   const targetMarketDate = argv.find((arg) => arg.startsWith('--target-market-date='))?.split('=')[1]
     || (argv.includes('--target-market-date') ? argv[argv.indexOf('--target-market-date') + 1] : null);
   const writeRunSummaryArg = argv.find((arg) => arg.startsWith('--write-run-summary='))?.split('=')[1]
@@ -243,8 +282,13 @@ function parseCliArgs(argv = process.argv.slice(2)) {
     }
   }
   explicitTickers.delete(null);
+  const explicitEntries = entriesFileArg
+    ? readEntriesFile(path.resolve(REPO_ROOT, entriesFileArg))
+    : [];
+  for (const entry of explicitEntries) explicitTickers.add(entry.symbol);
   return {
     explicitTickers: [...explicitTickers],
+    explicitEntries,
     targetMarketDate: normalizeDateId(targetMarketDate),
     writeRunSummary: parseBooleanFlag(writeRunSummaryArg),
     assetClasses: parseGlobalAssetClasses(assetClassesArg),
@@ -264,9 +308,11 @@ function resolveRequiredDate({ expectedDate = null, targetMarketDate = null, fal
 function buildComputeOptions(entry = {}) {
   const preferredCanonicalId = String(entry?.canonical_id || '').trim().toUpperCase() || null;
   const preferredExchange = String(entry?.exchange || canonicalExchange(preferredCanonicalId) || '').trim().toUpperCase() || null;
+  const preferredHistoryPack = String(entry?.history_pack || '').trim() || null;
   const options = {};
   if (preferredCanonicalId) options.preferredCanonicalId = preferredCanonicalId;
   if (preferredExchange) options.preferredExchange = preferredExchange;
+  if (preferredHistoryPack) options.preferredHistoryPack = preferredHistoryPack;
   return options;
 }
 
@@ -317,6 +363,7 @@ function mergeUniverseEntry(map, row) {
     canonical_ids: [],
     canonical_id: null,
     exchange: null,
+    history_pack: null,
   };
   const expectedDate = normalizeDateId(row?.last_trade_date);
   if (!current.expected_date || (expectedDate && expectedDate > current.expected_date)) {
@@ -335,6 +382,7 @@ function mergeUniverseEntry(map, row) {
   if (!current.canonical_id || shouldPreferCanonicalCandidate(current, row)) {
     current.canonical_id = canonicalId || null;
     current.exchange = String(row?.exchange || '').trim().toUpperCase() || canonicalExchange(canonicalId) || null;
+    current.history_pack = String(row?.pointers?.history_pack || row?.history_pack || '').trim() || null;
     current._preferred_last_trade_date = expectedDate || null;
     current._preferred_bars_count = barsCount;
   }
@@ -508,10 +556,13 @@ async function writeNoDataManifest(entries, { mode, totalInput }, outputPath = N
     min_required_bars: MIN_REQUIRED_BARS,
       tickers: entries.map((entry) => ({
       symbol: entry.symbol,
+      canonical_id: entry.canonical_id || null,
+      exchange: entry.exchange || canonicalExchange(entry.canonical_id) || null,
       bars_count: entry.bars_count,
       expected_date: entry.expected_date,
       type_norm: entry.type_norm || null,
       canonical_ids: entry.canonical_ids || [],
+      history_pack: entry.history_pack || null,
     })),
   };
   const tmpPath = `${outputPath}.${process.pid}.${Date.now()}.tmp`;
@@ -563,7 +614,17 @@ if (isMainThread) {
     const universe = await loadRequiredUniverse(cli.assetClasses);
     let universeEntries = universe.entries;
     let universeMode = universe.mode;
-    if (cli.explicitTickers.length > 0) {
+    if (cli.explicitEntries.length > 0) {
+      const bySymbol = new Map(universe.entries.map((entry) => [entry.symbol, entry]));
+      universeEntries = cli.explicitEntries.map((entry) => ({
+        ...(bySymbol.get(entry.symbol) || {}),
+        ...entry,
+        canonical_ids: entry.canonical_ids?.length
+          ? entry.canonical_ids
+          : (entry.canonical_id ? [entry.canonical_id] : bySymbol.get(entry.symbol)?.canonical_ids || []),
+      }));
+      universeMode = 'explicit_entries';
+    } else if (cli.explicitTickers.length > 0) {
       const explicitSet = new Set(cli.explicitTickers);
       universeEntries = universe.entries.filter((entry) => explicitSet.has(entry.symbol));
       universeMode = 'explicit_tickers';
@@ -633,7 +694,7 @@ if (isMainThread) {
           fallbackDate: regime?.date || null,
         }),
       }));
-    const tierSelection = cli.explicitTickers.length > 0
+    const tierSelection = cli.explicitTickers.length > 0 || cli.explicitEntries.length > 0
       ? { entries: requiredEntries, tier: 'explicit', tier_a_count: 0, tier_b_count: 0 }
       : applyHistProbsTier(requiredEntries, HIST_PROBS_TIER);
     requiredEntries = tierSelection.entries;
@@ -984,6 +1045,17 @@ if (isMainThread) {
       breadth_regime: regime?.breadth_regime ?? null,
       error_samples: errorSamples,
       no_data_samples: noDataSamples,
+      runtime_no_data_tickers: [...runtimeNoDataTickers].sort(),
+      runtime_no_data_entries: runtimeNoDataEntries.map((entry) => ({
+        symbol: entry.symbol,
+        canonical_id: entry.canonical_id || null,
+        exchange: entry.exchange || canonicalExchange(entry.canonical_id) || null,
+        bars_count: entry.bars_count || 0,
+        expected_date: entry.expected_date || entry.required_date || null,
+        type_norm: entry.type_norm || null,
+        canonical_ids: entry.canonical_ids || [],
+        history_pack: entry.history_pack || null,
+      })),
       local_only_mode: true,
       checkpoints_rebuild_forced: forcedRebuildCount,
       rss_budget_mb: HIST_PROBS_RSS_BUDGET_MB,
