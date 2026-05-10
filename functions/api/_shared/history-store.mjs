@@ -151,10 +151,19 @@ async function readLocalJsonMaybe(relPath) {
     }
 }
 
-export async function getStaticBars(symbol, baseUrl, assetFetcher = null) {
+export async function getStaticBars(symbol, baseUrl, assetFetcher = null, options = {}) {
     let mergedBars = [];
     try {
-        const candidates = buildSymbolCandidates(symbol);
+        const optionCandidates = [
+            options?.canonicalId,
+            options?.canonical_id,
+            options?.displayTicker,
+            options?.ticker,
+        ];
+        const candidates = [
+            ...buildSymbolCandidates(symbol),
+            ...optionCandidates.flatMap((candidate) => buildSymbolCandidates(candidate)),
+        ].filter((candidate, index, list) => candidate && list.indexOf(candidate) === index);
         const cleanSymbol = candidates[0]?.replace(/[^A-Z0-9.\-]/g, '') || '';
         const localMode = isLocalOrigin(baseUrl);
 

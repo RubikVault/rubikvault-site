@@ -167,13 +167,15 @@ function buildPublicDecisionFromPageCore(pageCoreResult, privateDecisionBundle =
   return { decision, analysisReadiness };
 }
 
-function buildStockApiPayloadFromPageCore({
+async function buildStockApiPayloadFromPageCore({
   tickerParam,
   normalizedTicker,
   effectiveTicker,
   pageCoreResult,
   requestStart,
   startedAt,
+  origin,
+  assetFetcher,
 }) {
   if (!pageCoreResult?.ok || !pageCoreResult.pageCore) return null;
   const row = pageCoreResult.pageCore;
@@ -191,22 +193,52 @@ function buildStockApiPayloadFromPageCore({
   });
   if (!publicDecision) return null;
   const dataDate = freshness.as_of || row.target_market_date || summary.as_of || null;
-  const latestBar = pageCoreLatestBar(row);
-  const change = {
-    abs: Number.isFinite(Number(summary.daily_change_abs)) ? Number(summary.daily_change_abs) : null,
-    pct: Number.isFinite(Number(summary.daily_change_pct)) ? Number(summary.daily_change_pct) : null,
-  };
+  const fallbackLatestBar = pageCoreLatestBar(row);
+  let historyBars = null;
+  try {
+    const { getStaticBars } = await import('./_shared/history-store.mjs');
+    historyBars = await getStaticBars(effectiveTicker, origin, assetFetcher, {
+      canonicalId: row.canonical_asset_id || pageCoreResult.canonical_id || null,
+      displayTicker: row.display_ticker || null,
+      ticker: normalizedTicker || null,
+    });
+  } catch {
+    historyBars = null;
+  }
+  const bars = Array.isArray(historyBars) && historyBars.length
+    ? historyBars
+    : (fallbackLatestBar ? [fallbackLatestBar] : []);
+  const historyRenderable = bars.length >= 40;
+  const latestBar = pickLatestBar(bars) || fallbackLatestBar;
+  const historyChange = computeDayChange(bars);
+  const change = historyChange.abs != null || historyChange.pct != null
+    ? historyChange
+    : {
+        abs: Number.isFinite(Number(summary.daily_change_abs)) ? Number(summary.daily_change_abs) : null,
+        pct: Number.isFinite(Number(summary.daily_change_pct)) ? Number(summary.daily_change_pct) : null,
+      };
+  const indicatorBars = bars.slice(Math.max(0, bars.length - 260));
+  const indicatorOut = indicatorBars.length >= 2 ? computeIndicators(indicatorBars) : { indicators: [], issues: ['INSUFFICIENT_HISTORY'] };
+  const indicatorList = Array.isArray(indicatorOut.indicators) ? indicatorOut.indicators : [];
+  const indicatorNullCount = indicatorList.reduce((acc, item) => {
+    const value = item?.value;
+    if (value == null) return acc + 1;
+    const num = Number(value);
+    return Number.isFinite(num) ? acc : acc + 1;
+  }, 0);
   const marketPrices = latestBar
-    ? buildMarketPricesFromLatestBar(latestBar, effectiveTicker, row.price_source || 'page-core-market-stats-min')
+    ? buildMarketPricesFromLatestBar(latestBar, effectiveTicker, historyRenderable ? 'static_history_store' : (row.price_source || 'page-core-market-stats-min'))
     : null;
-  const marketStats = buildMarketStatsPayload({
+  const pageCoreMarketStats = buildMarketStatsPayload({
     symbol: effectiveTicker,
     as_of: row.market_stats_min?.as_of || row.stats_date || latestBar?.date || dataDate,
     stats: row.market_stats_min?.stats || null,
     coverage: null,
     warnings: Array.isArray(row.market_stats_min?.issues) ? row.market_stats_min.issues : [],
   }, effectiveTicker);
+  const marketStats = buildMarketStatsFromIndicators(indicatorList, effectiveTicker, latestBar?.date) || pageCoreMarketStats;
   const generatedAt = nowUtcIso();
+  const mode = historyRenderable ? 'PAGE_CORE_HISTORY' : 'STATIC';
   const payload = {
     ok: true,
     schema_version: '3.0',
@@ -215,13 +247,13 @@ function buildStockApiPayloadFromPageCore({
       generated_at: generatedAt,
       data_date: dataDate,
       provider: 'page_core_public_projection',
-      quality_flags: [],
+      quality_flags: historyRenderable ? [] : ['HISTORY_NOT_RENDERABLE'],
       data_source: 'page_core',
-      mode: 'STATIC',
+      mode,
       asOf: dataDate,
       freshness: pageCoreResult.freshness_status || freshness.status || 'fresh',
       circuit: null,
-      cache: { mode: 'page_core', hit: true, stale: false },
+      cache: { mode: historyRenderable ? 'page_core_history' : 'page_core', hit: true, stale: false },
       timings: {
         t_total_ms: Date.now() - requestStart,
         t_kv_ms: null,
@@ -244,17 +276,17 @@ function buildStockApiPayloadFromPageCore({
       fetched_at: startedAt,
       published_at: generatedAt,
       digest: null,
-      status: row.coverage?.ui_renderable === true ? 'OK' : 'PARTIAL',
-      record_count: 1,
-      expected_count: 1,
+      status: row.coverage?.ui_renderable === true && historyRenderable ? 'OK' : 'PARTIAL',
+      record_count: bars.length,
+      expected_count: historyRenderable ? bars.length : 40,
       validation: {
-        passed: true,
+        passed: historyRenderable,
         dropped_records: 0,
         drop_ratio: 0,
-        drop_check_passed: true,
+        drop_check_passed: historyRenderable,
         drop_threshold: null,
-        checks: ['page_core_public_projection'],
-        warnings: [],
+        checks: historyRenderable ? ['page_core_public_projection', 'static_history_store'] : ['page_core_public_projection'],
+        warnings: historyRenderable ? [] : ['history_not_renderable'],
       },
       served_from: 'PAGE_CORE',
       request: {
@@ -265,10 +297,10 @@ function buildStockApiPayloadFromPageCore({
       as_of: dataDate,
       source_chain: {
         primary: 'page_core',
-        secondary: null,
+        secondary: historyRenderable ? 'static_history_store' : null,
         forced: null,
-        selected: 'page_core_public_projection',
-        fallbackUsed: false,
+        selected: historyRenderable ? 'page_core_history_projection' : 'page_core_public_projection',
+        fallbackUsed: historyRenderable,
         failureReason: null,
         primaryFailure: null,
         circuit: null,
@@ -286,8 +318,8 @@ function buildStockApiPayloadFromPageCore({
         httpStatus: 200,
       },
       indicators: {
-        count: 0,
-        nullCount: 0,
+        count: indicatorList.length,
+        nullCount: indicatorNullCount,
       },
       reasons: [],
       sources: {
@@ -299,6 +331,15 @@ function buildStockApiPayloadFromPageCore({
           lookup_key: effectiveTicker,
           record_found: true,
         },
+        history_store: {
+          served_from: historyRenderable ? 'ASSET' : 'MISSING',
+          path: '/data/eod/history',
+          status: historyRenderable ? 200 : 404,
+          error: historyRenderable ? null : 'history_not_renderable',
+          lookup_key: row.canonical_asset_id || effectiveTicker,
+          record_found: historyRenderable,
+          bars: bars.length,
+        },
       },
     },
     data: {
@@ -306,12 +347,12 @@ function buildStockApiPayloadFromPageCore({
       canonical_id: row.canonical_asset_id || pageCoreResult.canonical_id || null,
       name: identity.name || summary.name || row.display_name || null,
       asset_class: identity.asset_class || row.asset_class || null,
-      bars: latestBar ? [latestBar] : [],
+      bars,
       latest_bar: latestBar,
       change,
       market_prices: marketPrices,
       market_stats: marketStats,
-      indicators: [],
+      indicators: indicatorList,
       summary_min: summary,
       governance_summary: row.governance_summary || null,
       coverage: row.coverage || null,
@@ -925,13 +966,15 @@ export async function onRequestGet(context) {
   if (effectiveTicker && url.searchParams.get('legacy') !== '1' && String(env?.RV_STOCK_API_PAGE_CORE_FAST_PATH ?? '1') !== '0') {
     try {
       const pageCoreResult = await readPageCoreForTicker(resolvedCanonicalId || effectiveTicker, { request, env });
-      const pageCorePayload = buildStockApiPayloadFromPageCore({
+      const pageCorePayload = await buildStockApiPayloadFromPageCore({
         tickerParam,
         normalizedTicker,
         effectiveTicker,
         pageCoreResult,
         requestStart,
         startedAt,
+        origin: url.origin,
+        assetFetcher: env?.ASSETS || null,
       });
       if (pageCorePayload) {
         pageCorePayload.metadata.digest = await computeDigest(pageCorePayload);
