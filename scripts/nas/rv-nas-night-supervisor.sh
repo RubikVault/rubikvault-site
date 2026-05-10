@@ -638,8 +638,10 @@ step_command() {
       ;;
     page_core_bundle)
       local search_cmd
+      local decision_source
       search_cmd="$(build_search_rebuild_cmd "${RV_UNIVERSE_SCOPE_MODE:-global_registry}")"
-      printf '%s\n' "RV_DECISION_CORE_SOURCE='\${RV_DECISION_CORE_SOURCE:-legacy}' NODE_OPTIONS='--max-old-space-size=${RV_PAGE_CORE_HEAP_MB:-8192}' node scripts/ops/build-page-core-bundle.mjs --target-market-date '$TARGET_MARKET_DATE' --replace --incremental --promote && node scripts/ops/build-stock-analyzer-provider-exceptions.mjs --target-market-date '$TARGET_MARKET_DATE' && node scripts/ops/build-stock-analyzer-ui-state-summary.mjs --latest public/data/page-core/latest.json && ${search_cmd} && node scripts/universe-v7/verify-search-registry-sync.mjs && node scripts/ops/retention-page-core-bundles.mjs"
+      decision_source="${RV_DECISION_CORE_SOURCE:-legacy}"
+      printf '%s\n' "RV_DECISION_CORE_SOURCE='$decision_source' NODE_OPTIONS='--max-old-space-size=${RV_PAGE_CORE_HEAP_MB:-8192}' node scripts/ops/build-page-core-bundle.mjs --target-market-date '$TARGET_MARKET_DATE' --replace --incremental --promote && node scripts/ops/build-stock-analyzer-provider-exceptions.mjs --target-market-date '$TARGET_MARKET_DATE' && node scripts/ops/build-stock-analyzer-ui-state-summary.mjs --latest public/data/page-core/latest.json && ${search_cmd} && node scripts/universe-v7/verify-search-registry-sync.mjs && node scripts/ops/retention-page-core-bundles.mjs"
       ;;
     best_setups_core)
       printf '%s\n' "if [ \"\${RV_DECISION_CORE_SOURCE:-legacy}\" = \"core\" ]; then ALLOW_REMOTE_BAR_FETCH=0 BEST_SETUPS_DISABLE_NETWORK=1 BEST_SETUPS_DECISION_SOURCE=decision-core node scripts/build-best-setups-v4.mjs && node scripts/decision-core/build-buy-breadth-proof.mjs --target-market-date '$TARGET_MARKET_DATE'; else echo \"best_setups_core_skipped source=\${RV_DECISION_CORE_SOURCE:-legacy}\"; fi"
