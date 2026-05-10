@@ -85,7 +85,7 @@ async function fixtureRoot() {
     page_shard_count: 256,
   });
   for (let i = 0; i < 64; i += 1) await writeGzipJson(path.join(base, 'alias-shards', aliasShardName(i)), {});
-  for (let i = 0; i < 256; i += 1) await writeGzipJson(path.join(base, 'page-shards', pageShardName(i)), {});
+  for (let i = 0; i < 256; i += 1) await writeGzipJson(path.join(base, 'page-shards', pageShardName(i, 256)), {});
   const aliasShards = new Map();
   for (const [alias, canonical] of Object.entries(aliases)) {
     const index = aliasShardIndex(alias);
@@ -96,11 +96,11 @@ async function fixtureRoot() {
   }
   const pageShards = new Map();
   for (const [canonical, payload] of Object.entries(rows)) {
-    const index = pageShardIndex(canonical);
+    const index = pageShardIndex(canonical, 256);
     pageShards.set(index, { ...(pageShards.get(index) || {}), [canonical]: payload });
   }
   for (const [index, payload] of pageShards.entries()) {
-    await writeGzipJson(path.join(base, 'page-shards', pageShardName(index)), payload);
+    await writeGzipJson(path.join(base, 'page-shards', pageShardName(index, 256)), payload);
   }
   return root;
 }

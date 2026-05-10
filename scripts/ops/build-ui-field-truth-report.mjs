@@ -345,6 +345,7 @@ async function checkCanary(baseUrl, targetMarketDate, canary, timeoutMs) {
 }
 
 function readPageCoreSmokeLocal(latest, ticker) {
+  const pageShardCount = Number(latest?.page_shard_count) || PAGE_SHARD_COUNT;
   const query = normalizePageCoreAlias(ticker);
   const aliasShard = readPageCoreAssetJson(`${latest.snapshot_path}/alias-shards/${aliasShardName(aliasShardIndex(query))}`);
   const canonical = normalizePageCoreAlias(aliasShard?.[query]);
@@ -356,7 +357,7 @@ function readPageCoreSmokeLocal(latest, ticker) {
       error: null,
     };
   }
-  const pageShard = readPageCoreAssetJson(`${latest.snapshot_path}/page-shards/${pageShardName(pageShardIndex(canonical))}`);
+  const pageShard = readPageCoreAssetJson(`${latest.snapshot_path}/page-shards/${pageShardName(pageShardIndex(canonical, pageShardCount), pageShardCount)}`);
   const row = pageShard?.[canonical] || null;
   return {
     http_ok: true,
@@ -385,8 +386,9 @@ function pageCoreSampleKey(seed, row) {
 function listPageCoreRowsLocal(latest) {
   const rows = [];
   const seen = new Set();
-  for (let index = 0; index < PAGE_SHARD_COUNT; index += 1) {
-    const shard = readPageCoreAssetJson(`${latest.snapshot_path}/page-shards/${pageShardName(index)}`);
+  const pageShardCount = Number(latest?.page_shard_count) || PAGE_SHARD_COUNT;
+  for (let index = 0; index < pageShardCount; index += 1) {
+    const shard = readPageCoreAssetJson(`${latest.snapshot_path}/page-shards/${pageShardName(index, pageShardCount)}`);
     if (!shard || typeof shard !== 'object' || Array.isArray(shard)) continue;
     for (const [canonicalAssetId, row] of Object.entries(shard)) {
       const canonical = normalizePageCoreAlias(row?.canonical_asset_id || canonicalAssetId);

@@ -77,7 +77,7 @@ const pageCoreStructureGreen = Boolean(
   pageCoreLatest?.schema === 'rv.page_core_latest.v1'
   && pageCoreLatest?.snapshot_id
   && Number(pageCoreLatest?.alias_shard_count) === 64
-  && Number(pageCoreLatest?.page_shard_count) === 256
+  && Number(pageCoreLatest?.page_shard_count) >= 256
   && pageCoreManifestPath
   && fs.existsSync(pageCoreManifestPath)
 );

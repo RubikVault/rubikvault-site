@@ -35,6 +35,7 @@ const LOCAL_ROOT = (() => {
   }
 })();
 const ALIAS_MARKET_DATA_NAME_SIMILARITY_MIN = 0.8;
+const MIN_PAGE_SHARD_COUNT = 256;
 
 let latestCache = null;
 const aliasShardCache = new Map();
@@ -121,8 +122,13 @@ function validateLatest(latest) {
   if (!latest.snapshot_path) return 'PAGE_CORE_SNAPSHOT_PATH_MISSING';
   if (!latest.snapshot_id) return 'PAGE_CORE_SNAPSHOT_ID_MISSING';
   if (!latest.alias_shard_count || Number(latest.alias_shard_count) !== 64) return 'PAGE_CORE_ALIAS_SHARD_COUNT_INVALID';
-  if (!latest.page_shard_count || Number(latest.page_shard_count) !== 256) return 'PAGE_CORE_PAGE_SHARD_COUNT_INVALID';
+  if (!latest.page_shard_count || Number(latest.page_shard_count) < MIN_PAGE_SHARD_COUNT) return 'PAGE_CORE_PAGE_SHARD_COUNT_INVALID';
   return null;
+}
+
+function pageShardCountForLatest(latest) {
+  const count = Number(latest?.page_shard_count);
+  return Number.isInteger(count) && count >= MIN_PAGE_SHARD_COUNT ? count : PAGE_SHARD_COUNT;
 }
 
 async function loadLatest(options = {}) {
@@ -305,7 +311,8 @@ export async function readPageCoreForTicker(rawTicker, options = {}) {
         freshness_status: 'missing',
       });
     }
-    const pageShard = await loadPageShard(latest, pageShardIndex(canonical), options);
+    const pageShardCount = pageShardCountForLatest(latest);
+    const pageShard = await loadPageShard(latest, pageShardIndex(canonical, pageShardCount), options);
     const row = pageShard?.[canonical] || null;
     if (!row || row.schema_version !== PAGE_CORE_SCHEMA) {
       return failure('PAGE_CORE_NOT_FOUND', 'Mapped asset has no page-core row', {
@@ -325,7 +332,7 @@ export async function readPageCoreForTicker(rawTicker, options = {}) {
         const displayAliasShard = await loadAliasShard(latest, aliasShardIndex(displayAlias), options);
         const aliasCanonical = normalizePageCoreAlias(displayAliasShard?.[displayAlias]);
         if (aliasCanonical && aliasCanonical !== canonical) {
-          const aliasPageShard = await loadPageShard(latest, pageShardIndex(aliasCanonical), options);
+          const aliasPageShard = await loadPageShard(latest, pageShardIndex(aliasCanonical, pageShardCount), options);
           const aliasRow = aliasPageShard?.[aliasCanonical] || null;
           const aliasFallback = applyPageCoreAliasMarketDataFallback(row, aliasRow, { latest });
           if (aliasFallback) pageCore = aliasFallback;

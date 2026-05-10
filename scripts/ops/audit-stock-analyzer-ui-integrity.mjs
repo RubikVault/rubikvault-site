@@ -306,8 +306,9 @@ async function main() {
   }
   const rows = [];
   const rowsByCanonical = new Map();
-  for (let i = 0; i < 256; i += 1) {
-    const shard = await fetchJsonMaybeGzip(`${baseUrl}${snapshotPath}/page-shards/${pageShardName(i)}`);
+  const pageShardCount = Number(latest.page_shard_count) || 256;
+  for (let i = 0; i < pageShardCount; i += 1) {
+    const shard = await fetchJsonMaybeGzip(`${baseUrl}${snapshotPath}/page-shards/${pageShardName(i, pageShardCount)}`);
     for (const row of Object.values(shard || {})) {
       rows.push(row);
       if (row?.canonical_asset_id) rowsByCanonical.set(String(row.canonical_asset_id), row);
