@@ -185,11 +185,16 @@ export async function getStaticBars(symbol, baseUrl, assetFetcher = null, option
                         .filter(Boolean);
                 }
             }
-            const url = baseUrl ? new URL(relPath, baseUrl).toString() : relPath;
-            const response = assetFetcher && relPath.startsWith('/data/')
-                ? await assetFetcher.fetch(url)
-                : await fetch(url);
-            if (!response.ok || !response.body) return null;
+            let response = null;
+            try {
+                const url = baseUrl ? new URL(relPath, baseUrl).toString() : relPath;
+                response = assetFetcher && relPath.startsWith('/data/')
+                    ? await assetFetcher.fetch(url)
+                    : await fetch(url);
+            } catch {
+                return null;
+            }
+            if (!response?.ok || !response.body) return null;
             const text = await responseTextMaybeGzip(response, relPath);
 
             if (!text) return null;
@@ -213,13 +218,13 @@ export async function getStaticBars(symbol, baseUrl, assetFetcher = null, option
                 .map((row) => {
                     if (Array.isArray(row)) {
                         const date = String(row[0] || '').slice(0, 10);
-                        const close = Number(row[4] ?? row[5]);
+                        const close = Number(row.length >= 5 ? (row[4] ?? row[5]) : row[1]);
                         if (!date || !Number.isFinite(close)) return null;
-                        const open = Number(row[1]);
-                        const high = Number(row[2]);
-                        const low = Number(row[3]);
-                        const adjClose = Number(row[5]);
-                        const volume = Number(row[6]);
+                        const open = Number(row.length >= 5 ? row[1] : close);
+                        const high = Number(row.length >= 5 ? row[2] : close);
+                        const low = Number(row.length >= 5 ? row[3] : close);
+                        const adjClose = Number(row.length >= 5 ? row[5] : close);
+                        const volume = Number(row.length >= 7 ? row[6] : 0);
                         return {
                             date,
                             open: Number.isFinite(open) ? open : close,
@@ -356,15 +361,7 @@ export async function getStaticBars(symbol, baseUrl, assetFetcher = null, option
                         for (const candidate of candidates) {
                             const tickerBarsRaw = shardData[candidate] || shardData[candidate.replace(/[^A-Z0-9.\-]/g, '')];
                             if (Array.isArray(tickerBarsRaw)) {
-                                mergeInBars(tickerBarsRaw.map(b => ({
-                                    date: b[0],
-                                    open: b[1],
-                                    high: b[2],
-                                    low: b[3],
-                                    close: b[4],
-                                    adjClose: b[5],
-                                    volume: b[6]
-                                })));
+                                mergeInBars(tickerBarsRaw);
                             }
                         }
                         continue;
