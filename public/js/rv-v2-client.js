@@ -91,6 +91,15 @@ export async function fetchV2Historical(ticker) {
   return { ok: true, data: payload.data, meta: payload.meta, source: 'v2_historical' };
 }
 
+export async function fetchStockApiPayload(ticker) {
+  const payload = await fetchJsonWithTimeout(`/api/stock?ticker=${encodeURIComponent(ticker)}`, {
+    cache: 'no-store',
+    timeoutMs: 12000,
+  });
+  if (!payload?.ok || !payload?.data) throw new Error(payload?.error?.message || 'Stock API response not ok');
+  return { ok: true, data: payload, meta: payload.metadata || payload.meta || {}, source: 'stock_api' };
+}
+
 export async function fetchV2Governance(ticker) {
   const payload = await fetchJsonWithTimeout(`/api/v2/stocks/${encodeURIComponent(ticker)}/governance`);
   if (!payload.ok) throw new Error(payload.error?.message || 'V2 governance response not ok');
@@ -406,6 +415,25 @@ function pageCoreToHistorical(pageCore) {
   };
 }
 
+function stockApiToHistorical(stockApiPayload, fallbackTicker = null) {
+  const stockData = stockApiPayload?.data || {};
+  const bars = Array.isArray(stockData.bars) ? stockData.bars : [];
+  if (bars.length < 3) return null;
+  return {
+    ticker: stockData.ticker || fallbackTicker,
+    bars,
+    indicators: Array.isArray(stockData.indicators) ? stockData.indicators : [],
+    breakout_v12: stockData.breakout_v12 || null,
+    breakout_v2: stockData.breakout_v2 || null,
+    breakout_v2_legacy: stockData.breakout_v2_legacy || null,
+    availability: {
+      status: 'stock_api_history',
+      reason: 'Full historical bars served from the stock API public history projection.',
+      ui_renderable: true,
+    },
+  };
+}
+
 function pageCoreToHistoricalProfile(pageCore) {
   return {
     ticker: pageCore?.display_ticker || null,
@@ -469,17 +497,21 @@ export async function fetchV2StockPage(ticker) {
     if (pageCore?.ok && pageCore.data) {
       const summary = pageCoreToSummary(pageCore.data);
       const governance = pageCoreToGovernance(pageCore.data);
-      const [historicalResult, historicalProfileResult, fundamentalsResult] = await Promise.all([
+      const [stockApiResult, historicalResult, historicalProfileResult, fundamentalsResult] = await Promise.all([
+        settleOptionalModuleWithBudget(fetchStockApiPayload(ticker), 'stock_api', 12000),
         settleOptionalModuleWithBudget(fetchV2Historical(ticker), 'v2_historical'),
         settleOptionalModuleWithBudget(fetchV2HistoricalProfile(ticker), 'v2_historical_profile'),
         settleOptionalModuleWithBudget(fetchFundamentals(ticker), 'fundamentals'),
       ]);
-      const historical = historicalResult?.data || pageCoreToHistorical(pageCore.data);
-      const historicalProfile = historicalProfileResult?.data || pageCoreToHistoricalProfile(pageCore.data);
-      const fundamentals = fundamentalsResult?.data || null;
+      const stockApiPayload = stockApiResult?.data || null;
+      const stockApiData = stockApiPayload?.data || null;
+      const stockApiHistorical = stockApiToHistorical(stockApiPayload, summary.ticker);
+      const historical = stockApiHistorical || historicalResult?.data || pageCoreToHistorical(pageCore.data);
+      const historicalProfile = stockApiData?.historical_profile || historicalProfileResult?.data || pageCoreToHistoricalProfile(pageCore.data);
+      const fundamentals = stockApiData?.fundamentals || fundamentalsResult?.data || null;
       const missingModules = moduleMissingKeys({
         summary: { data: summary },
-        historical: historicalResult?.data ? historicalResult : { data: historical },
+        historical: stockApiHistorical ? { data: historical } : (historicalResult?.data ? historicalResult : { data: historical }),
         governance: { data: governance },
         fundamentals: fundamentalsResult?.data ? fundamentalsResult : { data: fundamentals },
         historicalProfile: historicalProfileResult?.data ? historicalProfileResult : { data: historicalProfile },
@@ -502,7 +534,9 @@ export async function fetchV2StockPage(ticker) {
         },
         meta: {
           summary: pageCore.meta || null,
-          historical: historicalResult?.meta || { provider: 'page-core', status: 'fresh' },
+          historical: stockApiHistorical
+            ? { ...(stockApiResult?.meta || {}), provider: 'stock_api', status: 'fresh' }
+            : (historicalResult?.meta || { provider: 'page-core', status: 'fresh' }),
           governance: pageCore.meta || null,
           fundamentals: fundamentalsResult?.meta || null,
           historical_profile: historicalProfileResult?.meta || { provider: 'page-core', status: 'pending' },

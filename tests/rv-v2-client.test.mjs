@@ -583,6 +583,78 @@ describe('fetchV2StockPage', () => {
     assert.equal(result.mode, 'v2_degraded');
     assert.deepEqual(result.missingModules.includes('governance'), true);
   });
+
+  it('hydrates page-core stock pages with full Stock API history before using the one-bar fallback', async () => {
+    global.fetch = async (url) => {
+      const href = String(url);
+      const okJson = (data) => ({ ok: true, json: async () => data });
+      if (href.includes('/data/page-core/latest.json')) {
+        return okJson({ snapshot_id: 'page-test' });
+      }
+      if (href.includes('/api/v2/page/AAPL')) {
+        return okJson({
+          ok: true,
+          data: {
+            canonical_asset_id: 'US:AAPL',
+            display_ticker: 'AAPL',
+            target_market_date: '2026-05-08',
+            freshness: { as_of: '2026-05-08', status: 'fresh' },
+            identity: { name: 'Apple Inc', asset_class: 'STOCK' },
+            summary_min: {
+              last_close: 102,
+              daily_change_abs: 2,
+              daily_change_pct: 0.02,
+              decision_verdict: 'BUY',
+              risk_level: 'MODERATE',
+            },
+            market_stats_min: {
+              price_date: '2026-05-08',
+              latest_bar_date: '2026-05-08',
+              stats_date: '2026-05-08',
+              as_of: '2026-05-08',
+              price_source: 'page-core',
+              stats_source: 'page-core',
+              key_levels_ready: true,
+              stats: { rsi14: 55, sma20: 100, sma50: 98, sma200: 90, atr14: 2 },
+            },
+            key_levels_ready: true,
+            ui_banner_state: 'all_systems_operational',
+            governance_summary: { blocking_reasons: [], warnings: [], risk_level: 'MODERATE' },
+            decision_core_min: { decision: { primary_action: 'BUY', analysis_reliability: 'MEDIUM' } },
+            coverage: { bars: 10498 },
+          },
+          meta: { provider: 'page-core' },
+        });
+      }
+      if (href.includes('/api/stock?ticker=AAPL')) {
+        return okJson({
+          ok: true,
+          data: {
+            ticker: 'AAPL',
+            bars: [
+              { date: '2026-05-06', close: 98 },
+              { date: '2026-05-07', close: 100 },
+              { date: '2026-05-08', close: 102 },
+            ],
+            indicators: [{ id: 'rsi14', value: 55 }],
+            fundamentals: { companyName: 'Apple Inc' },
+          },
+          metadata: { provider: 'page-core-public-stock-api', data_date: '2026-05-08' },
+        });
+      }
+      if (href.includes('/historical') || href.includes('/historical-profile') || href.includes('/api/fundamentals')) {
+        throw new Error('optional module unavailable');
+      }
+      throw new Error(`Unexpected URL: ${href}`);
+    };
+
+    const result = await fetchV2StockPage('AAPL');
+    assert.equal(result.ok, true);
+    assert.equal(result.mode, 'page_core_hydrated');
+    assert.equal(result.data.historical.bars.length, 3);
+    assert.equal(result.data.historical.availability.status, 'stock_api_history');
+    assert.equal(result.meta.historical.provider, 'stock_api');
+  });
 });
 
 describe('evaluateV2PromotionGate', () => {
