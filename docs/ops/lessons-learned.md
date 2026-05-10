@@ -21,6 +21,18 @@
 
 ---
 
+### 2026-05-10 · Dashboard · Public dashboards must use sanitized projections, not raw ops artifacts
+
+**What:** Dashboard V7 had useful live pipeline views, but the raw inputs under `public/data/ui/`, `public/data/ops/`, and broad `public/data/reports/` included NAS paths, run commands, internal topology, and private operational context.
+
+**Why:** The deploy bundle intentionally excludes dashboard/raw ops artifacts. Exposing them directly would violate the privacy and English-only public-site rules even when the dashboard itself renders correctly.
+
+**Fix:** The public `/dashboard_v7.html` is materialized during deploy as a compact, visitor-safe status page that reads only `public/data/status/dashboard-v7-public-latest.json` plus already allowlisted public proof data. Raw dashboard and ops reports remain NAS/local-only.
+
+**Prevention:** Any future public dashboard panel must first add a sanitized projection under `public/data/status/` and pass the privacy gate. Do not allowlist raw ops, UI, pipeline, report, or runbook artifacts just to make a dashboard render.
+
+---
+
 ### 2026-05-09 · NAS · Early-morning schedule masks must match last-completed EOD, not wall-clock weekdays
 
 **What:** Friday EOD did not advance because the scheduler wrapper skipped the Saturday 03:10 run as `outside_market_pipeline_schedule`.

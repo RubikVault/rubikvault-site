@@ -19,6 +19,8 @@
     { "pattern": "breakout-test.html", "maxFileSizeBytes": 2097152, "class": "visitor-html" },
     { "pattern": "market-stats.html", "maxFileSizeBytes": 2097152, "class": "visitor-html" },
     { "pattern": "showcase.html", "maxFileSizeBytes": 2097152, "class": "visitor-html" },
+    { "pattern": "dashboard_v7.html", "maxFileSizeBytes": 1048576, "class": "public-dashboard", "allowDenyNameHints": true },
+    { "pattern": "dashboard_v7/index.html", "maxFileSizeBytes": 1048576, "class": "public-dashboard", "allowDenyNameHints": true },
     { "pattern": "404.html", "maxFileSizeBytes": 2097152, "class": "visitor-html" },
 
     { "pattern": "_headers", "maxFileSizeBytes": 102400, "class": "cf-config" },
@@ -47,6 +49,7 @@
 
     { "pattern": "data/public-status.json", "maxFileSizeBytes": 16384, "class": "public-status" },
     { "pattern": "data/status/deploy-proof-latest.json", "maxFileSizeBytes": 16384, "class": "public-deploy-proof", "allowDenyNameHints": true },
+    { "pattern": "data/status/dashboard-v7-public-latest.json", "maxFileSizeBytes": 262144, "class": "public-dashboard-status", "allowDenyNameHints": true },
     { "pattern": "data/status/decision-module-scorecard-latest.json", "maxFileSizeBytes": 262144, "class": "decision-module-scorecard" },
     { "pattern": "data/reports/decision-core-buy-breadth-latest.json", "maxFileSizeBytes": 65536, "class": "decision-core-public-proof", "allowDenyNameHints": true },
     { "pattern": "data/reports/stock-decision-core-ui-buy-breadth-latest.json", "maxFileSizeBytes": 65536, "class": "decision-core-public-proof", "allowDenyNameHints": true },

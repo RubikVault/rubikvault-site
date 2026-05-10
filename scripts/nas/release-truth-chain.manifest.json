@@ -1,16 +1,16 @@
 {
   "schema": "rv.nas.release_truth_chain_code_manifest.v1",
-  "generated_at": "2026-05-10T08:46:10.988Z",
-  "git_head": "28c8622743c780dc6ccac6880f84eb73b337996e",
+  "generated_at": "2026-05-10T09:29:47.377Z",
+  "git_head": "7e37c9a467667c386bea3f3962e4d56c7e03d94b",
   "paths_file": "scripts/nas/inputs/release-truth-chain.paths",
-  "file_count": 95,
-  "combined_hash": "d2b12a07a521b6e439cabe34c615bc6555cb5ea7c86c764d4d30abfeee8ab777",
+  "file_count": 96,
+  "combined_hash": "ec0243376ec5d5ccc29f5ade53a3c0489bb4e3c6e305c890c02913d599c1f3dc",
   "missing": [],
   "files": [
     {
       "path": "config/runtime-manifest.json",
-      "size_bytes": 12171,
-      "sha256": "fc38079840bc4847aa1c9d8c0305d53df40e6441286929466e91e633b164e375"
+      "size_bytes": 12587,
+      "sha256": "17dadaa4a25b1b58c9e5a99bdaf01f714488bb66cc9d2393d1b50db6570e2654"
     },
     {
       "path": "extract_buys.py",
@@ -344,8 +344,8 @@
     },
     {
       "path": "scripts/nas/inputs/release-truth-chain.paths",
-      "size_bytes": 4181,
-      "sha256": "13b6baef87e8697d22b59ae198a243881cdf1515bed54663525687713b76dc2d"
+      "size_bytes": 4230,
+      "sha256": "4cb8a99357c4d9d7fd76261f71a6ed3889d3d1ade297802a32c6ebbaf3432407"
     },
     {
       "path": "scripts/nas/nas-env.sh",
@@ -359,8 +359,8 @@
     },
     {
       "path": "scripts/nas/rv-nas-night-supervisor.sh",
-      "size_bytes": 56391,
-      "sha256": "4907368affc8207bf5607a04d483431fca1e2376543bd3bfc5d53994424dd82e"
+      "size_bytes": 56448,
+      "sha256": "6fe57f492441346b9428634196367f60f188461304d754c006570019ae2e4f00"
     },
     {
       "path": "scripts/nas/safe-code-sync.sh",
@@ -384,8 +384,8 @@
     },
     {
       "path": "scripts/ops/build-deploy-bundle.mjs",
-      "size_bytes": 39950,
-      "sha256": "2fb861ab4fec6ec89eba63d205a7223a9c78dc4f535c5948b5abb6660378f971"
+      "size_bytes": 50125,
+      "sha256": "df14e2ead1d17bee546c8cb51fa6ec98f55a06615a45d5c30c774ee15496e276"
     },
     {
       "path": "scripts/ops/build-full-universe-decisions.mjs",
@@ -401,6 +401,11 @@
       "path": "scripts/ops/build-page-core-bundle.mjs",
       "size_bytes": 58164,
       "sha256": "0597853823af6d525821f4e3e58006f231443cc63be679479b97de4dc7dcc347"
+    },
+    {
+      "path": "scripts/ops/build-public-dashboard-v7-report.mjs",
+      "size_bytes": 13853,
+      "sha256": "012399c41a084faced54cfa245cc748e14a283ff70f7aec94f083c5a9e28fa89"
     },
     {
       "path": "scripts/ops/build-public-history-shards.mjs",
@@ -439,13 +444,13 @@
     },
     {
       "path": "scripts/ops/privacy-gate.mjs",
-      "size_bytes": 8409,
-      "sha256": "fb925c8a80c1d96383b44580c8675eed541436e7ecdacf396ced137e85938176"
+      "size_bytes": 8578,
+      "sha256": "422b9a837bdf6ef264410a0b21f6e5f90d3c800da3b5dbe90803ce169ddf2cb6"
     },
     {
       "path": "scripts/ops/release-gate-check.mjs",
-      "size_bytes": 48049,
-      "sha256": "cf576cacfec6de80e2374a7b56209a490baf02cccbf795563c73859cb5d4abe1"
+      "size_bytes": 48916,
+      "sha256": "fee5e9b106e7d307333a5600723b6c22ed1e0c2904da07c8a68f02c2db164560"
     },
     {
       "path": "scripts/ops/report-history-coverage.mjs",

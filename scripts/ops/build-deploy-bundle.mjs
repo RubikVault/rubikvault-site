@@ -132,6 +132,8 @@ const DECISION_CORE_PUBLIC_PROOF_REPORTS = [
   'data/reports/decision-core-outcome-bootstrap-latest.json',
 ];
 
+const PUBLIC_DASHBOARD_STATUS_REPORT = 'data/status/dashboard-v7-public-latest.json';
+
 const RUNTIME_HISTORICAL_CACHE_LIMIT = Number(process.env.RV_RUNTIME_HISTORICAL_CACHE_LIMIT || 750);
 const RUNTIME_HISTORICAL_CANONICAL_IDS = String(process.env.RV_RUNTIME_HISTORICAL_CANONICAL_IDS || 'US:F,US:AAPL,US:HOOD,US:SPY')
   .split(',')
@@ -256,6 +258,162 @@ function removeAppleDoubleArtifacts(dir) {
   }
   walk(dir);
   return removed;
+}
+
+function publicDashboardHtml() {
+  return `<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>RubikVault Decision Center</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg:#08111f; --panel:#111c2d; --panel2:#16243a; --text:#eef4ff; --muted:#9badc7;
+      --ok:#3ddc97; --warn:#ffca66; --bad:#ff6b7a; --line:#243650; --blue:#69a7ff;
+    }
+    *{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+    main{width:min(1220px,calc(100vw - 32px));margin:0 auto;padding:28px 0 48px}
+    header{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;margin-bottom:20px}
+    h1{font-size:clamp(28px,5vw,52px);line-height:1;margin:0 0 10px;letter-spacing:0}
+    h2{font-size:18px;margin:0 0 14px}.sub{color:var(--muted);max-width:820px;line-height:1.5}
+    .grid{display:grid;gap:14px}.cols4{grid-template-columns:repeat(4,minmax(0,1fr))}.cols3{grid-template-columns:repeat(3,minmax(0,1fr))}.cols2{grid-template-columns:repeat(2,minmax(0,1fr))}
+    .card{background:linear-gradient(180deg,var(--panel),#0d1828);border:1px solid var(--line);border-radius:8px;padding:16px;min-width:0}
+    .metric{font-size:28px;font-weight:800}.label{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.08em}.row{display:flex;justify-content:space-between;gap:12px;border-top:1px solid var(--line);padding:10px 0}.row:first-child{border-top:0}
+    .pill{display:inline-flex;align-items:center;border:1px solid var(--line);border-radius:999px;padding:4px 9px;font-size:12px;color:var(--muted);gap:6px}.ok{color:var(--ok)}.warn{color:var(--warn)}.bad{color:var(--bad)}
+    table{width:100%;border-collapse:collapse} th,td{text-align:left;border-bottom:1px solid var(--line);padding:9px 8px;font-size:13px} th{color:var(--muted);font-weight:650}
+    a{color:var(--blue);text-decoration:none}.small{font-size:12px;color:var(--muted)} .stack{display:flex;flex-direction:column;gap:10px}.bar{height:8px;border-radius:999px;background:#0a1320;overflow:hidden}.bar span{display:block;height:100%;background:linear-gradient(90deg,var(--ok),var(--blue))}
+    @media(max-width:880px){header{display:block}.cols4,.cols3,.cols2{grid-template-columns:1fr}main{width:min(100vw - 20px,1220px);padding-top:18px}.metric{font-size:24px}}
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <div>
+        <h1>RubikVault Decision Center</h1>
+        <div class="sub">Public operational truth for Decision Core, BUY breadth, NAS run health, deploy proof, frontpage validation, and module outcome scorecards.</div>
+      </div>
+      <div class="pill" id="generated">Loading</div>
+    </header>
+    <section class="grid cols4" id="hero"></section>
+    <section class="grid cols3" style="margin-top:14px" id="buyBreadth"></section>
+    <section class="card" style="margin-top:14px">
+      <h2>Best Setups: Short / Mid / Long</h2>
+      <div class="grid cols3" id="horizons"></div>
+    </section>
+    <section class="grid cols2" style="margin-top:14px">
+      <div class="card"><h2>Pipeline Health</h2><div id="pipeline"></div></div>
+      <div class="card"><h2>UI Proofs</h2><div id="proofs"></div></div>
+    </section>
+    <section class="card" style="margin-top:14px">
+      <h2>Module Outcome Scorecards</h2>
+      <div class="small" style="margin-bottom:10px">Empirical hit rates by horizon. Not profit probability. Not alpha proof.</div>
+      <div style="overflow:auto"><table id="modules"></table></div>
+    </section>
+    <section class="card" style="margin-top:14px">
+      <h2>Caveats</h2>
+      <div id="caveats" class="stack"></div>
+    </section>
+  </main>
+  <script>
+    const fmt = (v) => v == null ? "n/a" : String(v);
+    const pct = (v) => Number.isFinite(Number(v)) ? (Number(v) * 100).toFixed(1) + "%" : "n/a";
+    const cls = (ok) => ok ? "ok" : "bad";
+    const statusCls = (s) => s === "OK" ? "ok" : s === "DEGRADED" || s === "WARN" || s === "WARNING" ? "warn" : "bad";
+    function card(label, value, status) { return '<div class="card"><div class="label">'+label+'</div><div class="metric '+statusCls(status || value)+'">'+fmt(value)+'</div></div>'; }
+    function row(label, value, status) { return '<div class="row"><span>'+label+'</span><strong class="'+statusCls(status || value)+'">'+fmt(value)+'</strong></div>'; }
+    function signalRow(a) {
+      const href = a.analyzer_url || "#";
+      return '<div class="row"><span><a href="'+href+'">'+fmt(a.ticker)+'</a> <span class="small">'+fmt(a.region)+' '+fmt(a.asset_type)+'</span></span><strong>'+fmt(a.signal_quality_score)+'</strong></div>';
+    }
+    async function load() {
+      const res = await fetch('/data/status/dashboard-v7-public-latest.json?_=' + Date.now(), { cache: 'no-store' });
+      if (!res.ok) throw new Error('status fetch failed');
+      const d = await res.json();
+      document.getElementById('generated').textContent = 'Target ' + fmt(d.target_market_date) + ' · Updated ' + fmt(d.generated_at);
+      document.getElementById('hero').innerHTML = [
+        card('Release ready', d.public_truth.release_ready ? 'YES' : 'NO', d.public_truth.release_ready ? 'OK' : 'FAIL'),
+        card('Decision ready', d.public_truth.decision_ready ? 'YES' : 'NO', d.public_truth.decision_ready ? 'OK' : 'FAIL'),
+        card('Data plane', d.public_truth.data_plane_green ? 'GREEN' : 'BLOCKED', d.public_truth.data_plane_green ? 'OK' : 'FAIL'),
+        card('Deploy smokes', d.deploy.smokes_ok ? 'OK' : 'FAIL', d.deploy.smokes_ok ? 'OK' : 'FAIL')
+      ].join('');
+      const counts = d.decision_core.selected_counts || {};
+      const avail = d.decision_core.available_counts || {};
+      document.getElementById('buyBreadth').innerHTML = ['us_stock_etf','eu_stock_etf','asia_stock_etf'].map(k => {
+        const label = k.replaceAll('_',' ').toUpperCase();
+        return '<div class="card"><div class="label">'+label+'</div><div class="metric ok">'+fmt(counts[k])+'</div><div class="small">Available core BUY: '+fmt(avail[k])+'</div></div>';
+      }).join('');
+      const horizons = d.best_setups.horizons || {};
+      document.getElementById('horizons').innerHTML = ['short','medium','long'].map(h => {
+        const rows = (horizons[h] || []).slice(0,10).map(signalRow).join('');
+        return '<div class="card"><h2>'+h.toUpperCase()+'</h2>'+rows+'</div>';
+      }).join('');
+      const p = d.pipeline || {};
+      document.getElementById('pipeline').innerHTML = [
+        row('Stage health', p.stage_health.status),
+        row('Scheduler', p.scheduler.status + ' · ' + fmt(p.scheduler.schedule_policy)),
+        row('Watchdog', p.watchdog.status),
+        row('Cron', p.cron.status),
+        row('Disk free GB', p.disk.free_gb),
+        row('EODHD budget used', p.eodhd_budget.used_pct == null ? 'n/a' : p.eodhd_budget.used_pct + '%'),
+        row('Bundle preflight', p.cloudflare_bundle.status),
+        row('Stale actionable inputs', p.stale_data.actionable_stale_input_count),
+        row('Reason-code drift', p.reason_code_drift.status),
+        row('Connectivity', p.connectivity.status)
+      ].join('');
+      const u = d.ui_proofs || {};
+      document.getElementById('proofs').innerHTML = [
+        row('BUY breadth UI', u.buy_breadth.status),
+        row('Random20 UI', u.random20.status),
+        row('Frontpage analyzer proof', u.frontpage_best_setups.status),
+        row('Frontpage pages OK', (u.frontpage_best_setups.counts?.ok ?? 'n/a') + ' / ' + (u.frontpage_best_setups.counts?.unique_analyzer_pages ?? u.frontpage_best_setups.counts?.total ?? 'n/a')),
+        row('No stale actionable BUY', p.stale_data.stale_actionable_buy_forbidden ? 'YES' : 'NO', p.stale_data.stale_actionable_buy_forbidden ? 'OK' : 'FAIL')
+      ].join('');
+      const modules = d.module_scorecards.modules || {};
+      document.getElementById('modules').innerHTML = '<thead><tr><th>Module</th><th>Status</th><th>Short hit</th><th>Mid hit</th><th>Long hit</th><th>Samples</th><th>As of</th></tr></thead><tbody>' +
+        Object.values(modules).map(m => {
+          const s = m.horizons.short, mid = m.horizons.mid, l = m.horizons.long;
+          const samples = [s.sample_n, mid.sample_n, l.sample_n].map(fmt).join(' / ');
+          return '<tr><td>'+fmt(m.name)+'</td><td class="'+statusCls(m.status)+'">'+fmt(m.status)+'</td><td>'+pct(s.hit_rate)+'</td><td>'+pct(mid.hit_rate)+'</td><td>'+pct(l.hit_rate)+'</td><td>'+samples+'</td><td>'+fmt(m.source_asof)+'</td></tr>';
+        }).join('') + '</tbody>';
+      document.getElementById('caveats').innerHTML = (d.caveats || []).map(x => '<div class="small">'+x+'</div>').join('');
+    }
+    load().catch(err => {
+      document.body.innerHTML = '<main><div class="card"><h1>Dashboard unavailable</h1><div class="bad">'+String(err.message || err)+'</div></div></main>';
+    });
+  </script>
+</body>
+</html>
+`;
+}
+
+function materializePublicDashboardV7() {
+  const r = spawnSync(process.execPath, [
+    path.join(REPO_ROOT, 'scripts/ops/build-public-dashboard-v7-report.mjs'),
+  ], { cwd: REPO_ROOT, encoding: 'utf8', stdio: 'pipe', timeout: 30_000 });
+  if (r.status !== 0) {
+    process.stderr.write(r.stdout || '');
+    process.stderr.write(r.stderr || '');
+    log('FATAL: build-public-dashboard-v7-report failed');
+    process.exit(4);
+  }
+  const reportSrc = path.join(PUBLIC_DIR, PUBLIC_DASHBOARD_STATUS_REPORT);
+  const reportDest = path.join(DIST_DIR, PUBLIC_DASHBOARD_STATUS_REPORT);
+  if (fs.existsSync(reportSrc)) {
+    fs.mkdirSync(path.dirname(reportDest), { recursive: true });
+    fs.copyFileSync(reportSrc, reportDest);
+  }
+  const html = publicDashboardHtml();
+  const htmlPaths = [
+    path.join(DIST_DIR, 'dashboard_v7.html'),
+    path.join(DIST_DIR, 'dashboard_v7/index.html'),
+  ];
+  for (const dest of htmlPaths) {
+    fs.mkdirSync(path.dirname(dest), { recursive: true });
+    fs.writeFileSync(dest, html, 'utf8');
+  }
+  log('Materialized public-safe dashboard_v7.html');
 }
 
 function utcNow() { return new Date().toISOString(); }
@@ -790,6 +948,8 @@ if (!isDryRun) {
     copiedDecisionCoreProofReports += 1;
   }
   if (copiedDecisionCoreProofReports > 0) log(`Copied ${copiedDecisionCoreProofReports} Decision-Core public proof reports to dist/`);
+
+  materializePublicDashboardV7();
 
   const runtimeHistoricalCache = materializeRuntimeHistoricalCache();
   log(`Runtime historical cache: wrote ${runtimeHistoricalCache.written} files, skipped ${runtimeHistoricalCache.skipped}, ${Math.round(runtimeHistoricalCache.bytes / 1024 / 1024)} MB`);

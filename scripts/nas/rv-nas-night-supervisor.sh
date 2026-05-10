@@ -653,7 +653,7 @@ step_command() {
       printf '%s\n' "node scripts/ops/build-pipeline-epoch.mjs --lane='$ACTIVE_LANE'"
       ;;
     generate_meta_dashboard_data)
-      printf '%s\n' "node scripts/generate_meta_dashboard_data.mjs --lane='$ACTIVE_LANE'"
+      printf '%s\n' "node scripts/generate_meta_dashboard_data.mjs --lane='$ACTIVE_LANE' && node scripts/ops/build-public-dashboard-v7-report.mjs"
       ;;
     signal_performance_report)
       printf '%s\n' "node scripts/ops/build-signal-performance-report.mjs --lane='$ACTIVE_LANE'"

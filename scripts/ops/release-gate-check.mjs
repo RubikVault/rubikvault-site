@@ -45,6 +45,7 @@ const DECISION_CORE_BUY_BREADTH_PATH = path.join(REPO_ROOT, 'public/data/reports
 const DECISION_CORE_BUY_BREADTH_UI_PATH = path.join(REPO_ROOT, 'public/data/reports/stock-decision-core-ui-buy-breadth-latest.json');
 const DEPLOY_PROOF_PATH  = path.join(REPO_ROOT, 'var/private/ops/deploy-proof-latest.json');
 const PUBLIC_DEPLOY_PROOF_PATH = path.join(REPO_ROOT, 'public/data/status/deploy-proof-latest.json');
+const PUBLIC_DASHBOARD_STATUS_PATH = path.join(REPO_ROOT, 'public/data/status/dashboard-v7-public-latest.json');
 const BUNDLE_META_PATH   = path.join(REPO_ROOT, 'var/private/ops/build-bundle-meta.json');
 const CODE_SYNC_META_PATH = path.join(REPO_ROOT, 'var/private/ops/code-sync-latest.json');
 const BUILD_META_PATH    = path.join(REPO_ROOT, 'public/data/ops/build-meta.json');
@@ -763,6 +764,22 @@ function buildDeployBundle() {
   log('Deploy bundle built.');
 }
 
+function refreshPublicDashboardReportInBundle() {
+  const script = path.join(REPO_ROOT, 'scripts/ops/build-public-dashboard-v7-report.mjs');
+  if (!fs.existsSync(script)) return;
+  const r = spawnSync(process.execPath, [script], {
+    cwd: REPO_ROOT,
+    encoding: 'utf8',
+    stdio: 'inherit',
+    timeout: 30_000,
+  });
+  if (r.status !== 0) fail(`build-public-dashboard-v7-report failed with exit ${r.status ?? 'timeout'}`);
+  if (!fs.existsSync(DIST_DIR) || !fs.existsSync(PUBLIC_DASHBOARD_STATUS_PATH)) return;
+  const dest = path.join(DIST_DIR, 'data/status/dashboard-v7-public-latest.json');
+  fs.mkdirSync(path.dirname(dest), { recursive: true });
+  fs.copyFileSync(PUBLIC_DASHBOARD_STATUS_PATH, dest);
+}
+
 function deploymentIdFromUrl(url) {
   try {
     const host = new URL(url).hostname;
@@ -1010,6 +1027,7 @@ writeDeployProof({
   releaseStatePhase: proofReleasePhase,
   targetDate: proofTargetDate,
 });
+refreshPublicDashboardReportInBundle();
 log(`Deploy proof written: ${DEPLOY_PROOF_PATH}`);
 
 // 6. Publish the finalized public proof. Static Pages cannot update one file after

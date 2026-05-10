@@ -41,6 +41,10 @@ function normalizeRel(filePath) {
 export function classifyPath(relPath) {
   const normalized = normalizeRel(relPath);
   const low = normalized.toLowerCase();
+
+  if (low === 'dashboard_v7.html' || low === 'dashboard_v7/index.html') {
+    return { ok: true, reason: null };
+  }
   
   // Explicitly allow listed proof reports
   const allowlistedReports = [
@@ -49,7 +53,8 @@ export function classifyPath(relPath) {
     'data/reports/stock-decision-core-ui-random20-latest.json',
     'data/reports/frontpage-best-setups-ui-proof-latest.json',
     'data/reports/decision-core-historical-replay-latest.json',
-    'data/reports/decision-core-outcome-bootstrap-latest.json'
+    'data/reports/decision-core-outcome-bootstrap-latest.json',
+    'data/status/dashboard-v7-public-latest.json'
   ];
   if (allowlistedReports.some(allowed => low.endsWith(allowed))) {
     return { ok: true, reason: null };

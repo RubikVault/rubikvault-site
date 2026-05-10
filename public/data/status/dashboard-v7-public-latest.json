@@ -1,0 +1,1704 @@
+{
+  "schema": "rv.public_dashboard_v7_report.v1",
+  "generated_at": "2026-05-10T09:27:49.208Z",
+  "target_market_date": "2026-05-08",
+  "status": "OK",
+  "public_truth": {
+    "release_ready": true,
+    "ui_green": true,
+    "decision_ready": true,
+    "data_plane_green": true,
+    "decision_core_switch_mode": "accelerated_historical_certification",
+    "alpha_proof": false
+  },
+  "final_seal": {
+    "status": "DEGRADED",
+    "release_ready": true,
+    "ui_green": true,
+    "decision_ready": true,
+    "data_plane_green": true,
+    "blocker_count": 0,
+    "warning_count": 4,
+    "generated_at": "2026-05-09T18:53:03.783Z"
+  },
+  "deploy": {
+    "smokes_ok": true,
+    "release_ready": true,
+    "deployment_id": "ca31e15e",
+    "git_commit_sha": "fc50c77c021dabf745447d5c2870f571229383ce",
+    "target_market_date": "2026-05-08",
+    "generated_at": "2026-05-09T18:36:43.993Z"
+  },
+  "decision_core": {
+    "status": "OK",
+    "target_market_date": "2026-05-08",
+    "proof_mode": "core",
+    "total_buy_count": 1310,
+    "selected_counts": {
+      "us_stock_etf": 18,
+      "eu_stock_etf": 18,
+      "asia_stock_etf": 18
+    },
+    "available_counts": {
+      "us_stock_etf": 420,
+      "eu_stock_etf": 441,
+      "asia_stock_etf": 388
+    },
+    "sample_assets": {
+      "us": [
+        {
+          "asset_id": "US:CMSA",
+          "ticker": "CMSA",
+          "asset_type": "STOCK",
+          "region": "US",
+          "horizon": null,
+          "analysis_reliability": "MEDIUM",
+          "signal_quality_score": null,
+          "max_entry_price": 22.12,
+          "invalidation_level": 21.8314,
+          "best_setups_present": true,
+          "analyzer_url": "/analyze/CMSA"
+        },
+        {
+          "asset_id": "US:AAXJ",
+          "ticker": "AAXJ",
+          "asset_type": "ETF",
+          "region": "US",
+          "horizon": null,
+          "analysis_reliability": "MEDIUM",
+          "signal_quality_score": null,
+          "max_entry_price": 106.54,
+          "invalidation_level": 102.9544,
+          "best_setups_present": true,
+          "analyzer_url": "/analyze/AAXJ"
+        },
+        {
+          "asset_id": "US:AGNC",
+          "ticker": "AGNC",
+          "asset_type": "STOCK",
+          "region": "US",
+          "horizon": null,
+          "analysis_reliability": "MEDIUM",
+          "signal_quality_score": null,
+          "max_entry_price": 10.7233,
+          "invalidation_level": 10.5496,
+          "best_setups_present": true,
+          "analyzer_url": "/analyze/AGNC"
+        },
+        {
+          "asset_id": "US:CVEO",
+          "ticker": "CVEO",
+          "asset_type": "STOCK",
+          "region": "US",
+          "horizon": null,
+          "analysis_reliability": "MEDIUM",
+          "signal_quality_score": null,
+          "max_entry_price": 29.3862,
+          "invalidation_level": 29.0038,
+          "best_setups_present": true,
+          "analyzer_url": "/analyze/CVEO"
+        },
+        {
+          "asset_id": "US:AIVL",
+          "ticker": "AIVL",
+          "asset_type": "ETF",
+          "region": "US",
+          "horizon": null,
+          "analysis_reliability": "MEDIUM",
+          "signal_quality_score": null,
+          "max_entry_price": 122.9416,
+          "invalidation_level": 120.0409,
+          "best_setups_present": true,
+          "analyzer_url": "/analyze/AIVL"
+        },
+        {
+          "asset_id": "US:ACWI",
+          "ticker": "ACWI",
+          "asset_type": "ETF",
+          "region": "US",
+          "horizon": null,
+          "analysis_reliability": "MEDIUM",
+          "signal_quality_score": null,
+          "max_entry_price": 148.3681,
+          "invalidation_level": 144.8382,
+          "best_setups_present": true,
+          "analyzer_url": "/analyze/ACWI"
+        },
+        {
+          "asset_id": "US:ACWX",
+          "ticker": "ACWX",
+          "asset_type": "ETF",
+          "region": "US",
+          "horizon": null,
+          "analysis_reliability": "MEDIUM",
+          "signal_quality_score": null,
+          "max_entry_price": 74.4906,
+          "invalidation_level": 71.1526,
+          "best_setups_present": true,
+          "analyzer_url": "/analyze/ACWX"
+        },
+        {
+          "asset_id": "US:AOK",
+          "ticker": "AOK",
+          "asset_type": "ETF",
+          "region": "US",
+          "horizon": null,
+          "analysis_reliability": "MEDIUM",
+          "signal_quality_score": null,
+          "max_entry_price": 41.3658,
+          "invalidation_level": 40.4825,
+          "best_setups_present": true,
+          "analyzer_url": "/analyze/AOK"
+        },
+        {
+          "asset_id": "US:ALLW",
+          "ticker": "ALLW",
+          "asset_type": "ETF",
+          "region": "US",
+          "horizon": null,
+          "analysis_reliability": "MEDIUM",
+          "signal_quality_score": null,
+          "max_entry_price": 29.758,
+          "invalidation_level": 29.4047,
+          "best_setups_present": true,
+          "analyzer_url": "/analyze/ALLW"
+        },
+        {
+          "asset_id": "US:CAR",
+          "ticker": "CAR",
+          "asset_type": "STOCK",
+          "region": "US",
+          "horizon": null,
+          "analysis_reliability": "MEDIUM",
+          "signal_quality_score": null,
+          "max_entry_price": 101.6909,
+          "invalidation_level": 16.058,
+          "best_setups_present": true,
+          "analyzer_url": "/analyze/CAR"
+        }
+      ],
+      "eu": [
+        {
+          "asset_id": "LSE:0LOS",
+          "ticker": "0LOS",
+          "asset_type": "ETF",
+          "region": "EU",
+          "horizon": null,
+          "analysis_reliability": "MEDIUM",
+          "signal_quality_score": null,
+          "max_entry_price": 364.7849,
+          "invalidation_level": 337.7052,
+          "best_setups_present": true,
+          "analyzer_url": "/analyze/0LOS"
+        },
+        {
+          "asset_id": "LSE:0A3D",
+          "ticker": "0A3D",
+          "asset_type": "ETF",
+          "region": "EU",
+          "horizon": null,
+          "analysis_reliability": "MEDIUM",
+          "signal_quality_score": null,
+          "max_entry_price": 1806.862,
+          "invalidation_level": 1664.139,
+          "best_setups_present": true,
+          "analyzer_url": "/analyze/0A3D"
+        },
+        {
+          "asset_id": "XETRA:3V64",
+          "ticker": "3V64",
+          "asset_type": "STOCK",
+          "region": "EU",
+          "horizon": null,
+          "analysis_reliability": "MEDIUM",
+          "signal_quality_score": null,
+          "max_entry_price": 268.938,
+          "invalidation_level": 265.5758,
+          "best_setups_present": true,
+          "analyzer_url": "/analyze/3V64"
+        },
+        {
+          "asset_id": "LSE:0KZC",
+          "ticker": "0KZC",
+          "asset_type": "ETF",
+          "region": "EU",
+          "horizon": null,
+          "analysis_reliability": "MEDIUM",
+          "signal_quality_score": null,
+          "max_entry_price": 740.9463,
+          "invalidation_level": 684.5707,
+          "best_setups_present": true,
+          "analyzer_url": "/analyze/0KZC"
+        },
+        {
+          "asset_id": "LSE:AFL",
+          "ticker": "AFL",
+          "asset_type": "STOCK",
+          "region": "EU",
+          "horizon": null,
+          "analysis_reliability": "MEDIUM",
+          "signal_quality_score": null,
+          "max_entry_price": 353.2575,
+          "invalidation_level": 111.4776,
+          "best_setups_present": true,
+          "analyzer_url": "/analyze/AFL"
+        },
+        {
+          "asset_id": "PA:AASI",
+          "ticker": "AASI",
+          "asset_type": "ETF",
+          "region": "EU",
+          "horizon": null,
+          "analysis_reliability": "MEDIUM",
+          "signal_quality_score": null,
+          "max_entry_price": 50.884,
+          "invalidation_level": 50.2834,
+          "best_setups_present": true,
+          "analyzer_url": "/analyze/AASI"
+        },
+        {
+          "asset_id": "LSE:AUSC",
+          "ticker": "AUSC",
+          "asset_type": "STOCK",
+          "region": "EU",
+          "horizon": null,
+          "analysis_reliability": "MEDIUM",
+          "signal_quality_score": null,
+          "max_entry_price": 496.47,
+          "invalidation_level": 489.3,
+          "best_setups_present": true,
+          "analyzer_url": "/analyze/AUSC"
+        },
+        {
+          "asset_id": "LSE:0YIK",
+          "ticker": "0YIK",
+          "asset_type": "ETF",
+          "region": "EU",
+          "horizon": null,
+          "analysis_reliability": "MEDIUM",
+          "signal_quality_score": null,
+          "max_entry_price": 712.9068,
+          "invalidation_level": 620.6898,
+          "best_setups_present": true,
+          "analyzer_url": "/analyze/0YIK"
+        },
+        {
+          "asset_id": "BR:ASCE",
+          "ticker": "ASCE",
+          "asset_type": "STOCK",
+          "region": "EU",
+          "horizon": null,
+          "analysis_reliability": "MEDIUM",
+          "signal_quality_score": null,
+          "max_entry_price": 50.451,
+          "invalidation_level": 29.1946,
+          "best_setups_present": true,
+          "analyzer_url": "/analyze/ASCE"
+        },
+        {
+          "asset_id": "LSE:5ESG",
+          "ticker": "5ESG",
+          "asset_type": "ETF",
+          "region": "EU",
+          "horizon": null,
+          "analysis_reliability": "MEDIUM",
+          "signal_quality_score": null,
+          "max_entry_price": 4002.6637,
+          "invalidation_level": 82.1044,
+          "best_setups_present": true,
+          "analyzer_url": "/analyze/5ESG"
+        }
+      ],
+      "asia": [
+        {
+          "asset_id": "KO:0000H0",
+          "ticker": "0000H0",
+          "asset_type": "ETF",
+          "region": "ASIA",
+          "horizon": null,
+          "analysis_reliability": "MEDIUM",
+          "signal_quality_score": null,
+          "max_entry_price": 10532.4,
+          "invalidation_level": 10411.0364,
+          "best_setups_present": true,
+          "analyzer_url": "/analyze/0000H0"
+        },
+        {
+          "asset_id": "KO:0021D0",
+          "ticker": "0021D0",
+          "asset_type": "ETF",
+          "region": "ASIA",
+          "horizon": null,
+          "analysis_reliability": "MEDIUM",
+          "signal_quality_score": null,
+          "max_entry_price": 11391.675,
+          "invalidation_level": 11209.7,
+          "best_setups_present": true,
+          "analyzer_url": "/analyze/0021D0"
+        },
+        {
+          "asset_id": "SHE:002236",
+          "ticker": "002236",
+          "asset_type": "STOCK",
+          "region": "ASIA",
+          "horizon": null,
+          "analysis_reliability": "MEDIUM",
+          "signal_quality_score": null,
+          "max_entry_price": 18.3412,
+          "invalidation_level": 17.9448,
+          "best_setups_present": true,
+          "analyzer_url": "/analyze/002236"
+        },
+        {
+          "asset_id": "SHE:002034",
+          "ticker": "002034",
+          "asset_type": "STOCK",
+          "region": "ASIA",
+          "horizon": null,
+          "analysis_reliability": "MEDIUM",
+          "signal_quality_score": null,
+          "max_entry_price": 18.2106,
+          "invalidation_level": 17.9546,
+          "best_setups_present": true,
+          "analyzer_url": "/analyze/002034"
+        },
+        {
+          "asset_id": "KO:0015K0",
+          "ticker": "0015K0",
+          "asset_type": "ETF",
+          "region": "ASIA",
+          "horizon": null,
+          "analysis_reliability": "MEDIUM",
+          "signal_quality_score": null,
+          "max_entry_price": 7562.625,
+          "invalidation_level": 7436.1,
+          "best_setups_present": true,
+          "analyzer_url": "/analyze/0015K0"
+        },
+        {
+          "asset_id": "SHE:000333",
+          "ticker": "000333",
+          "asset_type": "STOCK",
+          "region": "ASIA",
+          "horizon": null,
+          "analysis_reliability": "MEDIUM",
+          "signal_quality_score": null,
+          "max_entry_price": 77.7769,
+          "invalidation_level": 76.9309,
+          "best_setups_present": true,
+          "analyzer_url": "/analyze/000333"
+        },
+        {
+          "asset_id": "SHE:000921",
+          "ticker": "000921",
+          "asset_type": "STOCK",
+          "region": "ASIA",
+          "horizon": null,
+          "analysis_reliability": "MEDIUM",
+          "signal_quality_score": null,
+          "max_entry_price": 23.0949,
+          "invalidation_level": 22.6932,
+          "best_setups_present": true,
+          "analyzer_url": "/analyze/000921"
+        },
+        {
+          "asset_id": "TW:006206",
+          "ticker": "006206",
+          "asset_type": "ETF",
+          "region": "ASIA",
+          "horizon": null,
+          "analysis_reliability": "MEDIUM",
+          "signal_quality_score": null,
+          "max_entry_price": 38.3608,
+          "invalidation_level": 36.9334,
+          "best_setups_present": true,
+          "analyzer_url": "/analyze/006206"
+        },
+        {
+          "asset_id": "KO:0021C0",
+          "ticker": "0021C0",
+          "asset_type": "ETF",
+          "region": "ASIA",
+          "horizon": null,
+          "analysis_reliability": "MEDIUM",
+          "signal_quality_score": null,
+          "max_entry_price": 13557.45,
+          "invalidation_level": 13244.5,
+          "best_setups_present": true,
+          "analyzer_url": "/analyze/0021C0"
+        },
+        {
+          "asset_id": "SHE:000848",
+          "ticker": "000848",
+          "asset_type": "STOCK",
+          "region": "ASIA",
+          "horizon": null,
+          "analysis_reliability": "MEDIUM",
+          "signal_quality_score": null,
+          "max_entry_price": 8.3113,
+          "invalidation_level": 8.2235,
+          "best_setups_present": true,
+          "analyzer_url": "/analyze/000848"
+        }
+      ]
+    },
+    "best_setups_core_only": true,
+    "legacy_buy_count": 0,
+    "unsafe_buy_counters": 0
+  },
+  "ui_proofs": {
+    "buy_breadth": {
+      "status": "OK",
+      "target_market_date": null,
+      "counts": {
+        "total": 30,
+        "ok": 30,
+        "failed": null
+      },
+      "coverage": {
+        "us_assets": 10,
+        "eu_assets": 10,
+        "asia_assets": 10
+      }
+    },
+    "random20": {
+      "status": "OK",
+      "target_market_date": null,
+      "counts": {
+        "total": 20,
+        "stock": 10,
+        "etf": 10,
+        "ok": 20
+      },
+      "coverage": {
+        "us_assets": null,
+        "eu_assets": null,
+        "asia_assets": null
+      }
+    },
+    "frontpage_best_setups": {
+      "status": "OK",
+      "target_market_date": "2026-05-08",
+      "counts": {
+        "frontpage_rows": 60,
+        "unique_analyzer_pages": 54,
+        "ok": 54,
+        "failed": 0
+      },
+      "coverage": {
+        "US": {
+          "stock": 9,
+          "etf": 9
+        },
+        "EU": {
+          "stock": 9,
+          "etf": 9
+        },
+        "ASIA": {
+          "stock": 12,
+          "etf": 12
+        }
+      }
+    }
+  },
+  "best_setups": {
+    "status": "OK",
+    "source": "decision_core_consumer",
+    "target_market_date": "2026-05-08",
+    "rows_emitted": {
+      "stocks": {
+        "short": 10,
+        "medium": 10,
+        "long": 10
+      },
+      "etfs": {
+        "short": 10,
+        "medium": 10,
+        "long": 10
+      },
+      "total": 60
+    },
+    "candidate_counts": {
+      "decision_bundle_buy_rows": 1267,
+      "unique_tickers": 1202
+    },
+    "verified_counts": {
+      "stocks": {
+        "short": 10,
+        "medium": 10,
+        "long": 10
+      },
+      "etfs": {
+        "short": 10,
+        "medium": 10,
+        "long": 10
+      }
+    },
+    "horizons": {
+      "short": [
+        {
+          "asset_id": "US:AAPL",
+          "ticker": "AAPL",
+          "asset_type": "STOCK",
+          "region": "US",
+          "horizon": "short",
+          "analysis_reliability": "MEDIUM",
+          "signal_quality_score": 41,
+          "max_entry_price": null,
+          "invalidation_level": null,
+          "analyzer_url": "/analyze/AAPL"
+        },
+        {
+          "asset_id": "US:ADAMM",
+          "ticker": "ADAMM",
+          "asset_type": "STOCK",
+          "region": "US",
+          "horizon": "short",
+          "analysis_reliability": "MEDIUM",
+          "signal_quality_score": 41,
+          "max_entry_price": null,
+          "invalidation_level": null,
+          "analyzer_url": "/analyze/ADAMM"
+        },
+        {
+          "asset_id": "US:AGNC",
+          "ticker": "AGNC",
+          "asset_type": "STOCK",
+          "region": "US",
+          "horizon": "short",
+          "analysis_reliability": "MEDIUM",
+          "signal_quality_score": 41,
+          "max_entry_price": null,
+          "invalidation_level": null,
+          "analyzer_url": "/analyze/AGNC"
+        },
+        {
+          "asset_id": "XETRA:3V64",
+          "ticker": "3V64",
+          "asset_type": "STOCK",
+          "region": "EU",
+          "horizon": "short",
+          "analysis_reliability": "MEDIUM",
+          "signal_quality_score": 41,
+          "max_entry_price": null,
+          "invalidation_level": null,
+          "analyzer_url": "/analyze/3V64"
+        },
+        {
+          "asset_id": "LSE:AFL",
+          "ticker": "AFL",
+          "asset_type": "STOCK",
+          "region": "EU",
+          "horizon": "short",
+          "analysis_reliability": "MEDIUM",
+          "signal_quality_score": 41,
+          "max_entry_price": null,
+          "invalidation_level": null,
+          "analyzer_url": "/analyze/AFL"
+        },
+        {
+          "asset_id": "LSE:AOM",
+          "ticker": "AOM",
+          "asset_type": "STOCK",
+          "region": "EU",
+          "horizon": "short",
+          "analysis_reliability": "MEDIUM",
+          "signal_quality_score": 41,
+          "max_entry_price": null,
+          "invalidation_level": null,
+          "analyzer_url": "/analyze/AOM"
+        },
+        {
+          "asset_id": "KO:000020",
+          "ticker": "000020",
+          "asset_type": "STOCK",
+          "region": "ASIA",
+          "horizon": "short",
+          "analysis_reliability": "MEDIUM",
+          "signal_quality_score": 41,
+          "max_entry_price": null,
+          "invalidation_level": null,
+          "analyzer_url": "/analyze/000020"
+        },
+        {
+          "asset_id": "SHE:000333",
+          "ticker": "000333",
+          "asset_type": "STOCK",
+          "region": "ASIA",
+          "horizon": "short",
+          "analysis_reliability": "MEDIUM",
+          "signal_quality_score": 41,
+          "max_entry_price": null,
+          "invalidation_level": null,
+          "analyzer_url": "/analyze/000333"
+        },
+        {
+          "asset_id": "SHE:000623",
+          "ticker": "000623",
+          "asset_type": "STOCK",
+          "region": "ASIA",
+          "horizon": "short",
+          "analysis_reliability": "MEDIUM",
+          "signal_quality_score": 41,
+          "max_entry_price": null,
+          "invalidation_level": null,
+          "analyzer_url": "/analyze/000623"
+        },
+        {
+          "asset_id": "SHE:000848",
+          "ticker": "000848",
+          "asset_type": "STOCK",
+          "region": "ASIA",
+          "horizon": "short",
+          "analysis_reliability": "MEDIUM",
+          "signal_quality_score": 41,
+          "max_entry_price": null,
+          "invalidation_level": null,
+          "analyzer_url": "/analyze/000848"
+        },
+        {
+          "asset_id": "US:AAXJ",
+          "ticker": "AAXJ",
+          "asset_type": "ETF",
+          "region": "US",
+          "horizon": "short",
+          "analysis_reliability": "MEDIUM",
+          "signal_quality_score": 41,
+          "max_entry_price": null,
+          "invalidation_level": null,
+          "analyzer_url": "/analyze/AAXJ"
+        },
+        {
+          "asset_id": "US:ACWI",
+          "ticker": "ACWI",
+          "asset_type": "ETF",
+          "region": "US",
+          "horizon": "short",
+          "analysis_reliability": "MEDIUM",
+          "signal_quality_score": 41,
+          "max_entry_price": null,
+          "invalidation_level": null,
+          "analyzer_url": "/analyze/ACWI"
+        },
+        {
+          "asset_id": "US:ACWX",
+          "ticker": "ACWX",
+          "asset_type": "ETF",
+          "region": "US",
+          "horizon": "short",
+          "analysis_reliability": "MEDIUM",
+          "signal_quality_score": 41,
+          "max_entry_price": null,
+          "invalidation_level": null,
+          "analyzer_url": "/analyze/ACWX"
+        },
+        {
+          "asset_id": "LSE:0A3D",
+          "ticker": "0A3D",
+          "asset_type": "ETF",
+          "region": "EU",
+          "horizon": "short",
+          "analysis_reliability": "MEDIUM",
+          "signal_quality_score": 41,
+          "max_entry_price": null,
+          "invalidation_level": null,
+          "analyzer_url": "/analyze/0A3D"
+        },
+        {
+          "asset_id": "LSE:0DZW",
+          "ticker": "0DZW",
+          "asset_type": "ETF",
+          "region": "EU",
+          "horizon": "short",
+          "analysis_reliability": "MEDIUM",
+          "signal_quality_score": 41,
+          "max_entry_price": null,
+          "invalidation_level": null,
+          "analyzer_url": "/analyze/0DZW"
+        },
+        {
+          "asset_id": "LSE:0JFH",
+          "ticker": "0JFH",
+          "asset_type": "ETF",
+          "region": "EU",
+          "horizon": "short",
+          "analysis_reliability": "MEDIUM",
+          "signal_quality_score": 41,
+          "max_entry_price": null,
+          "invalidation_level": null,
+          "analyzer_url": "/analyze/0JFH"
+        },
+        {
+          "asset_id": "KO:0000H0",
+          "ticker": "0000H0",
+          "asset_type": "ETF",
+          "region": "ASIA",
+          "horizon": "short",
+          "analysis_reliability": "MEDIUM",
+          "signal_quality_score": 41,
+          "max_entry_price": null,
+          "invalidation_level": null,
+          "analyzer_url": "/analyze/0000H0"
+        },
+        {
+          "asset_id": "KO:0015K0",
+          "ticker": "0015K0",
+          "asset_type": "ETF",
+          "region": "ASIA",
+          "horizon": "short",
+          "analysis_reliability": "MEDIUM",
+          "signal_quality_score": 41,
+          "max_entry_price": null,
+          "invalidation_level": null,
+          "analyzer_url": "/analyze/0015K0"
+        },
+        {
+          "asset_id": "KO:0021C0",
+          "ticker": "0021C0",
+          "asset_type": "ETF",
+          "region": "ASIA",
+          "horizon": "short",
+          "analysis_reliability": "MEDIUM",
+          "signal_quality_score": 41,
+          "max_entry_price": null,
+          "invalidation_level": null,
+          "analyzer_url": "/analyze/0021C0"
+        },
+        {
+          "asset_id": "KO:0021D0",
+          "ticker": "0021D0",
+          "asset_type": "ETF",
+          "region": "ASIA",
+          "horizon": "short",
+          "analysis_reliability": "MEDIUM",
+          "signal_quality_score": 41,
+          "max_entry_price": null,
+          "invalidation_level": null,
+          "analyzer_url": "/analyze/0021D0"
+        }
+      ],
+      "medium": [
+        {
+          "asset_id": "US:CAR",
+          "ticker": "CAR",
+          "asset_type": "STOCK",
+          "region": "US",
+          "horizon": "medium",
+          "analysis_reliability": "MEDIUM",
+          "signal_quality_score": 36,
+          "max_entry_price": null,
+          "invalidation_level": null,
+          "analyzer_url": "/analyze/CAR"
+        },
+        {
+          "asset_id": "US:CARE",
+          "ticker": "CARE",
+          "asset_type": "STOCK",
+          "region": "US",
+          "horizon": "medium",
+          "analysis_reliability": "MEDIUM",
+          "signal_quality_score": 36,
+          "max_entry_price": null,
+          "invalidation_level": null,
+          "analyzer_url": "/analyze/CARE"
+        },
+        {
+          "asset_id": "US:CMSA",
+          "ticker": "CMSA",
+          "asset_type": "STOCK",
+          "region": "US",
+          "horizon": "medium",
+          "analysis_reliability": "MEDIUM",
+          "signal_quality_score": 36,
+          "max_entry_price": null,
+          "invalidation_level": null,
+          "analyzer_url": "/analyze/CMSA"
+        },
+        {
+          "asset_id": "XETRA:APC",
+          "ticker": "APC",
+          "asset_type": "STOCK",
+          "region": "EU",
+          "horizon": "medium",
+          "analysis_reliability": "MEDIUM",
+          "signal_quality_score": 36,
+          "max_entry_price": null,
+          "invalidation_level": null,
+          "analyzer_url": "/analyze/APC"
+        },
+        {
+          "asset_id": "LSE:APN",
+          "ticker": "APN",
+          "asset_type": "STOCK",
+          "region": "EU",
+          "horizon": "medium",
+          "analysis_reliability": "MEDIUM",
+          "signal_quality_score": 36,
+          "max_entry_price": null,
+          "invalidation_level": null,
+          "analyzer_url": "/analyze/APN"
+        },
+        {
+          "asset_id": "ST:ARION-SDB",
+          "ticker": "ARION-SDB",
+          "asset_type": "STOCK",
+          "region": "EU",
+          "horizon": "medium",
+          "analysis_reliability": "MEDIUM",
+          "signal_quality_score": 36,
+          "max_entry_price": null,
+          "invalidation_level": null,
+          "analyzer_url": "/analyze/ARION-SDB"
+        },
+        {
+          "asset_id": "SHE:000848",
+          "ticker": "000848",
+          "asset_type": "STOCK",
+          "region": "ASIA",
+          "horizon": "medium",
+          "analysis_reliability": "MEDIUM",
+          "signal_quality_score": 36,
+          "max_entry_price": null,
+          "invalidation_level": null,
+          "analyzer_url": "/analyze/000848"
+        },
+        {
+          "asset_id": "SHE:000876",
+          "ticker": "000876",
+          "asset_type": "STOCK",
+          "region": "ASIA",
+          "horizon": "medium",
+          "analysis_reliability": "MEDIUM",
+          "signal_quality_score": 36,
+          "max_entry_price": null,
+          "invalidation_level": null,
+          "analyzer_url": "/analyze/000876"
+        },
+        {
+          "asset_id": "SHE:000921",
+          "ticker": "000921",
+          "asset_type": "STOCK",
+          "region": "ASIA",
+          "horizon": "medium",
+          "analysis_reliability": "MEDIUM",
+          "signal_quality_score": 36,
+          "max_entry_price": null,
+          "invalidation_level": null,
+          "analyzer_url": "/analyze/000921"
+        },
+        {
+          "asset_id": "KO:000020",
+          "ticker": "000020",
+          "asset_type": "STOCK",
+          "region": "ASIA",
+          "horizon": "medium",
+          "analysis_reliability": "MEDIUM",
+          "signal_quality_score": 36,
+          "max_entry_price": null,
+          "invalidation_level": null,
+          "analyzer_url": "/analyze/000020"
+        },
+        {
+          "asset_id": "US:AIPI",
+          "ticker": "AIPI",
+          "asset_type": "ETF",
+          "region": "US",
+          "horizon": "medium",
+          "analysis_reliability": "MEDIUM",
+          "signal_quality_score": 36,
+          "max_entry_price": null,
+          "invalidation_level": null,
+          "analyzer_url": "/analyze/AIPI"
+        },
+        {
+          "asset_id": "US:AIVL",
+          "ticker": "AIVL",
+          "asset_type": "ETF",
+          "region": "US",
+          "horizon": "medium",
+          "analysis_reliability": "MEDIUM",
+          "signal_quality_score": 36,
+          "max_entry_price": null,
+          "invalidation_level": null,
+          "analyzer_url": "/analyze/AIVL"
+        },
+        {
+          "asset_id": "US:ALLW",
+          "ticker": "ALLW",
+          "asset_type": "ETF",
+          "region": "US",
+          "horizon": "medium",
+          "analysis_reliability": "MEDIUM",
+          "signal_quality_score": 36,
+          "max_entry_price": null,
+          "invalidation_level": null,
+          "analyzer_url": "/analyze/ALLW"
+        },
+        {
+          "asset_id": "LSE:0JGN",
+          "ticker": "0JGN",
+          "asset_type": "ETF",
+          "region": "EU",
+          "horizon": "medium",
+          "analysis_reliability": "MEDIUM",
+          "signal_quality_score": 36,
+          "max_entry_price": null,
+          "invalidation_level": null,
+          "analyzer_url": "/analyze/0JGN"
+        },
+        {
+          "asset_id": "LSE:0KZC",
+          "ticker": "0KZC",
+          "asset_type": "ETF",
+          "region": "EU",
+          "horizon": "medium",
+          "analysis_reliability": "MEDIUM",
+          "signal_quality_score": 36,
+          "max_entry_price": null,
+          "invalidation_level": null,
+          "analyzer_url": "/analyze/0KZC"
+        },
+        {
+          "asset_id": "LSE:0LOS",
+          "ticker": "0LOS",
+          "asset_type": "ETF",
+          "region": "EU",
+          "horizon": "medium",
+          "analysis_reliability": "MEDIUM",
+          "signal_quality_score": 36,
+          "max_entry_price": null,
+          "invalidation_level": null,
+          "analyzer_url": "/analyze/0LOS"
+        },
+        {
+          "asset_id": "KO:0021D0",
+          "ticker": "0021D0",
+          "asset_type": "ETF",
+          "region": "ASIA",
+          "horizon": "medium",
+          "analysis_reliability": "MEDIUM",
+          "signal_quality_score": 36,
+          "max_entry_price": null,
+          "invalidation_level": null,
+          "analyzer_url": "/analyze/0021D0"
+        },
+        {
+          "asset_id": "KO:0021E0",
+          "ticker": "0021E0",
+          "asset_type": "ETF",
+          "region": "ASIA",
+          "horizon": "medium",
+          "analysis_reliability": "MEDIUM",
+          "signal_quality_score": 36,
+          "max_entry_price": null,
+          "invalidation_level": null,
+          "analyzer_url": "/analyze/0021E0"
+        },
+        {
+          "asset_id": "TW:0055",
+          "ticker": "0055",
+          "asset_type": "ETF",
+          "region": "ASIA",
+          "horizon": "medium",
+          "analysis_reliability": "MEDIUM",
+          "signal_quality_score": 36,
+          "max_entry_price": null,
+          "invalidation_level": null,
+          "analyzer_url": "/analyze/0055"
+        },
+        {
+          "asset_id": "KO:0000H0",
+          "ticker": "0000H0",
+          "asset_type": "ETF",
+          "region": "ASIA",
+          "horizon": "medium",
+          "analysis_reliability": "MEDIUM",
+          "signal_quality_score": 36,
+          "max_entry_price": null,
+          "invalidation_level": null,
+          "analyzer_url": "/analyze/0000H0"
+        }
+      ],
+      "long": [
+        {
+          "asset_id": "US:CMSD",
+          "ticker": "CMSD",
+          "asset_type": "STOCK",
+          "region": "US",
+          "horizon": "long",
+          "analysis_reliability": "MEDIUM",
+          "signal_quality_score": 33,
+          "max_entry_price": null,
+          "invalidation_level": null,
+          "analyzer_url": "/analyze/CMSD"
+        },
+        {
+          "asset_id": "US:CP",
+          "ticker": "CP",
+          "asset_type": "STOCK",
+          "region": "US",
+          "horizon": "long",
+          "analysis_reliability": "MEDIUM",
+          "signal_quality_score": 33,
+          "max_entry_price": null,
+          "invalidation_level": null,
+          "analyzer_url": "/analyze/CP"
+        },
+        {
+          "asset_id": "US:CVEO",
+          "ticker": "CVEO",
+          "asset_type": "STOCK",
+          "region": "US",
+          "horizon": "long",
+          "analysis_reliability": "MEDIUM",
+          "signal_quality_score": 33,
+          "max_entry_price": null,
+          "invalidation_level": null,
+          "analyzer_url": "/analyze/CVEO"
+        },
+        {
+          "asset_id": "BR:ASCE",
+          "ticker": "ASCE",
+          "asset_type": "STOCK",
+          "region": "EU",
+          "horizon": "long",
+          "analysis_reliability": "MEDIUM",
+          "signal_quality_score": 33,
+          "max_entry_price": null,
+          "invalidation_level": null,
+          "analyzer_url": "/analyze/ASCE"
+        },
+        {
+          "asset_id": "LSE:ATG",
+          "ticker": "ATG",
+          "asset_type": "STOCK",
+          "region": "EU",
+          "horizon": "long",
+          "analysis_reliability": "MEDIUM",
+          "signal_quality_score": 33,
+          "max_entry_price": null,
+          "invalidation_level": null,
+          "analyzer_url": "/analyze/ATG"
+        },
+        {
+          "asset_id": "LSE:AUSC",
+          "ticker": "AUSC",
+          "asset_type": "STOCK",
+          "region": "EU",
+          "horizon": "long",
+          "analysis_reliability": "MEDIUM",
+          "signal_quality_score": 33,
+          "max_entry_price": null,
+          "invalidation_level": null,
+          "analyzer_url": "/analyze/AUSC"
+        },
+        {
+          "asset_id": "SHE:002034",
+          "ticker": "002034",
+          "asset_type": "STOCK",
+          "region": "ASIA",
+          "horizon": "long",
+          "analysis_reliability": "MEDIUM",
+          "signal_quality_score": 33,
+          "max_entry_price": null,
+          "invalidation_level": null,
+          "analyzer_url": "/analyze/002034"
+        },
+        {
+          "asset_id": "SHE:002236",
+          "ticker": "002236",
+          "asset_type": "STOCK",
+          "region": "ASIA",
+          "horizon": "long",
+          "analysis_reliability": "MEDIUM",
+          "signal_quality_score": 33,
+          "max_entry_price": null,
+          "invalidation_level": null,
+          "analyzer_url": "/analyze/002236"
+        },
+        {
+          "asset_id": "SHE:002557",
+          "ticker": "002557",
+          "asset_type": "STOCK",
+          "region": "ASIA",
+          "horizon": "long",
+          "analysis_reliability": "MEDIUM",
+          "signal_quality_score": 33,
+          "max_entry_price": null,
+          "invalidation_level": null,
+          "analyzer_url": "/analyze/002557"
+        },
+        {
+          "asset_id": "KO:000020",
+          "ticker": "000020",
+          "asset_type": "STOCK",
+          "region": "ASIA",
+          "horizon": "long",
+          "analysis_reliability": "MEDIUM",
+          "signal_quality_score": 33,
+          "max_entry_price": null,
+          "invalidation_level": null,
+          "analyzer_url": "/analyze/000020"
+        },
+        {
+          "asset_id": "US:AMAX",
+          "ticker": "AMAX",
+          "asset_type": "ETF",
+          "region": "US",
+          "horizon": "long",
+          "analysis_reliability": "MEDIUM",
+          "signal_quality_score": 33,
+          "max_entry_price": null,
+          "invalidation_level": null,
+          "analyzer_url": "/analyze/AMAX"
+        },
+        {
+          "asset_id": "US:AOA",
+          "ticker": "AOA",
+          "asset_type": "ETF",
+          "region": "US",
+          "horizon": "long",
+          "analysis_reliability": "MEDIUM",
+          "signal_quality_score": 33,
+          "max_entry_price": null,
+          "invalidation_level": null,
+          "analyzer_url": "/analyze/AOA"
+        },
+        {
+          "asset_id": "US:AOK",
+          "ticker": "AOK",
+          "asset_type": "ETF",
+          "region": "US",
+          "horizon": "long",
+          "analysis_reliability": "MEDIUM",
+          "signal_quality_score": 33,
+          "max_entry_price": null,
+          "invalidation_level": null,
+          "analyzer_url": "/analyze/AOK"
+        },
+        {
+          "asset_id": "LSE:0YIK",
+          "ticker": "0YIK",
+          "asset_type": "ETF",
+          "region": "EU",
+          "horizon": "long",
+          "analysis_reliability": "MEDIUM",
+          "signal_quality_score": 33,
+          "max_entry_price": null,
+          "invalidation_level": null,
+          "analyzer_url": "/analyze/0YIK"
+        },
+        {
+          "asset_id": "LSE:5ESG",
+          "ticker": "5ESG",
+          "asset_type": "ETF",
+          "region": "EU",
+          "horizon": "long",
+          "analysis_reliability": "MEDIUM",
+          "signal_quality_score": 33,
+          "max_entry_price": null,
+          "invalidation_level": null,
+          "analyzer_url": "/analyze/5ESG"
+        },
+        {
+          "asset_id": "PA:AASI",
+          "ticker": "AASI",
+          "asset_type": "ETF",
+          "region": "EU",
+          "horizon": "long",
+          "analysis_reliability": "MEDIUM",
+          "signal_quality_score": 33,
+          "max_entry_price": null,
+          "invalidation_level": null,
+          "analyzer_url": "/analyze/AASI"
+        },
+        {
+          "asset_id": "TW:006205",
+          "ticker": "006205",
+          "asset_type": "ETF",
+          "region": "ASIA",
+          "horizon": "long",
+          "analysis_reliability": "MEDIUM",
+          "signal_quality_score": 33,
+          "max_entry_price": null,
+          "invalidation_level": null,
+          "analyzer_url": "/analyze/006205"
+        },
+        {
+          "asset_id": "TW:006206",
+          "ticker": "006206",
+          "asset_type": "ETF",
+          "region": "ASIA",
+          "horizon": "long",
+          "analysis_reliability": "MEDIUM",
+          "signal_quality_score": 33,
+          "max_entry_price": null,
+          "invalidation_level": null,
+          "analyzer_url": "/analyze/006206"
+        },
+        {
+          "asset_id": "TW:00783",
+          "ticker": "00783",
+          "asset_type": "ETF",
+          "region": "ASIA",
+          "horizon": "long",
+          "analysis_reliability": "MEDIUM",
+          "signal_quality_score": 33,
+          "max_entry_price": null,
+          "invalidation_level": null,
+          "analyzer_url": "/analyze/00783"
+        },
+        {
+          "asset_id": "KO:0000H0",
+          "ticker": "0000H0",
+          "asset_type": "ETF",
+          "region": "ASIA",
+          "horizon": "long",
+          "analysis_reliability": "MEDIUM",
+          "signal_quality_score": 33,
+          "max_entry_price": null,
+          "invalidation_level": null,
+          "analyzer_url": "/analyze/0000H0"
+        }
+      ]
+    }
+  },
+  "pipeline": {
+    "stage_health": {
+      "status": "DEGRADED",
+      "target_market_date": "2026-05-08",
+      "generated_at": "2026-05-09T20:13:53.431Z",
+      "release_ready": true,
+      "release_blocking": false,
+      "warning_step_count": 4,
+      "critical_step_count": 2,
+      "stages": {
+        "00-preflight": {
+          "status": "PENDING",
+          "total": 4,
+          "completed": 0,
+          "warning_count": 0,
+          "critical_count": 0,
+          "failed_count": 0
+        },
+        "99-report": {
+          "status": "DEGRADED",
+          "total": 8,
+          "completed": 4,
+          "warning_count": 0,
+          "critical_count": 1,
+          "failed_count": 0
+        },
+        "10-fetch": {
+          "status": "PENDING",
+          "total": 3,
+          "completed": 2,
+          "warning_count": 0,
+          "critical_count": 0,
+          "failed_count": 0
+        },
+        "20-features": {
+          "status": "DEGRADED",
+          "total": 5,
+          "completed": 3,
+          "warning_count": 1,
+          "critical_count": 0,
+          "failed_count": 0
+        },
+        "30-decision-core": {
+          "status": "DEGRADED",
+          "total": 6,
+          "completed": 3,
+          "warning_count": 1,
+          "critical_count": 1,
+          "failed_count": 0
+        },
+        "50-page-core": {
+          "status": "PENDING",
+          "total": 3,
+          "completed": 0,
+          "warning_count": 0,
+          "critical_count": 0,
+          "failed_count": 0
+        },
+        "40-best-setups": {
+          "status": "PENDING",
+          "total": 1,
+          "completed": 0,
+          "warning_count": 0,
+          "critical_count": 0,
+          "failed_count": 0
+        },
+        "60-audit": {
+          "status": "PENDING",
+          "total": 1,
+          "completed": 0,
+          "warning_count": 0,
+          "critical_count": 0,
+          "failed_count": 0
+        },
+        "70-deploy": {
+          "status": "DEGRADED",
+          "total": 4,
+          "completed": 3,
+          "warning_count": 2,
+          "critical_count": 0,
+          "failed_count": 0
+        }
+      }
+    },
+    "watchdog": {
+      "status": "OK",
+      "active": false,
+      "last_seen_age_hours": 6.06
+    },
+    "scheduler": {
+      "status": "OK",
+      "schedule_policy": "trading_eod_tue_sat_v1",
+      "monday_allowed": false,
+      "saturday_allowed": true,
+      "dynamic_freshness_gate_present": true
+    },
+    "cron": {
+      "status": "OK",
+      "stale": false,
+      "old_pipeline_master_active": false
+    },
+    "disk": {
+      "status": "OK",
+      "free_gb": 123.29,
+      "abort_below_gb": 10
+    },
+    "eodhd_budget": {
+      "status": "OK",
+      "budget_guard_ok": true,
+      "used_pct": 5.41
+    },
+    "cloudflare_bundle": {
+      "status": "OK",
+      "privacy_gate_ok": true,
+      "file_count": 7611,
+      "max_file_bytes": 15747196
+    },
+    "stale_data": {
+      "status": "DEGRADED",
+      "stale_input_count": 1,
+      "actionable_stale_input_count": 0,
+      "stale_actionable_buy_forbidden": true,
+      "inputs": {
+        "public_status": "2026-05-08",
+        "page_core": "2026-05-08",
+        "decision_core": "2026-05-08",
+        "best_setups": "2026-05-08",
+        "module_scorecards": "2026-04-27",
+        "dashboard_data": "2026-05-08"
+      }
+    },
+    "reason_code_drift": {
+      "status": "OK",
+      "unknown_codes": 0,
+      "unknown_blocking_or_demoting_codes": 0
+    },
+    "connectivity": {
+      "status": "OK",
+      "generated_at": "2026-05-09T20:13:57.161Z",
+      "probes": {
+        "0": {
+          "status": "UNKNOWN",
+          "ok": true
+        },
+        "1": {
+          "status": "UNKNOWN",
+          "ok": false
+        },
+        "2": {
+          "status": "UNKNOWN",
+          "ok": true
+        }
+      }
+    }
+  },
+  "module_scorecards": {
+    "target_market_date": "2026-04-27",
+    "generated_at": "2026-05-10T09:27:48.374Z",
+    "horizons": [
+      "short",
+      "mid",
+      "long"
+    ],
+    "modules": {
+      "forecast": {
+        "id": "forecast",
+        "name": "Forecast System v3.0",
+        "type": "price_direction_probability",
+        "status": "available",
+        "source_asof": "2026-04-24",
+        "source_fresh": false,
+        "stale_days": 3,
+        "horizons": {
+          "short": {
+            "source_horizon": "1d",
+            "status": "available",
+            "sample_n": 18335,
+            "hit_rate": 0.8965,
+            "precision_50": 0.8907,
+            "brier": 0.1935,
+            "max_drawdown": 0
+          },
+          "mid": {
+            "source_horizon": "5d",
+            "status": "available",
+            "sample_n": 2166,
+            "hit_rate": 0.3112,
+            "precision_50": 0.26,
+            "brier": 0.2717,
+            "max_drawdown": 0
+          },
+          "long": {
+            "source_horizon": "20d",
+            "status": "not_available",
+            "sample_n": 0,
+            "hit_rate": 0,
+            "precision_50": 0,
+            "brier": 0,
+            "max_drawdown": 0
+          }
+        }
+      },
+      "breakout": {
+        "id": "breakout",
+        "name": "breakout",
+        "type": null,
+        "status": "not_available",
+        "source_asof": null,
+        "source_fresh": false,
+        "stale_days": null,
+        "horizons": {
+          "short": {
+            "source_horizon": "1d",
+            "status": "not_available",
+            "sample_n": 0,
+            "hit_rate": 0,
+            "precision_50": 0,
+            "brier": 0,
+            "max_drawdown": 0
+          },
+          "mid": {
+            "source_horizon": "5d",
+            "status": "not_available",
+            "sample_n": 0,
+            "hit_rate": 0,
+            "precision_50": 0,
+            "brier": 0,
+            "max_drawdown": 0
+          },
+          "long": {
+            "source_horizon": "20d",
+            "status": "not_available",
+            "sample_n": 0,
+            "hit_rate": 0,
+            "precision_50": 0,
+            "brier": 0,
+            "max_drawdown": 0
+          }
+        }
+      },
+      "hist_probs": {
+        "id": "hist_probs",
+        "name": "hist_probs",
+        "type": null,
+        "status": "not_available",
+        "source_asof": null,
+        "source_fresh": false,
+        "stale_days": null,
+        "horizons": {
+          "short": {
+            "source_horizon": "1d",
+            "status": "not_available",
+            "sample_n": 0,
+            "hit_rate": 0,
+            "precision_50": 0,
+            "brier": 0,
+            "max_drawdown": 0
+          },
+          "mid": {
+            "source_horizon": "5d",
+            "status": "not_available",
+            "sample_n": 0,
+            "hit_rate": 0,
+            "precision_50": 0,
+            "brier": 0,
+            "max_drawdown": 0
+          },
+          "long": {
+            "source_horizon": "20d",
+            "status": "not_available",
+            "sample_n": 0,
+            "hit_rate": 0,
+            "precision_50": 0,
+            "brier": 0,
+            "max_drawdown": 0
+          }
+        }
+      },
+      "quantlab": {
+        "id": "quantlab",
+        "name": "QuantLab Agents Ensemble",
+        "type": "factor_rank_prediction",
+        "status": "low_sample_or_unavailable",
+        "source_asof": "2026-04-17",
+        "source_fresh": false,
+        "stale_days": 10,
+        "horizons": {
+          "short": {
+            "source_horizon": "1d",
+            "status": "not_available",
+            "sample_n": 0,
+            "hit_rate": 0,
+            "precision_50": 0,
+            "brier": 0,
+            "max_drawdown": 0
+          },
+          "mid": {
+            "source_horizon": "5d",
+            "status": "not_available",
+            "sample_n": 0,
+            "hit_rate": 0,
+            "precision_50": 0,
+            "brier": 0,
+            "max_drawdown": 0
+          },
+          "long": {
+            "source_horizon": "20d",
+            "status": "not_available",
+            "sample_n": 0,
+            "hit_rate": 0,
+            "precision_50": 0,
+            "brier": 0,
+            "max_drawdown": 0
+          }
+        }
+      },
+      "scientific": {
+        "id": "scientific",
+        "name": "Scientific Analyzer v9.1",
+        "type": "setup_trigger_breakout",
+        "status": "available",
+        "source_asof": "2026-04-24",
+        "source_fresh": false,
+        "stale_days": 3,
+        "horizons": {
+          "short": {
+            "source_horizon": "1d",
+            "status": "not_available",
+            "sample_n": 0,
+            "hit_rate": 0,
+            "precision_50": 0,
+            "brier": 0,
+            "max_drawdown": 0
+          },
+          "mid": {
+            "source_horizon": "5d",
+            "status": "available",
+            "sample_n": 4339,
+            "hit_rate": 0,
+            "precision_50": 0,
+            "brier": 0.253,
+            "max_drawdown": 0
+          },
+          "long": {
+            "source_horizon": "20d",
+            "status": "not_available",
+            "sample_n": 0,
+            "hit_rate": 0,
+            "precision_50": 0,
+            "brier": 0,
+            "max_drawdown": 0
+          }
+        }
+      },
+      "fundamentals": {
+        "id": "fundamentals",
+        "name": "fundamentals",
+        "type": null,
+        "status": "not_available",
+        "source_asof": null,
+        "source_fresh": false,
+        "stale_days": null,
+        "horizons": {
+          "short": {
+            "source_horizon": "1d",
+            "status": "not_available",
+            "sample_n": 0,
+            "hit_rate": 0,
+            "precision_50": 0,
+            "brier": 0,
+            "max_drawdown": 0
+          },
+          "mid": {
+            "source_horizon": "5d",
+            "status": "not_available",
+            "sample_n": 0,
+            "hit_rate": 0,
+            "precision_50": 0,
+            "brier": 0,
+            "max_drawdown": 0
+          },
+          "long": {
+            "source_horizon": "20d",
+            "status": "not_available",
+            "sample_n": 0,
+            "hit_rate": 0,
+            "precision_50": 0,
+            "brier": 0,
+            "max_drawdown": 0
+          }
+        }
+      },
+      "stock_analyzer": {
+        "id": "stock_analyzer",
+        "name": "Stock Analyzer",
+        "type": "best_setups_horizon_buy_signals",
+        "status": "available",
+        "source_asof": "2026-04-24",
+        "source_fresh": false,
+        "stale_days": 3,
+        "horizons": {
+          "short": {
+            "source_horizon": "1d",
+            "status": "low_sample",
+            "sample_n": 5,
+            "hit_rate": 1,
+            "precision_50": 1,
+            "brier": 0,
+            "max_drawdown": 0
+          },
+          "mid": {
+            "source_horizon": "5d",
+            "status": "low_sample",
+            "sample_n": 3,
+            "hit_rate": 1,
+            "precision_50": 1,
+            "brier": 0,
+            "max_drawdown": 0
+          },
+          "long": {
+            "source_horizon": "20d",
+            "status": "available",
+            "sample_n": 6343,
+            "hit_rate": 0.2043,
+            "precision_50": 0.2933,
+            "brier": 0.3816,
+            "max_drawdown": 0
+          }
+        }
+      }
+    },
+    "alpha_proof": false
+  },
+  "caveats": [
+    "P0 Decision Core is a safety gate, not alpha proof.",
+    "Module hit rates are empirical backtest/outcome metrics and are not profit guarantees.",
+    "Raw ops reports remain private; this file is a public sanitized projection."
+  ]
+}
