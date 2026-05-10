@@ -725,9 +725,14 @@ if (isMainThread) {
     for (const ticker of tickerList) {
       const cp = getTickerState(checkpointStore, ticker);
       if (cp?.status === 'no_data' && cp?.source === 'scripts/ops/apply-hist-probs-reclassifications.mjs') {
-        reclassifiedNoDataSet.add(ticker);
         const entry = requiredEntryByTicker.get(ticker);
-        if (entry) excludedNoData.push(entry);
+        const hasResolvableHistory = entry
+          && Number(entry.bars_count || 0) >= MIN_REQUIRED_BARS
+          && String(entry.history_pack || '').trim();
+        if (!hasResolvableHistory) {
+          reclassifiedNoDataSet.add(ticker);
+          if (entry) excludedNoData.push(entry);
+        }
       }
     }
     if (reclassifiedNoDataSet.size > 0) {
