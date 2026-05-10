@@ -34,7 +34,13 @@ function latestBarLagTradingDays(row, latest = null) {
   const marketStatsMin = row?.market_stats_min && typeof row.market_stats_min === 'object'
     ? row.market_stats_min
     : null;
-  const latestBarDate = isoDate(marketStatsMin?.latest_bar_date || row?.latest_bar_date || row?.freshness?.as_of);
+  const latestBarDate = isoDate(
+    marketStatsMin?.latest_bar_date
+    || marketStatsMin?.price_date
+    || row?.latest_bar_date
+    || row?.price_date
+    || row?.freshness?.as_of
+  );
   const targetDate = isoDate(latest?.target_market_date || latest?.target_date || row?.target_market_date);
   if (!latestBarDate || !targetDate) return null;
   return tradingDaysBetween(latestBarDate, targetDate);
@@ -100,7 +106,13 @@ export function pageCoreStrictOperationalReasons(row, { latest = null, freshness
   const stats = marketStatsMin?.stats && typeof marketStatsMin.stats === 'object'
     ? marketStatsMin.stats
     : null;
-  const latestBarDate = isoDate(marketStatsMin?.latest_bar_date || row?.latest_bar_date || row?.freshness?.as_of);
+  const latestBarDate = isoDate(
+    marketStatsMin?.latest_bar_date
+    || marketStatsMin?.price_date
+    || row?.latest_bar_date
+    || row?.price_date
+    || row?.freshness?.as_of
+  );
   const priceDate = isoDate(marketStatsMin?.price_date || row?.price_date || latestBarDate);
   const statsDate = isoDate(marketStatsMin?.as_of || marketStatsMin?.stats_date || row?.stats_date);
   const targetDate = isoDate(latest?.target_market_date || latest?.target_date || row?.target_market_date);

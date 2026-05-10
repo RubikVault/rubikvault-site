@@ -114,3 +114,56 @@ test('stock analyzer operability blocks page-core green without market_stats_min
   assert.equal(doc.records[0].page_core_truth.blockers.includes('missing_market_stats_basis'), true);
   assert.equal(doc.summary.targetable_operational_assets, 0);
 });
+
+test('stock analyzer operability accepts page-core market_stats_min price_date as current date', () => {
+  const pageCoreIndex = {
+    latest: { snapshot_id: 'page-test', target_market_date: '2026-05-08' },
+    rows: new Map([
+      ['US:OK', {
+        canonical_asset_id: 'US:OK',
+        display_ticker: 'OK',
+        identity: { asset_class: 'STOCK', symbol: 'OK' },
+        coverage: { bars: 250, ui_renderable: true },
+        ui_banner_state: 'all_systems_operational',
+        key_levels_ready: true,
+        market_stats_min: {
+          as_of: '2026-05-08',
+          price_date: '2026-05-08',
+          price_source: 'page-core',
+          stats_source: 'historical-indicators',
+          stats: { low_52w: 90 },
+        },
+        summary_min: {
+          last_close: 100,
+          daily_change_abs: 1,
+          daily_change_pct: 0.01010101,
+          decision_verdict: 'WAIT',
+          quality_status: 'OK',
+          risk_level: 'LOW',
+        },
+        governance_summary: {
+          status: 'ok',
+          risk_level: 'LOW',
+          blocking_reasons: [],
+        },
+      }],
+    ]),
+  };
+  const doc = rebuildOperabilityDocument({
+    target_market_date: '2026-05-08',
+    records: [
+      {
+        canonical_id: 'US:OK',
+        registry_bars_count: 250,
+        current_ui_title: 'Analysis incomplete',
+      },
+    ],
+  }, {
+    targetMarketDate: '2026-05-08',
+    pageCoreIndex,
+  });
+
+  assert.equal(doc.records[0].operational, true);
+  assert.equal(doc.records[0].current_ui_title, 'All systems operational');
+  assert.equal(doc.summary.targetable_operational_assets, 1);
+});

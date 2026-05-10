@@ -168,6 +168,7 @@ function pageCoreBars(row) {
 function pageCoreDate(row) {
   return isoDate(
     row?.market_stats_min?.latest_bar_date
+    || row?.market_stats_min?.price_date
     || row?.latest_bar_date
     || row?.freshness?.as_of
     || row?.price_date
