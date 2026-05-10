@@ -51,6 +51,7 @@ function baseCandidates(repoRoot, relPack, baseDir = DEFAULT_BASE) {
   const stripped = rel.startsWith('history/') ? rel.slice('history/'.length) : rel;
   return [
     path.join(repoRoot, baseDir, rel),
+    path.join(repoRoot, baseDir, 'history', rel),
     path.join(repoRoot, baseDir, 'history', stripped),
     path.join(repoRoot, 'public/data/universe/v7', rel),
   ];
