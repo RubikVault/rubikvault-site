@@ -1476,9 +1476,10 @@ def main(argv: Iterable[str]) -> int:
             bulk_min_yield_ratio = float(getattr(args, "bulk_min_yield_ratio", 0.0) or 0.0)
             bulk_min_rows_matched = int(getattr(args, "bulk_min_rows_matched", 0) or 0)
             bulk_expected = max(1, len(indexed_registry))
+            bulk_effective_min_rows_matched = min(bulk_min_rows_matched, bulk_expected) if bulk_min_rows_matched > 0 else 0
             bulk_yield_ratio = bulk_rows_matched / bulk_expected
             yield_below_ratio = bulk_min_yield_ratio > 0 and bulk_yield_ratio < bulk_min_yield_ratio
-            yield_below_abs = bulk_min_rows_matched > 0 and bulk_rows_matched < bulk_min_rows_matched
+            yield_below_abs = bulk_effective_min_rows_matched > 0 and bulk_rows_matched < bulk_effective_min_rows_matched
             if (yield_below_ratio or yield_below_abs) and not STOP_REQUESTED:
                 if EODHD_DISABLED_REASON is None:
                     globals()["EODHD_DISABLED_REASON"] = "bulk_yield_below_threshold"
@@ -1493,6 +1494,7 @@ def main(argv: Iterable[str]) -> int:
                             "rows_wrong_date": bulk_rows_wrong_date,
                             "min_ratio": bulk_min_yield_ratio,
                             "min_matched": bulk_min_rows_matched,
+                            "effective_min_matched": bulk_effective_min_rows_matched,
                             "exchanges_failed": [e.get("exchange") for e in bulk_exchange_errors],
                         }
                     ),
