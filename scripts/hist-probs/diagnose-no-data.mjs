@@ -4,11 +4,13 @@ import fs from 'node:fs';
 import path from 'node:path';
 import zlib from 'node:zlib';
 import { readHistoryPackRows } from '../lib/history-pack-overlay.mjs';
+import { histProbsReadCandidates } from '../lib/hist-probs/path-resolver.mjs';
 import { ROOT } from '../decision-core/shared.mjs';
 
 const NO_DATA_PATH = path.join(ROOT, 'public/data/hist-probs/no-data-tickers.json');
 const RUN_SUMMARY_PATH = path.join(ROOT, 'public/data/hist-probs/run-summary.json');
 const RETRY_SUMMARY_PATH = path.join(ROOT, 'public/data/hist-probs/retry-summary-latest.json');
+const HIST_PROBS_DIR = path.join(ROOT, 'public/data/hist-probs');
 const SCOPE_IDS_PATH = path.join(ROOT, 'public/data/universe/v7/ssot/assets.global.canonical.ids.json');
 const REGISTRY_PATH = path.join(ROOT, 'public/data/universe/v7/registry/registry.ndjson.gz');
 const PROVIDER_NO_DATA_PATH = path.join(ROOT, 'public/data/universe/v7/ssot/provider-no-data-exclusions.json');
@@ -186,6 +188,21 @@ async function inspectPack(row, registryRow) {
   return { status: 'ok', history_pack: historyPack, bars_count: bars.length, latest_date: latestDate };
 }
 
+function hasFreshHistProbsOutput(row, registryRow, staleTradingDays) {
+  const symbol = normalizeSymbol(row.symbol || registryRow?.symbol);
+  if (!symbol) return false;
+  const expectedDate = isoDate(row.expected_date || registryRow?.last_trade_date);
+  for (const filePath of histProbsReadCandidates(HIST_PROBS_DIR, symbol)) {
+    const doc = readJson(filePath);
+    if (!doc || normalizeSymbol(doc.ticker) !== symbol) continue;
+    const latestDate = isoDate(doc.latest_date);
+    if (!latestDate || Number(doc.bars_count || 0) < MIN_BARS) continue;
+    const lag = tradingDaysBetween(latestDate, expectedDate);
+    if (lag == null || lag <= staleTradingDays) return true;
+  }
+  return false;
+}
+
 async function classify(row, context) {
   const { scopeIds, registry, providerNoData, staleTradingDays } = context;
   const symbol = normalizeSymbol(row.symbol);
@@ -203,6 +220,9 @@ async function classify(row, context) {
     return { reason: 'not_in_scope', registryRow: null, pack: null };
   }
   if (!registryRow && !canonicalId) return { reason: 'canonical_absent', registryRow: null, pack: null };
+  if (hasFreshHistProbsOutput(row, registryRow, staleTradingDays)) {
+    return { reason: 'resolved_existing', registryRow, pack: null };
+  }
   if (providerNoData.ids.has(canonicalId) || providerNoData.symbols.has(symbol)) {
     return { reason: 'provider_no_data', registryRow, pack: null };
   }
@@ -241,6 +261,7 @@ async function main() {
     stale_pack: 0,
     provider_no_data: 0,
     resolver_bug: 0,
+    resolved_existing: 0,
   };
   const samples = [];
   for (const row of inputs) {
@@ -271,6 +292,7 @@ async function main() {
     counts,
     unclassified_count: 0,
     resolver_bug_count: counts.resolver_bug || 0,
+    resolved_existing_count: counts.resolved_existing || 0,
     samples,
   };
   writeJsonAtomic(outputPath, report);
