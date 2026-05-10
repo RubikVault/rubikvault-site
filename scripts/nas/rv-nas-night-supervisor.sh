@@ -181,12 +181,10 @@ doc = {
     "current_step": current_step or None,
     "current_pid": int(pid),
     "completed_steps": existing.get("completed_steps", []),
-    "failed_step": existing.get("failed_step"),
+    "failed_step": None if status in {"running", "completed"} else existing.get("failed_step"),
   }
 if status == "completed":
     doc["finished_at"] = now
-if existing.get("failed_step"):
-    doc["failed_step"] = existing["failed_step"]
 if status == "failed" and current_step:
     doc["failed_step"] = current_step
 os.makedirs(os.path.dirname(status_path), exist_ok=True)
