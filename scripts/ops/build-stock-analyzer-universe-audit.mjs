@@ -52,6 +52,11 @@ const POLICY_NEUTRAL_STRUCTURAL_FAMILIES = new Set([
   'artifact_provider_no_data_excluded',
 ]);
 const POLICY_NEUTRAL_HIST_PROBS_STALE_RATIO = 0.001;
+const HIST_PROBS_FRESHNESS_BUDGET_TRADING_DAYS = Math.max(0, Number(
+  process.env.HIST_PROBS_FRESHNESS_BUDGET_TRADING_DAYS
+    || process.env.RV_HIST_PROBS_FRESHNESS_BUDGET_TRADING_DAYS
+    || 2,
+) || 0);
 function isPolicyNeutralFailureFamily(family) {
   if (POLICY_NEUTRAL_STRUCTURAL_FAMILIES.has(family?.family_id)) return true;
   if (
@@ -488,6 +493,15 @@ function resolveHistProbsExpectedDate(entry, targetMarketDate) {
   return normalizeDate(entry?.lastTradeDate || targetMarketDate || null);
 }
 
+export function histProbsDateFreshEnough(histProbsDate, expectedHistProbsDate) {
+  const actual = normalizeDate(histProbsDate);
+  const expected = normalizeDate(expectedHistProbsDate);
+  if (!actual || !expected) return false;
+  if (actual >= expected) return true;
+  const lag = tradingDaysBetween(actual, expected);
+  return lag != null && lag <= HIST_PROBS_FRESHNESS_BUDGET_TRADING_DAYS;
+}
+
 function isTradableRegistryEntry(entry) {
   return Number(entry?.barsCount || 0) > 0 && Boolean(normalizeDate(entry?.lastTradeDate || null));
 }
@@ -613,6 +627,7 @@ function auditArtifactEntry(entry, targetMarketDate, fundamentalsScopeDoc = null
   const histProbsStatus = histProbsStatusIndex?.get(entry.ticker) || null;
   const histProbsNeutral = histProbsStatusIsNeutral(histProbsStatus, entry);
   const expectedHistProbsDate = resolveHistProbsExpectedDate(entry, targetMarketDate);
+  const histProbsFreshEnough = histProbsDateFreshEnough(histProbsDate, expectedHistProbsDate);
   if (!histProbsArtifact && !histProbsNeutral) {
     records.push({
       ticker: entry.ticker,
@@ -621,7 +636,7 @@ function auditArtifactEntry(entry, targetMarketDate, fundamentalsScopeDoc = null
       severity: ISSUE_FAMILY_CATALOG.artifact_hist_probs_missing.severity,
       detail: 'hist_probs_artifact_missing',
     });
-  } else if (histProbsArtifact && expectedHistProbsDate && (!histProbsDate || histProbsDate < expectedHistProbsDate) && !histProbsNeutral) {
+  } else if (histProbsArtifact && expectedHistProbsDate && !histProbsFreshEnough && !histProbsNeutral) {
     records.push({
       ticker: entry.ticker,
       assetClass: entry.assetClass,
@@ -649,7 +664,7 @@ function auditArtifactEntry(entry, targetMarketDate, fundamentalsScopeDoc = null
     });
   }
 
-  if (bestSetupsTickers?.has(entry.ticker) && expectedHistProbsDate && !histProbsNeutral && (!histProbsDate || histProbsDate < expectedHistProbsDate)) {
+  if (bestSetupsTickers?.has(entry.ticker) && expectedHistProbsDate && !histProbsNeutral && !histProbsFreshEnough) {
     records.push({
       ticker: entry.ticker,
       assetClass: entry.assetClass,
@@ -665,6 +680,7 @@ function auditArtifactEntry(entry, targetMarketDate, fundamentalsScopeDoc = null
     hist_probs_date: histProbsDate,
     hist_probs_status: histProbsStatus?.status || null,
     hist_probs_neutral: histProbsNeutral,
+    hist_probs_fresh_enough: histProbsFreshEnough,
     fundamentals_available: fundamentalsCount >= 2,
     fundamentals_expected: fundamentalsExpected,
     fundamentals_scope_neutral: fundamentalsScopeNeutral,

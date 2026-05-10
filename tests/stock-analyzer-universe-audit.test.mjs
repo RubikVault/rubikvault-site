@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import {
   ISSUE_FAMILY_CATALOG,
   buildOrderedRecovery,
+  histProbsDateFreshEnough,
   summarizeAuditFindings,
 } from '../scripts/ops/build-stock-analyzer-universe-audit.mjs';
 
@@ -51,5 +52,11 @@ describe('stock analyzer universe audit helpers', () => {
       assert.ok(family.label, `${familyId} missing label`);
       assert.ok(Array.isArray(family.recovery_ids) && family.recovery_ids.length > 0, `${familyId} missing recovery ids`);
     }
+  });
+
+  it('accepts hist-probs profiles within the declared trading-day freshness budget', () => {
+    assert.equal(histProbsDateFreshEnough('2026-05-07', '2026-05-08'), true);
+    assert.equal(histProbsDateFreshEnough('2026-05-04', '2026-05-08'), false);
+    assert.equal(histProbsDateFreshEnough(null, '2026-05-08'), false);
   });
 });
