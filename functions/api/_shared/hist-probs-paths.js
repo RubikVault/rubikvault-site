@@ -13,10 +13,9 @@ export function buildHistProbsCandidatePaths(ticker) {
   if (!normalized) return [];
   const shard = histProbsShardPrefix(normalized);
   return [
-    `/data/hist-probs/${encodeURIComponent(normalized)}.json`,
-    `/public/data/hist-probs/${encodeURIComponent(normalized)}.json`,
     `/data/hist-probs/${encodeURIComponent(shard)}/${encodeURIComponent(normalized)}.json`,
     `/public/data/hist-probs/${encodeURIComponent(shard)}/${encodeURIComponent(normalized)}.json`,
+    `/data/hist-probs/${encodeURIComponent(normalized)}.json`,
+    `/public/data/hist-probs/${encodeURIComponent(normalized)}.json`,
   ];
 }
-
