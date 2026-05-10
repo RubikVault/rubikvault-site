@@ -180,21 +180,23 @@ async function main() {
     .split(',')
     .map((item) => item.trim().toUpperCase())
     .filter(Boolean);
-  const tailBars = Math.max(60, Number.parseInt(String(argValue('--tail-bars', process.env.RV_PUBLIC_HISTORY_TAIL_BARS || '120')), 10) || 120);
+  const tailBars = Math.max(60, Number.parseInt(String(argValue('--tail-bars', process.env.RV_PUBLIC_HISTORY_TAIL_BARS || '260')), 10) || 260);
   const benchmarkTailBars = Math.max(tailBars, Number.parseInt(String(argValue('--benchmark-tail-bars', process.env.RV_PUBLIC_HISTORY_BENCHMARK_TAIL_BARS || '260')), 10) || 260);
   const maxAssets = Number.parseInt(String(argValue('--max-assets', '0')), 10) || 0;
   const extraRoots = String(argValue('--pack-root', '') || '').split(',').map((item) => item.trim()).filter(Boolean);
   const packRoots = [...extraRoots, ...DEFAULT_PACK_ROOTS];
   const manifest = readJson(manifestPath);
+  const forceFullRebuild = String(process.env.RV_UNIVERSE_SCOPE_MODE || '').trim().toLowerCase() === 'index_core';
   const previousManifestPath = path.join(outDir, 'manifest.public-history-shards.json');
   const previousSummary = readJsonIfExists(previousManifestPath);
   const { report: touchReport, byPack: touchedByPack } = loadHistoryTouchReport(touchReportPath);
-  const incrementalMode = incrementalRequested
+  const incrementalMode = !forceFullRebuild
+    && incrementalRequested
     && maxAssets <= 0
     && previousSummary?.schema === 'rv.public_history_shards.v1'
     && touchedByPack.size > 0;
   const incrementalFallbackReason = incrementalRequested && !incrementalMode
-    ? (!previousSummary ? 'previous_manifest_missing' : touchedByPack.size <= 0 ? 'history_touch_report_missing_or_empty' : maxAssets > 0 ? 'max_assets_smoke_mode' : 'unknown')
+    ? (forceFullRebuild ? 'index_core_full_rebuild' : !previousSummary ? 'previous_manifest_missing' : touchedByPack.size <= 0 ? 'history_touch_report_missing_or_empty' : maxAssets > 0 ? 'max_assets_smoke_mode' : 'unknown')
     : null;
   const byCanonical = manifest?.by_canonical_id && typeof manifest.by_canonical_id === 'object'
     ? manifest.by_canonical_id
