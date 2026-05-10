@@ -451,7 +451,7 @@ export async function runGeneratePhase(options = {}) {
     // 5. Load price history
     console.log('[Step 5] Loading price history...');
     stepStartedAt = Date.now();
-    const priceHistory = await loadPriceHistory(repoRoot, snapshot.universe, tradingDate);
+    const priceHistory = await loadPriceHistory(repoRoot, snapshot.universe_entries || snapshot.universe, tradingDate);
     timings.load_price_history_ms = elapsedMsSince(stepStartedAt);
     // Multi-exchange benchmark: prefer SPY, fallback to broad equity ETFs
     const BENCHMARK_CANDIDATES = ['SPY', 'VT', 'ACWI', 'IWDA'];

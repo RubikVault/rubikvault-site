@@ -28,6 +28,7 @@ const V3_EOD_LATEST_PATH = 'public/data/v3/eod/US/latest.ndjson.gz';
 const V3_ADJUSTED_SERIES_DIR = 'public/data/v3/series/adjusted';
 const MIRRORS_SNAPSHOT_BASE = 'mirrors/forecast/snapshots';
 const MIRRORS_UNIVERSE_V7_BASE = 'mirrors/universe-v7';
+const DEFAULT_SCOPE_CANONICAL_IDS_PATH = 'public/data/universe/v7/ssot/assets.global.canonical.ids.json';
 const DEFAULT_MIN_BARS = 200;
 
 let _registryUniverseCache = null;
@@ -136,6 +137,7 @@ function loadRegistryUniverse(repoRoot) {
     }
 
     _registryUniverseCache = {
+        allRows: rows,
         rows: uniqueRows,
         bySymbol,
         byCanonical
@@ -147,6 +149,46 @@ function forecastUniverseFilter(row, minBars = DEFAULT_MIN_BARS) {
     const barsCount = Number(row?.bars_count || 0);
     const hasAnyHistory = Boolean(row?.history_pack) || (Array.isArray(row?.recent_closes) && row.recent_closes.length > 0);
     return Boolean(row?.symbol) && barsCount >= minBars && hasAnyHistory;
+}
+
+function readScopeCanonicalIds(repoRoot, options = {}) {
+    const explicitScopeFile = String(options?.scopeFile || process.env.RV_FORECAST_SCOPE_FILE || '').trim();
+    const scopeMode = String(process.env.RV_UNIVERSE_SCOPE_MODE || 'global_registry').trim().toLowerCase();
+    const scopeFile = explicitScopeFile || (scopeMode === 'index_core' ? DEFAULT_SCOPE_CANONICAL_IDS_PATH : '');
+    if (!scopeFile) return null;
+
+    const absPath = path.isAbsolute(scopeFile) ? scopeFile : path.join(repoRoot, scopeFile);
+    if (!fs.existsSync(absPath)) {
+        throw new Error(`forecast_scope_file_missing:${absPath}`);
+    }
+
+    const parsed = JSON.parse(fs.readFileSync(absPath, 'utf8'));
+    const ids = Array.isArray(parsed?.canonical_ids)
+        ? parsed.canonical_ids
+        : Array.isArray(parsed?.ids)
+            ? parsed.ids
+            : Array.isArray(parsed?.data)
+                ? parsed.data
+                : [];
+    const canonicalIds = new Set(ids.map(normalizeCanonicalId).filter(Boolean));
+    if (!canonicalIds.size) {
+        throw new Error(`forecast_scope_file_empty:${absPath}`);
+    }
+    return {
+        file: absPath,
+        canonicalIds
+    };
+}
+
+function dedupeForecastRowsBySymbol(rows) {
+    const bestBySymbol = new Map();
+    for (const row of rows) {
+        const prev = bestBySymbol.get(row.symbol);
+        if (!prev || compareRegistryRows(row, prev) > 0) {
+            bestBySymbol.set(row.symbol, row);
+        }
+    }
+    return [...bestBySymbol.values()].sort((a, b) => a.symbol.localeCompare(b.symbol));
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -204,9 +246,17 @@ export function loadUniverse(repoRoot, options = {}) {
     }
 
     const registryUniverse = loadRegistryUniverse(repoRoot);
-    const registryRows = registryUniverse.rows.filter((row) => forecastUniverseFilter(row, minBars));
+    const scope = readScopeCanonicalIds(repoRoot, options);
+    const sourceRows = scope ? (registryUniverse.allRows || registryUniverse.rows) : registryUniverse.rows;
+    const scopedRows = scope
+        ? sourceRows.filter((row) => scope.canonicalIds.has(normalizeCanonicalId(row?.canonical_id)))
+        : sourceRows;
+    const registryRows = dedupeForecastRowsBySymbol(scopedRows.filter((row) => forecastUniverseFilter(row, minBars)));
     if (registryRows.length > 0) {
-        console.log(`[Ingest] Universe loaded from ${V7_REGISTRY_PATH} (${registryRows.length} forecast-eligible tickers)`);
+        const scopeSuffix = scope
+            ? `, scope=${path.relative(repoRoot, scope.file) || scope.file}, scope_ids=${scope.canonicalIds.size}`
+            : '';
+        console.log(`[Ingest] Universe loaded from ${V7_REGISTRY_PATH} (${registryRows.length} forecast-eligible tickers${scopeSuffix})`);
         return returnEntries ? registryRows : registryRows.map((row) => row.symbol);
     }
 
@@ -715,6 +765,7 @@ export async function ingestSnapshots(repoRoot, tradingDate, policy) {
 
     return {
         universe,
+        universe_entries: universeEntries,
         prices,
         manifest,
         missing_price_pct: missingPricePct,

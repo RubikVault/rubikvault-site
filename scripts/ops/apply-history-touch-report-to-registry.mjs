@@ -21,6 +21,7 @@ function parseArgs(argv) {
     scanExistingPacks: false,
     ignoreFresh: false,
     allowEmpty: false,
+    scopeFile: null,
   };
   for (let i = 0; i < argv.length; i += 1) {
     const arg = String(argv[i] || '');
@@ -37,6 +38,7 @@ function parseArgs(argv) {
     else if (arg === '--scan-existing-packs') out.scanExistingPacks = true;
     else if (arg === '--ignore-fresh') out.ignoreFresh = true;
     else if (arg === '--allow-empty') out.allowEmpty = true;
+    else if (arg === '--scope-file' || arg.startsWith('--scope-file=')) out.scopeFile = resolveRepoPath(readValue());
   }
   return out;
 }
@@ -62,6 +64,21 @@ function readNdjsonGz(filePath) {
     .map((line) => line.trim())
     .filter(Boolean)
     .map((line) => JSON.parse(line));
+}
+
+function readScopeIds(filePath) {
+  if (!filePath) return null;
+  const parsed = readJson(filePath);
+  const ids = Array.isArray(parsed?.canonical_ids)
+    ? parsed.canonical_ids
+    : Array.isArray(parsed?.ids)
+      ? parsed.ids
+      : Array.isArray(parsed?.data)
+        ? parsed.data
+        : [];
+  const scopeIds = new Set(ids.map(normalizeId).filter(Boolean));
+  if (!scopeIds.size) throw new Error(`scope_file_empty:${filePath}`);
+  return scopeIds;
 }
 
 function writeAtomic(filePath, buffer) {
@@ -235,7 +252,7 @@ function applyToRows(rows, touchIndex, { targetDate, appliedAt }) {
   };
 }
 
-function scanRowsFromExistingPacks(rows, { targetDate, appliedAt, loadPackStats, ignoreFresh = false }) {
+function scanRowsFromExistingPacks(rows, { targetDate, appliedAt, loadPackStats, ignoreFresh = false, scopeIds = null }) {
   let rowsScanned = 0;
   let rowsWithPackStats = 0;
   let datesAdvanced = 0;
@@ -244,11 +261,16 @@ function scanRowsFromExistingPacks(rows, { targetDate, appliedAt, loadPackStats,
   let missingPackFile = 0;
   let missingAssetInPack = 0;
   let skippedFresh = 0;
+  let skippedOutOfScope = 0;
   const sampleMissingAssetInPack = [];
 
   for (const row of rows) {
     const canonicalId = normalizeId(row?.canonical_id);
     if (!canonicalId) continue;
+    if (scopeIds && !scopeIds.has(canonicalId)) {
+      skippedOutOfScope += 1;
+      continue;
+    }
     const currentDate = normalizeDate(row.last_trade_date);
     if (!ignoreFresh && targetDate && currentDate && currentDate >= targetDate) {
       skippedFresh += 1;
@@ -301,6 +323,7 @@ function scanRowsFromExistingPacks(rows, { targetDate, appliedAt, loadPackStats,
     rows_scanned: rowsScanned,
     rows_with_pack_stats: rowsWithPackStats,
     skipped_fresh: skippedFresh,
+    skipped_out_of_scope: skippedOutOfScope,
     dates_advanced: datesAdvanced,
     bars_counts_updated: barsCountsUpdated,
     missing_pack_pointer: missingPackPointer,
@@ -315,6 +338,7 @@ function main() {
   const touchReport = readJson(args.touchReport);
   const targetDate = normalizeDate(touchReport?.meta?.to_date || touchReport?.to_date || null);
   const touchIndex = buildTouchIndex(touchReport);
+  const scopeIds = readScopeIds(args.scopeFile);
   const appliedAt = new Date().toISOString();
   if (!touchIndex.size && !args.scanExistingPacks && !args.allowEmpty) {
     throw new Error(`history_touch_report_has_no_entries:${args.touchReport}`);
@@ -330,10 +354,10 @@ function main() {
     : null;
   const loadPackStats = args.scanExistingPacks ? createPackStatsLoader() : null;
   const registryPackScan = loadPackStats
-    ? scanRowsFromExistingPacks(registryRows, { targetDate, appliedAt, loadPackStats, ignoreFresh: args.ignoreFresh })
+    ? scanRowsFromExistingPacks(registryRows, { targetDate, appliedAt, loadPackStats, ignoreFresh: args.ignoreFresh, scopeIds })
     : null;
   const snapshotPackScan = loadPackStats && snapshotRows.length
-    ? scanRowsFromExistingPacks(snapshotRows, { targetDate, appliedAt, loadPackStats, ignoreFresh: args.ignoreFresh })
+    ? scanRowsFromExistingPacks(snapshotRows, { targetDate, appliedAt, loadPackStats, ignoreFresh: args.ignoreFresh, scopeIds })
     : null;
 
   const report = {
@@ -345,6 +369,8 @@ function main() {
     snapshot_path: fs.existsSync(args.snapshot) ? path.relative(ROOT, args.snapshot) : null,
     target_market_date: targetDate,
     touch_entries: touchIndex.size,
+    scope_file: args.scopeFile ? path.relative(ROOT, args.scopeFile) : null,
+    scope_count: scopeIds?.size ?? null,
     registry: registryResult,
     snapshot: snapshotResult,
     pack_scan_enabled: args.scanExistingPacks,
