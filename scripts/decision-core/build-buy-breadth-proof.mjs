@@ -19,6 +19,7 @@ import {
 } from './shared.mjs';
 
 const DEFAULT_REPORT_PATH = path.join(ROOT, 'public/data/reports/decision-core-buy-breadth-latest.json');
+const CURRENT_SCOPE_IDS_PATH = path.join(ROOT, 'public/data/universe/v7/ssot/assets.global.canonical.ids.json');
 
 function cliValue(name, fallback = null) {
   const prefix = `--${name}=`;
@@ -81,6 +82,19 @@ function bestSetupCanonicalIds() {
     source: doc?.meta?.source || null,
     ids,
     rows_emitted_total: Number(doc?.meta?.rows_emitted?.total || 0),
+  };
+}
+
+function currentScopeCanonicalIds() {
+  const doc = readJsonMaybe(CURRENT_SCOPE_IDS_PATH);
+  const ids = Array.isArray(doc?.canonical_ids)
+    ? doc.canonical_ids
+    : (Array.isArray(doc?.ids) ? doc.ids : []);
+  const set = new Set(ids.map((id) => String(id || '').toUpperCase()).filter(Boolean));
+  return {
+    mode: doc?.scope_mode || doc?.mode || null,
+    count: Number(doc?.count || set.size || 0),
+    ids: set,
   };
 }
 
@@ -163,6 +177,7 @@ export function buildBuyBreadthProof({ root = path.join(DECISION_CORE_PUBLIC_ROO
   const target = isoDate(targetMarketDate) || isoDate(manifest.target_market_date) || isoDate(status.target_market_date);
   const metaById = registryMeta();
   const best = bestSetupCanonicalIds();
+  const scope = currentScopeCanonicalIds();
   const rows = readRows(root);
   const failureDiagnostics = diagnoseBreadth({ rows, metaById });
   const unsafe = [];
@@ -170,6 +185,7 @@ export function buildBuyBreadthProof({ root = path.join(DECISION_CORE_PUBLIC_ROO
   for (const row of rows) {
     if (row?.decision?.primary_action !== 'BUY') continue;
     const assetId = String(row?.meta?.asset_id || '').toUpperCase();
+    if (scope.ids.size && !scope.ids.has(assetId)) continue;
     const meta = metaById.get(assetId) || {};
     const failures = buyInvariantFailures(row, reasonMap);
     if (target && isoDate(row?.meta?.target_market_date) !== target) failures.push('target_mismatch');
@@ -199,9 +215,17 @@ export function buildBuyBreadthProof({ root = path.join(DECISION_CORE_PUBLIC_ROO
     ...availableAsia.filter((row) => !row.best_setups_present).slice(0, 10),
   ];
   const failures = [];
-  if (us.length < 10) failures.push('BUY_BREADTH_US_BELOW_10');
-  if (eu.length < 10) failures.push('BUY_BREADTH_EU_BELOW_10');
-  if (asia.length < 10) failures.push('BUY_BREADTH_ASIA_BELOW_10');
+  const regionTargets = {
+    US: Math.min(10, availableUs.length),
+    EU: Math.min(10, availableEu.length),
+    ASIA: Math.min(10, availableAsia.length),
+  };
+  if (regionTargets.US <= 0) failures.push('BUY_BREADTH_US_NONE_AVAILABLE');
+  else if (us.length < regionTargets.US) failures.push('BUY_BREADTH_US_BELOW_TARGET');
+  if (regionTargets.EU <= 0) failures.push('BUY_BREADTH_EU_NONE_AVAILABLE');
+  else if (eu.length < regionTargets.EU) failures.push('BUY_BREADTH_EU_BELOW_TARGET');
+  if (regionTargets.ASIA <= 0) failures.push('BUY_BREADTH_ASIA_NONE_AVAILABLE');
+  else if (asia.length < regionTargets.ASIA) failures.push('BUY_BREADTH_ASIA_BELOW_TARGET');
   if (unsafe.length) failures.push('UNSAFE_BUY_ROWS');
   if (!bestSetupsCoreOnly) failures.push('BEST_SETUPS_NOT_CORE_ONLY');
   return {
@@ -211,6 +235,10 @@ export function buildBuyBreadthProof({ root = path.join(DECISION_CORE_PUBLIC_ROO
     target_market_date: target,
     root: path.relative(ROOT, root),
     proof_mode: path.basename(root),
+    scope_mode: scope.mode,
+    scope_count: scope.count,
+    scope_filter_applied: scope.ids.size > 0,
+    region_targets: regionTargets,
     us_stock_etf_buy_count: us.length,
     eu_stock_etf_buy_count: eu.length,
     asia_stock_etf_buy_count: asia.length,

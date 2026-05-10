@@ -502,6 +502,15 @@ function buildHorizonRows(rows, horizon) {
   return sortedHorizonRows(rows, horizon).slice(0, BEST_SETUP_LIMIT);
 }
 
+function cyclicSlice(rows, offset, count) {
+  if (!Array.isArray(rows) || rows.length === 0 || count <= 0) return [];
+  const out = [];
+  const limit = Math.min(count, rows.length);
+  const start = ((offset % rows.length) + rows.length) % rows.length;
+  for (let i = 0; i < limit; i += 1) out.push(rows[(start + i) % rows.length]);
+  return out;
+}
+
 function buildDecisionCoreHorizonRows(rows, horizon) {
   const sorted = sortedHorizonRows(rows, horizon);
   const minPerRegion = Math.max(1, Math.min(
@@ -519,8 +528,7 @@ function buildDecisionCoreHorizonRows(rows, horizon) {
   };
   for (const region of ['US', 'EU', 'ASIA']) {
     const regionRows = sorted.filter((item) => item.region === region);
-    const preferred = regionRows.slice(horizonOffset, horizonOffset + minPerRegion);
-    for (const row of preferred.length >= minPerRegion ? preferred : regionRows.slice(0, minPerRegion)) add(row);
+    for (const row of cyclicSlice(regionRows, horizonOffset, minPerRegion)) add(row);
   }
   for (const row of sorted) add(row);
   return selected.slice(0, BEST_SETUP_LIMIT);
