@@ -245,6 +245,24 @@ function compactProfile(doc, tickerFromFile, maxEvents) {
   };
 }
 
+function profileRank(profile) {
+  return [
+    normalizeKey(profile?.latest_date),
+    Number(profile?.bars_count || 0),
+    Object.keys(profile?.events || {}).length,
+  ];
+}
+
+function shouldReplaceProfile(previous, next) {
+  if (!previous) return true;
+  const left = profileRank(previous);
+  const right = profileRank(next);
+  for (let i = 0; i < left.length; i += 1) {
+    if (right[i] !== left[i]) return right[i] > left[i];
+  }
+  return false;
+}
+
 function listProfileFiles(inputDir) {
   if (!fs.existsSync(inputDir)) return [];
   const files = [];
@@ -271,13 +289,14 @@ function main() {
   const scopeInfo = buildScopeInfo(options.scopeFile);
   const shards = Array.from({ length: options.shardCount }, () => ({}));
   const aliasCandidates = buildAliasCandidates();
-  const profiles = [];
+  const profiles = new Map();
   const aliasOwners = new Map();
   let read = 0;
   let skipped = 0;
+  let duplicateProfiles = 0;
   let skippedOutOfScope = 0;
   for (const filePath of files) {
-    if (options.maxProfiles > 0 && profiles.length >= options.maxProfiles) break;
+    if (options.maxProfiles > 0 && profiles.size >= options.maxProfiles) break;
     const ticker = path.basename(filePath, '.json');
     if (scopeInfo && !scopeInfo.keys.has(normalizeKey(ticker))) {
       skippedOutOfScope += 1;
@@ -290,7 +309,12 @@ function main() {
       skipped += 1;
       continue;
     }
-    profiles.push(compact);
+    const profileKey = normalizeKey(compact.ticker);
+    if (profiles.has(profileKey)) duplicateProfiles += 1;
+    if (shouldReplaceProfile(profiles.get(profileKey), compact)) profiles.set(profileKey, compact);
+  }
+  const profileList = [...profiles.values()];
+  for (const compact of profileList) {
     const aliases = new Set([compact.ticker, ...(aliasCandidates.get(normalizeKey(compact.ticker)) || [])]);
     for (const alias of aliases) {
       const key = normalizeKey(alias);
@@ -303,7 +327,7 @@ function main() {
 
   let written = 0;
   let aliasWritten = 0;
-  for (const compact of profiles) {
+  for (const compact of profileList) {
     const aliases = new Set([compact.ticker, ...(aliasCandidates.get(normalizeKey(compact.ticker)) || [])]);
     for (const alias of aliases) {
       const key = normalizeKey(alias);
@@ -332,10 +356,11 @@ function main() {
     generated_at: generatedAt,
     shard_count: options.shardCount,
     max_events_per_profile: options.maxEvents,
-    profile_count: profiles.length,
+    profile_count: profileList.length,
     runtime_key_count: written,
     alias_key_count: aliasWritten,
     skipped_count: skipped,
+    duplicate_profile_count: duplicateProfiles,
     skipped_out_of_scope_count: skippedOutOfScope,
     scope_file: scopeInfo ? path.relative(ROOT, scopeInfo.file).split(path.sep).join('/') : null,
     scope_canonical_id_count: scopeInfo?.canonicalIds.size || null,
@@ -358,10 +383,11 @@ function main() {
   console.log(JSON.stringify({
     ok: true,
     output: path.relative(ROOT, options.outputDir),
-    profiles: profiles.length,
+    profiles: profileList.length,
     runtime_keys: written,
     alias_keys: aliasWritten,
     skipped,
+    duplicate_profiles: duplicateProfiles,
     skipped_out_of_scope: skippedOutOfScope,
     scope_canonical_ids: scopeInfo?.canonicalIds.size || null,
     shards: options.shardCount,
