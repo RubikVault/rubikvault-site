@@ -22,6 +22,7 @@ PUBLIC_DATA_CODE_ALLOWLIST=(
   public/data/universe/sp500.json
   public/data/universe/v7/config/evaluation_policy.json
   public/data/universe/v7/config/global_trading_cost_model.json
+  public/data/universe/v7/config/index-core.v1.json
   public/data/universe/v7/config/license_publish_whitelist.json
   public/data/universe/v7/config/us_holidays_2020_2030.json
   public/data/universe/v7/config/v7.config.json
