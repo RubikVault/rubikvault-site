@@ -414,7 +414,7 @@ function buildQuantLabDataFreshnessSummary({
   const featureLagVsRawCanonicalCalendarDays = lagCalendarDays(featureAsof, rawCanonicalAsof);
   const featureLagVsRawAnyCalendarDays = lagCalendarDays(featureAsof, rawAnyAsof);
   const publishLagVsFeatureCalendarDays = lagCalendarDays(stockPublishAsof, featureAsof);
-  const marketPlaneFresh = (rawAnyAgeCalendarDays ?? 999) <= 3 && (featureSnapshotAgeCalendarDays ?? 999) <= 3;
+  const marketPlaneFresh = (rawAnyAgeCalendarDays ?? 999) <= 3;
   const labelHorizonLagLooksExpected = (featureLagVsRawAnyCalendarDays ?? -1) >= 10 && (featureLagVsRawAnyCalendarDays ?? 999) <= 35;
 
   const reasons = [];

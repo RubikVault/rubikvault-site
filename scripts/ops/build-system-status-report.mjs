@@ -559,22 +559,27 @@ function main() {
     .filter(Boolean)
     .sort()
     .slice(-1)[0] || null;
+  const refreshCheckpointNoop = refreshReport?.bulk_checkpoint_noop === true
+    && normalizeDate(refreshReport?.to_date || null);
+  const refreshObservedAsof = refreshSampleLastDate
+    || normalizeDate(refreshReport?.output_asof || refreshReport?.latest_date || null)
+    || (refreshCheckpointNoop ? normalizeDate(refreshReport?.to_date || null) : null);
   const expectedOperationalTargetDate = [
     recoveryReport?.target_market_date,
     isDataPlaneLane(EVALUATION_LANE) ? null : finalIntegritySeal?.target_market_date,
     isDataPlaneLane(EVALUATION_LANE) ? null : releaseTargetMarketDate,
     refreshReport?.to_date,
-    refreshSampleLastDate,
+    refreshObservedAsof,
   ]
     .map((value) => normalizeDate(value))
     .filter(Boolean)
     .sort((a, b) => a.localeCompare(b))
     .at(-1) || null;
   const refreshGeneratedAt = refreshReport?.generated_at || statMtimeIso(PATHS.refreshReport);
-  const refreshStaleDays = daysSince(refreshSampleLastDate || refreshGeneratedAt);
+  const refreshStaleDays = daysSince(refreshObservedAsof || refreshGeneratedAt);
   const refreshSeverity = refreshStaleDays == null ? 'warning' : refreshStaleDays > 7 ? 'critical' : refreshStaleDays > 3 ? 'warning' : 'ok';
   // Downgrade to warning when the API ran but returned zero data (pre-market timing or quota issue)
-  const noDataFetched = refreshReport != null && (refreshReport?.assets_fetched_with_data === 0) && !refreshSampleLastDate;
+  const noDataFetched = refreshReport != null && (refreshReport?.assets_fetched_with_data === 0) && !refreshObservedAsof && !refreshCheckpointNoop;
   const refreshSeverityFinal = noDataFetched && refreshSeverity === 'ok' ? 'warning' : refreshSeverity;
 
   const steps = {};
@@ -588,10 +593,12 @@ function main() {
     summary: refreshSeverityFinal === 'critical' ? 'Market-data refresh is stale' : refreshSeverityFinal === 'warning' ? (noDataFetched ? 'Market-data refresh ran but fetched no data (pre-market or quota issue)' : 'Market-data refresh is aging') : 'Market-data refresh is current',
     why: apiLimitLock && refreshSeverityFinal !== 'ok'
       ? `Latest v7 history refresh report is ${refreshStaleDays}d old and the provider lock file still records ${apiLimitLock.reason}.`
-      : noDataFetched
-        ? `Refresh report generated at ${refreshGeneratedAt || 'unknown'} but assets_fetched_with_data=0 — API returned no data. Likely a pre-market run or provider quota issue. Re-run after market close or inspect provider auth.`
+        : noDataFetched
+          ? `Refresh report generated at ${refreshGeneratedAt || 'unknown'} but assets_fetched_with_data=0 — API returned no data. Likely a pre-market run or provider quota issue. Re-run after market close or inspect provider auth.`
+          : refreshCheckpointNoop
+            ? `Latest v7 history refresh used exchange checkpoints for ${refreshReport?.to_date || 'unknown'}; completed exchanges were already fresh.`
         : refreshReport
-          ? `Latest v7 history refresh report was generated at ${refreshGeneratedAt || 'unknown'} with observed market data only up to ${refreshSampleLastDate || 'unknown'}.`
+          ? `Latest v7 history refresh report was generated at ${refreshGeneratedAt || 'unknown'} with observed market data only up to ${refreshObservedAsof || 'unknown'}.`
           : 'No v7 history refresh report was found.',
     next_fix: noDataFetched
       ? 'API ran but returned no data. Re-run after market close with: python3 scripts/quantlab/refresh_v7_history_from_eodhd.py --env-file "${RV_EODHD_ENV_FILE:-.env.local}" --allowlist-path public/data/universe/v7/ssot/assets.global.canonical.ids.json --from-date <YYYY-MM-DD> --to-date <YYYY-MM-DD> --concurrency "${RV_MARKET_REFRESH_CONCURRENCY:-12}" --progress-every "${RV_MARKET_REFRESH_PROGRESS_EVERY:-500}"'
@@ -600,10 +607,11 @@ function main() {
     generated_at: refreshGeneratedAt,
     last_success_at: refreshGeneratedAt,
     input_asof: refreshReport?.from_date || null,
-    output_asof: refreshSampleLastDate,
+    output_asof: refreshObservedAsof,
     status_detail: {
       assets_requested: refreshReport?.assets_requested ?? null,
       assets_fetched_with_data: refreshReport?.assets_fetched_with_data ?? null,
+      bulk_checkpoint_noop: refreshReport?.bulk_checkpoint_noop === true,
       fetch_errors_total: refreshReport?.fetch_errors_total ?? null,
       api_lock: apiLimitLock || null,
       impact: 'No newer market history can flow into delta ingest, QuantLab raw bars, hist-probs, or the snapshot dependency chain.',

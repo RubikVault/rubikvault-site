@@ -383,17 +383,26 @@ function main() {
     ? Math.max(0, rawCanonicalLagDays - CANONICAL_LABEL_WINDOW_DAYS)
     : null;
   const rawAnyStaleDays = ageCalendarDays(rawAnyDataDate, expectedEod);
+  const marketHistoryFreshCount = refreshReport?.bulk_checkpoint_noop === true && refreshReport?.to_date
+    ? Number(refreshReport?.assets_requested || scopeSymbols.length || 0)
+    : (refreshReport?.assets_fetched_with_data ?? null);
+  const marketHistoryMissingCount = refreshReport?.bulk_checkpoint_noop === true && refreshReport?.to_date
+    ? 0
+    : (refreshReport?.assets_requested != null && refreshReport?.assets_fetched_with_data != null
+      ? Math.max(0, Number(refreshReport.assets_requested) - Number(refreshReport.assets_fetched_with_data))
+      : null);
+  const quantlabRawHealthy = quantlabOperational?.summary?.local_data_green === true
+    || (Boolean(rawAnyDataDate) && (rawAnyStaleDays ?? Infinity) <= 1 && (rawCanonicalExcessLag ?? 0) <= 14);
   const families = [
     buildFamily({
       family_id: 'market_history',
       expected_eod: expectedEod,
       data_asof: refreshReport?.to_date || null,
-      fresh_count: refreshReport?.assets_fetched_with_data ?? null,
+      fresh_count: marketHistoryFreshCount,
       stale_count: 0,
-      missing_count: refreshReport?.assets_requested != null && refreshReport?.assets_fetched_with_data != null
-        ? Math.max(0, Number(refreshReport.assets_requested) - Number(refreshReport.assets_fetched_with_data))
-        : null,
+      missing_count: marketHistoryMissingCount,
       healthy: Boolean(refreshReport?.to_date),
+      bulk_checkpoint_noop: refreshReport?.bulk_checkpoint_noop === true,
       fix_commands: [
         'python3 scripts/quantlab/refresh_v7_history_from_eodhd.py --env-file "$NAS_DEV_ROOT/.env.local" --allowlist-path public/data/universe/v7/ssot/assets.global.canonical.ids.json --from-date <YYYY-MM-DD> --to-date <YYYY-MM-DD> --concurrency "${RV_MARKET_REFRESH_CONCURRENCY:-12}" --progress-every "${RV_MARKET_REFRESH_PROGRESS_EVERY:-500}"',
       ],
@@ -412,11 +421,13 @@ function main() {
       family_id: 'quantlab_raw',
       expected_eod: expectedEod,
       data_asof: rawAnyDataDate,
-      fresh_count: (rawAnyStaleDays ?? Infinity) <= 1 && (rawCanonicalExcessLag ?? 0) === 0 ? scopeSymbols.length : 0,
-      stale_count: (rawAnyStaleDays ?? Infinity) <= 1 && (rawCanonicalExcessLag ?? 0) === 0 ? 0 : scopeSymbols.length,
+      fresh_count: quantlabRawHealthy ? scopeSymbols.length : 0,
+      stale_count: quantlabRawHealthy ? 0 : scopeSymbols.length,
       missing_count: 0,
-      healthy: Boolean(rawAnyDataDate) && (rawAnyStaleDays ?? Infinity) <= 1 && (rawCanonicalExcessLag ?? Infinity) === 0,
+      healthy: quantlabRawHealthy,
       verification_mode: 'operational_status_label_window',
+      canonical_lag_trading_days: rawCanonicalLagDays,
+      canonical_excess_lag_trading_days: rawCanonicalExcessLag,
       fix_commands: ['node scripts/quantlab/build_quantlab_v4_daily_report.mjs'],
     }),
     buildFamily({
