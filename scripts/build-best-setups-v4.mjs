@@ -518,7 +518,7 @@ function buildDecisionCoreHorizonRows(rows, horizon) {
     Math.floor(BEST_SETUP_LIMIT / 3),
     Number(process.env.BEST_SETUPS_DECISION_CORE_MIN_PER_REGION || 5),
   ));
-  const horizonOffset = ({ short: 0, medium: minPerRegion, long: minPerRegion * 2 }[horizon] || 0);
+  const horizonOffset = ({ short: 0, medium: minPerRegion, long: minPerRegion * 3 }[horizon] || 0);
   const residualRegionOrder = {
     short: ['US', 'EU', 'ASIA'],
     medium: ['EU', 'ASIA', 'US'],
