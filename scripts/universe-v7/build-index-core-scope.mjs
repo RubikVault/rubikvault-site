@@ -534,6 +534,27 @@ async function resolveEtfs(config, registry) {
   return out;
 }
 
+async function resolveIndexAssets(config, registry) {
+  const maxCount = Math.max(0, Number(config.index_assets?.max_count || 50));
+  if (maxCount <= 0) return [];
+  return [...registry.byCanonical.values()]
+    .filter((row) => row.type_norm === 'INDEX')
+    .sort((a, b) => {
+      const score = registryProxyScore(b) - registryProxyScore(a);
+      if (score) return score;
+      const regionA = classifyScopeRegion(a) || '';
+      const regionB = classifyScopeRegion(b) || '';
+      if (regionA !== regionB) return regionA.localeCompare(regionB);
+      return String(a.canonical_id).localeCompare(String(b.canonical_id));
+    })
+    .slice(0, maxCount)
+    .map((row) => ({
+      ...row,
+      index_memberships: ['registry_index_asset'],
+      scope_region: classifyScopeRegion(row) || 'GLOBAL_INDEX',
+    }));
+}
+
 async function backupOutputs(generatedAt) {
   const dir = path.join(BACKUP_DIR, safeStamp(generatedAt));
   await fs.mkdir(dir, { recursive: true });
@@ -754,6 +775,14 @@ async function build(options) {
   for (const row of etfRows) {
     if (!byCanonical.has(row.canonical_id)) byCanonical.set(row.canonical_id, row);
   }
+  const indexAssetRows = await resolveIndexAssets(config, registry);
+  for (const row of indexAssetRows) {
+    if (!byCanonical.has(row.canonical_id)) {
+      byCanonical.set(row.canonical_id, row);
+    } else {
+      byCanonical.get(row.canonical_id).index_memberships.push('registry_index_asset');
+    }
+  }
 
   const rows = [...byCanonical.values()]
     .map((row) => ({
@@ -769,6 +798,7 @@ async function build(options) {
     provider_budget: budget,
     eodhd_calls: eodhdCalls,
     etf_count: etfRows.length,
+    index_asset_count: indexAssetRows.length,
     index_count: memberships.length,
     per_index: perIndex,
     warnings,

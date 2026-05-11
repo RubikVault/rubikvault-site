@@ -136,6 +136,7 @@
     "test:hist-probs:engine": "node --test tests/hist-probs/rolling-core.test.mjs tests/hist-probs/parity.test.mjs",
     "test:forecast-maturity": "node --test tests/forecast/maturity-lookup.test.mjs tests/forecast/calendar-resolver.test.mjs",
     "verify:stock-analyzer:non-regression": "node scripts/validate/stock-analyzer-non-regression-gate.mjs",
+    "verify:stock-analyzer:random50-proof": "node scripts/validate/stock-analyzer-ui-random50-proof.mjs",
     "stock-analyzer:promotion-report": "node scripts/stock-analyzer/build-promotion-readiness-report.mjs",
     "test:stock-analyzer:governance": "node tests/stock-analyzer-promotion-governance.test.mjs",
     "stock-analyzer:overnight": "bash scripts/stock-analyzer/run_overnight_autopilot.sh",

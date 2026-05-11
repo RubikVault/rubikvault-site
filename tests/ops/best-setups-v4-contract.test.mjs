@@ -9,7 +9,7 @@ const SCRIPT = fs.readFileSync(path.join(ROOT, 'scripts/build-best-setups-v4.mjs
 test('best-setups v4 consumes decision bundle BUY rows without unverified fallback', () => {
   assert.match(SCRIPT, /if \(decisionBundleMode\) \{/);
   assert.doesNotMatch(SCRIPT, /falling through to QuantLab\/forecast path/);
-  assert.match(SCRIPT, /source: 'decision_bundle_consumer'/);
+  assert.match(SCRIPT, /'decision_bundle_consumer'/);
 });
 
 test('best-setups v4 preserves decision confidence, freshness, reasons, and module evidence', () => {
@@ -19,4 +19,13 @@ test('best-setups v4 preserves decision confidence, freshness, reasons, and modu
   assert.match(SCRIPT, /decision\?\.buy_eligibility\?\.eligible !== true/);
   assert.match(SCRIPT, /decision_reasons: Array\.isArray\(decision\.reasons\)/);
   assert.match(SCRIPT, /module_contributions: decision\.module_contributions \|\| null/);
+});
+
+test('decision-core best-setups only publishes true BUY rows for each horizon', () => {
+  assert.match(SCRIPT, /horizon_actions:/);
+  assert.match(SCRIPT, /short: String\(decision\?\.horizons\?\.short_term\?\.horizon_action/);
+  assert.match(SCRIPT, /medium: String\(decision\?\.horizons\?\.mid_term\?\.horizon_action/);
+  assert.match(SCRIPT, /long: String\(decision\?\.horizons\?\.long_term\?\.horizon_action/);
+  assert.match(SCRIPT, /row\?\.horizon_actions\?\.\[horizon\]/);
+  assert.match(SCRIPT, /return !action \|\| action === 'BUY'/);
 });

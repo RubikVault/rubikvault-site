@@ -31,6 +31,10 @@
     "max_count": 200,
     "include_categories": ["broad_market", "sector_us", "sector_eu", "country", "factor_value", "factor_momentum", "treasuries_long", "treasuries_short", "gold", "broad_commodities"]
   },
+  "index_assets": {
+    "policy": "registry_index_assets",
+    "max_count": 50
+  },
   "extended_when_RV_INDEX_CORE_INCLUDE_EXTENDED": {
     "indexes": [{ "id": "nasdaq_composite", "eodhd": "IXIC.INDX", "region": "US" }],
     "etf_categories": ["thematic_ai", "thematic_clean_energy", "em_country", "credit_ig", "credit_hy"]

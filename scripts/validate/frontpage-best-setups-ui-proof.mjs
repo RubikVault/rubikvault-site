@@ -11,6 +11,12 @@ const SNAPSHOT_PATH = path.join(ROOT, 'public/data/snapshots/best-setups-v4.json
 const REPORT_PATH = path.join(ROOT, 'public/data/reports/frontpage-best-setups-ui-proof-latest.json');
 const REQUIRED_REGIONS = ['US', 'EU', 'ASIA'];
 const REQUIRED_CLASSES = ['stock', 'etf'];
+const REQUIRED_STOCK_BUY_PER_HORIZON = Math.max(0, Number(process.env.RV_FRONTPAGE_STOCK_BUY_MIN_PER_HORIZON || 5));
+const HORIZON_CORE_KEYS = Object.freeze({
+  short: 'short_term',
+  medium: 'mid_term',
+  long: 'long_term',
+});
 
 function cliValue(name, fallback = null) {
   const prefix = `--${name}=`;
@@ -101,9 +107,28 @@ function uniqueRows(rows) {
   const map = new Map();
   for (const row of rows) {
     const id = row.canonical_id || row.canonical_asset_id || `${row.region}:${row.ticker}`;
-    if (!map.has(id)) map.set(id, row);
+    if (!map.has(id)) {
+      map.set(id, { ...row, horizons: [row.horizon].filter(Boolean) });
+      continue;
+    }
+    const existing = map.get(id);
+    const horizons = new Set([...(existing.horizons || []), row.horizon].filter(Boolean));
+    map.set(id, { ...existing, horizons: [...horizons] });
   }
   return [...map.values()];
+}
+
+function stockBuyCountsByHorizon(rows) {
+  const out = { short: 0, medium: 0, long: 0 };
+  for (const horizon of Object.keys(out)) {
+    out[horizon] = rows.filter((row) => (
+      row.horizon === horizon
+      && row.asset_class === 'stock'
+      && String(row.verdict || '').toUpperCase() === 'BUY'
+      && row.price_basis === 'decision-core'
+    )).length;
+  }
+  return out;
 }
 
 async function validateAnalyzerPage(browser, baseUrl, row) {
@@ -114,7 +139,7 @@ async function validateAnalyzerPage(browser, baseUrl, row) {
     canonical_id: row.canonical_id || row.canonical_asset_id || null,
     region: row.region || null,
     asset_class: row.asset_class || null,
-    horizons: [row.horizon].filter(Boolean),
+    horizons: Array.isArray(row.horizons) ? row.horizons.filter(Boolean) : [row.horizon].filter(Boolean),
     ok: false,
     assertions: {},
     errors: [],
@@ -148,10 +173,16 @@ async function validateAnalyzerPage(browser, baseUrl, row) {
     }, routeId);
     const data = pageCore?.data || {};
     const coreAction = String(data?.decision_core_min?.decision?.primary_action || data?.summary_min?.decision_verdict || '').toUpperCase();
+    const horizonActions = {};
+    for (const horizon of result.horizons) {
+      const coreKey = HORIZON_CORE_KEYS[horizon] || horizon;
+      horizonActions[horizon] = String(data?.decision_core_min?.horizons?.[coreKey]?.horizon_action || '').toUpperCase() || null;
+    }
     const expectedDate = String(data?.market_stats_min?.price_date || data?.latest_bar_date || data?.freshness?.as_of || '').slice(0, 10);
     const expectedClose = Number(data?.summary_min?.last_close);
     result.visible_action = visible.action || null;
     result.page_core_action = coreAction || null;
+    result.horizon_actions = horizonActions;
     result.expected_price_date = expectedDate || null;
     result.visible_price_asof = visible.asOfText || null;
     result.expected_close = Number.isFinite(expectedClose) ? expectedClose : null;
@@ -159,6 +190,7 @@ async function validateAnalyzerPage(browser, baseUrl, row) {
     result.assertions.frontpage_row_is_buy = row.verdict === 'BUY' && row.price_basis === 'decision-core';
     result.assertions.visible_action_buy = visible.action === 'BUY' && !visible.blocked;
     result.assertions.page_core_buy = coreAction === 'BUY';
+    result.assertions.page_core_claimed_horizons_buy = result.horizons.every((horizon) => horizonActions[horizon] === 'BUY');
     result.assertions.max_entry_visible = /Max entry/i.test(bodyText);
     result.assertions.invalidation_visible = /Invalidation/i.test(bodyText);
     result.assertions.conditional_caveat_visible = /Conditional BUY|valid only below|Buy only/i.test(bodyText);
@@ -212,6 +244,10 @@ async function main() {
       : readJson(SNAPSHOT_PATH);
     const rows = flattenBestSetups(snapshot);
     const coverage = regionClassCoverage(rows);
+    const stockBuyByHorizon = stockBuyCountsByHorizon(rows);
+    const insufficientStockBuyHorizons = Object.entries(stockBuyByHorizon)
+      .filter(([, count]) => count < REQUIRED_STOCK_BUY_PER_HORIZON)
+      .map(([horizon, count]) => ({ horizon, count, required: REQUIRED_STOCK_BUY_PER_HORIZON }));
     const missingCoverage = [];
     for (const region of REQUIRED_REGIONS) {
       for (const assetClass of REQUIRED_CLASSES) {
@@ -227,13 +263,16 @@ async function main() {
       base_url: baseUrl,
       source: snapshot?.meta?.source || null,
       target_market_date: snapshot?.meta?.data_asof || null,
-      status: missingCoverage.length === 0 && results.every((row) => row.ok) ? 'OK' : 'FAILED',
+      status: missingCoverage.length === 0 && insufficientStockBuyHorizons.length === 0 && results.every((row) => row.ok) ? 'OK' : 'FAILED',
       counts: {
         frontpage_rows: rows.length,
         unique_analyzer_pages: proofRows.length,
         ok: results.filter((row) => row.ok).length,
         failed: results.filter((row) => !row.ok).length,
       },
+      stock_buy_min_per_horizon: REQUIRED_STOCK_BUY_PER_HORIZON,
+      stock_buy_by_horizon: stockBuyByHorizon,
+      insufficient_stock_buy_horizons: insufficientStockBuyHorizons,
       region_class_coverage: coverage,
       missing_region_class_coverage: missingCoverage,
       failed_results: results.filter((row) => !row.ok),

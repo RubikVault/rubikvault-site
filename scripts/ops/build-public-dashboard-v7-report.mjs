@@ -30,6 +30,7 @@ const PATHS = {
   buyBreadth: 'public/data/reports/decision-core-buy-breadth-latest.json',
   buyUi: 'public/data/reports/stock-decision-core-ui-buy-breadth-latest.json',
   random20: 'public/data/reports/stock-decision-core-ui-random20-latest.json',
+  random50: 'public/data/reports/stock-analyzer-ui-random50-proof-latest.json',
   frontpageProof: 'public/data/reports/frontpage-best-setups-ui-proof-latest.json',
   bestSetups: 'public/data/snapshots/best-setups-v4.json',
   moduleScorecard: 'public/data/status/decision-module-scorecard-latest.json',
@@ -258,6 +259,7 @@ function build() {
     ui_proofs: {
       buy_breadth: compactUiProof(readJson(PATHS.buyUi)),
       random20: compactUiProof(readJson(PATHS.random20)),
+      random50: compactUiProof(readJson(PATHS.random50)),
       frontpage_best_setups: compactUiProof(readJson(PATHS.frontpageProof)),
     },
     best_setups: compactBestSetups(readJson(PATHS.bestSetups)),

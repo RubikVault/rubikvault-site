@@ -221,6 +221,11 @@ async function readDecisionCoreBuyRows(targetMarketDate = null) {
         canonical_id: decision?.meta?.asset_id,
         asset_class: String(decision?.meta?.asset_type || '').toUpperCase() === 'ETF' ? 'etf' : 'stock',
         region: regionFromCanonicalId(decision?.meta?.asset_id),
+        horizon_actions: {
+          short: String(decision?.horizons?.short_term?.horizon_action || '').toUpperCase() || null,
+          medium: String(decision?.horizons?.mid_term?.horizon_action || '').toUpperCase() || null,
+          long: String(decision?.horizons?.long_term?.horizon_action || '').toUpperCase() || null,
+        },
         verdict: 'BUY',
         confidence: decision?.decision?.analysis_reliability || 'LOW',
         buy_eligible: true,
@@ -512,7 +517,10 @@ function cyclicSlice(rows, offset, count) {
 }
 
 function buildDecisionCoreHorizonRows(rows, horizon) {
-  const sorted = sortedHorizonRows(rows, horizon);
+  const sorted = sortedHorizonRows(rows, horizon).filter((row) => {
+    const action = row?.horizon_actions?.[horizon];
+    return !action || action === 'BUY';
+  });
   const regions = ['US', 'EU', 'ASIA'];
   const minPerRegion = Math.max(1, Math.min(
     Math.floor(BEST_SETUP_LIMIT / 3),

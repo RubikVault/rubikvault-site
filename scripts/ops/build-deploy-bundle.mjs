@@ -127,6 +127,7 @@ const DECISION_CORE_PUBLIC_PROOF_REPORTS = [
   'data/reports/decision-core-buy-breadth-latest.json',
   'data/reports/stock-decision-core-ui-buy-breadth-latest.json',
   'data/reports/stock-decision-core-ui-random20-latest.json',
+  'data/reports/stock-analyzer-ui-random50-proof-latest.json',
   'data/reports/frontpage-best-setups-ui-proof-latest.json',
   'data/reports/decision-core-historical-replay-latest.json',
   'data/reports/decision-core-outcome-bootstrap-latest.json',
@@ -366,6 +367,7 @@ function publicDashboardHtml() {
       document.getElementById('proofs').innerHTML = [
         row('BUY breadth UI', u.buy_breadth.status),
         row('Random20 UI', u.random20.status),
+        row('Random50 UI', u.random50.status),
         row('Frontpage analyzer proof', u.frontpage_best_setups.status),
         row('Frontpage pages OK', (u.frontpage_best_setups.counts?.ok ?? 'n/a') + ' / ' + (u.frontpage_best_setups.counts?.unique_analyzer_pages ?? u.frontpage_best_setups.counts?.total ?? 'n/a')),
         row('No stale actionable BUY', p.stale_data.stale_actionable_buy_forbidden ? 'YES' : 'NO', p.stale_data.stale_actionable_buy_forbidden ? 'OK' : 'FAIL')

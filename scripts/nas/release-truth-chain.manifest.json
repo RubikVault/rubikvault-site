@@ -1,10 +1,10 @@
 {
   "schema": "rv.nas.release_truth_chain_code_manifest.v1",
-  "generated_at": "2026-05-11T20:16:01.983Z",
-  "git_head": "625ce34f802ee21dbab7e8f582f21f48e748a49f",
+  "generated_at": "2026-05-11T20:44:57.372Z",
+  "git_head": "111cbdaf4635c903a05ef4b6bcd346620036e71c",
   "paths_file": "scripts/nas/inputs/release-truth-chain.paths",
-  "file_count": 96,
-  "combined_hash": "ede980f4dfb3a88cd339532079ce2692d202ac074553012014e07646f18ace00",
+  "file_count": 99,
+  "combined_hash": "75c3db35d40e9822fb1bdc6815dca738786a5420d8ee353b62827066d14f5dd9",
   "missing": [],
   "files": [
     {
@@ -56,6 +56,11 @@
       "path": "public/dashboard_v7.html",
       "size_bytes": 307220,
       "sha256": "958662a5e1be5d073ca38677a796bddde8b02f9e54067acdb5a0fd38d93a8b74"
+    },
+    {
+      "path": "public/data/universe/v7/config/index-core.v1.json",
+      "size_bytes": 3065,
+      "sha256": "b718adf2ab335a97f8842e566d204027b95d2b1898ee648bf0024bd036f3aeb4"
     },
     {
       "path": "public/index.html",
@@ -184,8 +189,8 @@
     },
     {
       "path": "scripts/build-best-setups-v4.mjs",
-      "size_bytes": 44068,
-      "sha256": "4070cadfec0de73251ff72e2d587ef95a951d630b23668eb34ba1ce5b9dbab95"
+      "size_bytes": 44521,
+      "sha256": "63879e1f5de94dd8ff39e2ca1c4396fd2f400701c61a465ed3d88c94162c9f54"
     },
     {
       "path": "scripts/decision-core/analysis-reliability.mjs",
@@ -344,8 +349,8 @@
     },
     {
       "path": "scripts/nas/inputs/release-truth-chain.paths",
-      "size_bytes": 4230,
-      "sha256": "4cb8a99357c4d9d7fd76261f71a6ed3889d3d1ade297802a32c6ebbaf3432407"
+      "size_bytes": 4381,
+      "sha256": "c8b1365cb415d357db65457a89db22be7e5630e38fbd9497cbfc8ef9c1d093b9"
     },
     {
       "path": "scripts/nas/nas-env.sh",
@@ -384,8 +389,8 @@
     },
     {
       "path": "scripts/ops/build-deploy-bundle.mjs",
-      "size_bytes": 50125,
-      "sha256": "df14e2ead1d17bee546c8cb51fa6ec98f55a06615a45d5c30c774ee15496e276"
+      "size_bytes": 50235,
+      "sha256": "91b60a1e266feac1df79a754e6d9081671fbcb81df74a3926adb610c8c452eb5"
     },
     {
       "path": "scripts/ops/build-full-universe-decisions.mjs",
@@ -404,8 +409,8 @@
     },
     {
       "path": "scripts/ops/build-public-dashboard-v7-report.mjs",
-      "size_bytes": 13853,
-      "sha256": "012399c41a084faced54cfa245cc748e14a283ff70f7aec94f083c5a9e28fa89"
+      "size_bytes": 13991,
+      "sha256": "c9d80cc6f9e7a3ff79867985d7c7705f991b46dbd9d00652dda4a92e859802a7"
     },
     {
       "path": "scripts/ops/build-public-history-shards.mjs",
@@ -444,8 +449,8 @@
     },
     {
       "path": "scripts/ops/privacy-gate.mjs",
-      "size_bytes": 8578,
-      "sha256": "422b9a837bdf6ef264410a0b21f6e5f90d3c800da3b5dbe90803ce169ddf2cb6"
+      "size_bytes": 8643,
+      "sha256": "8bca3ed7826c86d254e2760ca54d139d9c1e049095f0f00a61fcb608b9f30ceb"
     },
     {
       "path": "scripts/ops/release-gate-check.mjs",
@@ -463,9 +468,19 @@
       "sha256": "c4ebccc94cdddc9f79a3645b92dc75c0a274abe353c8c461ce67bed87c31d5f9"
     },
     {
+      "path": "scripts/universe-v7/build-index-core-scope.mjs",
+      "size_bytes": 34285,
+      "sha256": "1d03a6acf2ce653b18a45530cc0e963b2357210b51f7cbfabd51a6ce0d6baf7c"
+    },
+    {
       "path": "scripts/validate/frontpage-best-setups-ui-proof.mjs",
-      "size_bytes": 10507,
-      "sha256": "e6da561de06dabc3639122aaeb29ffee5cb4e474aa889c09a616e62864300f4b"
+      "size_bytes": 12414,
+      "sha256": "acd686fb56ce946930a7c59fc986e0d41a6cbd7fee3c3733c4badcf2c7858e4d"
+    },
+    {
+      "path": "scripts/validate/stock-analyzer-ui-random50-proof.mjs",
+      "size_bytes": 14666,
+      "sha256": "3cd4ee66080dd3097aca22e9f59f3de455306c44d965ae970cab51dc01c50770"
     },
     {
       "path": "scripts/validate/stock-decision-core-ui-buy-breadth.mjs",
