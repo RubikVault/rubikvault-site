@@ -144,12 +144,11 @@ jobs:
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add public/data/ops-daily.json
-          git ls-files -z \
+          git add -u \
+            public/data/ops-daily.json \
             public/data/marketphase \
             public/data/reports \
-            public/data/pipeline \
-            | xargs -0 -r git add --
+            public/data/pipeline
           if git diff --cached --quiet; then
             echo "No staged changes"
             exit 0
