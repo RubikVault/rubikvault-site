@@ -158,7 +158,9 @@ jobs:
               git add "$report_file"
             fi
           done
-          if compgen -G "public/data/pipeline/*.json" > /dev/null; then
+          if git check-ignore -q public/data/pipeline; then
+            echo "Ignored runtime artifact directory, skipping add: public/data/pipeline"
+          elif compgen -G "public/data/pipeline/*.json" > /dev/null; then
             for pipeline_file in public/data/pipeline/*.json; do
               if git check-ignore -q "$pipeline_file"; then
                 echo "Ignored runtime artifact, skipping add: $pipeline_file"
