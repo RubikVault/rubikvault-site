@@ -145,7 +145,19 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add public/data/marketphase/*.json
-          git add public/data/ops-daily.json public/data/reports/pipeline-compute-audit-latest.json public/data/reports/pipeline-monitoring-latest.json public/data/reports/frontpage-signal-link-validation-latest.json public/data/reports/stock-analyzer-probability-calibration-latest.json public/data/reports/retention-verification-latest.json
+          git add public/data/ops-daily.json
+          for report_file in \
+            public/data/reports/pipeline-compute-audit-latest.json \
+            public/data/reports/pipeline-monitoring-latest.json \
+            public/data/reports/frontpage-signal-link-validation-latest.json \
+            public/data/reports/stock-analyzer-probability-calibration-latest.json \
+            public/data/reports/retention-verification-latest.json; do
+            if git check-ignore -q "$report_file"; then
+              echo "Ignored runtime artifact, skipping add: $report_file"
+            else
+              git add "$report_file"
+            fi
+          done
           if compgen -G "public/data/pipeline/*.json" > /dev/null; then
             for pipeline_file in public/data/pipeline/*.json; do
               if git check-ignore -q "$pipeline_file"; then
