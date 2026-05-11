@@ -1,6 +1,6 @@
 {
   "schema": "rv_public_status_v1",
-  "generated_at": "2026-05-02T08:41:26.813Z",
+  "generated_at": "2026-05-11T19:28:52.913Z",
   "status": "LIMITED",
   "ui_green": false,
   "release_ready": false,
@@ -11,19 +11,52 @@
   "decision_ready": false,
   "risk_ready": false,
   "hist_ready": false,
+  "hist_release_blocking": false,
   "breakout_ready": null,
   "overall_ui_ready": false,
-  "target_market_date": "2026-04-29",
+  "release_gate": {
+    "schema": "rv.release_gate_model.v1",
+    "release_ui_ready": false,
+    "deploy_allowed": false,
+    "ui_green": false,
+    "required_field_coverage": 0.999951,
+    "required_field_coverage_minimum": 0.9,
+    "false_green_count": 0,
+    "contract_violation_total": 0,
+    "missing_scope_rows": 0,
+    "hist_ready": false,
+    "hist_release_blocking": false,
+    "blocking_reasons": [
+      {
+        "id": "core_release_not_ready",
+        "severity": "critical"
+      }
+    ],
+    "warning_reasons": [
+      {
+        "id": "hist_probs_not_release_green",
+        "severity": "warning"
+      }
+    ]
+  },
+  "target_market_date": "2026-05-08",
   "release_evidence_target_market_date": "2026-04-23",
-  "page_core_target_market_date": "2026-04-29",
+  "page_core_target_market_date": "2026-05-08",
   "page_core_source": "active",
   "release_evidence_fresh": false,
   "page_core_green": true,
   "page_core_freshness_ok": true,
-  "page_core_freshness_lag_hours": 81,
+  "page_core_freshness_lag_hours": 91,
   "page_core_freshness_max_hours": 96,
-  "stock_analyzer_ui_state_green": false,
+  "stock_analyzer_ui_state_green": true,
   "decision_public_green": false,
+  "decision_core_switch_mode": null,
+  "decision_core_accelerated_certification_status": null,
+  "decision_core_live_shadow_days": null,
+  "decision_core_historical_replay_days": null,
+  "decision_core_us_stock_etf_buy_count": 18,
+  "decision_core_eu_stock_etf_buy_count": 18,
+  "decision_core_buy_breadth_status": "OK",
   "data_plane_green": true,
   "hist_probs_green": true,
   "hist_probs_mode": "all",
@@ -36,10 +69,16 @@
   "signal_quality": "suppressed",
   "stock_analyzer": {
     "available": false,
-    "page_core_snapshot_id": "page-20260429-5810a40cd3db",
-    "ui_operational_ratio": 0,
-    "ui_renderable_ratio": 0,
-    "decision_ready_ratio": null,
+    "page_core_snapshot_id": "page-20260508-df6f97150dfd",
+    "denominator": "targetable_page_core_stock_etf_index_bars_ge_200_minus_verified_provider_exceptions",
+    "targetable_total": 81882,
+    "ui_renderable_total": 81878,
+    "decision_ready_total": 81878,
+    "exception_total": 4349,
+    "verified_provider_exception_total": 0,
+    "ui_operational_ratio": 0.999951,
+    "ui_renderable_ratio": 0.999951,
+    "decision_ready_ratio": 0.999951,
     "ui_state_contract_violations": 0,
     "overall_ui_ready": false
   }
