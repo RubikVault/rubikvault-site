@@ -556,12 +556,12 @@
         buildTradePlanModel,
         computeTooltipFrame,
         formatOrdinal,
-      } = await import('/js/stock-page-view-model.js?v=20260506-stock-ui-v2');
+      } = await import('/js/stock-page-view-model.js?v=20260511-breakout-v13');
       let payload;
       let _rvDataSource = 'v2';
       let _rvResolution = { mode: 'full', source: 'v2', notice: null, missingModules: [] };
       try {
-        const { fetchWithFallback } = await import('/js/rv-v2-client.js?v=20260510-chart-history');
+        const { fetchWithFallback } = await import('/js/rv-v2-client.js?v=20260511-breakout-v13');
         const resolved = await fetchWithFallback(ticker);
         payload = resolved.payload;
         _rvDataSource = resolved.source === 'v2' ? 'v2' : 'v1';
@@ -577,6 +577,23 @@
       }
       window._rvDataSource = _rvDataSource;
       window._rvResolution = _rvResolution;
+      try {
+        const existingBreakout = payload?.data?.breakout_v12;
+        if (!existingBreakout?.breakout_status) {
+          const brkRes = await fetch(`/api/stock?ticker=${encodeURIComponent(ticker)}&breakout=1`, { cache: 'no-store' });
+          if (brkRes.ok) {
+            const brkPayload = await brkRes.json();
+            if (brkPayload?.data?.breakout_v12?.breakout_status) {
+              payload.data = payload.data || {};
+              payload.data.breakout_v12 = brkPayload.data.breakout_v12;
+              payload.data.breakout_v2 = brkPayload.data.breakout_v2 || payload.data.breakout_v2 || null;
+              payload.data.breakout_v2_legacy = brkPayload.data.breakout_v2_legacy || payload.data.breakout_v2_legacy || null;
+            }
+          }
+        }
+      } catch (e) {
+        console.debug('[RV] breakout static hydrate skipped:', e);
+      }
       let _rvFinalSeal = null;
       try {
         const _sealRes = await fetch('/data/public-status.json?rv=' + Date.now(), { cache: 'no-store' });
@@ -1948,10 +1965,15 @@
           <div style="background:rgba(255,255,255,0.01);padding:.75rem;border-radius:10px;border:1px solid rgba(255,255,255,0.03);${breakoutDensityView.mode === 'compact' ? 'max-width:520px' : ''}" id="brk-shell">
             <div id="brk-dots" style="display:flex;gap:3px;align-items:center;justify-content:space-between;margin-bottom:1rem;width:100%"></div>
             <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.5rem">
-              <div style="font-size:1.1rem;font-weight:800;display:flex;align-items:center;gap:.4rem" id="brk-state"><span class="skeleton-line" style="width:160px;display:block"></span></div>
+              <div style="display:flex;align-items:baseline;gap:.45rem;flex-wrap:wrap">
+                <div style="font-size:1.1rem;font-weight:800;display:flex;align-items:center;gap:.4rem" id="brk-state"><span class="skeleton-line" style="width:160px;display:block"></span></div>
+                <div id="brk-state-detail" style="font-size:.62rem;font-weight:700;color:var(--text-dim);text-transform:uppercase"></div>
+              </div>
               <div style="font-size:.65rem;color:var(--text-dim)" id="brk-subtext"><span class="skeleton-line" style="width:220px;display:block"></span></div>
             </div>
             <div id="brk-subs-container" style="display:flex;gap:.4rem;margin-top:6px;flex-wrap:wrap"></div>
+            <div id="brk-support-zone" style="display:none;margin-top:.65rem;font-size:.64rem;color:var(--text-dim);line-height:1.45"></div>
+            <div id="brk-invalidation" style="display:none;margin-top:.4rem;font-size:.64rem;color:var(--red);font-weight:700"></div>
           </div>
         </div>
       </div>
@@ -2121,72 +2143,103 @@
 
       // ── Breakout V4 Render Layer ──
       const brk = data.breakout_v12 || data.breakout_v2 || data.breakout || {};
-      if (brk.state) {
-        const score = brk.scores?.total || 0;
-        document.getElementById('brk-score').innerText = score;
-        const brkTitleScore = document.getElementById('brk-title-score');
-        if (brkTitleScore) brkTitleScore.innerText = score;
-        document.getElementById('brk-state').innerText = breakoutDensityView.mode === 'compact' ? breakoutDensityView.headline : brk.state;
-
-        let c = 'var(--text)';
-        if (['TRIGGERED', 'CONFIRMED'].includes(brk.state)) c = 'var(--green)';
-        else if (brk.state === 'ARMED') c = 'var(--yellow)';
-        else if (brk.state === 'SETUP') c = 'var(--accent)';
-        if (breakoutDensityView.mode === 'compact') c = 'var(--text-muted)';
-        document.getElementById('brk-state').style.color = c;
-
-        if (effectiveVerdict === 'WAIT' && brk.state === 'SETUP') {
-          const _brkStateEl = document.getElementById('brk-state');
-          if (_brkStateEl && !document.getElementById('brk-conflict-badge')) {
-            _brkStateEl.insertAdjacentHTML('afterend',
-              '<span id="brk-conflict-badge" style="display:inline-block;margin-left:.4rem;font-size:.5rem;padding:1px 5px;border-radius:3px;background:rgba(234,179,8,0.12);border:1px solid rgba(234,179,8,0.3);color:var(--yellow);vertical-align:middle;font-weight:700">⚠ EXEC VETO</span>'
-            );
-          }
-        }
-
-        if (document.getElementById('brk-subtext')) {
-          document.getElementById('brk-subtext').innerText = breakoutDensityView.mode === 'compact'
-            ? breakoutDensityView.detail
-            : ((effectiveVerdict === 'WAIT' && brk.state === 'SETUP')
-              ? 'Early setup only — no confirmation yet.'
-              : (brk.explanation || 'Wyckoff Absorption Model'));
-        }
-
-        // Subscore pills for full-width breakout section
-        const subsContainer = document.getElementById('brk-subs-container');
-        if (subsContainer) subsContainer.innerHTML = '';
-        if (brk.scores && breakoutDensityView.mode !== 'compact') {
-          const _html = ['compression', 'volume', 'trigger'].filter(k => brk.scores[k] != null).map(k => {
-            return `<span style="font-size:.55rem;padding:2px 6px;border-radius:4px;background:rgba(255,255,255,0.03);border:1px solid var(--border);color:var(--text-dim)">${k.charAt(0).toUpperCase() + k.slice(1)}: <span style="font-weight:700;color:var(--accent)">${brk.scores[k]}</span></span>`;
-          }).join('');
-          if (subsContainer) subsContainer.innerHTML = _html;
-        }
-
-        const histItems = brk.history || [];
-        const dots = histItems.map(h => {
-          let dc = 'rgba(255,255,255,0.05)';
-          if (['TRIGGERED', 'CONFIRMED'].includes(h.state)) dc = 'var(--green)';
-          else if (h.state === 'ARMED') dc = 'var(--yellow)';
-          else if (h.state === 'SETUP') dc = 'var(--accent)';
-          return `<div style="width:6px;height:6px;background:${dc};border-radius:3px;cursor:default" title="${h.date}: ${h.state}"></div>`;
-        }).join('');
-        const padDots = Array.from({ length: Math.max(0, 30 - histItems.length) }, () => `<div style="width:6px;height:6px;background:rgba(255,255,255,0.05);border-radius:3px"></div>`).join('');
-        document.getElementById('brk-dots').innerHTML = dots + padDots;
-      } else {
-        const score = breakoutDensityView.score || 0;
+      {
+        const score = breakoutDensityView.score || brk.scores?.total || 0;
+        const state = String(breakoutDensityView.state || brk.legacy_state || brk.state || 'NONE').toUpperCase();
+        const detailState = String(breakoutDensityView.stateDetail || brk.breakout_status || brk.ui?.status || '').toUpperCase();
+        const supportZone = breakoutDensityView.supportZone || brk.support_zone || null;
+        const invalidation = breakoutDensityView.invalidation || brk.invalidation || null;
+        const explanation = breakoutDensityView.statusExplanation || brk.status_explanation || brk.explanation || '';
+        const fmtBrk = (value, digits = 2) => {
+          const n = Number(value);
+          return Number.isFinite(n) ? n.toFixed(digits) : '—';
+        };
         if (document.getElementById('brk-score')) document.getElementById('brk-score').innerText = String(score);
         const brkTitleScore = document.getElementById('brk-title-score');
         if (brkTitleScore) brkTitleScore.innerText = String(score);
-        if (document.getElementById('brk-state')) {
-          document.getElementById('brk-state').innerText = breakoutDensityView.headline;
-          document.getElementById('brk-state').style.color = 'var(--text-muted)';
+        const stateEl = document.getElementById('brk-state');
+        if (stateEl) {
+          stateEl.innerText = breakoutDensityView.mode === 'compact' ? breakoutDensityView.headline : state;
+          if (explanation) stateEl.title = explanation;
+          let c = 'var(--text)';
+          if (['TRIGGERED', 'CONFIRMED'].includes(state)) c = 'var(--green)';
+          else if (state === 'FAILED') c = 'var(--red)';
+          else if (state === 'ARMED') c = 'var(--yellow)';
+          else if (state === 'SETUP') c = 'var(--accent)';
+          else if (state === 'NONE') c = 'var(--text-muted)';
+          if (breakoutDensityView.mode === 'compact') c = 'var(--text-muted)';
+          stateEl.style.color = c;
+        }
+        const detailEl = document.getElementById('brk-state-detail');
+        if (detailEl) {
+          detailEl.textContent = breakoutDensityView.mode === 'compact' || !detailState ? '' : `${state} · ${detailState}`;
+        }
+        if (effectiveVerdict === 'WAIT' && state === 'SETUP') {
+          const _brkStateEl = document.getElementById('brk-state');
+          if (_brkStateEl && !document.getElementById('brk-conflict-badge')) {
+            _brkStateEl.insertAdjacentHTML('afterend',
+              '<span id="brk-conflict-badge" style="display:inline-block;margin-left:.4rem;font-size:.5rem;padding:1px 5px;border-radius:3px;background:rgba(234,179,8,0.12);border:1px solid rgba(234,179,8,0.3);color:var(--yellow);vertical-align:middle;font-weight:700">EXEC VETO</span>'
+            );
+          }
         }
         if (document.getElementById('brk-subtext')) {
-          document.getElementById('brk-subtext').innerText = breakoutDensityView.detail;
+          document.getElementById('brk-subtext').innerText = breakoutDensityView.mode === 'compact'
+            ? breakoutDensityView.detail
+            : (explanation || breakoutDensityView.detail || 'Breakout state active');
         }
+        const subsContainer = document.getElementById('brk-subs-container');
+        if (subsContainer) subsContainer.innerHTML = '';
+        const scoreMap = breakoutDensityView.scores || brk.scores || {};
+        if (scoreMap && breakoutDensityView.mode !== 'compact') {
+          const pillDefs = [
+            ['structure_score', 'Structure'],
+            ['compression_score', 'Compression'],
+            ['volume_score', 'Volume'],
+            ['selling_exhaustion_score', 'Selling Exhaustion'],
+            ['accumulation_proxy_score', 'Accumulation Proxy'],
+          ];
+          const _html = pillDefs.filter(([k]) => scoreMap[k] != null).map(([k, label]) => {
+            const v = Number(scoreMap[k]);
+            const display = Number.isFinite(v) && v <= 1 ? Math.round(v * 100) : fmtBrk(v, 0);
+            return `<span style="font-size:.55rem;padding:2px 6px;border-radius:4px;background:rgba(255,255,255,0.03);border:1px solid var(--border);color:var(--text-dim)">${label}: <span style="font-weight:700;color:var(--accent)">${display}</span></span>`;
+          }).join('');
+          if (subsContainer) subsContainer.innerHTML = _html;
+        }
+        const zoneEl = document.getElementById('brk-support-zone');
+        if (zoneEl) {
+          if (supportZone?.detected) {
+            const width = Number(supportZone.width_pct);
+            zoneEl.style.display = '';
+            zoneEl.innerHTML = `Support Zone: <strong style="color:var(--text)">${fmtBrk(supportZone.center)}</strong> · ${fmtBrk(supportZone.low)}-${fmtBrk(supportZone.high)} · tests ${_esc(supportZone.test_count ?? '—')} · width ${Number.isFinite(width) ? (width * 100).toFixed(1) + '%' : '—'} · base ${_esc(supportZone.base_age_bars ?? '—')} bars · failed lows ${_esc(supportZone.failed_low_count ?? '—')}`;
+          } else {
+            zoneEl.style.display = 'none';
+            zoneEl.innerHTML = '';
+          }
+        }
+        const invalidationEl = document.getElementById('brk-invalidation');
+        if (invalidationEl) {
+          if (invalidation?.close_below != null) {
+            invalidationEl.style.display = '';
+            invalidationEl.textContent = `Invalidation: close < ${fmtBrk(invalidation.close_below)}`;
+          } else {
+            invalidationEl.style.display = 'none';
+            invalidationEl.textContent = '';
+          }
+        }
+        const histItems = brk.history || [];
+        const dots = histItems.map(h => {
+          const hState = String(h.state || '').toUpperCase();
+          let dc = 'rgba(255,255,255,0.05)';
+          if (['TRIGGERED', 'CONFIRMED'].includes(hState)) dc = 'var(--green)';
+          else if (hState === 'FAILED') dc = 'var(--red)';
+          else if (hState === 'ARMED') dc = 'var(--yellow)';
+          else if (hState === 'SETUP') dc = 'var(--accent)';
+          return `<div style="width:6px;height:6px;background:${dc};border-radius:3px;cursor:default" title="${_esc(h.date)}: ${_esc(hState)}"></div>`;
+        }).join('');
         const dotsEl = document.getElementById('brk-dots');
         if (dotsEl) {
-          dotsEl.innerHTML = Array.from({ length: 30 }, () => `<div style="width:6px;height:6px;background:rgba(255,255,255,0.05);border-radius:3px"></div>`).join('');
+          const padDots = Array.from({ length: Math.max(0, 30 - histItems.length) }, () => `<div style="width:6px;height:6px;background:rgba(255,255,255,0.05);border-radius:3px"></div>`).join('');
+          dotsEl.innerHTML = dots + padDots;
         }
         const shell = document.getElementById('brk-shell');
         if (shell && breakoutDensityView.mode === 'compact') shell.style.maxWidth = '520px';

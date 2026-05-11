@@ -247,7 +247,11 @@
             <a href="/breakout-all" style="font-size:0.75rem; color: #38bdf8; text-decoration:none; font-weight:600;">View All <i class="fa-solid fa-arrow-right"></i></a>
           </div>
 
-          <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.75rem; margin-bottom: 1rem;" id="brk-home-buttons">
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(96px, 1fr)); gap: 0.75rem; margin-bottom: 1rem;" id="brk-home-buttons">
+            <button onclick="toggleBreakoutHomeView('ALL')" style="padding:0.75rem; background:rgba(148, 163, 184, 0.08); border:1px solid rgba(148, 163, 184, 0.2); border-radius:10px; cursor:pointer;" class="brk-home-btn" id="btn-h-all">
+              <div style="font-size:1.5rem; font-weight:800; color:#cbd5e1;" id="cnt-h-all">-</div>
+              <div style="font-size:0.6rem; color:#94a3b8; font-weight:700;">ALL</div>
+            </button>
             <button onclick="toggleBreakoutHomeView('SETUP')" style="padding:0.75rem; background:rgba(245, 158, 11, 0.08); border:1px solid rgba(245, 158, 11, 0.2); border-radius:10px; cursor:pointer;" class="brk-home-btn" id="btn-h-setup">
               <div style="font-size:1.5rem; font-weight:800; color:#f59e0b;" id="cnt-h-setup">-</div>
               <div style="font-size:0.6rem; color:#94a3b8; font-weight:700;">SETUP</div>
@@ -264,6 +268,10 @@
               <div style="font-size:1.5rem; font-weight:800; color:#10b981;" id="cnt-h-confirmed">-</div>
               <div style="font-size:0.6rem; color:#94a3b8; font-weight:700;">CONFIRMED</div>
             </button>
+            <button onclick="toggleBreakoutHomeView('FAILED')" style="padding:0.75rem; background:rgba(239, 68, 68, 0.08); border:1px solid rgba(239, 68, 68, 0.2); border-radius:10px; cursor:pointer;" class="brk-home-btn" id="btn-h-failed">
+              <div style="font-size:1.5rem; font-weight:800; color:#ef4444;" id="cnt-h-failed">-</div>
+              <div style="font-size:0.6rem; color:#94a3b8; font-weight:700;">FAILED</div>
+            </button>
           </div>
 
           <div id="brk-home-table-container" style="display:none; border-top:1px solid rgba(255,255,255,0.05); padding-top:0.75rem;">
@@ -275,7 +283,8 @@
                     <th style="padding:6px 8px;">Ticker</th>
                     <th style="padding:6px 8px;">Name</th>
                     <th style="padding:6px 8px;">Score</th>
-                    <th style="padding:6px 8px;">Explanation</th>
+                    <th style="padding:6px 8px;">9-State</th>
+                    <th style="padding:6px 8px;">Support / invalidation</th>
                   </tr>
                 </thead>
                 <tbody id="brk-home-tbody" style="font-size:0.8rem; color:#e2e8f0;">
@@ -3192,6 +3201,7 @@
                   <th style="text-align:left; color:#94a3b8; padding:0.35rem 0.25rem;">Ticker</th>
                   <th style="text-align:left; color:#94a3b8; padding:0.35rem 0.25rem;">Name</th>
                   <th style="text-align:right; color:#94a3b8; padding:0.35rem 0.25rem;">${metricLabel}</th>
+                  <th style="text-align:right; color:#94a3b8; padding:0.35rem 0.25rem;">Breakout</th>
                   <th style="text-align:right; color:#94a3b8; padding:0.35rem 0.25rem;">Signal</th>
                 </tr>
               </thead>
@@ -3203,6 +3213,15 @@
                   const signalColor = row.verdict === 'BUY' ? '#22c55e'
                     : row.signal_class === 'watchlist' ? '#f59e0b'
                     : row.trigger_fulfilled ? '#22c55e' : '#94a3b8';
+                  const breakoutLegacy = String(row.breakout_legacy_state || '').toUpperCase();
+                  const breakoutDetail = String(row.breakout_status || '').toUpperCase();
+                  const breakoutZone = row.breakout_support_zone?.detected
+                    ? `Support ${Number(row.breakout_support_zone.center || 0).toFixed(2)}`
+                    : '';
+                  const breakoutInv = row.breakout_invalidation?.close_below != null
+                    ? `Invalidation < ${Number(row.breakout_invalidation.close_below).toFixed(2)}`
+                    : '';
+                  const breakoutTitle = [breakoutDetail, breakoutZone, breakoutInv, row.breakout_explanation].filter(Boolean).join(' | ');
                   return `
                   <tr>
                     <td style="padding:0.35rem 0.25rem; border-top:1px solid rgba(100,116,139,0.18);">
@@ -3210,6 +3229,7 @@
                     </td>
                     <td style="padding:0.35rem 0.25rem; border-top:1px solid rgba(100,116,139,0.18); color:#cbd5e1;">${escapeHtml(row.name || '—')}</td>
                     <td style="padding:0.35rem 0.25rem; border-top:1px solid rgba(100,116,139,0.18); text-align:right; color:#e5e7eb;">${formatBestSetupMetric(row, source)}</td>
+                    <td style="padding:0.35rem 0.25rem; border-top:1px solid rgba(100,116,139,0.18); text-align:right; color:#cbd5e1;" title="${escapeHtml(breakoutTitle)}">${breakoutLegacy ? `<span style="font-size:0.72rem;color:#f59e0b;font-weight:700">${escapeHtml(breakoutLegacy)}</span>${breakoutDetail ? `<span style="display:block;font-size:0.64rem;color:#94a3b8">${escapeHtml(breakoutDetail)}</span>` : ''}` : '—'}</td>
                     <td style="padding:0.35rem 0.25rem; border-top:1px solid rgba(100,116,139,0.18); text-align:right; color:${signalColor};">${signalLabel}</td>
                   </tr>`;
                 }).join('')}
@@ -4909,18 +4929,26 @@
       const data = await loadBreakoutSnapshot();
       if (!data || !data.items) return;
 
-      const items = data.items;
+      const items = data.items.map((item) => ({
+        ...item,
+        state: String(item.legacy_state || item.state || 'NONE').toUpperCase(),
+        breakout_status: item.breakout_status || item.status || null
+      }));
       const counts = {
+        ALL: items.filter(i => i.state !== 'NO_DATA' && i.state !== 'NONE').length,
         SETUP: items.filter(i => i.state === 'SETUP').length,
         ARMED: items.filter(i => i.state === 'ARMED').length,
         TRIGGERED: items.filter(i => i.state === 'TRIGGERED').length,
-        CONFIRMED: items.filter(i => i.state === 'CONFIRMED').length
+        CONFIRMED: items.filter(i => i.state === 'CONFIRMED').length,
+        FAILED: items.filter(i => i.state === 'FAILED').length
       };
 
+      document.getElementById('cnt-h-all').innerText = counts.ALL;
       document.getElementById('cnt-h-setup').innerText = counts.SETUP;
       document.getElementById('cnt-h-armed').innerText = counts.ARMED;
       document.getElementById('cnt-h-triggered').innerText = counts.TRIGGERED;
       document.getElementById('cnt-h-confirmed').innerText = counts.CONFIRMED;
+      document.getElementById('cnt-h-failed').innerText = counts.FAILED;
 
       window.toggleBreakoutHomeView = function(state) {
         const container = document.getElementById('brk-home-table-container');
@@ -4928,28 +4956,32 @@
         const btn = document.getElementById('btn-h-' + state.toLowerCase());
 
         document.querySelectorAll('.brk-home-btn').forEach(b => b.style.borderColor = 'rgba(255,255,255,0.05)');
+        if(state==='ALL') btn.style.borderColor = '#cbd5e1';
         if(state==='SETUP') btn.style.borderColor = '#f59e0b';
         if(state==='ARMED') btn.style.borderColor = '#f97316';
         if(state==='TRIGGERED') btn.style.borderColor = '#38bdf8';
         if(state==='CONFIRMED') btn.style.borderColor = '#10b981';
+        if(state==='FAILED') btn.style.borderColor = '#ef4444';
 
         container.style.display = 'block';
-        document.getElementById('brk-home-table-title').innerText = `Stocks in ${state} State`;
+        document.getElementById('brk-home-table-title').innerText = state === 'ALL' ? 'Breakout indicator rows' : `Stocks in ${state} State`;
 
-        const rowList = items.filter(i => i.state === state).slice(0, 10);
+        const rowList = (state === 'ALL' ? items.filter(i => i.state !== 'NO_DATA' && i.state !== 'NONE') : items.filter(i => i.state === state)).slice(0, 10);
         if (rowList.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:10px; color:#64748b;">Keine Aktien in diesem Status</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:10px; color:#64748b;">No rows in this state</td></tr>';
             return;
         }
 
         tbody.innerHTML = rowList.map(i => {
-          const score = i.scores?.total || i.max_level || 0;
-          const expl = i.state === 'ARMED' ? 'Failed Low + Absorption found.' : i.state==='TRIGGERED' ? 'Breakout hit with high RVOL.' : 'Setup Stage identified.';
+          const score = i.scores?.total || (Number.isFinite(Number(i.scores?.final_signal_score)) ? Math.round(Number(i.scores.final_signal_score) * 100) : i.max_level || 0);
+          const zone = i.support_zone?.detected ? `Zone ${Number(i.support_zone.center || 0).toFixed(2)} · tests ${i.support_zone.test_count ?? '—'}` : 'No zone';
+          const inv = i.invalidation?.close_below != null ? `Invalidation < ${Number(i.invalidation.close_below).toFixed(2)}` : '';
           return `<tr style="border-bottom:1px solid rgba(255,255,255,0.02)">
             <td style="padding:6px 8px;"><a href="/analyze/${encodeURIComponent(i.ticker.includes(':') ? i.ticker.split(':').reverse().join('.') : i.ticker)}" style="color:#60a5fa; text-decoration:none; font-weight:700;">${i.ticker}</a></td>
             <td style="padding:6px 8px; font-size:0.7rem; color:#94a3b8;">${i.name || ''}</td>
             <td style="padding:6px 8px; font-weight:800; color:#8b5cf6">${score}</td>
-            <td style="padding:6px 8px; font-size:0.75rem;">${expl}</td>
+            <td style="padding:6px 8px; font-size:0.75rem;">${i.breakout_status || i.state}</td>
+            <td style="padding:6px 8px; font-size:0.75rem; color:#94a3b8;">${zone}${inv ? ` · ${inv}` : ''}</td>
           </tr>`;
         }).join('');
       };

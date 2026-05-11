@@ -250,6 +250,8 @@
         .state-armed { background: rgba(249, 115, 22, 0.15); color: #f97316; }
         .state-triggered { background: rgba(56, 189, 248, 0.15); color: #38bdf8; }
         .state-confirmed { background: rgba(16, 185, 129, 0.15); color: #10b981; }
+        .state-failed { background: rgba(239, 68, 68, 0.15); color: #ef4444; }
+        .state-none { background: rgba(148, 163, 184, 0.1); color: #94a3b8; }
         .state-nodata { background: rgba(148, 163, 184, 0.1); color: #94a3b8; }
 
         .price-col {
@@ -344,12 +346,12 @@
 
     <header>
         <h1>Breakout Scanner V1</h1>
-        <p>Parallele Test-Umgebung basierend auf Runblock-Logic | Volles Universum (70k+)</p>
+        <p>Breakout V1.3 scanner with legacy bucket states and 9-state detail.</p>
     </header>
 
     <div class="metrics-grid">
         <div class="metric-card glass-panel active" id="card-total" onclick="setFilter('ALL')">
-            <span class="metric-title">Gesamt Gescannt</span>
+            <span class="metric-title">Scanned</span>
             <div class="metric-value" id="val-total">-</div>
             <div class="regime-badge" id="regime-status">
                 <i class="fa-solid fa-circle-dot"></i> Regime: Loading...
@@ -371,9 +373,13 @@
             <span class="metric-title">Confirmed</span>
             <div class="metric-value" id="val-confirmed">-</div>
         </div>
+        <div class="metric-card glass-panel" id="card-failed" onclick="setFilter('FAILED')">
+            <span class="metric-title">Failed</span>
+            <div class="metric-value" id="val-failed">-</div>
+        </div>
         <!-- Special No-Data Card -->
         <div class="metric-card glass-panel" id="card-nodata" onclick="setFilter('NO_DATA')" style="opacity: 0.6;">
-            <span class="metric-title">Keine EOD Historie</span>
+            <span class="metric-title">No EOD History</span>
             <div class="metric-value" id="val-nodata" style="font-size: 1.5rem; margin-top:22px;">-</div>
         </div>
     </div>
@@ -382,7 +388,7 @@
         <div class="controls-header" style="flex-wrap: wrap;">
             <div class="search-container" style="flex: 2; min-width: 250px;">
                 <i class="fa fa-search"></i>
-                <input type="text" id="searchInput" placeholder="Ticker oder Name suchen..." oninput="filterTable()">
+                <input type="text" id="searchInput" placeholder="Search ticker or name..." oninput="filterTable()">
             </div>
             
             <select id="regionFilter" onchange="filterTable()" style="flex: 1; min-width: 150px; background: rgba(30, 41, 59, 0.5); border: 1px solid var(--glass-border); border-radius: 12px; color: var(--text-main); padding: 14px 20px; font-size: 1rem; font-family: inherit; outline: none; cursor: pointer; transition: border-color 0.2s;">
@@ -399,15 +405,16 @@
                 <thead>
                     <tr>
                         <th onclick="sortTable(0)" style="cursor: pointer;">Asset <span id="sort-0"></span></th>
-                        <th onclick="sortTable(1)" style="cursor: pointer;">Zustand <span id="sort-1"></span></th>
+                        <th onclick="sortTable(1)" style="cursor: pointer;">Legacy State <span id="sort-1"></span></th>
+                        <th onclick="sortTable(6)" style="cursor: pointer;">9-State <span id="sort-6"></span></th>
                         <th onclick="sortTable(2)" style="cursor: pointer;">Score <span id="sort-2"></span></th>
-                        <th onclick="sortTable(3)" style="cursor: pointer;">Level <span id="sort-3"></span></th>
-                        <th onclick="sortTable(4)" style="cursor: pointer;">Letzter Preis <span id="sort-4"></span></th>
-                        <th onclick="sortTable(5)" style="cursor: pointer;">Zustand-Alter <span id="sort-5"></span></th>
+                        <th onclick="sortTable(3)" style="cursor: pointer;">Support Zone <span id="sort-3"></span></th>
+                        <th onclick="sortTable(4)" style="cursor: pointer;">Invalidation <span id="sort-4"></span></th>
+                        <th onclick="sortTable(5)" style="cursor: pointer;">Last Price <span id="sort-5"></span></th>
                     </tr>
                 </thead>
                 <tbody id="assetsBody">
-                    <tr><td colspan="5" style="text-align:center;">Lade Snapshots...</td></tr>
+                    <tr><td colspan="7" style="text-align:center;">Loading snapshots...</td></tr>
                 </tbody>
             </table>
         </div>
@@ -415,7 +422,7 @@
         <!-- Pagination -->
         <div class="pagination">
             <button id="prevBtn" onclick="changePage(-1)" disabled><i class="fa fa-chevron-left"></i></button>
-            <span id="pageInfo">Seite 1</span>
+            <span id="pageInfo">Page 1</span>
             <button id="nextBtn" onclick="changePage(1)"><i class="fa fa-chevron-right"></i></button>
         </div>
     </div>
@@ -449,6 +456,7 @@
                     armed: items.filter(r => r.state === 'ARMED').length,
                     triggered: items.filter(r => r.state === 'TRIGGERED').length,
                     confirmed: items.filter(r => r.state === 'CONFIRMED').length,
+                    failed: items.filter(r => r.state === 'FAILED').length,
                     nodata: items.filter(r => r.state === 'NO_DATA').length
                 };
 
@@ -457,6 +465,7 @@
                 document.getElementById('val-armed').innerText = stats.armed;
                 document.getElementById('val-triggered').innerText = stats.triggered;
                 document.getElementById('val-confirmed').innerText = stats.confirmed;
+                document.getElementById('val-failed').innerText = stats.failed;
                 document.getElementById('val-nodata').innerText = stats.nodata;
 
                 allDataItems = items;
@@ -468,7 +477,7 @@
 
             } catch (e) {
                 console.error('Error loading snapshot:', e);
-                document.getElementById('assetsBody').innerHTML = '<tr><td colspan="5" style="text-align:center; color:red;">Fehler beim Laden des Snapshots.</td></tr>';
+                document.getElementById('assetsBody').innerHTML = '<tr><td colspan="7" style="text-align:center; color:red;">Snapshot load failed.</td></tr>';
             }
         }
 
@@ -503,7 +512,7 @@
                 // If ALL, hide NO_DATA by default to not flood with 50k empty rows, 
                 // UNLESS user is searching!
                 if (!searchValue) {
-                    filtered = filtered.filter(item => item.state !== 'NO_DATA');
+                    filtered = filtered.filter(item => item.state !== 'NO_DATA' && item.state !== 'NONE');
                 }
             }
 
@@ -521,14 +530,14 @@
 
             document.getElementById('prevBtn').disabled = currentPage === 1;
             document.getElementById('nextBtn').disabled = currentPage === totalPages || totalItems === 0;
-            document.getElementById('pageInfo').innerText = `Seite ${currentPage} / ${totalPages} (${totalItems} items)`;
+            document.getElementById('pageInfo').innerText = `Page ${currentPage} / ${totalPages} (${totalItems} items)`;
 
             const startIndex = (currentPage - 1) * rowsPerPage;
             const endIndex = Math.min(startIndex + rowsPerPage, totalItems);
             const pageItems = filtered.slice(startIndex, endIndex);
 
             if (pageItems.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:var(--text-muted);">Keine Ticker gefunden.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:var(--text-muted);">No tickers found.</td></tr>';
                 return;
             }
 
@@ -537,10 +546,18 @@
                 if (item.state === 'ARMED') badgeClass = 'state-armed';
                 if (item.state === 'TRIGGERED') badgeClass = 'state-triggered';
                 if (item.state === 'CONFIRMED') badgeClass = 'state-confirmed';
+                if (item.state === 'FAILED') badgeClass = 'state-failed';
+                if (item.state === 'NONE') badgeClass = 'state-none';
                 if (item.state === 'NO_DATA') badgeClass = 'state-nodata';
 
-                const stateLabel = item.state === 'NO_DATA' ? 'Keine Daten' : item.state;
+                const stateLabel = item.state === 'NO_DATA' ? 'NO DATA' : item.state;
                 const suppressedBadge = item.is_suppressed ? '<span style="font-size:0.6rem; background:rgba(239,68,68,0.15); color:#f87171; border-radius:4px; padding:2px 4px; margin-left:4px; font-weight:700;">SUPPRESSED</span>' : '';
+                const zone = item.support_zone?.detected
+                    ? `${Number(item.support_zone.center || 0).toFixed(2)} · tests ${item.support_zone.test_count ?? '—'}`
+                    : '-';
+                const invalidation = item.invalidation?.close_below != null
+                    ? `close < ${Number(item.invalidation.close_below).toFixed(2)}`
+                    : '-';
 
                 return `
                     <tr>
@@ -549,10 +566,11 @@
                             <span class="asset-name">${item.name || ''}</span>
                         </td>
                         <td><span class="state-badge ${badgeClass}">${stateLabel}</span></td>
+                        <td>${item.breakout_status || '-'}</td>
                         <td class="price-col" style="font-weight: 800; color: #8b5cf6;">${item.total_score || 0}</td>
-                        <td class="price-col">${item.state === 'NO_DATA' ? '-' : Number(item.max_level || 0).toFixed(2)}</td>
+                        <td class="price-col">${zone}</td>
+                        <td class="price-col">${invalidation}</td>
                         <td class="price-col">${item.state === 'NO_DATA' ? '-' : Number(item.latest_close || 0).toFixed(2)}</td>
-                        <td>${item.state === 'NO_DATA' ? '-' : item.state_age}</td>
                     </tr>
                 `;
             }).join('');
@@ -569,6 +587,7 @@
             if (filterType === 'ARMED') document.getElementById('card-armed').classList.add('active');
             if (filterType === 'TRIGGERED') document.getElementById('card-triggered').classList.add('active');
             if (filterType === 'CONFIRMED') document.getElementById('card-confirmed').classList.add('active');
+            if (filterType === 'FAILED') document.getElementById('card-failed').classList.add('active');
             if (filterType === 'NO_DATA') document.getElementById('card-nodata').classList.add('active');
 
             renderTable();
@@ -589,12 +608,12 @@
             sortDirection[columnIndex] = isAsc ? 'asc' : 'desc';
 
             // Highlight arrows
-            for (let i = 0; i <= 5; i++) {
+            for (let i = 0; i <= 6; i++) {
                 const el = document.getElementById('sort-' + i);
                 if (el) el.innerText = i === columnIndex ? (isAsc ? ' ▲' : ' ▼') : '';
             }
 
-            const statePriority = { 'TRIGGERED': 1, 'CONFIRMED': 2, 'ARMED': 3, 'SETUP': 4, 'NONE': 5, 'NO_DATA': 6 };
+            const statePriority = { 'TRIGGERED': 1, 'CONFIRMED': 2, 'ARMED': 3, 'SETUP': 4, 'FAILED': 5, 'NONE': 6, 'NO_DATA': 7 };
 
             allDataItems.sort((a, b) => {
                 let valA, valB;
@@ -605,9 +624,10 @@
                         valB = statePriority[b.state] || 99; 
                         break;
                     case 2: valA = a.total_score || 0; valB = b.total_score || 0; break;
-                    case 3: valA = a.max_level || 0; valB = b.max_level || 0; break;
-                    case 4: valA = a.latest_close || 0; valB = b.latest_close || 0; break;
-                    case 5: valA = a.state_age || 0; valB = b.state_age || 0; break;
+                    case 3: valA = a.support_zone?.center || 0; valB = b.support_zone?.center || 0; break;
+                    case 4: valA = a.invalidation?.close_below || 0; valB = b.invalidation?.close_below || 0; break;
+                    case 5: valA = a.latest_close || 0; valB = b.latest_close || 0; break;
+                    case 6: valA = a.breakout_status || ''; valB = b.breakout_status || ''; break;
                 }
 
                 if (valA == null) valA = '';

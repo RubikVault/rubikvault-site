@@ -506,7 +506,13 @@ export async function fetchV2StockPage(ticker) {
       const stockApiPayload = stockApiResult?.data || null;
       const stockApiData = stockApiPayload?.data || null;
       const stockApiHistorical = stockApiToHistorical(stockApiPayload, summary.ticker);
-      const historical = stockApiHistorical || historicalResult?.data || pageCoreToHistorical(pageCore.data);
+      const historicalBase = stockApiHistorical || historicalResult?.data || pageCoreToHistorical(pageCore.data);
+      const historical = {
+        ...historicalBase,
+        breakout_v12: historicalBase?.breakout_v12 || stockApiData?.breakout_v12 || null,
+        breakout_v2: historicalBase?.breakout_v2 || stockApiData?.breakout_v2 || null,
+        breakout_v2_legacy: historicalBase?.breakout_v2_legacy || stockApiData?.breakout_v2_legacy || null,
+      };
       const historicalProfile = stockApiData?.historical_profile || historicalProfileResult?.data || pageCoreToHistoricalProfile(pageCore.data);
       const fundamentals = stockApiData?.fundamentals || fundamentalsResult?.data || null;
       const missingModules = moduleMissingKeys({

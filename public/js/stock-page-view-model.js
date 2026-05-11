@@ -879,20 +879,27 @@ export function buildBreakoutDensityPresentation({ breakout = {}, verdict = 'WAI
   if (isV12) {
     const rawScore = toNumber(breakout?.final_signal_score ?? breakout?.scores?.final_signal_score);
     const score = rawScore == null ? 0 : Math.round(rawScore * 100);
-    const status = String(breakout?.status || '').toLowerCase();
-    const label = String(breakout?.label || breakout?.ui?.label || status || 'not_in_current_signal_set');
+    const responseStatus = String(breakout?.status || '').toLowerCase();
+    const breakoutStatus = String(breakout?.breakout_status || breakout?.ui?.status || '').toUpperCase();
+    const legacyState = String(breakout?.legacy_state || breakout?.ui?.legacy_state || breakout?.state || breakoutStatus || 'NONE').toUpperCase();
     const rank = breakout?.rank ?? breakout?.ui?.rank ?? null;
     const asOf = breakout?.as_of || breakout?.manifest?.as_of || null;
-    const compact = status !== 'ok';
+    const compact = responseStatus !== 'ok';
+    const version = String(breakout?.score_version || breakout?.manifest?.score_version || '').includes('v1.3') ? 'V1.3' : 'V12';
     return {
       mode: compact ? 'compact' : 'full',
-      title: 'Breakout V12',
-      headline: compact ? 'Breakout: Not in current V12 signal set' : 'Breakout: V12 candidate',
+      title: `Breakout ${version}`,
+      headline: compact ? `Breakout: Not in current ${version} signal set` : `Breakout: ${legacyState}`,
       detail: compact
-        ? 'Static V12 did not rank this asset in the current signal set.'
+        ? `Static ${version} did not rank this asset in the current signal set.`
         : `Rank ${rank || '—'}${asOf ? ` as of ${asOf}` : ''}`,
       score,
-      state: label.toUpperCase(),
+      state: legacyState,
+      stateDetail: breakoutStatus || null,
+      supportZone: breakout?.support_zone || null,
+      invalidation: breakout?.invalidation || null,
+      statusExplanation: breakout?.status_explanation || null,
+      scores: breakout?.scores || {},
     };
   }
   const state = String(breakout?.state || 'NONE').toUpperCase();
