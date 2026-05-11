@@ -2,8 +2,10 @@
 from __future__ import annotations
 
 import argparse
+import gc
 import json
 import math
+import os
 import sys
 from datetime import date
 from pathlib import Path
@@ -15,7 +17,18 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from scripts.breakout_compute.lib.breakout_math import clamp  # noqa: E402
+from scripts.breakout_compute.lib.breakout_math import (  # noqa: E402
+    absorption_vol_ratio,
+    clamp,
+    cluster_support_zone,
+    cmf_series,
+    clv_series,
+    count_failed_lows,
+    detect_pivots,
+    obv_higher_low,
+    safe_div,
+    trend_slope,
+)
 from scripts.quantlab.q1_common import (  # noqa: E402
     DEFAULT_QUANT_ROOT,
     atomic_write_json,
@@ -30,6 +43,12 @@ from scripts.quantlab.q1_common import (  # noqa: E402
 
 EU_PREFIXES = {"AS", "BR", "CO", "F", "HE", "LSE", "MC", "MI", "PA", "ST", "SW", "VI", "XETRA"}
 ASIA_PREFIXES = {"AU", "HK", "JK", "KO", "KQ", "SHG", "SHE", "TSE", "TO", "TW", "TWO"}
+BAR_FILE_PATTERNS = (
+    "ingest_date=*/asset_class=stock/*.parquet",
+    "ingest_date=*/asset_class=etf/*.parquet",
+    "asset_class=stock/*.parquet",
+    "asset_class=etf/*.parquet",
+)
 
 
 def parse_args(argv: Iterable[str]) -> argparse.Namespace:
@@ -68,7 +87,48 @@ def infer_region(asset_id: str, exchange: str | None = None, region: str | None 
     return "OTHER"
 
 
-def _normalize_universe(universe_path: Path, include_classes: set[str], max_assets: int) -> pl.DataFrame:
+def _load_scope_ids(scope_file: Path | None) -> set[str] | None:
+    if scope_file is None:
+        return None
+    payload = read_json(scope_file)
+    if isinstance(payload, list):
+        raw_ids = payload
+    elif isinstance(payload, dict):
+        raw_ids = payload.get("canonical_ids") or payload.get("ids") or []
+    else:
+        raw_ids = []
+    scope_ids = {str(value).strip() for value in raw_ids if str(value).strip()}
+    if not scope_ids:
+        raise SystemExit(f"FATAL: empty scope file: {scope_file}")
+    return scope_ids
+
+
+def _resolve_optional_repo_path(value: Any) -> Path | None:
+    raw = str(value or "").strip()
+    if not raw:
+        return None
+    path_value = Path(raw)
+    if not path_value.is_absolute():
+        path_value = REPO_ROOT / path_value
+    return path_value.resolve()
+
+
+def _resolve_bars_paths(bars_root: Path) -> list[str]:
+    paths: list[Path] = []
+    seen: set[str] = set()
+    for pattern in BAR_FILE_PATTERNS:
+        for file_path in sorted(bars_root.glob(pattern)):
+            resolved = str(file_path.resolve())
+            if resolved in seen:
+                continue
+            seen.add(resolved)
+            paths.append(file_path)
+    if not paths:
+        raise SystemExit(f"FATAL: no stock/etf bars parquet files under {bars_root}")
+    return [str(path_value) for path_value in paths]
+
+
+def _normalize_universe(universe_path: Path, include_classes: set[str], max_assets: int, scope_ids: set[str] | None = None) -> pl.DataFrame:
     df = pl.read_parquet(universe_path)
     cols = set(df.columns)
     if "asset_id" not in cols and "canonical_id" in cols:
@@ -99,6 +159,10 @@ def _normalize_universe(universe_path: Path, include_classes: set[str], max_asse
             ).alias("region"),
         ]
     )
+    if scope_ids is not None:
+        selected = selected.filter(pl.col("asset_id").is_in(sorted(scope_ids)))
+        if selected.is_empty():
+            raise SystemExit(f"FATAL: scope selected zero universe assets: {universe_path}")
     selected = selected.filter(pl.col("asset_class").is_in(sorted(include_classes)))
     selected = selected.unique("asset_id", keep="first").sort("asset_id")
     if max_assets and max_assets > 0:
@@ -143,28 +207,23 @@ def _load_snapshot(manifest: dict[str, Any]) -> tuple[Path, dict[str, Any], str,
     return quant_root, snap_manifest, str(snap_manifest.get("snapshot_id") or snap_dir.name), asof_date, bars_root, universe_path
 
 
-def _build_feature_frame(
+def _load_filtered_bars_df(
     *,
     bars_root: Path,
     universe_df: pl.DataFrame,
     asof_date: date,
     feature_config: dict[str, Any],
-) -> pl.DataFrame:
+) -> tuple[pl.DataFrame, list[str], str]:
     input_cfg = feature_config.get("input") or {}
     lookback_days = int(input_cfg.get("lookback_calendar_days") or 520)
-    feature_days = int(input_cfg.get("feature_history_days") or 252)
-    resistance_window = int(input_cfg.get("resistance_window_days") or 63)
-    range_window = int(input_cfg.get("range_window_days") or 20)
-    rs_days = int(input_cfg.get("relative_strength_days") or 63)
-    recent_window = int(input_cfg.get("recent_signal_window_days") or 20)
-    atr_period = int(input_cfg.get("atr_period_days") or 14)
-    rvol_period = int(input_cfg.get("rvol_period_days") or 20)
-
-    start_date = date.fromordinal(asof_date.toordinal() - lookback_days).isoformat()
+    history_bars = int(input_cfg.get("history_pattern_bars") or 300)
+    history_days = int(history_bars * 1.6) + 30
+    load_days = max(lookback_days, history_days)
+    start_date = date.fromordinal(asof_date.toordinal() - load_days).isoformat()
     asof_s = asof_date.isoformat()
-    bars_glob = str(bars_root / "**" / "*.parquet")
-    scan = pl.scan_parquet(bars_glob, hive_partitioning=True)
-    cols = set(scan.collect_schema().names())
+    bars_paths = _resolve_bars_paths(bars_root)
+    first_schema = pl.scan_parquet(bars_paths[0], hive_partitioning=True).collect_schema()
+    cols = set(first_schema.names())
     required = {
         "asset_id": ["asset_id", "canonical_id"],
         "date": ["date", "trading_date", "asof_date"],
@@ -180,6 +239,88 @@ def _build_feature_frame(
         raise SystemExit(f"FATAL: bars parquet missing required columns: {missing}")
 
     asset_ids = universe_df["asset_id"].to_list()
+    physical_cols = sorted({col for candidates in required.values() for col in [_first_existing(cols, candidates)] if col})
+    parts: list[pl.DataFrame] = []
+    compacted_parts: list[pl.DataFrame] = []
+    start_lit = pl.lit(start_date).str.strptime(pl.Date)
+    asof_lit = pl.lit(asof_s).str.strptime(pl.Date)
+    for file_path in bars_paths:
+        try:
+            raw = pl.read_parquet(file_path, columns=physical_cols)
+        except Exception:
+            continue
+        file_cols = set(raw.columns)
+        part = (
+            raw.lazy()
+            .with_columns(
+            [
+                    _expr(file_cols, required["asset_id"], "asset_id", pl.Utf8),
+                    _expr(file_cols, required["asset_class"], "bar_asset_class", pl.Utf8),
+                    _expr(file_cols, required["date"], "date_raw", pl.Utf8),
+                    _expr(file_cols, required["open_raw"], "open_raw", pl.Float64),
+                    _expr(file_cols, required["high_raw"], "high_raw", pl.Float64),
+                    _expr(file_cols, required["low_raw"], "low_raw", pl.Float64),
+                    _expr(file_cols, required["close_raw"], "close_raw", pl.Float64),
+                    _expr(file_cols, required["volume_raw"], "volume_raw", pl.Float64),
+            ]
+        )
+            .with_columns(
+            [
+                pl.col("bar_asset_class").str.to_lowercase(),
+                pl.col("date_raw").str.strptime(pl.Date, strict=False).alias("date"),
+            ]
+        )
+            .select(["asset_id", "bar_asset_class", "date", "open_raw", "high_raw", "low_raw", "close_raw", "volume_raw"])
+            .filter(pl.col("asset_id").is_in(asset_ids))
+            .filter(pl.col("date") >= start_lit)
+            .filter(pl.col("date") <= asof_lit)
+            .collect(engine="streaming")
+        )
+        if not part.is_empty():
+            parts.append(part)
+            if len(parts) >= 256:
+                compacted_parts.append(pl.concat(parts, how="diagonal_relaxed"))
+                parts.clear()
+                gc.collect()
+        del raw
+        del part
+    all_parts = compacted_parts + parts
+    bars_df = pl.concat(all_parts, how="diagonal_relaxed") if all_parts else pl.DataFrame(
+        schema={
+            "asset_id": pl.Utf8,
+            "bar_asset_class": pl.Utf8,
+            "date": pl.Date,
+            "open_raw": pl.Float64,
+            "high_raw": pl.Float64,
+            "low_raw": pl.Float64,
+            "close_raw": pl.Float64,
+            "volume_raw": pl.Float64,
+        }
+    )
+    if not bars_df.is_empty():
+        bars_df = bars_df.unique(["asset_id", "date"], keep="last").sort(["asset_id", "date"])
+    return bars_df, bars_paths, start_date
+
+
+def _build_feature_frame(
+    *,
+    bars_df: pl.DataFrame,
+    universe_df: pl.DataFrame,
+    asof_date: date,
+    feature_config: dict[str, Any],
+) -> pl.DataFrame:
+    input_cfg = feature_config.get("input") or {}
+    feature_days = int(input_cfg.get("feature_history_days") or 252)
+    resistance_window = int(input_cfg.get("resistance_window_days") or 63)
+    range_window = int(input_cfg.get("range_window_days") or 20)
+    rs_days = int(input_cfg.get("relative_strength_days") or 63)
+    recent_window = int(input_cfg.get("recent_signal_window_days") or 20)
+    atr_period = int(input_cfg.get("atr_period_days") or 14)
+    rvol_period = int(input_cfg.get("rvol_period_days") or 20)
+
+    if bars_df.is_empty():
+        return pl.DataFrame()
+    asset_ids = universe_df["asset_id"].to_list()
     meta = universe_df.select(["asset_id", "asset_class", "symbol", "name", "exchange", "region", "sector"]).lazy()
     prev_close = pl.col("close_raw").shift(1).over("asset_id")
     tr = pl.max_horizontal(
@@ -193,27 +334,8 @@ def _build_feature_frame(
     resistance = pl.col("high_raw").shift(1).rolling_max(resistance_window).over("asset_id")
 
     lf = (
-        scan.with_columns(
-            [
-                _expr(cols, required["asset_id"], "asset_id", pl.Utf8),
-                _expr(cols, required["asset_class"], "bar_asset_class", pl.Utf8),
-                _expr(cols, required["date"], "date_raw", pl.Utf8),
-                _expr(cols, required["open_raw"], "open_raw", pl.Float64),
-                _expr(cols, required["high_raw"], "high_raw", pl.Float64),
-                _expr(cols, required["low_raw"], "low_raw", pl.Float64),
-                _expr(cols, required["close_raw"], "close_raw", pl.Float64),
-                _expr(cols, required["volume_raw"], "volume_raw", pl.Float64),
-            ]
-        )
-        .with_columns(
-            [
-                pl.col("bar_asset_class").str.to_lowercase(),
-                pl.col("date_raw").str.strptime(pl.Date, strict=False).alias("date"),
-            ]
-        )
+        bars_df.lazy()
         .filter(pl.col("asset_id").is_in(asset_ids))
-        .filter(pl.col("date") >= pl.lit(start_date).str.strptime(pl.Date))
-        .filter(pl.col("date") <= pl.lit(asof_s).str.strptime(pl.Date))
         .sort(["asset_id", "date"])
         .join(meta, on="asset_id", how="left")
         .with_columns(
@@ -268,6 +390,17 @@ def _build_feature_frame(
             ]
         )
         .filter(pl.col("date") == pl.col("_asset_latest_date"))
+    )
+    feature_df = lf.collect(engine="streaming")
+    return feature_df.sort("asset_id") if not feature_df.is_empty() else feature_df
+
+
+def _add_cross_sectional_features(feature_df: pl.DataFrame, asof_date: date, feature_config: dict[str, Any]) -> pl.DataFrame:
+    if feature_df.is_empty():
+        return feature_df
+
+    feature_df = (
+        feature_df.lazy()
         .with_columns(
             [
                 pl.when(pl.col("sector").is_null() | (pl.col("sector") == "")).then(pl.lit("unknown")).otherwise(pl.col("sector")).alias("sector_key"),
@@ -276,10 +409,8 @@ def _build_feature_frame(
                 (pl.col("adv20_dollar").log1p().rank("average") / pl.len()).clip(0.0, 1.0).alias("liquidity_score"),
             ]
         )
+        .collect(engine="streaming")
     )
-    feature_df = lf.collect(engine="streaming")
-    if feature_df.is_empty():
-        return feature_df
 
     market_base = feature_df.filter(pl.col("sma_200").is_not_null() & pl.col("close_raw").is_not_null())
     if market_base.is_empty():
@@ -300,14 +431,136 @@ def _build_feature_frame(
         .with_columns(
             [
                 pl.lit(asof_date.isoformat()).alias("as_of"),
-                pl.lit("breakout_feature_engine_v1.2").alias("engine_version"),
-                pl.lit("breakout_features_v1.2").alias("schema_version"),
+                pl.lit(str(feature_config.get("engine_version") or "breakout_feature_engine_v1.2")).alias("engine_version"),
+                pl.lit(str(feature_config.get("schema_version") or "breakout_features.v1.2")).alias("schema_version"),
                 pl.lit(float(market_regime_score)).alias("market_regime_score"),
                 pl.lit(float(regime_multiplier)).alias("regime_multiplier"),
             ]
         )
         .sort("asset_id")
     )
+
+
+def _compute_history_features(
+    *,
+    bars_df: pl.DataFrame,
+    asset_ids: list[str],
+    history_bars: int = 300,
+) -> pl.DataFrame:
+    """History-based features per asset (pivots, support zone, failed lows,
+    absorption ratio, CLV trend, CMF, OBV higher-low, up/down volume ratio).
+
+    Returns one row per asset with the new feature columns. Joins onto feature_df by asset_id.
+    """
+    if not asset_ids or bars_df.is_empty():
+        return pl.DataFrame(schema={"asset_id": pl.Utf8})
+
+    history_df = (
+        bars_df.lazy()
+        .filter(pl.col("asset_id").is_in(asset_ids))
+        .sort(["asset_id", "date"])
+        .group_by("asset_id", maintain_order=True)
+        .tail(history_bars)
+        .collect(engine="streaming")
+    )
+    if history_df.is_empty():
+        return pl.DataFrame(schema={"asset_id": pl.Utf8})
+
+    out_rows: list[dict[str, Any]] = []
+    for asset_id, group_df in history_df.group_by("asset_id", maintain_order=True):
+        aid = asset_id[0] if isinstance(asset_id, tuple) else asset_id
+        opens = group_df["open_raw"].to_list()
+        highs = group_df["high_raw"].to_list()
+        lows = group_df["low_raw"].to_list()
+        closes = group_df["close_raw"].to_list()
+        volumes = group_df["volume_raw"].to_list()
+        n = len(closes)
+        if n < 60:
+            out_rows.append({
+                "asset_id": str(aid),
+                "history_bars_used": n,
+                "support_zone_detected": False,
+            })
+            continue
+
+        # Pivots (3/3 causal).
+        pivot_high, pivot_low = detect_pivots(highs, lows, left=3, right=3)
+
+        # ATR pct estimate (rough): mean true range / mean close over last 14.
+        recent_atr_window = closes[-14:]
+        recent_high = highs[-14:]
+        recent_low = lows[-14:]
+        trs: list[float] = []
+        for i in range(1, len(recent_atr_window)):
+            h = recent_high[i] or recent_atr_window[i] or 0.0
+            l = recent_low[i] or recent_atr_window[i] or 0.0
+            pc = recent_atr_window[i - 1] or 0.0
+            tr = max(h - l, abs(h - pc), abs(l - pc)) if all(v is not None for v in (h, l, pc)) else 0.0
+            trs.append(tr)
+        mean_close = sum(c for c in closes[-20:] if c is not None) / max(1, sum(1 for c in closes[-20:] if c is not None))
+        atr_pct_est = safe_div(sum(trs) / max(1, len(trs)), mean_close, 0.02)
+
+        # Support zone.
+        zone = cluster_support_zone(pivot_low, atr_pct=atr_pct_est, lookback=min(120, n))
+
+        # Failed-low count over base.
+        failed_low_count = count_failed_lows(lows, closes, pivot_low, lookback=80)
+
+        # Absorption volume ratio.
+        abs_ratio = absorption_vol_ratio(opens, closes, volumes, window=40)
+
+        # CLV trend over last 20 bars (slope).
+        clv = clv_series(highs, lows, closes)
+        clv_trend = trend_slope(clv, lookback=20)
+
+        # CMF recent (latest value).
+        cmf = cmf_series(highs, lows, closes, volumes, window=20)
+        cmf_recent = cmf[-1] if cmf else 0.0
+
+        # OBV higher-low flag.
+        obv_hl = obv_higher_low(closes, volumes, lookback=60)
+
+        # Up/Down-Volume ratio (last 20 bars).
+        up_v = 0.0
+        down_v = 0.0
+        for i in range(max(0, n - 20), n):
+            o = opens[i]
+            c = closes[i]
+            v = volumes[i]
+            if o is None or c is None or v is None:
+                continue
+            if c >= o:
+                up_v += float(v)
+            else:
+                down_v += float(v)
+        up_down_ratio = safe_div(up_v, down_v, 1.0)
+
+        # Base age in bars (counting bars since first support test).
+        base_age = 0
+        if zone.get("detected"):
+            first_test = int(zone.get("first_test_index") or 0)
+            base_age = max(0, n - 1 - first_test)
+
+        out_rows.append({
+            "asset_id": str(aid),
+            "history_bars_used": n,
+            "atr_pct_est_history": float(atr_pct_est),
+            "support_zone_detected": bool(zone.get("detected", False)),
+            "support_zone_center": float(zone.get("center")) if zone.get("center") is not None else None,
+            "support_zone_low": float(zone.get("low")) if zone.get("low") is not None else None,
+            "support_zone_high": float(zone.get("high")) if zone.get("high") is not None else None,
+            "support_zone_width_pct": float(zone.get("width_pct") or 0.0),
+            "support_test_count": int(zone.get("test_count") or 0),
+            "base_age_bars": int(base_age),
+            "failed_low_count": int(failed_low_count),
+            "absorption_vol_ratio": float(abs_ratio),
+            "clv_trend_20": float(clv_trend),
+            "cmf_recent_20": float(cmf_recent),
+            "obv_higher_low": bool(obv_hl),
+            "up_down_volume_ratio_20": float(up_down_ratio),
+        })
+
+    return pl.DataFrame(out_rows) if out_rows else pl.DataFrame(schema={"asset_id": pl.Utf8})
 
 
 def _rule_for(asset_class: str, region: str, rules: dict[str, Any]) -> dict[str, Any]:
@@ -419,13 +672,66 @@ def main(argv: Iterable[str]) -> int:
     max_assets = int(manifest.get("max_assets") or 0)
 
     quant_root, snap_manifest, snapshot_id, asof_date, bars_root, universe_path = _load_snapshot(manifest)
-    universe_df = _normalize_universe(universe_path, include_classes, max_assets)
-    feature_df = _build_feature_frame(
-        bars_root=bars_root,
-        universe_df=universe_df,
-        asof_date=asof_date,
-        feature_config=feature_config,
-    )
+    scope_file = _resolve_optional_repo_path(manifest.get("scope_file"))
+    scope_ids = _load_scope_ids(scope_file)
+    universe_df = _normalize_universe(universe_path, include_classes, max_assets, scope_ids=scope_ids)
+    input_cfg = feature_config.get("input") or {}
+    chunk_size = int(os.environ.get("RV_BREAKOUT_ASSET_CHUNK_SIZE") or input_cfg.get("asset_chunk_size") or 0)
+    if chunk_size <= 0:
+        chunk_size = max(1, universe_df.height)
+    feature_parts: list[pl.DataFrame] = []
+    bars_paths: list[str] = []
+    bars_cutoff = ""
+    bars_rows_loaded = 0
+    history_bars = int(input_cfg.get("history_pattern_bars") or 300)
+
+    for offset in range(0, universe_df.height, chunk_size):
+        universe_chunk = universe_df.slice(offset, chunk_size)
+        bars_df, chunk_bars_paths, chunk_bars_cutoff = _load_filtered_bars_df(
+            bars_root=bars_root,
+            universe_df=universe_chunk,
+            asof_date=asof_date,
+            feature_config=feature_config,
+        )
+        if not bars_paths:
+            bars_paths = chunk_bars_paths
+        bars_cutoff = chunk_bars_cutoff
+        bars_rows_loaded += int(bars_df.height)
+        feature_part = _build_feature_frame(
+            bars_df=bars_df,
+            universe_df=universe_chunk,
+            asof_date=asof_date,
+            feature_config=feature_config,
+        )
+        if feature_part.is_empty():
+            print(
+                f"BREAKOUT_FEATURE_CHUNK offset={offset} size={universe_chunk.height} bars_rows={bars_df.height} feature_rows=0",
+                file=sys.stderr,
+                flush=True,
+            )
+            del bars_df
+            gc.collect()
+            continue
+        history_features = _compute_history_features(
+            bars_df=bars_df,
+            asset_ids=feature_part["asset_id"].to_list(),
+            history_bars=history_bars,
+        )
+        if not history_features.is_empty():
+            feature_part = feature_part.join(history_features, on="asset_id", how="left")
+        print(
+            f"BREAKOUT_FEATURE_CHUNK offset={offset} size={universe_chunk.height} bars_rows={bars_df.height} feature_rows={feature_part.height}",
+            file=sys.stderr,
+            flush=True,
+        )
+        feature_parts.append(feature_part)
+        del bars_df
+        del feature_part
+        gc.collect()
+
+    feature_df = pl.concat(feature_parts, how="diagonal_relaxed") if feature_parts else pl.DataFrame()
+    feature_df = _add_cross_sectional_features(feature_df, asof_date, feature_config)
+
     eligible_df, excluded_df, eligible_features, reason_counts = _build_eligibility(universe_df, feature_df, universe_config, asof_date)
 
     output_root = quant_root / "breakout"
@@ -455,6 +761,8 @@ def main(argv: Iterable[str]) -> int:
             "tradable_eligible": int(eligible_df.height),
             "features_computed": int(eligible_features.height),
             "excluded_total": int(excluded_df.height),
+            "bars_rows_loaded": int(bars_rows_loaded),
+            "bars_files_scanned": int(len(bars_paths)),
         },
         "excluded_reasons": reason_counts,
         "artifacts": {
@@ -465,6 +773,8 @@ def main(argv: Iterable[str]) -> int:
         "sources": {
             "quant_root": str(quant_root),
             "bars_root": str(bars_root),
+            "bars_cutoff": bars_cutoff,
+            "scope_file": str(scope_file) if scope_file else None,
             "universe_parquet": str(universe_path),
         },
     }

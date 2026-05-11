@@ -14,6 +14,33 @@ const REPO_ROOT = '/Users/michaelpuchowezki/Dev/rubikvault-site';
 const CONFIG_PATH = path.join(REPO_ROOT, 'config/runblock/breakout_config.yaml');
 const DATA_DIR = path.join(REPO_ROOT, 'public/data/v3/series/adjusted_all');
 const OUTPUT_PATH = path.join(REPO_ROOT, 'public/data/snapshots/breakout-all.json');
+const PUBLIC_BREAKOUT_ROOT = path.join(REPO_ROOT, 'public/data/breakout');
+
+function readJsonIfExists(filePath) {
+  try {
+    return JSON.parse(fs.readFileSync(filePath, 'utf8'));
+  } catch {
+    return null;
+  }
+}
+
+function loadBreakoutV13Map() {
+  const latest = readJsonIfExists(path.join(PUBLIC_BREAKOUT_ROOT, 'manifests/latest.json'));
+  if (!latest?.files?.top500) return new Map();
+  const top500 = readJsonIfExists(path.join(PUBLIC_BREAKOUT_ROOT, latest.files.top500));
+  const items = Array.isArray(top500?.items) ? top500.items : [];
+  const out = new Map();
+  for (const item of items) {
+    const keys = [item.asset_id, item.symbol].map((value) => String(value || '').trim().toUpperCase()).filter(Boolean);
+    for (const key of keys) out.set(key, item);
+  }
+  return out;
+}
+
+function scoreFromBreakoutItem(item, fallback = 0) {
+  const score = Number(item?.scores?.final_signal_score);
+  return Number.isFinite(score) ? Math.round(score * 100) : fallback;
+}
 
 /**
  * Read ndjson.gz file and return array of bars
@@ -66,6 +93,7 @@ async function main() {
   const configText = fs.readFileSync(CONFIG_PATH, 'utf8');
   const config = yaml.parse(configText);
   const regime = await deriveRegime();
+  const breakoutV13ByAsset = loadBreakoutV13Map();
 
   if (!fs.existsSync(DATA_DIR)) {
       console.log(`DATA_DIR ${DATA_DIR} does not exist.`);
@@ -93,16 +121,24 @@ async function main() {
 
       const stats = processTickerSeries(bars, config, regime);
       const lastHist = stats.history[stats.history.length - 1] || {};
+      const lookupTicker = ticker.toUpperCase();
+      const v13 = breakoutV13ByAsset.get(lookupTicker) || breakoutV13ByAsset.get(lookupTicker.replace('.', ':')) || null;
       
       results.push({
         ticker: ticker,
         name: ticker,
-        state: stats.state,
+        state: v13?.legacy_state || stats.state,
+        legacy_state: v13?.legacy_state || stats.state,
+        breakout_status: v13?.breakout_status || v13?.status || null,
+        support_zone: v13?.support_zone || null,
+        invalidation: v13?.invalidation || null,
+        status_explanation: v13?.status_explanation || null,
         max_level: stats.max_level,
         latest_close: bars[bars.length - 1].close,
         state_age: lastHist.age || 0,
         is_suppressed: !!lastHist.is_suppressed,
-        total_score: lastHist.total_score || 0,
+        total_score: scoreFromBreakoutItem(v13, lastHist.total_score || 0),
+        scores: v13?.scores || null,
         absorption_score: lastHist.absorption_score_raw || 0,
         rvol20: lastHist.rvol20 || 1.0,
         has_data: true

@@ -238,6 +238,7 @@ function runLegacyFullCompute(args, pythonBin) {
   const childArgs = ['scripts/breakout/run-breakout-pipeline.mjs'];
   if (args.asOf) childArgs.push(`--as-of=${args.asOf}`);
   if (args.maxAssets) childArgs.push(`--max-assets=${args.maxAssets}`);
+  if (process.env.RV_BREAKOUT_SCOPE_FILE) childArgs.push(`--scope-file=${process.env.RV_BREAKOUT_SCOPE_FILE}`);
   const env = {
     ...process.env,
     RV_BREAKOUT_PYTHON_BIN: pythonBin,

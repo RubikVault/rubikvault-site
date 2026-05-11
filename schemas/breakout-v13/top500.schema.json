@@ -1,0 +1,132 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Breakout V1.3 Top Scores",
+  "type": "object",
+  "required": ["schema_version", "as_of", "score_version", "items"],
+  "additionalProperties": true,
+  "properties": {
+    "schema_version": { "const": "breakout_top_scores_v1" },
+    "as_of": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$" },
+    "generated_at": { "type": "string" },
+    "score_version": { "const": "breakout_scoring_v1.3" },
+    "count": { "type": "integer", "minimum": 0 },
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "event_id",
+          "asset_id",
+          "as_of",
+          "score_version",
+          "status",
+          "breakout_status",
+          "legacy_state",
+          "scores",
+          "ui",
+          "support_zone",
+          "invalidation",
+          "reasons",
+          "warnings"
+        ],
+        "additionalProperties": true,
+        "properties": {
+          "event_id": { "type": "string", "minLength": 1 },
+          "asset_id": { "type": "string", "minLength": 1 },
+          "symbol": { "type": ["string", "null"] },
+          "as_of": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$" },
+          "asset_class": { "type": "string" },
+          "region": { "type": "string" },
+          "score_version": { "const": "breakout_scoring_v1.3" },
+          "status": { "$ref": "#/definitions/v13_status" },
+          "breakout_status": { "$ref": "#/definitions/v13_status" },
+          "legacy_state": { "$ref": "#/definitions/legacy_state" },
+          "status_reasons": { "type": "array", "items": { "type": "string" } },
+          "status_explanation": { "type": ["string", "null"] },
+          "support_zone": {
+            "oneOf": [
+              { "type": "null" },
+              {
+                "type": "object",
+                "required": ["detected", "center", "low", "high", "width_pct", "test_count", "base_age_bars", "failed_low_count", "method"],
+                "additionalProperties": true,
+                "properties": {
+                  "detected": { "type": "boolean" },
+                  "center": { "type": ["number", "null"] },
+                  "low": { "type": ["number", "null"] },
+                  "high": { "type": ["number", "null"] },
+                  "width_pct": { "type": ["number", "null"] },
+                  "test_count": { "type": "integer", "minimum": 0 },
+                  "base_age_bars": { "type": "integer", "minimum": 0 },
+                  "failed_low_count": { "type": "integer", "minimum": 0 },
+                  "method": { "type": "string" }
+                }
+              }
+            ]
+          },
+          "invalidation": {
+            "oneOf": [
+              { "type": "null" },
+              {
+                "type": "object",
+                "required": ["close_below", "method"],
+                "additionalProperties": true,
+                "properties": {
+                  "close_below": { "type": ["number", "null"] },
+                  "method": { "type": "string" }
+                }
+              }
+            ]
+          },
+          "scores": {
+            "type": "object",
+            "required": [
+              "structure_score",
+              "volume_score",
+              "compression_score",
+              "relative_strength_score",
+              "liquidity_score",
+              "selling_exhaustion_score",
+              "accumulation_proxy_score",
+              "regime_multiplier",
+              "final_signal_score"
+            ],
+            "additionalProperties": { "type": "number" }
+          },
+          "ui": {
+            "type": "object",
+            "required": ["label", "rank", "rank_percentile", "status", "legacy_state"],
+            "additionalProperties": true,
+            "properties": {
+              "label": { "type": "string" },
+              "rank": { "type": "integer", "minimum": 1 },
+              "rank_percentile": { "type": "number" },
+              "status": { "$ref": "#/definitions/v13_status" },
+              "legacy_state": { "$ref": "#/definitions/legacy_state" }
+            }
+          },
+          "reasons": { "type": "array", "items": { "type": "string" } },
+          "warnings": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "v13_status": {
+      "enum": [
+        "UNELIGIBLE",
+        "DATA_INSUFFICIENT",
+        "NO_SETUP",
+        "EARLY_ACCUMULATION",
+        "RIGHT_SIDE_BASE",
+        "BREAKOUT_READY",
+        "BREAKOUT_CONFIRMED",
+        "FAILED_BREAKOUT",
+        "INVALIDATED"
+      ]
+    },
+    "legacy_state": {
+      "enum": ["NONE", "SETUP", "ARMED", "TRIGGERED", "CONFIRMED", "FAILED"]
+    }
+  }
+}

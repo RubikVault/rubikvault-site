@@ -582,6 +582,8 @@ manifest={'snapshot_id':'test','asof_date':'2025-11-21','artifacts':{'bars_datas
 `;
   const py = spawnSync('python3', ['-', tmp], { input: fixture, encoding: 'utf8', cwd: ROOT });
   assert.equal(py.status, 0, py.stderr);
+  const scopeFile = path.join(tmp, 'assets.index_core.canonical.ids.json');
+  writeJson(scopeFile, { schema_version: 'rv_v7_scope_canonical_ids_v1', canonical_ids: ['US:A', 'US:B', 'US:SPY'] });
 
   const run = spawnSync(process.execPath, [
     'scripts/breakout/run-breakout-pipeline.mjs',
@@ -590,6 +592,7 @@ manifest={'snapshot_id':'test','asof_date':'2025-11-21','artifacts':{'bars_datas
     `--quant-root=${tmp}`,
     '--snapshot-id=test',
     '--as-of=2025-11-21',
+    `--scope-file=${scopeFile}`,
   ], { cwd: ROOT, encoding: 'utf8' });
   assert.equal(run.status, 0, run.stderr || run.stdout);
   const workDir = /work_dir=([^ ]+)/.exec(run.stdout)?.[1];

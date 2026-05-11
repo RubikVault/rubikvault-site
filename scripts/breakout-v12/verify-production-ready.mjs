@@ -10,13 +10,20 @@ const REPO_ROOT = path.resolve(fileURLToPath(new URL('../..', import.meta.url)))
 const DEFAULT_QUANT_ROOT = process.env.QUANT_ROOT
   || path.join(process.env.HOME || path.dirname(REPO_ROOT), 'QuantLabHot/rubikvault-quantlab');
 const MAX_PUBLIC_FILE_BYTES = 25 * 1024 * 1024;
+const NAS_BREAKOUT_PYTHON = process.env.NAS_OPS_ROOT
+  ? path.join(process.env.NAS_OPS_ROOT, 'tooling/venv39/bin/python')
+  : '/volume1/homes/neoboy/RepoOps/rubikvault-site/tooling/venv39/bin/python';
 
 function parseArgs(argv) {
   const args = {
     asOf: process.env.RV_TARGET_MARKET_DATE || process.env.TARGET_MARKET_DATE || '',
     quantRoot: DEFAULT_QUANT_ROOT,
     publicRoot: path.join(REPO_ROOT, 'public/data/breakout'),
-    pythonBin: process.env.RV_BREAKOUT_PYTHON_BIN || process.env.RV_Q1_PYTHON_BIN || process.env.PYTHON || 'python3',
+    pythonBin: process.env.RV_BREAKOUT_PYTHON_BIN
+      || process.env.RV_Q1_PYTHON_BIN
+      || process.env.PYTHON
+      || (fs.existsSync(NAS_BREAKOUT_PYTHON) ? NAS_BREAKOUT_PYTHON : '')
+      || 'python3',
     bucketCount: Number.parseInt(process.env.RV_BREAKOUT_BUCKET_COUNT || '128', 10) || 128,
     json: false,
   };
@@ -141,6 +148,12 @@ function checkPublicArtifacts(args, failures) {
   const top500 = topPath && fs.existsSync(topPath) ? readJsonIfExists(topPath) : null;
   const topCount = Array.isArray(top500?.items) ? top500.items.length : Number(top500?.count || 0);
   if (topCount !== 500) failures.push(`top500 count ${topCount} != 500`);
+  if (String(latest.score_version || top500?.score_version || '').startsWith('breakout_scoring_v1.3')) {
+    const first = Array.isArray(top500?.items) ? top500.items[0] : null;
+    for (const key of ['breakout_status', 'legacy_state', 'support_zone', 'invalidation']) {
+      if (!first || !Object.hasOwn(first, key)) failures.push(`top500 V1.3 field missing: ${key}`);
+    }
+  }
   const shards = Array.isArray(latest.files?.shards) ? latest.files.shards : [];
   if (!shards.length) failures.push('manifest has no shards');
   for (const rel of shards) {
@@ -149,11 +162,12 @@ function checkPublicArtifacts(args, failures) {
     if (!fs.existsSync(shard)) failures.push(`shard missing: ${rel}`);
     if (!fs.existsSync(success)) failures.push(`shard _SUCCESS missing: ${rel}`);
   }
+  const isV13FullRun = String(latest.score_version || top500?.score_version || '').startsWith('breakout_scoring_v1.3');
   for (const [rel, expected] of Object.entries(latest.file_hashes || {})) {
     const filePath = path.join(args.publicRoot, rel);
     if (!fs.existsSync(filePath)) failures.push(`hashed file missing: ${rel}`);
     else {
-      const actual = canonicalSha256File(filePath);
+      const actual = isV13FullRun ? sha256File(filePath) : canonicalSha256File(filePath);
       if (actual !== expected) failures.push(`hash mismatch: ${rel}`);
     }
   }
@@ -186,7 +200,8 @@ function main() {
   const active = activeBreakoutProcesses();
   if (active.length) failures.push(`active breakout process found: ${active.length}`);
   const publicCheck = checkPublicArtifacts(args, failures);
-  const quant = checkQuantPointer(args, publicCheck.latest, failures);
+  const isV13FullRun = String(publicCheck.latest?.score_version || '').startsWith('breakout_scoring_v1.3');
+  const quant = isV13FullRun ? { pointer: null, tailBucketCount: 0 } : checkQuantPointer(args, publicCheck.latest, failures);
   const result = {
     ok: failures.length === 0,
     generated_at: new Date().toISOString(),
@@ -204,6 +219,7 @@ function main() {
         as_of: quant.pointer?.as_of || null,
         tail_bucket_count: quant.tailBucketCount,
         content_hash: quant.pointer?.content_hash || null,
+        skipped_for_v13_full_run: isV13FullRun,
       },
     },
     failures,

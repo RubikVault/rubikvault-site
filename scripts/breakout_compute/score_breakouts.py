@@ -14,7 +14,15 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from scripts.breakout_compute.lib.breakout_math import compute_component_scores, stable_event_id  # noqa: E402
+from scripts.breakout_compute.lib.breakout_math import (  # noqa: E402
+    accumulation_proxy_score,
+    classify_status,
+    compute_component_scores,
+    compute_invalidation,
+    legacy_state_from_v13,
+    selling_exhaustion_score,
+    stable_event_id,
+)
 from scripts.quantlab.q1_common import DEFAULT_QUANT_ROOT, atomic_write_json, read_json, stable_hash_file, utc_now_iso  # noqa: E402
 
 
@@ -48,12 +56,72 @@ def score_label(score: float, ui_threshold: float) -> str:
     return "breakout_watchlist"
 
 
+_STATUS_EXPLANATION = {
+    "UNELIGIBLE": "Asset is excluded from scoring because liquidity or history checks failed.",
+    "DATA_INSUFFICIENT": "Feature calculation could not produce enough usable bars.",
+    "NO_SETUP": "Asset is tradable, but no base is detected.",
+    "EARLY_ACCUMULATION": "Early base structure with failed lows. Not near trigger yet.",
+    "RIGHT_SIDE_BASE": "Base is turning up; demand proxies are improving.",
+    "BREAKOUT_READY": "Setup is near pivot with compression and acceptable relative strength.",
+    "BREAKOUT_CONFIRMED": "Close is above pivot with volume confirmation.",
+    "FAILED_BREAKOUT": "Prior trigger has moved back into the range.",
+    "INVALIDATED": "Support zone broke; setup is invalidated.",
+}
+
+
+def _compute_subscores(row: dict[str, Any]) -> dict[str, float]:
+    abs_ratio = safe_float(row.get("absorption_vol_ratio"), 1.0) or 1.0
+    failed_lows = int(safe_float(row.get("failed_low_count"), 0.0) or 0)
+    obv_hl = bool(row.get("obv_higher_low"))
+    cmf_recent = safe_float(row.get("cmf_recent_20"), 0.0) or 0.0
+    clv_trend = safe_float(row.get("clv_trend_20"), 0.0) or 0.0
+    up_down_ratio = safe_float(row.get("up_down_volume_ratio_20"), 1.0) or 1.0
+    selling = selling_exhaustion_score(abs_ratio, failed_lows, obv_hl, cmf_recent)
+    accum = accumulation_proxy_score(clv_trend, cmf_recent, obv_hl, up_down_ratio)
+    return {
+        "selling_exhaustion_score": float(selling),
+        "accumulation_proxy_score": float(accum),
+    }
+
+
+def _build_support_zone_payload(row: dict[str, Any]) -> dict[str, Any] | None:
+    if not bool(row.get("support_zone_detected")):
+        return None
+    return {
+        "detected": True,
+        "center": safe_float(row.get("support_zone_center")),
+        "low": safe_float(row.get("support_zone_low")),
+        "high": safe_float(row.get("support_zone_high")),
+        "width_pct": safe_float(row.get("support_zone_width_pct"), 0.0),
+        "test_count": int(safe_float(row.get("support_test_count"), 0.0) or 0),
+        "base_age_bars": int(safe_float(row.get("base_age_bars"), 0.0) or 0),
+        "failed_low_count": int(safe_float(row.get("failed_low_count"), 0.0) or 0),
+        "method": "pivot_cluster_atr_adjusted",
+    }
+
+
 def build_item(row: dict[str, Any], rank: int, total: int, score_version: str, scoring_config: dict[str, Any]) -> dict[str, Any]:
     components = compute_component_scores(row, scoring_config)
+    subscores = _compute_subscores(row)
     final_score = float(components["final_signal_score"])
     ui_threshold = float((scoring_config.get("thresholds") or {}).get("ui_candidate_min_score") or 0.55)
     as_of = str(row.get("as_of") or row.get("asof_date") or "")[:10]
     asset_id = str(row.get("asset_id") or "")
+
+    enriched = {**row, **subscores}
+    status, status_reasons = classify_status(enriched)
+    invalidation = compute_invalidation(enriched)
+    support_zone = _build_support_zone_payload(enriched)
+    legacy_state = legacy_state_from_v13(
+        status,
+        safe_float(enriched.get("close_raw")),
+        safe_float(enriched.get("resistance_level")),
+        safe_float(enriched.get("atr_14")),
+        safe_float(enriched.get("rvol20")),
+        safe_float(enriched.get("recent_signal_count_20d"), 0.0),
+        safe_float(enriched.get("distance_to_resistance_atr")),
+    )
+
     return {
         "event_id": stable_event_id(asset_id, as_of, score_version),
         "asset_id": asset_id,
@@ -65,12 +133,19 @@ def build_item(row: dict[str, Any], rank: int, total: int, score_version: str, s
         "as_of": as_of,
         "feature_date": json_value(row.get("date") or row.get("feature_date")),
         "score_version": score_version,
+        "status": status,
+        "breakout_status": status,
+        "legacy_state": legacy_state,
+        "status_reasons": status_reasons,
+        "status_explanation": _STATUS_EXPLANATION.get(status),
         "scores": {
             "structure_score": components["structure_score"],
             "volume_score": components["volume_score"],
             "compression_score": components["compression_score"],
             "relative_strength_score": components["relative_strength_score"],
             "liquidity_score": components["liquidity_score"],
+            "selling_exhaustion_score": subscores["selling_exhaustion_score"],
+            "accumulation_proxy_score": subscores["accumulation_proxy_score"],
             "regime_multiplier": components["regime_multiplier"],
             "final_signal_score": components["final_signal_score"],
         },
@@ -85,7 +160,15 @@ def build_item(row: dict[str, Any], rank: int, total: int, score_version: str, s
             "recent_signal_count_20d": safe_float(row.get("recent_signal_count_20d"), 0.0),
             "market_regime_score": safe_float(row.get("market_regime_score")),
             "sector_breadth_score": safe_float(row.get("sector_breadth_score")),
+            "absorption_vol_ratio": safe_float(row.get("absorption_vol_ratio")),
+            "clv_trend_20": safe_float(row.get("clv_trend_20")),
+            "cmf_recent_20": safe_float(row.get("cmf_recent_20")),
+            "obv_higher_low": bool(row.get("obv_higher_low")),
+            "up_down_volume_ratio_20": safe_float(row.get("up_down_volume_ratio_20")),
+            "history_bars_used": int(safe_float(row.get("history_bars_used"), 0.0) or 0),
         },
+        "support_zone": support_zone,
+        "invalidation": invalidation,
         "risk": {
             "close": safe_float(row.get("close_raw")),
             "atr14": safe_float(row.get("atr_14")),
@@ -96,6 +179,8 @@ def build_item(row: dict[str, Any], rank: int, total: int, score_version: str, s
             "label": score_label(final_score, ui_threshold),
             "rank": rank,
             "rank_percentile": round(1.0 - ((rank - 1) / max(1, total)), 6),
+            "status": status,
+            "legacy_state": legacy_state,
         },
         "reasons": components["_reasons"],
         "warnings": components["_warnings"],
@@ -104,6 +189,15 @@ def build_item(row: dict[str, Any], rank: int, total: int, score_version: str, s
 
 def write_json(path: Path, payload: dict[str, Any]) -> None:
     atomic_write_json(path, payload)
+
+
+def write_json_compact(path: Path, payload: dict[str, Any]) -> None:
+    """Write JSON with no extra whitespace. Used for slim files to keep size down."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_suffix(path.suffix + ".tmp")
+    with tmp.open("w", encoding="utf-8") as fh:
+        json.dump(payload, fh, separators=(",", ":"), ensure_ascii=False, sort_keys=True)
+    tmp.replace(path)
 
 
 def main(argv: Iterable[str]) -> int:
@@ -143,8 +237,10 @@ def main(argv: Iterable[str]) -> int:
     max_top = int(thresholds.get("max_top_items") or 500)
     max_shard = int(thresholds.get("max_shard_items_per_region") or 750)
     top_items = [item for item in items if float(item["scores"]["final_signal_score"]) >= top_min][:max_top]
-    if not top_items:
-        top_items = items[: min(max_top, len(items))]
+    target_top = min(max_top, len(items))
+    if len(top_items) < target_top:
+        seen = {item["asset_id"] for item in top_items}
+        top_items.extend([item for item in items if item["asset_id"] not in seen][: target_top - len(top_items)])
 
     date_part = f"date={as_of}"
     score_root = quant_root / "breakout" / "scores" / date_part
@@ -228,6 +324,7 @@ def main(argv: Iterable[str]) -> int:
             "features_parquet_present": features_path.exists(),
             "scores_computed": len(items),
             "top500_present": True,
+            "all_scored_present": True,
             "excluded_parquet_present": excluded_path.exists(),
         },
         "hard_fail_reasons": hard_fail_reasons,
@@ -245,6 +342,65 @@ def main(argv: Iterable[str]) -> int:
         "count": len(top_items),
         "items": top_items,
     }
+    all_scored_payload = {
+        "schema_version": "breakout_top_scores_v1",
+        "as_of": as_of,
+        "generated_at": utc_now_iso(),
+        "score_version": score_version,
+        "count": len(items),
+        "items": items,
+    }
+    # Slim per-asset projection used by the UI fast-path: only fields the
+    # Stock Analyzer + frontpage consume. Keeps the reader payload small
+    # enough for Cloudflare Worker CPU budgets even with full-scope coverage.
+    def _slim(it: dict[str, Any]) -> dict[str, Any]:
+        # Minimal V1.3 essentials only. Goal: keep all_scored_slim.json under
+        # ~2 MB so a single Cloudflare Worker request can parse it within the
+        # CPU budget even on cold calls. Keeps all schema-required fields.
+        sc = it.get("scores") or {}
+        ui = it.get("ui") or {}
+        return {
+            "event_id": it.get("event_id"),
+            "asset_id": it.get("asset_id"),
+            "symbol": it.get("symbol"),
+            "as_of": it.get("as_of"),
+            "score_version": it.get("score_version"),
+            "status": it.get("status"),
+            "breakout_status": it.get("breakout_status"),
+            "legacy_state": it.get("legacy_state"),
+            "status_reasons": it.get("status_reasons") or [],
+            "status_explanation": it.get("status_explanation"),
+            "support_zone": it.get("support_zone"),
+            "invalidation": it.get("invalidation"),
+            "scores": {
+                "structure_score": sc.get("structure_score"),
+                "volume_score": sc.get("volume_score"),
+                "compression_score": sc.get("compression_score"),
+                "relative_strength_score": sc.get("relative_strength_score"),
+                "liquidity_score": sc.get("liquidity_score"),
+                "selling_exhaustion_score": sc.get("selling_exhaustion_score"),
+                "accumulation_proxy_score": sc.get("accumulation_proxy_score"),
+                "regime_multiplier": sc.get("regime_multiplier"),
+                "final_signal_score": sc.get("final_signal_score"),
+            },
+            "ui": {
+                "label": ui.get("label"),
+                "rank": ui.get("rank"),
+                "rank_percentile": ui.get("rank_percentile"),
+                "status": ui.get("status"),
+                "legacy_state": ui.get("legacy_state"),
+            },
+            "reasons": [],
+            "warnings": [],
+        }
+    all_scored_slim_payload = {
+        "schema_version": "breakout_top_scores_v1",
+        "as_of": as_of,
+        "generated_at": utc_now_iso(),
+        "score_version": score_version,
+        "count": len(items),
+        "items": [_slim(it) for it in items],
+    }
     metadata = {
         "schema_version": "breakout_score_metadata_v1",
         "generated_at": utc_now_iso(),
@@ -259,6 +415,7 @@ def main(argv: Iterable[str]) -> int:
         "counts": {
             "scores_computed": len(items),
             "top_items": len(top_items),
+            "all_scored_items": len(items),
         },
     }
 
@@ -266,6 +423,10 @@ def main(argv: Iterable[str]) -> int:
     write_json(public_dir / "health.json", health)
     write_json(public_dir / "errors.json", errors)
     write_json(public_dir / "top500.json", top_payload)
+    # all_scored.json is the canonical full-scope artifact consumed by the
+    # page-core bundle builder (which embeds breakout_summary per asset into
+    # the 256 page-shards). It is NOT loaded by the Worker hot-path.
+    write_json(public_dir / "all_scored.json", all_scored_payload)
     write_json(public_dir / "metadata.json", metadata)
 
     by_region: dict[str, list[dict[str, Any]]] = {}

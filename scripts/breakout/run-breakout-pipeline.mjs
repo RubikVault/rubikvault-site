@@ -12,6 +12,7 @@ const REPO_ROOT = path.resolve(fileURLToPath(new URL('../..', import.meta.url)))
 const PUBLIC_BREAKOUT_ROOT = path.join(REPO_ROOT, 'public/data/breakout');
 const CONFIG_DIR = path.join(REPO_ROOT, 'config/breakout');
 const SCHEMA_DIR = path.join(REPO_ROOT, 'schemas/breakout');
+const DEFAULT_SCOPE_FILE = 'public/data/universe/v7/ssot/assets.index_core.canonical.ids.json';
 
 function parseArgs(argv) {
   const args = {
@@ -23,6 +24,7 @@ function parseArgs(argv) {
     snapshotId: '',
     barsDatasetRoot: '',
     universeParquet: '',
+    scopeFile: process.env.RV_BREAKOUT_SCOPE_FILE || DEFAULT_SCOPE_FILE,
   };
   for (const arg of argv) {
     if (arg === '--dry-run') args.dryRun = true;
@@ -34,6 +36,7 @@ function parseArgs(argv) {
     else if (arg.startsWith('--snapshot-id=')) args.snapshotId = arg.split('=')[1] || '';
     else if (arg.startsWith('--bars-dataset-root=')) args.barsDatasetRoot = arg.split('=')[1] || '';
     else if (arg.startsWith('--universe-parquet=')) args.universeParquet = arg.split('=')[1] || '';
+    else if (arg.startsWith('--scope-file=')) args.scopeFile = arg.split('=')[1] || '';
   }
   return args;
 }
@@ -44,6 +47,12 @@ function readYaml(fileName) {
 
 function readJson(filePath) {
   return JSON.parse(fs.readFileSync(filePath, 'utf8'));
+}
+
+function resolveRepoPath(value) {
+  const raw = String(value || '').trim();
+  if (!raw) return '';
+  return path.isAbsolute(raw) ? raw : path.join(REPO_ROOT, raw);
 }
 
 function atomicWriteJson(filePath, payload) {
@@ -134,13 +143,16 @@ function resolveBreakoutPythonBin() {
   return process.env.RV_Q1_PYTHON_BIN || process.env.PYTHON || 'python3';
 }
 
-function compileSchemas() {
+function compileSchemas(scoreVersion = '') {
   const ajv = new Ajv({ allErrors: true, strict: false });
+  const top500SchemaPath = String(scoreVersion).startsWith('breakout_scoring_v1.3')
+    ? path.join(REPO_ROOT, 'schemas/breakout-v13/top500.schema.json')
+    : path.join(SCHEMA_DIR, 'score.schema.json');
   return {
     manifest: ajv.compile(readJson(path.join(SCHEMA_DIR, 'manifest.schema.json'))),
     coverage: ajv.compile(readJson(path.join(SCHEMA_DIR, 'coverage.schema.json'))),
     errors: ajv.compile(readJson(path.join(SCHEMA_DIR, 'errors.schema.json'))),
-    score: ajv.compile(readJson(path.join(SCHEMA_DIR, 'score.schema.json'))),
+    score: ajv.compile(readJson(top500SchemaPath)),
   };
 }
 
@@ -164,6 +176,10 @@ function buildManifest({ asOf, runDir, candidateDir, configs, inputManifestPath,
   assertValid(schemas.coverage, readJson(path.join(candidateDir, 'coverage.json')), 'coverage');
   assertValid(schemas.errors, readJson(path.join(candidateDir, 'errors.json')), 'errors');
   assertValid(schemas.score, readJson(path.join(candidateDir, 'top500.json')), 'top500');
+  const allScoredPath = path.join(candidateDir, 'all_scored.json');
+  if (fs.existsSync(allScoredPath)) {
+    assertValid(schemas.score, readJson(allScoredPath), 'all_scored');
+  }
   for (const shard of shardFiles) {
     assertValid(schemas.score, readJson(shard), `shard ${path.basename(shard)}`);
   }
@@ -189,6 +205,7 @@ function buildManifest({ asOf, runDir, candidateDir, configs, inputManifestPath,
     health: fileRel('health.json'),
     metadata: fileRel('metadata.json'),
     top500: fileRel('top500.json'),
+    all_scored: fs.existsSync(path.join(candidateDir, 'all_scored.json')) ? fileRel('all_scored.json') : null,
     shards: shardRelPaths,
   };
   if (fs.existsSync(path.join(candidateDir, 'legacy-comparison.json'))) {
@@ -280,10 +297,14 @@ function publish({ candidateDir, finalRunDir, manifest }) {
 
 function main() {
   const args = parseArgs(process.argv.slice(2));
+  const resolvedScopeFile = resolveRepoPath(args.scopeFile);
+  if (resolvedScopeFile && !fs.existsSync(resolvedScopeFile) && process.env.RV_BREAKOUT_ALLOW_FULL_UNIVERSE !== '1') {
+    throw new Error(`scope file missing: ${resolvedScopeFile}`);
+  }
   const configs = {
     tradable_universe: readYaml('tradable_universe.v1.yaml'),
-    features: readYaml('breakout_features.v1.2.yaml'),
-    scoring: readYaml('breakout_scoring.v1.2.yaml'),
+    features: readYaml('breakout_features.v1.3.yaml'),
+    scoring: readYaml('breakout_scoring.v1.3.yaml'),
     outcomes: readYaml('outcome_labels.v1.yaml'),
     health: readYaml('health_guards.v1.yaml'),
   };
@@ -303,6 +324,7 @@ function main() {
     snapshot_id: args.snapshotId,
     bars_dataset_root: args.barsDatasetRoot,
     universe_parquet: args.universeParquet,
+    scope_file: resolvedScopeFile && fs.existsSync(resolvedScopeFile) ? resolvedScopeFile : '',
     max_assets: args.maxAssets,
     configs,
   };
@@ -310,7 +332,7 @@ function main() {
   atomicWriteJson(inputManifestPath, inputManifest);
 
   const pythonBin = resolveBreakoutPythonBin();
-  const schemas = compileSchemas();
+  const schemas = compileSchemas(configs.scoring.score_version);
   try {
     runPython(pythonBin, 'scripts/breakout_compute/compute_features.py', inputManifestPath);
     const featureMetadata = readJson(path.join(workDir, 'feature_metadata.json'));
