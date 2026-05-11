@@ -173,6 +173,7 @@ async function buildStockApiPayloadFromPageCore({
   normalizedTicker,
   effectiveTicker,
   pageCoreResult,
+  request,
   requestStart,
   startedAt,
   origin,
@@ -239,6 +240,14 @@ async function buildStockApiPayloadFromPageCore({
     warnings: Array.isArray(row.market_stats_min?.issues) ? row.market_stats_min.issues : [],
   }, effectiveTicker);
   const marketStats = buildMarketStatsFromIndicators(indicatorList, effectiveTicker, latestBar?.date) || pageCoreMarketStats;
+  const breakoutV12 = request
+    ? await fetchBreakoutV12Static(request, {
+        ticker: effectiveTicker,
+        canonicalId: row.canonical_asset_id || pageCoreResult.canonical_id || null,
+        exchange: identity.exchange || row.exchange || null,
+        pageCoreSummary: row?.breakout_summary || null,
+      })
+    : null;
   const generatedAt = nowUtcIso();
   const mode = historyRenderable ? 'PAGE_CORE_HISTORY' : 'STATIC';
   const payload = {
@@ -355,6 +364,8 @@ async function buildStockApiPayloadFromPageCore({
       market_prices: marketPrices,
       market_stats: marketStats,
       indicators: indicatorList,
+      breakout_v12: breakoutV12,
+      breakout_v2: toBreakoutV2Compat(breakoutV12),
       summary_min: summary,
       governance_summary: row.governance_summary || null,
       coverage: row.coverage || null,
@@ -580,7 +591,9 @@ async function fetchSnapshot(moduleName, request) {
 
 async function readBreakoutV12Json(origin, assetPath) {
   try {
-    const response = await fetch(new URL(assetPath, origin).toString(), { cf: { cacheTtl: 60 } });
+    const response = await fetch(new URL(assetPath, origin).toString(), {
+      cf: { cacheTtl: 600, cacheEverything: true },
+    });
     if (!response.ok) return null;
     return await response.json();
   } catch {
@@ -588,7 +601,7 @@ async function readBreakoutV12Json(origin, assetPath) {
   }
 }
 
-async function fetchBreakoutV12Static(request, { ticker, canonicalId, exchange } = {}) {
+async function fetchBreakoutV12Static(request, { ticker, canonicalId, exchange, pageCoreSummary = null } = {}) {
   const origin = new URL(request.url).origin;
   const latest = await readBreakoutV12Json(origin, '/data/breakout/manifests/latest.json');
   const manifest = latest?.validation?.publishable === true
@@ -598,8 +611,37 @@ async function fetchBreakoutV12Static(request, { ticker, canonicalId, exchange }
   if (!manifest?.files?.top500) {
     return shapeBreakoutV12Result({ manifest: null, candidates });
   }
+  // Worker-hot-path: read ONLY top500.json (~1.2 MB) for the ranked subset.
+  // For non-top500 assets the breakout summary is delivered via the existing
+  // page-core 256-shard architecture (page-shard ~35 KB gzipped per request)
+  // — see `pageCoreResult.pageCore.breakout_summary`. We never JSON.parse the
+  // full all_scored bundle in the Worker hot-path (would blow the CPU budget).
   const top500 = await readBreakoutV12Json(origin, `/data/breakout/${manifest.files.top500}`);
-  const item = findBreakoutV12Item(top500, candidates);
+  let item = findBreakoutV12Item(top500, candidates);
+  if (!item && pageCoreSummary && typeof pageCoreSummary === 'object') {
+    // Synthesize a top500-shaped item from the page-core breakout_summary so the
+    // shared shaper still works for non-top500 tickers (AAPL/TSLA/etc.).
+    item = {
+      asset_id: canonicalId || null,
+      symbol: ticker || null,
+      name: ticker || null,
+      as_of: manifest?.as_of || null,
+      score_version: manifest?.score_version || null,
+      status: pageCoreSummary.breakout_status || null,
+      breakout_status: pageCoreSummary.breakout_status || null,
+      legacy_state: pageCoreSummary.legacy_state || null,
+      status_explanation: pageCoreSummary.status_explanation || null,
+      status_reasons: Array.isArray(pageCoreSummary.status_reasons) ? pageCoreSummary.status_reasons : [],
+      support_zone: pageCoreSummary.support_zone || null,
+      invalidation: pageCoreSummary.invalidation || null,
+      scores: pageCoreSummary.scores || {},
+      features: {},
+      risk: {},
+      ui: { label: null, rank: null, rank_percentile: null, status: pageCoreSummary.breakout_status || null, legacy_state: pageCoreSummary.legacy_state || null },
+      reasons: [],
+      warnings: [],
+    };
+  }
   return shapeBreakoutV12Result({ manifest, top500, item, candidates });
 }
 
@@ -993,6 +1035,7 @@ export async function onRequestGet(context) {
         normalizedTicker,
         effectiveTicker,
         pageCoreResult,
+        request,
         requestStart,
         startedAt,
         origin: url.origin,
@@ -1863,10 +1906,23 @@ export async function onRequestGet(context) {
   const providerHint = eodProvider || sourceChain?.selected || sourceChain?.primary || null;
   const marketPricesPayload = buildMarketPricesFromLatestBar(latestBar, effectiveTicker, providerHint) || marketPricesSnapshotPayload;
   const marketStatsPayload = buildMarketStatsFromIndicators(indicatorOut.indicators, effectiveTicker, latestBar?.date) || marketStatsSnapshotPayload;
+  // Resolve breakout_summary from page-core (256-shard architecture) so
+  // non-top500 tickers like AAPL/TSLA still expose V1.3 breakout fields without
+  // forcing the Worker to JSON.parse a multi-MB global all_scored bundle.
+  let breakoutSummaryFromPageCore = null;
+  try {
+    const pageCoreLookup = await readPageCoreForTicker(effectiveTicker, { request });
+    if (pageCoreLookup?.ok) {
+      breakoutSummaryFromPageCore = pageCoreLookup.pageCore?.breakout_summary || null;
+    }
+  } catch {
+    breakoutSummaryFromPageCore = null;
+  }
   const breakoutV12 = await fetchBreakoutV12Static(request, {
     ticker: effectiveTicker,
     canonicalId: resolvedCanonicalId,
     exchange: resolvedExchange || universePayload?.exchange || null,
+    pageCoreSummary: breakoutSummaryFromPageCore,
   });
   const breakoutV2Legacy = (() => {
     try {
@@ -2056,7 +2112,7 @@ export async function onRequestGet(context) {
       forecastMeta: decisionInputs.forecastMeta,
       inputFingerprints: decisionInputs.input_fingerprints,
       runtimeControl: decisionInputs.runtimeControl,
-      breakoutState: payload.data?.breakout_v12?.label || payload.data?.breakout_v12?.status || null,
+      breakoutState: payload.data?.breakout_v12?.legacy_state || payload.data?.breakout_v12?.breakout_status || payload.data?.breakout_v12?.label || payload.data?.breakout_v12?.status || null,
     });
     payload.meta.evaluation_v4 = {
       requested: true,

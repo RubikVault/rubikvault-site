@@ -276,6 +276,8 @@ export function buildVerifiedFrontpageRow(stockDoc, candidate) {
   const rawProbability = toNumber(decisionSlice?.raw_probability);
   const calibratedProbability = toNumber(decisionSlice?.confidence_calibrated);
   const effectiveProbability = calibratedProbability ?? rawProbability ?? forecastProbability;
+  const breakout = stockDoc?.data?.breakout_v12 || stockDoc?.data?.breakout_v2 || null;
+  const breakoutScores = breakout?.scores || {};
 
   return {
     ticker,
@@ -334,5 +336,12 @@ export function buildVerifiedFrontpageRow(stockDoc, candidate) {
     contributor_agreement: toNumber(decisionSlice?.contributor_agreement),
     meta_labeler_rule_version: decisionSlice?.meta_labeler_rule_version || decision?.meta_labeler_rule_version || null,
     trigger_gates: gates,
+    breakout_status: breakout?.breakout_status || breakout?.ui?.status || null,
+    breakout_legacy_state: breakout?.legacy_state || breakout?.state || breakout?.ui?.legacy_state || null,
+    breakout_support_zone: breakout?.support_zone || null,
+    breakout_invalidation: breakout?.invalidation || null,
+    breakout_explanation: breakout?.status_explanation || breakout?.explanation || null,
+    breakout_selling_exhaustion: toNumber(breakoutScores?.selling_exhaustion_score ?? breakoutScores?.selling_exhaustion),
+    breakout_accumulation_proxy: toNumber(breakoutScores?.accumulation_proxy_score ?? breakoutScores?.accumulation_proxy),
   };
 }

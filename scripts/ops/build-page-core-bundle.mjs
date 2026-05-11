@@ -48,6 +48,7 @@ const BREAKOUT_LATEST_MANIFEST_PATHS = [
   path.join(ROOT, 'public/data/breakout/manifests/latest.json'),
   path.join(ROOT, 'public/data/breakout/status.json'),
 ];
+const BREAKOUT_PUBLIC_ROOT = path.join(ROOT, 'public/data/breakout');
 const PAGE_CORE_SCHEMA_PATH = path.join(ROOT, 'schemas/stock-analyzer/page-core.v1.schema.json');
 const HISTORY_MANIFEST_CANDIDATES = [
   process.env.RV_PAGE_CORE_HISTORY_MANIFEST_PATH,
@@ -416,27 +417,27 @@ function readForecastSymbols() {
   return new Set(rows.map((row) => normalizePageCoreAlias(row?.symbol || row?.ticker)).filter(Boolean));
 }
 
-function collectBreakoutKeys(value, out = new Set()) {
-  if (!value || typeof value !== 'object') return out;
-  if (Array.isArray(value)) {
-    for (const item of value) collectBreakoutKeys(item, out);
-    return out;
-  }
-  const direct = normalizePageCoreAlias(value.canonical_id || value.canonicalId || value.asset_id || value.assetId);
-  if (direct) out.add(direct);
-  const ticker = normalizePageCoreAlias(value.symbol || value.ticker);
-  if (ticker) out.add(ticker);
-  for (const key of ['assets', 'symbols', 'candidates', 'rows', 'signals', 'setups', 'data']) {
-    if (value[key]) collectBreakoutKeys(value[key], out);
-  }
-  return out;
-}
-
 function readBreakoutKeys() {
-  const keys = new Set();
+  const keys = new Map();
   for (const filePath of BREAKOUT_LATEST_MANIFEST_PATHS) {
     const doc = readJsonMaybe(filePath);
-    if (doc) collectBreakoutKeys(doc, keys);
+    if (!doc?.files) continue;
+    // Prefer all_scored (full scope coverage) so non-top500 assets like AAPL/TSLA
+    // also get breakout_summary populated in page-core rows. Fall back to top500
+    // for older manifests / legacy runs that only emit top500.
+    const sources = [];
+    if (doc.files.all_scored) sources.push(doc.files.all_scored);
+    if (doc.files.top500) sources.push(doc.files.top500);
+    for (const rel of sources) {
+      const source = readJsonMaybe(path.join(BREAKOUT_PUBLIC_ROOT, rel));
+      const items = Array.isArray(source?.items) ? source.items : [];
+      for (const item of items) {
+        for (const raw of [item.asset_id, item.assetId, item.canonical_id, item.symbol, item.ticker]) {
+          const key = normalizePageCoreAlias(raw);
+          if (key && !keys.has(key)) keys.set(key, item);
+        }
+      }
+    }
   }
   return keys;
 }
@@ -467,6 +468,10 @@ function forecastStatusFor({ display, assetClass, forecastSymbols }) {
 function breakoutStatusFor({ canonicalId, display, barsCount, breakoutKeys }) {
   if (breakoutKeys?.has(normalizePageCoreAlias(canonicalId)) || breakoutKeys?.has(normalizePageCoreAlias(display))) return 'available';
   return Number(barsCount || 0) < 200 ? 'insufficient_history' : 'not_generated';
+}
+
+function breakoutItemFor({ canonicalId, display, breakoutKeys }) {
+  return breakoutKeys?.get(normalizePageCoreAlias(canonicalId)) || breakoutKeys?.get(normalizePageCoreAlias(display)) || null;
 }
 
 function riskFallbackFor({ assetClass, marketStatsMin }) {
@@ -886,6 +891,11 @@ function buildPageCoreRow({ canonicalId, registryRow, decisionRow, lookupValue, 
     barsCount,
     breakoutKeys: moduleContext.breakoutKeys,
   });
+  const breakoutItem = breakoutItemFor({
+    canonicalId,
+    display,
+    breakoutKeys: moduleContext.breakoutKeys,
+  });
   const moduleWarnings = [];
   if (riskFallback) moduleWarnings.push(`risk_fallback_${riskFallback.source}`);
   if (riskFallback && rawVerdict === 'BUY') moduleWarnings.push('buy_suppressed_by_risk_fallback');
@@ -980,7 +990,14 @@ function buildPageCoreRow({ canonicalId, registryRow, decisionRow, lookupValue, 
       strict_blocking_reasons: primaryBlocker ? [primaryBlocker] : [],
     },
     historical_profile_summary: null,
-    breakout_summary: null,
+    breakout_summary: breakoutItem ? {
+      breakout_status: breakoutItem.breakout_status || breakoutItem.status || null,
+      legacy_state: breakoutItem.legacy_state || breakoutItem?.ui?.legacy_state || null,
+      support_zone: breakoutItem.support_zone || null,
+      invalidation: breakoutItem.invalidation || null,
+      status_explanation: breakoutItem.status_explanation || null,
+      scores: breakoutItem.scores || null,
+    } : null,
     module_links: {
       historical: `/api/v2/stocks/${encodeURIComponent(display)}/historical?asset_id=${encodeURIComponent(canonicalId)}`,
       fundamentals: `/api/fundamentals?ticker=${encodeURIComponent(display)}`,
