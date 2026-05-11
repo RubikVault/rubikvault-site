@@ -164,6 +164,8 @@ function symbolVariants(rawSymbol, region) {
     HK: 'HK',
     CN: 'SHE',
     AU: 'AU',
+    IN: 'NSE',
+    KR: 'KO',
   }[region] || '';
   if (regionSuffix) {
     variants.add(`${symbol}.${regionSuffix}`);
@@ -190,6 +192,8 @@ function regionRank(row, region) {
   if (expectedRegion === 'HK' && (hasEx('HK', 'HKEX') || country === 'HONG KONG')) return 10;
   if (expectedRegion === 'CN' && (hasEx('SHE', 'SHG', 'SS', 'SZ') || country === 'CHINA')) return 10;
   if (expectedRegion === 'AU' && (hasEx('AU', 'ASX', 'AX') || country === 'AUSTRALIA')) return 10;
+  if (expectedRegion === 'IN' && (hasEx('NSE', 'BSE', 'NSEI') || country === 'INDIA')) return 10;
+  if (expectedRegion === 'KR' && (hasEx('KO', 'KQ', 'KRX', 'KOSDAQ') || country === 'KOREA' || country === 'SOUTH KOREA')) return 10;
   return 0;
 }
 
@@ -400,6 +404,10 @@ function registryProxyRowsForIndex(def, registry) {
     HSI: 75,
     CSI300: 300,
     ASX200: 200,
+    NIFTY50: 50,
+    KOSPI200: 200,
+    TECDAX: 30,
+    SDAX: 70,
   };
   const target = Math.max(expectedMin, targetById[id] || expectedMin);
   const us = () => rankedStocks(regionRows(allRows, 'US'));
@@ -431,6 +439,10 @@ function registryProxyRowsForIndex(def, registry) {
     },
     CSI300: () => rankedStocks(regionRows(allRows, 'CN')).slice(0, 300),
     ASX200: () => rankedStocks(regionRows(allRows, 'AU')).slice(0, 200),
+    NIFTY50: () => rankedStocks(regionRows(allRows, 'IN')).slice(0, 50),
+    KOSPI200: () => rankedStocks(regionRows(allRows, 'KR')).slice(0, 200),
+    TECDAX: () => rankedStocks(regionRows(allRows, 'DE')).slice(40, 70),
+    SDAX: () => rankedStocks(regionRows(allRows, 'DE')).slice(90, 160),
   };
   const rows = (selectors[id]?.() || rankedStocks(regionRows(allRows, def.region)).slice(0, target))
     .slice(0, target);
@@ -762,8 +774,8 @@ async function build(options) {
     warnings,
     validation: {
       expected_asset_count_min: 4500,
-      expected_asset_count_max: 7500,
-      asset_count_in_expected_range: rows.length >= 4500 && rows.length <= 7500,
+      expected_asset_count_max: 9500,
+      asset_count_in_expected_range: rows.length >= 4500 && rows.length <= 9500,
     },
   };
   return writeOutputs({ rows, memberships, report, generatedAt, dryRun: options.dryRun });
