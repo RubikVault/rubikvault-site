@@ -265,7 +265,7 @@ function maybeCanonicalFromLookup(value) {
   return '';
 }
 
-function readDecisionCoreRows(source = process.env.RV_DECISION_CORE_SOURCE || 'legacy') {
+function readDecisionCoreRows(source = process.env.RV_DECISION_CORE_SOURCE || 'core') {
   const normalizedSource = String(source || 'legacy').toLowerCase();
   if (!['core', 'shadow'].includes(normalizedSource)) return null;
   const root = path.join(DECISION_CORE_ROOT, normalizedSource);
