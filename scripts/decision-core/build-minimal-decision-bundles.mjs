@@ -42,6 +42,8 @@ import {
   writeJsonAtomic,
 } from './shared.mjs';
 
+const DECISION_HORIZONS = ['short_term', 'mid_term', 'long_term'];
+
 export async function main(argv = process.argv.slice(2)) {
   const opts = parseArgs(argv);
   const mode = opts.mode === 'production' || opts.mode === 'core' ? 'core' : 'shadow';
@@ -79,8 +81,15 @@ export async function main(argv = process.argv.slice(2)) {
       mid_term: evidenceBootstrap({ assetId, horizon: 'mid_term', setup, histProbs, features }),
       long_term: evidenceBootstrap({ assetId, horizon: 'long_term', setup, histProbs, features }),
     };
-    const evidence = evidenceByHorizon.mid_term;
-    const evRisk = evaluateP0EvRisk({ evidence, features, policy, horizon: 'mid_term' });
+    const setupByHorizon = buildSetupByHorizon({ setup, features, regime, eligibility });
+    const evRiskByHorizon = Object.fromEntries(DECISION_HORIZONS.map((horizon) => [
+      horizon,
+      evaluateP0EvRisk({ evidence: evidenceByHorizon[horizon], features, policy, horizon }),
+    ]));
+    const candidateByHorizon = Object.fromEntries(DECISION_HORIZONS.map((horizon) => [
+      horizon,
+      horizonCandidate({ baseCandidate: candidate, horizon, setup: setupByHorizon[horizon], features, eligibility }),
+    ]));
     const buyCriticalOk = buyCriticalFeaturesAvailable(features);
     const decisionGrade = resolveDecisionGrade({
       eligibility,
@@ -90,35 +99,39 @@ export async function main(argv = process.argv.slice(2)) {
       reasonRegistry,
       buyCriticalFeaturesAvailable: buyCriticalOk,
     });
-    let reasonCodes = buildInitialReasonCodes({
+    let reasonCodesByHorizon = buildReasonCodesByHorizon({
       eligibility,
-      setup,
-      evidence,
+      setupByHorizon,
       evidenceByHorizon,
-      evRisk,
-      candidate,
+      evRiskByHorizon,
+      candidateByHorizon,
       regime,
       policy,
       decisionGrade,
     });
-
-    let preliminary = resolveOverallAction({
+    let preliminaryByHorizon = buildPreliminaryByHorizon({
       eligibility,
       decisionGrade,
-      setup,
-      evidence,
-      evRisk,
+      setupByHorizon,
+      evidenceByHorizon,
+      evRiskByHorizon,
       reliability: 'MEDIUM',
-      reasonCodes,
+      reasonCodesByHorizon,
       reasonMap,
-      candidate,
+      candidateByHorizon,
     });
+    let primaryHorizon = selectPrimaryHorizon(preliminaryByHorizon);
+    let evidence = evidenceByHorizon[primaryHorizon];
+    let evRisk = evRiskByHorizon[primaryHorizon];
+    let primarySetup = setupByHorizon[primaryHorizon] || setup;
+    let reasonCodes = [...reasonCodesByHorizon[primaryHorizon]];
+    let preliminary = primaryPreliminary(preliminaryByHorizon, primaryHorizon);
 
     let tradeGuard = preliminary.primary_action === 'BUY'
       ? buildEntryGapGuard({ action: 'BUY', features, targetMarketDate: opts.targetMarketDate })
       : emptyGuard();
     let invalidation = (preliminary.primary_action === 'BUY' || preliminary.wait_subtype === 'WAIT_TRIGGER_PENDING')
-      ? buildInvalidationLevel({ action: preliminary.primary_action === 'BUY' ? 'BUY' : 'WAIT', setup, features })
+      ? buildInvalidationLevel({ action: preliminary.primary_action === 'BUY' ? 'BUY' : 'WAIT', setup: primarySetup, features })
       : emptyInvalidation();
 
     let rowDoc = buildRow({
@@ -128,7 +141,7 @@ export async function main(argv = process.argv.slice(2)) {
       featureManifest,
       eligibility,
       decisionGrade,
-      setup,
+      setup: primarySetup,
       evidence,
       evRisk,
       preliminary,
@@ -138,40 +151,53 @@ export async function main(argv = process.argv.slice(2)) {
       reasonMap,
       reliability: 'LOW',
       evidenceByHorizon,
+      setupByHorizon,
+      evRiskByHorizon,
+      reasonCodesByHorizon,
+      preliminaryByHorizon,
+      primaryHorizon,
     });
 
     const reliabilityResult = resolveAnalysisReliability(rowDoc, policy, {
       policyLoaded: true,
       featureManifestLoaded: true,
       reasonRegistryLoaded: true,
-      unknownBlockingReason: hasUnknownBlockingReason(reasonCodes, reasonMap),
+      unknownBlockingReason: Object.values(reasonCodesByHorizon).some((codes) => hasUnknownBlockingReason(codes, reasonMap)),
       asOfMismatch: eligibility.as_of_date && opts.targetMarketDate && eligibility.as_of_date > opts.targetMarketDate,
     });
     let reliability = reliabilityResult.analysis_reliability;
 
-    preliminary = resolveOverallAction({
+    preliminaryByHorizon = buildPreliminaryByHorizon({
       eligibility,
       decisionGrade,
-      setup,
-      evidence,
-      evRisk,
+      setupByHorizon,
+      evidenceByHorizon,
+      evRiskByHorizon,
       reliability,
-      reasonCodes,
+      reasonCodesByHorizon,
       reasonMap,
-      candidate,
+      candidateByHorizon,
     });
+    primaryHorizon = selectPrimaryHorizon(preliminaryByHorizon);
+    evidence = evidenceByHorizon[primaryHorizon];
+    evRisk = evRiskByHorizon[primaryHorizon];
+    primarySetup = setupByHorizon[primaryHorizon] || setup;
+    reasonCodes = [...reasonCodesByHorizon[primaryHorizon]];
+    preliminary = primaryPreliminary(preliminaryByHorizon, primaryHorizon);
     tradeGuard = preliminary.primary_action === 'BUY'
       ? buildEntryGapGuard({ action: 'BUY', features, targetMarketDate: opts.targetMarketDate })
       : emptyGuard();
     invalidation = (preliminary.primary_action === 'BUY' || preliminary.wait_subtype === 'WAIT_TRIGGER_PENDING')
-      ? buildInvalidationLevel({ action: preliminary.primary_action === 'BUY' ? 'BUY' : 'WAIT', setup, features })
+      ? buildInvalidationLevel({ action: preliminary.primary_action === 'BUY' ? 'BUY' : 'WAIT', setup: primarySetup, features })
       : emptyInvalidation();
 
     if (preliminary.primary_action === 'BUY') {
-      const invariantErrors = buyInvariantErrors({ eligibility, decisionGrade, setup, evidence, evRisk, reliability, tradeGuard, invalidation, reasonCodes, reasonMap });
+      const invariantErrors = buyInvariantErrors({ eligibility, decisionGrade, setup: primarySetup, evidence, evRisk, reliability, tradeGuard, invalidation, reasonCodes, reasonMap });
       if (invariantErrors.length) {
         reasonCodes.push('WAIT_RISK_BLOCKER', ...invariantErrors);
         preliminary = { primary_action: 'WAIT', wait_subtype: 'WAIT_RISK_BLOCKER' };
+        preliminaryByHorizon[primaryHorizon] = preliminary;
+        reasonCodesByHorizon[primaryHorizon] = reasonCodes;
         tradeGuard = emptyGuard();
       }
     }
@@ -183,7 +209,7 @@ export async function main(argv = process.argv.slice(2)) {
       featureManifest,
       eligibility,
       decisionGrade,
-      setup,
+      setup: primarySetup,
       evidence,
       evRisk,
       preliminary,
@@ -193,6 +219,11 @@ export async function main(argv = process.argv.slice(2)) {
       reasonMap,
       reliability,
       evidenceByHorizon,
+      setupByHorizon,
+      evRiskByHorizon,
+      reasonCodesByHorizon,
+      preliminaryByHorizon,
+      primaryHorizon,
     });
     updateCounters(counters, rowDoc);
     parts[partitionFor(assetId)].push(JSON.stringify(rowDoc));
@@ -203,9 +234,10 @@ export async function main(argv = process.argv.slice(2)) {
       candidate_selected: candidate,
       features,
       regime,
-      setup,
+      setup: primarySetup,
       evidence_debug: evidence,
       ev_risk_debug: evRisk.debug,
+      horizon_actions: Object.fromEntries(DECISION_HORIZONS.map((horizon) => [horizon, preliminaryByHorizon[horizon]?.primary_action || null])),
     }));
   }
 
@@ -291,11 +323,111 @@ function buildInitialReasonCodes({ eligibility, setup, evidence, evidenceByHoriz
   return uniqueStrings(codes);
 }
 
-function buildRow({ row, targetMarketDate, policy, featureManifest, eligibility, decisionGrade, setup, evidence, evRisk, preliminary, tradeGuard, invalidation, reasonCodes, reasonMap, reliability, evidenceByHorizon }) {
+function buildSetupByHorizon({ setup, features, regime, eligibility }) {
+  return {
+    short_term: horizonSetup({ baseSetup: setup, features, regime, eligibility, horizon: 'short_term' }),
+    mid_term: setup,
+    long_term: horizonSetup({ baseSetup: setup, features, regime, eligibility, horizon: 'long_term' }),
+  };
+}
+
+function horizonSetup({ baseSetup, features = {}, eligibility, horizon }) {
+  if (eligibility?.eligibility_status !== 'ELIGIBLE') return baseSetup;
+  const close = finiteLocal(features.close);
+  const sma20 = finiteLocal(features.sma20);
+  const sma50 = finiteLocal(features.sma50);
+  const sma200 = finiteLocal(features.sma200);
+  const ret5 = finiteLocal(features.ret_5d_pct);
+  const ret120 = finiteLocal(features.ret_120d_pct) ?? finiteLocal(features.ret_60d_pct);
+  const bullishShort = close != null && sma20 != null && close > sma20 && (sma50 == null || sma20 >= sma50);
+  if (horizon === 'short_term' && bullishShort && ret5 != null && ret5 > 0.0125) {
+    return { ...baseSetup, primary_setup: 'trend_continuation', modifiers: baseSetup?.modifiers || [], bias: 'BULLISH' };
+  }
+  const bullishLong = close != null && ((sma200 != null && close > sma200) || (sma50 != null && close > sma50));
+  if (horizon === 'long_term' && bullishLong && ret120 != null && ret120 > 0.2) {
+    return { ...baseSetup, primary_setup: 'trend_continuation', modifiers: baseSetup?.modifiers || [], bias: 'BULLISH' };
+  }
+  return { primary_setup: 'none', modifiers: baseSetup?.modifiers || [], bias: baseSetup?.bias || 'NEUTRAL' };
+}
+
+function horizonCandidate({ baseCandidate, horizon, setup, features = {}, eligibility }) {
+  if (baseCandidate) return true;
+  if (eligibility?.eligibility_status !== 'ELIGIBLE') return false;
+  if (!setup?.primary_setup || setup.primary_setup === 'none') return false;
+  const liq = finiteLocal(features.liquidity_score);
+  const vol = finiteLocal(features.volatility_percentile);
+  if (liq == null || liq < 45) return false;
+  if (vol != null && vol >= 85) return false;
+  if (horizon === 'short_term') return (finiteLocal(features.ret_5d_pct) ?? -Infinity) > 0.0125;
+  if (horizon === 'long_term') return (finiteLocal(features.ret_120d_pct) ?? finiteLocal(features.ret_60d_pct) ?? -Infinity) > 0.2;
+  return false;
+}
+
+function finiteLocal(value) {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : null;
+}
+
+function buildReasonCodesByHorizon({ eligibility, setupByHorizon, evidenceByHorizon, evRiskByHorizon, candidateByHorizon, regime, policy, decisionGrade }) {
+  return Object.fromEntries(DECISION_HORIZONS.map((horizon) => [
+    horizon,
+    buildInitialReasonCodes({
+      eligibility,
+      setup: setupByHorizon[horizon],
+      evidence: evidenceByHorizon[horizon],
+      evidenceByHorizon,
+      evRisk: evRiskByHorizon[horizon],
+      candidate: candidateByHorizon[horizon],
+      regime,
+      policy,
+      decisionGrade,
+    }),
+  ]));
+}
+
+function buildPreliminaryByHorizon({ eligibility, decisionGrade, setupByHorizon, evidenceByHorizon, evRiskByHorizon, reliability, reasonCodesByHorizon, reasonMap, candidateByHorizon }) {
+  return Object.fromEntries(DECISION_HORIZONS.map((horizon) => [
+    horizon,
+    resolveOverallAction({
+      eligibility,
+      decisionGrade,
+      setup: setupByHorizon[horizon],
+      evidence: evidenceByHorizon[horizon],
+      evRisk: evRiskByHorizon[horizon],
+      reliability,
+      reasonCodes: reasonCodesByHorizon[horizon],
+      reasonMap,
+      candidate: candidateByHorizon[horizon],
+    }),
+  ]));
+}
+
+function selectPrimaryHorizon(preliminaryByHorizon = {}) {
+  for (const horizon of ['mid_term', 'short_term', 'long_term']) {
+    if (preliminaryByHorizon[horizon]?.primary_action === 'BUY') return horizon;
+  }
+  return 'mid_term';
+}
+
+function primaryPreliminary(preliminaryByHorizon = {}, primaryHorizon = 'mid_term') {
+  return preliminaryByHorizon[primaryHorizon] || preliminaryByHorizon.mid_term || { primary_action: 'UNAVAILABLE', wait_subtype: null };
+}
+
+function buildRow({ row, targetMarketDate, policy, featureManifest, eligibility, decisionGrade, setup, evidence, evRisk, preliminary, tradeGuard, invalidation, reasonCodes, reasonMap, reliability, evidenceByHorizon, setupByHorizon, evRiskByHorizon, reasonCodesByHorizon, preliminaryByHorizon, primaryHorizon = 'mid_term' }) {
   const assetId = normalizeId(row?.canonical_id);
   const cappedReasons = capReasonCodes(reasonCodes, reasonMap);
   const mainBlocker = selectMainBlocker(cappedReasons, reasonMap);
   const action = preliminary.primary_action;
+  const horizonState = (horizon) => resolveHorizonState({
+    horizon,
+    baseAction: preliminaryByHorizon?.[horizon]?.primary_action || action,
+    setup: setupByHorizon?.[horizon] || setup,
+    evidence: evidenceByHorizon[horizon],
+    evRisk: evRiskByHorizon?.[horizon] || evRisk,
+    reliability,
+    reasonCodes: capReasonCodes(reasonCodesByHorizon?.[horizon] || reasonCodes, reasonMap),
+    reasonMap,
+  });
   const rowDoc = {
     meta: {
       decision_id: `dc-${targetMarketDate}-${sha256Hex(`${assetId}|${targetMarketDate}|${policy.policy_bundle_version}`).slice(0, 16)}`,
@@ -317,6 +449,7 @@ function buildRow({ row, targetMarketDate, policy, featureManifest, eligibility,
     decision: {
       primary_action: action,
       wait_subtype: action === 'WAIT' ? preliminary.wait_subtype : null,
+      primary_horizon: primaryHorizon,
       bias: setup.bias,
       analysis_reliability: reliability,
       reliability_rule_version: policy.reliability_rule_version,
@@ -344,7 +477,7 @@ function buildRow({ row, targetMarketDate, policy, featureManifest, eligibility,
       ...invalidation,
     },
     evaluation: {
-      evaluation_horizon_days: HORIZON_DAYS.mid_term,
+      evaluation_horizon_days: HORIZON_DAYS[primaryHorizon] || HORIZON_DAYS.mid_term,
       evaluation_policy: action === 'BUY' ? 'fixed_eod_horizon_no_auto_exit' : 'not_evaluated',
     },
     rank_summary: {
@@ -352,9 +485,9 @@ function buildRow({ row, targetMarketDate, policy, featureManifest, eligibility,
       rank_scope: null,
     },
     horizons: {
-      short_term: resolveHorizonState({ horizon: 'short_term', baseAction: action === 'BUY' ? 'BUY' : action, setup, evidence: evidenceByHorizon.short_term, evRisk, reliability, reasonCodes: cappedReasons, reasonMap }),
-      mid_term: resolveHorizonState({ horizon: 'mid_term', baseAction: action, setup, evidence: evidenceByHorizon.mid_term, evRisk, reliability, reasonCodes: cappedReasons, reasonMap }),
-      long_term: resolveHorizonState({ horizon: 'long_term', baseAction: action === 'BUY' && evidenceByHorizon.long_term.evidence_method !== 'unavailable' ? 'BUY' : (action === 'INCUBATING' ? 'INCUBATING' : action === 'UNAVAILABLE' ? 'UNAVAILABLE' : 'WAIT'), setup, evidence: evidenceByHorizon.long_term, evRisk, reliability, reasonCodes: cappedReasons, reasonMap }),
+      short_term: horizonState('short_term'),
+      mid_term: horizonState('mid_term'),
+      long_term: horizonState('long_term'),
     },
     ui: {
       severity: severityFor(action),

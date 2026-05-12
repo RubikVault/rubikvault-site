@@ -61,7 +61,7 @@ export function tailRiskBucket({ evidence, features, policy } = {}) {
 
 export function evProxyBucket({ evidence, features, cost, horizon } = {}) {
   const effective = finiteNumber(evidence?.evidence_effective_n) || 0;
-  const ret = horizon === 'short_term' ? finiteNumber(features?.ret_5d_pct) : finiteNumber(features?.ret_20d_pct);
+  const ret = horizonReturn(features, horizon);
   const reason_codes = [];
   if (evidence?.evidence_method === 'unavailable' || effective <= 0 || ret == null) {
     reason_codes.push('EV_PROXY_UNAVAILABLE');
@@ -78,4 +78,10 @@ export function evProxyBucket({ evidence, features, cost, horizon } = {}) {
   }
   reason_codes.push('EV_PROXY_NOT_POSITIVE');
   return { ev_proxy_bucket: 'neutral', reason_codes };
+}
+
+function horizonReturn(features, horizon) {
+  if (horizon === 'short_term') return finiteNumber(features?.ret_5d_pct);
+  if (horizon === 'long_term') return finiteNumber(features?.ret_120d_pct) ?? finiteNumber(features?.ret_60d_pct);
+  return finiteNumber(features?.ret_20d_pct);
 }

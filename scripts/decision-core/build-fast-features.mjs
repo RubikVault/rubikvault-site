@@ -17,6 +17,8 @@ export function buildFastFeatures({ row, indicators = null, eligibility } = {}) 
   const liquidityScore = finiteNumber(stats.liquidity_score) ?? liquidityScoreFromDollarVolume(dollarVolume);
   const ret5 = finiteNumber(stats.ret_5d_pct) ?? pctReturn(recentCloses, 5);
   const ret20 = finiteNumber(stats.ret_20d_pct) ?? pctReturn(recentCloses, Math.min(20, Math.max(1, recentCloses.length - 1)));
+  const ret60 = finiteNumber(stats.ret_60d_pct) ?? pctReturn(recentCloses, Math.min(60, Math.max(1, recentCloses.length - 1)));
+  const ret120 = finiteNumber(stats.ret_120d_pct) ?? pctReturn(recentCloses, Math.min(120, Math.max(1, recentCloses.length - 1)));
   const syntheticVolPct = recentCloses.length >= 6 ? Math.min(100, Math.max(0, volatilityPct(recentCloses) * 5000)) : null;
   const volatilityPercentile = finiteNumber(stats.volatility_percentile) ?? syntheticVolPct;
   const atr14 = finiteNumber(stats.atr14) ?? (close != null && volatilityPercentile != null ? close * Math.max(0.005, volatilityPercentile / 10000) : null);
@@ -42,6 +44,8 @@ export function buildFastFeatures({ row, indicators = null, eligibility } = {}) 
     dollar_volume_20d: dollarVolume,
     ret_5d_pct: ret5,
     ret_20d_pct: ret20,
+    ret_60d_pct: ret60,
+    ret_120d_pct: ret120,
     close_to_sma20_pct: close != null && sma20 ? (close - sma20) / sma20 : null,
     close_to_sma200_pct: close != null && sma200 ? (close - sma200) / sma200 : null,
   };
