@@ -34,6 +34,28 @@ export function findBreakoutV12Item(top500, candidates) {
   }) || null;
 }
 
+function normalizeBreakoutStatus(item) {
+  const raw = item?.breakout_status
+    || item?.status
+    || item?.ui?.status
+    || item?.ui?.label
+    || item?.label
+    || null;
+  return raw ? String(raw).trim().toUpperCase() : null;
+}
+
+function normalizeBreakoutLegacyState(item) {
+  const raw = item?.legacy_state
+    || item?.ui?.legacy_state
+    || item?.state
+    || item?.ui?.label
+    || item?.label
+    || item?.breakout_status
+    || item?.status
+    || null;
+  return raw ? String(raw).trim().toUpperCase() : null;
+}
+
 export function shapeBreakoutV12Result({ manifest = null, top500 = null, item = null, candidates = new Set() } = {}) {
   const asOf = item?.as_of || manifest?.as_of || top500?.as_of || null;
   if (!item) {
@@ -50,6 +72,8 @@ export function shapeBreakoutV12Result({ manifest = null, top500 = null, item = 
     };
   }
   const finalScore = Number(item?.scores?.final_signal_score ?? item?.final_signal_score ?? NaN);
+  const breakoutStatus = normalizeBreakoutStatus(item);
+  const legacyState = normalizeBreakoutLegacyState(item);
   return {
     status: 'ok',
     source: 'breakout_v12_static',
@@ -58,8 +82,8 @@ export function shapeBreakoutV12Result({ manifest = null, top500 = null, item = 
     name: item.name || null,
     as_of: asOf,
     score_version: item.score_version || manifest?.score_version || top500?.score_version || null,
-    breakout_status: item.breakout_status || item.status || item?.ui?.status || null,
-    legacy_state: item.legacy_state || item?.ui?.legacy_state || null,
+    breakout_status: breakoutStatus,
+    legacy_state: legacyState,
     status_reasons: Array.isArray(item.status_reasons) ? item.status_reasons : [],
     status_explanation: item.status_explanation || null,
     support_zone: item.support_zone || null,

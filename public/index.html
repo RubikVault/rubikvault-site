@@ -2875,6 +2875,7 @@
       const value = String(source || '');
       return value.includes('stock_api_verified')
         || value.includes('quantlab_ranked')
+        || value.includes('decision_core_consumer')
         || value.includes('decision_bundle_consumer')
         || value.includes('verified_decision_bundle');
     }
@@ -4916,11 +4917,63 @@
     });
 
     let breakoutData = null;
+    function normalizeHomeBreakoutState(item) {
+      const raw = String(item?.legacy_state || item?.state || item?.ui?.legacy_state || item?.breakout_status || item?.status || item?.ui?.label || item?.label || 'NONE').toUpperCase();
+      if (raw.includes('CONFIRMED')) return 'CONFIRMED';
+      if (raw.includes('FAILED')) return 'FAILED';
+      if (raw.includes('TRIGGERED')) return 'TRIGGERED';
+      if (raw.includes('ARMED') || raw.includes('READY')) return 'ARMED';
+      if (raw.includes('SETUP') || raw.includes('BASE') || raw.includes('ACCUMULATION') || raw.includes('CANDIDATE')) return 'SETUP';
+      if (raw === 'NO_DATA' || raw === 'NONE' || raw === 'NO_SETUP') return raw;
+      return raw || 'NONE';
+    }
+
+    function normalizeHomeBreakoutItem(item) {
+      const assetId = item?.asset_id || item?.assetId || item?.canonical_id || null;
+      const symbol = item?.symbol || item?.ticker || (assetId && String(assetId).includes(':') ? String(assetId).split(':').pop() : assetId);
+      const status = item?.breakout_status || item?.status || item?.ui?.status || item?.ui?.label || item?.label || null;
+      const legacyState = item?.legacy_state || item?.state || item?.ui?.legacy_state || item?.ui?.label || item?.label || status || null;
+      return {
+        ...item,
+        asset_id: assetId,
+        ticker: String(symbol || '').toUpperCase(),
+        state: normalizeHomeBreakoutState({ ...item, legacy_state: legacyState, breakout_status: status }),
+        breakout_status: status ? String(status).toUpperCase() : null,
+        legacy_state: legacyState ? String(legacyState).toUpperCase() : null,
+        as_of: item?.as_of || item?.target_market_date || null,
+        score_version: item?.score_version || null
+      };
+    }
+
     async function loadBreakoutSnapshot() {
       if (breakoutData) return breakoutData;
       try {
+        const manifestResult = await fetchJson('/data/breakout/manifests/latest.json');
+        const manifest = manifestResult?.payload;
+        const top500Path = manifest?.files?.top500 ? `/data/breakout/${manifest.files.top500}` : null;
+        if (manifest?.validation?.publishable === true && top500Path) {
+          const topResult = await fetchJson(top500Path);
+          const items = Array.isArray(topResult?.payload?.items) ? topResult.payload.items.map(normalizeHomeBreakoutItem) : [];
+          if (items.length) {
+            breakoutData = {
+              source: 'breakout_manifest',
+              as_of: manifest.as_of || topResult?.payload?.as_of || null,
+              target_market_date: manifest.target_market_date || manifest.as_of || topResult?.payload?.target_market_date || null,
+              score_version: manifest.score_version || topResult?.payload?.score_version || null,
+              items
+            };
+            return breakoutData;
+          }
+        }
+      } catch(e) { console.error("Breakout manifest load failed:", e); }
+      try {
         const res = await fetch('/data/snapshots/breakout-all.json');
-        breakoutData = await res.json();
+        const legacy = await res.json();
+        breakoutData = {
+          ...(legacy || {}),
+          source: legacy?.source || 'legacy_breakout_snapshot',
+          items: Array.isArray(legacy?.items) ? legacy.items.map(normalizeHomeBreakoutItem) : []
+        };
       } catch(e) { console.error("Snapshot load failed:", e); }
       return breakoutData;
     }
@@ -4929,11 +4982,7 @@
       const data = await loadBreakoutSnapshot();
       if (!data || !data.items) return;
 
-      const items = data.items.map((item) => ({
-        ...item,
-        state: String(item.legacy_state || item.state || 'NONE').toUpperCase(),
-        breakout_status: item.breakout_status || item.status || null
-      }));
+      const items = data.items.map(normalizeHomeBreakoutItem);
       const counts = {
         ALL: items.filter(i => i.state !== 'NO_DATA' && i.state !== 'NONE').length,
         SETUP: items.filter(i => i.state === 'SETUP').length,
@@ -4949,6 +4998,13 @@
       document.getElementById('cnt-h-triggered').innerText = counts.TRIGGERED;
       document.getElementById('cnt-h-confirmed').innerText = counts.CONFIRMED;
       document.getElementById('cnt-h-failed').innerText = counts.FAILED;
+      window.__rvUiAudit = window.__rvUiAudit || {};
+      window.__rvUiAudit.breakout = {
+        source: data.source || null,
+        as_of: data.as_of || data.target_market_date || null,
+        score_version: data.score_version || null,
+        counts
+      };
 
       window.toggleBreakoutHomeView = function(state) {
         const container = document.getElementById('brk-home-table-container');
@@ -4977,7 +5033,7 @@
           const zone = i.support_zone?.detected ? `Zone ${Number(i.support_zone.center || 0).toFixed(2)} · tests ${i.support_zone.test_count ?? '—'}` : 'No zone';
           const inv = i.invalidation?.close_below != null ? `Invalidation < ${Number(i.invalidation.close_below).toFixed(2)}` : '';
           return `<tr style="border-bottom:1px solid rgba(255,255,255,0.02)">
-            <td style="padding:6px 8px;"><a href="/analyze/${encodeURIComponent(i.ticker.includes(':') ? i.ticker.split(':').reverse().join('.') : i.ticker)}" style="color:#60a5fa; text-decoration:none; font-weight:700;">${i.ticker}</a></td>
+            <td style="padding:6px 8px;"><a href="/analyze/${encodeURIComponent(i.ticker)}" style="color:#60a5fa; text-decoration:none; font-weight:700;">${i.ticker}</a></td>
             <td style="padding:6px 8px; font-size:0.7rem; color:#94a3b8;">${i.name || ''}</td>
             <td style="padding:6px 8px; font-weight:800; color:#8b5cf6">${score}</td>
             <td style="padding:6px 8px; font-size:0.75rem;">${i.breakout_status || i.state}</td>

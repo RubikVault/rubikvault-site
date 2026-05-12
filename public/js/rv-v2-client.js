@@ -85,8 +85,15 @@ function canonicalAssetQuery(ticker) {
     : '';
 }
 
+function routeTickerForAsset(ticker) {
+  const value = String(ticker || '').trim().toUpperCase();
+  if (/^[A-Z0-9_.-]+:[A-Z0-9_.-]+$/.test(value)) return value.split(':').pop();
+  return value;
+}
+
 export async function fetchV2Historical(ticker) {
-  const payload = await fetchJsonWithTimeout(`/api/v2/stocks/${encodeURIComponent(ticker)}/historical${canonicalAssetQuery(ticker)}`);
+  const routeTicker = routeTickerForAsset(ticker);
+  const payload = await fetchJsonWithTimeout(`/api/v2/stocks/${encodeURIComponent(routeTicker)}/historical${canonicalAssetQuery(ticker)}`);
   if (!payload.ok) throw new Error(payload.error?.message || 'V2 historical response not ok');
   return { ok: true, data: payload.data, meta: payload.meta, source: 'v2_historical' };
 }
@@ -107,7 +114,8 @@ export async function fetchV2Governance(ticker) {
 }
 
 export async function fetchV2HistoricalProfile(ticker) {
-  const payload = await fetchJsonWithTimeout(`/api/v2/stocks/${encodeURIComponent(ticker)}/historical-profile${canonicalAssetQuery(ticker)}`);
+  const routeTicker = routeTickerForAsset(ticker);
+  const payload = await fetchJsonWithTimeout(`/api/v2/stocks/${encodeURIComponent(routeTicker)}/historical-profile${canonicalAssetQuery(ticker)}`);
   if (!payload.ok) throw new Error(payload.error?.message || 'V2 historical-profile response not ok');
   return { ok: true, data: payload.data, meta: payload.meta, source: 'v2_historical_profile' };
 }

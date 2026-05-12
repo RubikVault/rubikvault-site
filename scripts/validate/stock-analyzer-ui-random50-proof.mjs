@@ -15,11 +15,13 @@ import {
 const ROOT = path.resolve(new URL('.', import.meta.url).pathname, '../..');
 const DEFAULT_REPORT_PATH = path.join(ROOT, 'public/data/reports/stock-analyzer-ui-random50-proof-latest.json');
 const REGIONAL30_REPORT_PATH = path.join(ROOT, 'public/data/reports/stock-analyzer-ui-regional30-proof-latest.json');
+const CLASS90_REPORT_PATH = path.join(ROOT, 'public/data/reports/stock-analyzer-ui-class90-proof-latest.json');
 const REGISTRY_PATH = path.join(ROOT, 'public/data/universe/v7/registry/registry.ndjson.gz');
 const CANONICAL_IDS_PATH = path.join(ROOT, 'public/data/universe/v7/ssot/assets.global.canonical.ids.json');
 const PAGE_CORE_LATEST_PATH = path.join(ROOT, 'public/data/page-core/latest.json');
 const SCOPE_ROWS_PATH = path.join(ROOT, 'mirrors/universe-v7/ssot/assets.global.rows.json');
 const GLOBAL50_REQUIRED = Object.freeze({ INDEX: 5, ETF: 25, STOCK: 20 });
+const CLASS90_REQUIRED = Object.freeze({ INDEX: 30, ETF: 30, STOCK: 30 });
 const REGIONAL30_REQUIRED = Object.freeze({
   US: Object.freeze({ INDEX: 2, ETF: 3, STOCK: 5 }),
   EU: Object.freeze({ INDEX: 2, ETF: 3, STOCK: 5 }),
@@ -73,7 +75,7 @@ const REPORT_PATH = path.resolve(
   ROOT,
   cliValue('output')
     || process.env.RV_STOCK_ANALYZER_UI_PROOF_OUTPUT
-    || (SAMPLE_MODE === 'regional30' ? REGIONAL30_REPORT_PATH : DEFAULT_REPORT_PATH),
+    || (SAMPLE_MODE === 'regional30' ? REGIONAL30_REPORT_PATH : SAMPLE_MODE === 'class90' ? CLASS90_REPORT_PATH : DEFAULT_REPORT_PATH),
 );
 
 function readJson(filePath) {
@@ -151,6 +153,7 @@ function indexHasDocumentedNonTradableState({ asset, strictReasons, coreAction, 
   const allowedReasons = new Set([
     'primary_blocker:decision_not_operational',
     'primary_blocker:decision_bundle_missing',
+    'primary_blocker:insufficient_history',
   ]);
   return ['WAIT', 'UNAVAILABLE', 'AVOID'].includes(String(coreAction || '').toUpperCase())
     && String(visibleAction || '').toUpperCase() === String(coreAction || '').toUpperCase()
@@ -217,6 +220,18 @@ function buildGlobal50Sample({ seed, rows }) {
   return { required: GLOBAL50_REQUIRED, availability, selected };
 }
 
+function buildClass90Sample({ seed, rows }) {
+  const selected = [];
+  const availability = {};
+  for (const [assetClass, count] of Object.entries(CLASS90_REQUIRED)) {
+    const pool = rows.filter((row) => row.asset_class === assetClass);
+    availability[assetClass] = pool.length;
+    if (pool.length < count) throw new Error(`CLASS90_POOL_TOO_SMALL:${assetClass}:${pool.length}:${count}`);
+    selected.push(...deterministicPick(pool, count, `${seed}:class90:${assetClass}`));
+  }
+  return { required: CLASS90_REQUIRED, availability, selected };
+}
+
 function buildSample({ seed, mode }) {
   const canonicalIds = readCanonicalIds();
   const registryMeta = readRegistryMeta();
@@ -229,8 +244,65 @@ function buildSample({ seed, mode }) {
 
   const sample = mode === 'regional30'
     ? buildRegional30Sample({ seed, rows })
-    : buildGlobal50Sample({ seed, rows });
+    : mode === 'class90'
+      ? buildClass90Sample({ seed, rows })
+      : buildGlobal50Sample({ seed, rows });
   return { latest, pageCoreIds: pageCoreIds?.size || null, ...sample };
+}
+
+async function fetchMaybeGzipJson(url) {
+  const res = await fetch(url, { cache: 'no-store' });
+  if (!res.ok) throw new Error(`HTTP_${res.status}:${url}`);
+  const buffer = Buffer.from(await res.arrayBuffer());
+  try {
+    return JSON.parse(zlib.gunzipSync(buffer).toString('utf8'));
+  } catch {
+    return JSON.parse(buffer.toString('utf8'));
+  }
+}
+
+function normalizePageCoreProofRow(row) {
+  const canonicalId = String(row?.canonical_asset_id || '').toUpperCase();
+  if (!canonicalId) return null;
+  const proofRow = {
+    canonical_id: canonicalId,
+    symbol: row?.display_ticker || canonicalId.split(':').pop(),
+    name: row?.identity?.name || null,
+    country: row?.identity?.country || null,
+    exchange: row?.identity?.exchange || canonicalId.split(':')[0],
+    asset_class: normalizeAssetClass({
+      canonical_id: canonicalId,
+      asset_class: row?.identity?.asset_class,
+      type_norm: row?.identity?.asset_class,
+    }),
+  };
+  proofRow.region = classifyRegion(proofRow);
+  return proofRow;
+}
+
+async function buildRemotePageCoreSample({ baseUrl, seed, mode }) {
+  const latest = await fetchJson(`${baseUrl}/data/page-core/latest.json`);
+  const manifestPath = latest?.manifest_path || `${latest?.snapshot_path || ''}/manifest.json`;
+  if (!manifestPath) throw new Error('REMOTE_PAGE_CORE_MANIFEST_MISSING');
+  const manifest = await fetchJson(`${baseUrl}${manifestPath}`);
+  const shardCount = Number(manifest?.page_shard_count || latest?.page_shard_count || 0);
+  const shardRoot = manifest?.paths?.page_shards_path || `${latest?.snapshot_path || ''}/page-shards`;
+  if (!shardCount || !shardRoot) throw new Error('REMOTE_PAGE_CORE_SHARDS_MISSING');
+  const rows = [];
+  for (let shard = 0; shard < shardCount; shard += 1) {
+    const name = `${String(shard).padStart(3, '0')}.json.gz`;
+    const doc = await fetchMaybeGzipJson(`${baseUrl}${shardRoot}/${name}`);
+    for (const row of Object.values(doc || {})) {
+      const normalized = normalizePageCoreProofRow(row);
+      if (normalized) rows.push(normalized);
+    }
+  }
+  const sample = mode === 'regional30'
+    ? buildRegional30Sample({ seed, rows })
+    : mode === 'class90'
+      ? buildClass90Sample({ seed, rows })
+      : buildGlobal50Sample({ seed, rows });
+  return { latest, pageCoreIds: rows.length, ...sample };
 }
 
 async function freePort() {
@@ -331,6 +403,10 @@ async function validateAsset({ browser, baseUrl, asset, targetMarketDate, latest
       priceText: document.getElementById('sc-price')?.textContent || '',
       asOfText: document.getElementById('rv-data-asof')?.textContent || '',
       updatedText: document.getElementById('rv-data-updated-date')?.textContent || '',
+      chartText: document.getElementById('tf-chart')?.textContent || '',
+      chartSvg: Boolean(document.querySelector('#tf-chart svg polyline[points]')),
+      breakoutState: document.getElementById('brk-state')?.textContent || '',
+      breakoutSubtext: document.getElementById('brk-subtext')?.textContent || '',
       overflow: document.documentElement.scrollWidth > document.documentElement.clientWidth + 2,
     }));
     const data = pageCore?.data || {};
@@ -352,6 +428,8 @@ async function validateAsset({ browser, baseUrl, asset, targetMarketDate, latest
     result.visible_price_asof = visible.asOfText || null;
     result.expected_close = Number.isFinite(close) ? close : null;
     result.visible_price = visible.priceText || null;
+    result.visible_breakout_state = visible.breakoutState || null;
+    result.visible_breakout_subtext = visible.breakoutSubtext || null;
     result.strict_operational_reasons = strictReasons;
     result.console_errors = consoleErrors.slice(0, 10);
     result.assertions.api_page_core_ok = pageCore?.ok === true && data?.schema_version === 'rv.page_core.v1';
@@ -368,6 +446,9 @@ async function validateAsset({ browser, baseUrl, asset, targetMarketDate, latest
     result.assertions.reliability_visible = /Reliability|Analysis reliability/i.test(bodyText);
     result.assertions.horizons_visible = /Short/i.test(bodyText) && /Mid|Medium/i.test(bodyText) && /Long/i.test(bodyText);
     result.assertions.system_status_visible = /System Status|All Systems Operational|Analysis degraded|Analysis incomplete/i.test(bodyText);
+    result.assertions.chart_svg_rendered = visible.chartSvg && !/Chart unavailable/i.test(visible.chartText);
+    result.assertions.breakout_indicator_filled = Boolean(String(visible.breakoutState || '').trim())
+      && !/skeleton-line|Loading|\.\.\./i.test(`${visible.breakoutState} ${visible.breakoutSubtext}`);
     result.assertions.key_text_not_placeholder = !/Loading|\.\.\./.test(`${visible.priceText} ${visible.asOfText} ${visible.updatedText}`);
     result.assertions.buy_guard_complete_when_buy = coreAction !== 'BUY'
       || (/Max entry/i.test(bodyText)
@@ -389,8 +470,6 @@ async function validateAsset({ browser, baseUrl, asset, targetMarketDate, latest
 
 async function main() {
   const seed = cliValue('seed') || process.env.RV_RANDOM50_SEED || new Date().toISOString().slice(0, 10);
-  const { latest, pageCoreIds, availability, required, selected } = buildSample({ seed, mode: SAMPLE_MODE });
-  const targetMarketDate = normalizeDate(cliValue('date') || cliValue('target-market-date') || process.env.RV_TARGET_MARKET_DATE || latest?.target_market_date);
   const baseArg = cliValue('base-url') || process.env.RV_UI_PROOF_BASE_URL || '';
   let baseUrl = String(baseArg || '').replace(/\/+$/, '');
   let server = null;
@@ -404,6 +483,11 @@ async function main() {
     });
     await waitFor(baseUrl);
   }
+  const sampleBundle = baseArg
+    ? await buildRemotePageCoreSample({ baseUrl, seed, mode: SAMPLE_MODE })
+    : buildSample({ seed, mode: SAMPLE_MODE });
+  const { latest, pageCoreIds, availability, required, selected } = sampleBundle;
+  const targetMarketDate = normalizeDate(cliValue('date') || cliValue('target-market-date') || process.env.RV_TARGET_MARKET_DATE || latest?.target_market_date);
   const remoteLatest = await fetchJson(`${baseUrl}/data/page-core/latest.json`).catch(() => latest);
   let browser;
   try {
@@ -430,7 +514,11 @@ async function main() {
     }, {});
     const failedResults = results.filter((row) => !row.ok);
     const report = {
-      schema: SAMPLE_MODE === 'regional30' ? 'rv.stock_analyzer_ui_regional30_proof.v1' : 'rv.stock_analyzer_ui_random50_proof.v1',
+      schema: SAMPLE_MODE === 'regional30'
+        ? 'rv.stock_analyzer_ui_regional30_proof.v1'
+        : SAMPLE_MODE === 'class90'
+          ? 'rv.stock_analyzer_ui_class90_proof.v1'
+          : 'rv.stock_analyzer_ui_random50_proof.v1',
       generated_at: new Date().toISOString(),
       status: failedResults.length === 0 ? 'OK' : 'FAILED',
       sample_mode: SAMPLE_MODE,

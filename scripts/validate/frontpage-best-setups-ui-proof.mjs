@@ -210,6 +210,60 @@ async function validateAnalyzerPage(browser, baseUrl, row) {
   return result;
 }
 
+async function validateHomeCounters(browser, baseUrl, expectedCounts, expectedTargetDate = null) {
+  const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+  const result = {
+    ok: false,
+    assertions: {},
+    errors: [],
+  };
+  try {
+    await page.goto(`${baseUrl}/?rv_frontpage_proof=${Date.now()}`, { waitUntil: 'domcontentloaded', timeout: 45000 });
+    await page.waitForFunction(
+      () => Boolean(window.__rvUiAudit?.analyze?.counters)
+        || /Short-Term Buy Signals|Best Setups Today/i.test(document.body?.innerText || ''),
+      { timeout: 25000 },
+    ).catch(() => {});
+    await page.waitForFunction(
+      () => Boolean(window.__rvUiAudit?.breakout?.counts)
+        || /Breakout indicator rows/i.test(document.body?.innerText || ''),
+      { timeout: 25000 },
+    ).catch(() => {});
+    await page.waitForTimeout(1000);
+    const visible = await page.evaluate(() => ({
+      short: Number(document.getElementById('signal-short')?.textContent || NaN),
+      medium: Number(document.getElementById('signal-medium')?.textContent || NaN),
+      long: Number(document.getElementById('signal-long')?.textContent || NaN),
+      note: document.getElementById('buy-signals-note')?.textContent || '',
+      bestMeta: document.getElementById('best-setups-meta')?.textContent || '',
+      audit: window.__rvUiAudit?.analyze || null,
+      breakout: window.__rvUiAudit?.breakout || null,
+    }));
+    result.visible_counts = {
+      short: visible.short,
+      medium: visible.medium,
+      long: visible.long,
+    };
+    result.note = visible.note;
+    result.best_setups_meta = visible.bestMeta;
+    result.audit = visible.audit;
+    result.breakout = visible.breakout;
+    result.assertions.visible_short_matches_snapshot = visible.short === expectedCounts.short;
+    result.assertions.visible_medium_matches_snapshot = visible.medium === expectedCounts.medium;
+    result.assertions.visible_long_matches_snapshot = visible.long === expectedCounts.long;
+    result.assertions.visible_source_is_verified = !/verified_decision_bundle_unavailable/i.test(`${visible.note} ${visible.bestMeta}`);
+    result.assertions.breakout_manifest_loaded = visible.breakout?.source === 'breakout_manifest';
+    result.assertions.breakout_current_target_date = expectedTargetDate ? String(visible.breakout?.as_of || '').slice(0, 10) === expectedTargetDate : Boolean(visible.breakout?.as_of);
+    result.assertions.breakout_has_rows = Number(visible.breakout?.counts?.ALL || 0) > 0;
+    result.ok = Object.values(result.assertions).every(Boolean);
+  } catch (error) {
+    result.errors.push(error.message);
+  } finally {
+    await page.close();
+  }
+  return result;
+}
+
 async function mapLimit(items, limit, fn) {
   const out = new Array(items.length);
   let cursor = 0;
@@ -256,6 +310,7 @@ async function main() {
       }
     }
     browser = await chromium.launch({ headless: true });
+    const homeCounterResult = await validateHomeCounters(browser, baseUrl, stockBuyByHorizon, snapshot?.meta?.data_asof || null);
     const proofRows = uniqueRows(rows);
     const results = await mapLimit(proofRows, 3, (row) => validateAnalyzerPage(browser, baseUrl, row));
     const report = {
@@ -264,7 +319,7 @@ async function main() {
       base_url: baseUrl,
       source: snapshot?.meta?.source || null,
       target_market_date: snapshot?.meta?.data_asof || null,
-      status: missingCoverage.length === 0 && insufficientStockBuyHorizons.length === 0 && results.every((row) => row.ok) ? 'OK' : 'FAILED',
+      status: missingCoverage.length === 0 && insufficientStockBuyHorizons.length === 0 && homeCounterResult.ok && results.every((row) => row.ok) ? 'OK' : 'FAILED',
       counts: {
         frontpage_rows: rows.length,
         unique_analyzer_pages: proofRows.length,
@@ -273,6 +328,7 @@ async function main() {
       },
       stock_buy_min_per_horizon: REQUIRED_STOCK_BUY_PER_HORIZON,
       stock_buy_by_horizon: stockBuyByHorizon,
+      home_counter_result: homeCounterResult,
       insufficient_stock_buy_horizons: insufficientStockBuyHorizons,
       region_class_coverage: coverage,
       missing_region_class_coverage: missingCoverage,

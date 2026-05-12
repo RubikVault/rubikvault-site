@@ -3,6 +3,7 @@ import { getStaticBars } from '../../../_shared/history-store.mjs';
 import { normalizeTicker } from '../../../_shared/stock-helpers.js';
 import { logV2Request, logV2Gate } from '../../../_shared/v2-observability.js';
 import { errorEnvelope } from '../../../_shared/envelope.js';
+import { latestUsMarketSessionIso, parseIsoDay } from '../../../_shared/market-calendar.js';
 
 function pickLatestBar(bars) {
   return Array.isArray(bars) && bars.length ? bars[bars.length - 1] : null;
@@ -26,6 +27,18 @@ function runtimeHistoricalKey({ ticker, request }) {
   return `US__${String(ticker || '').trim().toUpperCase()}`.replace(/[^A-Z0-9_.-]/g, '');
 }
 
+function targetMarketDateForRuntimeCache(env) {
+  const forced = parseIsoDay(env?.TARGET_MARKET_DATE || env?.RV_TARGET_MARKET_DATE || env?.TARGET_DATE);
+  return forced || latestUsMarketSessionIso(new Date());
+}
+
+function runtimeHistoricalDataDate(payload) {
+  const metaDate = parseIsoDay(payload?.meta?.data_date || payload?.meta?.as_of || payload?.target_market_date);
+  if (metaDate) return metaDate;
+  const bars = Array.isArray(payload?.data?.bars) ? payload.data.bars : [];
+  return parseIsoDay(bars.length ? bars[bars.length - 1]?.date : null);
+}
+
 async function fastRuntimeHistoricalCacheResponse({ ticker, request, env }) {
   const key = runtimeHistoricalKey({ ticker, request });
   if (!key) return null;
@@ -36,8 +49,12 @@ async function fastRuntimeHistoricalCacheResponse({ ticker, request, env }) {
     const response = assetFetcher
       ? await assetFetcher.fetch(url.toString())
       : await fetch(url.toString());
-    if (!response?.ok || !response.body) return null;
-    return new Response(response.body, {
+    if (!response?.ok) return null;
+    const payload = await response.json().catch(() => null);
+    const dataDate = runtimeHistoricalDataDate(payload);
+    const targetDate = targetMarketDateForRuntimeCache(env);
+    if (!payload || (targetDate && (!dataDate || dataDate < targetDate))) return null;
+    return new Response(JSON.stringify(payload), {
       status: 200,
       headers: {
         'Content-Type': 'application/json; charset=utf-8',

@@ -735,14 +735,25 @@
       const _assetVerdict = String(_dailyDecision?.verdict || '').toUpperCase();
       const _assetRiskLevel = String(_dailyDecision?.risk_assessment?.level || '').toUpperCase();
       const _assetBlockingReasons = Array.isArray(_dailyDecision?.blocking_reasons) ? _dailyDecision.blocking_reasons : [];
-      const _assetDecisionOperational = Boolean(
+      const _statusContract = data?.ssot?.page_core?.status_contract || data?.status_contract || payload?.status_contract || payload?.page_core_contract?.status_contract || {};
+      const _stockDetailStatus = String(_statusContract?.stock_detail_view_status || '').toLowerCase();
+      const _contractDecisionStatus = String(_statusContract?.decision_status || '').toLowerCase();
+      const _strictBlockingReasons = Array.isArray(_statusContract?.strict_blocking_reasons) ? _statusContract.strict_blocking_reasons : [];
+      const _contractOperational = Boolean(
+        _stockDetailStatus === 'operational'
+        || (_contractDecisionStatus === 'operational' && _statusContract?.strict_operational === true && _strictBlockingReasons.length === 0)
+      );
+      const _legacyDecisionOperational = Boolean(
         _dailyDecision?.schema === 'rv.asset_daily_decision.v1'
         && _assetPipelineStatus === 'OK'
         && _bundleOperational
-        && (_assetVerdict === 'BUY' || _assetVerdict === 'WAIT')
+        && ['BUY', 'WAIT', 'AVOID', 'SELL', 'INCUBATING'].includes(_assetVerdict)
         && _assetBlockingReasons.length === 0
         && _assetRiskLevel !== 'UNKNOWN'
       );
+      const _assetDecisionOperational = _stockDetailStatus || _contractDecisionStatus
+        ? _contractOperational
+        : _legacyDecisionOperational;
       if (!_rvFinalSeal) {
         _integrityItems.push({ text: 'Pipeline truth unavailable', color: 'var(--red)' });
       } else if (!_finalSealOperational) {

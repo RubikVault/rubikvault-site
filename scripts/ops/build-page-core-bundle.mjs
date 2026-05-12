@@ -491,6 +491,28 @@ function breakoutItemFor({ canonicalId, display, breakoutKeys }) {
   return breakoutKeys?.get(normalizePageCoreAlias(canonicalId)) || breakoutKeys?.get(normalizePageCoreAlias(display)) || null;
 }
 
+function normalizeBreakoutItemStatus(item) {
+  const raw = item?.breakout_status
+    || item?.status
+    || item?.ui?.status
+    || item?.ui?.label
+    || item?.label
+    || null;
+  return raw ? String(raw).trim().toUpperCase() : null;
+}
+
+function normalizeBreakoutItemLegacyState(item) {
+  const raw = item?.legacy_state
+    || item?.ui?.legacy_state
+    || item?.state
+    || item?.ui?.label
+    || item?.label
+    || item?.breakout_status
+    || item?.status
+    || null;
+  return raw ? String(raw).trim().toUpperCase() : null;
+}
+
 function riskFallbackFor({ assetClass, marketStatsMin }) {
   const stats = marketStatsMin?.stats || {};
   const volPct = Number(stats.volatility_percentile);
@@ -1012,12 +1034,16 @@ function buildPageCoreRow({ canonicalId, registryRow, decisionRow, lookupValue, 
     },
     historical_profile_summary: null,
     breakout_summary: breakoutItem ? {
-      breakout_status: breakoutItem.breakout_status || breakoutItem.status || null,
-      legacy_state: breakoutItem.legacy_state || breakoutItem?.ui?.legacy_state || null,
+      breakout_status: normalizeBreakoutItemStatus(breakoutItem),
+      legacy_state: normalizeBreakoutItemLegacyState(breakoutItem),
       support_zone: breakoutItem.support_zone || null,
       invalidation: breakoutItem.invalidation || null,
       status_explanation: breakoutItem.status_explanation || null,
       scores: breakoutItem.scores || null,
+      final_signal_score: numberOrNull(breakoutItem?.scores?.final_signal_score ?? breakoutItem?.final_signal_score),
+      rank: numberOrNull(breakoutItem?.ui?.rank ?? breakoutItem?.rank),
+      rank_percentile: numberOrNull(breakoutItem?.ui?.rank_percentile ?? breakoutItem?.rank_percentile),
+      label: breakoutItem?.ui?.label || breakoutItem?.label || null,
     } : null,
     module_links: {
       historical: `/api/v2/stocks/${encodeURIComponent(display)}/historical?asset_id=${encodeURIComponent(canonicalId)}`,
