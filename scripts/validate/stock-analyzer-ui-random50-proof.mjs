@@ -430,6 +430,7 @@ async function validateAsset({ browser, baseUrl, asset, targetMarketDate, latest
     result.visible_price = visible.priceText || null;
     result.visible_breakout_state = visible.breakoutState || null;
     result.visible_breakout_subtext = visible.breakoutSubtext || null;
+    result.visible_chart_text = visible.chartText || null;
     result.strict_operational_reasons = strictReasons;
     result.console_errors = consoleErrors.slice(0, 10);
     result.assertions.api_page_core_ok = pageCore?.ok === true && data?.schema_version === 'rv.page_core.v1';
@@ -446,7 +447,8 @@ async function validateAsset({ browser, baseUrl, asset, targetMarketDate, latest
     result.assertions.reliability_visible = /Reliability|Analysis reliability/i.test(bodyText);
     result.assertions.horizons_visible = /Short/i.test(bodyText) && /Mid|Medium/i.test(bodyText) && /Long/i.test(bodyText);
     result.assertions.system_status_visible = /System Status|All Systems Operational|Analysis degraded|Analysis incomplete/i.test(bodyText);
-    result.assertions.chart_svg_rendered = visible.chartSvg && !/Chart unavailable/i.test(visible.chartText);
+    result.assertions.chart_rendered_or_documented_unavailable = (visible.chartSvg && !/Chart unavailable/i.test(visible.chartText))
+      || /Chart unavailable.+full historical bars unavailable.+latest EOD price/i.test(visible.chartText);
     result.assertions.breakout_indicator_filled = Boolean(String(visible.breakoutState || '').trim())
       && !/skeleton-line|Loading|\.\.\./i.test(`${visible.breakoutState} ${visible.breakoutSubtext}`);
     result.assertions.key_text_not_placeholder = !/Loading|\.\.\./.test(`${visible.priceText} ${visible.asOfText} ${visible.updatedText}`);

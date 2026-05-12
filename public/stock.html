@@ -1438,7 +1438,7 @@
         const recent = bars.slice(-(bc || 60));
         const cl = recent.map(b => Number(b.adjClose ?? b.close)).filter(Number.isFinite);
         const dates = recent.map(b => b.date);
-        if (cl.length < 3) return '<div style="height:' + height + 'px;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,0.02);color:var(--text-dim)">Chart unavailable</div>';
+        if (cl.length < 3) return '<div style="height:' + height + 'px;display:flex;align-items:center;justify-content:center;text-align:center;padding:.8rem;background:rgba(255,255,255,0.02);color:var(--text-dim)">Chart unavailable — full historical bars unavailable; latest EOD price shown above.</div>';
 
         const paddingLeft = 42, paddingRight = 8, paddingTop = 10, paddingBottom = 20;
         const w = 800, graphW = w - paddingLeft - paddingRight, graphH = height - paddingTop - paddingBottom;

@@ -141,6 +141,9 @@ const RUNTIME_HISTORICAL_CANONICAL_IDS = String(process.env.RV_RUNTIME_HISTORICA
   .split(',')
   .map((item) => item.trim().toUpperCase())
   .filter(Boolean);
+const RUNTIME_HISTORICAL_SCOPE_CACHE = String(process.env.RV_RUNTIME_HISTORICAL_SCOPE_CACHE ?? '1') !== '0';
+const CANONICAL_IDS_PATH = path.join(PUBLIC_DIR, 'data/universe/v7/ssot/assets.global.canonical.ids.json');
+const historyShardCache = new Map();
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -518,30 +521,57 @@ function writeRuntimeHistoricalPayload(outputDir, key, rows, source) {
   return Buffer.byteLength(body);
 }
 
-function readHistoryShardRows(symbol) {
-  const cleanSymbol = String(symbol || '').trim().toUpperCase().replace(/[^A-Z0-9.\-]/g, '');
-  if (!cleanSymbol) return [];
-  const shardKey = cleanSymbol[0] || '_';
+function readRuntimeHistoricalCanonicalIds() {
+  const ids = new Set(RUNTIME_HISTORICAL_CANONICAL_IDS);
+  if (!RUNTIME_HISTORICAL_SCOPE_CACHE) return [...ids];
+  try {
+    const doc = JSON.parse(fs.readFileSync(CANONICAL_IDS_PATH, 'utf8'));
+    const canonicalIds = Array.isArray(doc?.canonical_ids) ? doc.canonical_ids : [];
+    for (const id of canonicalIds) {
+      const canonicalId = String(id || '').trim().toUpperCase();
+      if (/^[A-Z0-9_.-]+:[A-Z0-9_.-]+$/.test(canonicalId)) ids.add(canonicalId);
+    }
+  } catch {
+    // Keep explicit canaries when scope doc is unavailable.
+  }
+  return [...ids].sort();
+}
+
+function readHistoryShardDoc(shardKey) {
+  const cleanShard = String(shardKey || '').trim().toUpperCase();
+  if (!cleanShard) return null;
+  if (historyShardCache.has(cleanShard)) return historyShardCache.get(cleanShard);
   const shardDir = path.join(PUBLIC_DIR, 'data/eod/history/shards');
-  for (const name of [`${shardKey}.json.gz`, `${shardKey}.json`]) {
+  for (const name of [`${cleanShard}.json.gz`, `${cleanShard}.json`]) {
     const filePath = path.join(shardDir, name);
     if (!fs.existsSync(filePath)) continue;
     try {
       const text = name.endsWith('.gz')
         ? gunzipSync(fs.readFileSync(filePath)).toString('utf8')
         : fs.readFileSync(filePath, 'utf8');
-      const shard = JSON.parse(text);
-      const rawRows = shard?.[cleanSymbol];
-      if (!Array.isArray(rawRows)) return [];
-      return rawRows
-        .map((row) => normalizeHistoricalRow(row))
-        .filter(Boolean)
-        .sort((a, b) => a.date.localeCompare(b.date));
+      const doc = JSON.parse(text);
+      historyShardCache.set(cleanShard, doc);
+      return doc;
     } catch {
-      return [];
+      historyShardCache.set(cleanShard, null);
+      return null;
     }
   }
-  return [];
+  historyShardCache.set(cleanShard, null);
+  return null;
+}
+
+function readHistoryShardRows(symbol) {
+  const cleanSymbol = String(symbol || '').trim().toUpperCase().replace(/[^A-Z0-9.\-]/g, '');
+  if (!cleanSymbol) return [];
+  const shardKey = cleanSymbol[0] || '_';
+  const shard = readHistoryShardDoc(shardKey);
+  const rawRows = shard?.[cleanSymbol];
+  if (!Array.isArray(rawRows)) return [];
+  return rawRows
+    .map((row) => normalizeHistoricalRow(row))
+    .filter(Boolean)
+    .sort((a, b) => a.date.localeCompare(b.date));
 }
 
 function materializeRuntimeHistoricalCache() {
@@ -571,7 +601,7 @@ function materializeRuntimeHistoricalCache() {
       skipped += 1;
     }
   }
-  for (const canonicalId of RUNTIME_HISTORICAL_CANONICAL_IDS) {
+  for (const canonicalId of readRuntimeHistoricalCanonicalIds()) {
     const [exchange, symbol] = canonicalId.split(':');
     const key = `${exchange}__${symbol}`.replace(/[^A-Z0-9_.-]/g, '');
     if (!key || fs.existsSync(path.join(outputDir, `${key}.json`))) continue;

@@ -91,6 +91,10 @@ function routeTickerForAsset(ticker) {
   return value;
 }
 
+function hasRenderableBars(data, minBars = 3) {
+  return Array.isArray(data?.bars) && data.bars.length >= minBars;
+}
+
 export async function fetchV2Historical(ticker) {
   const routeTicker = routeTickerForAsset(ticker);
   const payload = await fetchJsonWithTimeout(`/api/v2/stocks/${encodeURIComponent(routeTicker)}/historical${canonicalAssetQuery(ticker)}`);
@@ -514,7 +518,12 @@ export async function fetchV2StockPage(ticker) {
       const stockApiPayload = stockApiResult?.data || null;
       const stockApiData = stockApiPayload?.data || null;
       const stockApiHistorical = stockApiToHistorical(stockApiPayload, summary.ticker);
-      const historicalBase = stockApiHistorical || historicalResult?.data || pageCoreToHistorical(pageCore.data);
+      const pageCoreHistorical = pageCoreToHistorical(pageCore.data);
+      const historicalBase = hasRenderableBars(stockApiHistorical)
+        ? stockApiHistorical
+        : hasRenderableBars(historicalResult?.data)
+          ? historicalResult.data
+          : stockApiHistorical || historicalResult?.data || pageCoreHistorical;
       const historical = {
         ...historicalBase,
         breakout_v12: historicalBase?.breakout_v12 || stockApiData?.breakout_v12 || null,

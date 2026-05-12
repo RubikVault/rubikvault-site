@@ -58,6 +58,8 @@ test('historical endpoint rejects stale runtime historical cache before fallback
 test('v2 client uses symbol route plus asset_id query for canonical historical calls', () => {
   const source = readText('public/js/rv-v2-client.js');
   assert.match(source, /function routeTickerForAsset/);
+  assert.match(source, /function hasRenderableBars/);
   assert.match(source, /fetchV2Historical\(ticker\)[\s\S]+routeTickerForAsset\(ticker\)[\s\S]+canonicalAssetQuery\(ticker\)/);
   assert.match(source, /fetchV2HistoricalProfile\(ticker\)[\s\S]+routeTickerForAsset\(ticker\)[\s\S]+canonicalAssetQuery\(ticker\)/);
+  assert.match(source, /hasRenderableBars\(stockApiHistorical\)[\s\S]+hasRenderableBars\(historicalResult\?\.data\)/);
 });
