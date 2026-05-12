@@ -355,6 +355,9 @@ function pageCoreToSummary(pageCore) {
       abs: pageCore?.summary_min?.daily_change_abs ?? null,
       daily_change_abs: pageCore?.summary_min?.daily_change_abs ?? null,
     },
+    breakout_v12: pageCoreToBreakoutV12(pageCore),
+    breakout_v2: null,
+    breakout_v2_legacy: null,
     decision: {
       verdict: pageCore?.summary_min?.decision_verdict || pageCore?.decision_core_min?.decision?.primary_action || null,
       confidence_bucket: pageCore?.summary_min?.decision_confidence_bucket || null,
@@ -427,6 +430,25 @@ function pageCoreToHistorical(pageCore) {
   };
 }
 
+function pageCoreToBreakoutV12(pageCore) {
+  const summary = pageCore?.breakout_summary && typeof pageCore.breakout_summary === 'object'
+    ? pageCore.breakout_summary
+    : null;
+  if (!summary) return null;
+  const rawState = String(summary.breakout_status || summary.status || summary.label || '').trim();
+  const legacyState = String(summary.legacy_state || rawState || '').trim().toUpperCase();
+  const status = rawState || (legacyState === 'SETUP' ? 'RIGHT_SIDE_BASE' : 'not_generated');
+  return {
+    ...summary,
+    source: 'page_core_breakout_summary',
+    breakout_status: status,
+    status,
+    label: legacyState || status,
+    legacy_state: legacyState || status,
+    reason: summary.status_explanation || summary.reason || null,
+  };
+}
+
 function stockApiToHistorical(stockApiPayload, fallbackTicker = null) {
   const stockData = stockApiPayload?.data || {};
   const bars = Array.isArray(stockData.bars) ? stockData.bars : [];
@@ -453,6 +475,16 @@ function pageCoreToHistoricalProfile(pageCore) {
     regime: null,
     availability: { status: 'not_generated', reason: 'Historical profile has not been generated for this asset yet.' },
   };
+}
+
+function optionalHydrationEnabled() {
+  if (typeof window === 'undefined') return false;
+  try {
+    const params = new URLSearchParams(window.location.search || '');
+    return params.get('rv_optional') === '1' || window.__RV_ENABLE_OPTIONAL_HYDRATION === true;
+  } catch {
+    return false;
+  }
 }
 
 function missingModulesLabel(missingModules = []) {
@@ -509,16 +541,24 @@ export async function fetchV2StockPage(ticker) {
     if (pageCore?.ok && pageCore.data) {
       const summary = pageCoreToSummary(pageCore.data);
       const governance = pageCoreToGovernance(pageCore.data);
+      const shouldHydrateOptional = optionalHydrationEnabled();
       const [stockApiResult, historicalResult, historicalProfileResult, fundamentalsResult] = await Promise.all([
-        settleOptionalModuleWithBudget(fetchStockApiPayload(ticker), 'stock_api', 12000),
+        shouldHydrateOptional
+          ? settleOptionalModuleWithBudget(fetchStockApiPayload(ticker), 'stock_api', 12000)
+          : Promise.resolve({ ok: false, data: null, meta: {}, source: 'stock_api', error: 'optional_hydration_disabled' }),
         settleOptionalModuleWithBudget(fetchV2Historical(ticker), 'v2_historical'),
-        settleOptionalModuleWithBudget(fetchV2HistoricalProfile(ticker), 'v2_historical_profile'),
-        settleOptionalModuleWithBudget(fetchFundamentals(ticker), 'fundamentals'),
+        shouldHydrateOptional
+          ? settleOptionalModuleWithBudget(fetchV2HistoricalProfile(ticker), 'v2_historical_profile')
+          : Promise.resolve({ ok: false, data: null, meta: {}, source: 'v2_historical_profile', error: 'optional_hydration_disabled' }),
+        shouldHydrateOptional
+          ? settleOptionalModuleWithBudget(fetchFundamentals(ticker), 'fundamentals')
+          : Promise.resolve({ ok: false, data: null, meta: {}, source: 'fundamentals', error: 'optional_hydration_disabled' }),
       ]);
       const stockApiPayload = stockApiResult?.data || null;
       const stockApiData = stockApiPayload?.data || null;
       const stockApiHistorical = stockApiToHistorical(stockApiPayload, summary.ticker);
       const pageCoreHistorical = pageCoreToHistorical(pageCore.data);
+      const pageCoreBreakout = pageCoreToBreakoutV12(pageCore.data);
       const historicalBase = hasRenderableBars(stockApiHistorical)
         ? stockApiHistorical
         : hasRenderableBars(historicalResult?.data)
@@ -526,7 +566,7 @@ export async function fetchV2StockPage(ticker) {
           : stockApiHistorical || historicalResult?.data || pageCoreHistorical;
       const historical = {
         ...historicalBase,
-        breakout_v12: historicalBase?.breakout_v12 || stockApiData?.breakout_v12 || null,
+        breakout_v12: pageCoreBreakout || historicalBase?.breakout_v12 || stockApiData?.breakout_v12 || null,
         breakout_v2: historicalBase?.breakout_v2 || stockApiData?.breakout_v2 || null,
         breakout_v2_legacy: historicalBase?.breakout_v2_legacy || stockApiData?.breakout_v2_legacy || null,
       };

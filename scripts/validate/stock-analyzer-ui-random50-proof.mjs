@@ -383,6 +383,15 @@ function decisionAction(data) {
 async function validateAsset({ browser, baseUrl, asset, targetMarketDate, latest }) {
   const page = await browser.newPage({ viewport: { width: 1366, height: 900 } });
   const consoleErrors = [];
+  const networkErrors = [];
+  page.on('response', (response) => {
+    if (response.status() >= 400) {
+      networkErrors.push({ status: response.status(), url: response.url() });
+    }
+  });
+  page.on('requestfailed', (request) => {
+    networkErrors.push({ status: 'failed', url: request.url(), error: request.failure()?.errorText || null });
+  });
   page.on('pageerror', (error) => consoleErrors.push(error.message));
   page.on('console', (msg) => {
     if (msg.type() === 'error') consoleErrors.push(msg.text());
@@ -453,6 +462,7 @@ async function validateAsset({ browser, baseUrl, asset, targetMarketDate, latest
     result.visible_chart_text = visible.chartText || null;
     result.strict_operational_reasons = strictReasons;
     result.console_errors = consoleErrors.slice(0, 10);
+    result.network_errors = networkErrors.slice(0, 10);
     result.assertions.api_page_core_ok = pageCore?.ok === true && data?.schema_version === 'rv.page_core.v1';
     result.assertions.canonical_id_matches = String(data?.canonical_asset_id || '').toUpperCase() === asset.canonical_id;
     result.assertions.page_core_operational = (pageCoreClaimsOperational(data) && strictReasons.length === 0) || documentedProviderState;
@@ -481,7 +491,7 @@ async function validateAsset({ browser, baseUrl, asset, targetMarketDate, latest
         && data?.decision_core_min?.trade_guard?.invalidation_level != null);
     result.assertions.no_horizontal_overflow = !visible.overflow;
     result.assertions.no_german_text = !/\b(kaufen|verkaufen|warte|wartet|Öffne|Treffer|Wahrscheinlichkeit)\b/i.test(bodyText);
-    result.assertions.no_console_errors = consoleErrors.length === 0;
+    result.assertions.no_console_errors = consoleErrors.length === 0 && networkErrors.length === 0;
     result.ok = Object.values(result.assertions).every(Boolean);
   } catch (error) {
     result.errors.push(error.message);
