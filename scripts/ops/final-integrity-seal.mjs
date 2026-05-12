@@ -382,12 +382,21 @@ function histProbsStatusSummary(histProbsStatus = null) {
   const writeMode = String(histProbsStatus?.hist_probs_write_mode || '').toLowerCase();
   const writeModeOk = writeMode === 'bucket_only';
   const known = Boolean(mode && catchup && mode !== 'unknown' && catchup !== 'unknown');
+  const catchupReleaseOk = catchup === 'complete' || (
+    catchup === 'partial'
+    && Number.isFinite(coverage)
+    && Number.isFinite(artifactFreshness)
+    && coverage >= minCoverage
+    && artifactFreshness >= minCoverage
+    && !deferred
+    && writeModeOk
+  );
   const green = known
     && Number.isFinite(coverage)
     && Number.isFinite(artifactFreshness)
     && coverage >= minCoverage
     && artifactFreshness >= minCoverage
-    && catchup === 'complete'
+    && catchupReleaseOk
     && !deferred
     && writeModeOk;
   return {
@@ -395,6 +404,7 @@ function histProbsStatusSummary(histProbsStatus = null) {
     known,
     mode,
     catchup_status: catchup,
+    catchup_release_ok: catchupReleaseOk,
     coverage_ratio: Number.isFinite(coverage) ? coverage : 0,
     artifact_freshness_ratio: Number.isFinite(artifactFreshness) ? artifactFreshness : 0,
     min_coverage_ratio: Number.isFinite(minCoverage) ? minCoverage : 0.95,

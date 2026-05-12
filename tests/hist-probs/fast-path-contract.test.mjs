@@ -56,3 +56,11 @@ test('daily learning streams forecast monthly gzip instead of full string inflat
   assert.match(source, /forecastRowDateMatches/);
   assert.match(source, /await extractForecastPredictions/);
 });
+
+test('final integrity treats partial hist-probs as release green when coverage gates pass', () => {
+  const source = readRepoFile('scripts/ops/final-integrity-seal.mjs');
+  assert.match(source, /catchupReleaseOk/);
+  assert.match(source, /catchup === 'partial'/);
+  assert.match(source, /coverage >= minCoverage/);
+  assert.match(source, /artifactFreshness >= minCoverage/);
+});
