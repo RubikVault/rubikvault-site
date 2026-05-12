@@ -39,6 +39,7 @@ const EUROPE_COUNTRIES = new Set([
   'SPAIN',
   'SWEDEN',
   'SWITZERLAND',
+  'UK',
   'UNITED KINGDOM',
 ]);
 const ASIA_COUNTRIES = new Set([
@@ -54,8 +55,9 @@ const ASIA_COUNTRIES = new Set([
   'TAIWAN',
   'THAILAND',
   'VIETNAM',
+  'AUSTRALIA',
 ]);
-const ASIA_EXCHANGES = new Set(['HK', 'KO', 'KQ', 'KS', 'NSE', 'NSEI', 'SHE', 'SHG', 'SI', 'TSE', 'TW']);
+const ASIA_EXCHANGES = new Set(['AU', 'BK', 'HK', 'JK', 'KO', 'KQ', 'KS', 'NSE', 'NSEI', 'PSE', 'SHE', 'SHG', 'SI', 'TA', 'TSE', 'TW', 'VN']);
 
 function cliValue(name, fallback = null) {
   const prefix = `--${name}=`;
@@ -101,7 +103,7 @@ function classifyRegion(row) {
   const id = String(row?.canonical_id || '').toUpperCase();
   const country = String(row?.country || '').trim().toUpperCase();
   const exchange = String(row?.exchange || '').trim().toUpperCase();
-  if (country === 'UNITED STATES' || id.startsWith('US:')) return 'US';
+  if (country === 'USA' || country === 'UNITED STATES' || id.startsWith('US:')) return 'US';
   if (EUROPE_COUNTRIES.has(country)) return 'EU';
   if (ASIA_COUNTRIES.has(country) || ASIA_EXCHANGES.has(exchange)) return 'ASIA';
   return 'OTHER';

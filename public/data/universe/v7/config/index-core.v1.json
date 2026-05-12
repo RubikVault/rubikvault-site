@@ -29,11 +29,13 @@
     "exclude_keywords": ["leveraged", "inverse", "2x", "3x", "-2x", "-3x", "short", "ultra", "bear", "bull", "etn", "etc", "covered call", "buffer"],
     "dedup_by": ["isin", "underlying_index"],
     "max_count": 200,
-    "include_categories": ["broad_market", "sector_us", "sector_eu", "country", "factor_value", "factor_momentum", "treasuries_long", "treasuries_short", "gold", "broad_commodities"]
+    "include_categories": ["broad_market", "sector_us", "sector_eu", "country", "factor_value", "factor_momentum", "treasuries_long", "treasuries_short", "gold", "broad_commodities"],
+    "regional_minimums": { "US": 3, "EU": 3, "ASIA": 3 }
   },
   "index_assets": {
     "policy": "registry_index_assets",
-    "max_count": 50
+    "max_count": 50,
+    "regional_minimums": { "US": 2, "EU": 2, "ASIA": 2 }
   },
   "extended_when_RV_INDEX_CORE_INCLUDE_EXTENDED": {
     "indexes": [{ "id": "nasdaq_composite", "eodhd": "IXIC.INDX", "region": "US" }],

@@ -490,44 +490,61 @@ function isBadEtfName(row, excludeKeywords) {
   return excludeKeywords.some((keyword) => text.includes(String(keyword).toLowerCase()));
 }
 
+function configuredRegionalMinimums(value, defaults = {}) {
+  const source = value && typeof value === 'object' ? value : defaults;
+  const out = {};
+  for (const region of ['US', 'EU', 'ASIA']) {
+    out[region] = Math.max(0, Number(source?.[region] || 0));
+  }
+  return out;
+}
+
 async function resolveEtfs(config, registry) {
   const fixture = await readJsonMaybe(path.join(FIXTURE_DIR, 'etfs-curated.json'));
   const items = Array.isArray(fixture) ? fixture : (Array.isArray(fixture?.items) ? fixture.items : []);
   const excludeKeywords = config.etfs?.exclude_keywords || [];
   const maxCount = Number(config.etfs?.max_count || 200);
+  const regionalMinimums = configuredRegionalMinimums(config.etfs?.regional_minimums, { US: 3, EU: 3, ASIA: 3 });
   const out = [];
   const seen = new Set();
   const seenIsin = new Set();
+  const addEtf = (row) => {
+    if (!row || row.type_norm !== 'ETF') return false;
+    if (isBadEtfName(row, excludeKeywords)) return false;
+    if (row.isin && seenIsin.has(row.isin)) return false;
+    if (seen.has(row.canonical_id)) return false;
+    seen.add(row.canonical_id);
+    if (row.isin) seenIsin.add(row.isin);
+    out.push({ ...row, index_memberships: ['curated_etf'], scope_region: classifyScopeRegion(row) || 'GLOBAL_ETF' });
+    return true;
+  };
+  const regionalCount = (region) => out.filter((row) => row.scope_region === region).length;
   for (const item of items) {
     let row = item.canonical_id ? registry.byCanonical.get(normalize(item.canonical_id)) : null;
     if (!row && item.symbol && item.exchange) row = registry.bySymbolExchange.get(`${normalize(item.symbol)}|${normalize(item.exchange)}`);
     if (!row && item.symbol) row = (registry.bySymbol.get(normalize(item.symbol)) || []).find((candidate) => candidate.type_norm === 'ETF') || null;
-    if (!row || row.type_norm !== 'ETF') continue;
-    if (isBadEtfName(row, excludeKeywords)) continue;
-    if (row.isin && seenIsin.has(row.isin)) continue;
-    if (seen.has(row.canonical_id)) continue;
-    seen.add(row.canonical_id);
-    if (row.isin) seenIsin.add(row.isin);
-    out.push({ ...row, index_memberships: ['curated_etf'], scope_region: classifyScopeRegion(row) || 'GLOBAL_ETF' });
-    if (out.length >= maxCount) break;
+    addEtf(row);
+  }
+  const candidates = [...registry.byCanonical.values()]
+    .filter((row) => row.type_norm === 'ETF')
+    .filter((row) => toNum(row.bars_count) >= 60)
+    .filter((row) => classifyScopeRegion(row))
+    .filter((row) => !isBadEtfName(row, excludeKeywords))
+    .sort((a, b) => {
+      const score = registryProxyScore(b) - registryProxyScore(a);
+      if (score) return score;
+      return String(a.canonical_id).localeCompare(String(b.canonical_id));
+    });
+  for (const [region, minimum] of Object.entries(regionalMinimums)) {
+    for (const row of candidates) {
+      if (out.length >= maxCount || regionalCount(region) >= minimum) break;
+      if (classifyScopeRegion(row) !== region) continue;
+      addEtf(row);
+    }
   }
   if (out.length < maxCount) {
-    const candidates = [...registry.byCanonical.values()]
-      .filter((row) => row.type_norm === 'ETF')
-      .filter((row) => toNum(row.bars_count) >= 60)
-      .filter((row) => classifyScopeRegion(row))
-      .filter((row) => !isBadEtfName(row, excludeKeywords))
-      .sort((a, b) => {
-        const score = registryProxyScore(b) - registryProxyScore(a);
-        if (score) return score;
-        return String(a.canonical_id).localeCompare(String(b.canonical_id));
-      });
     for (const row of candidates) {
-      if (seen.has(row.canonical_id)) continue;
-      if (row.isin && seenIsin.has(row.isin)) continue;
-      seen.add(row.canonical_id);
-      if (row.isin) seenIsin.add(row.isin);
-      out.push({ ...row, index_memberships: ['curated_etf'], scope_region: classifyScopeRegion(row) || 'GLOBAL_ETF' });
+      addEtf(row);
       if (out.length >= maxCount) break;
     }
   }
@@ -537,7 +554,10 @@ async function resolveEtfs(config, registry) {
 async function resolveIndexAssets(config, registry) {
   const maxCount = Math.max(0, Number(config.index_assets?.max_count || 50));
   if (maxCount <= 0) return [];
-  return [...registry.byCanonical.values()]
+  const regionalMinimums = configuredRegionalMinimums(config.index_assets?.regional_minimums, { US: 2, EU: 2, ASIA: 2 });
+  const out = [];
+  const seen = new Set();
+  const candidates = [...registry.byCanonical.values()]
     .filter((row) => row.type_norm === 'INDEX')
     .sort((a, b) => {
       const score = registryProxyScore(b) - registryProxyScore(a);
@@ -546,13 +566,30 @@ async function resolveIndexAssets(config, registry) {
       const regionB = classifyScopeRegion(b) || '';
       if (regionA !== regionB) return regionA.localeCompare(regionB);
       return String(a.canonical_id).localeCompare(String(b.canonical_id));
-    })
-    .slice(0, maxCount)
-    .map((row) => ({
+    });
+  const addIndex = (row) => {
+    if (!row || seen.has(row.canonical_id) || out.length >= maxCount) return false;
+    seen.add(row.canonical_id);
+    out.push({
       ...row,
       index_memberships: ['registry_index_asset'],
       scope_region: classifyScopeRegion(row) || 'GLOBAL_INDEX',
-    }));
+    });
+    return true;
+  };
+  const regionalCount = (region) => out.filter((row) => row.scope_region === region).length;
+  for (const [region, minimum] of Object.entries(regionalMinimums)) {
+    for (const row of candidates) {
+      if (regionalCount(region) >= minimum || out.length >= maxCount) break;
+      if (classifyScopeRegion(row) !== region) continue;
+      addIndex(row);
+    }
+  }
+  for (const row of candidates) {
+    addIndex(row);
+    if (out.length >= maxCount) break;
+  }
+  return out;
 }
 
 async function backupOutputs(generatedAt) {
@@ -574,9 +611,14 @@ async function backupOutputs(generatedAt) {
 function countsForRows(rows, symbols) {
   const byType = {};
   const byRegion = {};
+  const byRegionType = {};
   for (const row of rows) {
-    byType[row.type_norm] = (byType[row.type_norm] || 0) + 1;
-    byRegion[row.scope_region || 'UNKNOWN'] = (byRegion[row.scope_region || 'UNKNOWN'] || 0) + 1;
+    const type = row.type_norm || 'UNKNOWN';
+    const region = row.scope_region || 'UNKNOWN';
+    byType[type] = (byType[type] || 0) + 1;
+    byRegion[region] = (byRegion[region] || 0) + 1;
+    byRegionType[region] ||= {};
+    byRegionType[region][type] = (byRegionType[region][type] || 0) + 1;
   }
   return {
     total_assets: rows.length,
@@ -584,6 +626,7 @@ function countsForRows(rows, symbols) {
     duplicate_symbol_count: Math.max(0, rows.length - symbols.length),
     by_region: byRegion,
     by_type: byType,
+    by_region_type: byRegionType,
   };
 }
 
