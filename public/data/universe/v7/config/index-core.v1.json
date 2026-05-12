@@ -33,9 +33,17 @@
     "regional_minimums": { "US": 3, "EU": 3, "ASIA": 3 }
   },
   "index_assets": {
-    "policy": "registry_index_assets",
+    "policy": "registry_index_assets_with_configured_benchmarks",
     "max_count": 50,
-    "regional_minimums": { "US": 2, "EU": 2, "ASIA": 2 }
+    "min_bars": 60,
+    "regional_minimums": { "US": 2, "EU": 2, "ASIA": 2 },
+    "synthetic_from_indices": {
+      "enabled": true,
+      "regions": ["US"],
+      "max_assets": 2,
+      "min_bars": 200,
+      "from_date": "2010-01-01"
+    }
   },
   "extended_when_RV_INDEX_CORE_INCLUDE_EXTENDED": {
     "indexes": [{ "id": "nasdaq_composite", "eodhd": "IXIC.INDX", "region": "US" }],

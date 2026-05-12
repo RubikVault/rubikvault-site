@@ -10,6 +10,7 @@ export const POLICY_PATH = path.join(ROOT, 'public/data/decision-core/policies/l
 export const REASON_CODES_PATH = path.join(ROOT, 'public/data/decision-core/reason-codes/latest.json');
 export const FEATURE_MANIFEST_PATH = path.join(ROOT, 'public/data/decision-core/feature-manifests/latest.json');
 export const REGISTRY_PATH = path.join(ROOT, 'public/data/universe/v7/registry/registry.ndjson.gz');
+export const SCOPE_ROWS_PATH = path.join(ROOT, 'mirrors/universe-v7/ssot/assets.global.rows.json');
 export const HIST_PROBS_PUBLIC_LATEST = path.join(ROOT, 'public/data/hist-probs-public/latest.json');
 export const DECISION_CORE_PUBLIC_ROOT = path.join(ROOT, 'public/data/decision-core');
 export const DECISION_CORE_RUNTIME_ROOT = path.resolve(
@@ -141,22 +142,41 @@ export function readTextMaybeGzip(filePath) {
 
 export function readRegistryRows({ maxAssets = null, registryPath = null } = {}) {
   const sourcePath = registryPath || process.env.RV_DECISION_CORE_REGISTRY_OVERRIDE || REGISTRY_PATH;
-  if (!fs.existsSync(sourcePath)) return [];
-  const text = readTextMaybeGzip(sourcePath);
-  const rows = [];
-  for (const line of text.split('\n')) {
-    if (!line.trim()) continue;
-    try {
-      const row = JSON.parse(line);
-      const assetType = normalizeAssetType(row?.type_norm || row?.asset_class || row?.type);
-      if (!['STOCK', 'ETF', 'INDEX'].includes(assetType)) continue;
-      rows.push(row);
-      if (maxAssets && rows.length >= maxAssets) break;
-    } catch {
-      // malformed rows excluded; validator records bundle-level errors.
+  const byId = new Map();
+  const addRow = (row) => {
+    const id = normalizeId(row?.canonical_id);
+    const assetType = normalizeAssetType(row?.type_norm || row?.asset_class || row?.type);
+    if (!id || !['STOCK', 'ETF', 'INDEX'].includes(assetType)) return;
+    const current = byId.get(id) || {};
+    byId.set(id, {
+      ...current,
+      ...row,
+      pointers: {
+        ...(current.pointers || {}),
+        ...(row.pointers || {}),
+        history_pack: row?.pointers?.history_pack || row?.history_pack || current?.pointers?.history_pack || current?.history_pack || null,
+      },
+      history_pack: row?.history_pack || row?.pointers?.history_pack || current?.history_pack || current?.pointers?.history_pack || null,
+    });
+  };
+  if (fs.existsSync(sourcePath)) {
+    const text = readTextMaybeGzip(sourcePath);
+    for (const line of text.split('\n')) {
+      if (!line.trim()) continue;
+      try {
+        addRow(JSON.parse(line));
+      } catch {
+        // malformed rows excluded; validator records bundle-level errors.
+      }
     }
   }
-  return rows;
+  if (!registryPath && process.env.RV_DECISION_CORE_INCLUDE_SCOPE_ROWS !== '0') {
+    const scopeDoc = readJsonMaybe(SCOPE_ROWS_PATH);
+    const scopeRows = Array.isArray(scopeDoc?.items) ? scopeDoc.items : [];
+    for (const row of scopeRows) addRow(row);
+  }
+  const rows = [...byId.values()];
+  return maxAssets ? rows.slice(0, maxAssets) : rows;
 }
 
 export function normalizeAssetType(value) {

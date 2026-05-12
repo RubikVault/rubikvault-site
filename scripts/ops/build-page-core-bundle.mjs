@@ -38,6 +38,7 @@ const SEARCH_EXACT_PATH = path.join(ROOT, 'public/data/universe/v7/search/search
 const GLOBAL_SCOPE_PATH = path.join(ROOT, 'public/data/universe/v7/ssot/assets.global.canonical.ids.json');
 const DAILY_SCOPE_PATH = path.join(ROOT, 'public/data/universe/v7/ssot/assets.us_eu.daily_eval.canonical.ids.json');
 const COMPAT_SCOPE_PATH = path.join(ROOT, 'public/data/universe/v7/ssot/stocks_etfs.us_eu.canonical.ids.json');
+const SCOPE_ROWS_PATH = path.join(ROOT, 'mirrors/universe-v7/ssot/assets.global.rows.json');
 const OPERABILITY_PATH = path.join(ROOT, 'public/data/ops/stock-analyzer-operability-summary-latest.json');
 const OPERABILITY_FULL_PATH = path.join(ROOT, 'public/data/ops/stock-analyzer-operability-latest.json');
 const DECISIONS_LATEST_PATH = path.join(ROOT, 'public/data/decisions/latest.json');
@@ -206,22 +207,38 @@ function readOperabilityIds() {
 }
 
 function readRegistryRows() {
-  if (!fs.existsSync(REGISTRY_PATH)) return [];
-  const rows = [];
-  const text = readGzipText(REGISTRY_PATH);
-  for (const line of text.split('\n')) {
-    if (!line.trim()) continue;
-    try {
-      const row = JSON.parse(line);
-      const id = normalizePageCoreAlias(row?.canonical_id);
-      const assetClass = normalizePageCoreAlias(row?.type_norm || row?.asset_class || row?.type);
-      if (!id || !['STOCK', 'ETF', 'INDEX'].includes(assetClass)) continue;
-      rows.push(row);
-    } catch {
-      // Skip malformed registry rows; bundle validation catches missing protected IDs.
+  const byId = new Map();
+  const addRow = (row) => {
+    const id = normalizePageCoreAlias(row?.canonical_id);
+    const assetClass = normalizePageCoreAlias(row?.type_norm || row?.asset_class || row?.type);
+    if (!id || !['STOCK', 'ETF', 'INDEX'].includes(assetClass)) return;
+    const current = byId.get(id) || {};
+    byId.set(id, {
+      ...current,
+      ...row,
+      pointers: {
+        ...(current.pointers || {}),
+        ...(row.pointers || {}),
+        history_pack: row?.pointers?.history_pack || row?.history_pack || current?.pointers?.history_pack || current?.history_pack || null,
+      },
+      history_pack: row?.history_pack || row?.pointers?.history_pack || current?.history_pack || current?.pointers?.history_pack || null,
+    });
+  };
+  if (fs.existsSync(REGISTRY_PATH)) {
+    const text = readGzipText(REGISTRY_PATH);
+    for (const line of text.split('\n')) {
+      if (!line.trim()) continue;
+      try {
+        addRow(JSON.parse(line));
+      } catch {
+        // Skip malformed registry rows; bundle validation catches missing protected IDs.
+      }
     }
   }
-  return rows;
+  const scopeRowsDoc = readJsonMaybe(SCOPE_ROWS_PATH);
+  const scopeRows = Array.isArray(scopeRowsDoc?.items) ? scopeRowsDoc.items : [];
+  for (const row of scopeRows) addRow(row);
+  return [...byId.values()];
 }
 
 function readSearchExact() {

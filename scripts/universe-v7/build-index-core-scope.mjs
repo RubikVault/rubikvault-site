@@ -19,6 +19,7 @@ const DRY_RUN_DIR = path.join(ROOT, 'mirrors/universe-v7/dry-run/index-core');
 const MEMBERSHIP_DIR = path.join(ROOT, 'public/data/universe/v7/index-memberships');
 const REPORT_DIR = path.join(ROOT, 'public/data/universe/v7/reports');
 const FIXTURE_DIR = path.join(ROOT, 'tests/fixtures/index-core');
+const SYNTHETIC_INDEX_HISTORY_DIR = 'history/INDEX/configured';
 const MAX_SNAPSHOT_AGE_MS = 14 * 24 * 60 * 60 * 1000;
 const LIVE_MIN_RATIO = 0.8;
 
@@ -499,6 +500,184 @@ function configuredRegionalMinimums(value, defaults = {}) {
   return out;
 }
 
+function configuredRegionSet(value) {
+  const source = Array.isArray(value) && value.length ? value : ['US'];
+  return new Set(source.map((item) => normalize(item)).filter(Boolean));
+}
+
+function indexExchangeForRegion(region) {
+  return ({
+    US: 'US',
+    UK: 'LSE',
+    DE: 'XETRA',
+    FR: 'PA',
+    EU: 'EU',
+    CH: 'SW',
+    ES: 'MC',
+    JP: 'TYO',
+    HK: 'HK',
+    CN: 'SHG',
+    AU: 'AU',
+    IN: 'NSE',
+    KR: 'KO',
+  })[normalize(region)] || normalize(region) || 'INDEX';
+}
+
+function countryForRegion(region) {
+  return ({
+    US: 'USA',
+    UK: 'UK',
+    DE: 'GERMANY',
+    FR: 'FRANCE',
+    EU: 'EU',
+    CH: 'SWITZERLAND',
+    ES: 'SPAIN',
+    JP: 'JAPAN',
+    HK: 'HONG KONG',
+    CN: 'CHINA',
+    AU: 'AUSTRALIA',
+    IN: 'INDIA',
+    KR: 'SOUTH KOREA',
+  })[normalize(region)] || null;
+}
+
+function indexSymbolFromEodhd(eodhd) {
+  return normalize(eodhd).replace(/\.INDX$/i, '');
+}
+
+function syntheticIndexCanonicalId(def) {
+  const provider = normalize(def?.eodhd);
+  return provider ? `${indexExchangeForRegion(def.region)}:${provider}` : null;
+}
+
+function syntheticIndexHistoryPack(def) {
+  const provider = normalize(def?.eodhd).toLowerCase().replace(/[^a-z0-9._-]/g, '-');
+  const region = normalize(def?.region).toLowerCase() || 'global';
+  return provider ? `${SYNTHETIC_INDEX_HISTORY_DIR}/${region}/${provider}.ndjson.gz` : null;
+}
+
+function normalizeEodBar(row) {
+  const date = String(row?.date || '').slice(0, 10);
+  const close = toNum(row?.adjusted_close ?? row?.adjustedClose ?? row?.close);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || close <= 0) return null;
+  return {
+    date,
+    open: toNum(row?.open) || close,
+    high: toNum(row?.high) || close,
+    low: toNum(row?.low) || close,
+    close,
+    adjClose: close,
+    volume: toNum(row?.volume),
+  };
+}
+
+function syntheticIndexToDate() {
+  const raw = process.env.RV_INDEX_CORE_EOD_TO_DATE
+    || process.env.RV_TARGET_MARKET_DATE
+    || process.env.TARGET_MARKET_DATE
+    || process.env.RV_PIPELINE_TARGET_MARKET_DATE
+    || '';
+  const iso = String(raw || '').slice(0, 10);
+  return /^\d{4}-\d{2}-\d{2}$/.test(iso) ? iso : null;
+}
+
+async function fetchIndexEodBars(def, token, { fromDate, toDate, timeoutMs = 45000 } = {}) {
+  if (!token || !def?.eodhd) return { ok: false, reason: 'missing_token_or_symbol', bars: [] };
+  const params = new URLSearchParams({
+    api_token: token,
+    fmt: 'json',
+    from: fromDate || '2010-01-01',
+  });
+  if (toDate) params.set('to', toDate);
+  const result = await fetchJson(`https://eodhd.com/api/eod/${encodeURIComponent(def.eodhd)}?${params.toString()}`, timeoutMs);
+  if (!result.ok) return { ok: false, reason: result.error || 'eod_fetch_failed', status: result.status, bars: [] };
+  const bars = Array.isArray(result.json)
+    ? result.json.map(normalizeEodBar).filter(Boolean).sort((a, b) => a.date.localeCompare(b.date))
+    : [];
+  return { ok: bars.length > 0, reason: bars.length ? null : 'empty_eod_history', status: result.status, bars };
+}
+
+async function writeSyntheticIndexPack(def, bars, dryRun = false) {
+  const canonicalId = syntheticIndexCanonicalId(def);
+  const relPack = syntheticIndexHistoryPack(def);
+  if (!canonicalId || !relPack || !bars.length) return null;
+  if (dryRun) return relPack;
+  const absPack = path.join(ROOT, 'mirrors/universe-v7', relPack);
+  await fs.mkdir(path.dirname(absPack), { recursive: true });
+  const body = `${JSON.stringify({ canonical_id: canonicalId, bars })}\n`;
+  const tmp = `${absPack}.${process.pid}.${Date.now()}.tmp`;
+  await fs.writeFile(tmp, zlib.gzipSync(Buffer.from(body, 'utf8'), { level: 9 }));
+  await fs.rename(tmp, absPack);
+  return relPack;
+}
+
+async function resolveSyntheticIndexAssets(config, token, options = {}) {
+  const settings = config.index_assets?.synthetic_from_indices || {};
+  if (settings.enabled === false) return { rows: [], diagnostics: [] };
+  const regions = configuredRegionSet(settings.regions);
+  const minBars = Math.max(1, Number(settings.min_bars || 200));
+  const maxAssets = Math.max(0, Number(settings.max_assets || 2));
+  const fromDate = String(settings.from_date || '2010-01-01');
+  const toDate = syntheticIndexToDate();
+  const rows = [];
+  const diagnostics = [];
+  for (const def of config.indices || []) {
+    if (maxAssets > 0 && rows.length >= maxAssets) break;
+    if (!regions.has(normalize(def.region))) continue;
+    const canonicalId = syntheticIndexCanonicalId(def);
+    const loaded = options.noLive
+      ? { ok: false, reason: 'no_live', bars: [] }
+      : await fetchIndexEodBars(def, token, { fromDate, toDate });
+    const bars = loaded.bars || [];
+    const latest = bars[bars.length - 1] || null;
+    diagnostics.push({
+      id: def.id,
+      eodhd: def.eodhd,
+      canonical_id: canonicalId,
+      ok: loaded.ok && bars.length >= minBars,
+      reason: loaded.reason || null,
+      bars_count: bars.length,
+      latest_date: latest?.date || null,
+      to_date: toDate,
+    });
+    if (!loaded.ok || bars.length < minBars || !latest) continue;
+    const historyPack = await writeSyntheticIndexPack(def, bars, options.dryRun);
+    rows.push({
+      canonical_id: canonicalId,
+      symbol: indexSymbolFromEodhd(def.eodhd),
+      provider_symbol: def.eodhd,
+      name: def.label || membershipLabel(def.id),
+      type_norm: 'INDEX',
+      exchange: indexExchangeForRegion(def.region),
+      mic: null,
+      country: countryForRegion(def.region),
+      currency: def.currency || (normalize(def.region) === 'US' ? 'USD' : null),
+      isin: null,
+      bars_count: bars.length,
+      avg_volume_30d: 0,
+      recent_close: latest.close,
+      market_cap: 0,
+      score_0_100: 90,
+      last_trade_date: latest.date,
+      history_pack: historyPack,
+      pointers: {
+        history_pack: historyPack,
+        pack_sha256: null,
+        symbol_group: 'configured_index_asset',
+      },
+      index_memberships: ['configured_index_asset'],
+      scope_region: classifyScopeRegion({ country: countryForRegion(def.region), exchange: indexExchangeForRegion(def.region) }) || 'GLOBAL_INDEX',
+      _quality_basis: 'eodhd_index_eod_history',
+      meta: {
+        source: 'configured_index_asset',
+        index_id: def.id,
+        eodhd: def.eodhd,
+      },
+    });
+  }
+  return { rows, diagnostics };
+}
+
 async function resolveEtfs(config, registry) {
   const fixture = await readJsonMaybe(path.join(FIXTURE_DIR, 'etfs-curated.json'));
   const items = Array.isArray(fixture) ? fixture : (Array.isArray(fixture?.items) ? fixture.items : []);
@@ -551,13 +730,15 @@ async function resolveEtfs(config, registry) {
   return out;
 }
 
-async function resolveIndexAssets(config, registry) {
+async function resolveIndexAssets(config, registry, token, options = {}) {
   const maxCount = Math.max(0, Number(config.index_assets?.max_count || 50));
   if (maxCount <= 0) return [];
   const regionalMinimums = configuredRegionalMinimums(config.index_assets?.regional_minimums, { US: 2, EU: 2, ASIA: 2 });
+  const minBars = Math.max(0, Number(config.index_assets?.min_bars || 60));
+  const synthetic = await resolveSyntheticIndexAssets(config, token, options);
   const out = [];
   const seen = new Set();
-  const candidates = [...registry.byCanonical.values()]
+  const rawCandidates = [...registry.byCanonical.values()]
     .filter((row) => row.type_norm === 'INDEX')
     .sort((a, b) => {
       const score = registryProxyScore(b) - registryProxyScore(a);
@@ -567,6 +748,8 @@ async function resolveIndexAssets(config, registry) {
       if (regionA !== regionB) return regionA.localeCompare(regionB);
       return String(a.canonical_id).localeCompare(String(b.canonical_id));
     });
+  const healthyCandidates = rawCandidates.filter((row) => toNum(row.bars_count) >= minBars);
+  const candidates = healthyCandidates.length ? healthyCandidates : rawCandidates;
   const addIndex = (row) => {
     if (!row || seen.has(row.canonical_id) || out.length >= maxCount) return false;
     seen.add(row.canonical_id);
@@ -577,6 +760,7 @@ async function resolveIndexAssets(config, registry) {
     });
     return true;
   };
+  for (const row of synthetic.rows) addIndex(row);
   const regionalCount = (region) => out.filter((row) => row.scope_region === region).length;
   for (const [region, minimum] of Object.entries(regionalMinimums)) {
     for (const row of candidates) {
@@ -589,8 +773,10 @@ async function resolveIndexAssets(config, registry) {
     addIndex(row);
     if (out.length >= maxCount) break;
   }
+  resolveIndexAssets.lastDiagnostics = synthetic.diagnostics;
   return out;
 }
+resolveIndexAssets.lastDiagnostics = [];
 
 async function backupOutputs(generatedAt) {
   const dir = path.join(BACKUP_DIR, safeStamp(generatedAt));
@@ -818,7 +1004,7 @@ async function build(options) {
   for (const row of etfRows) {
     if (!byCanonical.has(row.canonical_id)) byCanonical.set(row.canonical_id, row);
   }
-  const indexAssetRows = await resolveIndexAssets(config, registry);
+  const indexAssetRows = await resolveIndexAssets(config, registry, token, options);
   for (const row of indexAssetRows) {
     if (!byCanonical.has(row.canonical_id)) {
       byCanonical.set(row.canonical_id, row);
@@ -845,6 +1031,7 @@ async function build(options) {
     index_count: memberships.length,
     per_index: perIndex,
     warnings,
+    synthetic_index_assets: resolveIndexAssets.lastDiagnostics || [],
     validation: {
       expected_asset_count_min: 4500,
       expected_asset_count_max: 9500,

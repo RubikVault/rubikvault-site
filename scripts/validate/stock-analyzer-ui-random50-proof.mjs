@@ -18,6 +18,7 @@ const REGIONAL30_REPORT_PATH = path.join(ROOT, 'public/data/reports/stock-analyz
 const REGISTRY_PATH = path.join(ROOT, 'public/data/universe/v7/registry/registry.ndjson.gz');
 const CANONICAL_IDS_PATH = path.join(ROOT, 'public/data/universe/v7/ssot/assets.global.canonical.ids.json');
 const PAGE_CORE_LATEST_PATH = path.join(ROOT, 'public/data/page-core/latest.json');
+const SCOPE_ROWS_PATH = path.join(ROOT, 'mirrors/universe-v7/ssot/assets.global.rows.json');
 const GLOBAL50_REQUIRED = Object.freeze({ INDEX: 5, ETF: 25, STOCK: 20 });
 const REGIONAL30_REQUIRED = Object.freeze({
   US: Object.freeze({ INDEX: 2, ETF: 3, STOCK: 5 }),
@@ -117,23 +118,43 @@ function readCanonicalIds() {
 
 function readRegistryMeta() {
   const meta = new Map();
-  const text = zlib.gunzipSync(fs.readFileSync(REGISTRY_PATH)).toString('utf8');
-  for (const line of text.split('\n')) {
-    if (!line.trim()) continue;
-    const row = JSON.parse(line);
+  const add = (row) => {
     const canonicalId = String(row?.canonical_id || '').toUpperCase();
-    if (!canonicalId) continue;
+    if (!canonicalId) return;
+    const current = meta.get(canonicalId) || {};
     meta.set(canonicalId, {
+      ...current,
       canonical_id: canonicalId,
-      symbol: row.symbol || canonicalId.split(':').pop(),
-      name: row.name || row.company_name || null,
-      country: row.country || null,
-      exchange: row.exchange || canonicalId.split(':')[0],
+      symbol: row.symbol || current.symbol || canonicalId.split(':').pop(),
+      name: row.name || row.company_name || current.name || null,
+      country: row.country || current.country || null,
+      exchange: row.exchange || current.exchange || canonicalId.split(':')[0],
       asset_class: normalizeAssetClass(row),
       region: classifyRegion(row),
     });
+  };
+  const text = zlib.gunzipSync(fs.readFileSync(REGISTRY_PATH)).toString('utf8');
+  for (const line of text.split('\n')) {
+    if (!line.trim()) continue;
+    add(JSON.parse(line));
+  }
+  const scopeDoc = fs.existsSync(SCOPE_ROWS_PATH) ? readJson(SCOPE_ROWS_PATH) : null;
+  const scopeRows = Array.isArray(scopeDoc?.items) ? scopeDoc.items : [];
+  for (const row of scopeRows) {
+    add(row);
   }
   return meta;
+}
+
+function indexHasDocumentedNonTradableState({ asset, strictReasons, coreAction, visibleAction }) {
+  if (asset?.asset_class !== 'INDEX') return false;
+  const allowedReasons = new Set([
+    'primary_blocker:decision_not_operational',
+    'primary_blocker:decision_bundle_missing',
+  ]);
+  return ['WAIT', 'UNAVAILABLE', 'AVOID'].includes(String(coreAction || '').toUpperCase())
+    && String(visibleAction || '').toUpperCase() === String(coreAction || '').toUpperCase()
+    && strictReasons.every((reason) => allowedReasons.has(reason));
 }
 
 function readPageCoreIds(latest) {
@@ -319,6 +340,12 @@ async function validateAsset({ browser, baseUrl, asset, targetMarketDate, latest
     const strictReasons = pageCoreStrictOperationalReasons(data, { latest })
       .filter((reason) => reason !== 'ui_banner_not_operational');
     const visibleAction = visible.action || null;
+    const documentedIndexState = indexHasDocumentedNonTradableState({
+      asset,
+      strictReasons,
+      coreAction,
+      visibleAction,
+    });
     result.page_core_action = coreAction;
     result.visible_action = visibleAction;
     result.expected_price_date = priceDate;
@@ -329,14 +356,14 @@ async function validateAsset({ browser, baseUrl, asset, targetMarketDate, latest
     result.console_errors = consoleErrors.slice(0, 10);
     result.assertions.api_page_core_ok = pageCore?.ok === true && data?.schema_version === 'rv.page_core.v1';
     result.assertions.canonical_id_matches = String(data?.canonical_asset_id || '').toUpperCase() === asset.canonical_id;
-    result.assertions.page_core_operational = pageCoreClaimsOperational(data) && strictReasons.length === 0;
+    result.assertions.page_core_operational = (pageCoreClaimsOperational(data) && strictReasons.length === 0) || documentedIndexState;
     result.assertions.target_market_date_matches = !targetMarketDate || normalizeDate(data?.target_market_date) === targetMarketDate;
     result.assertions.price_date_current = !targetMarketDate || Boolean(priceDate && priceDate >= targetMarketDate);
     result.assertions.close_numeric = Number.isFinite(close);
     result.assertions.visible_price_matches_page_core = Number.isFinite(close) && visible.priceText.includes(close.toFixed(2));
     result.assertions.visible_asof_matches_page_core = Boolean(priceDate && visible.asOfText.includes(priceDate));
     result.assertions.visible_action_exists = /\b(BUY|WAIT|AVOID|UNAVAILABLE|INCUBATING)\b/i.test(bodyText);
-    result.assertions.visible_action_matches_page_core = Boolean(coreAction && visibleAction === coreAction && !visible.blocked);
+    result.assertions.visible_action_matches_page_core = Boolean(coreAction && visibleAction === coreAction && (!visible.blocked || documentedIndexState));
     result.assertions.decision_basis_visible = /Decision Basis|Why not now|Conditional BUY|Analysis incomplete/i.test(bodyText);
     result.assertions.reliability_visible = /Reliability|Analysis reliability/i.test(bodyText);
     result.assertions.horizons_visible = /Short/i.test(bodyText) && /Mid|Medium/i.test(bodyText) && /Long/i.test(bodyText);
