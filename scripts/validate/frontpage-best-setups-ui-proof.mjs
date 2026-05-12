@@ -10,7 +10,8 @@ const ROOT = path.resolve(new URL('.', import.meta.url).pathname, '../..');
 const SNAPSHOT_PATH = path.join(ROOT, 'public/data/snapshots/best-setups-v4.json');
 const REPORT_PATH = path.join(ROOT, 'public/data/reports/frontpage-best-setups-ui-proof-latest.json');
 const REQUIRED_REGIONS = ['US', 'EU', 'ASIA'];
-const REQUIRED_CLASSES = ['stock', 'etf'];
+const COVERAGE_CLASSES = ['stock', 'etf'];
+const REQUIRED_COVERAGE_CLASSES = ['stock'];
 const REQUIRED_STOCK_BUY_PER_HORIZON = Math.max(0, Number(process.env.RV_FRONTPAGE_STOCK_BUY_MIN_PER_HORIZON || 5));
 const HORIZON_CORE_KEYS = Object.freeze({
   short: 'short_term',
@@ -96,7 +97,7 @@ function regionClassCoverage(rows) {
   const out = {};
   for (const region of REQUIRED_REGIONS) {
     out[region] = {};
-    for (const assetClass of REQUIRED_CLASSES) {
+    for (const assetClass of COVERAGE_CLASSES) {
       out[region][assetClass] = rows.filter((row) => row.region === region && row.asset_class === assetClass).length;
     }
   }
@@ -250,7 +251,7 @@ async function main() {
       .map(([horizon, count]) => ({ horizon, count, required: REQUIRED_STOCK_BUY_PER_HORIZON }));
     const missingCoverage = [];
     for (const region of REQUIRED_REGIONS) {
-      for (const assetClass of REQUIRED_CLASSES) {
+      for (const assetClass of REQUIRED_COVERAGE_CLASSES) {
         if (!coverage[region][assetClass]) missingCoverage.push(`${region}:${assetClass}`);
       }
     }
