@@ -689,8 +689,12 @@ function readPackRows(packPath) {
   }
   let indexed = null;
   for (const root of HISTORY_PACK_ROOTS) {
-    const filePath = path.join(root, packPath);
-    if (!fs.existsSync(filePath)) continue;
+    const packCandidates = [
+      packPath,
+      String(packPath).replace(/^history\//, ''),
+    ].filter((value, index, list) => value && list.indexOf(value) === index);
+    const filePath = packCandidates.map((candidate) => path.join(root, candidate)).find((candidate) => fs.existsSync(candidate));
+    if (!filePath) continue;
     indexed = new Map();
     const text = filePath.endsWith('.gz') ? readGzipText(filePath) : fs.readFileSync(filePath, 'utf8');
     for (const line of text.split('\n')) {
