@@ -18,6 +18,19 @@ if [[ -f "$NAS_OPS_ROOT/tooling/env.sh" ]]; then
   . "$NAS_OPS_ROOT/tooling/env.sh"
 fi
 
+# Source $NAS_DEV_ROOT/.env.local for RV_* overrides (universe scope mode, decision-core
+# source, training flags, etc). Without this, supervisor evaluated defaults from below
+# and never picked up index_core mode despite .env.local listing it. set -a / set +a
+# ensures vars are exported to child processes, even if .env.local lacks `export` prefix.
+_rv_env_local_path="${RV_DEV_ENV_LOCAL:-${NAS_DEV_ROOT:-/volume1/homes/neoboy/Dev/rubikvault-site}/.env.local}"
+if [[ -f "$_rv_env_local_path" ]]; then
+  set -a
+  # shellcheck disable=SC1090
+  . "$_rv_env_local_path"
+  set +a
+fi
+unset _rv_env_local_path
+
 export NAS_DEV_ROOT="${NAS_DEV_ROOT:-/volume1/homes/neoboy/Dev/rubikvault-site}"
 export NAS_OPS_ROOT="${NAS_OPS_ROOT:-/volume1/homes/neoboy/RepoOps/rubikvault-site}"
 export NAS_QUANT_ROOT="${NAS_QUANT_ROOT:-/volume1/homes/neoboy/QuantLabHot/rubikvault-quantlab}"
