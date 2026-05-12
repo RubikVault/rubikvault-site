@@ -449,7 +449,6 @@ function buildRow({ row, targetMarketDate, policy, featureManifest, eligibility,
     decision: {
       primary_action: action,
       wait_subtype: action === 'WAIT' ? preliminary.wait_subtype : null,
-      primary_horizon: primaryHorizon,
       bias: setup.bias,
       analysis_reliability: reliability,
       reliability_rule_version: policy.reliability_rule_version,
