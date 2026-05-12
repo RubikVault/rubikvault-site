@@ -630,7 +630,12 @@
       const _integrity = _guard.integrity || {};
       const _integrityFields = _integrity.fields || {};
       const _decisionBlockedByIntegrity = _integrity.decisionReadiness === 'UNAVAILABLE';
-      const _chartBlockedByIntegrity = _integrityFields.chart?.status === 'BLOCK';
+      const _earlyStatusContract = data?.ssot?.page_core?.status_contract || data?.status_contract || payload?.status_contract || payload?.page_core_contract?.status_contract || {};
+      const _earlyStrictReasons = Array.isArray(_earlyStatusContract?.strict_blocking_reasons) ? _earlyStatusContract.strict_blocking_reasons : [];
+      const _earlyAssetClass = String(data?.ssot?.page_core?.identity?.asset_class || data?.universe?.asset_class || data?.identity?.asset_class || '').toUpperCase();
+      const _documentedMinimalIndexChart = _earlyAssetClass === 'INDEX'
+        && _earlyStrictReasons.some((reason) => /decision_not_operational|insufficient_history/i.test(String(reason || '')));
+      const _chartBlockedByIntegrity = _integrityFields.chart?.status === 'BLOCK' && !_documentedMinimalIndexChart;
       window._rvUiIntegrity = _integrity;
       const ssotMarketContext = data.ssot?.market_context || {};
       const historicalProfileEnvelope = data.historical_profile || null;

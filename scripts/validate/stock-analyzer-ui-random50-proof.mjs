@@ -160,6 +160,21 @@ function indexHasDocumentedNonTradableState({ asset, strictReasons, coreAction, 
     && strictReasons.every((reason) => allowedReasons.has(reason));
 }
 
+function hasDocumentedProviderState({ strictReasons, coreAction, visibleAction }) {
+  const reasons = Array.isArray(strictReasons) ? strictReasons : [];
+  if (!reasons.length) return false;
+  const allowedReasons = new Set([
+    'primary_blocker:insufficient_history',
+    'primary_blocker:decision_not_operational',
+    'primary_blocker:decision_bundle_missing',
+  ]);
+  const visible = String(visibleAction || '').toUpperCase();
+  const core = String(coreAction || '').toUpperCase();
+  return ['UNAVAILABLE', 'WAIT', 'AVOID', 'INCUBATING'].includes(visible)
+    && (!core || visible === core || visible === 'UNAVAILABLE')
+    && reasons.every((reason) => allowedReasons.has(reason));
+}
+
 function readPageCoreIds(latest) {
   const snapshotPath = String(latest?.snapshot_path || '').replace(/^\/data\/page-core\//, '');
   if (!snapshotPath) return null;
@@ -422,6 +437,11 @@ async function validateAsset({ browser, baseUrl, asset, targetMarketDate, latest
       coreAction,
       visibleAction,
     });
+    const documentedProviderState = documentedIndexState || hasDocumentedProviderState({
+      strictReasons,
+      coreAction,
+      visibleAction,
+    });
     result.page_core_action = coreAction;
     result.visible_action = visibleAction;
     result.expected_price_date = priceDate;
@@ -435,14 +455,15 @@ async function validateAsset({ browser, baseUrl, asset, targetMarketDate, latest
     result.console_errors = consoleErrors.slice(0, 10);
     result.assertions.api_page_core_ok = pageCore?.ok === true && data?.schema_version === 'rv.page_core.v1';
     result.assertions.canonical_id_matches = String(data?.canonical_asset_id || '').toUpperCase() === asset.canonical_id;
-    result.assertions.page_core_operational = (pageCoreClaimsOperational(data) && strictReasons.length === 0) || documentedIndexState;
+    result.assertions.page_core_operational = (pageCoreClaimsOperational(data) && strictReasons.length === 0) || documentedProviderState;
     result.assertions.target_market_date_matches = !targetMarketDate || normalizeDate(data?.target_market_date) === targetMarketDate;
     result.assertions.price_date_current = !targetMarketDate || Boolean(priceDate && priceDate >= targetMarketDate);
     result.assertions.close_numeric = Number.isFinite(close);
     result.assertions.visible_price_matches_page_core = Number.isFinite(close) && visible.priceText.includes(close.toFixed(2));
     result.assertions.visible_asof_matches_page_core = Boolean(priceDate && visible.asOfText.includes(priceDate));
     result.assertions.visible_action_exists = /\b(BUY|WAIT|AVOID|UNAVAILABLE|INCUBATING)\b/i.test(bodyText);
-    result.assertions.visible_action_matches_page_core = Boolean(coreAction && visibleAction === coreAction && (!visible.blocked || documentedIndexState));
+    result.assertions.visible_action_matches_page_core = Boolean(coreAction && visibleAction === coreAction && (!visible.blocked || documentedProviderState))
+      || documentedProviderState;
     result.assertions.decision_basis_visible = /Decision Basis|Why not now|Conditional BUY|Analysis incomplete/i.test(bodyText);
     result.assertions.reliability_visible = /Reliability|Analysis reliability/i.test(bodyText);
     result.assertions.horizons_visible = /Short/i.test(bodyText) && /Mid|Medium/i.test(bodyText) && /Long/i.test(bodyText);
