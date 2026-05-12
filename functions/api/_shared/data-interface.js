@@ -313,7 +313,7 @@ function pageCoreIndicators(row) {
 
 async function buildPageCoreHistoricalFallback({ ticker, canonicalId = null, request, env }) {
   const mode = readRuntimeMode(env, 'RV_V2_HISTORICAL_PAGE_CORE_FAST_MODE');
-  if (mode !== 'on') return null;
+  if (['0', 'off', 'false', 'disabled'].includes(mode)) return null;
   const pageCoreResult = await readPageCoreForTicker(canonicalId || ticker, { request, env });
   if (!pageCoreResult?.ok || !pageCoreResult.pageCore) return null;
   const latestBar = pageCoreLatestBar(pageCoreResult.pageCore);
