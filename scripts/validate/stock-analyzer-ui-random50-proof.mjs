@@ -415,7 +415,7 @@ async function main() {
       required_counts: required,
       sample_counts: counts,
       sample_counts_by_region_class: regionalCounts,
-      page_core_ids,
+      page_core_ids: pageCoreIds,
       pool_availability: availability,
       ok: results.filter((row) => row.ok).length,
       total: results.length,
