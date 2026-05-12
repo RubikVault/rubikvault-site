@@ -48,3 +48,11 @@ test('buy breadth proof separates available-region and displayed-row targets', (
   assert.match(source, /BUY_BREADTH_EU_DISPLAY_BELOW_TARGET/);
   assert.match(source, /available_region_targets/);
 });
+
+test('daily learning streams forecast monthly gzip instead of full string inflate', () => {
+  const source = readRepoFile('scripts/learning/run-daily-learning-cycle.mjs');
+  assert.match(source, /readNdjsonGzFiltered/);
+  assert.match(source, /createReadStream\(p\)\.pipe\(zlib\.createGunzip\(\)\)/);
+  assert.match(source, /forecastRowDateMatches/);
+  assert.match(source, /await extractForecastPredictions/);
+});

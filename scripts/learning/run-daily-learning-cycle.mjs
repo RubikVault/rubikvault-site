@@ -14,6 +14,7 @@
 import fs from 'node:fs';
 import crypto from 'node:crypto';
 import path from 'node:path';
+import readline from 'node:readline';
 import zlib from 'node:zlib';
 import {
     brierScore, accuracy, hitRate, trend, rollingAverage, eceScore,
@@ -84,6 +85,30 @@ function readNdjson(p) {
             .map(l => { try { return JSON.parse(l); } catch { return null; } })
             .filter(Boolean);
     } catch { return []; }
+}
+
+async function readNdjsonGzFiltered(p, predicate, { limit = 250000 } = {}) {
+    try {
+        if (!fs.existsSync(p)) return [];
+        const rows = [];
+        const input = fs.createReadStream(p).pipe(zlib.createGunzip());
+        const rl = readline.createInterface({ input, crlfDelay: Infinity });
+        for await (const line of rl) {
+            const trimmed = line.trim();
+            if (!trimmed) continue;
+            let row = null;
+            try { row = JSON.parse(trimmed); } catch { continue; }
+            if (!predicate(row)) continue;
+            rows.push(row);
+            if (rows.length >= limit) {
+                input.destroy();
+                break;
+            }
+        }
+        return rows;
+    } catch {
+        return [];
+    }
 }
 
 function writeJson(p, data) {
@@ -517,18 +542,20 @@ function metricBucket(items, referenceDate = null) {
 
 // ─── 1. FORECAST: Extract Predictions ───────────────────────────────────────
 // IMPROVEMENT: Calibration feedback loop + Adaptive confidence scaling
-function extractForecastPredictions(date, eodPrices) {
+function forecastRowDateMatches(row, date) {
+    const rowDate = String(row?.trading_date || row?.date || row?.as_of || '').slice(0, 10);
+    return rowDate === date;
+}
+
+async function extractForecastPredictions(date, eodPrices) {
     const [y, m] = date.split('-');
     const gzPath = path.join(FORECAST_LEDGER, 'forecasts', y, `${m}.ndjson.gz`);
     const plainPath = path.join(FORECAST_LEDGER, 'forecasts', y, m, `${date}.ndjson`);
 
-    let rows = readNdjson(gzPath);
-    if (!rows.length) rows = readNdjson(plainPath);
-
-    const dayRows = rows.filter(r => {
-        const rDate = r.trading_date || r.date || r.as_of || '';
-        return rDate.startsWith(date);
-    });
+    let dayRows = readNdjson(plainPath).filter(r => forecastRowDateMatches(r, date));
+    if (!dayRows.length) {
+        dayRows = await readNdjsonGzFiltered(gzPath, (row) => forecastRowDateMatches(row, date));
+    }
 
     // Load calibration data for feedback loop
     const calib = loadCalib('forecast');
@@ -1445,7 +1472,7 @@ async function main() {
 
     // 2. Extract today's predictions from each feature
     console.log('[learning] Extracting predictions...');
-    const forecastResult = extractForecastPredictions(date, eodPrices);
+    const forecastResult = await extractForecastPredictions(date, eodPrices);
     const forecastPreds = forecastResult.predictions || [];
     const scientificResult = extractScientificPredictions(date, eodPrices);
     const scientificPreds = scientificResult.predictions || [];
