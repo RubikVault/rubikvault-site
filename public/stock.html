@@ -580,16 +580,15 @@
       try {
         const existingBreakout = payload?.data?.breakout_v12;
         if (!existingBreakout?.breakout_status) {
-          const brkRes = await fetch(`/api/stock?ticker=${encodeURIComponent(ticker)}&breakout=1`, { cache: 'no-store' });
-          if (brkRes.ok) {
-            const brkPayload = await brkRes.json();
-            if (brkPayload?.data?.breakout_v12?.breakout_status) {
-              payload.data = payload.data || {};
-              payload.data.breakout_v12 = brkPayload.data.breakout_v12;
-              payload.data.breakout_v2 = brkPayload.data.breakout_v2 || payload.data.breakout_v2 || null;
-              payload.data.breakout_v2_legacy = brkPayload.data.breakout_v2_legacy || payload.data.breakout_v2_legacy || null;
-            }
-          }
+          payload.data = payload.data || {};
+          payload.data.breakout_v12 = {
+            source: 'page_core_default',
+            breakout_status: 'not_generated',
+            status: 'not_generated',
+            label: 'NONE',
+            legacy_state: 'NONE',
+            reason: 'Not in current V12 signal set.',
+          };
         }
       } catch (e) {
         console.debug('[RV] breakout static hydrate skipped:', e);
@@ -1167,6 +1166,18 @@
       // Fetch benchmarks in background
       async function loadBenchmarks() {
         _mktCtx.loading = true;
+        const optionalNetwork = new URLSearchParams(window.location.search || '').get('rv_optional') === '1';
+        if (!optionalNetwork) {
+          _mktCtx.loaded = false;
+          _mktCtx.loading = false;
+          _mktCtx.degraded = true;
+          _mktCtx.cacheUsed = false;
+          _mktCtx.cacheAgeLabel = '';
+          _mktCtx.errorReason = 'Market context unavailable.';
+          const el = document.getElementById('dyn-market-context');
+          if (el) el.innerHTML = window._renderMarketContext();
+          return;
+        }
         const timeoutMs = 10000;
         const timeoutJson = (url) => {
           const controller = new AbortController();
@@ -1234,7 +1245,7 @@
           const el = document.getElementById('dyn-market-context');
           if (el) el.innerHTML = window._renderMarketContext();
         } catch (e) {
-          console.error('[Benchmark Load Error]', e);
+          console.debug('[Benchmark Load Error]', e);
           const cached = _readMarketContextCache();
           const cacheAgeMs = cached?.cachedAt ? Date.now() - new Date(cached.cachedAt).getTime() : Number.POSITIVE_INFINITY;
           if (cached && cacheAgeMs <= _mktCtxCacheTtlMs) {
