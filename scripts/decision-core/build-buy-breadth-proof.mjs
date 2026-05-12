@@ -103,6 +103,12 @@ function bump(map, key) {
   map[clean] = (map[clean] || 0) + 1;
 }
 
+function positiveIntEnv(name, fallback) {
+  const value = Number(process.env[name]);
+  if (!Number.isFinite(value) || value < 0) return fallback;
+  return Math.floor(value);
+}
+
 function diagnoseBreadth({ rows, metaById }) {
   const diag = {
     us_stock_etf_rows: 0,
@@ -215,17 +221,27 @@ export function buildBuyBreadthProof({ root = path.join(DECISION_CORE_PUBLIC_ROO
     ...availableAsia.filter((row) => !row.best_setups_present).slice(0, 10),
   ];
   const failures = [];
-  const regionTargets = {
-    US: Math.min(10, availableUs.length),
-    EU: Math.min(10, availableEu.length),
-    ASIA: Math.min(10, availableAsia.length),
+  const availableRegionTarget = positiveIntEnv('RV_BUY_BREADTH_AVAILABLE_REGION_TARGET', 10);
+  const displayRegionTarget = positiveIntEnv('RV_BUY_BREADTH_DISPLAY_REGION_TARGET', 5);
+  const availableRegionTargets = {
+    US: Math.min(availableRegionTarget, availableUs.length),
+    EU: Math.min(availableRegionTarget, availableEu.length),
+    ASIA: Math.min(availableRegionTarget, availableAsia.length),
   };
-  if (regionTargets.US <= 0) failures.push('BUY_BREADTH_US_NONE_AVAILABLE');
-  else if (us.length < regionTargets.US) failures.push('BUY_BREADTH_US_BELOW_TARGET');
-  if (regionTargets.EU <= 0) failures.push('BUY_BREADTH_EU_NONE_AVAILABLE');
-  else if (eu.length < regionTargets.EU) failures.push('BUY_BREADTH_EU_BELOW_TARGET');
-  if (regionTargets.ASIA <= 0) failures.push('BUY_BREADTH_ASIA_NONE_AVAILABLE');
-  else if (asia.length < regionTargets.ASIA) failures.push('BUY_BREADTH_ASIA_BELOW_TARGET');
+  const displayRegionTargets = {
+    US: Math.min(displayRegionTarget, availableUs.length),
+    EU: Math.min(displayRegionTarget, availableEu.length),
+    ASIA: Math.min(displayRegionTarget, availableAsia.length),
+  };
+  if (availableRegionTargets.US <= 0) failures.push('BUY_BREADTH_US_NONE_AVAILABLE');
+  else if (availableUs.length < availableRegionTargets.US) failures.push('BUY_BREADTH_US_AVAILABLE_BELOW_TARGET');
+  if (availableRegionTargets.EU <= 0) failures.push('BUY_BREADTH_EU_NONE_AVAILABLE');
+  else if (availableEu.length < availableRegionTargets.EU) failures.push('BUY_BREADTH_EU_AVAILABLE_BELOW_TARGET');
+  if (availableRegionTargets.ASIA <= 0) failures.push('BUY_BREADTH_ASIA_NONE_AVAILABLE');
+  else if (availableAsia.length < availableRegionTargets.ASIA) failures.push('BUY_BREADTH_ASIA_AVAILABLE_BELOW_TARGET');
+  if (displayRegionTargets.US > 0 && us.length < displayRegionTargets.US) failures.push('BUY_BREADTH_US_DISPLAY_BELOW_TARGET');
+  if (displayRegionTargets.EU > 0 && eu.length < displayRegionTargets.EU) failures.push('BUY_BREADTH_EU_DISPLAY_BELOW_TARGET');
+  if (displayRegionTargets.ASIA > 0 && asia.length < displayRegionTargets.ASIA) failures.push('BUY_BREADTH_ASIA_DISPLAY_BELOW_TARGET');
   if (unsafe.length) failures.push('UNSAFE_BUY_ROWS');
   if (!bestSetupsCoreOnly) failures.push('BEST_SETUPS_NOT_CORE_ONLY');
   return {
@@ -238,7 +254,11 @@ export function buildBuyBreadthProof({ root = path.join(DECISION_CORE_PUBLIC_ROO
     scope_mode: scope.mode,
     scope_count: scope.count,
     scope_filter_applied: scope.ids.size > 0,
-    region_targets: regionTargets,
+    region_targets: displayRegionTargets,
+    available_region_targets: availableRegionTargets,
+    display_region_targets: displayRegionTargets,
+    available_region_target: availableRegionTarget,
+    display_region_target: displayRegionTarget,
     us_stock_etf_buy_count: us.length,
     eu_stock_etf_buy_count: eu.length,
     asia_stock_etf_buy_count: asia.length,

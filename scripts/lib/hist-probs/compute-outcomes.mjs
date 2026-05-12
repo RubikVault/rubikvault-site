@@ -21,6 +21,7 @@ import { histProbsWriteTargets, resolveHistProbsWriteMode } from './path-resolve
 const OUTPUT_BASE = path.join(REPO_ROOT, 'public/data/hist-probs');
 const HORIZONS = [5, 10, 20, 60, 120, 250];
 const MIN_SAMPLE = 50; // minimum events needed to report a statistic
+const PRETTY_OUTPUT = process.env.HIST_PROBS_PRETTY_JSON === '1' || process.env.RV_HIST_PROBS_PRETTY_JSON === '1';
 
 // ─── Maths helpers ────────────────────────────────────────────────────────────
 
@@ -195,7 +196,7 @@ export async function computeOutcomes(ticker, options = {}) {
   const tmpPath = path.join(path.dirname(primaryPath), `.${ticker.toUpperCase()}.${process.pid}.${Date.now()}.tmp`);
   await fs.mkdir(path.dirname(primaryPath), { recursive: true });
   try {
-    await fs.writeFile(tmpPath, JSON.stringify(result, null, 2), 'utf8');
+    await fs.writeFile(tmpPath, `${PRETTY_OUTPUT ? JSON.stringify(result, null, 2) : JSON.stringify(result)}\n`, 'utf8');
     await fs.rename(tmpPath, primaryPath);
     for (const writePath of writePaths.slice(1)) {
       await fs.mkdir(path.dirname(writePath), { recursive: true });

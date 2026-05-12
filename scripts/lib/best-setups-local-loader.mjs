@@ -21,11 +21,26 @@ const stooqBarsCache = new Map();
 let searchExactCache = null;
 let stockSymbolsCache = null;
 let registryIndexCache = null;
+const localBarsTelemetry = {
+  direct_history_pack_hit: 0,
+  direct_history_pack_miss: 0,
+  history_pack_fallback_hit: 0,
+  shard_gzip_hit: 0,
+  shard_plain_json_fallback_hit: 0,
+};
 
 export function setLocalBarsRuntimeOverrides(overrides = null) {
   localBarsRuntimeOverrides = overrides && typeof overrides === 'object'
     ? { ...overrides }
     : null;
+}
+
+export function getLocalBarsTelemetry() {
+  return { ...localBarsTelemetry };
+}
+
+export function resetLocalBarsTelemetry() {
+  for (const key of Object.keys(localBarsTelemetry)) localBarsTelemetry[key] = 0;
 }
 
 function resolveLocalBarStaleDays() {
@@ -106,6 +121,13 @@ function normalizeRows(rows) {
     })
     .filter(Boolean)
     .sort((a, b) => a.date.localeCompare(b.date));
+}
+
+function mergeBars(packBars, seriesBars) {
+  const barMap = new Map();
+  for (const b of packBars) barMap.set(b.date, b);
+  for (const b of seriesBars) barMap.set(b.date, b);
+  return Array.from(barMap.values()).sort((a, b) => a.date.localeCompare(b.date));
 }
 
 function daysFromToday(dateText) {
@@ -378,13 +400,26 @@ export async function loadLocalBars(ticker, options = {}) {
     if (refreshedBars.length) seriesBars = refreshedBars;
   }
 
+  const preferredCanonicalId = normalizeCanonicalId(options.preferredCanonicalId || options.canonicalId);
+  const preferredHistoryPack = String(options.preferredHistoryPack || options.historyPack || '').trim() || null;
+  if (preferredCanonicalId && preferredHistoryPack) {
+    const directPackBars = await loadBarsFromHistoryPack({
+      canonical_id: preferredCanonicalId,
+      history_pack: preferredHistoryPack,
+      history_pack_candidates: [preferredHistoryPack],
+    });
+    if (directPackBars.length) {
+      localBarsTelemetry.direct_history_pack_hit += 1;
+      return mergeBars(directPackBars, seriesBars);
+    }
+    localBarsTelemetry.direct_history_pack_miss += 1;
+  }
+
   const assetMeta = await resolveLocalAssetMeta(cleanTicker, options);
   const packBars = await loadBarsFromHistoryPack(assetMeta);
+  if (packBars.length) localBarsTelemetry.history_pack_fallback_hit += 1;
   if (seriesBars.length || packBars.length) {
-    const barMap = new Map();
-    for (const b of packBars) barMap.set(b.date, b);
-    for (const b of seriesBars) barMap.set(b.date, b);
-    const mergedBars = Array.from(barMap.values()).sort((a, b) => a.date.localeCompare(b.date));
+    const mergedBars = mergeBars(packBars, seriesBars);
     if (mergedBars.length) return mergedBars;
   }
 
@@ -393,7 +428,17 @@ export async function loadLocalBars(ticker, options = {}) {
 
 
 
-  const shardDoc = await readJsonAbs(path.join(REPO_ROOT, `public/data/eod/history/shards/${shard}.json`));
+  const shardGzPath = path.join(REPO_ROOT, `public/data/eod/history/shards/${shard}.json.gz`);
+  const shardJsonPath = path.join(REPO_ROOT, `public/data/eod/history/shards/${shard}.json`);
+  let shardDoc = await readJsonGzAbs(shardGzPath);
+  if (shardDoc) localBarsTelemetry.shard_gzip_hit += 1;
+  if (!shardDoc) {
+    shardDoc = await readJsonAbs(shardJsonPath);
+    if (shardDoc && process.env.RV_LOADER_SHARD_FALLBACK_WARN === '1') {
+      console.warn(`[best-setups-loader] shard_plain_json_fallback shard=${shard}`);
+    }
+    if (shardDoc) localBarsTelemetry.shard_plain_json_fallback_hit += 1;
+  }
   const shardBars = Array.isArray(shardDoc?.[cleanTicker])
     ? shardDoc[cleanTicker].map((b) => {
         const rawClose = b[4], adjClose = b[5] ?? b[4];

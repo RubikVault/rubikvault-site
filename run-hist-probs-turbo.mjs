@@ -70,6 +70,25 @@ const HIST_PROBS_TIER_A_TOP_STOCKS = Math.max(0, Number(
 ) || 0);
 const HIST_PROBS_PROTECTED_TICKERS = new Set(['T', 'AAPL', 'MSFT', 'F', 'V', 'TSLA', 'SPY', 'QQQ', 'BRK-B', 'BRK.B', 'BF-B', 'BF.B']);
 const HIST_PROBS_DEFER_PATH = path.join(HIST_PROBS_DIR, 'deferred-latest.json');
+const HIST_PROBS_STATE_INDEX_PATH = path.join(HIST_PROBS_DIR, 'state_index.latest.json');
+const HIST_PROBS_WORKSET_SUMMARY_PATH = path.join(HIST_PROBS_DIR, 'workset-summary-latest.json');
+const HIST_PROBS_PROFILE_PATH = path.join(HIST_PROBS_DIR, 'profile-latest.json');
+const HIST_PROBS_RUN_ERROR_LEDGER_PATH = process.env.HIST_PROBS_ERROR_LEDGER_PATH
+  || process.env.RV_HIST_PROBS_ERROR_LEDGER_PATH
+  || path.join(HIST_PROBS_DIR, 'error-ledger-current.ndjson');
+const HIST_PROBS_SKIP_FULL_JSON_FALLBACK = process.env.HIST_PROBS_SKIP_FULL_JSON_FALLBACK === '1'
+  || process.env.RV_HIST_PROBS_SKIP_FULL_JSON_FALLBACK === '1';
+const HIST_PROBS_CLEANUP_LEDGER_ON_RUN = process.env.HIST_PROBS_CLEANUP_LEDGER_ON_RUN === '1'
+  || process.env.RV_HIST_PROBS_CLEANUP_LEDGER_ON_RUN === '1';
+const HIST_PROBS_PRUNE_CHECKPOINT_TO_SCOPE = process.env.HIST_PROBS_PRUNE_CHECKPOINT_TO_SCOPE !== '0'
+  && process.env.RV_HIST_PROBS_PRUNE_CHECKPOINT_TO_SCOPE !== '0';
+const HIST_PROBS_BOOTSTRAP_CHECKPOINT_FROM_OUTPUTS = process.env.HIST_PROBS_BOOTSTRAP_CHECKPOINT_FROM_OUTPUTS !== '0'
+  && process.env.RV_HIST_PROBS_BOOTSTRAP_CHECKPOINT_FROM_OUTPUTS !== '0';
+const HIST_PROBS_CHECKPOINT_FLUSH_BATCHES = Math.max(1, Number(
+  process.env.HIST_PROBS_CHECKPOINT_FLUSH_BATCHES
+    || process.env.RV_HIST_PROBS_CHECKPOINT_FLUSH_BATCHES
+    || 10,
+) || 10);
 
 function readJsonSync(filePath) {
   try {
@@ -470,7 +489,51 @@ async function inspectHistProbsOutput(filePath, expectedTicker, expectedDate = n
   }
 }
 
-async function collectExistingCoverage(entries, histDir) {
+async function findExistingHistProbsOutput(histDir, ticker) {
+  for (const candidate of histProbsReadCandidates(histDir, ticker)) {
+    try {
+      await fs.access(candidate);
+      return candidate;
+    } catch {}
+  }
+  return null;
+}
+
+function inspectCheckpointFreshness(checkpointStore, entry) {
+  const ticker = entry.symbol;
+  const state = getTickerState(checkpointStore, ticker);
+  const latestDate = normalizeDateId(state?.latest_date);
+  if (!state) return { status: 'invalid', latest_date: null, freshness_status: null, reason: 'checkpoint_missing' };
+  if (!['processed', 'fresh_skipped'].includes(String(state.status || '').toLowerCase())) {
+    return { status: 'invalid', latest_date: latestDate, freshness_status: null, reason: `checkpoint_status_${state.status || 'unknown'}` };
+  }
+  const rebuild = needsColdRebuild(checkpointStore, ticker, CURRENT_VERSIONS);
+  if (rebuild.needsRebuild) return { status: 'invalid', latest_date: latestDate, freshness_status: null, reason: rebuild.reason || 'checkpoint_version_mismatch' };
+  const expectedDate = entry.required_date || entry.expected_date || null;
+  if (expectedDate && latestDate && latestDate < expectedDate) {
+    const lag = tradingDaysBetween(latestDate, expectedDate);
+    if (lag != null && lag <= HIST_PROBS_FRESHNESS_BUDGET_TRADING_DAYS) {
+      return {
+        status: 'fresh',
+        freshness_status: 'budget_fresh',
+        latest_date: latestDate,
+        freshness_lag_trading_days: lag,
+        reason: 'state_index_budget_fresh',
+      };
+    }
+    return { status: 'stale', latest_date: latestDate, freshness_lag_trading_days: lag, reason: 'state_index_stale' };
+  }
+  if (!latestDate) return { status: 'invalid', latest_date: null, freshness_status: null, reason: 'checkpoint_latest_date_missing' };
+  return {
+    status: 'fresh',
+    freshness_status: 'strict_fresh',
+    latest_date: latestDate,
+    freshness_lag_trading_days: 0,
+    reason: 'state_index_strict_fresh',
+  };
+}
+
+async function collectExistingCoverage(entries, histDir, checkpointStore = null) {
   const fresh = new Set();
   const freshDates = new Map();
   let strictFresh = 0;
@@ -479,25 +542,28 @@ async function collectExistingCoverage(entries, histDir) {
   let missing = 0;
   let stale = 0;
   let invalid = 0;
+  let fullJsonReads = 0;
+  let stateIndexHits = 0;
 
   const batchSize = 64;
   for (let index = 0; index < entries.length; index += batchSize) {
     const batch = entries.slice(index, index + batchSize);
     await Promise.all(batch.map(async (entry) => {
-      const ticker = entry.symbol;
-      let filePath = null;
-      for (const candidate of histProbsReadCandidates(histDir, ticker)) {
-        try {
-          await fs.access(candidate);
-          filePath = candidate;
-          break;
-        } catch {}
-      }
+      const ticker = normalizeTicker(entry.symbol) || entry.symbol;
+      const filePath = await findExistingHistProbsOutput(histDir, ticker);
       if (!filePath) {
         missing += 1;
         return;
       }
-      const inspected = await inspectHistProbsOutput(filePath, ticker, entry.required_date || entry.expected_date);
+      let inspected = checkpointStore
+        ? inspectCheckpointFreshness(checkpointStore, entry)
+        : { status: 'invalid', latest_date: null, reason: 'checkpoint_store_unavailable' };
+      if (inspected.status === 'invalid' && HIST_PROBS_SKIP_FULL_JSON_FALLBACK) {
+        fullJsonReads += 1;
+        inspected = await inspectHistProbsOutput(filePath, ticker, entry.required_date || entry.expected_date);
+      } else if (checkpointStore) {
+        stateIndexHits += 1;
+      }
       if (inspected.status === 'fresh') {
         fresh.add(ticker);
         if (inspected.latest_date) freshDates.set(ticker, inspected.latest_date);
@@ -513,7 +579,100 @@ async function collectExistingCoverage(entries, histDir) {
     }));
   }
 
-  return { fresh, freshDates, missing, stale, invalid, strictFresh, budgetFresh, maxBudgetFreshLag };
+  return { fresh, freshDates, missing, stale, invalid, strictFresh, budgetFresh, maxBudgetFreshLag, fullJsonReads, stateIndexHits };
+}
+
+async function bootstrapCheckpointFromOutputs(checkpointStore, entries, histDir, expectedDate = null) {
+  const stats = {
+    attempted: entries.length,
+    bootstrapped: 0,
+    missing: 0,
+    stale: 0,
+    invalid: 0,
+    full_json_reads: 0,
+  };
+  for (const entry of entries) {
+    const ticker = normalizeTicker(entry.symbol);
+    if (!ticker) continue;
+    const filePath = await findExistingHistProbsOutput(histDir, ticker);
+    if (!filePath) {
+      stats.missing += 1;
+      continue;
+    }
+    stats.full_json_reads += 1;
+    const inspected = await inspectHistProbsOutput(filePath, ticker, entry.required_date || entry.expected_date || expectedDate);
+    if (inspected.status === 'fresh') {
+      setTickerState(checkpointStore, ticker, {
+        status: 'processed',
+        latest_date: inspected.latest_date || entry.expected_date || expectedDate || null,
+        canonical_id: entry.canonical_id || null,
+        ...CURRENT_VERSIONS,
+        computed_at: new Date().toISOString(),
+        source: 'bootstrap_from_existing_output',
+      });
+      stats.bootstrapped += 1;
+    } else if (inspected.status === 'stale') {
+      stats.stale += 1;
+    } else {
+      stats.invalid += 1;
+    }
+  }
+  return stats;
+}
+
+function buildWorksetRows({
+  universeEntries,
+  activeCandidates,
+  requiredEntries,
+  tickerList,
+  freshSkippedSet,
+  excludedNoData,
+  excludedInactive,
+  reclassifiedNoDataSet,
+  targetMarketDate,
+}) {
+  const activeSet = new Set(activeCandidates.map((entry) => entry.symbol));
+  const requiredSet = new Set(requiredEntries.map((entry) => entry.symbol));
+  const recomputeSet = new Set(tickerList.map((ticker) => String(ticker || '').toUpperCase()));
+  const noDataSet = new Set(excludedNoData.map((entry) => entry.symbol));
+  const inactiveSet = new Set(excludedInactive.map((entry) => entry.symbol));
+  return universeEntries.map((entry) => {
+    const symbol = String(entry.symbol || '').toUpperCase();
+    let decision = 'UNKNOWN';
+    let reason = 'UNKNOWN';
+    if (recomputeSet.has(symbol)) {
+      decision = 'RECOMPUTE';
+      reason = 'RECOMPUTE_OUTPUT_MISSING_OR_STALE';
+    } else if (freshSkippedSet.has(symbol)) {
+      decision = 'SKIP';
+      reason = 'SKIP_FRESHNESS_MATCH';
+    } else if (reclassifiedNoDataSet.has(symbol)) {
+      decision = 'EXCLUDE';
+      reason = 'EXCLUDE_PROVIDER_NO_DATA';
+    } else if (noDataSet.has(symbol)) {
+      decision = 'EXCLUDE';
+      reason = 'EXCLUDE_NOT_ELIGIBLE';
+    } else if (inactiveSet.has(symbol)) {
+      decision = 'EXCLUDE';
+      reason = 'EXCLUDE_INACTIVE';
+    } else if (activeSet.has(symbol) && !requiredSet.has(symbol)) {
+      decision = 'DEFER';
+      reason = 'DEFER_POLICY';
+    } else if (!activeSet.has(symbol)) {
+      decision = 'EXCLUDE';
+      reason = 'EXCLUDE_NOT_ELIGIBLE';
+    }
+    return {
+      symbol,
+      canonical_id: entry.canonical_id || null,
+      type_norm: entry.type_norm || null,
+      expected_date: entry.expected_date || null,
+      target_market_date: targetMarketDate || null,
+      bars_count: Number(entry.bars_count || 0),
+      decision,
+      reason,
+    };
+  });
 }
 
 function applyHistProbsTier(entries, tier = HIST_PROBS_TIER) {
@@ -598,6 +757,88 @@ async function writeJsonAtomic(filePath, payload) {
   }
 }
 
+function pruneCheckpointStoreToSymbols(store, symbols) {
+  const keep = new Set([...symbols].map((symbol) => String(symbol || '').toUpperCase()).filter(Boolean));
+  if (!keep.size) return 0;
+  let removed = 0;
+  for (const ticker of Object.keys(store.tickers || {})) {
+    if (!keep.has(String(ticker).toUpperCase())) {
+      delete store.tickers[ticker];
+      removed += 1;
+    }
+  }
+  return removed;
+}
+
+function summarizeWorkset(rows) {
+  const byDecision = {};
+  const byReason = {};
+  const byDecisionReason = {};
+  let unknown = 0;
+  for (const row of rows) {
+    const decision = row.decision || 'UNKNOWN';
+    const reason = row.reason || 'UNKNOWN';
+    byDecision[decision] = (byDecision[decision] || 0) + 1;
+    byReason[reason] = (byReason[reason] || 0) + 1;
+    const pair = `${decision}|${reason}`;
+    byDecisionReason[pair] = (byDecisionReason[pair] || 0) + 1;
+    if (decision === 'UNKNOWN') unknown += 1;
+  }
+  return { byDecision, byReason, byDecisionReason, unknown };
+}
+
+async function writeWorksetSummary({ rows, targetMarketDate, universeMode, assetClasses, outputPath = HIST_PROBS_WORKSET_SUMMARY_PATH }) {
+  const summary = summarizeWorkset(rows);
+  const payload = {
+    schema: 'rv.hist_probs.workset_summary.v1',
+    generated_at: new Date().toISOString(),
+    target_market_date: targetMarketDate || null,
+    universe_mode: universeMode || null,
+    asset_classes: [...assetClasses].sort(),
+    total_assets: rows.length,
+    ...summary,
+    samples: rows.slice(0, 200),
+  };
+  await writeJsonAtomic(outputPath, payload);
+  if (summary.unknown > 0) {
+    throw new Error(`hist_probs_workset_unknown:${summary.unknown}`);
+  }
+  return payload;
+}
+
+async function writeStateIndex({ checkpointStore, summary, outputPath = HIST_PROBS_STATE_INDEX_PATH }) {
+  const tickers = Object.values(checkpointStore?.tickers || {})
+    .sort((a, b) => String(a?.ticker || '').localeCompare(String(b?.ticker || '')))
+    .map((entry) => ({
+      ticker: String(entry?.ticker || '').toUpperCase(),
+      status: entry?.status || 'unknown',
+      latest_date: normalizeDateId(entry?.latest_date),
+      canonical_id: entry?.canonical_id || null,
+      schema_version: entry?.schema_version || null,
+      feature_core_version: entry?.feature_core_version || null,
+      outcome_logic_version: entry?.outcome_logic_version || null,
+      updated_at: entry?.updated_at || entry?.computed_at || null,
+    }));
+  const payload = {
+    schema: 'rv.hist_probs.state_index.v1',
+    generated_at: new Date().toISOString(),
+    source: 'checkpoint_store',
+    target_market_date: summary?.regime_date || summary?.target_market_date || null,
+    run_summary: {
+      ran_at: summary?.ran_at || null,
+      tickers_total: summary?.tickers_total ?? null,
+      tickers_covered: summary?.tickers_covered ?? null,
+      tickers_remaining: summary?.tickers_remaining ?? null,
+      tickers_errors: summary?.tickers_errors ?? null,
+      source_mode: summary?.source_mode || null,
+    },
+    ticker_count: tickers.length,
+    tickers,
+  };
+  await writeJsonAtomic(outputPath, payload);
+  return payload;
+}
+
 if (isMainThread) {
   // Re-import after setting env
   const { computeRegime } = await import('./scripts/lib/hist-probs/compute-regime.mjs');
@@ -639,17 +880,35 @@ if (isMainThread) {
     }
     const rssAtUniverseLoad = enforceRssBudget('universe_loaded');
     const checkpointStore = loadCheckpoints();
+    const checkpointTickerCountAtLoad = Object.keys(checkpointStore.tickers || {}).length;
+    const checkpointBootstrapSummary = (checkpointTickerCountAtLoad === 0 && SKIP_EXISTING && HIST_PROBS_BOOTSTRAP_CHECKPOINT_FROM_OUTPUTS)
+      ? await bootstrapCheckpointFromOutputs(checkpointStore, universeEntries, HIST_PROBS_DIR, targetMarketDate || regime?.date || null)
+      : null;
+    const checkpointTickerCountBeforePrune = Object.keys(checkpointStore.tickers || {}).length;
+    const shouldPruneCheckpoints = HIST_PROBS_PRUNE_CHECKPOINT_TO_SCOPE
+      && writeGlobalArtifacts
+      && cli.explicitTickers.length === 0
+      && cli.explicitEntries.length === 0;
+    const checkpointPrunedCount = shouldPruneCheckpoints
+      ? pruneCheckpointStoreToSymbols(checkpointStore, universeEntries.map((entry) => entry.symbol))
+      : 0;
     const totalInputTickers = universeEntries.length;
     const lowBarEntries = universeEntries.filter((entry) => Number(entry.bars_count || 0) < MIN_REQUIRED_BARS);
     const retainedFreshLowBarDates = new Map();
+    const freshSkippedSet = new Set();
+    let skipFullJsonReadCount = 0;
+    let skipStateIndexHitCount = 0;
     if (SKIP_EXISTING && lowBarEntries.length > 0) {
       await fs.mkdir(HIST_PROBS_DIR, { recursive: true });
-      const { fresh, freshDates } = await collectExistingCoverage(lowBarEntries, HIST_PROBS_DIR);
+      const { fresh, freshDates, fullJsonReads, stateIndexHits } = await collectExistingCoverage(lowBarEntries, HIST_PROBS_DIR, checkpointStore);
+      skipFullJsonReadCount += fullJsonReads;
+      skipStateIndexHitCount += stateIndexHits;
       for (const entry of lowBarEntries) {
         const ticker = entry.symbol;
-        if (!fresh.has(ticker)) continue;
-        const latestDate = freshDates.get(ticker) || entry.expected_date || null;
+        if (!fresh.has(ticker.toUpperCase())) continue;
+        const latestDate = freshDates.get(ticker.toUpperCase()) || entry.expected_date || null;
         retainedFreshLowBarDates.set(ticker, latestDate);
+        freshSkippedSet.add(ticker.toUpperCase());
         setTickerState(checkpointStore, ticker, {
           status: 'fresh_skipped',
           latest_date: latestDate,
@@ -750,7 +1009,11 @@ if (isMainThread) {
         strictFresh,
         budgetFresh,
         maxBudgetFreshLag,
-      } = await collectExistingCoverage(requiredEntries, HIST_PROBS_DIR);
+        fullJsonReads,
+        stateIndexHits,
+      } = await collectExistingCoverage(requiredEntries, HIST_PROBS_DIR, checkpointStore);
+      skipFullJsonReadCount += fullJsonReads;
+      skipStateIndexHitCount += stateIndexHits;
       if (RESPECT_CHECKPOINT_VERSION) {
         for (const entry of requiredEntries) {
           const ticker = entry.symbol;
@@ -766,9 +1029,10 @@ if (isMainThread) {
       for (const entry of requiredEntries) {
         const ticker = entry.symbol;
         if (!fresh.has(ticker.toUpperCase())) continue;
+        freshSkippedSet.add(ticker.toUpperCase());
         setTickerState(checkpointStore, ticker, {
           status: 'fresh_skipped',
-          latest_date: freshDates.get(ticker) || entry.required_date || entry.expected_date || null,
+          latest_date: freshDates.get(ticker.toUpperCase()) || entry.required_date || entry.expected_date || null,
           canonical_id: entry.canonical_id || null,
           ...CURRENT_VERSIONS,
           computed_at: new Date().toISOString(),
@@ -783,6 +1047,27 @@ if (isMainThread) {
       budgetFreshExistingCount = budgetFresh;
       maxBudgetFreshLagTradingDays = maxBudgetFreshLag;
       console.log(`[Turbo-Hist] Skip-existing: ${skippedCount} fresh skipped (${strictFreshExistingCount} strict, ${budgetFreshExistingCount} budget≤${HIST_PROBS_FRESHNESS_BUDGET_TRADING_DAYS}T), ${tickerList.length} remaining, ${staleExistingCount} stale, ${missingExistingCount} missing, ${invalidExistingCount} invalid, ${forcedRebuildCount} rebuild-forced`);
+    }
+
+    let worksetSummaryPayload = null;
+    if (writeGlobalArtifacts) {
+      const worksetRows = buildWorksetRows({
+        universeEntries,
+        activeCandidates,
+        requiredEntries,
+        tickerList,
+        freshSkippedSet,
+        excludedNoData,
+        excludedInactive,
+        reclassifiedNoDataSet,
+        targetMarketDate: targetMarketDate || regime?.date || null,
+      });
+      worksetSummaryPayload = await writeWorksetSummary({
+        rows: worksetRows,
+        targetMarketDate: targetMarketDate || regime?.date || null,
+        universeMode,
+        assetClasses: cli.assetClasses,
+      });
     }
 
     if (writeGlobalArtifacts && HIST_PROBS_DEFER_IF_REMAINING_OVER > 0 && tickerList.length > HIST_PROBS_DEFER_IF_REMAINING_OVER) {
@@ -898,7 +1183,7 @@ if (isMainThread) {
             error: 'COMPUTE_ERROR',
             message: msg.message,
             run_id: regime?.date || null,
-          });
+          }, HIST_PROBS_RUN_ERROR_LEDGER_PATH);
           setTickerState(checkpointStore, msg.ticker, {
             status: 'error',
             latest_date: msg.latest_date || expectedDates[msg.ticker] || null,
@@ -917,7 +1202,7 @@ if (isMainThread) {
             message: msg.message || 'NO_DATA',
             run_id: regime?.date || null,
             severity: 'warning',
-          });
+          }, HIST_PROBS_RUN_ERROR_LEDGER_PATH);
           setTickerState(checkpointStore, msg.ticker, {
             status: 'no_data',
             latest_date: expectedDates[msg.ticker] || null,
@@ -950,8 +1235,9 @@ if (isMainThread) {
           return;
         }
         batchesCompleted += 1;
-        // Incremental checkpoint save: persist state after each batch (crash-safe)
-        saveCheckpoints(checkpointStore);
+        if (batchesCompleted % HIST_PROBS_CHECKPOINT_FLUSH_BATCHES === 0 || batchesCompleted === batches.length) {
+          saveCheckpoints(checkpointStore);
+        }
         console.log(`[Turbo-Hist] Batch ${batchesCompleted}/${batches.length} complete (${batch.length} tickers)`);
         resolve();
       });
@@ -989,8 +1275,8 @@ if (isMainThread) {
     const totalSkippedAll = skippedCount + totalSkipped;
     const effectiveTotal = Math.max(0, totalUniverse - runtimeNoDataEntries.length - totalInactiveDetected - reclassifiedNoDataSet.size);
     const tickersCovered = totalDone + totalSkippedAll;
-    const tickersRemaining = Math.max(0, effectiveTotal - tickersCovered);
-    console.log(`\n[Turbo-Hist] ─── Done in ${elapsed}s (${totalDone} newly computed, ${totalSkippedAll} skipped, ${totalErrors} errors, ${totalNoData} runtime no-data, ${tickersRemaining} remaining)`);
+	    const tickersRemaining = Math.max(0, effectiveTotal - tickersCovered);
+	    console.log(`\n[Turbo-Hist] ─── Done in ${elapsed}s (${totalDone} newly computed, ${totalSkippedAll} skipped, ${totalErrors} errors, ${totalNoData} runtime no-data, ${tickersRemaining} remaining)`);
 
     // Final Summary to satisfy SSOT contract. Keep asset_classes sorted.
     let rssAtCompletion = null;
@@ -1000,8 +1286,14 @@ if (isMainThread) {
       rssAtCompletion = measureRssMb();
       console.warn(`[Turbo-Hist] ${error?.message || error} (recorded as advisory after state persistence)`);
     }
-    const summaryPayload = {
-      schema_version: RUN_SCHEMA_VERSION,
+	    const forceRebuild = !SKIP_EXISTING || !RESPECT_CHECKPOINT_VERSION || forcedRebuildCount > 0;
+	    const rebuildReasons = [
+	      !SKIP_EXISTING ? 'skip_existing_disabled' : null,
+	      !RESPECT_CHECKPOINT_VERSION ? 'checkpoint_version_not_respected' : null,
+	      forcedRebuildCount > 0 ? 'checkpoint_version_mismatch' : null,
+	    ].filter(Boolean);
+	    const summaryPayload = {
+	      schema_version: RUN_SCHEMA_VERSION,
       feature_core_version: FEATURE_CORE_VERSION,
       outcome_logic_version: OUTCOME_LOGIC_VERSION,
       ran_at: new Date().toISOString(),
@@ -1035,16 +1327,23 @@ if (isMainThread) {
       worker_scaling_gate_state: WORKER_GATE.gateState,
       worker_scaling_gate_source: WORKER_GATE.source,
       worker_scaling_cap_applied: WORKER_GATE.capApplied,
-      respect_checkpoint_version: RESPECT_CHECKPOINT_VERSION,
-      fail_on_soft_errors: FAIL_ON_SOFT_ERRORS,
+	      respect_checkpoint_version: RESPECT_CHECKPOINT_VERSION,
+	      effective_skip_existing: SKIP_EXISTING,
+	      effective_respect_checkpoint_version: RESPECT_CHECKPOINT_VERSION,
+	      force_rebuild: forceRebuild,
+	      rebuild_reason: rebuildReasons.length ? rebuildReasons.join(',') : null,
+	      checkpoint_bootstrap_from_outputs_enabled: HIST_PROBS_BOOTSTRAP_CHECKPOINT_FROM_OUTPUTS,
+	      checkpoint_bootstrap_from_outputs: checkpointBootstrapSummary,
+	      fail_on_soft_errors: FAIL_ON_SOFT_ERRORS,
       min_coverage_ratio: MIN_COVERAGE_RATIO,
       source_mode: universeMode,
       asset_classes: [...cli.assetClasses].sort(),
       max_tickers: cli.explicitTickers.length > 0 ? cli.explicitTickers.length : HIST_PROBS_MAX_TICKERS,
       retry_mode: writeGlobalArtifacts !== true,
       requested_tickers: cli.explicitTickers.length > 0 ? cli.explicitTickers : null,
-      regime_date: regime?.date ?? null,
-      elapsed_seconds: parseFloat(elapsed),
+	      regime_date: regime?.date ?? null,
+	      target_market_date: targetMarketDate || regime?.date || null,
+	      elapsed_seconds: parseFloat(elapsed),
       market_regime: regime?.market_regime ?? null,
       volatility_regime: regime?.volatility_regime ?? null,
       breadth_regime: regime?.breadth_regime ?? null,
@@ -1062,17 +1361,65 @@ if (isMainThread) {
         history_pack: entry.history_pack || null,
       })),
       local_only_mode: true,
-      checkpoints_rebuild_forced: forcedRebuildCount,
-      rss_budget_mb: HIST_PROBS_RSS_BUDGET_MB,
-      rss_after_universe_load_mb: rssAtUniverseLoad,
-      rss_at_completion_mb: rssAtCompletion,
-    };
-    saveCheckpoints(checkpointStore);
-    cleanupLedger({ maxAgeDays: 7 });
-    cleanupSnapshots({ maxAgeDays: 30 });
-    const snapshot = buildStateSnapshot(checkpointStore, summaryPayload);
-    writeStateSnapshot(snapshot);
-    const summaryPath = await writeSummaryAtomic(summaryPayload, writeGlobalArtifacts ? path.join(HIST_PROBS_DIR, 'run-summary.json') : RETRY_SUMMARY_PATH);
+	      checkpoints_rebuild_forced: forcedRebuildCount,
+	      checkpoint_prune_enabled: shouldPruneCheckpoints,
+	      checkpoint_ticker_count_before_prune: checkpointTickerCountBeforePrune,
+	      checkpoint_pruned_count: checkpointPrunedCount,
+	      checkpoint_ticker_count_after_prune: Object.keys(checkpointStore.tickers || {}).length,
+	      checkpoint_flush_batches: HIST_PROBS_CHECKPOINT_FLUSH_BATCHES,
+	      skip_full_json_read_count: skipFullJsonReadCount,
+	      skip_state_index_hit_count: skipStateIndexHitCount,
+	      error_ledger_path: path.relative(REPO_ROOT, HIST_PROBS_RUN_ERROR_LEDGER_PATH),
+	      workset_summary_path: writeGlobalArtifacts ? path.relative(REPO_ROOT, HIST_PROBS_WORKSET_SUMMARY_PATH) : null,
+	      state_index_path: writeGlobalArtifacts ? path.relative(REPO_ROOT, HIST_PROBS_STATE_INDEX_PATH) : null,
+	      workset_unknown_count: worksetSummaryPayload?.unknown ?? null,
+	      rss_budget_mb: HIST_PROBS_RSS_BUDGET_MB,
+	      rss_after_universe_load_mb: rssAtUniverseLoad,
+	      rss_at_completion_mb: rssAtCompletion,
+	    };
+	    saveCheckpoints(checkpointStore);
+	    if (HIST_PROBS_CLEANUP_LEDGER_ON_RUN) cleanupLedger({ maxAgeDays: 7, ledgerPath: HIST_PROBS_RUN_ERROR_LEDGER_PATH });
+	    cleanupSnapshots({ maxAgeDays: 30 });
+	    const snapshot = buildStateSnapshot(checkpointStore, summaryPayload);
+	    writeStateSnapshot(snapshot);
+	    if (writeGlobalArtifacts) {
+	      await writeStateIndex({ checkpointStore, summary: summaryPayload });
+	      await writeJsonAtomic(HIST_PROBS_PROFILE_PATH, {
+	        schema: 'rv.hist_probs.profile_summary.v1',
+	        generated_at: new Date().toISOString(),
+	        target_market_date: summaryPayload.target_market_date,
+	        elapsed_seconds: summaryPayload.elapsed_seconds,
+	        skip: {
+	          skipped: skippedCount,
+	          strict_fresh: strictFreshExistingCount,
+	          budget_fresh: budgetFreshExistingCount,
+	          stale: staleExistingCount,
+	          missing: missingExistingCount,
+	          invalid: invalidExistingCount,
+	          full_json_read_count: skipFullJsonReadCount,
+	          state_index_hit_count: skipStateIndexHitCount,
+	        },
+	        checkpoint: {
+	          bootstrap_from_outputs: checkpointBootstrapSummary,
+	          prune_enabled: shouldPruneCheckpoints,
+	          before_prune: checkpointTickerCountBeforePrune,
+	          pruned_count: checkpointPrunedCount,
+	          after_prune: Object.keys(checkpointStore.tickers || {}).length,
+	          flush_batches: HIST_PROBS_CHECKPOINT_FLUSH_BATCHES,
+	        },
+	        worker: {
+	          workers_used: numWorkers,
+	          batch_size: WORKER_BATCH_SIZE,
+	          batches: batches.length,
+	        },
+	        rss: {
+	          budget_mb: HIST_PROBS_RSS_BUDGET_MB,
+	          after_universe_load_mb: rssAtUniverseLoad,
+	          completion_mb: rssAtCompletion,
+	        },
+	      });
+	    }
+	    const summaryPath = await writeSummaryAtomic(summaryPayload, writeGlobalArtifacts ? path.join(HIST_PROBS_DIR, 'run-summary.json') : RETRY_SUMMARY_PATH);
     if (writeGlobalArtifacts) {
       await fs.rm(HIST_PROBS_DEFER_PATH, { force: true }).catch(() => {});
     }
