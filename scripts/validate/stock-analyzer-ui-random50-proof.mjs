@@ -13,11 +13,49 @@ import {
 } from '../../functions/api/_shared/page-core-reader.js';
 
 const ROOT = path.resolve(new URL('.', import.meta.url).pathname, '../..');
-const REPORT_PATH = path.join(ROOT, 'public/data/reports/stock-analyzer-ui-random50-proof-latest.json');
+const DEFAULT_REPORT_PATH = path.join(ROOT, 'public/data/reports/stock-analyzer-ui-random50-proof-latest.json');
+const REGIONAL30_REPORT_PATH = path.join(ROOT, 'public/data/reports/stock-analyzer-ui-regional30-proof-latest.json');
 const REGISTRY_PATH = path.join(ROOT, 'public/data/universe/v7/registry/registry.ndjson.gz');
 const CANONICAL_IDS_PATH = path.join(ROOT, 'public/data/universe/v7/ssot/assets.global.canonical.ids.json');
 const PAGE_CORE_LATEST_PATH = path.join(ROOT, 'public/data/page-core/latest.json');
-const REQUIRED = Object.freeze({ INDEX: 5, ETF: 25, STOCK: 20 });
+const GLOBAL50_REQUIRED = Object.freeze({ INDEX: 5, ETF: 25, STOCK: 20 });
+const REGIONAL30_REQUIRED = Object.freeze({
+  US: Object.freeze({ INDEX: 2, ETF: 3, STOCK: 5 }),
+  EU: Object.freeze({ INDEX: 2, ETF: 3, STOCK: 5 }),
+  ASIA: Object.freeze({ INDEX: 2, ETF: 3, STOCK: 5 }),
+});
+const EUROPE_COUNTRIES = new Set([
+  'AUSTRIA',
+  'BELGIUM',
+  'DENMARK',
+  'FINLAND',
+  'FRANCE',
+  'GERMANY',
+  'IRELAND',
+  'ITALY',
+  'NETHERLANDS',
+  'NORWAY',
+  'PORTUGAL',
+  'SPAIN',
+  'SWEDEN',
+  'SWITZERLAND',
+  'UNITED KINGDOM',
+]);
+const ASIA_COUNTRIES = new Set([
+  'CHINA',
+  'HONG KONG',
+  'INDIA',
+  'INDONESIA',
+  'JAPAN',
+  'MALAYSIA',
+  'PHILIPPINES',
+  'SINGAPORE',
+  'SOUTH KOREA',
+  'TAIWAN',
+  'THAILAND',
+  'VIETNAM',
+]);
+const ASIA_EXCHANGES = new Set(['HK', 'KO', 'KQ', 'KS', 'NSE', 'NSEI', 'SHE', 'SHG', 'SI', 'TSE', 'TW']);
 
 function cliValue(name, fallback = null) {
   const prefix = `--${name}=`;
@@ -26,6 +64,14 @@ function cliValue(name, fallback = null) {
   const index = process.argv.indexOf(`--${name}`);
   return index >= 0 ? process.argv[index + 1] || fallback : fallback;
 }
+
+const SAMPLE_MODE = String(cliValue('sample') || cliValue('mode') || process.env.RV_STOCK_ANALYZER_UI_PROOF_SAMPLE || 'random50').trim().toLowerCase();
+const REPORT_PATH = path.resolve(
+  ROOT,
+  cliValue('output')
+    || process.env.RV_STOCK_ANALYZER_UI_PROOF_OUTPUT
+    || (SAMPLE_MODE === 'regional30' ? REGIONAL30_REPORT_PATH : DEFAULT_REPORT_PATH),
+);
 
 function readJson(filePath) {
   return JSON.parse(fs.readFileSync(filePath, 'utf8'));
@@ -51,6 +97,16 @@ function normalizeAssetClass(row) {
   return raw || 'UNKNOWN';
 }
 
+function classifyRegion(row) {
+  const id = String(row?.canonical_id || '').toUpperCase();
+  const country = String(row?.country || '').trim().toUpperCase();
+  const exchange = String(row?.exchange || '').trim().toUpperCase();
+  if (country === 'UNITED STATES' || id.startsWith('US:')) return 'US';
+  if (EUROPE_COUNTRIES.has(country)) return 'EU';
+  if (ASIA_COUNTRIES.has(country) || ASIA_EXCHANGES.has(exchange)) return 'ASIA';
+  return 'OTHER';
+}
+
 function readCanonicalIds() {
   const doc = readJson(CANONICAL_IDS_PATH);
   const ids = Array.isArray(doc?.canonical_ids) ? doc.canonical_ids : (Array.isArray(doc?.ids) ? doc.ids : []);
@@ -72,6 +128,7 @@ function readRegistryMeta() {
       country: row.country || null,
       exchange: row.exchange || canonicalId.split(':')[0],
       asset_class: normalizeAssetClass(row),
+      region: classifyRegion(row),
     });
   }
   return meta;
@@ -101,7 +158,43 @@ function deterministicPick(rows, count, seed) {
     .map((item) => item.row);
 }
 
-function buildSample({ seed }) {
+function regionClassCounts(rows) {
+  const out = {};
+  for (const row of rows) {
+    const region = row.region || 'OTHER';
+    const assetClass = row.asset_class || 'UNKNOWN';
+    out[region] ||= {};
+    out[region][assetClass] = (out[region][assetClass] || 0) + 1;
+  }
+  return out;
+}
+
+function buildRegional30Sample({ seed, rows }) {
+  const selected = [];
+  const availability = regionClassCounts(rows);
+  for (const [region, byClass] of Object.entries(REGIONAL30_REQUIRED)) {
+    for (const [assetClass, count] of Object.entries(byClass)) {
+      const pool = rows.filter((row) => row.region === region && row.asset_class === assetClass);
+      if (pool.length < count) throw new Error(`REGIONAL30_POOL_TOO_SMALL:${region}:${assetClass}:${pool.length}:${count}`);
+      selected.push(...deterministicPick(pool, count, `${seed}:${region}:${assetClass}`));
+    }
+  }
+  return { required: REGIONAL30_REQUIRED, availability, selected };
+}
+
+function buildGlobal50Sample({ seed, rows }) {
+  const selected = [];
+  const availability = {};
+  for (const [assetClass, count] of Object.entries(GLOBAL50_REQUIRED)) {
+    const pool = rows.filter((row) => row.asset_class === assetClass);
+    availability[assetClass] = pool.length;
+    if (pool.length < count) throw new Error(`RANDOM50_POOL_TOO_SMALL:${assetClass}:${pool.length}:${count}`);
+    selected.push(...deterministicPick(pool, count, `${seed}:${assetClass}`));
+  }
+  return { required: GLOBAL50_REQUIRED, availability, selected };
+}
+
+function buildSample({ seed, mode }) {
   const canonicalIds = readCanonicalIds();
   const registryMeta = readRegistryMeta();
   const latest = readJson(PAGE_CORE_LATEST_PATH);
@@ -111,15 +204,10 @@ function buildSample({ seed }) {
     .filter(Boolean)
     .filter((row) => !pageCoreIds || pageCoreIds.has(row.canonical_id));
 
-  const selected = [];
-  const availability = {};
-  for (const [assetClass, count] of Object.entries(REQUIRED)) {
-    const pool = rows.filter((row) => row.asset_class === assetClass);
-    availability[assetClass] = pool.length;
-    if (pool.length < count) throw new Error(`RANDOM50_POOL_TOO_SMALL:${assetClass}:${pool.length}:${count}`);
-    selected.push(...deterministicPick(pool, count, `${seed}:${assetClass}`));
-  }
-  return { latest, pageCoreIds: pageCoreIds?.size || null, availability, selected };
+  const sample = mode === 'regional30'
+    ? buildRegional30Sample({ seed, rows })
+    : buildGlobal50Sample({ seed, rows });
+  return { latest, pageCoreIds: pageCoreIds?.size || null, ...sample };
 }
 
 async function freePort() {
@@ -272,7 +360,7 @@ async function validateAsset({ browser, baseUrl, asset, targetMarketDate, latest
 
 async function main() {
   const seed = cliValue('seed') || process.env.RV_RANDOM50_SEED || new Date().toISOString().slice(0, 10);
-  const { latest, pageCoreIds, availability, selected } = buildSample({ seed });
+  const { latest, pageCoreIds, availability, required, selected } = buildSample({ seed, mode: SAMPLE_MODE });
   const targetMarketDate = normalizeDate(cliValue('date') || cliValue('target-market-date') || process.env.RV_TARGET_MARKET_DATE || latest?.target_market_date);
   const baseArg = cliValue('base-url') || process.env.RV_UI_PROOF_BASE_URL || '';
   let baseUrl = String(baseArg || '').replace(/\/+$/, '');
@@ -305,18 +393,26 @@ async function main() {
       acc[row.asset_class] = (acc[row.asset_class] || 0) + 1;
       return acc;
     }, {});
+    const regionalCounts = results.reduce((acc, row) => {
+      const region = selected.find((asset) => asset.canonical_id === row.canonical_id)?.region || 'OTHER';
+      acc[region] ||= {};
+      acc[region][row.asset_class] = (acc[region][row.asset_class] || 0) + 1;
+      return acc;
+    }, {});
     const failedResults = results.filter((row) => !row.ok);
     const report = {
-      schema: 'rv.stock_analyzer_ui_random50_proof.v1',
+      schema: SAMPLE_MODE === 'regional30' ? 'rv.stock_analyzer_ui_regional30_proof.v1' : 'rv.stock_analyzer_ui_random50_proof.v1',
       generated_at: new Date().toISOString(),
       status: failedResults.length === 0 ? 'OK' : 'FAILED',
+      sample_mode: SAMPLE_MODE,
       base_url: baseUrl,
       target_market_date: targetMarketDate,
       local_page_core_snapshot: latest?.snapshot_id || null,
       served_page_core_snapshot: remoteLatest?.snapshot_id || null,
       seed,
-      required_counts: REQUIRED,
+      required_counts: required,
       sample_counts: counts,
+      sample_counts_by_region_class: regionalCounts,
       page_core_ids,
       pool_availability: availability,
       ok: results.filter((row) => row.ok).length,
