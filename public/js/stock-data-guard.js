@@ -510,24 +510,23 @@ export function guardModelConsensus(decision, ev4) {
   if (!ev4?.input_states) return { valid: false, warning: null };
 
   const states = ev4.input_states;
-  const hasScientific = states.scientific?.status === 'ok';
-  const hasForecast = states.forecast?.status === 'ok';
-  const hasQuantlab = states.quantlab?.status === 'ok';
-  const available = [hasScientific, hasForecast, hasQuantlab].filter(Boolean).length;
+  const entries = ['quantlab', 'forecast', 'scientific'].map((key) => ({ key, state: states[key] || {} }));
+  const required = entries.filter(({ state }) => state.status !== 'not_applicable');
+  const available = required.filter(({ state }) => state.status === 'ok').length;
   const missingModels = [
-    !hasQuantlab ? 'quantlab' : null,
-    !hasForecast ? 'forecast' : null,
-    !hasScientific ? 'scientific' : null,
+    ...required.filter(({ state }) => state.status !== 'ok').map(({ key }) => key),
   ].filter(Boolean);
 
-  if (available === 0) return { valid: false, warning: 'Model consensus: no model data available', available, missingModels, degraded: true };
+  if (required.length === 0) return { valid: true, warning: null, available: 0, total: 0, missingModels: [], degraded: false };
+  if (available === 0) return { valid: false, warning: 'Model consensus: no required model data available', available, total: required.length, missingModels, degraded: true };
   
-  const isUiDegraded = available < 3;
+  const isUiDegraded = available < required.length;
 
   return { 
     valid: true, 
-    warning: available < 3 ? `Model consensus: ${available}/3 models available` : null,
+    warning: isUiDegraded ? `Model consensus: ${available}/${required.length} required models available` : null,
     available, 
+    total: required.length,
     missingModels, 
     degraded: isUiDegraded 
   };

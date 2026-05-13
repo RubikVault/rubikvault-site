@@ -47,6 +47,8 @@ const DECISION_CORE_ROOT = path.join(ROOT, 'public/data/decision-core');
 const FUNDAMENTALS_SCOPE_PATH = path.join(ROOT, 'public/data/fundamentals/_scope.json');
 const FORECAST_LATEST_PATH = path.join(ROOT, 'public/data/forecast/latest.json');
 const HIST_PROBS_PUBLIC_ROOT = path.join(ROOT, 'public/data/hist-probs-public');
+const SCIENTIFIC_PER_ASSET_LATEST_PATH = path.join(ROOT, 'public/data/supermodules/scientific-per-asset/latest.json');
+const QUANTLAB_MODEL_COVERAGE_LATEST_PATH = path.join(ROOT, 'public/data/quantlab/model-coverage/latest.json');
 const BREAKOUT_LATEST_MANIFEST_PATHS = [
   path.join(ROOT, 'public/data/breakout/manifests/latest.json'),
   path.join(ROOT, 'public/data/breakout/status.json'),
@@ -573,6 +575,87 @@ function breakoutItemFor({ canonicalId, display, breakoutKeys }) {
   return breakoutKeys?.get(normalizePageCoreAlias(canonicalId)) || breakoutKeys?.get(normalizePageCoreAlias(display)) || null;
 }
 
+function createModelProjectionReader(latestPath) {
+  const latest = readJsonMaybe(latestPath);
+  if (!latest || !Array.isArray(latest.shard_files)) {
+    return {
+      available: false,
+      latest: latest || null,
+      get: () => null,
+    };
+  }
+  const byAsset = new Map();
+  const root = path.dirname(latestPath);
+  for (const rel of latest.shard_files) {
+    const filePath = path.join(root, String(rel || ''));
+    const doc = readJsonCached(filePath);
+    const entries = doc?.by_asset && typeof doc.by_asset === 'object' ? Object.entries(doc.by_asset) : [];
+    for (const [canonical, row] of entries) {
+      const id = normalizePageCoreAlias(canonical || row?.canonical_id);
+      if (id) byAsset.set(id, row);
+    }
+  }
+  return {
+    available: byAsset.size > 0,
+    latest,
+    get: (canonicalId) => byAsset.get(normalizePageCoreAlias(canonicalId)) || null,
+  };
+}
+
+function modelStateFromProjection(reader, canonicalId, {
+  missingReason,
+  targetMarketDate,
+  source,
+  notApplicableReason = null,
+} = {}) {
+  if (!reader?.available) {
+    return { status: 'unavailable', reason: `${source || 'model'}_projection_missing` };
+  }
+  const row = reader.get(canonicalId);
+  if (!row) return { status: 'unavailable', reason: missingReason || `${source || 'model'}_entry_missing` };
+  const status = String(row.status || '').trim().toLowerCase();
+  const asOf = normalizeIsoDate(row.as_of || row.target_market_date || reader.latest?.target_market_date || null);
+  if (status === 'not_applicable') {
+    return {
+      status: 'not_applicable',
+      as_of: asOf || targetMarketDate || null,
+      reason: row.reason || notApplicableReason || `${source || 'model'}_not_applicable`,
+    };
+  }
+  if (status === 'ok' && (!targetMarketDate || (asOf && asOf >= targetMarketDate))) {
+    return {
+      status: 'ok',
+      as_of: asOf || targetMarketDate || null,
+      score: row.score ?? row.avg_top_percentile ?? null,
+      reason: null,
+    };
+  }
+  return {
+    status: status || 'unavailable',
+    as_of: asOf || null,
+    reason: row.reason || (status === 'stale' ? `${source || 'model'}_stale` : `${source || 'model'}_not_ready`),
+  };
+}
+
+function forecastModelState({ forecastStatus, targetMarketDate }) {
+  if (forecastStatus === 'available') return { status: 'ok', as_of: targetMarketDate || null };
+  if (forecastStatus === 'not_applicable') {
+    return { status: 'not_applicable', as_of: targetMarketDate || null, reason: 'forecast_model_stock_only' };
+  }
+  return { status: 'unavailable', reason: 'forecast_unavailable' };
+}
+
+function summarizeModelCoverage(states) {
+  const values = Object.values(states || {});
+  const required = values.filter((state) => state?.status !== 'not_applicable');
+  const ok = required.filter((state) => state?.status === 'ok');
+  const blocked = required.filter((state) => state?.status !== 'ok');
+  if (required.length === 0) return { status: 'not_applicable', available: 0, required: 0, total: values.length, blocked };
+  if (blocked.length === 0) return { status: 'complete', available: ok.length, required: required.length, total: values.length, blocked };
+  if (ok.length > 0) return { status: 'partial', available: ok.length, required: required.length, total: values.length, blocked };
+  return { status: 'missing', available: 0, required: required.length, total: values.length, blocked };
+}
+
 function normalizeBreakoutItemStatus(item) {
   const raw = item?.breakout_status
     || item?.status
@@ -1034,17 +1117,29 @@ function buildPageCoreRow({ canonicalId, registryRow, decisionRow, lookupValue, 
       ? 'available_via_endpoint'
       : (moduleContext.histProfiles?.available ? 'not_generated' : 'projection_missing');
   const modelStates = {
-    forecast: forecastStatus === 'available'
-      ? { status: 'ok', as_of: targetMarketDate || null }
-      : { status: 'unavailable', reason: 'forecast_unavailable' },
-    scientific: { status: 'unavailable', reason: 'scientific_unavailable' },
-    quantlab: { status: 'unavailable', reason: 'quantlab_unavailable' },
+    forecast: forecastModelState({ forecastStatus, targetMarketDate }),
+    scientific: modelStateFromProjection(moduleContext.scientificModels, canonicalId, {
+      missingReason: 'scientific_entry_missing',
+      targetMarketDate,
+      source: 'scientific',
+      notApplicableReason: 'scientific_model_stock_only',
+    }),
+    quantlab: modelStateFromProjection(moduleContext.quantlabModels, canonicalId, {
+      missingReason: 'quantlab_entry_missing',
+      targetMarketDate,
+      source: 'quantlab',
+      notApplicableReason: 'quantlab_model_stock_etf_only',
+    }),
   };
-  const modelAvailable = Object.values(modelStates).filter((state) => state.status === 'ok').length;
-  const modelCoverageStatus = modelAvailable >= 3 ? 'complete' : (modelAvailable > 0 ? 'partial' : 'missing');
+  const modelCoverage = summarizeModelCoverage(modelStates);
+  const modelAvailable = modelCoverage.available;
+  const modelCoverageStatus = modelCoverage.status;
   const moduleWarnings = [];
   if (riskFallback) moduleWarnings.push(`risk_fallback_${riskFallback.source}`);
   if (riskFallback && rawVerdict === 'BUY') moduleWarnings.push('buy_suppressed_by_risk_fallback');
+  for (const [modelKey, state] of Object.entries(modelStates)) {
+    if (state?.status && !['ok', 'not_applicable'].includes(state.status)) moduleWarnings.push(`${modelKey}_${state.status}`);
+  }
   const uiBannerState = decisionOperational && targetable && historicalBasisOk && freshnessOk
     ? 'all_systems_operational'
     : primaryBlocker
@@ -1109,6 +1204,8 @@ function buildPageCoreRow({ canonicalId, registryRow, decisionRow, lookupValue, 
       fundamentals_status: fundamentalsStatus,
       forecast: forecastStatus === 'available',
       forecast_status: forecastStatus,
+      scientific_status: modelStates.scientific.status,
+      quantlab_status: modelStates.quantlab.status,
       breakout_status: breakoutStatus,
       historical_profile: historicalProfileStatus === 'ready',
       historical_profile_status: historicalProfileStatus,
@@ -1152,6 +1249,7 @@ function buildPageCoreRow({ canonicalId, registryRow, decisionRow, lookupValue, 
     model_coverage: {
       status: modelCoverageStatus,
       available: modelAvailable,
+      required: modelCoverage.required,
       total: 3,
       states: modelStates,
     },
@@ -1351,6 +1449,8 @@ function buildBundle(opts) {
     forecastSymbols: readForecastSymbols(),
     breakoutKeys: readBreakoutKeys(),
     histProfiles: createHistProfileReader(),
+    scientificModels: createModelProjectionReader(SCIENTIFIC_PER_ASSET_LATEST_PATH),
+    quantlabModels: createModelProjectionReader(QUANTLAB_MODEL_COVERAGE_LATEST_PATH),
   };
   const { aliases, collisions } = buildAliasMap({ lookupExact, searchExact, registryRows, scopeIds });
   const snapshotId = buildPageCoreSnapshotId({

@@ -608,13 +608,13 @@ step_command() {
       fi
       ;;
     quantlab_daily_report)
-      printf '%s\n' "node scripts/quantlab/build_quantlab_v4_daily_report.mjs"
+      printf '%s\n' "node scripts/quantlab/build_quantlab_v4_daily_report.mjs && node scripts/ops/build-quantlab-model-coverage.mjs --target-market-date '$TARGET_MARKET_DATE'"
       ;;
     breakout_v12)
       printf '%s\n' "POLARS_MAX_THREADS='${POLARS_MAX_THREADS:-2}' OMP_NUM_THREADS='${OMP_NUM_THREADS:-2}' DUCKDB_THREADS='${DUCKDB_THREADS:-2}' RV_BREAKOUT_SCOPE_FILE='${RV_BREAKOUT_SCOPE_FILE:-public/data/universe/v7/ssot/assets.index_core.canonical.ids.json}' node scripts/breakout/run-breakout-nightly-safe.mjs --as-of='$TARGET_MARKET_DATE' --max-assets='${RV_BREAKOUT_MAX_ASSETS:-5990}' && node scripts/breakout-v12/verify-production-ready.mjs --as-of='$TARGET_MARKET_DATE'"
       ;;
     scientific_summary)
-      printf '%s\n' "node scripts/build-scientific-summary.mjs"
+      printf '%s\n' "SCIENTIFIC_SCOPE_FILE='public/data/universe/v7/ssot/assets.global.canonical.ids.json' SCIENTIFIC_ROWS_FILE='mirrors/universe-v7/ssot/assets.global.rows.json' node scripts/scientific-analyzer/generate-analysis.mjs && node scripts/build-scientific-summary.mjs && node scripts/ops/build-scientific-per-asset-projection.mjs --target-market-date '$TARGET_MARKET_DATE'"
       ;;
     forecast_daily)
       local forecast_scope_env=""

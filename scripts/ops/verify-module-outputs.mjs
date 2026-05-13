@@ -148,15 +148,15 @@ const modules = [
   },
   {
     id: 'quantlab',
-    paths: ['public/data/quantlab/daily-scorecard-latest.json', 'public/data/quantlab/reports/v4-daily-latest.json', 'public/data/quantlab/latest.json'],
-    countKeys: ['asset_count', 'assets_scored', 'targetAsofs', 'trainingScope.currentFocusFamilies', 'rows', 'items', 'symbols'],
+    paths: ['public/data/quantlab/model-coverage/latest.json', 'public/data/quantlab/daily-scorecard-latest.json', 'public/data/quantlab/reports/v4-daily-latest.json', 'public/data/quantlab/latest.json'],
+    countKeys: ['scope_count', 'asset_count', 'assets_scored', 'targetAsofs', 'trainingScope.currentFocusFamilies', 'rows', 'items', 'symbols'],
     dateMode: 'on_or_after',
     minCount: 1,
   },
   {
     id: 'scientific',
-    paths: ['public/data/supermodules/scientific-summary.json', 'public/data/decision-core/status/latest.json'],
-    countKeys: ['asset_count', 'assets', 'rows', 'summary.asset_count', 'universe_stats.total', 'total_assets'],
+    paths: ['public/data/supermodules/scientific-per-asset/latest.json', 'public/data/supermodules/scientific-summary.json', 'public/data/decision-core/status/latest.json'],
+    countKeys: ['scope_count', 'asset_count', 'assets', 'rows', 'summary.asset_count', 'universe_stats.total', 'total_assets'],
     minCount: 1,
   },
 ];

@@ -412,27 +412,34 @@ function pageCoreToGovernance(pageCore) {
   const coverage = pageCore?.coverage || {};
   const contract = pageCore?.status_contract || {};
   const statusFrom = (value) => String(value || '').trim().toLowerCase();
-  const okState = (status, okValues = ['available', 'ready', 'operational', 'ok']) => (
-    okValues.includes(statusFrom(status)) ? { status: 'ok', as_of: targetAsOf } : null
-  );
-  const forecastState = okState(contract.forecast_status || coverage.forecast_status || (coverage.forecast ? 'available' : null))
+  const modelStates = pageCore?.model_coverage?.states || {};
+  const okState = (status, fallbackReason, okValues = ['available', 'ready', 'operational', 'ok']) => {
+    const normalized = statusFrom(status);
+    if (okValues.includes(normalized)) return { status: 'ok', as_of: targetAsOf };
+    if (normalized === 'not_applicable') return { status: 'not_applicable', as_of: targetAsOf, reason: fallbackReason || 'not_applicable' };
+    return null;
+  };
+  const forecastState = okState(contract.forecast_status || coverage.forecast_status || modelStates.forecast?.status || (coverage.forecast ? 'available' : null), modelStates.forecast?.reason || 'forecast_not_applicable')
     || { status: 'unavailable', reason: 'forecast_unavailable' };
-  const scientificState = okState(contract.scientific_status || coverage.scientific_status || pageCore?.model_coverage?.scientific?.status)
+  const scientificState = okState(contract.scientific_status || coverage.scientific_status || modelStates.scientific?.status, modelStates.scientific?.reason || 'scientific_not_applicable')
     || { status: 'unavailable', reason: 'scientific_unavailable' };
-  const quantlabState = okState(contract.quantlab_status || coverage.quantlab_status || pageCore?.model_coverage?.quantlab?.status)
+  const quantlabState = okState(contract.quantlab_status || coverage.quantlab_status || modelStates.quantlab?.status, modelStates.quantlab?.reason || 'quantlab_not_applicable')
     || { status: 'unavailable', reason: 'quantlab_unavailable' };
-  const available = [forecastState, scientificState, quantlabState].filter((state) => state.status === 'ok').length;
+  const inputStates = [forecastState, scientificState, quantlabState];
+  const required = inputStates.filter((state) => state.status !== 'not_applicable');
+  const available = required.filter((state) => state.status === 'ok').length;
+  const complete = required.length === 0 || available >= required.length;
   return {
     ticker: pageCore?.display_ticker || null,
     canonical_asset_id: pageCore?.canonical_asset_id || null,
     universe: pageCore?.identity || null,
     market_score: null,
     evaluation_v4: {
-      status: available > 0 ? 'partial_model_inputs' : 'not_built_at_request_time',
+      status: complete ? 'ready' : available > 0 ? 'partial_model_inputs' : 'not_built_at_request_time',
       availability: {
-        status: available >= 3 ? 'ready' : (available > 0 ? 'partial' : 'not_built_at_request_time'),
-        reason: available >= 3 ? null : reason,
-        ui_renderable: available > 0,
+        status: complete ? 'ready' : (available > 0 ? 'partial' : 'not_built_at_request_time'),
+        reason: complete ? null : reason,
+        ui_renderable: complete || available > 0,
       },
       input_states: {
         quantlab: quantlabState,

@@ -21,6 +21,18 @@
 
 ---
 
+### 2026-05-13 · Stock Analyzer · Model coverage must come from per-asset producer projections
+
+**What:** Page-Core could mark assets operational while visible Stock Analyzer model evidence still showed `Models: 0/3`, because `scientific` and `quantlab` were hardcoded as unavailable instead of consuming current per-asset producer truth.
+
+**Why:** Scientific and QuantLab generated legacy/global artifacts, but Page-Core did not have compact per-asset projections with typed `ok`, `not_applicable`, `stale`, or `unavailable` status. The UI had to infer model health from missing optional structures.
+
+**Fix:** Publish `scientific-per-asset/latest.json` and `quantlab/model-coverage/latest.json` with shards, wire Page-Core model coverage to those projections, and treat `not_applicable` as operational only when explicit and policy-defined.
+
+**Prevention:** Do not hardcode visible model modules as available or unavailable in Page-Core. Every visible Stock Analyzer module needs current producer projection or typed provider/asset exception before it can contribute to `All Systems Operational`.
+
+---
+
 ### 2026-05-10 · Dashboard · Public dashboards must use sanitized projections, not raw ops artifacts
 
 **What:** Dashboard V7 had useful live pipeline views, but the raw inputs under `public/data/ui/`, `public/data/ops/`, and broad `public/data/reports/` included NAS paths, run commands, internal topology, and private operational context.

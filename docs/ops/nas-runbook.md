@@ -214,6 +214,52 @@ Required service checks:
 ssh neonas 'ps -ef | egrep "synorelayd|synofoto|nginx: master|smbd -F --no-process-group" | grep -v egrep'
 ```
 
+## Cloudflare Pages Deploy Secret
+
+Production deploys run from the NAS release lane. Keep Cloudflare credentials in NAS private secrets directories only.
+
+Active supervisor path:
+
+```sh
+/volume1/homes/neoboy/RepoOps/rubikvault-site/secrets/cloudflare.env
+```
+
+Dev workspace mirror:
+
+```sh
+/volume1/homes/neoboy/Dev/rubikvault-site/var/private/secrets/cloudflare.env
+```
+
+Required keys:
+
+```sh
+CLOUDFLARE_API_TOKEN=...
+CLOUDFLARE_ACCOUNT_ID=...
+CLOUDFLARE_PROJECT_NAME=rubikvault-site
+```
+
+Rules:
+
+- Never commit this file.
+- Never print token values in logs, docs, tickets, or screenshots.
+- File owner should be `neoboy`; permissions should be `600`.
+- `CLOUDFLARE_ACCOUNT_ID` must be the 32-character account id, not a `cfut_...` token value.
+- Validate from the same NAS environment that runs the supervisor.
+
+Non-printing validation:
+
+```sh
+cd /volume1/homes/neoboy/Dev/rubikvault-site
+. scripts/nas/nas-env.sh >/dev/null
+node -e "console.log({token: !!process.env.CLOUDFLARE_API_TOKEN, account: /^[0-9a-f]{32}$/.test(process.env.CLOUDFLARE_ACCOUNT_ID || ''), project: process.env.CLOUDFLARE_PROJECT_NAME || null})"
+node_modules/.bin/wrangler whoami
+curl -fsS "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/pages/projects/${CLOUDFLARE_PROJECT_NAME}" \
+  -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+  | jq '{success, project: .result.name}'
+```
+
+If validation fails, stop before `wrangler pages deploy`. Do not mark the release lane green.
+
 Capture a migration checkpoint before or after a stage:
 
 ```sh

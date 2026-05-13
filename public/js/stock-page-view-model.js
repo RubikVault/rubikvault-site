@@ -600,6 +600,12 @@ export function buildStockUiState({
   tradePlan = null,
   close = payload?.data?.market_prices?.close || null,
 } = {}) {
+  const inputStates = payload?.evaluation_v4?.input_states || {};
+  const modelKeys = ['quantlab', 'forecast', 'scientific'];
+  const hasExplicitModelStates = modelKeys.some((key) => inputStates[key]);
+  const requiredModelKeys = hasExplicitModelStates
+    ? modelKeys.filter((key) => inputStates[key]?.status !== 'not_applicable')
+    : modelKeys;
   const decisionCore = payload?.decision_core_min || payload?.data?.decision_core_min || decision?.decision_core_min || null;
   const coreDecision = decisionCore?.decision || null;
   const coreTradeGuard = decisionCore?.trade_guard || null;
@@ -609,7 +615,7 @@ export function buildStockUiState({
   const horizonVerdicts = rawHorizons.map((item) => normalizeUiAction(item?.v?.l || item?.verdict || item?.label)).filter(Boolean);
   const allHorizonsWait = horizonVerdicts.length > 0 && horizonVerdicts.every((value) => value === 'WAIT' || value === 'UNAVAILABLE');
   const horizonConfidences = rawHorizons.map((item) => normalizeUiConfidence(item?.v?.cf ?? item?.confidence ?? rawConfidence));
-  const modelTotal = 3;
+  const modelTotal = requiredModelKeys.length;
   const missingCount = Array.isArray(missingModels) ? new Set(missingModels).size : 0;
   const modelCount = modelEvidenceLimited ? Math.max(0, modelTotal - missingCount) : modelTotal;
   let confidence = rawConfidence;
@@ -674,7 +680,7 @@ export function buildStockUiState({
   const trustChips = [
     `System: ${integrityBlocked ? 'Blocked' : 'OK'}`,
     `Price/Tech: ${canonicalDate ? `OK · ${canonicalDate} EOD` : 'Pending'}`,
-    `Models: ${modelCount}/${modelTotal}`,
+    modelTotal > 0 ? `Models: ${modelCount}/${modelTotal}` : 'Models: N/A',
     historyChip,
     `Reliability: ${confidence}`,
   ];
@@ -806,24 +812,45 @@ export function buildActiveModelConsensusPresentation({ evaluation = null, decis
     { key: 'forecast', label: 'Forecast' },
     { key: 'scientific', label: 'Scientific' },
   ];
-  const activeModels = models.filter((model) => !missingModels.includes(model.key) && modelStates[model.key]);
+  const inputStates = evaluation?.input_states || {};
+  const hasInputStates = models.some((model) => inputStates[model.key]);
+  const applicableModels = hasInputStates
+    ? models.filter((model) => inputStates[model.key]?.status !== 'not_applicable')
+    : models;
+  const activeModels = applicableModels.filter((model) => !missingModels.includes(model.key) && modelStates[model.key]);
   const coverageCount = activeModels.length;
+  const coverageTotal = applicableModels.length;
+  if (coverageTotal === 0) {
+    return {
+      title: 'Model Evidence',
+      compactTitle: 'Model Evidence',
+      coverageCount: 0,
+      coverageTotal: 0,
+      activeModels: [],
+      isolatedSignal: 'No model layer required',
+      actionableText: 'Model evidence not applicable',
+      availabilityText: 'No required model layer for this asset class',
+      finalInterpretation: 'Model evidence: Not applicable for this asset class',
+      primaryVerdict: decision?.verdict || null,
+    };
+  }
   const isolatedSignal = coverageCount === 1
     ? `${activeModels[0].label} remains isolated`
-    : coverageCount < 3
+    : coverageCount < coverageTotal
         ? 'Coverage incomplete'
         : 'Broad model confirmation available';
-  const finalInterpretation = coverageCount >= 3
+  const finalInterpretation = coverageCount >= coverageTotal
     ? 'Model evidence: Actionable alignment is available'
-    : `Model evidence: Not actionable · Coverage incomplete (${coverageCount}/3 models) · ${isolatedSignal}`;
+    : `Model evidence: Not actionable · Coverage incomplete (${coverageCount}/${coverageTotal} models) · ${isolatedSignal}`;
   return {
     title: 'Model Evidence',
     compactTitle: 'Model Evidence',
     coverageCount,
+    coverageTotal,
     activeModels,
     isolatedSignal,
-    actionableText: coverageCount >= 3 ? 'Actionable alignment available' : 'Not actionable',
-    availabilityText: coverageCount >= 3 ? 'Broad model confirmation available' : `Coverage incomplete (${coverageCount}/3 models)`,
+    actionableText: coverageCount >= coverageTotal ? 'Actionable alignment available' : 'Model evidence not actionable',
+    availabilityText: coverageCount >= coverageTotal ? 'Broad model confirmation available' : `Only ${coverageCount} of ${coverageTotal} models available`,
     finalInterpretation,
     primaryVerdict: decision?.verdict || null,
   };
@@ -845,10 +872,10 @@ export function buildModelConsensusPresentation({ evaluation = null, decision = 
   });
   return {
     ...view,
-    title: view.coverageCount < 3 ? `${view.coverageCount}-model evidence` : 'Model evidence',
-    compactTitle: view.coverageCount < 3 ? `${view.coverageCount}-model evidence` : 'Model evidence',
-    actionableText: view.coverageCount >= 3 ? 'Model alignment available' : 'Model evidence not actionable',
-    availabilityText: view.coverageCount >= 3 ? 'Broad model confirmation available' : `Only ${view.coverageCount} of 3 models available`,
+    title: view.coverageTotal > 0 && view.coverageCount < view.coverageTotal ? `${view.coverageCount}-model evidence` : 'Model evidence',
+    compactTitle: view.coverageTotal > 0 && view.coverageCount < view.coverageTotal ? `${view.coverageCount}-model evidence` : 'Model evidence',
+    actionableText: view.coverageTotal > 0 && view.coverageCount >= view.coverageTotal ? 'Model alignment available' : view.actionableText,
+    availabilityText: view.coverageTotal > 0 && view.coverageCount >= view.coverageTotal ? 'Broad model confirmation available' : view.availabilityText,
   };
 }
 

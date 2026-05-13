@@ -39,6 +39,7 @@ const MARKETPHASE_DIR = 'public/data/marketphase';
 const LEGACY_UNIVERSE_FILE = 'public/data/universe/all.json';
 const V7_STOCK_ROWS_FILE = mirrorSsotRel('stocks.max.rows.json');
 const V7_STOCK_SYMBOLS_FILE = publicSsotRel('stocks.max.symbols.json');
+const GLOBAL_ROWS_FILE = 'mirrors/universe-v7/ssot/assets.global.rows.json';
 const MARKETPHASE_INDEX_FILE = 'public/data/marketphase/index.json';
 const MARKETPHASE_DEEP_SUMMARY_FILE = 'public/data/universe/v7/read_models/marketphase_deep_summary.json';
 const DEFAULT_MAX_DEEP_SUMMARY_AGE_HOURS = 48;
@@ -92,7 +93,34 @@ function toTickerRows(values) {
     return out;
 }
 
+async function loadScopedScientificUniverse() {
+    const scopeFile = String(process.env.SCIENTIFIC_SCOPE_FILE || '').trim();
+    if (!scopeFile) return null;
+    const scopeDoc = await readJson(scopeFile);
+    const ids = Array.isArray(scopeDoc?.canonical_ids) ? scopeDoc.canonical_ids : Array.isArray(scopeDoc) ? scopeDoc : [];
+    const scopeIds = new Set(ids.map((id) => String(id || '').trim().toUpperCase()).filter(Boolean));
+    if (!scopeIds.size) throw new Error('SCIENTIFIC_SCOPE_FILE_EMPTY');
+    const rowsFile = String(process.env.SCIENTIFIC_ROWS_FILE || GLOBAL_ROWS_FILE).trim();
+    const rowsDoc = await readJson(rowsFile);
+    const rawRows = Array.isArray(rowsDoc?.rows) ? rowsDoc.rows : Array.isArray(rowsDoc?.items) ? rowsDoc.items : Array.isArray(rowsDoc) ? rowsDoc : [];
+    const rows = [];
+    const seen = new Set();
+    for (const row of rawRows) {
+        const canonicalId = String(row?.canonical_id || row?.asset_id || '').trim().toUpperCase();
+        const assetClass = String(row?.type_norm || row?.asset_class || row?.type || '').trim().toUpperCase();
+        if (!scopeIds.has(canonicalId) || assetClass !== 'STOCK') continue;
+        const ticker = normalizeTicker(row?.symbol || canonicalId.split(':').pop());
+        if (!ticker || seen.has(ticker)) continue;
+        seen.add(ticker);
+        rows.push({ ticker, name: row?.name || null });
+    }
+    if (!rows.length) throw new Error('SCIENTIFIC_SCOPE_ROWS_EMPTY');
+    return { source: scopeFile, rows };
+}
+
 async function loadScientificUniverse() {
+    const scoped = await loadScopedScientificUniverse();
+    if (scoped) return scoped;
     const preferredSource = String(process.env.SCIENTIFIC_UNIVERSE_SOURCE || 'v7').trim().toLowerCase();
     const requireV7 = String(process.env.SCIENTIFIC_REQUIRE_V7 || 'true').trim().toLowerCase() !== 'false';
     const v7Candidates = [V7_STOCK_ROWS_FILE, V7_STOCK_SYMBOLS_FILE];
