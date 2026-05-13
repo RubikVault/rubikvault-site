@@ -1027,7 +1027,7 @@ export async function onRequestGet(context) {
   const effectiveTicker = resolvedTicker || normalizedTicker || null;
   const providerSymbolMap = buildProviderSymbolMap(effectiveTicker, resolvedExchange);
 
-  if (effectiveTicker && url.searchParams.get('legacy') !== '1' && String(env?.RV_STOCK_API_PAGE_CORE_FAST_PATH ?? '1') !== '0') {
+  if (effectiveTicker && url.searchParams.get('legacy') !== '1' && String(env?.RV_STOCK_API_PAGE_CORE_FAST_PATH ?? '0') !== '0') {
     try {
       const pageCoreResult = await readPageCoreForTicker(resolvedCanonicalId || effectiveTicker, { request, env });
       const pageCorePayload = await buildStockApiPayloadFromPageCore({
