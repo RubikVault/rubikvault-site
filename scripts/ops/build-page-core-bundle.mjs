@@ -1140,7 +1140,18 @@ function buildPageCoreRow({ canonicalId, registryRow, decisionRow, lookupValue, 
   for (const [modelKey, state] of Object.entries(modelStates)) {
     if (state?.status && !['ok', 'not_applicable'].includes(state.status)) moduleWarnings.push(`${modelKey}_${state.status}`);
   }
-  const uiBannerState = decisionOperational && targetable && historicalBasisOk && freshnessOk
+  const historicalProfileOperational = ['ready', 'available_via_endpoint', 'not_applicable'].includes(historicalProfileStatus);
+  const modelCoverageOperational = ['complete', 'not_applicable'].includes(modelCoverageStatus);
+  const visibleModuleBlockers = [];
+  if (!historicalProfileOperational) visibleModuleBlockers.push('historical_profile_not_ready');
+  if (!modelCoverageOperational) visibleModuleBlockers.push('model_coverage_incomplete');
+  if (!historicalProfileOperational) moduleWarnings.push(`historical_profile_${historicalProfileStatus || 'missing'}`);
+  const visibleModulesOperational = visibleModuleBlockers.length === 0;
+  const strictBlockingReasons = uniqueStrings([
+    ...(primaryBlocker ? [primaryBlocker] : []),
+    ...(targetable ? visibleModuleBlockers : []),
+  ]);
+  const uiBannerState = decisionOperational && targetable && historicalBasisOk && freshnessOk && visibleModulesOperational
     ? 'all_systems_operational'
     : primaryBlocker
       ? 'provider_or_data_reason'
@@ -1235,9 +1246,10 @@ function buildPageCoreRow({ canonicalId, registryRow, decisionRow, lookupValue, 
       quantlab_status: modelStates.quantlab.status,
       scientific_status: modelStates.scientific.status,
       model_coverage_status: modelCoverageStatus,
+      visible_modules_operational: visibleModulesOperational,
       stock_detail_view_status: uiBannerState === 'all_systems_operational' ? 'operational' : 'degraded',
       strict_operational: uiBannerState === 'all_systems_operational',
-      strict_blocking_reasons: primaryBlocker ? [primaryBlocker] : [],
+      strict_blocking_reasons: strictBlockingReasons,
     },
     historical_profile_summary: historicalProfileSummary ? {
       ticker: historicalProfileSummary.ticker || display,
