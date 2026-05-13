@@ -275,6 +275,9 @@ function main() {
     rows_total: 0,
     rows_in_release_scope: 0,
     rows_outside_release_scope: 0,
+    missing_scope_rows_total: 0,
+    missing_scope_provider_exception_total: 0,
+    missing_scope_unexplained_total: 0,
     targetable_total: 0,
     operational_total: 0,
     ui_renderable_total: 0,
@@ -289,6 +292,7 @@ function main() {
     by_decision_blocking_reason: {},
   };
   const samples = { degraded: [], exceptions: [], contract_violations: [] };
+  const seenScopeRows = new Set();
   for (const file of fs.readdirSync(pageDir).filter((name) => name.endsWith('.json.gz')).sort()) {
     const shard = readMaybeGzip(path.join(pageDir, file));
     for (const row of Object.values(shard)) {
@@ -299,6 +303,7 @@ function main() {
         continue;
       }
       counts.rows_in_release_scope += 1;
+      if (canonicalId) seenScopeRows.add(canonicalId);
       const classified = classifyRow(row, providerExceptions);
       inc(counts.by_state, classified.state);
       inc(counts.by_asset_class, classified.assetClass);
@@ -336,7 +341,35 @@ function main() {
     }
   }
   const denominator = counts.targetable_total;
-  const missingScopeRows = scopeIds ? Math.max(0, scopeIds.size - counts.rows_in_release_scope) : 0;
+  const missingScopeIds = [];
+  if (scopeIds) {
+    for (const id of scopeIds) {
+      if (!seenScopeRows.has(id)) missingScopeIds.push(id);
+    }
+  }
+  const missingScopeProviderExceptions = missingScopeIds.filter((id) => providerExceptions.has(id));
+  const missingScopeUnexplained = missingScopeIds.filter((id) => !providerExceptions.has(id));
+  counts.missing_scope_rows_total = missingScopeIds.length;
+  counts.missing_scope_provider_exception_total = missingScopeProviderExceptions.length;
+  counts.missing_scope_unexplained_total = missingScopeUnexplained.length;
+  for (const id of missingScopeProviderExceptions.slice(0, Math.max(0, 25 - samples.exceptions.length))) {
+    const providerException = providerExceptions.get(id);
+    samples.exceptions.push({
+      canonical_asset_id: id,
+      display_ticker: id.split(':').pop(),
+      asset_class: id.endsWith('.INDX') ? 'INDEX' : 'UNKNOWN',
+      reasons: [`provider_exception:${providerException?.reason || 'scope_missing_provider_exception'}`],
+    });
+  }
+  for (const id of missingScopeUnexplained.slice(0, Math.max(0, 25 - samples.exceptions.length))) {
+    samples.exceptions.push({
+      canonical_asset_id: id,
+      display_ticker: id.split(':').pop(),
+      asset_class: id.endsWith('.INDX') ? 'INDEX' : 'UNKNOWN',
+      reasons: ['scope_row_missing_without_provider_exception'],
+    });
+  }
+  const missingScopeRows = missingScopeUnexplained.length;
   const ratio = denominator > 0 ? counts.operational_total / denominator : 0;
   const coreReleaseEligible = missingScopeRows === 0 && counts.contract_violation_total === 0;
   const releaseEligible = ratio >= MIN_GREEN_RATIO && coreReleaseEligible;

@@ -100,8 +100,46 @@ function assertRefreshEvidence(reportPath, targetMarketDate) {
   if (toDate !== targetMarketDate) throw new Error(`refresh_report_target_mismatch:${toDate}:${targetMarketDate}`);
   if (!Number.isFinite(requested) || requested <= 0) throw new Error('refresh_report_assets_requested_missing');
   if (!Number.isFinite(found) || found <= 0) throw new Error('refresh_report_assets_found_missing');
-  if (Number.isFinite(errors) && errors > 0) throw new Error(`refresh_report_has_fetch_errors:${errors}`);
+  const samples = extractRefreshErrors(report);
+  if (Number.isFinite(errors) && errors > 0 && samples.length < errors) {
+    throw new Error(`refresh_report_fetch_errors_without_samples:${errors}:${samples.length}`);
+  }
   return report;
+}
+
+function extractRefreshErrors(report) {
+  const rows = [
+    ...(Array.isArray(report?.fetch_errors) ? report.fetch_errors : []),
+    ...(Array.isArray(report?.errors) ? report.errors : []),
+    ...(Array.isArray(report?.error_samples) ? report.error_samples : []),
+  ];
+  const seen = new Set();
+  const out = [];
+  for (const row of rows) {
+    const canonicalId = String(row?.canonical_id || row?.asset_id || '').toUpperCase();
+    if (!canonicalId || seen.has(canonicalId)) continue;
+    seen.add(canonicalId);
+    out.push({
+      canonical_id: canonicalId,
+      error: String(row?.error || row?.reason || 'refresh_error').trim() || 'refresh_error',
+      message: row?.message ? String(row.message) : null,
+    });
+  }
+  return out;
+}
+
+function assetClassFromCanonicalId(canonicalId) {
+  const id = String(canonicalId || '').toUpperCase();
+  if (id.endsWith('.INDX')) return 'INDEX';
+  return 'UNKNOWN';
+}
+
+function sanitizeReason(value) {
+  return String(value || 'refresh_error')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '') || 'refresh_error';
 }
 
 function main() {
@@ -110,6 +148,7 @@ function main() {
   const refreshReport = assertRefreshEvidence(options.refreshReportPath, options.targetMarketDate);
   const registryRows = readNdjsonGz(options.registryPath);
   const exceptions = [];
+  const exceptionIds = new Set();
   const byExchange = {};
   const byReason = {};
 
@@ -126,6 +165,7 @@ function main() {
     const reason = 'provider_no_target_row_after_full_refresh';
     byExchange[exchange] = (byExchange[exchange] || 0) + 1;
     byReason[reason] = (byReason[reason] || 0) + 1;
+    exceptionIds.add(canonicalId);
     exceptions.push({
       canonical_id: canonicalId,
       symbol: row?.symbol || canonicalId.split(':').pop(),
@@ -136,6 +176,29 @@ function main() {
       target_market_date: options.targetMarketDate,
       reason,
       evidence: 'full_universe_eodhd_refresh_ok_no_target_row',
+    });
+  }
+
+  for (const error of extractRefreshErrors(refreshReport)) {
+    const canonicalId = error.canonical_id;
+    if (!scopeIds.has(canonicalId) || exceptionIds.has(canonicalId)) continue;
+    const exchange = String(canonicalId.split(':')[0] || '').toUpperCase();
+    const reason = `refresh_report_${sanitizeReason(error.error)}`;
+    byExchange[exchange] = (byExchange[exchange] || 0) + 1;
+    byReason[reason] = (byReason[reason] || 0) + 1;
+    exceptionIds.add(canonicalId);
+    exceptions.push({
+      canonical_id: canonicalId,
+      symbol: canonicalId.split(':').pop(),
+      exchange,
+      asset_class: assetClassFromCanonicalId(canonicalId),
+      bars_count: null,
+      last_trade_date: null,
+      target_market_date: options.targetMarketDate,
+      reason,
+      evidence: 'refresh_report_fetch_error',
+      provider_error: error.error,
+      provider_message: error.message,
     });
   }
 
@@ -151,6 +214,7 @@ function main() {
       refresh_report_assets_requested: refreshReport.assets_requested ?? null,
       refresh_report_assets_fetched_with_data: refreshReport.assets_fetched_with_data ?? null,
       refresh_report_fetch_errors_total: refreshReport.fetch_errors_total ?? null,
+      refresh_report_fetch_error_samples: extractRefreshErrors(refreshReport).slice(0, 25),
     },
     counts: {
       scope_assets: scopeIds.size,
