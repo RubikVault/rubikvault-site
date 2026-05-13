@@ -3,6 +3,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 
+const REPO_ROOT = path.resolve(process.cwd());
+
 function parseArgs(argv) {
   const args = {
     asOf: '',
@@ -24,6 +26,10 @@ function parseArgs(argv) {
 
 function readJson(filePath) {
   return JSON.parse(fs.readFileSync(filePath, 'utf8'));
+}
+
+function readJsonIfExists(filePath) {
+  try { return readJson(filePath); } catch { return null; }
 }
 
 function atomicWriteJson(filePath, payload) {
@@ -92,6 +98,126 @@ function requireFile(filePath, label) {
   if (!fs.existsSync(filePath)) throw new Error(`${label} missing: ${filePath}`);
 }
 
+function normalizeCanonical(value) {
+  return String(value || '').trim().toUpperCase();
+}
+
+function loadUniverseMetaIndex() {
+  const candidates = [
+    process.env.RV_BREAKOUT_UNIVERSE_ROWS || '',
+    path.join(REPO_ROOT, 'mirrors/universe-v7/ssot/assets.global.rows.json'),
+    path.join(REPO_ROOT, 'mirrors/universe-v7/ssot/stocks.max.canonical.rows.json'),
+  ].filter(Boolean);
+  const byCanonical = new Map();
+  for (const filePath of candidates) {
+    const doc = readJsonIfExists(filePath);
+    const rows = Array.isArray(doc) ? doc : (Array.isArray(doc?.items) ? doc.items : []);
+    for (const row of rows) {
+      const canonical = normalizeCanonical(row?.canonical_id || row?.asset_id);
+      if (!canonical || byCanonical.has(canonical)) continue;
+      byCanonical.set(canonical, {
+        canonical_id: canonical,
+        symbol: String(row?.symbol || row?.ticker || canonical.split(':').pop() || '').trim(),
+        name: String(row?.name || row?.company_name || '').trim(),
+        exchange: String(row?.exchange || canonical.split(':')[0] || '').trim().toUpperCase(),
+        asset_class: String(row?.type_norm || row?.asset_class || row?.assetClass || '').trim().toLowerCase(),
+        region: String(row?.scope_region || row?.region || '').trim().toUpperCase(),
+      });
+    }
+    if (byCanonical.size > 0) break;
+  }
+  return byCanonical;
+}
+
+function displayTickerFor(meta, fallbackSymbol, canonicalId) {
+  const symbol = String(meta?.symbol || fallbackSymbol || canonicalId.split(':').pop() || '').trim().toUpperCase();
+  const exchange = String(meta?.exchange || canonicalId.split(':')[0] || '').trim().toUpperCase();
+  if (!symbol) return canonicalId;
+  if (!exchange || exchange === 'US') return symbol;
+  if (symbol.includes('.') || symbol.includes(':')) return symbol;
+  return `${symbol}.${exchange}`;
+}
+
+function enrichBreakoutItem(item, metaByCanonical) {
+  if (!item || typeof item !== 'object') return item;
+  const canonicalId = normalizeCanonical(item.asset_id || item.assetId || item.canonical_id);
+  if (!canonicalId) return item;
+  const meta = metaByCanonical.get(canonicalId) || null;
+  const symbol = String(meta?.symbol || item.symbol || item.ticker || canonicalId.split(':').pop() || '').trim().toUpperCase();
+  const displayTicker = displayTickerFor(meta, symbol, canonicalId);
+  const placeholderNames = new Set([
+    '',
+    canonicalId,
+    symbol,
+    displayTicker,
+  ].map((value) => String(value || '').trim().toUpperCase()));
+  const rawName = String(item.name || item.display_name || '').trim();
+  const displayName = meta?.name || (placeholderNames.has(rawName.toUpperCase()) ? '' : rawName) || rawName || canonicalId;
+  return {
+    ...item,
+    asset_id: canonicalId,
+    canonical_id: canonicalId,
+    symbol,
+    ticker: symbol,
+    display_ticker: displayTicker,
+    display_name: displayName,
+    name: displayName,
+    asset_class: meta?.asset_class || item.asset_class,
+    region: meta?.region || item.region,
+  };
+}
+
+function enrichBreakoutPublicJson(publicCandidate) {
+  const metaByCanonical = loadUniverseMetaIndex();
+  if (metaByCanonical.size === 0) return { enriched_files: 0, enriched_items: 0, meta_loaded: false };
+  let enrichedFiles = 0;
+  let enrichedItems = 0;
+  for (const file of collectFiles(publicCandidate).filter((entry) => entry.endsWith('.json'))) {
+    const doc = readJsonIfExists(file);
+    if (!doc) continue;
+    let next = null;
+    if (Array.isArray(doc?.items)) {
+      const items = doc.items.map((item) => enrichBreakoutItem(item, metaByCanonical));
+      enrichedItems += items.length;
+      next = { ...doc, items };
+    } else if (Array.isArray(doc)) {
+      next = doc.map((item) => enrichBreakoutItem(item, metaByCanonical));
+      enrichedItems += next.length;
+    }
+    if (!next) continue;
+    atomicWriteJson(file, next);
+    enrichedFiles += 1;
+  }
+  return { enriched_files: enrichedFiles, enriched_items: enrichedItems, meta_loaded: true };
+}
+
+function writeStateSummary(publicCandidate, asOf) {
+  const top500 = readJsonIfExists(path.join(publicCandidate, 'top500.json'));
+  const items = Array.isArray(top500?.items) ? top500.items : [];
+  const doc = {
+    schema_version: 'rv.breakout.state_summary.v1',
+    generated_at: new Date().toISOString(),
+    as_of: asOf,
+    target_market_date: asOf,
+    score_version: top500?.score_version || 'breakout_scoring_v12_incremental_v1',
+    contract_mode: 'candidate_rank',
+    full_state_distribution_available: false,
+    candidate_rank_only: true,
+    counts: {
+      ALL: items.length,
+      CANDIDATE: items.length,
+      SETUP: 0,
+      ARMED: 0,
+      TRIGGERED: 0,
+      CONFIRMED: 0,
+      FAILED: 0,
+    },
+    note: 'Nightly V12 incremental feed publishes ranked breakout candidates, not full-scope state distribution.',
+  };
+  atomicWriteJson(path.join(publicCandidate, 'state-summary.json'), doc);
+  return doc;
+}
+
 function buildRequiredPublicCheck(publicCandidate) {
   const missing = [];
   for (const rel of ['coverage.json', 'errors.json', 'health.json', 'top500.json']) {
@@ -118,6 +244,8 @@ function main() {
   if (!validation.ok) throw new Error(`candidate validation failed: ${(validation.errors || []).join(',')}`);
   const publicCandidate = path.join(args.candidateRoot, 'public');
   if (!fs.existsSync(publicCandidate)) throw new Error(`public candidate missing: ${publicCandidate}`);
+  const enrichment = enrichBreakoutPublicJson(publicCandidate);
+  const stateSummary = writeStateSummary(publicCandidate, args.asOf);
   const required = buildRequiredPublicCheck(publicCandidate);
   if (!required.required_files_present) throw new Error(`public required files missing: ${required.missing.join(',')}`);
   if (!required.shards_complete) throw new Error(`public shard _SUCCESS missing: ${required.missing_shard_success.join(',') || 'no shards'}`);
@@ -143,6 +271,7 @@ function main() {
     errors: `runs/${args.asOf}/${contentHash}/errors.json`,
     health: `runs/${args.asOf}/${contentHash}/health.json`,
     top500: `runs/${args.asOf}/${contentHash}/top500.json`,
+    state_summary: `runs/${args.asOf}/${contentHash}/state-summary.json`,
     shards: shardFiles.map((file) => `runs/${args.asOf}/${contentHash}/${path.relative(publicRunRoot, file).split(path.sep).join('/')}`),
   };
   const shardsComplete = files.shards.length > 0 && files.shards.every((rel) => fs.existsSync(path.join(args.publicRoot, rel.replace(/\.json$/, '._SUCCESS'))));
@@ -162,6 +291,12 @@ function main() {
     content_hash: contentHash,
     files,
     file_hashes: Object.fromEntries(Object.entries(hashMap).map(([rel, hash]) => [`runs/${args.asOf}/${contentHash}/${rel}`, hash])),
+    enrichment,
+    state_summary: {
+      contract_mode: stateSummary.contract_mode,
+      full_state_distribution_available: stateSummary.full_state_distribution_available,
+      counts: stateSummary.counts,
+    },
     validation: {
       schema_valid: true,
       shards_complete: shardsComplete,
