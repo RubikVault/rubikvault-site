@@ -134,7 +134,7 @@ describe('UI integrity resolver', () => {
         trade_guard: { max_entry_price: 82, invalidation_level: 76 },
       },
       daily_decision: { schema: 'rv.asset_daily_decision.v1', pipeline_status: 'OK', verdict: 'BUY', blocking_reasons: [], risk_assessment: { level: 'MEDIUM' } },
-      analysis_readiness: { status: 'READY', decision_bundle_status: 'OK', blocking_reasons: ['primary_blocker:model_coverage_incomplete'] },
+      analysis_readiness: { status: 'READY', decision_bundle_status: 'OK', blocking_reasons: ['primary_blocker:model_coverage_incomplete', 'ui_banner_not_operational'] },
     };
     const integrity = buildUiIntegrity(payload, { ticker: 'ADM', priceStack: { valid: true } });
     assert.equal(integrity.fields.decision_contract.status, 'VALID');

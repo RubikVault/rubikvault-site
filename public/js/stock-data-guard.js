@@ -91,7 +91,7 @@ function unique(values) {
 
 function isVisibleModuleOnlyReason(reason) {
   const raw = String(reason || '').toLowerCase();
-  return /model_coverage_incomplete|historical_profile|breakout_detail|visible_module|fundamentals/.test(raw);
+  return /model_coverage_incomplete|historical_profile|breakout_detail|visible_module|fundamentals|ui_banner_not_operational/.test(raw);
 }
 
 function hasUsableDecisionCore(payload) {
