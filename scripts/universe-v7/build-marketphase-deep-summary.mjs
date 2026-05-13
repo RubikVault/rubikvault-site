@@ -55,7 +55,9 @@ function parseArgs(argv = process.argv.slice(2)) {
     maxSymbols: Infinity,
     asOf: null,
     feature: 'marketphase',
-    idMode: 'symbol'
+    idMode: 'symbol',
+    scopeFile: null,
+    rowsFile: 'mirrors/universe-v7/ssot/assets.global.rows.json'
   };
   for (let i = 0; i < argv.length; i += 1) {
     const token = argv[i];
@@ -64,6 +66,8 @@ function parseArgs(argv = process.argv.slice(2)) {
     else if (token === '--as-of') out.asOf = String(argv[++i] || '').slice(0, 10) || null;
     else if (token === '--feature') out.feature = String(argv[++i] || out.feature).trim().toLowerCase() || out.feature;
     else if (token === '--id-mode') out.idMode = String(argv[++i] || out.idMode).trim().toLowerCase() || out.idMode;
+    else if (token === '--scope-file') out.scopeFile = String(argv[++i] || '').trim() || null;
+    else if (token === '--rows-file') out.rowsFile = String(argv[++i] || out.rowsFile).trim() || out.rowsFile;
   }
   if (!Number.isFinite(out.minBars) || out.minBars < 1) out.minBars = 120;
   if (!Number.isFinite(out.maxSymbols) || out.maxSymbols < 1) out.maxSymbols = Infinity;
@@ -104,6 +108,32 @@ async function loadFeatureTargetSet(featureName) {
   const set = new Set();
   for (const item of list) {
     const ticker = normalize(item);
+    if (ticker) set.add(ticker);
+  }
+  return set;
+}
+
+async function loadScopeTargetSet(scopeFile, rowsFile) {
+  if (!scopeFile) return null;
+  const scopePath = path.isAbsolute(scopeFile) ? scopeFile : path.join(REPO_ROOT, scopeFile);
+  const rowsPath = path.isAbsolute(rowsFile) ? rowsFile : path.join(REPO_ROOT, rowsFile);
+  const scopeDoc = await readJson(scopePath);
+  const ids = Array.isArray(scopeDoc?.canonical_ids) ? scopeDoc.canonical_ids : Array.isArray(scopeDoc) ? scopeDoc : [];
+  const scope = new Set(ids.map((id) => normalize(id)).filter(Boolean));
+  if (!scope.size) return null;
+  const rowsDoc = await readJson(rowsPath);
+  const rows = Array.isArray(rowsDoc?.rows) ? rowsDoc.rows : Array.isArray(rowsDoc?.items) ? rowsDoc.items : Array.isArray(rowsDoc) ? rowsDoc : [];
+  const set = new Set();
+  for (const row of rows) {
+    const canonicalId = normalize(row?.canonical_id || row?.asset_id);
+    if (!scope.has(canonicalId)) continue;
+    if (normalize(row?.type_norm || row?.asset_class || row?.type) !== 'STOCK') continue;
+    const ticker = normalize(row?.symbol || canonicalId.split(':').pop());
+    if (ticker) set.add(ticker);
+  }
+  if (set.size > 0) return set;
+  for (const id of scope) {
+    const ticker = normalize(id.split(':').pop());
     if (ticker) set.add(ticker);
   }
   return set;
@@ -284,7 +314,7 @@ function buildDeepItem(candidate, analysis, bars, generatedAt, idMode = 'symbol'
 async function main() {
   const startedAt = nowIso();
   const args = parseArgs();
-  const targetSet = await loadFeatureTargetSet(args.feature);
+  const targetSet = await loadScopeTargetSet(args.scopeFile, args.rowsFile) || await loadFeatureTargetSet(args.feature);
 
   const { byKey, scan } = await buildCandidates({
     minBars: args.minBars,
