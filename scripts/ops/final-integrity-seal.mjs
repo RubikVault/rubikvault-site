@@ -745,7 +745,7 @@ export function buildFinalIntegritySeal({
         details: { expected: expectedTargetDate, actual: uiStateTarget },
       });
     }
-    if ((stockAnalyzerUiState.ui_renderable_release_eligible ?? stockAnalyzerUiState.release_eligible) !== true) {
+    if (stockAnalyzerUiState.release_eligible !== true) {
       blockingReasons.push({
         id: contractViolationTotal > 0 || missingScopeRows > 0
           ? 'stock_analyzer_ui_state_contract_failed'
@@ -753,10 +753,12 @@ export function buildFinalIntegritySeal({
         severity: 'critical',
         details: {
           ui_operational_ratio: stockAnalyzerUiState.ui_operational_ratio ?? null,
+          strict_operational_ratio: stockAnalyzerUiState.strict_operational_ratio ?? null,
           min_green_ratio: stockAnalyzerUiState.min_green_ratio ?? null,
           missing_scope_rows: stockAnalyzerUiState.missing_scope_rows ?? null,
           contract_violation_total: contractViolationTotal,
           by_reason: stockAnalyzerUiState.counts?.by_reason || null,
+          by_strict_reason: stockAnalyzerUiState.counts?.by_strict_reason || null,
         },
       });
     }
@@ -958,7 +960,7 @@ export function buildFinalIntegritySeal({
     searchReady,
     universeReady,
     stockUiState: stockAnalyzerUiState,
-    stockUiReleaseEligible: (stockAnalyzerUiState?.ui_renderable_release_eligible ?? stockAnalyzerUiState?.release_eligible) === true,
+    stockUiReleaseEligible: stockAnalyzerUiState?.release_eligible === true,
     histReady,
   });
   const overallUiReady = releaseGate.release_ui_ready;

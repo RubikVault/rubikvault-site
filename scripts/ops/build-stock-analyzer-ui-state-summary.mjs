@@ -220,6 +220,9 @@ export function classifyRow(row, providerExceptions = new Map()) {
   const historicalLink = String(row?.module_links?.historical || '');
   if (!historicalLink.includes('asset_id=')) reasons.push('historical_link_not_canonical_safe');
   reasons.push(...uiModuleCompletenessReasons(row));
+  const strictOperationalReasons = pageCoreStrictOperationalReasons(row)
+    .filter((reason) => reason !== 'ui_banner_not_operational');
+  const strictOperational = targetable && strictOperationalReasons.length === 0;
   const providerException = providerExceptions.get(canonicalId) || null;
   const verifiedProviderException = Boolean(providerException && reasons.includes('bars_stale'));
   if (verifiedProviderException) {
@@ -234,6 +237,8 @@ export function classifyRow(row, providerExceptions = new Map()) {
     operational: uiRenderable,
     ui_renderable: uiRenderable,
     decision_ready: decisionReady,
+    strict_operational: strictOperational,
+    strict_operational_reasons: strictOperationalReasons,
     state: uiRenderable ? 'all_systems_operational' : effectiveTargetable ? 'degraded' : 'provider_or_structural_exception',
     reasons,
     ui_blocking_reasons: split.ui,
@@ -281,6 +286,7 @@ function main() {
     targetable_total: 0,
     operational_total: 0,
     ui_renderable_total: 0,
+    strict_operational_total: 0,
     decision_ready_total: 0,
     exception_total: 0,
     verified_provider_exception_total: 0,
@@ -288,6 +294,7 @@ function main() {
     by_state: {},
     by_asset_class: {},
     by_reason: {},
+    by_strict_reason: {},
     by_ui_blocking_reason: {},
     by_decision_blocking_reason: {},
   };
@@ -312,8 +319,10 @@ function main() {
       if (classified.verifiedProviderException) counts.verified_provider_exception_total += 1;
       if (classified.operational) counts.operational_total += 1;
       if (classified.ui_renderable) counts.ui_renderable_total += 1;
+      if (classified.strict_operational) counts.strict_operational_total += 1;
       if (classified.decision_ready) counts.decision_ready_total += 1;
       for (const reason of classified.reasons) inc(counts.by_reason, reason);
+      for (const reason of classified.strict_operational_reasons || []) inc(counts.by_strict_reason, reason);
       for (const reason of classified.ui_blocking_reasons) inc(counts.by_ui_blocking_reason, reason);
       for (const reason of classified.decision_blocking_reasons) inc(counts.by_decision_blocking_reason, reason);
       if (classified.reasons.some((reason) => String(reason).startsWith('contract_green_'))) {
@@ -327,6 +336,7 @@ function main() {
           display_ticker: row?.display_ticker || null,
           asset_class: classified.assetClass,
           reasons: classified.reasons,
+          strict_operational_reasons: classified.strict_operational_reasons || [],
           ui_blocking_reasons: classified.ui_blocking_reasons,
           decision_blocking_reasons: classified.decision_blocking_reasons,
         });
@@ -371,8 +381,10 @@ function main() {
   }
   const missingScopeRows = missingScopeUnexplained.length;
   const ratio = denominator > 0 ? counts.operational_total / denominator : 0;
+  const strictRatio = denominator > 0 ? counts.strict_operational_total / denominator : 0;
   const coreReleaseEligible = missingScopeRows === 0 && counts.contract_violation_total === 0;
-  const releaseEligible = ratio >= MIN_GREEN_RATIO && coreReleaseEligible;
+  const strictReleaseEligible = strictRatio >= MIN_GREEN_RATIO && coreReleaseEligible;
+  const releaseEligible = ratio >= MIN_GREEN_RATIO && strictReleaseEligible;
   const doc = {
     schema: 'rv.stock_analyzer.ui_state_summary.v2',
     generated_at: new Date().toISOString(),
@@ -382,12 +394,14 @@ function main() {
     release_scope_rows: scopeIds ? scopeIds.size : counts.rows_in_release_scope,
     min_green_ratio: MIN_GREEN_RATIO,
     release_eligible: releaseEligible,
-    ui_renderable_release_eligible: releaseEligible,
+    ui_renderable_release_eligible: ratio >= MIN_GREEN_RATIO && coreReleaseEligible,
+    strict_operational_release_eligible: strictReleaseEligible,
     decision_ready_release_eligible: denominator > 0 ? (counts.decision_ready_total / denominator) >= MIN_GREEN_RATIO && coreReleaseEligible : false,
     core_release_eligible: coreReleaseEligible,
     overall_ui_ready: releaseEligible,
     ui_operational_ratio: Number(ratio.toFixed(6)),
     ui_renderable_ratio: Number(ratio.toFixed(6)),
+    strict_operational_ratio: Number(strictRatio.toFixed(6)),
     decision_ready_ratio: Number((denominator > 0 ? counts.decision_ready_total / denominator : 0).toFixed(6)),
     missing_scope_rows: missingScopeRows,
     counts,

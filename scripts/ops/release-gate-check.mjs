@@ -554,7 +554,7 @@ function checkLocalPublicStatus(seal) {
     searchReady: status.search_ready !== false,
     universeReady: status.universe_ready !== false,
     stockUiState: uiState,
-    stockUiReleaseEligible: status.stock_analyzer_ui_state_green === true || uiState?.release_eligible === true,
+    stockUiReleaseEligible: uiState?.release_eligible === true,
     histReady: status.hist_ready === true,
   });
   const safe = status.release_ready === true
@@ -688,7 +688,11 @@ function writeDeployProof({
   releaseStatePhase = null,
   targetDate = null,
   contractCheck = null,
+  releaseReady = null,
 }) {
+  const proofReleaseReady = releaseReady == null
+    ? contractCheck !== 'failed'
+    : Boolean(releaseReady);
   const proof = {
     schema: 'rv_deploy_proof_v1',
     deployed_commit: deployedCommit,
@@ -708,6 +712,7 @@ function writeDeployProof({
     bundle_hash: bundleMeta?.bundle_hash ?? null,
     contract_check: contractCheck ?? bundleMeta?.manifest_check ?? null,
     release_state_phase: releaseStatePhase,
+    release_ready: proofReleaseReady,
     target_market_date: targetDate,
     target_date: targetDate,
   };
@@ -724,7 +729,7 @@ function writeDeployProof({
     smokes_ok: smokesOk,
     custom_domain_smoke: customDomainSmoke,
     pages_dev_smoke: pagesDevSmoke,
-    release_ready: contractCheck === 'failed' ? false : true,
+    release_ready: proofReleaseReady,
     bundle_file_count: bundleMeta?.bundle_file_count ?? null,
     bundle_size_mb: bundleMeta?.bundle_size_mb ?? null,
     bundle_max_file_bytes: bundleMeta?.bundle_max_file_bytes ?? null,
@@ -919,6 +924,7 @@ const releaseStateForProof = releaseState?.schema === 'rv_release_state_v3' ? re
 const finalSealForProof = releaseState?.final_integrity_seal || readJson(FINAL_INTEGRITY_SEAL_PATH);
 const proofTargetDate = finalSealForProof?.target_market_date ?? releaseStateForProof?.target_market_date ?? null;
 const proofReleasePhase = releaseStateForProof?.phase ?? null;
+const proofReleaseReady = finalSealForProof?.release_ready === true;
 checkBuildMeta();
 writeDeployProof({
   deployedCommit: currentGitSha,
@@ -926,6 +932,7 @@ writeDeployProof({
   bundleMeta: null,
   releaseStatePhase: proofReleasePhase,
   targetDate: proofTargetDate,
+  releaseReady: proofReleaseReady,
 });
 
 // 2. Build deploy bundle
@@ -945,6 +952,7 @@ writeDeployProof({
   contractCheck,
   releaseStatePhase: proofReleasePhase,
   targetDate: proofTargetDate,
+  releaseReady: proofReleaseReady,
 });
 
 if (isDryRun) {
@@ -1026,6 +1034,7 @@ writeDeployProof({
   contractCheck,
   releaseStatePhase: proofReleasePhase,
   targetDate: proofTargetDate,
+  releaseReady: proofReleaseReady,
 });
 refreshPublicDashboardReportInBundle();
 log(`Deploy proof written: ${DEPLOY_PROOF_PATH}`);

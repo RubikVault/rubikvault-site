@@ -98,7 +98,7 @@ const histStatusKnown = histProbsMode !== 'unknown' && catchupStatus !== 'unknow
 const histGreen = histStatusKnown
   && histCoverageRatio >= 0.90
   && !['failed', 'unknown'].includes(String(catchupStatus).toLowerCase());
-const stockUiStateGreen = (stockUiState?.ui_renderable_release_eligible ?? stockUiState?.release_eligible) === true;
+const stockUiStateGreen = stockUiState?.release_eligible === true;
 const stockUiContractOk = Boolean(
   stockUiState
   && Number(stockUiState?.missing_scope_rows ?? 0) === 0
@@ -178,11 +178,13 @@ const doc = {
     denominator: stockUiState?.denominator ?? null,
     targetable_total: stockUiState?.counts?.targetable_total ?? null,
     ui_renderable_total: stockUiState?.counts?.ui_renderable_total ?? stockUiState?.counts?.operational_total ?? null,
+    strict_operational_total: stockUiState?.counts?.strict_operational_total ?? null,
     decision_ready_total: stockUiState?.counts?.decision_ready_total ?? null,
     exception_total: stockUiState?.counts?.exception_total ?? null,
     verified_provider_exception_total: stockUiState?.counts?.verified_provider_exception_total ?? null,
     ui_operational_ratio: stockUiState?.ui_operational_ratio ?? null,
     ui_renderable_ratio: stockUiState?.ui_renderable_ratio ?? stockUiState?.ui_operational_ratio ?? null,
+    strict_operational_ratio: stockUiState?.strict_operational_ratio ?? null,
     decision_ready_ratio: stockUiState?.decision_ready_ratio ?? null,
     ui_state_contract_violations: stockUiState?.counts?.contract_violation_total ?? null,
     overall_ui_ready: overallUiReady,

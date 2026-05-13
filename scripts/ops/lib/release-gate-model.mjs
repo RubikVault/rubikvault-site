@@ -35,9 +35,9 @@ export function buildReleaseGateModel({
   requiredFieldCoverageMin = DEFAULT_REQUIRED_FIELD_COVERAGE_MIN,
 } = {}) {
   const releaseEligible = stockUiReleaseEligible == null
-    ? (stockUiState?.ui_renderable_release_eligible ?? stockUiState?.release_eligible) === true
+    ? stockUiState?.release_eligible === true
     : bool(stockUiReleaseEligible);
-  const coverage = num(stockUiState?.ui_renderable_ratio ?? stockUiState?.ui_operational_ratio, releaseEligible ? 1 : 0);
+  const coverage = num(stockUiState?.strict_operational_ratio ?? stockUiState?.ui_renderable_ratio ?? stockUiState?.ui_operational_ratio, releaseEligible ? 1 : 0);
   const contractViolations = num(stockUiState?.counts?.contract_violation_total ?? 0);
   const missingScopeRows = num(stockUiState?.missing_scope_rows ?? 0);
   const falseGreenCount = readFalseGreenCount(stockUiState);

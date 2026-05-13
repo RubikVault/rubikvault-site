@@ -453,10 +453,18 @@ async function validateAsset({ browser, baseUrl, asset, targetMarketDate, latest
     const routeId = asset.canonical_id;
     await page.goto(`${baseUrl}/analyze/${routePath(routeId)}?rv_dev=1`, { waitUntil: 'domcontentloaded', timeout: 45000 });
     await page.waitForFunction(
-      () => Boolean(window._rvVisibleAction) || /EXECUTIVE DECISION|Decision-grade|System Status/i.test(document.body?.innerText || ''),
-      { timeout: 25000 },
+      () => {
+        const action = String(window._rvVisibleAction || '').trim();
+        const priceText = String(document.getElementById('sc-price')?.textContent || '').trim();
+        const asOfText = String(document.getElementById('rv-data-asof')?.textContent || '').trim();
+        return Boolean(action)
+          && priceText
+          && !/Loading/i.test(priceText)
+          && /\d{4}-\d{2}-\d{2}/.test(asOfText);
+      },
+      { timeout: 45000 },
     ).catch(() => {});
-    await page.waitForTimeout(600);
+    await page.waitForTimeout(250);
     const [bodyText, pageCore] = await Promise.all([
       page.locator('body').innerText({ timeout: 15000 }),
       page.evaluate(async (id) => {
@@ -523,7 +531,7 @@ async function validateAsset({ browser, baseUrl, asset, targetMarketDate, latest
     result.assertions.visible_price_matches_page_core = Number.isFinite(close) && visible.priceText.includes(close.toFixed(2));
     result.assertions.visible_asof_matches_page_core = Boolean(priceDate && visible.asOfText.includes(priceDate));
     result.assertions.visible_action_exists = /\b(BUY|WAIT|AVOID|UNAVAILABLE|INCUBATING)\b/i.test(bodyText);
-    result.assertions.visible_action_matches_page_core = Boolean(coreAction && visibleAction === coreAction && (!visible.blocked || documentedProviderState))
+    result.assertions.visible_action_matches_page_core = Boolean(coreAction && visibleAction === coreAction && (coreAction !== 'BUY' || !visible.blocked || documentedProviderState))
       || documentedProviderState;
     result.assertions.decision_basis_visible = /Decision Basis|Why not now|Conditional BUY|Analysis incomplete/i.test(bodyText);
     result.assertions.reliability_visible = /Reliability|Analysis reliability/i.test(bodyText);

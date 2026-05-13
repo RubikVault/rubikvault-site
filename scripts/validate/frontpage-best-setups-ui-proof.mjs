@@ -230,10 +230,18 @@ async function validateAnalyzerPage(browser, baseUrl, row) {
     const routePath = encodeURIComponent(routeId).replace(/%3A/gi, ':');
     await page.goto(`${baseUrl}/analyze/${routePath}?rv_dev=1`, { waitUntil: 'domcontentloaded', timeout: 45000 });
     await page.waitForFunction(
-      () => Boolean(window._rvVisibleAction) || /EXECUTIVE DECISION|Decision-grade|System Status/i.test(document.body?.innerText || ''),
-      { timeout: 20000 },
+      () => {
+        const action = String(window._rvVisibleAction || '').trim();
+        const priceText = String(document.getElementById('sc-price')?.textContent || '').trim();
+        const asOfText = String(document.getElementById('rv-data-asof')?.textContent || '').trim();
+        return Boolean(action)
+          && priceText
+          && !/Loading/i.test(priceText)
+          && /\d{4}-\d{2}-\d{2}/.test(asOfText);
+      },
+      { timeout: 45000 },
     ).catch(() => {});
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(250);
     const bodyText = await page.locator('body').innerText({ timeout: 15000 });
     const visible = await page.evaluate(() => ({
       action: String(window._rvVisibleAction || '').toUpperCase(),
