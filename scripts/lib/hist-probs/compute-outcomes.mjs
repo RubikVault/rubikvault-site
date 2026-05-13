@@ -132,36 +132,30 @@ export async function computeOutcomes(ticker, options = {}) {
     const events = activeEventKeys(snap);
     if (!events.length) continue;
 
-    // For each horizon, compute forward outcome starting from Open(t+1)
-    for (const h of HORIZONS) {
-      const endIdx = t + h;
-      if (endIdx >= n) continue;
+    // Compute all horizons in one forward pass; shorter horizons are prefixes
+    // of the longest path, while MAE/MFE still use low/high, not close-only.
+    const entryPrice = bars[t + 1]?.open;
+    if (!entryPrice || entryPrice <= 0) continue;
+    const maxEndIdx = Math.min(t + Math.max(...HORIZONS), n - 1);
+    let mae = 0;
+    let mfe = 0;
+    const path_returns = [];
+    for (let d = t + 1; d <= maxEndIdx; d++) {
+      const lo = bars[d]?.low ?? bars[d]?.close;
+      const hi = bars[d]?.high ?? bars[d]?.close;
+      const cl = bars[d]?.close;
+      if (!cl || cl <= 0) continue;
+      const retLow = (lo - entryPrice) / entryPrice;
+      const retHigh = (hi - entryPrice) / entryPrice;
+      const retClose = (cl - entryPrice) / entryPrice;
+      if (retLow < mae) mae = retLow;
+      if (retHigh > mfe) mfe = retHigh;
+      path_returns.push(retClose);
 
-      // Entry at Open(t+1), exit at Close(t+h)
-      const entryPrice = bars[t + 1]?.open;
-      if (!entryPrice || entryPrice <= 0) continue;
-
-      // Compute path for MAE / MFE / Drawdown
-      let mae = 0, mfe = 0;
-      const path_returns = [];
-      for (let d = t + 1; d <= endIdx; d++) {
-        const lo = bars[d]?.low ?? bars[d]?.close;
-        const hi = bars[d]?.high ?? bars[d]?.close;
-        const cl = bars[d]?.close;
-        if (!cl || cl <= 0) continue;
-        const retLow = (lo - entryPrice) / entryPrice;
-        const retHigh = (hi - entryPrice) / entryPrice;
-        const retClose = (cl - entryPrice) / entryPrice;
-        if (retLow < mae) mae = retLow;
-        if (retHigh > mfe) mfe = retHigh;
-        path_returns.push(retClose);
-      }
-
-      const exitClose = bars[endIdx]?.close;
-      if (!exitClose || exitClose <= 0) continue;
-      const ret = (exitClose - entryPrice) / entryPrice;
+      const h = d - t;
+      if (!HORIZONS.includes(h)) continue;
+      const ret = (cl - entryPrice) / entryPrice;
       const drawdown = maxDrawdown(path_returns);
-
       const obs = { ret, mae, mfe, drawdown: drawdown ?? 0 };
 
       for (const eventKey of events) {
