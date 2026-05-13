@@ -772,6 +772,14 @@
       if (_signalQuality === 'suppressed') {
         _integrityItems.push({ text: 'Signals suppressed', color: 'var(--red)' });
       }
+      const _historicalProfileStatus = String(data?.historical_profile?.availability?.status || '').toLowerCase();
+      const _historicalProfileReady = ['ready', 'available'].includes(_historicalProfileStatus) && Boolean(data?.historical_profile?.profile);
+      if (!_historicalProfileReady) {
+        _integrityItems.push({ text: 'Historical profile unavailable', color: 'var(--yellow)' });
+      }
+      if (payload.degraded === true && Array.isArray(payload.missingModules) && payload.missingModules.length) {
+        _integrityItems.push({ text: `Visible modules incomplete: ${payload.missingModules.join(', ')}`, color: 'var(--yellow)' });
+      }
       const _learningGate = _decision.learning_gate || payload.evaluation_v4?.decision?.learning_gate || null;
       if (_decision.regime_transition_active) _integrityItems.push({ text: 'Regime transition active', color: 'var(--red)' });
       if ((_learningGate?.learning_status || _decision.learning_status || payload.evaluation_v4?.decision?.learning_status) === 'BOOTSTRAP') _integrityItems.push({ text: 'Learning bootstrap active', color: 'var(--yellow)' });
@@ -1676,7 +1684,7 @@
 
       // ── Construct Layout ──
       const _criticalIntegrityItems = _integrityItems.filter(item => item.color === 'var(--red)');
-      const _allSystemsOperational = _finalSealOperational && _assetDecisionOperational && (_integrity.pageState || 'OK') === 'OK' && _criticalIntegrityItems.length === 0;
+      const _allSystemsOperational = _finalSealOperational && _assetDecisionOperational && (_integrity.pageState || 'OK') === 'OK' && _criticalIntegrityItems.length === 0 && _integrityItems.length === 0;
       const _statusSeverity = _integrity.pageState && _integrity.pageState !== 'OK' ? 'critical' : (_criticalIntegrityItems.length ? 'critical' : (_allSystemsOperational ? 'ok' : 'warning'));
       const _statusTitle = _integrity.pageState === 'GLOBAL_OUTAGE'
         ? 'System Status: GLOBAL OUTAGE'

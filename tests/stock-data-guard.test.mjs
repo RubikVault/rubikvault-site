@@ -370,21 +370,21 @@ describe('guardModelConsensus', () => {
   it('all models ok → valid', () => {
     const ev4 = { input_states: {
       scientific: { status: 'ok' }, forecast: { status: 'ok' },
-      elliott: { status: 'ok' }, quantlab: { status: 'ok' }
+      quantlab: { status: 'ok' }
     }};
     const r = guardModelConsensus({}, ev4);
     assert.equal(r.valid, true);
     assert.equal(r.warning, null);
   });
 
-  it('only 2 models → degraded', () => {
+  it('partial required models → degraded', () => {
     const ev4 = { input_states: {
       scientific: { status: 'ok' }, forecast: { status: 'error' },
-      elliott: { status: 'ok' }, quantlab: { status: 'error' }
+      quantlab: { status: 'error' }
     }};
     const r = guardModelConsensus({}, ev4);
     assert.equal(r.valid, true);
-    assert.equal(r.degraded, false);
+    assert.equal(r.degraded, true);
   });
 });
 

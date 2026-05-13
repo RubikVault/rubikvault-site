@@ -479,23 +479,21 @@ export function guardModelConsensus(decision, ev4) {
   const states = ev4.input_states;
   const hasScientific = states.scientific?.status === 'ok';
   const hasForecast = states.forecast?.status === 'ok';
-  const hasElliott = states.elliott?.status === 'ok';
   const hasQuantlab = states.quantlab?.status === 'ok';
-  const available = [hasScientific, hasForecast, hasElliott, hasQuantlab].filter(Boolean).length;
+  const available = [hasScientific, hasForecast, hasQuantlab].filter(Boolean).length;
   const missingModels = [
-    !hasQuantlab ? 'QuantLab' : null,
-    !hasForecast ? 'Forecast' : null,
-    !hasElliott ? 'Elliott' : null,
-    !hasScientific ? 'Scientific' : null,
+    !hasQuantlab ? 'quantlab' : null,
+    !hasForecast ? 'forecast' : null,
+    !hasScientific ? 'scientific' : null,
   ].filter(Boolean);
 
   if (available === 0) return { valid: false, warning: 'Model consensus: no model data available', available, missingModels, degraded: true };
   
-  const isUiDegraded = available < 2;
+  const isUiDegraded = available < 3;
 
   return { 
     valid: true, 
-    warning: available < 4 ? `Model consensus: ${available}/4 models available` : null,
+    warning: available < 3 ? `Model consensus: ${available}/3 models available` : null,
     available, 
     missingModels, 
     degraded: isUiDegraded 

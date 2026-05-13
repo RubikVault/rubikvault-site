@@ -1872,9 +1872,11 @@
         const erColor = er > 0 ? '#34d399' : er < 0 ? '#f87171' : '#94a3b8';
         const verdict = String(s.verdict || '').toUpperCase();
         const confidence = String(s.confidence || '').toUpperCase();
+        const routeId = normalizeTicker(s.canonical_id || s.asset_id || ticker) || ticker;
+        const routeHref = `/analyze/${encodeURIComponent(routeId).replace(/%3A/gi, ':')}`;
         return `
           <tr style="background:${bgColor};">
-            <td style="padding:0.75rem 1rem; font-weight:600; color:#60a5fa; cursor:pointer;" onclick="closeSignalModal();selectSymbol('${ticker}', '${name.replace(/'/g, "\\'")}', {push:true})">${ticker}</td>
+            <td style="padding:0.75rem 1rem; font-weight:600; color:#60a5fa; cursor:pointer;" onclick="closeSignalModal();window.location.assign('${routeHref}')">${ticker}</td>
             <td style="padding:0.75rem 1rem; color:#e5e7eb;">${name}</td>
             <td style="padding:0.75rem 1rem; color:#94a3b8; text-align:right;">${Number.isFinite(price) ? `$${price.toFixed(2)}` : 'N/A'}</td>
             <td style="padding:0.75rem 1rem; text-align:center;"><span style="background:rgba(16,185,129,0.15); color:#34d399; padding:0.2rem 0.5rem; border-radius:4px; font-size:0.85rem;">${analyzerVerified ? (verdict || '—') : (Number.isFinite(setupScore) ? Math.round(setupScore) : '—')}</span></td>
@@ -1991,6 +1993,7 @@
     let universe = [];
     const universeByTicker = new Map();
     const universeMetaByTicker = new Map();
+    const universeMetaByCanonical = new Map();
     let universeReady = null;
     let coveragePromise = null;
     let coverageInfo = null;
@@ -2189,8 +2192,8 @@
 
     function parseTopRoute(pathname) {
       const path = String(pathname || '/');
-      const deep = path.match(/^\/analyze\/([A-Z0-9.\-]+)$/i);
-      if (deep) return { route: 'analyze', ticker: normalizeTicker(deep[1]) };
+      const deep = path.match(/^\/analyze\/([^/?#]+)$/i);
+      if (deep) return { route: 'analyze', ticker: normalizeTicker(decodeURIComponent(deep[1])) };
       if (path === '/analyze') {
         try {
           const qpTicker = normalizeTicker(new URLSearchParams(window.location.search || '').get('ticker'));
@@ -2230,6 +2233,7 @@
       };
       universeByTicker.set(ticker, name || null);
       universeMetaByTicker.set(ticker, nextMeta);
+      if (nextMeta.canonical_id) universeMetaByCanonical.set(nextMeta.canonical_id, nextMeta);
     }
 
     async function loadUniverseFromV7ExactIndex() {
@@ -2490,6 +2494,7 @@
         if (!better) continue;
         universeByTicker.set(ticker, candidate.name || null);
         universeMetaByTicker.set(ticker, candidate);
+        if (candidate.canonical_id) universeMetaByCanonical.set(candidate.canonical_id, candidate);
       }
     }
 
@@ -2851,6 +2856,7 @@
     function canonicalForTicker(rawTicker) {
       const t = normalizeTicker(rawTicker);
       if (!t) return null;
+      if (t.includes(':')) return t;
       const meta = universeMetaByTicker.get(t) || null;
       return meta?.canonical_id ? String(meta.canonical_id) : null;
     }
@@ -4572,7 +4578,7 @@
     function buildStockDetailSrc(symbol) {
       const s = normalizeTicker(symbol);
       if (!s) return null;
-      return `/analyze/${encodeURIComponent(s)}`;
+      return `/analyze/${encodeURIComponent(s).replace(/%3A/gi, ':')}`;
     }
 
     function renderAnalyzeTicker(symbol, name, { push = true } = {}) {
@@ -4618,10 +4624,11 @@
         return;
       }
       const resolvedName = support.name || universeByTicker.get(s) || null;
-      lastResolved = { ticker: s, name: resolvedName };
+      const routeSymbol = normalizeTicker(support.canonical_id || s) || s;
+      lastResolved = { ticker: routeSymbol, name: resolvedName };
       syncSearchInputs(s, 'main');
       closeTypeahead();
-      renderAnalyzeTicker(s, resolvedName, { push });
+      renderAnalyzeTicker(routeSymbol, resolvedName, { push });
     }
 
     function renderTypeahead() {
@@ -4932,16 +4939,27 @@
       const assetId = item?.asset_id || item?.assetId || item?.canonical_id || null;
       const symbol = item?.symbol || item?.ticker || (assetId && String(assetId).includes(':') ? String(assetId).split(':').pop() : assetId);
       const status = item?.breakout_status || item?.status || item?.ui?.status || item?.ui?.label || item?.label || null;
-      const legacyState = item?.legacy_state || item?.state || item?.ui?.legacy_state || item?.ui?.label || item?.label || status || null;
+      const legacyState = item?.legacy_state || item?.state || item?.ui?.legacy_state || null;
+      const canonicalId = assetId ? String(assetId).toUpperCase() : null;
+      const universeMeta = canonicalId ? universeMetaByCanonical.get(canonicalId) : null;
+      const isCandidateOnly = !legacyState && /CANDIDATE|WATCHLIST/i.test(String(status || item?.ui?.label || item?.label || ''));
+      const displayTicker = canonicalId && !String(canonicalId).startsWith('US:')
+        ? canonicalId
+        : String(symbol || '').toUpperCase();
       return {
         ...item,
-        asset_id: assetId,
+        asset_id: canonicalId,
         ticker: String(symbol || '').toUpperCase(),
-        state: normalizeHomeBreakoutState({ ...item, legacy_state: legacyState, breakout_status: status }),
+        display_ticker: displayTicker,
+        name: (item?.name && String(item.name).toUpperCase() !== String(canonicalId || '').toUpperCase())
+          ? item.name
+          : (universeMeta?.name || item?.display_name || item?.name || ''),
+        state: isCandidateOnly ? 'CANDIDATE' : normalizeHomeBreakoutState({ ...item, legacy_state: legacyState, breakout_status: status }),
         breakout_status: status ? String(status).toUpperCase() : null,
         legacy_state: legacyState ? String(legacyState).toUpperCase() : null,
         as_of: item?.as_of || item?.target_market_date || null,
-        score_version: item?.score_version || null
+        score_version: item?.score_version || null,
+        candidate_only: isCandidateOnly,
       };
     }
 
@@ -4957,6 +4975,7 @@
           if (items.length) {
             breakoutData = {
               source: 'breakout_manifest',
+              contract_mode: 'candidate_rank',
               as_of: manifest.as_of || topResult?.payload?.as_of || null,
               target_market_date: manifest.target_market_date || manifest.as_of || topResult?.payload?.target_market_date || null,
               score_version: manifest.score_version || topResult?.payload?.score_version || null,
@@ -4983,7 +5002,16 @@
       if (!data || !data.items) return;
 
       const items = data.items.map(normalizeHomeBreakoutItem);
-      const counts = {
+      const candidateRankOnly = data.contract_mode === 'candidate_rank' && items.every(i => i.candidate_only || i.state === 'CANDIDATE');
+      const counts = candidateRankOnly ? {
+        ALL: items.length,
+        SETUP: 0,
+        ARMED: 0,
+        TRIGGERED: 0,
+        CONFIRMED: 0,
+        FAILED: 0,
+        CANDIDATE: items.length,
+      } : {
         ALL: items.filter(i => i.state !== 'NO_DATA' && i.state !== 'NONE').length,
         SETUP: items.filter(i => i.state === 'SETUP').length,
         ARMED: items.filter(i => i.state === 'ARMED').length,
@@ -5003,6 +5031,8 @@
         source: data.source || null,
         as_of: data.as_of || data.target_market_date || null,
         score_version: data.score_version || null,
+        contract_mode: data.contract_mode || null,
+        candidate_rank_only: candidateRankOnly,
         counts
       };
 
@@ -5020,9 +5050,15 @@
         if(state==='FAILED') btn.style.borderColor = '#ef4444';
 
         container.style.display = 'block';
-        document.getElementById('brk-home-table-title').innerText = state === 'ALL' ? 'Breakout indicator rows' : `Stocks in ${state} State`;
+        document.getElementById('brk-home-table-title').innerText = candidateRankOnly
+          ? (state === 'ALL' ? 'Top ranked breakout candidates' : `${state} state unavailable in candidate-rank feed`)
+          : (state === 'ALL' ? 'Breakout indicator rows' : `Stocks in ${state} State`);
 
-        const rowList = (state === 'ALL' ? items.filter(i => i.state !== 'NO_DATA' && i.state !== 'NONE') : items.filter(i => i.state === state)).slice(0, 10);
+        const rowList = (
+          candidateRankOnly
+            ? (state === 'ALL' ? items : [])
+            : (state === 'ALL' ? items.filter(i => i.state !== 'NO_DATA' && i.state !== 'NONE') : items.filter(i => i.state === state))
+        ).slice(0, 10);
         if (rowList.length === 0) {
             tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:10px; color:#64748b;">No rows in this state</td></tr>';
             return;
@@ -5032,8 +5068,10 @@
           const score = i.scores?.total || (Number.isFinite(Number(i.scores?.final_signal_score)) ? Math.round(Number(i.scores.final_signal_score) * 100) : i.max_level || 0);
           const zone = i.support_zone?.detected ? `Zone ${Number(i.support_zone.center || 0).toFixed(2)} · tests ${i.support_zone.test_count ?? '—'}` : 'No zone';
           const inv = i.invalidation?.close_below != null ? `Invalidation < ${Number(i.invalidation.close_below).toFixed(2)}` : '';
+          const routeId = i.asset_id || i.ticker;
+          const href = `/analyze/${encodeURIComponent(routeId).replace(/%3A/gi, ':')}`;
           return `<tr style="border-bottom:1px solid rgba(255,255,255,0.02)">
-            <td style="padding:6px 8px;"><a href="/analyze/${encodeURIComponent(i.ticker)}" style="color:#60a5fa; text-decoration:none; font-weight:700;">${i.ticker}</a></td>
+            <td style="padding:6px 8px;"><a href="${href}" style="color:#60a5fa; text-decoration:none; font-weight:700;">${escapeHtml(i.display_ticker || i.ticker)}</a></td>
             <td style="padding:6px 8px; font-size:0.7rem; color:#94a3b8;">${i.name || ''}</td>
             <td style="padding:6px 8px; font-weight:800; color:#8b5cf6">${score}</td>
             <td style="padding:6px 8px; font-size:0.75rem;">${i.breakout_status || i.state}</td>

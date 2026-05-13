@@ -120,6 +120,8 @@ export function pageCoreStrictOperationalReasons(row, { latest = null, freshness
   const statsSource = String(marketStatsMin?.stats_source || row?.stats_source || '').trim();
   const freshness = String(freshnessStatus || row?.freshness?.status || '').toLowerCase();
   const statusContractView = String(row?.status_contract?.stock_detail_view_status || '').toLowerCase();
+  const historicalProfileStatus = String(row?.status_contract?.historical_profile_status || row?.status_contract?.hist_profile_status || '').toLowerCase();
+  const modelCoverageStatus = String(row?.status_contract?.model_coverage_status || row?.model_coverage?.status || '').toLowerCase();
   const latestBarFreshEnough = latestBarWithinOperationalTtl(row, latest);
   const primaryBlocker = String(row?.primary_blocker || '');
 
@@ -152,6 +154,12 @@ export function pageCoreStrictOperationalReasons(row, { latest = null, freshness
   }
   const returnIntegrity = pageCoreReturnIntegrity(row);
   if (returnIntegrity.reason && returnIntegrity.status !== 'warning') addReason(reasons, returnIntegrity.reason);
+  if (!['ready', 'available', 'not_applicable'].includes(historicalProfileStatus)) {
+    addReason(reasons, 'historical_profile_not_ready');
+  }
+  if (!['complete', 'ready', 'not_applicable'].includes(modelCoverageStatus)) {
+    addReason(reasons, 'model_coverage_incomplete');
+  }
   if (claimsNonOperational && reasons.length > 0) addReason(reasons, 'ui_banner_not_operational');
   return unique(reasons);
 }
@@ -196,6 +204,10 @@ export function normalizePageCoreOperationalState(row, { latest = null, freshnes
         || (coverage.forecast === true ? 'available' : 'missing'),
       breakout_status: firstNonEmpty(existingContract.breakout_status, coverage.breakout_status)
         || (row?.breakout_summary ? 'available' : 'missing'),
+      historical_profile_status: firstNonEmpty(existingContract.historical_profile_status, existingContract.hist_profile_status)
+        || (row?.historical_profile_summary ? 'ready' : 'missing'),
+      model_coverage_status: firstNonEmpty(existingContract.model_coverage_status, row?.model_coverage?.status)
+        || 'missing',
       stock_detail_view_status: strictlyOperational ? 'operational' : 'degraded',
       strict_operational: strictlyOperational,
       strict_blocking_reasons: strictReasons,

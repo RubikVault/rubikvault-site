@@ -291,7 +291,14 @@ export function clearPageCoreReaderCache() {
 
 export async function readPageCoreForTicker(rawTicker, options = {}) {
   const query = normalizePageCoreAlias(rawTicker);
-  if (!isValidPageCoreAlias(query)) {
+  let requestedCanonical = null;
+  try {
+    const url = options.request?.url ? new URL(options.request.url) : null;
+    const candidate = normalizePageCoreAlias(url?.searchParams?.get('asset_id') || '');
+    if (candidate && candidate.includes(':') && isValidPageCoreAlias(candidate)) requestedCanonical = candidate;
+  } catch {}
+  const routeCanonical = query && query.includes(':') && isValidPageCoreAlias(query) ? query : null;
+  if (!isValidPageCoreAlias(query) && !requestedCanonical) {
     return failure('INVALID_TICKER', 'Invalid or missing ticker parameter', { httpStatus: 400 });
   }
   try {
@@ -303,8 +310,11 @@ export async function readPageCoreForTicker(rawTicker, options = {}) {
         freshness_status: 'error',
       });
     }
-    const aliasShard = await loadAliasShard(latest, aliasShardIndex(query), options);
-    const canonical = normalizePageCoreAlias(aliasShard?.[query]);
+    let canonical = requestedCanonical || routeCanonical || null;
+    if (!canonical) {
+      const aliasShard = await loadAliasShard(latest, aliasShardIndex(query), options);
+      canonical = normalizePageCoreAlias(aliasShard?.[query]);
+    }
     if (!canonical) {
       return failure('INVALID_OR_UNMAPPED_TICKER', 'Ticker is not mapped in page-core alias shards', {
         run_id: latest.run_id,

@@ -66,8 +66,13 @@ export async function fetchPageCoreManifest() {
 export async function fetchPageCore(ticker) {
   const manifest = await fetchPageCoreManifest();
   const snapshotId = manifest?.snapshot_id || manifest?.run_id || Date.now();
-  const tickerPath = encodeURIComponent(ticker).replace(/%3A/gi, ':');
-  const payload = await fetchJsonWithTimeout(`/api/v2/page/${tickerPath}?v=${encodeURIComponent(snapshotId)}`);
+  const routeTicker = routeTickerForAsset(ticker);
+  const tickerPath = encodeURIComponent(routeTicker).replace(/%3A/gi, ':');
+  const params = new URLSearchParams();
+  params.set('v', String(snapshotId));
+  const assetId = canonicalAssetId(ticker);
+  if (assetId) params.set('asset_id', assetId);
+  const payload = await fetchJsonWithTimeout(`/api/v2/page/${tickerPath}?${params.toString()}`);
   return {
     ok: payload?.ok === true,
     data: payload?.data || null,
@@ -79,10 +84,15 @@ export async function fetchPageCore(ticker) {
 }
 
 function canonicalAssetQuery(ticker) {
-  const assetId = String(ticker || '').trim().toUpperCase();
-  return /^[A-Z0-9_.-]+:[A-Z0-9_.-]+$/.test(assetId)
+  const assetId = canonicalAssetId(ticker);
+  return assetId
     ? `?asset_id=${encodeURIComponent(assetId)}`
     : '';
+}
+
+function canonicalAssetId(ticker) {
+  const assetId = String(ticker || '').trim().toUpperCase();
+  return /^[A-Z0-9_.-]+:[A-Z0-9_.-]+$/.test(assetId) ? assetId : null;
 }
 
 function routeTickerForAsset(ticker) {
@@ -265,6 +275,8 @@ function strictPageCoreReasons(pageCore) {
   const lagTradingDays = latestBarDate && targetDate ? tradingDaysBetween(latestBarDate, targetDate) : null;
   const latestBarFreshEnough = lagTradingDays != null && lagTradingDays <= PAGE_CORE_MAX_STALE_TRADING_DAYS;
   const primaryBlocker = String(pageCore?.primary_blocker || '');
+  const historicalProfileStatus = String(pageCore?.status_contract?.historical_profile_status || pageCore?.status_contract?.hist_profile_status || '').toLowerCase();
+  const modelCoverageStatus = String(pageCore?.status_contract?.model_coverage_status || pageCore?.model_coverage?.status || '').toLowerCase();
   const claimsNonOperational = pageCore?.ui_banner_state !== 'all_systems_operational'
     && String(pageCore?.status_contract?.stock_detail_view_status || '').toLowerCase() !== 'operational';
   if (!marketStatsMin) add('missing_market_stats_basis');
@@ -283,6 +295,8 @@ function strictPageCoreReasons(pageCore) {
   if (targetDate && (!latestBarDate || (!latestBarFreshEnough && latestBarDate < targetDate))) add('bars_stale');
   if (['stale', 'expired', 'missing', 'last_good', 'error'].includes(freshness) && !latestBarFreshEnough) add(`freshness_${freshness}`);
   if (primaryBlocker && !(primaryBlocker === 'bars_stale' && latestBarFreshEnough)) add(`primary_blocker:${primaryBlocker}`);
+  if (!['ready', 'available', 'not_applicable'].includes(historicalProfileStatus)) add('historical_profile_not_ready');
+  if (!['complete', 'ready', 'not_applicable'].includes(modelCoverageStatus)) add('model_coverage_incomplete');
   if (claimsNonOperational && reasons.length > 0) add('ui_banner_not_operational');
   return reasons;
 }
@@ -394,19 +408,36 @@ function pageCoreToSummary(pageCore) {
 
 function pageCoreToGovernance(pageCore) {
   const reason = 'evaluation_inputs_unavailable';
+  const targetAsOf = pageCore?.target_market_date || pageCore?.freshness?.as_of || null;
+  const coverage = pageCore?.coverage || {};
+  const contract = pageCore?.status_contract || {};
+  const statusFrom = (value) => String(value || '').trim().toLowerCase();
+  const okState = (status, okValues = ['available', 'ready', 'operational', 'ok']) => (
+    okValues.includes(statusFrom(status)) ? { status: 'ok', as_of: targetAsOf } : null
+  );
+  const forecastState = okState(contract.forecast_status || coverage.forecast_status || (coverage.forecast ? 'available' : null))
+    || { status: 'unavailable', reason: 'forecast_unavailable' };
+  const scientificState = okState(contract.scientific_status || coverage.scientific_status || pageCore?.model_coverage?.scientific?.status)
+    || { status: 'unavailable', reason: 'scientific_unavailable' };
+  const quantlabState = okState(contract.quantlab_status || coverage.quantlab_status || pageCore?.model_coverage?.quantlab?.status)
+    || { status: 'unavailable', reason: 'quantlab_unavailable' };
+  const available = [forecastState, scientificState, quantlabState].filter((state) => state.status === 'ok').length;
   return {
     ticker: pageCore?.display_ticker || null,
     canonical_asset_id: pageCore?.canonical_asset_id || null,
     universe: pageCore?.identity || null,
     market_score: null,
     evaluation_v4: {
-      status: 'not_built_at_request_time',
-      availability: { status: 'not_built_at_request_time', reason, ui_renderable: false },
+      status: available > 0 ? 'partial_model_inputs' : 'not_built_at_request_time',
+      availability: {
+        status: available >= 3 ? 'ready' : (available > 0 ? 'partial' : 'not_built_at_request_time'),
+        reason: available >= 3 ? null : reason,
+        ui_renderable: available > 0,
+      },
       input_states: {
-        quantlab: { status: 'unavailable', reason },
-        forecast: { status: 'unavailable', reason },
-        scientific: { status: 'unavailable', reason },
-        elliott: { status: 'unavailable', reason },
+        quantlab: quantlabState,
+        forecast: forecastState,
+        scientific: scientificState,
       },
       v4_contract: {},
       decision: null,
@@ -469,11 +500,29 @@ function stockApiToHistorical(stockApiPayload, fallbackTicker = null) {
 }
 
 function pageCoreToHistoricalProfile(pageCore) {
+  const summary = pageCore?.historical_profile_summary && typeof pageCore.historical_profile_summary === 'object'
+    ? pageCore.historical_profile_summary
+    : null;
+  if (summary?.events && Object.keys(summary.events).length > 0) {
+    return {
+      ticker: pageCore?.display_ticker || summary.ticker || null,
+      profile: {
+        latest_date: summary.latest_date || pageCore?.target_market_date || null,
+        bars_count: summary.bars_count ?? null,
+        events: summary.events,
+      },
+      regime: summary.regime || null,
+      availability: { status: 'ready', reason: null },
+    };
+  }
   return {
     ticker: pageCore?.display_ticker || null,
     profile: null,
     regime: null,
-    availability: { status: 'not_generated', reason: 'Historical profile has not been generated for this asset yet.' },
+    availability: {
+      status: pageCore?.status_contract?.historical_profile_status || 'not_generated',
+      reason: 'Historical profile has not been generated for this asset yet.',
+    },
   };
 }
 
@@ -481,9 +530,10 @@ function optionalHydrationEnabled() {
   if (typeof window === 'undefined') return false;
   try {
     const params = new URLSearchParams(window.location.search || '');
-    return params.get('rv_optional') === '1' || window.__RV_ENABLE_OPTIONAL_HYDRATION === true;
+    if (params.get('rv_optional') === '0' || window.__RV_DISABLE_OPTIONAL_HYDRATION === true) return false;
+    return true;
   } catch {
-    return false;
+    return true;
   }
 }
 

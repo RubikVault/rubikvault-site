@@ -45,6 +45,7 @@ const DECISIONS_LATEST_PATH = path.join(ROOT, 'public/data/decisions/latest.json
 const DECISION_CORE_ROOT = path.join(ROOT, 'public/data/decision-core');
 const FUNDAMENTALS_SCOPE_PATH = path.join(ROOT, 'public/data/fundamentals/_scope.json');
 const FORECAST_LATEST_PATH = path.join(ROOT, 'public/data/forecast/latest.json');
+const HIST_PROBS_PUBLIC_ROOT = path.join(ROOT, 'public/data/hist-probs-public');
 const BREAKOUT_LATEST_MANIFEST_PATHS = [
   path.join(ROOT, 'public/data/breakout/manifests/latest.json'),
   path.join(ROOT, 'public/data/breakout/status.json'),
@@ -457,6 +458,36 @@ function readBreakoutKeys() {
     }
   }
   return keys;
+}
+
+function createHistProfileReader() {
+  const latest = readJsonMaybe(path.join(HIST_PROBS_PUBLIC_ROOT, 'latest.json'));
+  const shardCount = Number(latest?.shard_count || 0);
+  if (!latest || !Number.isInteger(shardCount) || shardCount <= 0) {
+    return { available: false, get: () => null };
+  }
+  const cache = new Map();
+  const readShard = (key) => {
+    const shard = pageShardIndex(key, shardCount);
+    if (cache.has(shard)) return cache.get(shard);
+    const filePath = path.join(HIST_PROBS_PUBLIC_ROOT, latest.shards_path || 'shards', `${String(shard).padStart(3, '0')}.json`);
+    const doc = readJsonMaybe(filePath) || {};
+    cache.set(shard, doc);
+    return doc;
+  };
+  return {
+    available: true,
+    latest,
+    get(canonicalId, displayTicker) {
+      for (const key of [canonicalId, displayTicker]) {
+        const normalized = normalizePageCoreAlias(key);
+        if (!normalized) continue;
+        const profile = readShard(normalized)?.[normalized] || null;
+        if (profile?.events && Object.keys(profile.events).length > 0) return profile;
+      }
+      return null;
+    },
+  };
 }
 
 function normalizeTypedStatus(value, fallback = 'not_generated') {
@@ -941,6 +972,17 @@ function buildPageCoreRow({ canonicalId, registryRow, decisionRow, lookupValue, 
     display,
     breakoutKeys: moduleContext.breakoutKeys,
   });
+  const historicalProfileSummary = moduleContext.histProfiles?.get?.(canonicalId, display) || null;
+  const historicalProfileStatus = historicalProfileSummary ? 'ready' : (moduleContext.histProfiles?.available ? 'missing' : 'projection_missing');
+  const modelStates = {
+    forecast: forecastStatus === 'available'
+      ? { status: 'ok', as_of: targetMarketDate || null }
+      : { status: 'unavailable', reason: 'forecast_unavailable' },
+    scientific: { status: 'unavailable', reason: 'scientific_unavailable' },
+    quantlab: { status: 'unavailable', reason: 'quantlab_unavailable' },
+  };
+  const modelAvailable = Object.values(modelStates).filter((state) => state.status === 'ok').length;
+  const modelCoverageStatus = modelAvailable >= 3 ? 'complete' : (modelAvailable > 0 ? 'partial' : 'missing');
   const moduleWarnings = [];
   if (riskFallback) moduleWarnings.push(`risk_fallback_${riskFallback.source}`);
   if (riskFallback && rawVerdict === 'BUY') moduleWarnings.push('buy_suppressed_by_risk_fallback');
@@ -1009,6 +1051,9 @@ function buildPageCoreRow({ canonicalId, registryRow, decisionRow, lookupValue, 
       forecast: forecastStatus === 'available',
       forecast_status: forecastStatus,
       breakout_status: breakoutStatus,
+      historical_profile: historicalProfileStatus === 'ready',
+      historical_profile_status: historicalProfileStatus,
+      model_coverage_status: modelCoverageStatus,
       ui_renderable: true,
     },
     price_source: priceSource,
@@ -1027,14 +1072,30 @@ function buildPageCoreRow({ canonicalId, registryRow, decisionRow, lookupValue, 
       risk_status: riskLevel && riskLevel !== 'UNKNOWN' ? 'available' : 'degraded',
       risk_source: riskSource,
       hist_status: historyContext.marketStatsMin ? 'available' : 'missing',
+      historical_profile_status: historicalProfileStatus,
       fundamentals_status: fundamentalsStatus,
       forecast_status: forecastStatus,
       breakout_status: breakoutStatus,
+      quantlab_status: modelStates.quantlab.status,
+      scientific_status: modelStates.scientific.status,
+      model_coverage_status: modelCoverageStatus,
       stock_detail_view_status: uiBannerState === 'all_systems_operational' ? 'operational' : 'degraded',
       strict_operational: uiBannerState === 'all_systems_operational',
       strict_blocking_reasons: primaryBlocker ? [primaryBlocker] : [],
     },
-    historical_profile_summary: null,
+    historical_profile_summary: historicalProfileSummary ? {
+      ticker: historicalProfileSummary.ticker || display,
+      latest_date: historicalProfileSummary.latest_date || null,
+      bars_count: historicalProfileSummary.bars_count ?? null,
+      events: historicalProfileSummary.events || {},
+      source: historicalProfileSummary.source || 'hist_probs_public_projection',
+    } : null,
+    model_coverage: {
+      status: modelCoverageStatus,
+      available: modelAvailable,
+      total: 3,
+      states: modelStates,
+    },
     breakout_summary: breakoutItem ? {
       breakout_status: normalizeBreakoutItemStatus(breakoutItem),
       legacy_state: normalizeBreakoutItemLegacyState(breakoutItem),
@@ -1196,6 +1257,7 @@ function buildBundle(opts) {
     fundamentalsScope: readJsonMaybe(FUNDAMENTALS_SCOPE_PATH),
     forecastSymbols: readForecastSymbols(),
     breakoutKeys: readBreakoutKeys(),
+    histProfiles: createHistProfileReader(),
   };
   const { aliases, collisions } = buildAliasMap({ lookupExact, searchExact, registryRows, scopeIds });
   const snapshotId = buildPageCoreSnapshotId({
