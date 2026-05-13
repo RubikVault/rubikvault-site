@@ -1206,7 +1206,19 @@ function finalizePageCoreRow(row, { targetMarketDate, canonicalId = null } = {})
   }
   const bytes = Buffer.byteLength(JSON.stringify(row), 'utf8');
   if (bytes > PAGE_CORE_TARGET_BYTES) row.meta.warnings = Array.from(new Set([...row.meta.warnings, 'row_over_target_size']));
-  const hardBytes = Buffer.byteLength(JSON.stringify(row), 'utf8');
+  let hardBytes = Buffer.byteLength(JSON.stringify(row), 'utf8');
+  if (hardBytes > PAGE_CORE_HARD_BYTES && row.historical_profile_summary?.events) {
+    row.historical_profile_summary = {
+      ticker: row.historical_profile_summary.ticker || row.display_ticker || null,
+      latest_date: row.historical_profile_summary.latest_date || null,
+      bars_count: row.historical_profile_summary.bars_count ?? null,
+      event_count: row.historical_profile_summary.event_count ?? Object.keys(row.historical_profile_summary.events || {}).length,
+      source: row.historical_profile_summary.source || 'hist_probs_public_projection',
+      compact_only: true,
+    };
+    row.meta.warnings = Array.from(new Set([...row.meta.warnings, 'historical_profile_events_omitted_for_page_core_budget']));
+    hardBytes = Buffer.byteLength(JSON.stringify(row), 'utf8');
+  }
   if (hardBytes > PAGE_CORE_HARD_BYTES) throw new Error(`PAGE_CORE_ROW_TOO_LARGE:${canonicalId || row.canonical_asset_id || 'unknown'}:${hardBytes}`);
   return row;
 }
