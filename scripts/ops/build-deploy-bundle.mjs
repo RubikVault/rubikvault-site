@@ -134,6 +134,12 @@ const DECISION_CORE_PUBLIC_PROOF_REPORTS = [
   'data/reports/decision-core-outcome-bootstrap-latest.json',
 ];
 
+const PUBLIC_RUNTIME_ALLOWLIST = [
+  'data/runtime/hist-probs-status-summary.json',
+  'data/runtime/stock-analyzer-ui-delivery.json',
+  'data/runtime/stock-analyzer-provider-exceptions-latest.json',
+];
+
 const PUBLIC_DASHBOARD_STATUS_REPORT = 'data/status/dashboard-v7-public-latest.json';
 
 const RUNTIME_HISTORICAL_CACHE_LIMIT = Number(process.env.RV_RUNTIME_HISTORICAL_CACHE_LIMIT || 750);
@@ -989,6 +995,17 @@ if (!isDryRun) {
   log(`Runtime historical cache: wrote ${runtimeHistoricalCache.written} files, skipped ${runtimeHistoricalCache.skipped}, ${Math.round(runtimeHistoricalCache.bytes / 1024 / 1024)} MB`);
 
   fs.rmSync(path.join(DIST_DIR, 'data/runtime'), { recursive: true, force: true });
+
+  let copiedRuntimePublicFiles = 0;
+  for (const relPath of PUBLIC_RUNTIME_ALLOWLIST) {
+    const src = path.join(PUBLIC_DIR, relPath);
+    if (!fs.existsSync(src)) continue;
+    const dest = path.join(DIST_DIR, relPath);
+    fs.mkdirSync(path.dirname(dest), { recursive: true });
+    fs.copyFileSync(src, dest);
+    copiedRuntimePublicFiles += 1;
+  }
+  if (copiedRuntimePublicFiles > 0) log(`Copied ${copiedRuntimePublicFiles} public runtime files to dist/`);
 }
 
 // Count bundle files: in dry-run parse rsync --stats output; otherwise count actual files
