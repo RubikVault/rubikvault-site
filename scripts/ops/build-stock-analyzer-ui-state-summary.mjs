@@ -203,6 +203,14 @@ export function classifyRow(row, providerExceptions = new Map()) {
       reasons.push(`contract_green_strict_${reason}`);
     }
   }
+  const pageCoreBannerState = String(row?.ui_banner_state || '').trim().toLowerCase();
+  if (targetable && pageCoreBannerState && pageCoreBannerState !== 'all_systems_operational') {
+    const contractReasons = Array.isArray(row?.status_contract?.strict_blocking_reasons)
+      ? row.status_contract.strict_blocking_reasons
+      : [];
+    if (contractReasons.length) reasons.push(...contractReasons);
+    else reasons.push(`page_core_${pageCoreBannerState}`);
+  }
   if (warnings.includes('decision_bundle_missing') && !hasDecisionCoreState) reasons.push('decision_bundle_missing');
   if (warnings.includes('bars_stale')) reasons.push('bars_stale');
   if (hasDecisionCoreState) {
