@@ -62,6 +62,15 @@ export function classifyPath(relPath) {
     return { ok: true, reason: null };
   }
 
+  const allowlistedRuntime = [
+    'data/runtime/hist-probs-status-summary.json',
+    'data/runtime/stock-analyzer-ui-delivery.json',
+    'data/runtime/stock-analyzer-provider-exceptions-latest.json',
+  ];
+  if (allowlistedRuntime.some((allowed) => low.endsWith(allowed))) {
+    return { ok: true, reason: null };
+  }
+
   const hit = FORBIDDEN_PATH_RULES.find((rule) => rule.re.test(low));
   return hit ? { ok: false, reason: hit.reason } : { ok: true, reason: null };
 }
@@ -76,7 +85,12 @@ function classifyRepoPath(repoPath) {
     const check = classifyPath(publicRel);
     if (!check.ok) return check;
   }
-  if (/^(mirrors|var\/private|dist\/pages-prod\/data\/(ops|reports|pipeline|ui|runtime|decisions|quantlab))(\/|$)/.test(normalized)) {
+  if (normalized.startsWith('dist/pages-prod/')) {
+    const distRel = normalized.slice('dist/pages-prod/'.length);
+    const check = classifyPath(distRel);
+    if (!check.ok) return { ok: false, reason: 'private_repo_artifact' };
+  }
+  if (/^(mirrors|var\/private|dist\/pages-prod\/data\/(ops|reports|pipeline|ui|decisions|quantlab))(\/|$)/.test(normalized)) {
     return { ok: false, reason: 'private_repo_artifact' };
   }
   return { ok: true, reason: null };
