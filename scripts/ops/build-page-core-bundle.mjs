@@ -466,9 +466,7 @@ function createHistProfileReader() {
   if (!latest || !Number.isInteger(shardCount) || shardCount <= 0) {
     return { available: false, status: 'projection_missing', get: () => null };
   }
-  if (process.env.RV_PAGE_CORE_EMBED_HIST_PROFILE_SUMMARY !== '1') {
-    return { available: true, status: 'available_via_endpoint', latest, get: () => null };
-  }
+  const embed = process.env.RV_PAGE_CORE_EMBED_HIST_PROFILE_SUMMARY === '1';
   const cache = new Map();
   const readShard = (key) => {
     const shard = pageShardIndex(key, shardCount);
@@ -480,6 +478,7 @@ function createHistProfileReader() {
   };
   return {
     available: true,
+    embed,
     latest,
     get(canonicalId, displayTicker) {
       for (const key of [canonicalId, displayTicker]) {
@@ -1020,8 +1019,15 @@ function buildPageCoreRow({ canonicalId, registryRow, decisionRow, lookupValue, 
     breakoutKeys: moduleContext.breakoutKeys,
   });
   const rawHistoricalProfileSummary = moduleContext.histProfiles?.get?.(canonicalId, display) || null;
-  const historicalProfileSummary = compactPageCoreHistProfile(rawHistoricalProfileSummary, display);
-  const historicalProfileStatus = historicalProfileSummary ? 'ready' : (moduleContext.histProfiles?.status || (moduleContext.histProfiles?.available ? 'available_via_endpoint' : 'projection_missing'));
+  const rawHistoricalProfileReady = Boolean(rawHistoricalProfileSummary?.events && Object.keys(rawHistoricalProfileSummary.events).length > 0);
+  const historicalProfileSummary = moduleContext.histProfiles?.embed
+    ? compactPageCoreHistProfile(rawHistoricalProfileSummary, display)
+    : null;
+  const historicalProfileStatus = historicalProfileSummary
+    ? 'ready'
+    : rawHistoricalProfileReady
+      ? 'available_via_endpoint'
+      : (moduleContext.histProfiles?.available ? 'not_generated' : 'projection_missing');
   const modelStates = {
     forecast: forecastStatus === 'available'
       ? { status: 'ok', as_of: targetMarketDate || null }

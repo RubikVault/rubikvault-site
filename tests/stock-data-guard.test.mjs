@@ -142,6 +142,47 @@ describe('UI integrity resolver', () => {
     assert.equal(integrity.pageState, 'DATA_ISSUE');
   });
 
+  it('keeps decision-core WAIT/AVOID reasons as explanation, not data-integrity blockers', () => {
+    const basePayload = (action) => ({
+      data: {
+        market_prices: { close: 75, date: '2026-05-12' },
+        change: { pct: 0.005, abs: 0.37 },
+        market_stats: { stats: { low_52w: 40, high_52w: 90, rsi14: 55, sma20: 74, sma50: 72, sma200: 70, atr14: 1.8 } },
+        bars: [{ date: '2026-05-12', close: 75 }],
+        ssot: {
+          market_context: {
+            key_levels_ready: true,
+            issues: [],
+            prices_source: 'historical-bars',
+            stats_source: 'historical-indicators',
+            price_date: '2026-05-12',
+            stats_date: '2026-05-12',
+            latest_bar_date: '2026-05-12',
+          },
+        },
+        decision_core_min: { decision: { primary_action: action, reason_codes: ['WAIT_RISK_BLOCKER', 'TAIL_RISK_HIGH'] } },
+      },
+      decision_core_min: { decision: { primary_action: action, reason_codes: ['WAIT_RISK_BLOCKER', 'TAIL_RISK_HIGH'] } },
+      daily_decision: {
+        schema: 'rv.asset_daily_decision.v1',
+        pipeline_status: 'DEGRADED',
+        verdict: action,
+        blocking_reasons: ['primary_blocker:model_coverage_incomplete', 'WAIT_RISK_BLOCKER', 'TAIL_RISK_HIGH'],
+        risk_assessment: { level: 'HIGH' },
+      },
+      analysis_readiness: {
+        status: 'FAILED',
+        decision_bundle_status: 'FAILED',
+        blocking_reasons: ['primary_blocker:model_coverage_incomplete', 'WAIT_RISK_BLOCKER', 'TAIL_RISK_HIGH'],
+      },
+    });
+    for (const action of ['WAIT', 'AVOID']) {
+      const integrity = buildUiIntegrity(basePayload(action), { ticker: 'SF', priceStack: { valid: true } });
+      assert.equal(integrity.fields.decision_contract.status, 'VALID');
+      assert.equal(integrity.decisionReadiness, 'READY');
+    }
+  });
+
   it('renders model evidence panel as degraded instead of blank when evaluation is missing', () => {
     const gate = guardPanelGate('modelConsensus', { ev4: null, consensusValid: false, consensusDegraded: true });
     assert.equal(gate.show, true);

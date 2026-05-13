@@ -94,9 +94,26 @@ function isVisibleModuleOnlyReason(reason) {
   return /model_coverage_incomplete|historical_profile|breakout_detail|visible_module|fundamentals|ui_banner_not_operational/.test(raw);
 }
 
+function isDecisionCoreBusinessReason(reason) {
+  const raw = String(reason || '').trim().toUpperCase();
+  if (!raw) return false;
+  if (raw === 'DECISION_CORE_READY') return true;
+  if (/^(WAIT|TAIL_RISK|COST_PROXY|EV_PROXY|RANK|LONG_HORIZON|SHORT_HORIZON|MID_HORIZON)_/.test(raw)) return true;
+  if (/_(LOW_RANK|NO_SETUP|RISK_BLOCKER|NOT_POSITIVE|HIGH|UNKNOWN|UNAVAILABLE|EVIDENCE_MISSING)$/.test(raw)) return true;
+  return false;
+}
+
 function hasUsableDecisionCore(payload) {
   const decisionCore = payload?.decision_core_min || payload?.data?.decision_core_min || null;
-  const action = String(decisionCore?.decision?.primary_action || '').toUpperCase();
+  const dailyDecision = payload?.daily_decision || payload?.data?.daily_decision || null;
+  const action = String(
+    decisionCore?.decision?.primary_action
+    || dailyDecision?.primary_action
+    || dailyDecision?.verdict
+    || payload?.decision?.verdict
+    || payload?.data?.decision?.verdict
+    || '',
+  ).toUpperCase();
   return ['BUY', 'WAIT', 'AVOID', 'SELL', 'INCUBATING'].includes(action);
 }
 
@@ -192,7 +209,7 @@ export function buildUiIntegrity(payload, { ticker = null, priceStack = null } =
     ...(Array.isArray(dailyDecision.blocking_reasons) ? dailyDecision.blocking_reasons : []),
   ]);
   const decisionBlockingReasons = hasUsableDecisionCore(payload)
-    ? readinessReasons.filter((reason) => !isVisibleModuleOnlyReason(reason))
+    ? readinessReasons.filter((reason) => !isVisibleModuleOnlyReason(reason) && !isDecisionCoreBusinessReason(reason))
     : readinessReasons;
   const readinessFailed = String(readiness.status || 'READY').toUpperCase() === 'FAILED';
   const decisionContractFailed = readinessFailed && !(hasUsableDecisionCore(payload) && decisionBlockingReasons.length === 0);
