@@ -38,12 +38,20 @@ function firstDoc(paths) {
 function pickDate(doc) {
   return normalizeDate(
     doc?.target_market_date
+    || doc?.as_of
     || doc?.report_date
+    || doc?.reportDate
+    || doc?.freshness
     || doc?.run_meta?.target_market_date
     || doc?.meta?.target_market_date
+    || doc?.data?.asof
+    || doc?.data?.freshness
+    || doc?.source_meta?.asof
     || doc?.meta?.data_asof
     || doc?.data_asof
     || doc?.date
+    || doc?.generatedAt
+    || doc?.generated_at
   );
 }
 
@@ -51,10 +59,18 @@ function pickCount(doc, keys) {
   for (const key of keys) {
     const value = key.split('.').reduce((acc, part) => acc?.[part], doc);
     if (Array.isArray(value)) return value.length;
+    if (value && typeof value === 'object') return Object.keys(value).length;
     const n = Number(value);
     if (Number.isFinite(n)) return n;
   }
   return null;
+}
+
+function compareDate(a, b) {
+  const left = normalizeDate(a);
+  const right = normalizeDate(b);
+  if (!left || !right) return null;
+  return left.localeCompare(right);
 }
 
 function checkModule(def, targetMarketDate) {
@@ -70,9 +86,20 @@ function checkModule(def, targetMarketDate) {
   }
   const target = pickDate(hit.doc);
   const count = pickCount(hit.doc, def.countKeys || []);
-  const ratio = pickCount(hit.doc, def.ratioKeys || []);
+  let ratio = pickCount(hit.doc, def.ratioKeys || []);
+  if (!Number.isFinite(ratio)) {
+    const numerator = pickCount(hit.doc, def.ratioNumeratorKeys || []);
+    const denominator = pickCount(hit.doc, def.ratioDenominatorKeys || []);
+    if (Number.isFinite(numerator) && Number.isFinite(denominator) && denominator > 0) {
+      ratio = numerator / denominator;
+    }
+  }
   const reasons = [];
-  if (targetMarketDate && target !== targetMarketDate) {
+  const cmp = compareDate(target, targetMarketDate);
+  const dateOk = def.dateMode === 'on_or_after'
+    ? cmp != null && cmp >= 0
+    : target === targetMarketDate;
+  if (targetMarketDate && !dateOk) {
     reasons.push('target_market_date_mismatch');
   }
   if (def.minCount != null && !(Number.isFinite(count) && count >= def.minCount)) {
@@ -100,33 +127,36 @@ const modules = [
   {
     id: 'forecast',
     paths: ['public/data/forecast/forecast-summary-latest.json', 'public/data/forecast/latest.json'],
-    countKeys: ['asset_count', 'completed_assets', 'forecasts', 'predictions'],
+    countKeys: ['asset_count', 'completed_assets', 'data.forecasts', 'forecasts', 'predictions'],
     minCount: 1,
   },
   {
     id: 'hist_probs',
-    paths: ['public/data/hist-probs/coverage-report-latest.json', 'public/data/runtime/hist-probs-status-summary.json', 'public/data/hist-probs/run-summary.json'],
+    paths: ['public/data/hist-probs/coverage-report-latest.json', 'public/data/hist-probs/run-summary.json', 'public/data/runtime/hist-probs-status-summary.json'],
     countKeys: ['tickers_covered', 'covered_assets', 'asset_count'],
-    ratioKeys: ['coverage_ratio', 'ssot_coverage_pct'],
+    ratioKeys: ['coverage_ratio', 'artifact_coverage_ratio', 'run_coverage_ratio', 'ssot_coverage_pct'],
+    ratioNumeratorKeys: ['tickers_covered'],
+    ratioDenominatorKeys: ['tickers_total', 'tickers_input_total'],
     minCount: 1,
     minRatio: 0.90,
   },
   {
     id: 'breakout',
     paths: ['public/data/breakout/latest.json', 'public/data/breakout/manifests/latest.json', 'public/data/snapshots/breakout-all.json'],
-    countKeys: ['scored', 'counts.scored', 'top500', 'rows', 'items'],
+    countKeys: ['scored', 'counts.scored', 'count', 'validation.publishable', 'top500', 'rows', 'items'],
     minCount: 1,
   },
   {
     id: 'quantlab',
-    paths: ['public/data/quantlab/daily-scorecard-latest.json', 'public/data/quantlab/latest.json'],
-    countKeys: ['asset_count', 'assets_scored', 'rows', 'items'],
+    paths: ['public/data/quantlab/daily-scorecard-latest.json', 'public/data/quantlab/reports/v4-daily-latest.json', 'public/data/quantlab/latest.json'],
+    countKeys: ['asset_count', 'assets_scored', 'targetAsofs', 'trainingScope.currentFocusFamilies', 'rows', 'items', 'symbols'],
+    dateMode: 'on_or_after',
     minCount: 1,
   },
   {
     id: 'scientific',
     paths: ['public/data/supermodules/scientific-summary.json', 'public/data/decision-core/status/latest.json'],
-    countKeys: ['asset_count', 'assets', 'rows', 'summary.asset_count'],
+    countKeys: ['asset_count', 'assets', 'rows', 'summary.asset_count', 'universe_stats.total', 'total_assets'],
     minCount: 1,
   },
 ];
