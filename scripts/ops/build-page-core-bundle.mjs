@@ -1219,6 +1219,11 @@ function finalizePageCoreRow(row, { targetMarketDate, canonicalId = null } = {})
     row.meta.warnings = Array.from(new Set([...row.meta.warnings, 'historical_profile_events_omitted_for_page_core_budget']));
     hardBytes = Buffer.byteLength(JSON.stringify(row), 'utf8');
   }
+  if (hardBytes > PAGE_CORE_HARD_BYTES && row.historical_profile_summary) {
+    row.historical_profile_summary = null;
+    row.meta.warnings = Array.from(new Set([...row.meta.warnings, 'historical_profile_summary_omitted_for_page_core_budget']));
+    hardBytes = Buffer.byteLength(JSON.stringify(row), 'utf8');
+  }
   if (hardBytes > PAGE_CORE_HARD_BYTES) throw new Error(`PAGE_CORE_ROW_TOO_LARGE:${canonicalId || row.canonical_asset_id || 'unknown'}:${hardBytes}`);
   return row;
 }
