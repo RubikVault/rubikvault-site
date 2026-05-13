@@ -1224,6 +1224,23 @@ function finalizePageCoreRow(row, { targetMarketDate, canonicalId = null } = {})
     row.meta.warnings = Array.from(new Set([...row.meta.warnings, 'historical_profile_summary_omitted_for_page_core_budget']));
     hardBytes = Buffer.byteLength(JSON.stringify(row), 'utf8');
   }
+  if (hardBytes > PAGE_CORE_HARD_BYTES) {
+    row.meta.warnings = (row.meta.warnings || [])
+      .filter((warning) => !/historical_profile|row_over_target_size/i.test(String(warning || '')))
+      .slice(0, 2);
+    row.governance_summary = {
+      ...row.governance_summary,
+      warnings: (row.governance_summary?.warnings || []).slice(0, 2),
+    };
+    if (row.model_coverage?.states) {
+      row.model_coverage = {
+        status: row.model_coverage.status,
+        available: row.model_coverage.available,
+        total: row.model_coverage.total,
+      };
+    }
+    hardBytes = Buffer.byteLength(JSON.stringify(row), 'utf8');
+  }
   if (hardBytes > PAGE_CORE_HARD_BYTES) throw new Error(`PAGE_CORE_ROW_TOO_LARGE:${canonicalId || row.canonical_asset_id || 'unknown'}:${hardBytes}`);
   return row;
 }
