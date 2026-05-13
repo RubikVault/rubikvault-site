@@ -310,14 +310,14 @@ async function buildPageCoreBuyGuard(targetMarketDate = null) {
   for (const file of files) {
     const payload = JSON.parse(zlib.gunzipSync(await fs.readFile(path.join(pageDir, file))).toString('utf8'));
     const entries = Array.isArray(payload)
-      ? payload.map((row) => [row?.asset_id || row?.canonical_id || '', row])
+      ? payload.map((row) => [row?.canonical_asset_id || row?.asset_id || row?.canonical_id || '', row])
       : Object.entries(payload || {});
     for (const [key, row] of entries) {
       rowsScanned += 1;
-      const id = String(row?.asset_id || row?.canonical_id || key || '').toUpperCase();
+      const id = String(row?.canonical_asset_id || row?.asset_id || row?.canonical_id || key || '').toUpperCase();
       if (!id) continue;
       byId.set(id, row);
-      const coreAction = String(row?.decision_core_min?.decision?.primary_action || '').toUpperCase();
+      const coreAction = String(row?.decision_core_min?.decision?.primary_action || row?.summary_min?.decision_verdict || '').toUpperCase();
       if (!coreAction) missingCoreTotal += 1;
       if (coreAction === 'BUY') buyIds.add(id);
     }
@@ -496,6 +496,9 @@ function horizonScore(row, horizon) {
 function decorateForHorizon(row, horizon) {
   const score = horizonScore(row, horizon);
   const rawProbability = row?.calibrated_probability ?? row?.probability ?? null;
+  const expectedReturn = horizon === 'short'
+    ? (num(row?.analyzer_ret_5d_pct) != null ? Number((num(row.analyzer_ret_5d_pct) * 100).toFixed(1)) : null)
+    : (num(row?.analyzer_ret_20d_pct) != null ? Number((num(row.analyzer_ret_20d_pct) * 100).toFixed(1)) : null);
   return {
     ...row,
     horizon,
@@ -504,11 +507,16 @@ function decorateForHorizon(row, horizon) {
     metric_value: score,
     metric_label: 'RANK',
     probability: rawProbability != null ? rawProbability : score / 100,
-    expected_return:
-      horizon === 'short'
-        ? (num(row?.analyzer_ret_5d_pct) != null ? Number((num(row.analyzer_ret_5d_pct) * 100).toFixed(1)) : null)
-        : (num(row?.analyzer_ret_20d_pct) != null ? Number((num(row.analyzer_ret_20d_pct) * 100).toFixed(1)) : null),
+    expected_return: expectedReturn,
+    expected_return_reason: expectedReturn == null ? 'page_core_return_metric_unavailable' : null,
   };
+}
+
+function firstDefined(...values) {
+  for (const value of values) {
+    if (value !== undefined && value !== null && value !== '') return value;
+  }
+  return null;
 }
 
 function enrichDecisionRowsFromPageCore(rows, pageCoreGuard = null) {
@@ -518,21 +526,44 @@ function enrichDecisionRowsFromPageCore(rows, pageCoreGuard = null) {
     const pageRow = id ? pageCoreGuard.by_id.get(id) : null;
     if (!pageRow) return row;
     const price = num(
-      pageRow.last_close
-      ?? pageRow.price
-      ?? pageRow.quote?.price
-      ?? pageRow.market?.last_close
-      ?? pageRow.market_data?.last_close
+      firstDefined(
+        pageRow.summary_min?.last_close,
+        pageRow.last_close,
+        pageRow.price,
+        pageRow.quote?.price,
+        pageRow.market?.last_close,
+        pageRow.market_data?.last_close,
+        pageRow.market_prices?.close,
+        pageRow.latest_bar?.close,
+        pageRow.market_stats_min?.latest_close,
+        pageRow.market_stats_min?.close,
+      )
     );
+    const stats = pageRow.market_stats_min?.stats || pageRow.market_stats?.stats || {};
+    const ret5 = num(firstDefined(stats.ret_5d_pct, stats.return_5d_pct, pageRow.historical_profile_summary?.ret_5d_pct));
+    const ret20 = num(firstDefined(stats.ret_20d_pct, stats.return_20d_pct, pageRow.historical_profile_summary?.ret_20d_pct));
     return {
       ...row,
-      name: row.name || pageRow.name || pageRow.company_name || pageRow.display_name || pageRow.asset_name || null,
+      name: row.name || pageRow.identity?.name || pageRow.name || pageRow.company_name || pageRow.display_name || pageRow.asset_name || null,
       price: row.price ?? price,
       last_close: row.last_close ?? price,
-      market_cap: row.market_cap ?? pageRow.market_cap ?? pageRow.fundamentals?.market_cap ?? null,
-      exchange: row.exchange || String(row.canonical_id || '').split(':')[0] || null,
+      market_cap: row.market_cap ?? pageRow.summary_min?.market_cap ?? pageRow.market_cap ?? pageRow.fundamentals?.market_cap ?? null,
+      exchange: row.exchange || pageRow.identity?.exchange || String(row.canonical_id || '').split(':')[0] || null,
+      analyzer_ret_5d_pct: row.analyzer_ret_5d_pct ?? ret5,
+      analyzer_ret_20d_pct: row.analyzer_ret_20d_pct ?? ret20,
+      page_core_snapshot_id: row.page_core_snapshot_id || pageCoreGuard.snapshot_id || null,
     };
   });
+}
+
+function hasFrontpageRequiredFields(row) {
+  return Boolean(
+    row?.canonical_id
+    && row?.name
+    && num(row?.price) != null
+    && row?.decision_as_of
+    && num(row?.probability ?? row?.rank_score ?? row?.score) != null
+  );
 }
 
 function sortedHorizonRows(rows, horizon) {
@@ -584,7 +615,7 @@ function buildDecisionCoreHorizonRows(rows, horizon) {
   const selectedIds = new Set();
   const add = (row) => {
     const id = String(row?.canonical_id || row?.ticker || '');
-    if (!id || selectedIds.has(id) || selected.length >= BEST_SETUP_LIMIT) return;
+    if (!id || selectedIds.has(id) || selected.length >= BEST_SETUP_LIMIT || !hasFrontpageRequiredFields(row)) return;
     selected.push(row);
     selectedIds.add(id);
   };
