@@ -203,13 +203,18 @@ async function loadPackRows(packPath) {
   const rows = [];
   const stream = fs.createReadStream(packPath).pipe(zlib.createGunzip());
   const rl = readline.createInterface({ input: stream, crlfDelay: Infinity });
-  for await (const line of rl) {
-    if (!line) continue;
-    try {
-      rows.push(JSON.parse(line));
-    } catch {
-      // ignore invalid row
+  try {
+    for await (const line of rl) {
+      if (!line) continue;
+      try {
+        rows.push(JSON.parse(line));
+      } catch {
+        // ignore invalid row
+      }
     }
+  } catch (error) {
+    console.warn(`[marketphase-deep] pack_read_failed path=${path.relative(REPO_ROOT, packPath)} reason=${error?.message || error}`);
+    return [];
   }
   return rows;
 }
