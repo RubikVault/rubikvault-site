@@ -17,6 +17,7 @@ import path from 'node:path';
 
 const REPO_ROOT = path.resolve(new URL('.', import.meta.url).pathname, '../../..');
 const DEFAULT_CHECKPOINT_PATH = path.join(REPO_ROOT, 'public/data/hist-probs/checkpoints.json');
+const PRETTY_CHECKPOINTS = process.env.HIST_PROBS_PRETTY_JSON === '1' || process.env.RV_HIST_PROBS_PRETTY_JSON === '1';
 
 /**
  * Load checkpoint store from disk.
@@ -51,7 +52,7 @@ export function saveCheckpoints(store, checkpointPath = DEFAULT_CHECKPOINT_PATH)
     updated_at: new Date().toISOString(),
   };
   const tmpPath = `${checkpointPath}.${process.pid}.tmp`;
-  fs.writeFileSync(tmpPath, JSON.stringify(payload, null, 2) + '\n', 'utf8');
+  fs.writeFileSync(tmpPath, `${PRETTY_CHECKPOINTS ? JSON.stringify(payload, null, 2) : JSON.stringify(payload)}\n`, 'utf8');
   fs.renameSync(tmpPath, checkpointPath);
 }
 

@@ -1,8 +1,6 @@
 name: EOD History Refresh
 
 on:
-  schedule:
-    - cron: '20 21 * * 1-5' # 21:20 UTC, Mon-Fri (After market close)
   workflow_dispatch:
 
 permissions:

@@ -740,7 +740,7 @@ step_command() {
       printf '%s\n' "node scripts/ops/build-ui-field-truth-report.mjs --page-core-only --page-core-latest-path public/data/page-core/candidates/latest.candidate.json --date='$TARGET_MARKET_DATE' --timeout-ms '${RV_UI_TRUTH_TIMEOUT_MS:-30000}'"
       ;;
     final_integrity_seal)
-      printf '%s\n' "node scripts/ops/build-pipeline-runtime-report.mjs && node scripts/ops/build-hist-probs-status-summary.mjs && node scripts/ops/final-integrity-seal.mjs --target-market-date '$TARGET_MARKET_DATE' && node scripts/ops/sync-release-state-from-final-seal.mjs"
+      printf '%s\n' "node scripts/ops/build-pipeline-runtime-report.mjs && node scripts/ops/build-hist-probs-status-summary.mjs && node scripts/ops/verify-module-outputs.mjs --target-market-date '$TARGET_MARKET_DATE' --output public/data/ops/module-outputs-verify-latest.json && node scripts/ops/final-integrity-seal.mjs --target-market-date '$TARGET_MARKET_DATE' && node scripts/ops/sync-release-state-from-final-seal.mjs"
       ;;
     build_deploy_bundle)
       printf '%s\n' "node scripts/ops/build-deploy-bundle.mjs --strict"

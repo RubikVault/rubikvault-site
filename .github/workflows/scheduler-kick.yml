@@ -1,14 +1,12 @@
 name: Scheduler Kick
 
 on:
-  schedule:
-    - cron: "15 * * * *"
   workflow_dispatch:
     inputs:
       workflows:
         description: "Comma-separated workflow files to dispatch (manual only)"
         required: false
-        default: "eod-latest.yml,ops-daily.yml,forecast-daily.yml"
+        default: "ops-daily.yml"
 
 permissions:
   actions: write

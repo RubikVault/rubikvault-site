@@ -188,6 +188,29 @@ async function readDecisionBundleBuyRows(targetMarketDate = null) {
   return { latest, rows, manifest };
 }
 
+function scoreBucket(value, table, fallback = 50) {
+  const key = String(value || '').trim().toUpperCase();
+  return table[key] ?? fallback;
+}
+
+function decisionCoreAnalyzerScores(decision) {
+  const evidence = decision?.evidence_summary || {};
+  const reliability = scoreBucket(decision?.decision?.analysis_reliability, { HIGH: 92, MEDIUM: 76, LOW: 58 }, 62);
+  const ev = scoreBucket(evidence.ev_proxy_bucket, { POSITIVE: 88, NEUTRAL: 52, NEGATIVE: 20 }, 50);
+  const risk = scoreBucket(evidence.tail_risk_bucket, { LOW: 86, MEDIUM: 68, HIGH: 24 }, 50);
+  const cost = scoreBucket(evidence.cost_proxy_bucket, { LOW: 84, MEDIUM: 64, HIGH: 28 }, 55);
+  const setup = decision?.trade_guard?.max_entry_price != null && decision?.trade_guard?.invalidation_level != null ? 82 : 45;
+  const trend = scoreBucket(decision?.horizons?.mid_term?.horizon_action, { BUY: 84, WAIT: 55, AVOID: 25, SELL: 20 }, 58);
+  const composite = Number(((reliability + ev + risk + cost + setup + trend) / 6).toFixed(2));
+  return {
+    analyzer_composite: composite,
+    analyzer_trend_score: trend,
+    analyzer_entry_score: setup,
+    analyzer_risk_score: Number(((risk + cost) / 2).toFixed(2)),
+    analyzer_context_score: Number(((reliability + ev) / 2).toFixed(2)),
+  };
+}
+
 async function readDecisionCoreBuyRows(targetMarketDate = null) {
   const root = path.join(REPO_ROOT, DECISION_CORE_ROOT, 'core');
   const manifest = await readJsonAbs(path.join(root, 'manifest.json'));
@@ -216,6 +239,7 @@ async function readDecisionCoreBuyRows(targetMarketDate = null) {
       if (decision?.trade_guard?.max_entry_price == null || decision?.trade_guard?.invalidation_level == null) continue;
       if (decision?.evidence_summary?.ev_proxy_bucket !== 'positive') continue;
       if (!['LOW', 'MEDIUM'].includes(decision?.evidence_summary?.tail_risk_bucket)) continue;
+      const analyzerScores = decisionCoreAnalyzerScores(decision);
       rows.push({
         ticker: String(decision?.meta?.asset_id || '').split(':').pop(),
         canonical_id: decision?.meta?.asset_id,
@@ -230,11 +254,7 @@ async function readDecisionCoreBuyRows(targetMarketDate = null) {
         confidence: decision?.decision?.analysis_reliability || 'LOW',
         buy_eligible: true,
         trigger_fulfilled: true,
-        analyzer_composite: 100,
-        analyzer_trend_score: 100,
-        analyzer_entry_score: 100,
-        analyzer_risk_score: 100,
-        analyzer_context_score: 100,
+        ...analyzerScores,
         decision_snapshot_id: manifest.decision_run_id,
         decision_as_of: decision?.meta?.as_of_date || null,
         price_basis: 'decision-core',
@@ -283,6 +303,7 @@ async function buildPageCoreBuyGuard(targetMarketDate = null) {
   const snapshotPath = String(pageCore.pointer.snapshot_path || '').replace(/^\/data\//, 'public/data/');
   const pageDir = path.join(REPO_ROOT, snapshotPath, 'page-shards');
   const buyIds = new Set();
+  const byId = new Map();
   let rowsScanned = 0;
   let missingCoreTotal = 0;
   const files = (await fs.readdir(pageDir)).filter((name) => name.endsWith('.json.gz')).sort();
@@ -295,6 +316,7 @@ async function buildPageCoreBuyGuard(targetMarketDate = null) {
       rowsScanned += 1;
       const id = String(row?.asset_id || row?.canonical_id || key || '').toUpperCase();
       if (!id) continue;
+      byId.set(id, row);
       const coreAction = String(row?.decision_core_min?.decision?.primary_action || '').toUpperCase();
       if (!coreAction) missingCoreTotal += 1;
       if (coreAction === 'BUY') buyIds.add(id);
@@ -305,6 +327,7 @@ async function buildPageCoreBuyGuard(targetMarketDate = null) {
     target_market_date: normalizeDateId(pageCore.pointer.target_market_date),
     snapshot_id: pageCore.pointer.snapshot_id || null,
     buy_ids: buyIds,
+    by_id: byId,
     confirmed_buy_total: buyIds.size,
     rows_scanned: rowsScanned,
     missing_core_total: missingCoreTotal,
@@ -472,6 +495,7 @@ function horizonScore(row, horizon) {
 
 function decorateForHorizon(row, horizon) {
   const score = horizonScore(row, horizon);
+  const rawProbability = row?.calibrated_probability ?? row?.probability ?? null;
   return {
     ...row,
     horizon,
@@ -479,12 +503,36 @@ function decorateForHorizon(row, horizon) {
     rank_score: score,
     metric_value: score,
     metric_label: 'RANK',
-    probability: row?.calibrated_probability ?? row?.probability ?? null,
+    probability: rawProbability != null ? rawProbability : score / 100,
     expected_return:
       horizon === 'short'
         ? (num(row?.analyzer_ret_5d_pct) != null ? Number((num(row.analyzer_ret_5d_pct) * 100).toFixed(1)) : null)
         : (num(row?.analyzer_ret_20d_pct) != null ? Number((num(row.analyzer_ret_20d_pct) * 100).toFixed(1)) : null),
   };
+}
+
+function enrichDecisionRowsFromPageCore(rows, pageCoreGuard = null) {
+  if (!pageCoreGuard?.by_id || typeof pageCoreGuard.by_id.get !== 'function') return rows;
+  return rows.map((row) => {
+    const id = String(row?.canonical_id || '').toUpperCase();
+    const pageRow = id ? pageCoreGuard.by_id.get(id) : null;
+    if (!pageRow) return row;
+    const price = num(
+      pageRow.last_close
+      ?? pageRow.price
+      ?? pageRow.quote?.price
+      ?? pageRow.market?.last_close
+      ?? pageRow.market_data?.last_close
+    );
+    return {
+      ...row,
+      name: row.name || pageRow.name || pageRow.company_name || pageRow.display_name || pageRow.asset_name || null,
+      price: row.price ?? price,
+      last_close: row.last_close ?? price,
+      market_cap: row.market_cap ?? pageRow.market_cap ?? pageRow.fundamentals?.market_cap ?? null,
+      exchange: row.exchange || String(row.canonical_id || '').split(':')[0] || null,
+    };
+  });
 }
 
 function sortedHorizonRows(rows, horizon) {
@@ -709,6 +757,7 @@ async function main() {
       if (pageCoreGuard.available) {
         const before = buyRows.length;
         buyRows = buyRows.filter((row) => pageCoreGuard.buy_ids.has(String(row?.canonical_id || '').toUpperCase()));
+        buyRows = enrichDecisionRowsFromPageCore(buyRows, pageCoreGuard);
         pageCoreGuard.filtered_buy_rows = before - buyRows.length;
       }
     }

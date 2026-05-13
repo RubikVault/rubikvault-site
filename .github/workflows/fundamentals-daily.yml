@@ -2,9 +2,6 @@ name: Fundamentals Waterfall Build (Daily)
 
 on:
   workflow_dispatch:
-  schedule:
-    # 06:15 UTC daily — after EOD pipeline completes
-    - cron: '15 6 * * *'
 
 permissions:
   contents: write

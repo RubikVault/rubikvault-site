@@ -48,6 +48,7 @@ const PATHS = {
   decisionCoreBuyBreadthUi: path.join(ROOT, 'public/data/reports/stock-decision-core-ui-buy-breadth-latest.json'),
   histProbsStatus: path.join(ROOT, 'public/data/runtime/hist-probs-status-summary.json'),
   histProbsStatusLegacy: path.join(ROOT, 'public/data/hist-probs/status-summary.json'),
+  moduleOutputsVerify: path.join(ROOT, 'public/data/ops/module-outputs-verify-latest.json'),
   heartbeat: path.join(ROOT, 'mirrors/ops/pipeline-master/supervisor-heartbeat.json'),
   crashSeal: path.join(ROOT, 'public/data/ops/crash-seal-latest.json'),
 };
@@ -445,6 +446,7 @@ export function buildFinalIntegritySeal({
   decisionCoreBuyBreadth = null,
   decisionCoreBuyBreadthUi = null,
   histProbsStatus = null,
+  moduleOutputsVerify = null,
   heartbeat = null,
   crashSeal = null,
   previousFinal = null,
@@ -622,6 +624,24 @@ export function buildFinalIntegritySeal({
       id: 'module_target_date_mismatch',
       severity: 'critical',
       details: moduleDateMismatches,
+    });
+  }
+  if (!moduleOutputsVerify) {
+    blockingReasons.push({
+      id: 'module_outputs_verify_missing',
+      severity: 'critical',
+      details: null,
+    });
+  } else if (moduleOutputsVerify.ok !== true || normalizeDate(moduleOutputsVerify.target_market_date) !== expectedTargetDate) {
+    blockingReasons.push({
+      id: 'module_outputs_verify_failed',
+      severity: 'critical',
+      details: {
+        expected_target_market_date: expectedTargetDate,
+        actual_target_market_date: normalizeDate(moduleOutputsVerify.target_market_date),
+        failed_count: moduleOutputsVerify.failed_count ?? null,
+        checks: moduleOutputsVerify.checks || [],
+      },
     });
   }
   if (!publishOk) {
@@ -1015,6 +1035,7 @@ export function buildFinalIntegritySeal({
     control_plane: consistency,
     pipeline_consistency: consistency,
     module_dates: moduleDates,
+    module_outputs_verify: moduleOutputsVerify,
     blocking_reasons: mergedBlockingReasons,
     warnings: mergedWarningReasons,
     advisories: advisoryReasons,
@@ -1177,6 +1198,7 @@ async function main() {
   const decisionCoreBuyBreadth = readJson(PATHS.decisionCoreBuyBreadth) || null;
   const decisionCoreBuyBreadthUi = readJson(PATHS.decisionCoreBuyBreadthUi) || null;
   const histProbsStatus = readJson(PATHS.histProbsStatus) || readJson(PATHS.histProbsStatusLegacy) || null;
+  const moduleOutputsVerify = readJson(PATHS.moduleOutputsVerify) || null;
   const heartbeat = readJson(PATHS.heartbeat) || null;
   const crashSeal = readJson(PATHS.crashSeal) || null;
   const previousFinal = readJson(FINAL_INTEGRITY_SEAL_PATH) || null;
@@ -1231,6 +1253,7 @@ async function main() {
     decisionCoreBuyBreadth,
     decisionCoreBuyBreadthUi,
     histProbsStatus,
+    moduleOutputsVerify,
     heartbeat,
     crashSeal,
     previousFinal,
