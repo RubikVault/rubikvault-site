@@ -533,7 +533,7 @@ async function validateAsset({ browser, baseUrl, asset, targetMarketDate, latest
       || !/All Systems Operational/i.test(bodyText);
     result.assertions.no_false_green_for_missing_model_coverage = !strictReasons.includes('model_coverage_incomplete')
       || !/All Systems Operational/i.test(bodyText);
-    result.assertions.historical_profile_visible_or_documented = ['ready', 'available'].includes(historicalProfileStatus)
+    result.assertions.historical_profile_visible_or_documented = ['ready', 'available', 'available_via_endpoint'].includes(historicalProfileStatus)
       ? !/Historical signal profile unavailable|Historical profile has not been generated/i.test(bodyText)
       : /Historical signal profile unavailable|Historical profile unavailable|Analysis incomplete|Analysis degraded/i.test(bodyText);
     result.assertions.model_coverage_visible_or_documented = ['complete', 'ready'].includes(modelCoverageStatus)

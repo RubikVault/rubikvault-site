@@ -295,7 +295,7 @@ function strictPageCoreReasons(pageCore) {
   if (targetDate && (!latestBarDate || (!latestBarFreshEnough && latestBarDate < targetDate))) add('bars_stale');
   if (['stale', 'expired', 'missing', 'last_good', 'error'].includes(freshness) && !latestBarFreshEnough) add(`freshness_${freshness}`);
   if (primaryBlocker && !(primaryBlocker === 'bars_stale' && latestBarFreshEnough)) add(`primary_blocker:${primaryBlocker}`);
-  if (!['ready', 'available', 'not_applicable'].includes(historicalProfileStatus)) add('historical_profile_not_ready');
+  if (!['ready', 'available', 'available_via_endpoint', 'not_applicable'].includes(historicalProfileStatus)) add('historical_profile_not_ready');
   if (!['complete', 'ready', 'not_applicable'].includes(modelCoverageStatus)) add('model_coverage_incomplete');
   if (claimsNonOperational && reasons.length > 0) add('ui_banner_not_operational');
   return reasons;

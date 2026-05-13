@@ -154,7 +154,7 @@ export function pageCoreStrictOperationalReasons(row, { latest = null, freshness
   }
   const returnIntegrity = pageCoreReturnIntegrity(row);
   if (returnIntegrity.reason && returnIntegrity.status !== 'warning') addReason(reasons, returnIntegrity.reason);
-  if (!['ready', 'available', 'not_applicable'].includes(historicalProfileStatus)) {
+  if (!['ready', 'available', 'available_via_endpoint', 'not_applicable'].includes(historicalProfileStatus)) {
     addReason(reasons, 'historical_profile_not_ready');
   }
   if (!['complete', 'ready', 'not_applicable'].includes(modelCoverageStatus)) {

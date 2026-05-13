@@ -464,7 +464,10 @@ function createHistProfileReader() {
   const latest = readJsonMaybe(path.join(HIST_PROBS_PUBLIC_ROOT, 'latest.json'));
   const shardCount = Number(latest?.shard_count || 0);
   if (!latest || !Number.isInteger(shardCount) || shardCount <= 0) {
-    return { available: false, get: () => null };
+    return { available: false, status: 'projection_missing', get: () => null };
+  }
+  if (process.env.RV_PAGE_CORE_EMBED_HIST_PROFILE_SUMMARY !== '1') {
+    return { available: true, status: 'available_via_endpoint', latest, get: () => null };
   }
   const cache = new Map();
   const readShard = (key) => {
@@ -1018,7 +1021,7 @@ function buildPageCoreRow({ canonicalId, registryRow, decisionRow, lookupValue, 
   });
   const rawHistoricalProfileSummary = moduleContext.histProfiles?.get?.(canonicalId, display) || null;
   const historicalProfileSummary = compactPageCoreHistProfile(rawHistoricalProfileSummary, display);
-  const historicalProfileStatus = historicalProfileSummary ? 'ready' : (moduleContext.histProfiles?.available ? 'missing' : 'projection_missing');
+  const historicalProfileStatus = historicalProfileSummary ? 'ready' : (moduleContext.histProfiles?.status || (moduleContext.histProfiles?.available ? 'available_via_endpoint' : 'projection_missing'));
   const modelStates = {
     forecast: forecastStatus === 'available'
       ? { status: 'ok', as_of: targetMarketDate || null }
