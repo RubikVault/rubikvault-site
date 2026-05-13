@@ -166,6 +166,44 @@ function stockBuyCountsByHorizon(rows) {
   return out;
 }
 
+function bestSetupRowQuality(rows) {
+  const failures = [];
+  const seenTickers = new Map();
+  for (const row of rows) {
+    const ticker = String(row?.ticker || '').trim().toUpperCase();
+    const canonicalId = String(row?.canonical_id || row?.canonical_asset_id || '').trim().toUpperCase();
+    const price = Number(row?.price ?? row?.last_close);
+    const probability = Number(row?.probability ?? NaN);
+    const rankScore = Number(row?.rank_score ?? row?.score ?? NaN);
+    const expectedReturn = Number(row?.expected_return ?? NaN);
+    const expectedReturnReason = String(row?.expected_return_reason || '').trim();
+    const reasons = [];
+    if (!canonicalId || !canonicalId.includes(':')) reasons.push('missing_canonical_id');
+    if (!ticker) reasons.push('missing_ticker');
+    if (!row?.name || String(row.name).trim() === '—') reasons.push('missing_name');
+    if (!Number.isFinite(price) || price <= 0) reasons.push('missing_price');
+    if (!row?.decision_as_of) reasons.push('missing_decision_as_of');
+    if (!Number.isFinite(probability) && !Number.isFinite(rankScore)) reasons.push('missing_probability_or_rank');
+    if (Number.isFinite(probability) && (probability < 0 || probability > 1)) reasons.push('probability_out_of_unit_range');
+    if (!Number.isFinite(expectedReturn) && !expectedReturnReason) reasons.push('missing_expected_return_reason');
+    if (/^\d+$/.test(ticker) && canonicalId && !canonicalId.endsWith(`:${ticker}`)) reasons.push('ambiguous_numeric_ticker_mismatch');
+    if (ticker && canonicalId) {
+      const existing = seenTickers.get(ticker);
+      if (existing && existing !== canonicalId) reasons.push('duplicate_bare_ticker_needs_canonical_route');
+      seenTickers.set(ticker, canonicalId);
+    }
+    if (reasons.length) {
+      failures.push({
+        ticker: ticker || null,
+        canonical_id: canonicalId || null,
+        horizon: row?.horizon || null,
+        reasons,
+      });
+    }
+  }
+  return { ok: failures.length === 0, failures };
+}
+
 async function validateAnalyzerPage(browser, baseUrl, row) {
   const ticker = String(row.ticker || row.canonical_id?.split(':').pop() || '').trim();
   const page = await browser.newPage({ viewport: { width: 1366, height: 900 } });
@@ -289,6 +327,15 @@ async function validateHomeCounters(browser, baseUrl, expectedCounts, expectedTa
     result.assertions.breakout_manifest_loaded = visible.breakout?.source === 'breakout_manifest';
     result.assertions.breakout_current_target_date = expectedTargetDate ? String(visible.breakout?.as_of || '').slice(0, 10) === expectedTargetDate : Boolean(visible.breakout?.as_of);
     result.assertions.breakout_has_rows = Number(visible.breakout?.counts?.ALL || 0) > 0;
+    result.assertions.breakout_not_fake_full_state_distribution = Boolean(visible.breakout?.candidate_rank_only)
+      || !(
+        Number(visible.breakout?.counts?.ALL || 0) === Number(visible.breakout?.counts?.SETUP || 0)
+        && Number(visible.breakout?.counts?.ALL || 0) >= 100
+        && Number(visible.breakout?.counts?.ARMED || 0) === 0
+        && Number(visible.breakout?.counts?.TRIGGERED || 0) === 0
+        && Number(visible.breakout?.counts?.CONFIRMED || 0) === 0
+        && Number(visible.breakout?.counts?.FAILED || 0) === 0
+      );
     result.ok = Object.values(result.assertions).every(Boolean);
   } catch (error) {
     result.errors.push(error.message);
@@ -333,6 +380,7 @@ async function main() {
       : readJson(SNAPSHOT_PATH);
     const rows = flattenBestSetups(snapshot);
     const coverage = regionClassCoverage(rows);
+    const rowQuality = bestSetupRowQuality(rows);
     const stockBuyByHorizon = stockBuyCountsByHorizon(rows);
     const exclusiveStockBuyByHorizon = exclusiveStockBuyCountsByHorizon(rows);
     const insufficientStockBuyHorizons = Object.entries(stockBuyByHorizon)
@@ -357,7 +405,7 @@ async function main() {
       base_url: baseUrl,
       source: snapshot?.meta?.source || null,
       target_market_date: snapshot?.meta?.data_asof || null,
-      status: missingCoverage.length === 0 && insufficientStockBuyHorizons.length === 0 && homeCounterResult.ok && results.every((row) => row.ok) ? 'OK' : 'FAILED',
+      status: rowQuality.ok && missingCoverage.length === 0 && insufficientStockBuyHorizons.length === 0 && homeCounterResult.ok && results.every((row) => row.ok) ? 'OK' : 'FAILED',
       counts: {
         frontpage_rows: rows.length,
         unique_analyzer_pages: proofRows.length,
@@ -369,6 +417,7 @@ async function main() {
       exclusive_stock_buy_by_horizon: exclusiveStockBuyByHorizon.counts,
       exclusive_stock_buy_examples: exclusiveStockBuyByHorizon.examples,
       home_counter_result: homeCounterResult,
+      row_quality: rowQuality,
       insufficient_stock_buy_horizons: insufficientStockBuyHorizons,
       missing_exclusive_stock_buy_horizons: missingExclusiveBuyHorizons,
       region_class_coverage: coverage,

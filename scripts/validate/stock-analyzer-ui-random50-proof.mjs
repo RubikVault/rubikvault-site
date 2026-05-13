@@ -481,6 +481,8 @@ async function validateAsset({ browser, baseUrl, asset, targetMarketDate, latest
     const close = Number(data?.summary_min?.last_close);
     const priceDate = expectedPriceDate(data);
     const coreAction = decisionAction(data);
+    const historicalProfileStatus = String(data?.status_contract?.historical_profile_status || data?.historical_profile_summary?.availability?.status || '').toLowerCase();
+    const modelCoverageStatus = String(data?.status_contract?.model_coverage_status || data?.model_coverage?.status || '').toLowerCase();
     const strictReasons = pageCoreStrictOperationalReasons(data, { latest })
       .filter((reason) => reason !== 'ui_banner_not_operational');
     const visibleAction = visible.action || null;
@@ -507,6 +509,8 @@ async function validateAsset({ browser, baseUrl, asset, targetMarketDate, latest
     result.visible_breakout_state = visible.breakoutState || null;
     result.visible_breakout_subtext = visible.breakoutSubtext || null;
     result.visible_chart_text = visible.chartText || null;
+    result.historical_profile_status = historicalProfileStatus || null;
+    result.model_coverage_status = modelCoverageStatus || null;
     result.strict_operational_reasons = strictReasons;
     result.console_errors = consoleErrors.slice(0, 10);
     result.network_errors = networkErrors.slice(0, 10);
@@ -525,6 +529,16 @@ async function validateAsset({ browser, baseUrl, asset, targetMarketDate, latest
     result.assertions.reliability_visible = /Reliability|Analysis reliability/i.test(bodyText);
     result.assertions.horizons_visible = /Short/i.test(bodyText) && /Mid|Medium/i.test(bodyText) && /Long/i.test(bodyText);
     result.assertions.system_status_visible = /System Status|All Systems Operational|Analysis degraded|Analysis incomplete/i.test(bodyText);
+    result.assertions.no_false_green_for_missing_historical_profile = !strictReasons.includes('historical_profile_not_ready')
+      || !/All Systems Operational/i.test(bodyText);
+    result.assertions.no_false_green_for_missing_model_coverage = !strictReasons.includes('model_coverage_incomplete')
+      || !/All Systems Operational/i.test(bodyText);
+    result.assertions.historical_profile_visible_or_documented = ['ready', 'available'].includes(historicalProfileStatus)
+      ? !/Historical signal profile unavailable|Historical profile has not been generated/i.test(bodyText)
+      : /Historical signal profile unavailable|Historical profile unavailable|Analysis incomplete|Analysis degraded/i.test(bodyText);
+    result.assertions.model_coverage_visible_or_documented = ['complete', 'ready'].includes(modelCoverageStatus)
+      ? /Models:\s*3\/3|3\/3 models/i.test(bodyText)
+      : /Models:\s*[0-2]\/3|Model consensus|Analysis incomplete|Analysis degraded/i.test(bodyText);
     result.assertions.chart_rendered_or_documented_unavailable = (visible.chartSvg && !/Chart unavailable/i.test(visible.chartText))
       || /Chart unavailable.+full historical bars unavailable.+latest EOD price/i.test(visible.chartText);
     result.assertions.breakout_indicator_filled = Boolean(String(visible.breakoutState || '').trim())
