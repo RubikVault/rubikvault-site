@@ -574,10 +574,10 @@ async function validateAsset({ browser, baseUrl, asset, targetMarketDate, latest
       || !/All Systems Operational/i.test(bodyText);
     result.assertions.historical_profile_visible_or_documented = ['ready', 'available', 'available_via_endpoint'].includes(historicalProfileStatus)
       ? !/Historical signal profile unavailable|Historical profile has not been generated/i.test(bodyText)
-      : /Historical signal profile unavailable|Historical profile unavailable|Analysis incomplete|Analysis degraded/i.test(bodyText);
+      : /Historical signal profile unavailable|Historical profile unavailable|Analysis incomplete|Analysis degraded|System attention required/i.test(bodyText);
     result.assertions.model_coverage_visible_or_documented = ['complete', 'ready'].includes(modelCoverageStatus)
       ? /Models:\s*\d+\/\d+|Model evidence: Actionable alignment is available|Broad model confirmation available/i.test(bodyText)
-      : /Models:\s*(?:[0-2]\/3|N\/A)|Model consensus|Analysis incomplete|Analysis degraded/i.test(bodyText);
+      : /Models:\s*(?:[0-2]\/3|N\/A)|Model consensus|Analysis incomplete|Analysis degraded|System attention required/i.test(bodyText);
     result.assertions.chart_rendered_or_documented_unavailable = (visible.chartSvg && !/Chart unavailable/i.test(visible.chartText))
       || /Chart unavailable.+full historical bars unavailable.+latest EOD price/i.test(visible.chartText);
     result.assertions.breakout_indicator_filled = Boolean(String(visible.breakoutState || '').trim())

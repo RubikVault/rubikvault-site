@@ -1957,7 +1957,13 @@
           const modelCoverageLabel = (view) => view.coverageTotal > 0
             ? `Models: ${view.coverageCount}/${view.coverageTotal} required`
             : 'Models: N/A';
-          const modelEvidenceView = { showSection: mg?.show !== false };
+          const hasModelCoverageContract = Boolean(
+            data?.model_coverage
+            || data?.ssot?.page_core?.model_coverage
+            || payload?.model_coverage
+            || _statusContract?.model_coverage_status
+          );
+          const modelEvidenceView = { showSection: mg?.show !== false || hasModelCoverageContract };
           if (!modelEvidenceView.showSection) return '';
           if (!ev4) {
             const fallback = buildCoverageFallback();

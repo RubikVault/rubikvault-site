@@ -49,6 +49,7 @@ const FORECAST_LATEST_PATH = path.join(ROOT, 'public/data/forecast/latest.json')
 const HIST_PROBS_PUBLIC_ROOT = path.join(ROOT, 'public/data/hist-probs-public');
 const SCIENTIFIC_PER_ASSET_LATEST_PATH = path.join(ROOT, 'public/data/supermodules/scientific-per-asset/latest.json');
 const QUANTLAB_MODEL_COVERAGE_LATEST_PATH = path.join(ROOT, 'public/data/quantlab/model-coverage/latest.json');
+const PROVIDER_EXCEPTIONS_LATEST_PATH = path.join(ROOT, 'public/data/runtime/stock-analyzer-provider-exceptions-latest.json');
 const BREAKOUT_LATEST_MANIFEST_PATHS = [
   path.join(ROOT, 'public/data/breakout/manifests/latest.json'),
   path.join(ROOT, 'public/data/breakout/status.json'),
@@ -602,6 +603,34 @@ function createModelProjectionReader(latestPath) {
   };
 }
 
+function readProviderExceptions(filePath = PROVIDER_EXCEPTIONS_LATEST_PATH) {
+  const doc = readJsonMaybe(filePath);
+  const rows = Array.isArray(doc?.exceptions) ? doc.exceptions : [];
+  const byAsset = new Map();
+  for (const row of rows) {
+    const id = normalizePageCoreAlias(row?.canonical_id);
+    if (!id) continue;
+    byAsset.set(id, {
+      canonical_id: id,
+      reason: String(row?.reason || 'provider_exception'),
+      target_market_date: normalizeIsoDate(row?.target_market_date) || doc?.target_market_date || null,
+      last_trade_date: normalizeIsoDate(row?.last_trade_date) || null,
+      bars_count: numberOrNull(row?.bars_count),
+      evidence: row?.evidence ? String(row.evidence) : null,
+    });
+  }
+  return byAsset;
+}
+
+function providerExceptionBlocker(exception) {
+  const reason = String(exception?.reason || '').toLowerCase();
+  if (!reason) return null;
+  if (reason.includes('insufficient_history')) return 'insufficient_history';
+  if (reason.includes('no_target_row') || reason.includes('stale')) return 'bars_stale';
+  if (reason.includes('refresh_report')) return 'provider_refresh_error';
+  return 'provider_exception';
+}
+
 function modelStateFromProjection(reader, canonicalId, {
   missingReason,
   targetMarketDate,
@@ -1039,7 +1068,10 @@ function buildPageCoreRow({ canonicalId, registryRow, decisionRow, lookupValue, 
   const staleAfter = asOf ? new Date(Date.parse(`${asOf}T00:00:00Z`) + 48 * 60 * 60 * 1000).toISOString() : null;
   const barsCount = Math.max(numberOrNull(registryRow?.bars_count) || 0, historyContext.bars.length || 0);
   const targetable = OPERATIONAL_ASSET_CLASSES.has(assetClass) && barsCount >= 200;
-  const freshnessOk = targetMarketDate ? Boolean(asOf && asOf >= targetMarketDate) : Boolean(asOf);
+  const providerException = moduleContext.providerExceptions?.get?.(canonicalId) || null;
+  const providerBlocker = providerExceptionBlocker(providerException);
+  const providerFreshnessBlocked = providerBlocker === 'bars_stale';
+  const freshnessOk = (targetMarketDate ? Boolean(asOf && asOf >= targetMarketDate) : Boolean(asOf)) && !providerFreshnessBlocked;
   const rawRiskLevel = String(decisionRow?.risk_assessment?.level || '').toUpperCase();
   const riskFallback = (!rawRiskLevel || rawRiskLevel === 'UNKNOWN') && targetable
     ? riskFallbackFor({ assetClass, marketStatsMin: historyContext.marketStatsMin })
@@ -1073,6 +1105,7 @@ function buildPageCoreRow({ canonicalId, registryRow, decisionRow, lookupValue, 
   );
   const primaryBlocker = (!isDecisionCoreRow ? effectiveBlockingReasons[0] : null)
     || (!OPERATIONAL_ASSET_CLASSES.has(assetClass) ? 'asset_class_out_of_scope' : null)
+    || providerBlocker
     || (barsCount < 200 ? 'insufficient_history' : null)
     || (!historyContext.latestBar ? 'missing_historical_bar_basis' : null)
     || (!historyContext.marketStats ? 'missing_market_stats_basis' : null)
@@ -1137,6 +1170,7 @@ function buildPageCoreRow({ canonicalId, registryRow, decisionRow, lookupValue, 
   const moduleWarnings = [];
   if (riskFallback) moduleWarnings.push(`risk_fallback_${riskFallback.source}`);
   if (riskFallback && rawVerdict === 'BUY') moduleWarnings.push('buy_suppressed_by_risk_fallback');
+  if (providerException) moduleWarnings.push(`provider_exception:${providerException.reason}`);
   for (const [modelKey, state] of Object.entries(modelStates)) {
     if (state?.status && !['ok', 'not_applicable'].includes(state.status)) moduleWarnings.push(`${modelKey}_${state.status}`);
   }
@@ -1250,6 +1284,7 @@ function buildPageCoreRow({ canonicalId, registryRow, decisionRow, lookupValue, 
       stock_detail_view_status: uiBannerState === 'all_systems_operational' ? 'operational' : 'degraded',
       strict_operational: uiBannerState === 'all_systems_operational',
       strict_blocking_reasons: strictBlockingReasons,
+      provider_exception_status: providerException ? 'verified' : 'none',
     },
     historical_profile_summary: historicalProfileSummary ? {
       ticker: historicalProfileSummary.ticker || display,
@@ -1287,6 +1322,13 @@ function buildPageCoreRow({ canonicalId, registryRow, decisionRow, lookupValue, 
       source: 'page-core-builder',
       render_contract: 'critical_page_contract',
       warnings: uniqueStrings([...warnings, ...moduleWarnings]),
+      provider_exception: providerException ? {
+        reason: providerException.reason,
+        evidence: providerException.evidence,
+        target_market_date: providerException.target_market_date,
+        last_trade_date: providerException.last_trade_date,
+        bars_count: providerException.bars_count,
+      } : null,
     },
   };
   return finalizePageCoreRow(row, { targetMarketDate, canonicalId });
@@ -1463,6 +1505,7 @@ function buildBundle(opts) {
     histProfiles: createHistProfileReader(),
     scientificModels: createModelProjectionReader(SCIENTIFIC_PER_ASSET_LATEST_PATH),
     quantlabModels: createModelProjectionReader(QUANTLAB_MODEL_COVERAGE_LATEST_PATH),
+    providerExceptions: readProviderExceptions(),
   };
   const { aliases, collisions } = buildAliasMap({ lookupExact, searchExact, registryRows, scopeIds });
   const snapshotId = buildPageCoreSnapshotId({
