@@ -158,11 +158,14 @@ function main() {
     const assetClass = String(row?.type_norm || row?.asset_class || '').toUpperCase();
     if (!OPERATIONAL_ASSET_CLASSES.has(assetClass)) continue;
     const bars = numberOrZero(row?.bars_count);
-    if (bars < options.minBars) continue;
     const lastTradeDate = isoDate(row?.last_trade_date || row?.latest_bar_date || row?.actual_last_trade_date);
-    if (!lastTradeDate || lastTradeDate >= options.targetMarketDate) continue;
+    const staleAfterRefresh = Boolean(lastTradeDate && lastTradeDate < options.targetMarketDate);
+    const insufficientHistory = bars < options.minBars;
+    if (!staleAfterRefresh && !insufficientHistory) continue;
     const exchange = String(row?.exchange || canonicalId.split(':')[0] || '').toUpperCase();
-    const reason = 'provider_no_target_row_after_full_refresh';
+    const reason = staleAfterRefresh
+      ? 'provider_no_target_row_after_full_refresh'
+      : 'provider_insufficient_history_after_full_refresh';
     byExchange[exchange] = (byExchange[exchange] || 0) + 1;
     byReason[reason] = (byReason[reason] || 0) + 1;
     exceptionIds.add(canonicalId);

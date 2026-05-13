@@ -667,7 +667,7 @@ step_command() {
       printf '%s\n' "node scripts/audit/classifier/run-all.mjs --verbose"
       ;;
     ops_health_reports)
-      printf '%s\n' "node scripts/ops/build-nas-ops-health-reports.mjs || { ops_status=\$?; if [ \"\${RV_OPS_HEALTH_REPORTS_HARD_GATE:-0}\" = \"1\" ]; then exit \"\$ops_status\"; fi; echo \"ops_health_reports_warn_only exit_code=\$ops_status\" >&2; exit 0; }"
+      printf '%s\n' "node scripts/ops/rotate-hist-probs-error-ledger.mjs && node scripts/ops/build-nas-ops-health-reports.mjs || { ops_status=\$?; if [ \"\${RV_OPS_HEALTH_REPORTS_HARD_GATE:-0}\" = \"1\" ]; then exit \"\$ops_status\"; fi; echo \"ops_health_reports_warn_only exit_code=\$ops_status\" >&2; exit 0; }"
       ;;
     public_history_shards)
       printf '%s\n' "history_incremental_flag='--incremental'; if [ \"\${RV_UNIVERSE_SCOPE_MODE:-global_registry}\" = \"index_core\" ]; then history_incremental_flag=''; fi; RV_PUBLIC_HISTORY_TAIL_BARS='${RV_PUBLIC_HISTORY_TAIL_BARS:-260}' RV_PUBLIC_HISTORY_BENCHMARK_TAIL_BARS='${RV_PUBLIC_HISTORY_BENCHMARK_TAIL_BARS:-520}' NODE_OPTIONS='--max-old-space-size=${RV_PUBLIC_HISTORY_SHARDS_HEAP_MB:-4096}' node scripts/ops/build-public-history-shards.mjs --manifest '$RV_GLOBAL_MANIFEST_DIR/pack-manifest.global.json' --target-market-date='$TARGET_MARKET_DATE' \$history_incremental_flag"

@@ -60,7 +60,10 @@ const histAudit = Array.isArray(computeAudit.runners)
 const histErrorRate = Number(histSummary?.tickers_total || 0) > 0
   ? Number(histSummary?.tickers_errors || 0) / Number(histSummary.tickers_total)
   : null;
-const histDlq = ledgerSummary({ maxAgeDays: 7 });
+const histLedgerPath = histSummary?.error_ledger_path
+  ? path.join(ROOT, histSummary.error_ledger_path)
+  : path.join(ROOT, 'public/data/hist-probs/error-ledger-current.ndjson');
+const histDlq = ledgerSummary({ maxAgeDays: 7, ledgerPath: histLedgerPath });
 const histDlqRate = Number(histSummary?.tickers_total || 0) > 0
   ? Number(histDlq?.total || 0) / Number(histSummary.tickers_total)
   : null;
@@ -106,7 +109,7 @@ writeJson(PATHS.output, {
   refs: {
     compute_audit: 'public/data/reports/pipeline-compute-audit-latest.json',
     hist_probs_run_summary: 'public/data/hist-probs/run-summary.json',
-    hist_probs_error_ledger: 'public/data/hist-probs/error-ledger.ndjson',
+    hist_probs_error_ledger: path.relative(ROOT, histLedgerPath),
     recovery_state: 'mirrors/ops/dashboard-green/state.json',
     system_status: 'public/data/reports/system-status-latest.json',
     epoch: system?.summary?.epoch_ref || 'public/data/pipeline/epoch.json',

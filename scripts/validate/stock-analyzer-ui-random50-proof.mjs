@@ -168,16 +168,21 @@ function indexHasDocumentedNonTradableState({ asset, strictReasons, coreAction, 
     && strictReasons.every((reason) => allowedReasons.has(reason));
 }
 
-function hasDocumentedProviderState({ strictReasons, coreAction, visibleAction }) {
+function hasDocumentedProviderState({ strictReasons, coreAction, visibleAction, providerException = null }) {
   const reasons = Array.isArray(strictReasons) ? strictReasons : [];
   if (!reasons.length) return false;
   const allowedReasons = new Set([
+    'bars_stale',
+    'primary_blocker:bars_stale',
     'primary_blocker:insufficient_history',
     'primary_blocker:decision_not_operational',
     'primary_blocker:decision_bundle_missing',
   ]);
   const visible = String(visibleAction || '').toUpperCase();
   const core = String(coreAction || '').toUpperCase();
+  if (!providerException && reasons.some((reason) => reason === 'bars_stale' || reason === 'primary_blocker:bars_stale')) {
+    return false;
+  }
   return ['UNAVAILABLE', 'WAIT', 'AVOID', 'INCUBATING'].includes(visible)
     && (!core || visible === core || visible === 'UNAVAILABLE')
     && reasons.every((reason) => allowedReasons.has(reason));
@@ -344,6 +349,21 @@ async function buildRemotePageCoreSample({ baseUrl, seed, mode }) {
   return { latest, pageCoreIds: rows.length, ...sample };
 }
 
+async function loadRemoteProviderExceptions(baseUrl) {
+  const out = new Map();
+  try {
+    const doc = await fetchJson(`${baseUrl}/data/runtime/stock-analyzer-provider-exceptions-latest.json`);
+    const rows = Array.isArray(doc?.exceptions) ? doc.exceptions : [];
+    for (const row of rows) {
+      const canonicalId = String(row?.canonical_id || '').toUpperCase();
+      if (canonicalId) out.set(canonicalId, row);
+    }
+  } catch {
+    // Provider exceptions are optional for local legacy fixtures. Stale rows still fail without them.
+  }
+  return out;
+}
+
 async function freePort() {
   return new Promise((resolve, reject) => {
     const server = net.createServer();
@@ -404,7 +424,7 @@ function decisionAction(data) {
   ).toUpperCase() || null;
 }
 
-async function validateAsset({ browser, baseUrl, asset, targetMarketDate, latest }) {
+async function validateAsset({ browser, baseUrl, asset, targetMarketDate, latest, providerExceptions }) {
   const page = await browser.newPage({ viewport: { width: 1366, height: 900 } });
   const consoleErrors = [];
   const networkErrors = [];
@@ -464,6 +484,7 @@ async function validateAsset({ browser, baseUrl, asset, targetMarketDate, latest
     const strictReasons = pageCoreStrictOperationalReasons(data, { latest })
       .filter((reason) => reason !== 'ui_banner_not_operational');
     const visibleAction = visible.action || null;
+    const providerException = providerExceptions?.get(asset.canonical_id) || null;
     const documentedIndexState = indexHasDocumentedNonTradableState({
       asset,
       strictReasons,
@@ -474,7 +495,9 @@ async function validateAsset({ browser, baseUrl, asset, targetMarketDate, latest
       strictReasons,
       coreAction,
       visibleAction,
+      providerException,
     });
+    result.provider_exception = providerException;
     result.page_core_action = coreAction;
     result.visible_action = visibleAction;
     result.expected_price_date = priceDate;
@@ -491,7 +514,7 @@ async function validateAsset({ browser, baseUrl, asset, targetMarketDate, latest
     result.assertions.canonical_id_matches = String(data?.canonical_asset_id || '').toUpperCase() === asset.canonical_id;
     result.assertions.page_core_operational = (pageCoreClaimsOperational(data) && strictReasons.length === 0) || documentedProviderState;
     result.assertions.target_market_date_matches = !targetMarketDate || normalizeDate(data?.target_market_date) === targetMarketDate;
-    result.assertions.price_date_current = !targetMarketDate || Boolean(priceDate && priceDate >= targetMarketDate);
+    result.assertions.price_date_current = documentedProviderState || !targetMarketDate || Boolean(priceDate && priceDate >= targetMarketDate);
     result.assertions.close_numeric = Number.isFinite(close);
     result.assertions.visible_price_matches_page_core = Number.isFinite(close) && visible.priceText.includes(close.toFixed(2));
     result.assertions.visible_asof_matches_page_core = Boolean(priceDate && visible.asOfText.includes(priceDate));
@@ -546,6 +569,7 @@ async function main() {
   const { latest, pageCoreIds, availability, required, selected } = sampleBundle;
   const targetMarketDate = normalizeDate(cliValue('date') || cliValue('target-market-date') || process.env.RV_TARGET_MARKET_DATE || latest?.target_market_date);
   const remoteLatest = await fetchJson(`${baseUrl}/data/page-core/latest.json`).catch(() => latest);
+  const providerExceptions = await loadRemoteProviderExceptions(baseUrl);
   let browser;
   try {
     browser = await chromium.launch({ headless: true });
@@ -557,6 +581,7 @@ async function main() {
         asset,
         targetMarketDate,
         latest: remoteLatest || latest,
+        providerExceptions,
       }));
     }
     const counts = results.reduce((acc, row) => {
@@ -591,6 +616,7 @@ async function main() {
       sample_counts_by_region_class: regionalCounts,
       page_core_ids: pageCoreIds,
       pool_availability: availability,
+      provider_exceptions_loaded: providerExceptions.size,
       ok: results.filter((row) => row.ok).length,
       total: results.length,
       failed: failedResults.length,

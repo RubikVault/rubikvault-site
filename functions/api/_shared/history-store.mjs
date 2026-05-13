@@ -68,6 +68,12 @@ function hasRenderableHistory(rows, minBars = 60) {
     return Array.isArray(rows) && rows.length >= minBars;
 }
 
+function normalizeIsoDay(value) {
+    const raw = String(value || '').trim();
+    const match = raw.match(/^\d{4}-\d{2}-\d{2}/);
+    return match ? match[0] : null;
+}
+
 async function responseTextMaybeGzip(response, relPath) {
     const contentEncoding = String(response.headers.get('content-encoding') || '').toLowerCase();
     const contentType = String(response.headers.get('content-type') || '').toLowerCase();
@@ -170,6 +176,18 @@ export async function getStaticBars(symbol, baseUrl, assetFetcher = null, option
         ].filter((candidate, index, list) => candidate && list.indexOf(candidate) === index);
         const cleanSymbol = candidates[0]?.replace(/[^A-Z0-9.\-]/g, '') || '';
         const localMode = isLocalOrigin(baseUrl);
+        const requiredLatestDate = normalizeIsoDay(
+            options?.targetMarketDate
+            || options?.target_market_date
+            || options?.minLatestDate
+            || options?.min_latest_date
+        );
+
+        function isFreshEnough(rows) {
+            if (!requiredLatestDate) return true;
+            const latestDate = latestMergedDate(rows);
+            return Boolean(latestDate && latestDate >= requiredLatestDate);
+        }
 
         async function fetchGzipNdjson(relPath) {
             if (localMode) {
@@ -356,7 +374,7 @@ export async function getStaticBars(symbol, baseUrl, assetFetcher = null, option
             mergeInBars(rows);
         }
 
-        if (hasRenderableHistory(mergedBars)) {
+        if (hasRenderableHistory(mergedBars) && isFreshEnough(mergedBars)) {
             return mergedBars;
         }
 
@@ -386,7 +404,7 @@ export async function getStaticBars(symbol, baseUrl, assetFetcher = null, option
             if (bars.length) mergedBars = mergeBars(mergedBars, bars);
         }
 
-        if (hasRenderableHistory(mergedBars)) {
+        if (hasRenderableHistory(mergedBars) && isFreshEnough(mergedBars)) {
             return mergedBars;
         }
 

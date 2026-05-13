@@ -69,12 +69,15 @@ async function fastRuntimeHistoricalCacheResponse({ ticker, request, env }) {
 }
 
 function fastStaticHistoricalResponse({ ticker, request, env }) {
-  return getStaticBars(ticker, new URL(request.url).origin, env?.ASSETS || null)
+  const targetDate = targetMarketDateForRuntimeCache(env);
+  return getStaticBars(ticker, new URL(request.url).origin, env?.ASSETS || null, { targetMarketDate: targetDate })
     .then((bars) => {
       if (!Array.isArray(bars) || bars.length < 60) return null;
       const limit = historicalLimitForRequest(request);
       const limitedBars = bars.length > limit ? bars.slice(-limit) : bars;
       const latest = pickLatestBar(limitedBars);
+      const dataDate = latest?.date || new Date().toISOString().slice(0, 10);
+      const status = targetDate && dataDate < targetDate ? 'stale' : 'fresh';
       return {
         ok: true,
         data: {
@@ -91,9 +94,9 @@ function fastStaticHistoricalResponse({ ticker, request, env }) {
           breakout_v2_legacy: null,
         },
         meta: {
-          status: 'fresh',
+          status,
           generated_at: new Date().toISOString(),
-          data_date: latest?.date || new Date().toISOString().slice(0, 10),
+          data_date: dataDate,
           provider: 'static_store',
           quality_flags: ['STATIC_FAST_HISTORY', `BAR_LIMIT_${limit}`],
           version: 'v2',
