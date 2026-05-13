@@ -16,12 +16,14 @@ const ROOT = path.resolve(new URL('.', import.meta.url).pathname, '../..');
 const DEFAULT_REPORT_PATH = path.join(ROOT, 'public/data/reports/stock-analyzer-ui-random50-proof-latest.json');
 const REGIONAL30_REPORT_PATH = path.join(ROOT, 'public/data/reports/stock-analyzer-ui-regional30-proof-latest.json');
 const CLASS90_REPORT_PATH = path.join(ROOT, 'public/data/reports/stock-analyzer-ui-class90-proof-latest.json');
+const CLASS160_REPORT_PATH = path.join(ROOT, 'public/data/reports/stock-analyzer-ui-class160-proof-latest.json');
 const REGISTRY_PATH = path.join(ROOT, 'public/data/universe/v7/registry/registry.ndjson.gz');
 const CANONICAL_IDS_PATH = path.join(ROOT, 'public/data/universe/v7/ssot/assets.global.canonical.ids.json');
 const PAGE_CORE_LATEST_PATH = path.join(ROOT, 'public/data/page-core/latest.json');
 const SCOPE_ROWS_PATH = path.join(ROOT, 'mirrors/universe-v7/ssot/assets.global.rows.json');
 const GLOBAL50_REQUIRED = Object.freeze({ INDEX: 5, ETF: 25, STOCK: 20 });
 const CLASS90_REQUIRED = Object.freeze({ INDEX: 30, ETF: 30, STOCK: 30 });
+const CLASS160_REQUIRED = Object.freeze({ INDEX: 10, ETF: 50, STOCK: 100 });
 const REGIONAL30_REQUIRED = Object.freeze({
   US: Object.freeze({ INDEX: 2, ETF: 3, STOCK: 5 }),
   EU: Object.freeze({ INDEX: 2, ETF: 3, STOCK: 5 }),
@@ -75,7 +77,13 @@ const REPORT_PATH = path.resolve(
   ROOT,
   cliValue('output')
     || process.env.RV_STOCK_ANALYZER_UI_PROOF_OUTPUT
-    || (SAMPLE_MODE === 'regional30' ? REGIONAL30_REPORT_PATH : SAMPLE_MODE === 'class90' ? CLASS90_REPORT_PATH : DEFAULT_REPORT_PATH),
+    || (SAMPLE_MODE === 'regional30'
+      ? REGIONAL30_REPORT_PATH
+      : SAMPLE_MODE === 'class90'
+        ? CLASS90_REPORT_PATH
+        : SAMPLE_MODE === 'class160'
+          ? CLASS160_REPORT_PATH
+          : DEFAULT_REPORT_PATH),
 );
 
 function readJson(filePath) {
@@ -247,6 +255,18 @@ function buildClass90Sample({ seed, rows }) {
   return { required: CLASS90_REQUIRED, availability, selected };
 }
 
+function buildClass160Sample({ seed, rows }) {
+  const selected = [];
+  const availability = {};
+  for (const [assetClass, count] of Object.entries(CLASS160_REQUIRED)) {
+    const pool = rows.filter((row) => row.asset_class === assetClass);
+    availability[assetClass] = pool.length;
+    if (pool.length < count) throw new Error(`CLASS160_POOL_TOO_SMALL:${assetClass}:${pool.length}:${count}`);
+    selected.push(...deterministicPick(pool, count, `${seed}:class160:${assetClass}`));
+  }
+  return { required: CLASS160_REQUIRED, availability, selected };
+}
+
 function buildSample({ seed, mode }) {
   const canonicalIds = readCanonicalIds();
   const registryMeta = readRegistryMeta();
@@ -261,6 +281,8 @@ function buildSample({ seed, mode }) {
     ? buildRegional30Sample({ seed, rows })
     : mode === 'class90'
       ? buildClass90Sample({ seed, rows })
+      : mode === 'class160'
+        ? buildClass160Sample({ seed, rows })
       : buildGlobal50Sample({ seed, rows });
   return { latest, pageCoreIds: pageCoreIds?.size || null, ...sample };
 }
@@ -316,6 +338,8 @@ async function buildRemotePageCoreSample({ baseUrl, seed, mode }) {
     ? buildRegional30Sample({ seed, rows })
     : mode === 'class90'
       ? buildClass90Sample({ seed, rows })
+      : mode === 'class160'
+        ? buildClass160Sample({ seed, rows })
       : buildGlobal50Sample({ seed, rows });
   return { latest, pageCoreIds: rows.length, ...sample };
 }
@@ -551,6 +575,8 @@ async function main() {
         ? 'rv.stock_analyzer_ui_regional30_proof.v1'
         : SAMPLE_MODE === 'class90'
           ? 'rv.stock_analyzer_ui_class90_proof.v1'
+          : SAMPLE_MODE === 'class160'
+            ? 'rv.stock_analyzer_ui_class160_proof.v1'
           : 'rv.stock_analyzer_ui_random50_proof.v1',
       generated_at: new Date().toISOString(),
       status: failedResults.length === 0 ? 'OK' : 'FAILED',

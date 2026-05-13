@@ -119,6 +119,40 @@ function uniqueRows(rows) {
   return [...map.values()];
 }
 
+function exclusiveStockBuyCountsByHorizon(rows) {
+  const byId = new Map();
+  for (const row of rows) {
+    if (
+      row.asset_class !== 'stock'
+      || String(row.verdict || '').toUpperCase() !== 'BUY'
+      || row.price_basis !== 'decision-core'
+    ) {
+      continue;
+    }
+    const id = row.canonical_id || row.canonical_asset_id || `${row.region}:${row.ticker}`;
+    if (!id) continue;
+    const entry = byId.get(id) || { row, horizons: new Set() };
+    entry.horizons.add(row.horizon);
+    byId.set(id, entry);
+  }
+  const out = { short: 0, medium: 0, long: 0 };
+  const examples = { short: [], medium: [], long: [] };
+  for (const { row, horizons } of byId.values()) {
+    if (horizons.size !== 1) continue;
+    const [horizon] = [...horizons];
+    if (!(horizon in out)) continue;
+    out[horizon] += 1;
+    if (examples[horizon].length < 5) {
+      examples[horizon].push({
+        ticker: row.ticker || null,
+        canonical_id: row.canonical_id || row.canonical_asset_id || null,
+        region: row.region || null,
+      });
+    }
+  }
+  return { counts: out, examples };
+}
+
 function stockBuyCountsByHorizon(rows) {
   const out = { short: 0, medium: 0, long: 0 };
   for (const horizon of Object.keys(out)) {
@@ -300,9 +334,13 @@ async function main() {
     const rows = flattenBestSetups(snapshot);
     const coverage = regionClassCoverage(rows);
     const stockBuyByHorizon = stockBuyCountsByHorizon(rows);
+    const exclusiveStockBuyByHorizon = exclusiveStockBuyCountsByHorizon(rows);
     const insufficientStockBuyHorizons = Object.entries(stockBuyByHorizon)
       .filter(([, count]) => count < REQUIRED_STOCK_BUY_PER_HORIZON)
       .map(([horizon, count]) => ({ horizon, count, required: REQUIRED_STOCK_BUY_PER_HORIZON }));
+    const missingExclusiveBuyHorizons = Object.entries(exclusiveStockBuyByHorizon.counts)
+      .filter(([, count]) => count < 1)
+      .map(([horizon, count]) => ({ horizon, count, required: 1 }));
     const missingCoverage = [];
     for (const region of REQUIRED_REGIONS) {
       for (const assetClass of REQUIRED_COVERAGE_CLASSES) {
@@ -328,13 +366,17 @@ async function main() {
       },
       stock_buy_min_per_horizon: REQUIRED_STOCK_BUY_PER_HORIZON,
       stock_buy_by_horizon: stockBuyByHorizon,
+      exclusive_stock_buy_by_horizon: exclusiveStockBuyByHorizon.counts,
+      exclusive_stock_buy_examples: exclusiveStockBuyByHorizon.examples,
       home_counter_result: homeCounterResult,
       insufficient_stock_buy_horizons: insufficientStockBuyHorizons,
+      missing_exclusive_stock_buy_horizons: missingExclusiveBuyHorizons,
       region_class_coverage: coverage,
       missing_region_class_coverage: missingCoverage,
       failed_results: results.filter((row) => !row.ok),
       results,
     };
+    if (missingExclusiveBuyHorizons.length > 0) report.status = 'FAILED';
     writeJsonAtomic(REPORT_PATH, report);
     console.log(JSON.stringify(report, null, 2));
     if (report.status !== 'OK') process.exitCode = 1;
