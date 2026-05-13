@@ -41,7 +41,8 @@ const V7_STOCK_ROWS_FILE = mirrorSsotRel('stocks.max.rows.json');
 const V7_STOCK_SYMBOLS_FILE = publicSsotRel('stocks.max.symbols.json');
 const GLOBAL_ROWS_FILE = 'mirrors/universe-v7/ssot/assets.global.rows.json';
 const MARKETPHASE_INDEX_FILE = 'public/data/marketphase/index.json';
-const MARKETPHASE_DEEP_SUMMARY_FILE = 'public/data/universe/v7/read_models/marketphase_deep_summary.json';
+const MARKETPHASE_DEEP_SUMMARY_FILE = process.env.RV_MARKETPHASE_DEEP_SUMMARY_PATH
+    || 'public/data/universe/v7/read_models/marketphase_deep_summary.json';
 const DEFAULT_MAX_DEEP_SUMMARY_AGE_HOURS = 48;
 
 function isoNow() {
@@ -49,7 +50,7 @@ function isoNow() {
 }
 
 async function readJson(relPath) {
-    const abs = path.join(REPO_ROOT, relPath);
+    const abs = path.isAbsolute(relPath) ? relPath : path.join(REPO_ROOT, relPath);
     try {
         const raw = await fs.readFile(abs, 'utf-8');
         return JSON.parse(raw);
@@ -59,7 +60,7 @@ async function readJson(relPath) {
 }
 
 async function writeJsonAtomic(relPath, data) {
-    const abs = path.join(REPO_ROOT, relPath);
+    const abs = path.isAbsolute(relPath) ? relPath : path.join(REPO_ROOT, relPath);
     const tmpPath = `${abs}.tmp`;
     await fs.mkdir(path.dirname(abs), { recursive: true });
     await fs.writeFile(tmpPath, JSON.stringify(data, null, 2) + '\n', 'utf-8');
@@ -67,7 +68,7 @@ async function writeJsonAtomic(relPath, data) {
 }
 
 async function statIso(relPath) {
-    const abs = path.join(REPO_ROOT, relPath);
+    const abs = path.isAbsolute(relPath) ? relPath : path.join(REPO_ROOT, relPath);
     try {
         const st = await fs.stat(abs);
         return st.mtime.toISOString();
