@@ -4939,10 +4939,11 @@
       const assetId = item?.asset_id || item?.assetId || item?.canonical_id || null;
       const symbol = item?.symbol || item?.ticker || (assetId && String(assetId).includes(':') ? String(assetId).split(':').pop() : assetId);
       const status = item?.breakout_status || item?.status || item?.ui?.status || item?.ui?.label || item?.label || null;
-      const legacyState = item?.legacy_state || item?.state || item?.ui?.legacy_state || null;
+      const explicitCandidate = item?.candidate_only === true || String(item?.state || '').toUpperCase() === 'CANDIDATE';
+      const legacyState = item?.legacy_state || (!explicitCandidate ? item?.state : null) || item?.ui?.legacy_state || null;
       const canonicalId = assetId ? String(assetId).toUpperCase() : null;
       const universeMeta = canonicalId ? universeMetaByCanonical.get(canonicalId) : null;
-      const isCandidateOnly = !legacyState && /CANDIDATE|WATCHLIST/i.test(String(status || item?.ui?.label || item?.label || ''));
+      const isCandidateOnly = explicitCandidate || (!legacyState && /CANDIDATE|WATCHLIST/i.test(String(status || item?.ui?.label || item?.label || '')));
       const displayTicker = canonicalId && !String(canonicalId).startsWith('US:')
         ? canonicalId
         : String(symbol || '').toUpperCase();

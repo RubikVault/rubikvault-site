@@ -105,6 +105,43 @@ describe('UI integrity resolver', () => {
     assert.equal(integrity.decisionReadiness, 'READY');
   });
 
+  it('keeps decision-core BUY actionable when visible model coverage is incomplete', () => {
+    const payload = {
+      data: {
+        market_prices: { close: 80.73, date: '2026-05-12' },
+        change: { pct: 0.011, abs: 0.89 },
+        market_stats: { stats: { low_52w: 40, high_52w: 90, rsi14: 55, sma20: 78, sma50: 76, sma200: 70, atr14: 1.8 } },
+        bars: [{ date: '2026-05-12', close: 80.73 }],
+        ssot: {
+          page_core: { coverage: { bars: 500 } },
+          market_context: {
+            key_levels_ready: true,
+            issues: [],
+            prices_source: 'historical-bars',
+            stats_source: 'historical-indicators',
+            price_date: '2026-05-12',
+            stats_date: '2026-05-12',
+            latest_bar_date: '2026-05-12',
+          },
+        },
+        decision_core_min: {
+          decision: { primary_action: 'BUY', analysis_reliability: 'MEDIUM' },
+          trade_guard: { max_entry_price: 82, invalidation_level: 76 },
+        },
+      },
+      decision_core_min: {
+        decision: { primary_action: 'BUY', analysis_reliability: 'MEDIUM' },
+        trade_guard: { max_entry_price: 82, invalidation_level: 76 },
+      },
+      daily_decision: { schema: 'rv.asset_daily_decision.v1', pipeline_status: 'OK', verdict: 'BUY', blocking_reasons: [], risk_assessment: { level: 'MEDIUM' } },
+      analysis_readiness: { status: 'READY', decision_bundle_status: 'OK', blocking_reasons: ['primary_blocker:model_coverage_incomplete'] },
+    };
+    const integrity = buildUiIntegrity(payload, { ticker: 'ADM', priceStack: { valid: true } });
+    assert.equal(integrity.fields.decision_contract.status, 'VALID');
+    assert.equal(integrity.decisionReadiness, 'READY');
+    assert.equal(integrity.pageState, 'OK');
+  });
+
   it('renders model evidence panel as degraded instead of blank when evaluation is missing', () => {
     const gate = guardPanelGate('modelConsensus', { ev4: null, consensusValid: false, consensusDegraded: true });
     assert.equal(gate.show, true);

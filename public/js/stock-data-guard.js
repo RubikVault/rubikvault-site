@@ -89,6 +89,17 @@ function unique(values) {
   return Array.from(new Set(values.filter(Boolean)));
 }
 
+function isVisibleModuleOnlyReason(reason) {
+  const raw = String(reason || '').toLowerCase();
+  return /model_coverage_incomplete|historical_profile|breakout_detail|visible_module|fundamentals/.test(raw);
+}
+
+function hasUsableDecisionCore(payload) {
+  const decisionCore = payload?.decision_core_min || payload?.data?.decision_core_min || null;
+  const action = String(decisionCore?.decision?.primary_action || '').toUpperCase();
+  return ['BUY', 'WAIT', 'AVOID', 'SELL', 'INCUBATING'].includes(action);
+}
+
 function field(value, status = 'VALID', reason = null, usedInDecision = false, asOf = null) {
   return { value, status, reason, usedInDecision, asOf };
 }
@@ -180,9 +191,12 @@ export function buildUiIntegrity(payload, { ticker = null, priceStack = null } =
     ...(Array.isArray(readiness.blocking_reasons) ? readiness.blocking_reasons : []),
     ...(Array.isArray(dailyDecision.blocking_reasons) ? dailyDecision.blocking_reasons : []),
   ]);
-  fields.decision_contract = readinessReasons.length === 0 && String(readiness.status || 'READY').toUpperCase() !== 'FAILED'
+  const decisionBlockingReasons = hasUsableDecisionCore(payload)
+    ? readinessReasons.filter((reason) => !isVisibleModuleOnlyReason(reason))
+    : readinessReasons;
+  fields.decision_contract = decisionBlockingReasons.length === 0 && String(readiness.status || 'READY').toUpperCase() !== 'FAILED'
     ? field(true, 'VALID', null, true, priceAsOf)
-    : field(null, 'BLOCK', readinessReasons[0] || 'decision contract failed', true, priceAsOf);
+    : field(null, 'BLOCK', decisionBlockingReasons[0] || 'decision contract failed', true, priceAsOf);
 
   const decisionCritical = ['current_price', 'asset_return_1d', 'price_series', 'decision_contract'];
   const pageCritical = [...decisionCritical, 'chart'];

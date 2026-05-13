@@ -502,6 +502,10 @@ function decorateForHorizon(row, horizon) {
   return {
     ...row,
     horizon,
+    route_id: row?.canonical_id || row?.ticker || null,
+    analysis_url: row?.canonical_id || row?.ticker
+      ? `/analyze/${encodeURIComponent(row.canonical_id || row.ticker).replace(/%3A/gi, ':')}`
+      : null,
     score,
     rank_score: score,
     metric_value: score,

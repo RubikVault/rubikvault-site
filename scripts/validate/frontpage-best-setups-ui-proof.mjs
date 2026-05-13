@@ -177,19 +177,27 @@ function bestSetupRowQuality(rows) {
     const rankScore = Number(row?.rank_score ?? row?.score ?? NaN);
     const expectedReturn = Number(row?.expected_return ?? NaN);
     const expectedReturnReason = String(row?.expected_return_reason || '').trim();
+    const routeId = String(row?.route_id || '').trim().toUpperCase();
+    const analysisUrl = String(row?.analysis_url || '').trim();
+    const encodedCanonical = canonicalId ? encodeURIComponent(canonicalId).replace(/%3A/gi, ':') : '';
+    const hasCanonicalRoute = Boolean(
+      canonicalId
+      && (routeId === canonicalId || analysisUrl.includes(encodedCanonical) || analysisUrl.includes(encodeURIComponent(canonicalId)))
+    );
     const reasons = [];
     if (!canonicalId || !canonicalId.includes(':')) reasons.push('missing_canonical_id');
     if (!ticker) reasons.push('missing_ticker');
     if (!row?.name || String(row.name).trim() === '—') reasons.push('missing_name');
     if (!Number.isFinite(price) || price <= 0) reasons.push('missing_price');
     if (!row?.decision_as_of) reasons.push('missing_decision_as_of');
+    if (!hasCanonicalRoute) reasons.push('missing_canonical_analysis_route');
     if (!Number.isFinite(probability) && !Number.isFinite(rankScore)) reasons.push('missing_probability_or_rank');
     if (Number.isFinite(probability) && (probability < 0 || probability > 1)) reasons.push('probability_out_of_unit_range');
     if (!Number.isFinite(expectedReturn) && !expectedReturnReason) reasons.push('missing_expected_return_reason');
     if (/^\d+$/.test(ticker) && canonicalId && !canonicalId.endsWith(`:${ticker}`)) reasons.push('ambiguous_numeric_ticker_mismatch');
     if (ticker && canonicalId) {
       const existing = seenTickers.get(ticker);
-      if (existing && existing !== canonicalId) reasons.push('duplicate_bare_ticker_needs_canonical_route');
+      if (existing && existing !== canonicalId && !hasCanonicalRoute) reasons.push('duplicate_bare_ticker_needs_canonical_route');
       seenTickers.set(ticker, canonicalId);
     }
     if (reasons.length) {
