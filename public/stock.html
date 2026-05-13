@@ -1928,13 +1928,50 @@
           const mg = _guard.panelGates.modelConsensus;
           const models = [{ k: 'quantlab', l: 'QuantLab' }, { k: 'forecast', l: 'Forecast' }, { k: 'scientific', l: 'Scientific' }];
           const dirMap = d => d === 'bullish' || d === 'BUY' ? { c: 'var(--green)', l: 'BUY' } : d === 'bearish' || d === 'SELL' || d === 'AVOID' ? { c: 'var(--red)', l: String(d).toUpperCase() } : { c: 'var(--yellow)', l: d ? String(d).toUpperCase() : 'No data' };
+          const modelCoverage = data?.model_coverage || data?.ssot?.page_core?.model_coverage || payload?.model_coverage || {};
+          const coverageStates = modelCoverage?.states || {};
+          const normalizeCoverageStatus = (raw) => {
+            const value = String(raw || '').toLowerCase();
+            if (['ok', 'ready', 'available', 'complete'].includes(value)) return 'ok';
+            if (value === 'not_applicable') return 'not_applicable';
+            if (['stale', 'unavailable', 'missing', 'error'].includes(value)) return value;
+            return value || 'unavailable';
+          };
+          const buildCoverageFallback = () => {
+            const inputStates = {};
+            const modelStates = {};
+            const missing = [];
+            for (const model of models) {
+              const state = coverageStates?.[model.k] || {};
+              const status = normalizeCoverageStatus(state.status);
+              inputStates[model.k] = {
+                status,
+                as_of: state.as_of || modelCoverage?.target_market_date || pageAsOf || null,
+                reason: state.reason || null,
+              };
+              if (status === 'ok') modelStates[model.k] = 'neutral';
+              else if (status !== 'not_applicable') missing.push(model.k);
+            }
+            return { evaluation: { input_states: inputStates }, modelStates, missingModels: missing };
+          };
+          const modelCoverageLabel = (view) => view.coverageTotal > 0
+            ? `Models: ${view.coverageCount}/${view.coverageTotal} required`
+            : 'Models: N/A';
           const modelEvidenceView = { showSection: mg?.show !== false };
           if (!modelEvidenceView.showSection) return '';
           if (!ev4) {
-            const modelConsensusView = buildActiveModelConsensusPresentation({ evaluation: null, decision: _decision, missingModels: models.map((m) => m.k), modelStates: {} });
+            const fallback = buildCoverageFallback();
+            const modelConsensusView = buildActiveModelConsensusPresentation({
+              evaluation: fallback.evaluation,
+              decision: _decision,
+              missingModels: fallback.missingModels,
+              modelStates: fallback.modelStates,
+            });
             return `<div style="margin-top:0.6rem; padding:.5rem; border-radius:8px; background:rgba(255,255,255,0.01); border:1px solid rgba(255,255,255,0.03);">
-            <div style="font-size:.62rem; color:var(--text-dim); text-transform:uppercase; font-weight:700; margin-bottom:.35rem;">${_esc(modelConsensusView.compactTitle)} ${modelConsensusView.coverageCount < 2 ? '<span style="font-size:.5rem;color:var(--yellow)">Limited data</span>' : ''}</div>
-            <div style="font-size:.62rem;color:var(--text-dim)">Model consensus unavailable.</div>
+            <div style="font-size:.62rem; color:var(--text-dim); text-transform:uppercase; font-weight:700; margin-bottom:.35rem;">${_esc(modelConsensusView.compactTitle)} · ${_esc(modelCoverageLabel(modelConsensusView))} ${modelConsensusView.coverageTotal > 0 && modelConsensusView.coverageCount < modelConsensusView.coverageTotal ? '<span style="font-size:.5rem;color:var(--yellow)">Limited data</span>' : ''}</div>
+            <div style="display:grid; grid-template-columns:repeat(${Math.max(1, modelConsensusView.activeModels.length || 1)},1fr); gap:.25rem;">
+              ${modelConsensusView.activeModels.length ? modelConsensusView.activeModels.map(m => { const d = fallback.modelStates[m.key]; const dir = d ? dirMap(d) : { c: 'var(--text-muted)', l: 'N/A' }; return `<div style="text-align:center;padding:.3rem;border-radius:6px;background:rgba(255,255,255,0.02);border:1px solid var(--border);"><div style="font-size:.5rem;color:var(--text-muted);text-transform:uppercase">${m.label}</div><div style="font-size:.7rem;font-weight:800;color:${dir.c};margin-top:1px">${dir.l}</div></div>` }).join('') : '<div style="font-size:.62rem;color:var(--text-dim)">Model evidence is not applicable for this asset.</div>'}
+            </div>
             <div style="font-size:.56rem;color:var(--text-dim);margin-top:.3rem">${_esc(modelConsensusView.finalInterpretation)}</div>
         </div>`;
           }
@@ -1951,7 +1988,7 @@
           const missingModels = (_guard.corrections.modelConsensus?.missingModels || []);
           const modelConsensusView = buildActiveModelConsensusPresentation({ evaluation: ev4, decision: _decision, missingModels, modelStates: _modelDirs });
           return `<div style="margin-top:0.6rem; padding:.5rem; border-radius:8px; background:rgba(255,255,255,0.01); border:1px solid rgba(255,255,255,0.03);">
-            <div style="font-size:.62rem; color:var(--text-dim); text-transform:uppercase; font-weight:700; margin-bottom:.35rem;">${_esc(modelConsensusView.compactTitle)}</div>
+            <div style="font-size:.62rem; color:var(--text-dim); text-transform:uppercase; font-weight:700; margin-bottom:.35rem;">${_esc(modelConsensusView.compactTitle)} · ${_esc(modelCoverageLabel(modelConsensusView))}</div>
             <div style="display:grid; grid-template-columns:repeat(${Math.max(1, modelConsensusView.activeModels.length)},1fr); gap:.25rem;">
               ${modelConsensusView.activeModels.map(m => { const d = _modelDirs[m.key]; const dir = d ? dirMap(d) : { c: 'var(--text-muted)', l: 'N/A' }; return `<div style="text-align:center;padding:.3rem;border-radius:6px;background:rgba(255,255,255,0.02);border:1px solid var(--border);"><div style="font-size:.5rem;color:var(--text-muted);text-transform:uppercase">${m.label}</div><div style="font-size:.7rem;font-weight:800;color:${dir.c};margin-top:1px">${dir.l}</div></div>` }).join('')}
             </div>

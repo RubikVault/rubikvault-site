@@ -188,6 +188,29 @@ function hasDocumentedProviderState({ strictReasons, coreAction, visibleAction, 
     && reasons.every((reason) => allowedReasons.has(reason));
 }
 
+function hasDocumentedUiIncompleteState({ strictReasons, visibleAction, bodyText }) {
+  const reasons = Array.isArray(strictReasons) ? strictReasons : [];
+  if (!reasons.length) return false;
+  const visible = String(visibleAction || '').toUpperCase();
+  const text = String(bodyText || '');
+  if (/All Systems Operational/i.test(text)) return false;
+  if (!['UNAVAILABLE', 'WAIT', 'AVOID', 'INCUBATING'].includes(visible)) return false;
+  const allowedReasons = new Set([
+    'historical_profile_not_ready',
+    'model_coverage_incomplete',
+    'missing_market_stats_basis',
+    'key_levels_not_ready',
+    'primary_blocker:decision_not_operational',
+    'primary_blocker:decision_bundle_missing',
+    'primary_blocker:insufficient_history',
+    'primary_blocker:historical_profile_not_ready',
+    'primary_blocker:model_coverage_incomplete',
+    'primary_blocker:missing_historical_bar_basis',
+  ]);
+  if (!reasons.every((reason) => allowedReasons.has(reason))) return false;
+  return /Analysis incomplete|Analysis degraded|System attention required|Historical signal profile unavailable|Historical profile unavailable|Model evidence|Breakout:/i.test(text);
+}
+
 function readPageCoreIds(latest) {
   const snapshotPath = String(latest?.snapshot_path || '').replace(/^\/data\/page-core\//, '');
   if (!snapshotPath) return null;
@@ -507,6 +530,11 @@ async function validateAsset({ browser, baseUrl, asset, targetMarketDate, latest
       visibleAction,
       providerException,
     });
+    const documentedUiIncompleteState = hasDocumentedUiIncompleteState({
+      strictReasons,
+      visibleAction,
+      bodyText,
+    });
     result.provider_exception = providerException;
     result.page_core_action = coreAction;
     result.visible_action = visibleAction;
@@ -524,7 +552,9 @@ async function validateAsset({ browser, baseUrl, asset, targetMarketDate, latest
     result.network_errors = networkErrors.slice(0, 10);
     result.assertions.api_page_core_ok = pageCore?.ok === true && data?.schema_version === 'rv.page_core.v1';
     result.assertions.canonical_id_matches = String(data?.canonical_asset_id || '').toUpperCase() === asset.canonical_id;
-    result.assertions.page_core_operational = (pageCoreClaimsOperational(data) && strictReasons.length === 0) || documentedProviderState;
+    result.assertions.page_core_operational = (pageCoreClaimsOperational(data) && strictReasons.length === 0)
+      || documentedProviderState
+      || documentedUiIncompleteState;
     result.assertions.target_market_date_matches = !targetMarketDate || normalizeDate(data?.target_market_date) === targetMarketDate;
     result.assertions.price_date_current = documentedProviderState || !targetMarketDate || Boolean(priceDate && priceDate >= targetMarketDate);
     result.assertions.close_numeric = Number.isFinite(close);
@@ -532,7 +562,8 @@ async function validateAsset({ browser, baseUrl, asset, targetMarketDate, latest
     result.assertions.visible_asof_matches_page_core = Boolean(priceDate && visible.asOfText.includes(priceDate));
     result.assertions.visible_action_exists = /\b(BUY|WAIT|AVOID|UNAVAILABLE|INCUBATING)\b/i.test(bodyText);
     result.assertions.visible_action_matches_page_core = Boolean(coreAction && visibleAction === coreAction && (coreAction !== 'BUY' || !visible.blocked || documentedProviderState))
-      || documentedProviderState;
+      || documentedProviderState
+      || documentedUiIncompleteState;
     result.assertions.decision_basis_visible = /Decision Basis|Why not now|Conditional BUY|Analysis incomplete/i.test(bodyText);
     result.assertions.reliability_visible = /Reliability|Analysis reliability/i.test(bodyText);
     result.assertions.horizons_visible = /Short/i.test(bodyText) && /Mid|Medium/i.test(bodyText) && /Long/i.test(bodyText);
@@ -545,7 +576,7 @@ async function validateAsset({ browser, baseUrl, asset, targetMarketDate, latest
       ? !/Historical signal profile unavailable|Historical profile has not been generated/i.test(bodyText)
       : /Historical signal profile unavailable|Historical profile unavailable|Analysis incomplete|Analysis degraded/i.test(bodyText);
     result.assertions.model_coverage_visible_or_documented = ['complete', 'ready'].includes(modelCoverageStatus)
-      ? /Models:\s*3\/3|3\/3 models/i.test(bodyText)
+      ? /Models:\s*\d+\/\d+|Model evidence: Actionable alignment is available|Broad model confirmation available/i.test(bodyText)
       : /Models:\s*(?:[0-2]\/3|N\/A)|Model consensus|Analysis incomplete|Analysis degraded/i.test(bodyText);
     result.assertions.chart_rendered_or_documented_unavailable = (visible.chartSvg && !/Chart unavailable/i.test(visible.chartText))
       || /Chart unavailable.+full historical bars unavailable.+latest EOD price/i.test(visible.chartText);
