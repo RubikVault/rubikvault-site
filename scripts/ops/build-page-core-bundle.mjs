@@ -674,7 +674,7 @@ function readJsonCached(filePath) {
   if (historyJsonCache.has(filePath)) return historyJsonCache.get(filePath);
   let doc = null;
   try {
-    doc = readJson(filePath);
+    doc = filePath.endsWith('.gz') ? readGzipJson(filePath) : readJson(filePath);
   } catch {
     doc = null;
   }
@@ -745,8 +745,9 @@ function readShardBars(symbol) {
   const shard = clean.charAt(0);
   if (!shard) return [];
   if (!historyShardCache.has(shard)) {
-    const filePath = path.join(ROOT, 'public/data/eod/history/shards', `${shard}.json`);
-    historyShardCache.set(shard, readJsonCached(filePath) || {});
+    const gzPath = path.join(ROOT, 'public/data/eod/history/shards', `${shard}.json.gz`);
+    const jsonPath = path.join(ROOT, 'public/data/eod/history/shards', `${shard}.json`);
+    historyShardCache.set(shard, readJsonCached(gzPath) || readJsonCached(jsonPath) || {});
   }
   const doc = historyShardCache.get(shard) || {};
   return normalizeHistoryBars(doc[clean] || doc[symbol] || []);
@@ -757,7 +758,7 @@ function historyPackPath(row) {
 }
 
 function readHistoricalBars(canonicalId, symbol, registryRow = null) {
-  let bars = readShardBars(symbol);
+  let bars = [];
   const manifest = readFirstJson(HISTORY_MANIFEST_CANDIDATES);
   const lookup = readFirstJson(HISTORY_LOOKUP_CANDIDATES);
   const candidates = [
@@ -780,6 +781,7 @@ function readHistoricalBars(canonicalId, symbol, registryRow = null) {
     const packBars = indexed?.get(entry.canonical_id) || indexed?.get(normalizePageCoreAlias(canonicalId)) || [];
     bars = mergeBars(bars, packBars);
   }
+  if (!bars.length) bars = readShardBars(symbol);
   return bars;
 }
 

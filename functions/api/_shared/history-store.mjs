@@ -356,7 +356,41 @@ export async function getStaticBars(symbol, baseUrl, assetFetcher = null, option
             mergeInBars(rows);
         }
 
-        // New: Try Sharded History (100% universe fallback)
+        if (hasRenderableHistory(mergedBars)) {
+            return mergedBars;
+        }
+
+        const packLookup = await loadHistoryPackLookup();
+        const lookupEntries = candidates
+            .map((candidate) => normalizePackEntry(
+                packLookup?.by_symbol?.[candidate]
+                || packLookup?.by_canonical_id?.[candidate]
+                || null
+            ))
+            .filter(Boolean);
+
+        const packManifest = await loadHistoryPackManifest();
+        const manifestEntries = candidates
+            .map((candidate) => normalizePackEntry(
+                packManifest?.by_symbol?.[candidate]
+                || packManifest?.by_canonical_id?.[candidate]
+                || null
+            ))
+            .filter(Boolean);
+
+        const packEntries = [...lookupEntries, ...manifestEntries]
+            .filter(Boolean)
+            .filter((entry, index, list) => list.findIndex((candidate) => candidate.pack === entry.pack && candidate.canonical_id === entry.canonical_id) === index);
+        for (const entry of packEntries) {
+            const bars = await fetchHistoryPackBars(entry.pack, entry.canonical_id);
+            if (bars.length) mergedBars = mergeBars(mergedBars, bars);
+        }
+
+        if (hasRenderableHistory(mergedBars)) {
+            return mergedBars;
+        }
+
+        // Legacy fallback only: alphabet shards can be large enough to hit Worker CPU limits.
         const shard = cleanSymbol[0] || '_';
         const shardCandidates = [
             `/data/eod/history/shards/${shard}.json.gz`,
@@ -387,36 +421,6 @@ export async function getStaticBars(symbol, baseUrl, assetFetcher = null, option
                     }
                 }
             } catch { /* ignore */ }
-        }
-
-        if (hasRenderableHistory(mergedBars)) {
-            return mergedBars;
-        }
-
-        const packLookup = await loadHistoryPackLookup();
-        const lookupEntries = candidates
-            .map((candidate) => normalizePackEntry(
-                packLookup?.by_symbol?.[candidate]
-                || packLookup?.by_canonical_id?.[candidate]
-                || null
-            ))
-            .filter(Boolean);
-
-        const packManifest = await loadHistoryPackManifest();
-        const manifestEntries = candidates
-            .map((candidate) => normalizePackEntry(
-                packManifest?.by_symbol?.[candidate]
-                || packManifest?.by_canonical_id?.[candidate]
-                || null
-            ))
-            .filter(Boolean);
-
-        const packEntries = [...lookupEntries, ...manifestEntries]
-            .filter(Boolean)
-            .filter((entry, index, list) => list.findIndex((candidate) => candidate.pack === entry.pack && candidate.canonical_id === entry.canonical_id) === index);
-        for (const entry of packEntries) {
-            const bars = await fetchHistoryPackBars(entry.pack, entry.canonical_id);
-            if (bars.length) mergedBars = mergeBars(mergedBars, bars);
         }
 
         const latestCandidates = [
