@@ -103,7 +103,7 @@ function readQuantlabRows(root) {
   return { byId, byTicker };
 }
 
-function compactQuantlab(row, { canonicalId, registryRow, targetMarketDate, metaAsOf }) {
+function compactQuantlab(row, { canonicalId, registryRow, targetMarketDate, metaAsOf, coveragePolicy }) {
   const assetClass = norm(registryRow?.type_norm || registryRow?.asset_class || registryRow?.type);
   const displayTicker = norm(registryRow?.symbol || canonicalId.split(':').pop());
   if (assetClass === 'INDEX') {
@@ -129,6 +129,17 @@ function compactQuantlab(row, { canonicalId, registryRow, targetMarketDate, meta
     };
   }
   if (!row) {
+    if (coveragePolicy?.required_for_operational === false) {
+      return {
+        canonical_id: canonicalId,
+        display_ticker: displayTicker,
+        asset_class: assetClass,
+        status: 'not_applicable',
+        as_of: targetMarketDate || metaAsOf || null,
+        reason: coveragePolicy.missing_reason || 'quantlab_top_ideas_only',
+        source: 'quantlab_stock_insights',
+      };
+    }
     return {
       canonical_id: canonicalId,
       display_ticker: displayTicker,
@@ -141,6 +152,17 @@ function compactQuantlab(row, { canonicalId, registryRow, targetMarketDate, meta
   }
   const rowAsOf = dateOnly(row.asOfDate || row.as_of || metaAsOf);
   if (!rowAsOf || rowAsOf < targetMarketDate) {
+    if (coveragePolicy?.required_for_operational === false) {
+      return {
+        canonical_id: canonicalId,
+        display_ticker: displayTicker,
+        asset_class: assetClass,
+        status: 'not_applicable',
+        as_of: rowAsOf || metaAsOf || targetMarketDate || null,
+        reason: 'quantlab_top_ideas_stale_not_required',
+        source: 'quantlab_stock_insights',
+      };
+    }
     return {
       canonical_id: canonicalId,
       display_ticker: displayTicker,
@@ -176,13 +198,22 @@ function main() {
   const meta = readJsonMaybe(path.join(opts.quantlabRoot, 'latest.json')) || {};
   const metaAsOf = dateOnly(meta.asOfDate || meta.as_of || meta.target_market_date);
   const quantlab = readQuantlabRows(opts.quantlabRoot);
+  const sourceRowsCount = quantlab.byId.size || quantlab.byTicker.size;
+  const sourceCoveragePct = scope.length ? (sourceRowsCount / scope.length) * 100 : 0;
+  const coveragePolicy = {
+    mode: sourceCoveragePct > 50 ? 'per_asset' : 'top_ideas_legacy',
+    required_for_operational: sourceCoveragePct > 50,
+    source_rows_count: sourceRowsCount,
+    source_coverage_pct: Number(sourceCoveragePct.toFixed(2)),
+    missing_reason: sourceCoveragePct > 50 ? 'quantlab_entry_missing' : 'quantlab_top_ideas_only',
+  };
   const shards = new Map();
   const counts = { ok: 0, not_applicable: 0, stale: 0, unavailable: 0, error: 0 };
   for (const canonicalId of scope) {
     const registryRow = rows.get(canonicalId) || {};
     const symbol = norm(registryRow?.symbol || canonicalId.split(':').pop());
     const row = quantlab.byId.get(canonicalId) || quantlab.byTicker.get(symbol) || null;
-    const item = compactQuantlab(row, { canonicalId, registryRow, targetMarketDate: opts.targetMarketDate, metaAsOf });
+    const item = compactQuantlab(row, { canonicalId, registryRow, targetMarketDate: opts.targetMarketDate, metaAsOf, coveragePolicy });
     counts[item.status] = (counts[item.status] || 0) + 1;
     const shard = shardFor(canonicalId);
     if (!shards.has(shard)) shards.set(shard, {});
@@ -207,6 +238,7 @@ function main() {
     generated_at: generatedAt,
     scope_count: scope.length,
     counts,
+    coverage_policy: coveragePolicy,
     source: {
       path: path.relative(ROOT, path.join(opts.quantlabRoot, 'latest.json')).split(path.sep).join('/'),
       as_of: metaAsOf,

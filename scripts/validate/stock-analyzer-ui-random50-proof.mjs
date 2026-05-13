@@ -546,7 +546,7 @@ async function validateAsset({ browser, baseUrl, asset, targetMarketDate, latest
       : /Historical signal profile unavailable|Historical profile unavailable|Analysis incomplete|Analysis degraded/i.test(bodyText);
     result.assertions.model_coverage_visible_or_documented = ['complete', 'ready'].includes(modelCoverageStatus)
       ? /Models:\s*3\/3|3\/3 models/i.test(bodyText)
-      : /Models:\s*[0-2]\/3|Model consensus|Analysis incomplete|Analysis degraded/i.test(bodyText);
+      : /Models:\s*(?:[0-2]\/3|N\/A)|Model consensus|Analysis incomplete|Analysis degraded/i.test(bodyText);
     result.assertions.chart_rendered_or_documented_unavailable = (visible.chartSvg && !/Chart unavailable/i.test(visible.chartText))
       || /Chart unavailable.+full historical bars unavailable.+latest EOD price/i.test(visible.chartText);
     result.assertions.breakout_indicator_filled = Boolean(String(visible.breakoutState || '').trim())

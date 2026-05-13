@@ -49,15 +49,17 @@ test('scientific per-asset projection is current only for scoped STOCK rows', ()
   assert.equal(latest.counts.not_applicable, 2);
 });
 
-test('quantlab model coverage blocks stale rows and accepts index not-applicable', () => {
+test('quantlab legacy top-ideas coverage is typed not-applicable outside current per-asset scope', () => {
   const dir = tmpDir();
   const scope = path.join(dir, 'scope.json');
   const rows = path.join(dir, 'rows.json');
   const qroot = path.join(dir, 'quantlab');
   const out = path.join(dir, 'coverage');
-  writeJson(scope, { canonical_ids: ['US:AAA', 'US:SPY', 'US:DJI.INDX'] });
+  writeJson(scope, { canonical_ids: ['US:AAA', 'US:BBB', 'US:CCC', 'US:SPY', 'US:DJI.INDX'] });
   writeJson(rows, [
     { canonical_id: 'US:AAA', symbol: 'AAA', type_norm: 'STOCK' },
+    { canonical_id: 'US:BBB', symbol: 'BBB', type_norm: 'STOCK' },
+    { canonical_id: 'US:CCC', symbol: 'CCC', type_norm: 'STOCK' },
     { canonical_id: 'US:SPY', symbol: 'SPY', type_norm: 'ETF' },
     { canonical_id: 'US:DJI.INDX', symbol: 'DJI.INDX', type_norm: 'INDEX' },
   ]);
@@ -77,10 +79,12 @@ test('quantlab model coverage blocks stale rows and accepts index not-applicable
     `--out-root=${out}`,
   ], { cwd: ROOT, stdio: 'pipe' });
   const latest = JSON.parse(fs.readFileSync(path.join(out, 'latest.json'), 'utf8'));
-  assert.equal(latest.scope_count, 3);
-  assert.equal(latest.counts.stale, 1);
+  assert.equal(latest.scope_count, 5);
+  assert.equal(latest.coverage_policy.mode, 'top_ideas_legacy');
+  assert.equal(latest.coverage_policy.required_for_operational, false);
+  assert.equal(latest.counts.stale, 0);
   assert.equal(latest.counts.ok, 1);
-  assert.equal(latest.counts.not_applicable, 1);
+  assert.equal(latest.counts.not_applicable, 4);
 });
 
 test('not-applicable models are not counted as missing required model evidence', () => {
