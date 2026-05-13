@@ -1,11 +1,10 @@
 {
-  "schema_version": "nas.input-manifest.v1",
-  "generated_at": "2026-05-13T08:52:56.289Z",
-  "stage": null,
-  "run_id": null,
+  "schema": "rv.nas.release_truth_chain_code_manifest.v1",
+  "generated_at": "2026-05-13T09:30:09.089Z",
+  "git_head": "c154b6fc8b2f2a41e2ccdfe8600a7f0842da897c",
+  "paths_file": "scripts/nas/inputs/release-truth-chain.paths",
   "file_count": 99,
-  "total_bytes": 2193836,
-  "combined_hash": "316e1a8112a3e73b382a51a0cde027083be4354869328094a31d2f2dcf914941",
+  "combined_hash": "c6ccec5309e02cfe4f217523f6767e117dc6971f2165f976d9fe9cff26288c8a",
   "missing": [],
   "files": [
     {
@@ -25,8 +24,8 @@
     },
     {
       "path": "functions/api/_shared/history-store.mjs",
-      "size_bytes": 18575,
-      "sha256": "829db13ec4f65f8245f0f551b26b56b42ea7eafc5aeaa96150d11417a3320bca"
+      "size_bytes": 19254,
+      "sha256": "bc4cedfcb7dda7765c1c37d1e9a64fa9553eebcf3c8e0e979aba17fd5149c76a"
     },
     {
       "path": "functions/api/_shared/page-core-operational-contract.js",
@@ -365,8 +364,8 @@
     },
     {
       "path": "scripts/nas/rv-nas-night-supervisor.sh",
-      "size_bytes": 60680,
-      "sha256": "687a1feb80957e5f0090016d5d74c769cacf801fbf0e83f1798738fc8f81e658"
+      "size_bytes": 60735,
+      "sha256": "1cf1ddb30f2f7338117f04408710752977f7dad277dcc5e26820783dad1e145f"
     },
     {
       "path": "scripts/nas/safe-code-sync.sh",
@@ -430,8 +429,8 @@
     },
     {
       "path": "scripts/ops/build-stock-analyzer-provider-exceptions.mjs",
-      "size_bytes": 9665,
-      "sha256": "04e80120612378d411248e1ae27787cd86dba6785146772ce3d9ebf4c22561f1"
+      "size_bytes": 9845,
+      "sha256": "1f8e67527dcb7928e0e23030b601101b7e211f5d842769e9f8454cd3b0ca7118"
     },
     {
       "path": "scripts/ops/build-stock-analyzer-ui-state-summary.mjs",
@@ -480,8 +479,8 @@
     },
     {
       "path": "scripts/validate/stock-analyzer-ui-random50-proof.mjs",
-      "size_bytes": 26193,
-      "sha256": "257c16060996fd278a47232a58970e81e1133e6680e66986c2eabe2682f863f7"
+      "size_bytes": 27345,
+      "sha256": "7caad01e7e2bd1a5548745e28ab6e26c0d112c635474ecb671f426b43b3d1c06"
     },
     {
       "path": "scripts/validate/stock-decision-core-ui-buy-breadth.mjs",
