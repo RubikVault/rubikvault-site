@@ -360,7 +360,11 @@ function isPostDeployPublicProof(publicProof) {
     && Boolean(publicProof?.git_commit_sha);
 }
 
-function verifyProductionArtifactsOnce(targetDate, { baseUrl = PROD_BASE, requirePostDeployProof = false } = {}) {
+function verifyProductionArtifactsOnce(targetDate, {
+  baseUrl = PROD_BASE,
+  requirePostDeployProof = false,
+  expectedReleaseReady = true,
+} = {}) {
   const clean = String(baseUrl || PROD_BASE).replace(/\/+$/, '');
   const cacheBust = `rv=${Date.now()}`;
   const checks = {
@@ -369,15 +373,20 @@ function verifyProductionArtifactsOnce(targetDate, { baseUrl = PROD_BASE, requir
   };
   const failures = [];
   const publicStatus = checks.public_status.json || {};
-  const publicStatusSafe = publicStatus.release_ready === true
+  const publicStatusReady = publicStatus.release_ready === true
     && publicStatus.core_release_ready !== false
     && publicStatus.overall_ui_ready === true
     && publicStatus.ui_green === true;
-  if (!checks.public_status.ok || targetDateOf(publicStatus) !== targetDate || !publicStatusSafe) {
+  const publicStatusNotReady = publicStatus.release_ready === false
+    && publicStatus.ui_green === false;
+  const publicStatusMatchesExpected = expectedReleaseReady
+    ? publicStatusReady
+    : publicStatusNotReady;
+  if (!checks.public_status.ok || targetDateOf(publicStatus) !== targetDate || !publicStatusMatchesExpected) {
     failures.push(`public_status target=${targetDateOf(publicStatus) || 'missing'} status=${publicStatus.status || 'missing'} release_ready=${publicStatus.release_ready} core_release_ready=${publicStatus.core_release_ready} overall_ui_ready=${publicStatus.overall_ui_ready}`);
   }
   const publicProof = checks.deploy_proof.json || {};
-  if (!checks.deploy_proof.ok || targetDateOf(publicProof) !== targetDate || publicProof.release_ready !== true) {
+  if (!checks.deploy_proof.ok || targetDateOf(publicProof) !== targetDate || publicProof.release_ready !== expectedReleaseReady) {
     failures.push(`deploy_proof target=${targetDateOf(publicProof) || 'missing'} release_ready=${publicProof.release_ready}`);
   }
   if (requirePostDeployProof && !isPostDeployPublicProof(publicProof)) {
@@ -1058,6 +1067,7 @@ if (!skipSmokes && PUBLIC_DEPLOY_PROOF_FINALIZE) {
 // 7. Verify production serves the sanitized visitor status/proof, not private proofs.
 const productionArtifacts = verifyDualHostProductionArtifacts(proofTargetDate, {
   requirePostDeployProof: !skipSmokes && PUBLIC_DEPLOY_PROOF_FINALIZE,
+  expectedReleaseReady: proofReleaseReady,
 });
 if (!productionArtifacts.ok) {
   fail(`Production artifact smoke failed: ${productionArtifacts.failures.join('; ')}`);
