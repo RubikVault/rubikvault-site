@@ -3,6 +3,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import zlib from 'node:zlib';
+import crypto from 'node:crypto';
 import Ajv2020 from 'ajv/dist/2020.js';
 import { computeIndicators } from '../../functions/api/_shared/eod-indicators.mjs';
 import { pageCoreStrictOperationalReasons } from '../../functions/api/_shared/page-core-operational-contract.js';
@@ -468,8 +469,12 @@ function createHistProfileReader() {
   }
   const embed = process.env.RV_PAGE_CORE_EMBED_HIST_PROFILE_SUMMARY === '1';
   const cache = new Map();
+  const publicShardIndex = (key) => {
+    const hash = crypto.createHash('sha256').update(String(key || '').toUpperCase()).digest();
+    return hash.readUInt32BE(0) % shardCount;
+  };
   const readShard = (key) => {
-    const shard = pageShardIndex(key, shardCount);
+    const shard = publicShardIndex(key);
     if (cache.has(shard)) return cache.get(shard);
     const filePath = path.join(HIST_PROBS_PUBLIC_ROOT, latest.shards_path || 'shards', `${String(shard).padStart(3, '0')}.json`);
     const doc = readJsonMaybe(filePath) || {};
