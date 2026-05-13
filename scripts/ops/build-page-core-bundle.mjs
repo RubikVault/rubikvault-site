@@ -1407,6 +1407,18 @@ function finalizePageCoreRow(row, { targetMarketDate, canonicalId = null } = {})
     }
     hardBytes = Buffer.byteLength(JSON.stringify(row), 'utf8');
   }
+  if (hardBytes > PAGE_CORE_HARD_BYTES && row.meta?.provider_exception) {
+    row.meta.provider_exception = {
+      reason: row.meta.provider_exception.reason || 'provider_exception',
+    };
+    row.meta.warnings = Array.from(new Set([...(row.meta.warnings || []), 'provider_exception_details_omitted_for_page_core_budget']));
+    hardBytes = Buffer.byteLength(JSON.stringify(row), 'utf8');
+  }
+  if (hardBytes > PAGE_CORE_HARD_BYTES && row.meta?.provider_exception) {
+    delete row.meta.provider_exception;
+    row.meta.warnings = Array.from(new Set([...(row.meta.warnings || []), 'provider_exception_ref_in_runtime_exceptions']));
+    hardBytes = Buffer.byteLength(JSON.stringify(row), 'utf8');
+  }
   if (hardBytes > PAGE_CORE_HARD_BYTES) throw new Error(`PAGE_CORE_ROW_TOO_LARGE:${canonicalId || row.canonical_asset_id || 'unknown'}:${hardBytes}`);
   return row;
 }
