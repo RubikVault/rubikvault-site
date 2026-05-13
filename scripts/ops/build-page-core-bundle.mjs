@@ -490,6 +490,50 @@ function createHistProfileReader() {
   };
 }
 
+function compactPageCoreHorizon(value) {
+  if (!value || typeof value !== 'object') return null;
+  const out = {};
+  for (const key of ['n', 'win_rate', 'avg_return']) {
+    const number = Number(value[key]);
+    if (Number.isFinite(number)) out[key] = Number(number.toFixed(key === 'n' ? 0 : 6));
+  }
+  return Object.keys(out).length ? out : null;
+}
+
+function histProfileEventScore(event) {
+  if (!event || typeof event !== 'object') return 0;
+  return Number(event.h20d?.n || 0) * 4
+    + Number(event.h60d?.n || 0) * 2
+    + Number(event.h5d?.n || 0)
+    + Number(event.h120d?.n || 0);
+}
+
+function compactPageCoreHistProfile(profile, display) {
+  if (!profile?.events || typeof profile.events !== 'object') return null;
+  const events = {};
+  const selected = Object.entries(profile.events)
+    .filter(([, value]) => value && typeof value === 'object')
+    .sort((left, right) => histProfileEventScore(right[1]) - histProfileEventScore(left[1]))
+    .slice(0, 3);
+  for (const [eventName, eventValue] of selected) {
+    const compact = {};
+    for (const horizon of ['h5d', 'h20d', 'h60d', 'h120d']) {
+      const horizonValue = compactPageCoreHorizon(eventValue[horizon]);
+      if (horizonValue) compact[horizon] = horizonValue;
+    }
+    if (Object.keys(compact).length) events[eventName] = compact;
+  }
+  if (!Object.keys(events).length) return null;
+  return {
+    ticker: profile.ticker || display,
+    latest_date: profile.latest_date || null,
+    bars_count: profile.bars_count ?? null,
+    event_count: Object.keys(profile.events || {}).length,
+    events,
+    source: profile.source || 'hist_probs_public_projection',
+  };
+}
+
 function normalizeTypedStatus(value, fallback = 'not_generated') {
   const normalized = String(value || '').trim().toLowerCase();
   return normalized || fallback;
@@ -972,7 +1016,8 @@ function buildPageCoreRow({ canonicalId, registryRow, decisionRow, lookupValue, 
     display,
     breakoutKeys: moduleContext.breakoutKeys,
   });
-  const historicalProfileSummary = moduleContext.histProfiles?.get?.(canonicalId, display) || null;
+  const rawHistoricalProfileSummary = moduleContext.histProfiles?.get?.(canonicalId, display) || null;
+  const historicalProfileSummary = compactPageCoreHistProfile(rawHistoricalProfileSummary, display);
   const historicalProfileStatus = historicalProfileSummary ? 'ready' : (moduleContext.histProfiles?.available ? 'missing' : 'projection_missing');
   const modelStates = {
     forecast: forecastStatus === 'available'
