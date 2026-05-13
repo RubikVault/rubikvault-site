@@ -82,6 +82,8 @@ CAMPAIGN_DIR="$PIPELINE_ROOT/runs/$CAMPAIGN_STAMP"
 LOG_DIR="$CAMPAIGN_DIR/logs"
 STATUS_JSON="$CAMPAIGN_DIR/status.json"
 LATEST_JSON="$PIPELINE_ROOT/latest.json"
+PUBLIC_PIPELINE_STATE_JSON="$REPO_ROOT/public/data/ops/pipeline-state-latest.json"
+PUBLIC_NIGHTLY_RUN_TRUTH_JSON="$REPO_ROOT/public/data/ops/nightly-run-truth-latest.json"
 HEARTBEAT_JSON="$REPO_ROOT/mirrors/ops/pipeline-master/supervisor-heartbeat.json"
 MEASURE_SCRIPT="$REPO_ROOT/scripts/nas/measure-command.py"
 HIST_PROBS_STATE_JSON="$PIPELINE_ROOT/state/hist-probs-profile.json"
@@ -154,13 +156,13 @@ write_status() {
   local status="$1"
   local note="${2:-}"
   local current_step="${3:-}"
-  python3 - "$STATUS_JSON" "$LATEST_JSON" "$HEARTBEAT_JSON" "$CAMPAIGN_STAMP" "$ACTIVE_LANE" "$TARGET_MARKET_DATE" "$status" "$note" "$current_step" "$$" <<'PY'
+  python3 - "$STATUS_JSON" "$LATEST_JSON" "$PUBLIC_PIPELINE_STATE_JSON" "$PUBLIC_NIGHTLY_RUN_TRUTH_JSON" "$HEARTBEAT_JSON" "$CAMPAIGN_STAMP" "$ACTIVE_LANE" "$TARGET_MARKET_DATE" "$status" "$note" "$current_step" "$$" <<'PY'
 import json
 import os
 import sys
 from datetime import datetime
 
-status_path, latest_path, heartbeat_path, stamp, lane, target_market_date, status, note, current_step, pid = sys.argv[1:11]
+status_path, latest_path, public_state_path, public_truth_path, heartbeat_path, stamp, lane, target_market_date, status, note, current_step, pid = sys.argv[1:13]
 now = datetime.utcnow().isoformat() + "Z"
 existing = {}
 if os.path.exists(status_path):
@@ -195,6 +197,15 @@ os.makedirs(os.path.dirname(latest_path), exist_ok=True)
 with open(latest_path, "w", encoding="utf-8") as fh:
     json.dump(doc, fh, indent=2)
     fh.write("\n")
+public_doc = dict(doc)
+public_doc["schema_version"] = "rv.nightly_run_truth.v1"
+for path in (public_state_path, public_truth_path):
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    tmp = f"{path}.{os.getpid()}.tmp"
+    with open(tmp, "w", encoding="utf-8") as fh:
+        json.dump(public_doc, fh, indent=2)
+        fh.write("\n")
+    os.replace(tmp, path)
 heartbeat = {
     "schema": "rv.supervisor_heartbeat.v1",
     "source": "rv-nas-night-supervisor",
