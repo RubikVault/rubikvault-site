@@ -194,7 +194,9 @@ export function buildUiIntegrity(payload, { ticker = null, priceStack = null } =
   const decisionBlockingReasons = hasUsableDecisionCore(payload)
     ? readinessReasons.filter((reason) => !isVisibleModuleOnlyReason(reason))
     : readinessReasons;
-  fields.decision_contract = decisionBlockingReasons.length === 0 && String(readiness.status || 'READY').toUpperCase() !== 'FAILED'
+  const readinessFailed = String(readiness.status || 'READY').toUpperCase() === 'FAILED';
+  const decisionContractFailed = readinessFailed && !(hasUsableDecisionCore(payload) && decisionBlockingReasons.length === 0);
+  fields.decision_contract = decisionBlockingReasons.length === 0 && !decisionContractFailed
     ? field(true, 'VALID', null, true, priceAsOf)
     : field(null, 'BLOCK', decisionBlockingReasons[0] || 'decision contract failed', true, priceAsOf);
 
