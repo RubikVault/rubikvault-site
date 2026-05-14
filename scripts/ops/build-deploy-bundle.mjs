@@ -127,8 +127,6 @@ const DECISION_CORE_PUBLIC_PROOF_REPORTS = [
   'data/reports/decision-core-buy-breadth-latest.json',
   'data/reports/stock-decision-core-ui-buy-breadth-latest.json',
   'data/reports/stock-decision-core-ui-random20-latest.json',
-  'data/reports/stock-analyzer-ui-random50-proof-latest.json',
-  'data/reports/stock-analyzer-ui-regional30-proof-latest.json',
   'data/reports/frontpage-best-setups-ui-proof-latest.json',
   'data/reports/decision-core-historical-replay-latest.json',
   'data/reports/decision-core-outcome-bootstrap-latest.json',
