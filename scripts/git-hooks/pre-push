@@ -47,13 +47,42 @@ if ! node scripts/nas/verify-code-manifest.mjs >/dev/null 2>&1; then
   echo "[pre-push] manifest drift detected — auto-regenerating..."
   node scripts/nas/verify-code-manifest.mjs --write >/dev/null 2>&1 || true
   if ! git diff --quiet -- scripts/nas/release-truth-chain.manifest.json; then
-    echo "[pre-push] FAIL: scripts/nas/release-truth-chain.manifest.json was regenerated."
-    echo "[pre-push] Stage + commit the updated manifest, then re-push:"
-    echo "[pre-push]   git add scripts/nas/release-truth-chain.manifest.json"
-    echo "[pre-push]   git commit -m 'chore(nas): regenerate code-manifest'"
-    echo "[pre-push]   git push origin main"
-    echo "[pre-push] Bypass with --no-verify only if NAS code_manifest_guard would still pass."
-    exit 1
+    # Auto-amend manifest into HEAD when safe:
+    #   - HEAD commit younger than 5 min (fresh, same session)
+    #   - HEAD not yet present on origin/main (not pushed)
+    #   - Not mid-merge/rebase (no MERGE_HEAD, no rebase-apply/rebase-merge dir)
+    # Eliminates manifest-commit churn that produced 10+ solo
+    # 'chore(nas): regenerate release truth manifest' commits per session.
+    head_age=$(( $(date +%s) - $(git log -1 --format=%ct HEAD 2>/dev/null || echo 0) ))
+    head_in_remote=0
+    if git fetch --quiet origin main 2>/dev/null; then
+      head_in_remote=$(git branch -r --contains HEAD 2>/dev/null | grep -c origin/main || true)
+    fi
+    mid_merge=0
+    git_dir="$(git rev-parse --git-dir 2>/dev/null || echo .git)"
+    if [ -e "$git_dir/MERGE_HEAD" ] || [ -d "$git_dir/rebase-apply" ] || [ -d "$git_dir/rebase-merge" ]; then
+      mid_merge=1
+    fi
+    if [ "$head_age" -lt 300 ] && [ "$head_in_remote" -eq 0 ] && [ "$mid_merge" -eq 0 ]; then
+      echo "[pre-push] amending manifest into HEAD commit (age=${head_age}s, unpushed)..."
+      git add scripts/nas/release-truth-chain.manifest.json
+      if git commit --amend --no-edit --no-verify >/dev/null 2>&1; then
+        echo "[pre-push] manifest amended into HEAD — continuing push."
+      else
+        echo "[pre-push] FAIL: amend failed unexpectedly. Manual fix required:"
+        echo "[pre-push]   git add scripts/nas/release-truth-chain.manifest.json"
+        echo "[pre-push]   git commit -m 'chore(nas): regenerate code-manifest'"
+        exit 1
+      fi
+    else
+      echo "[pre-push] FAIL: manifest drift (age=${head_age}s, in_remote=${head_in_remote}, mid_merge=${mid_merge})."
+      echo "[pre-push] Auto-amend skipped (HEAD too old, already pushed, or mid-merge). Manual fix required:"
+      echo "[pre-push]   git add scripts/nas/release-truth-chain.manifest.json"
+      echo "[pre-push]   git commit -m 'chore(nas): regenerate code-manifest'"
+      echo "[pre-push]   git push origin main"
+      echo "[pre-push] Bypass with --no-verify only if NAS code_manifest_guard would still pass."
+      exit 1
+    fi
   fi
 fi
 
