@@ -484,14 +484,17 @@ function pageCoreToBreakoutV12(pageCore) {
   if (!summary) return null;
   const rawState = String(summary.breakout_status || summary.status || summary.label || '').trim();
   const legacyState = String(summary.legacy_state || rawState || '').trim().toUpperCase();
-  const status = rawState || (legacyState === 'SETUP' ? 'RIGHT_SIDE_BASE' : 'not_generated');
+  const breakoutStatus = rawState || (legacyState === 'SETUP' ? 'RIGHT_SIDE_BASE' : 'not_generated');
+  const responseStatus = breakoutStatus && !/^not_generated$/i.test(breakoutStatus)
+    ? 'ok'
+    : 'not_in_current_signal_set';
   return {
     ...summary,
     source: 'page_core_breakout_summary',
-    breakout_status: status,
-    status,
-    label: legacyState || status,
-    legacy_state: legacyState || status,
+    breakout_status: breakoutStatus,
+    status: responseStatus,
+    label: legacyState || breakoutStatus,
+    legacy_state: legacyState || breakoutStatus,
     reason: summary.status_explanation || summary.reason || null,
   };
 }
