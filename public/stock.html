@@ -563,7 +563,7 @@
       let _rvDataSource = 'v2';
       let _rvResolution = { mode: 'full', source: 'v2', notice: null, missingModules: [] };
       try {
-        const { fetchWithFallback } = await import('/js/rv-v2-client.js?v=20260514-canonical-history');
+        const { fetchWithFallback } = await import('/js/rv-v2-client.js?v=20260514-static-shards');
         const resolved = await fetchWithFallback(ticker);
         payload = resolved.payload;
         _rvDataSource = resolved.source === 'v2' ? 'v2' : 'v1';
@@ -662,8 +662,6 @@
         if (Array.isArray(currentBars) && currentBars.length >= 2000) return currentBars;
         const rawTicker = String(data?.ticker || identity?.ticker || ticker || '').trim();
         if (!rawTicker) return currentBars || [];
-        const params = new URLSearchParams({ limit: '1500' });
-        if (canonicalAssetId.includes(':')) params.set('asset_id', canonicalAssetId);
         const mergeBarsByDate = (...sets) => {
           const byDate = new Map();
           for (const set of sets) {
@@ -676,16 +674,57 @@
           }
           return [...byDate.values()].sort((a, b) => String(a.date).localeCompare(String(b.date)));
         };
+        const normalizePublicBars = (rows) => {
+          if (!Array.isArray(rows)) return [];
+          return rows.map((row) => {
+            if (Array.isArray(row)) {
+              const date = String(row[0] || '').slice(0, 10);
+              const close = Number(row.length >= 5 ? row[4] : row[1]);
+              if (!date || !Number.isFinite(close)) return null;
+              const open = Number(row.length >= 5 ? row[1] : close);
+              const high = Number(row.length >= 5 ? row[2] : close);
+              const low = Number(row.length >= 5 ? row[3] : close);
+              const adjClose = Number(row.length >= 6 ? row[5] : close);
+              const volume = Number(row.length >= 7 ? row[6] : 0);
+              return {
+                date,
+                open: Number.isFinite(open) ? open : close,
+                high: Number.isFinite(high) ? high : close,
+                low: Number.isFinite(low) ? low : close,
+                close,
+                adjClose: Number.isFinite(adjClose) ? adjClose : close,
+                volume: Number.isFinite(volume) ? volume : 0,
+              };
+            }
+            return row && typeof row === 'object' ? row : null;
+          }).filter(Boolean);
+        };
+        const loadPublicHistoryShardBars = async (assetId) => {
+          const id = String(assetId || '').trim().toUpperCase();
+          if (!/^[A-Z0-9_.-]+:[A-Z0-9_.-]+$/.test(id)) return [];
+          const symbol = id.split(':').pop().replace(/[^A-Z0-9.\-]/g, '');
+          if (!symbol) return [];
+          const manifestRes = await fetch('/data/eod/history/shards/manifest.public-history-shards.json', { cache: 'no-store' });
+          if (!manifestRes.ok) return [];
+          const manifest = await manifestRes.json().catch(() => null);
+          const prefixLen = Math.max(1, Math.min(4, Number(manifest?.shard_prefix_len || 2) || 2));
+          const shardKey = symbol.slice(0, prefixLen) || '_';
+          if (manifest?.shards && !manifest.shards[shardKey]) return [];
+          const shardRes = await fetch(`/data/eod/history/shards/${encodeURIComponent(shardKey)}.json.gz`, { cache: 'no-store' });
+          if (!shardRes.ok) return [];
+          let shardDoc = null;
+          try {
+            shardDoc = await shardRes.clone().json();
+          } catch {
+            if (typeof DecompressionStream !== 'function' || !shardRes.body) return [];
+            const text = await new Response(shardRes.body.pipeThrough(new DecompressionStream('gzip'))).text();
+            shardDoc = JSON.parse(text);
+          }
+          return normalizePublicBars(shardDoc?.[id] || []);
+        };
         try {
-          const [historyDoc, stockDoc] = await Promise.all([
-            fetch(`/api/v2/stocks/${encodeURIComponent(rawTicker)}/historical?${params.toString()}`, { cache: 'no-store' })
-              .then(res => res.ok ? res.json() : null).catch(() => null),
-            fetch(`/api/stock?ticker=${encodeURIComponent(rawTicker)}`, { cache: 'no-store' })
-              .then(res => res.ok ? res.json() : null).catch(() => null),
-          ]);
-          const historyBars = Array.isArray(historyDoc?.data?.bars) ? historyDoc.data.bars : (Array.isArray(historyDoc?.bars) ? historyDoc.bars : []);
-          const stockBars = Array.isArray(stockDoc?.data?.bars) ? stockDoc.data.bars : [];
-          const merged = mergeBarsByDate(historyBars, currentBars, stockBars);
+          const publicBars = await loadPublicHistoryShardBars(canonicalAssetId);
+          const merged = mergeBarsByDate(publicBars, currentBars);
           return merged.length > (currentBars?.length || 0) ? merged : (currentBars || []);
         } catch {
           return currentBars || [];
@@ -702,10 +741,13 @@
         const symbol = String(symbolRaw || '').replace(/[^A-Z0-9]/g, '').toUpperCase();
         const shardKey = `${exchange.replace(/[^A-Z0-9_-]/g, '_')}-${(symbol[0] || '0')}`;
         try {
-          const [manifestRes, shardRes] = await Promise.all([
-            fetch('/data/historical-insights/latest.json', { cache: 'no-store' }).then(r => r.ok ? r.json() : null).catch(() => null),
-            fetch(`/data/historical-insights/shards/${encodeURIComponent(shardKey)}.json`, { cache: 'no-store' }).then(r => r.ok ? r.json() : null).catch(() => null),
-          ]);
+          const manifestRes = await fetch('/data/historical-insights/latest.json', { cache: 'no-store' }).then(r => r.ok ? r.json() : null).catch(() => null);
+          if (manifestRes?.shards && !manifestRes.shards[shardKey]) return {
+            availability: { status: 'missing', reason: 'No historical research projection for this asset.' },
+            manifest: manifestRes,
+          };
+          const shardPath = manifestRes?.shards?.[shardKey] || `shards/${shardKey}.json`;
+          const shardRes = await fetch(`/data/historical-insights/${shardPath.replace(/^\/?data\/historical-insights\/?/, '')}`, { cache: 'no-store' }).then(r => r.ok ? r.json() : null).catch(() => null);
           const row = shardRes?.by_asset?.[id] || null;
           if (!row) return {
             availability: { status: 'missing', reason: 'No historical research projection for this asset.' },

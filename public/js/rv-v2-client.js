@@ -616,13 +616,16 @@ export async function fetchV2StockPage(ticker) {
       const governance = pageCoreToGovernance(pageCore.data);
       const shouldHydrateOptional = optionalHydrationEnabled();
       const targetMarketDate = String(pageCore.data?.target_market_date || pageCore.meta?.data_date || '').slice(0, 10);
+      const shouldHydrateHistorical = shouldHydrateOptional;
       const shouldHydrateHistoricalProfile = shouldHydrateOptional
-        || String(pageCore.data?.status_contract?.historical_profile_status || '').toLowerCase() === 'available_via_endpoint';
+        && String(pageCore.data?.status_contract?.historical_profile_status || '').toLowerCase() === 'available_via_endpoint';
       const [stockApiResult, historicalResult, historicalProfileResult, fundamentalsResult] = await Promise.all([
         shouldHydrateOptional
           ? settleOptionalModuleWithBudget(fetchStockApiPayload(ticker), 'stock_api', 12000)
           : Promise.resolve({ ok: false, data: null, meta: {}, source: 'stock_api', error: 'optional_hydration_disabled' }),
-        settleOptionalModuleWithBudget(fetchV2Historical(ticker, { targetMarketDate }), 'v2_historical'),
+        shouldHydrateHistorical
+          ? settleOptionalModuleWithBudget(fetchV2Historical(ticker, { targetMarketDate }), 'v2_historical')
+          : Promise.resolve({ ok: false, data: null, meta: {}, source: 'v2_historical', error: 'optional_hydration_disabled' }),
         shouldHydrateHistoricalProfile
           ? settleOptionalModuleWithBudget(fetchV2HistoricalProfile(ticker, { targetMarketDate }), 'v2_historical_profile')
           : Promise.resolve({ ok: false, data: null, meta: {}, source: 'v2_historical_profile', error: 'optional_hydration_disabled' }),

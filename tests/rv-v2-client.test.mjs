@@ -567,6 +567,7 @@ describe('fetchV2StockPage', () => {
 
   afterEach(() => {
     global.fetch = originalFetch;
+    delete global.window;
   });
 
   it('requires a full multi-endpoint contract before rendering V2 page data', async () => {
@@ -608,6 +609,7 @@ describe('fetchV2StockPage', () => {
   });
 
   it('hydrates page-core stock pages with full Stock API history before using the one-bar fallback', async () => {
+    global.window = { location: { search: '?rv_optional=1' } };
     global.fetch = async (url) => {
       const href = String(url);
       const okJson = (data) => ({ ok: true, json: async () => data });
@@ -677,6 +679,7 @@ describe('fetchV2StockPage', () => {
     assert.equal(result.data.historical.bars.length, 3);
     assert.equal(result.data.historical.availability.status, 'stock_api_history');
     assert.equal(result.meta.historical.provider, 'stock_api');
+    delete global.window;
   });
 });
 
