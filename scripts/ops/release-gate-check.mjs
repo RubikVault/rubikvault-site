@@ -26,6 +26,7 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
+import crypto from 'node:crypto';
 import { execFileSync, spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { verifySealPayload } from '../lib/pipeline_authority/gates/release-seal.mjs';
@@ -100,6 +101,44 @@ function fail(msg) { console.error(`[release-gate] FAIL: ${msg}`); process.exit(
 // ─── Helpers ───────────────────────────────────────────────────────────────────
 function readJson(p) {
   try { return JSON.parse(fs.readFileSync(p, 'utf8')); } catch { return null; }
+}
+
+const readJsonMaybe = readJson;
+
+// QM4: compute a deterministic SHA256 of the deploy bundle tree (relative-path + size +
+// mtime) so we can skip wrangler upload when nothing changed since the last successful
+// deploy. mtime-based — fast (no file reads) and stable per identical build.
+function computeDistTreeHash(distRoot) {
+  if (!fs.existsSync(distRoot)) return null;
+  const hash = crypto.createHash('sha256');
+  const stack = [distRoot];
+  const entries = [];
+  while (stack.length) {
+    const current = stack.pop();
+    let dirEntries;
+    try {
+      dirEntries = fs.readdirSync(current, { withFileTypes: true });
+    } catch {
+      continue;
+    }
+    for (const entry of dirEntries) {
+      const full = path.join(current, entry.name);
+      if (entry.isDirectory()) {
+        stack.push(full);
+        continue;
+      }
+      if (!entry.isFile()) continue;
+      try {
+        const stat = fs.statSync(full);
+        entries.push(`${path.relative(distRoot, full)}:${stat.size}:${stat.mtimeMs.toFixed(0)}`);
+      } catch {
+        // skip races
+      }
+    }
+  }
+  entries.sort();
+  hash.update(entries.join('\n'));
+  return hash.digest('hex');
 }
 
 function loadSecretEnvFile(filePath = DEFAULT_CLOUDFLARE_ENV_PATH) {
@@ -698,6 +737,8 @@ function writeDeployProof({
   targetDate = null,
   contractCheck = null,
   releaseReady = null,
+  distHash = null,
+  reusedPriorDeploy = false,
 }) {
   const proofReleaseReady = releaseReady == null
     ? contractCheck !== 'failed'
@@ -719,6 +760,8 @@ function writeDeployProof({
     bundle_size_mb: bundleMeta?.bundle_size_mb ?? null,
     bundle_max_file_bytes: bundleMeta?.bundle_max_file_bytes ?? null,
     bundle_hash: bundleMeta?.bundle_hash ?? null,
+    dist_hash: distHash,
+    reused_prior_deploy: Boolean(reusedPriorDeploy),
     contract_check: contractCheck ?? bundleMeta?.manifest_check ?? null,
     release_state_phase: releaseStatePhase,
     release_ready: proofReleaseReady,
@@ -998,8 +1041,32 @@ if (pageCoreCandidatePresent) {
   bundleMeta = readJson(BUNDLE_META_PATH);
 }
 
-deployResult = runWranglerDeploy(PAGES_DEPLOY_BRANCH);
-log(`Deployed: url=${deployResult.deployment_url} id=${deployResult.deployment_id}`);
+// QM4 delta-deploy skip: hash dist tree, compare to prior deploy proof's dist_hash.
+// If unchanged + last deploy succeeded with smokes_ok, reuse prior deployment to avoid
+// 10-minute 600 MB wrangler upload. Override via RV_DEPLOY_FORCE=1 or --force-deploy.
+const distHash = computeDistTreeHash(DIST_DIR);
+const previousDeployProof = readJsonMaybe(DEPLOY_PROOF_PATH);
+const forceDeploy = process.env.RV_DEPLOY_FORCE === '1' || process.argv.includes('--force-deploy');
+if (
+  !forceDeploy
+  && previousDeployProof
+  && previousDeployProof.dist_hash === distHash
+  && previousDeployProof.smokes_ok === true
+  && previousDeployProof.deployment_url
+) {
+  log(`dist tree unchanged (hash=${distHash.slice(0, 16)}…); reusing prior deploy ${previousDeployProof.deployment_id} url=${previousDeployProof.deployment_url}`);
+  deployResult = {
+    deployment_url: previousDeployProof.deployment_url,
+    deployment_id: previousDeployProof.deployment_id,
+    deploy_id_logged: previousDeployProof.deployment_id,
+    dist_hash: distHash,
+    reused_prior_deploy: true,
+  };
+} else {
+  deployResult = runWranglerDeploy(PAGES_DEPLOY_BRANCH);
+  deployResult.dist_hash = distHash;
+  log(`Deployed: url=${deployResult.deployment_url} id=${deployResult.deployment_id}`);
+}
 
 // 4. Smokes
 let smokeResults = { smokes: {}, smokes_ok: true };
@@ -1044,6 +1111,8 @@ writeDeployProof({
   releaseStatePhase: proofReleasePhase,
   targetDate: proofTargetDate,
   releaseReady: proofReleaseReady,
+  distHash: deployResult?.dist_hash || null,
+  reusedPriorDeploy: Boolean(deployResult?.reused_prior_deploy),
 });
 refreshPublicDashboardReportInBundle();
 log(`Deploy proof written: ${DEPLOY_PROOF_PATH}`);
