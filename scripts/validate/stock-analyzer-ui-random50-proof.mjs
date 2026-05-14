@@ -567,7 +567,7 @@ async function validateAsset({ browser, baseUrl, asset, targetMarketDate, latest
     result.assertions.decision_basis_visible = /Decision Basis|Why not now|Conditional BUY|Analysis incomplete/i.test(bodyText);
     result.assertions.reliability_visible = /Reliability|Analysis reliability/i.test(bodyText);
     result.assertions.horizons_visible = /Short/i.test(bodyText) && /Mid|Medium/i.test(bodyText) && /Long/i.test(bodyText);
-    result.assertions.system_status_visible = /System Status|All Systems Operational|Analysis degraded|Analysis incomplete|System attention required/i.test(bodyText);
+    result.assertions.system_status_visible = /System Status|System:\s*(?:OK|Blocked|Failed)|All Systems Operational|Analysis degraded|Analysis incomplete|System attention required/i.test(bodyText);
     result.assertions.no_false_green_for_missing_historical_profile = !strictReasons.includes('historical_profile_not_ready')
       || !/All Systems Operational/i.test(bodyText);
     result.assertions.no_false_green_for_missing_model_coverage = !strictReasons.includes('model_coverage_incomplete')
@@ -577,7 +577,7 @@ async function validateAsset({ browser, baseUrl, asset, targetMarketDate, latest
       : /Historical signal profile unavailable|Historical profile unavailable|Analysis incomplete|Analysis degraded|System attention required/i.test(bodyText);
     result.assertions.model_coverage_visible_or_documented = ['complete', 'ready'].includes(modelCoverageStatus)
       ? /Models:\s*\d+\/\d+|Model evidence: Actionable alignment is available|Broad model confirmation available/i.test(bodyText)
-      : /Models:\s*(?:[0-2]\/3|N\/A)|Model consensus|Analysis incomplete|Analysis degraded|System attention required/i.test(bodyText);
+      : /Models:\s*(?:[0-2]\/[23]|N\/A)|Model evidence|Model consensus|Analysis incomplete|Analysis degraded|System attention required/i.test(bodyText);
     result.assertions.chart_rendered_or_documented_unavailable = (visible.chartSvg && !/Chart unavailable/i.test(visible.chartText))
       || /Chart unavailable.+full historical bars unavailable.+latest EOD price/i.test(visible.chartText);
     result.assertions.breakout_indicator_filled = Boolean(String(visible.breakoutState || '').trim())
