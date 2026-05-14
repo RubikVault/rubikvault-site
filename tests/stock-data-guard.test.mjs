@@ -105,6 +105,44 @@ describe('UI integrity resolver', () => {
     assert.equal(integrity.decisionReadiness, 'READY');
   });
 
+  it('keeps strict page-core operational assets actionable when chart shards hydrate later', () => {
+    const payload = {
+      data: {
+        market_prices: { close: 3.62, date: '2026-05-13' },
+        change: { pct: 0.71563981, abs: 1.51 },
+        market_stats: { stats: { low_52w: 0.34, high_52w: 8.42, rsi14: 86.56, sma20: 0.87, sma50: 1.27, atr14: 0.57 } },
+        bars: [{ date: '2026-05-13', close: 3.62 }],
+        ssot: {
+          page_core: {
+            coverage: { bars: 4630 },
+            status_contract: {
+              stock_detail_view_status: 'operational',
+              strict_operational: true,
+              strict_blocking_reasons: [],
+            },
+          },
+          market_context: {
+            key_levels_ready: true,
+            issues: [],
+            prices_source: 'historical-bars',
+            stats_source: 'historical-indicators',
+            price_date: '2026-05-13',
+            stats_date: '2026-05-13',
+            latest_bar_date: '2026-05-13',
+          },
+        },
+      },
+      daily_decision: { schema: 'rv.asset_daily_decision.v1', pipeline_status: 'OK', verdict: 'WAIT', blocking_reasons: [], risk_assessment: { level: 'LOW' } },
+      analysis_readiness: { status: 'READY', decision_bundle_status: 'OK', blocking_reasons: [] },
+      meta: { historical: { provider: 'page-core-minimal-history' } },
+    };
+    const integrity = buildUiIntegrity(payload, { ticker: 'AEHL', priceStack: { valid: true } });
+    assert.equal(integrity.fields.chart.status, 'WARNING');
+    assert.equal(integrity.pageState, 'OK');
+    assert.equal(integrity.dataQuality, 'OK');
+    assert.equal(integrity.decisionReadiness, 'READY');
+  });
+
   it('keeps decision-core BUY actionable when visible model coverage is incomplete', () => {
     const payload = {
       data: {

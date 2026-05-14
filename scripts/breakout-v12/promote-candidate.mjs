@@ -413,12 +413,16 @@ function main() {
     score_version: 'breakout_scoring_v12_incremental_v1',
     input_manifest_hash: sha256File(validationPath),
     content_hash: contentHash,
+    contract_mode: stateSummary.contract_mode,
+    full_state_distribution_available: stateSummary.full_state_distribution_available,
+    candidate_rank_only: stateSummary.candidate_rank_only,
     files,
     file_hashes: Object.fromEntries(Object.entries(hashMap).map(([rel, hash]) => [`runs/${args.asOf}/${contentHash}/${rel}`, hash])),
     enrichment,
     state_summary: {
       contract_mode: stateSummary.contract_mode,
       full_state_distribution_available: stateSummary.full_state_distribution_available,
+      candidate_rank_only: stateSummary.candidate_rank_only,
       counts: stateSummary.counts,
     },
     validation: {

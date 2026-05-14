@@ -623,7 +623,7 @@
       }
 
       // Data Guard: validate and annotate payload before rendering
-      const { guardPayload } = await import('/js/stock-data-guard.js');
+      const { guardPayload } = await import('/js/stock-data-guard.js?v=20260514-pagecore-contract');
       const _guard = guardPayload(payload, ticker);
       if (_guard.warnings.length) console.debug('[RV Guard]', _guard.warnings);
 

@@ -416,6 +416,9 @@ print(json.dumps({'history':str(history),'delta_root':str(root/'quant/breakout-v
   assert.ok(latest.files.top500);
   assert.ok(latest.files.all_scored);
   assert.ok(latest.files.state_summary);
+  assert.equal(latest.contract_mode, 'full_state_distribution');
+  assert.equal(latest.full_state_distribution_available, true);
+  assert.equal(latest.candidate_rank_only, false);
   const top = JSON.parse(fs.readFileSync(path.join(tmp, 'public', latest.files.top500), 'utf8'));
   assert.ok(top.items.length > 0);
   for (const key of ['asset_id', 'display_ticker', 'breakout_status', 'legacy_state', 'support_zone', 'invalidation']) {
