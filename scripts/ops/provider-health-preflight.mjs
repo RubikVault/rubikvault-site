@@ -15,9 +15,11 @@ const getArg = (name, fallback = '') => {
 const envFile = getArg('--env-file', process.env.RV_EODHD_ENV_FILE || '');
 const outputPath = getArg('--output', process.env.RV_PROVIDER_HEALTH_REPORT_PATH || 'var/private/ops/provider-health-latest.json');
 const minAvailableCalls = Number(getArg('--min-available-calls', process.env.RV_MARKET_REFRESH_MIN_EODHD_AVAILABLE_CALLS || '10000')) || 0;
+const requiredCalls = Number(getArg('--required-calls', process.env.RV_PROVIDER_HEALTH_REQUIRED_CALLS || '0')) || 0;
 const timeoutMs = Number(getArg('--timeout-ms', process.env.RV_PROVIDER_HEALTH_TIMEOUT_MS || '20000')) || 20000;
 const noLive = args.includes('--no-live') || process.env.RV_PROVIDER_HEALTH_LIVE === '0';
 const warnOnly = args.includes('--warn-only') || process.env.RV_PROVIDER_HEALTH_WARN_ONLY === '1';
+const exitDeferred = Number(process.env.RV_PROVIDER_HEALTH_DEFERRED_EXIT_CODE || '17') || 17;
 
 function readEnvFile(filePath) {
   const values = {};
@@ -87,6 +89,8 @@ async function main() {
     status: 'unknown',
     failure_type: null,
     min_available_calls: minAvailableCalls,
+    required_calls: requiredCalls,
+    deferred: false,
     env_file_present: Boolean(envFile && fs.existsSync(envFile)),
     live_probe: { skipped: noLive },
     budget: null,
@@ -127,6 +131,10 @@ async function main() {
       if (available < minAvailableCalls) {
         report.status = 'blocked';
         report.failure_type = 'daily_cap_below_floor';
+      } else if (requiredCalls > 0 && available < requiredCalls) {
+        report.status = 'deferred';
+        report.deferred = true;
+        report.failure_type = 'insufficient_for_required_scope';
       } else {
         report.ok = true;
         report.status = 'healthy';
@@ -138,6 +146,9 @@ async function main() {
   fs.mkdirSync(path.dirname(resolvedOutput), { recursive: true });
   fs.writeFileSync(resolvedOutput, `${JSON.stringify(report, null, 2)}\n`);
   process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);
+  if (report.deferred && !warnOnly) {
+    process.exit(exitDeferred);
+  }
   if (!report.ok && !warnOnly) {
     process.exit(1);
   }
