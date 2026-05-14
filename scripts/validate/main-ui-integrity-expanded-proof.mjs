@@ -70,7 +70,7 @@ async function main() {
     for (const assetId of sampleForChart) {
       const detail = await browser.newPage({ viewport: { width: 1440, height: 1200 } });
       await detail.goto(`${BASE}/analyze/${enc(assetId)}`, { waitUntil: 'domcontentloaded', timeout: 30000 });
-      await detail.waitForTimeout(2600);
+      await detail.waitForSelector('#tf-btns .tf-btn[data-tf="3D"]', { timeout: 8000 }).catch(() => {});
       for (const label of ['3D', '10Y', 'ALL']) {
         const button = detail.locator(`#tf-btns .tf-btn[data-tf="${label}"]`);
         if (await button.count() === 0) {
