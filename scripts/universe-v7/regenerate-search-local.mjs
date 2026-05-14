@@ -142,17 +142,24 @@ async function run() {
 
   console.log(`Processing ${snapshot.records.length} records...`);
 
+  let missingRegistryRows = 0;
   const ranked = snapshot.records.map((r) => {
     const canonicalId = String(r?.canonical_id || '').trim().toUpperCase();
-    const row = mergeFreshRegistryRow(r, registryById.get(canonicalId));
+    const registryRow = registryById.get(canonicalId);
+    if (!registryRow) missingRegistryRows += 1;
+    const row = mergeFreshRegistryRow(r, registryRow);
     return {
       ...row,
       _rank_score: rankScore(row)
     };
   })
+    .filter((row) => registryById.has(String(row?.canonical_id || '').trim().toUpperCase()))
     .filter((row) => !scopeSet || scopeSet.has(String(row?.canonical_id || '').trim().toUpperCase()))
     .filter((row) => isAllowedWebUniverseRecord(row))
     .sort((a, b) => b._rank_score - a._rank_score);
+  if (missingRegistryRows > 0) {
+    console.log(`Skipped ${missingRegistryRows} snapshot rows missing from current registry`);
+  }
 
   const topK = ranked.slice(0, 30000).map(row => ({
     canonical_id: row.canonical_id,
