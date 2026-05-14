@@ -461,6 +461,31 @@ print(value if value in {4096, 6144} else default)
 PY
 }
 
+# scope_aware_heap_mb returns the larger of (base_mb, scope_count * multiplier_kb_per_asset / 1024),
+# capped at RV_SCOPE_HEAP_MAX_MB (default 12288 MB).
+# Prevents OOM crashes mid-pipeline when scope grows (e.g. scientific_summary exit 134 with
+# heap=512MB on 6k scope). Multiplier table tuned per-step memory profile; see plan QM2.
+# Override: each step still honors its existing RV_*_HEAP_MB env var if user pins it explicitly.
+scope_aware_heap_mb() {
+  local base="$1" multiplier_kb="$2"
+  local scope_file="public/data/universe/v7/ssot/assets.global.canonical.ids.json"
+  local scope_count
+  scope_count="$(jq -r '.count // 6110' "$scope_file" 2>/dev/null || echo 6110)"
+  if ! [[ "$scope_count" =~ ^[0-9]+$ ]]; then
+    scope_count=6110
+  fi
+  local cap="${RV_SCOPE_HEAP_MAX_MB:-12288}"
+  local computed=$(( scope_count * multiplier_kb / 1024 ))
+  if [ "$computed" -gt "$cap" ]; then
+    computed="$cap"
+  fi
+  if [ "$computed" -gt "$base" ]; then
+    printf '%s\n' "$computed"
+  else
+    printf '%s\n' "$base"
+  fi
+}
+
 step_heap_mb() {
   case "$1" in
     hist_probs)
@@ -470,15 +495,30 @@ step_heap_mb() {
       printf '%s\n' "${RV_HIST_PROBS_CATCHUP_HEAP_MB:-3072}"
       ;;
     snapshot)
-      printf '%s\n' "${RV_SNAPSHOT_HEAP_MB:-8192}"
+      if [ -n "${RV_SNAPSHOT_HEAP_MB:-}" ]; then
+        printf '%s\n' "$RV_SNAPSHOT_HEAP_MB"
+      else
+        scope_aware_heap_mb 8192 1400
+      fi
       ;;
     decision_core_shadow)
       printf '%s\n' "${RV_DECISION_CORE_HEAP_MB:-8192}"
       ;;
     best_setups_core)
-      printf '%s\n' "${RV_BEST_SETUPS_CORE_HEAP_MB:-2048}"
+      if [ -n "${RV_BEST_SETUPS_CORE_HEAP_MB:-}" ]; then
+        printf '%s\n' "$RV_BEST_SETUPS_CORE_HEAP_MB"
+      else
+        scope_aware_heap_mb 2048 350
+      fi
       ;;
-    learning_daily|v1_audit|cutover_readiness|stock_analyzer_universe_audit|ui_field_truth_report|page_core_bundle|page_core_smoke|final_integrity_seal|hist_probs_v2_shadow|classifier_audit|ops_health_reports)
+    page_core_bundle)
+      if [ -n "${RV_PAGE_CORE_BUNDLE_HEAP_MB:-}" ]; then
+        printf '%s\n' "$RV_PAGE_CORE_BUNDLE_HEAP_MB"
+      else
+        scope_aware_heap_mb 1536 600
+      fi
+      ;;
+    learning_daily|v1_audit|cutover_readiness|stock_analyzer_universe_audit|ui_field_truth_report|page_core_smoke|final_integrity_seal|hist_probs_v2_shadow|classifier_audit|ops_health_reports)
       printf '%s\n' 1536
       ;;
     build_global_scope)
@@ -488,9 +528,27 @@ step_heap_mb() {
       printf '%s\n' "${RV_FORECAST_DAILY_HEAP_MB:-3072}"
       ;;
     scientific_summary)
-      printf '%s\n' "${RV_SCIENTIFIC_SUMMARY_HEAP_MB:-2048}"
+      if [ -n "${RV_SCIENTIFIC_SUMMARY_HEAP_MB:-}" ]; then
+        printf '%s\n' "$RV_SCIENTIFIC_SUMMARY_HEAP_MB"
+      else
+        scope_aware_heap_mb 2048 400
+      fi
       ;;
-    build_fundamentals|quantlab_daily_report|breakout_v12|etf_diagnostic|signal_performance_report)
+    build_fundamentals)
+      if [ -n "${RV_BUILD_FUNDAMENTALS_HEAP_MB:-}" ]; then
+        printf '%s\n' "$RV_BUILD_FUNDAMENTALS_HEAP_MB"
+      else
+        scope_aware_heap_mb 512 200
+      fi
+      ;;
+    breakout_v12)
+      if [ -n "${RV_BREAKOUT_V12_HEAP_MB:-}" ]; then
+        printf '%s\n' "$RV_BREAKOUT_V12_HEAP_MB"
+      else
+        scope_aware_heap_mb 512 250
+      fi
+      ;;
+    quantlab_daily_report|etf_diagnostic|signal_performance_report)
       printf '%s\n' 512
       ;;
     dp8_market)
@@ -595,7 +653,13 @@ step_command() {
         history_scan_scope_arg=" --scope-file public/data/universe/v7/ssot/assets.global.canonical.ids.json"
         bulk_min_rows_matched="${RV_EODHD_BULK_MIN_ROWS_MATCHED:-0}"
       fi
-      printf '%s\n' "python3 scripts/quantlab/refresh_v7_history_from_eodhd.py --env-file '$RV_EODHD_ENV_FILE' --allowlist-path public/data/universe/v7/ssot/assets.global.canonical.ids.json --from-date '$TARGET_MARKET_DATE' --to-date '$TARGET_MARKET_DATE' --bulk-last-day --bulk-exchange-cost '${RV_EODHD_BULK_EXCHANGE_COST:-100}' --exchange-checkpoint-path '${NAS_OPS_ROOT:-$REPO_ROOT/var/private}/pipeline-artifacts/$checkpoint_name' --resume-exchange-checkpoint --global-lock-path '$NAS_LOCK_ROOT/eodhd.lock' --max-eodhd-calls '${RV_MARKET_REFRESH_MAX_EODHD_CALLS:-0}' --max-retries '${RV_MARKET_REFRESH_MAX_RETRIES:-1}' --timeout-sec '${RV_MARKET_REFRESH_TIMEOUT_PER_REQUEST_SEC:-60}' --flush-every '${RV_MARKET_REFRESH_FLUSH_EVERY:-250}' --concurrency '$MARKET_REFRESH_CONCURRENCY' --progress-every '$MARKET_REFRESH_PROGRESS_EVERY' --write-mode '${RV_HISTORY_WRITE_MODE:-merge}' --reset-state-on-start --bulk-min-yield-ratio '${RV_EODHD_BULK_MIN_YIELD_RATIO:-0}' --bulk-min-rows-matched '$bulk_min_rows_matched' --hard-daily-cap-calls '${RV_EODHD_HARD_DAILY_CAP:-90000}' && node scripts/ops/apply-history-touch-report-to-registry.mjs --scan-existing-packs${history_scan_scope_arg} && node scripts/ops/build-history-pack-manifest.mjs --scope global --asset-classes '$GLOBAL_ASSET_CLASSES' && node scripts/ops/report-history-coverage.mjs --asset-classes '$GLOBAL_ASSET_CLASSES' --target-market-date '$TARGET_MARKET_DATE'"
+      # QM7 scope-aware EODHD preflight: required_calls = scope_count * 1.2 (buffer for retries).
+      # Exit 17 → step "deferred" (not fail). Skipped via RV_PREFLIGHT_SKIP=1.
+      local market_preflight=""
+      if [ "${RV_PREFLIGHT_SKIP:-0}" != "1" ]; then
+        market_preflight="REQUIRED_CALLS=\$(node -e 'const fs=require(\"node:fs\");try{const d=JSON.parse(fs.readFileSync(\"public/data/universe/v7/ssot/assets.global.canonical.ids.json\",\"utf8\"));process.stdout.write(String(Math.ceil((d.count||6110)*1.2)))}catch{process.stdout.write(\"7332\")}' ) && node scripts/ops/provider-health-preflight.mjs --env-file '$RV_EODHD_ENV_FILE' --min-available-calls '${RV_MARKET_REFRESH_MIN_EODHD_AVAILABLE_CALLS:-10000}' --required-calls \"\$REQUIRED_CALLS\" --output '${NAS_OPS_ROOT:-$REPO_ROOT/var/private}/pipeline-artifacts/provider-health-market-refresh-preflight.json' && "
+      fi
+      printf '%s\n' "${market_preflight}python3 scripts/quantlab/refresh_v7_history_from_eodhd.py --env-file '$RV_EODHD_ENV_FILE' --allowlist-path public/data/universe/v7/ssot/assets.global.canonical.ids.json --from-date '$TARGET_MARKET_DATE' --to-date '$TARGET_MARKET_DATE' --bulk-last-day --bulk-exchange-cost '${RV_EODHD_BULK_EXCHANGE_COST:-100}' --exchange-checkpoint-path '${NAS_OPS_ROOT:-$REPO_ROOT/var/private}/pipeline-artifacts/$checkpoint_name' --resume-exchange-checkpoint --global-lock-path '$NAS_LOCK_ROOT/eodhd.lock' --max-eodhd-calls '${RV_MARKET_REFRESH_MAX_EODHD_CALLS:-0}' --max-retries '${RV_MARKET_REFRESH_MAX_RETRIES:-1}' --timeout-sec '${RV_MARKET_REFRESH_TIMEOUT_PER_REQUEST_SEC:-60}' --flush-every '${RV_MARKET_REFRESH_FLUSH_EVERY:-250}' --concurrency '$MARKET_REFRESH_CONCURRENCY' --progress-every '$MARKET_REFRESH_PROGRESS_EVERY' --write-mode '${RV_HISTORY_WRITE_MODE:-merge}' --reset-state-on-start --bulk-min-yield-ratio '${RV_EODHD_BULK_MIN_YIELD_RATIO:-0}' --bulk-min-rows-matched '$bulk_min_rows_matched' --hard-daily-cap-calls '${RV_EODHD_HARD_DAILY_CAP:-90000}' && node scripts/ops/apply-history-touch-report-to-registry.mjs --scan-existing-packs${history_scan_scope_arg} && node scripts/ops/build-history-pack-manifest.mjs --scope global --asset-classes '$GLOBAL_ASSET_CLASSES' && node scripts/ops/report-history-coverage.mjs --asset-classes '$GLOBAL_ASSET_CLASSES' --target-market-date '$TARGET_MARKET_DATE'"
       ;;
     q1_delta_ingest)
       printf '%s\n' "${RV_Q1_PYTHON_BIN:-python3} scripts/quantlab/run_daily_delta_ingest_q1.py --ingest-date '$TARGET_MARKET_DATE' --workers '${RV_Q1_WORKERS:-1}'"
