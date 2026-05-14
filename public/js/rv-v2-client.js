@@ -83,11 +83,16 @@ export async function fetchPageCore(ticker) {
   };
 }
 
-function canonicalAssetQuery(ticker) {
+function canonicalAssetQuery(ticker, extraParams = {}) {
+  const params = new URLSearchParams();
   const assetId = canonicalAssetId(ticker);
-  return assetId
-    ? `?asset_id=${encodeURIComponent(assetId)}`
-    : '';
+  if (assetId) params.set('asset_id', assetId);
+  for (const [key, value] of Object.entries(extraParams || {})) {
+    const normalized = String(value || '').trim();
+    if (normalized) params.set(key, normalized);
+  }
+  const query = params.toString();
+  return query ? `?${query}` : '';
 }
 
 function canonicalAssetId(ticker) {
@@ -105,9 +110,11 @@ function hasRenderableBars(data, minBars = 3) {
   return Array.isArray(data?.bars) && data.bars.length >= minBars;
 }
 
-export async function fetchV2Historical(ticker) {
+export async function fetchV2Historical(ticker, options = {}) {
   const routeTicker = routeTickerForAsset(ticker);
-  const payload = await fetchJsonWithTimeout(`/api/v2/stocks/${encodeURIComponent(routeTicker)}/historical${canonicalAssetQuery(ticker)}`);
+  const payload = await fetchJsonWithTimeout(`/api/v2/stocks/${encodeURIComponent(routeTicker)}/historical${canonicalAssetQuery(ticker, {
+    target_market_date: options?.targetMarketDate || options?.target_market_date,
+  })}`);
   if (!payload.ok) throw new Error(payload.error?.message || 'V2 historical response not ok');
   return { ok: true, data: payload.data, meta: payload.meta, source: 'v2_historical' };
 }
@@ -127,9 +134,11 @@ export async function fetchV2Governance(ticker) {
   return { ok: true, data: payload.data, meta: payload.meta, source: 'v2_governance' };
 }
 
-export async function fetchV2HistoricalProfile(ticker) {
+export async function fetchV2HistoricalProfile(ticker, options = {}) {
   const routeTicker = routeTickerForAsset(ticker);
-  const payload = await fetchJsonWithTimeout(`/api/v2/stocks/${encodeURIComponent(routeTicker)}/historical-profile${canonicalAssetQuery(ticker)}`);
+  const payload = await fetchJsonWithTimeout(`/api/v2/stocks/${encodeURIComponent(routeTicker)}/historical-profile${canonicalAssetQuery(ticker, {
+    target_market_date: options?.targetMarketDate || options?.target_market_date,
+  })}`);
   if (!payload.ok) throw new Error(payload.error?.message || 'V2 historical-profile response not ok');
   return { ok: true, data: payload.data, meta: payload.meta, source: 'v2_historical_profile' };
 }
@@ -599,15 +608,16 @@ export async function fetchV2StockPage(ticker) {
       const summary = pageCoreToSummary(pageCore.data);
       const governance = pageCoreToGovernance(pageCore.data);
       const shouldHydrateOptional = optionalHydrationEnabled();
+      const targetMarketDate = String(pageCore.data?.target_market_date || pageCore.meta?.data_date || '').slice(0, 10);
       const shouldHydrateHistoricalProfile = shouldHydrateOptional
         || String(pageCore.data?.status_contract?.historical_profile_status || '').toLowerCase() === 'available_via_endpoint';
       const [stockApiResult, historicalResult, historicalProfileResult, fundamentalsResult] = await Promise.all([
         shouldHydrateOptional
           ? settleOptionalModuleWithBudget(fetchStockApiPayload(ticker), 'stock_api', 12000)
           : Promise.resolve({ ok: false, data: null, meta: {}, source: 'stock_api', error: 'optional_hydration_disabled' }),
-        settleOptionalModuleWithBudget(fetchV2Historical(ticker), 'v2_historical'),
+        settleOptionalModuleWithBudget(fetchV2Historical(ticker, { targetMarketDate }), 'v2_historical'),
         shouldHydrateHistoricalProfile
-          ? settleOptionalModuleWithBudget(fetchV2HistoricalProfile(ticker), 'v2_historical_profile')
+          ? settleOptionalModuleWithBudget(fetchV2HistoricalProfile(ticker, { targetMarketDate }), 'v2_historical_profile')
           : Promise.resolve({ ok: false, data: null, meta: {}, source: 'v2_historical_profile', error: 'optional_hydration_disabled' }),
         shouldHydrateOptional
           ? settleOptionalModuleWithBudget(fetchFundamentals(ticker), 'fundamentals')

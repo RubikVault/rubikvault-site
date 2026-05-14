@@ -27,7 +27,17 @@ function runtimeHistoricalKey({ ticker, request }) {
   return `US__${String(ticker || '').trim().toUpperCase()}`.replace(/[^A-Z0-9_.-]/g, '');
 }
 
-function targetMarketDateForRuntimeCache(env) {
+function targetMarketDateForRuntimeCache(env, request = null) {
+  try {
+    const params = new URL(request?.url || '').searchParams;
+    const requested = parseIsoDay(
+      params.get('target_market_date')
+      || params.get('target_date')
+      || params.get('as_of')
+      || params.get('data_date')
+    );
+    if (requested) return requested;
+  } catch { /* fall through */ }
   const forced = parseIsoDay(env?.TARGET_MARKET_DATE || env?.RV_TARGET_MARKET_DATE || env?.TARGET_DATE);
   return forced || latestUsMarketSessionIso(new Date());
 }
@@ -52,7 +62,7 @@ async function fastRuntimeHistoricalCacheResponse({ ticker, request, env }) {
     if (!response?.ok) return null;
     const payload = await response.json().catch(() => null);
     const dataDate = runtimeHistoricalDataDate(payload);
-    const targetDate = targetMarketDateForRuntimeCache(env);
+    const targetDate = targetMarketDateForRuntimeCache(env, request);
     if (!payload || (targetDate && (!dataDate || dataDate < targetDate))) return null;
     return new Response(JSON.stringify(payload), {
       status: 200,
@@ -69,7 +79,7 @@ async function fastRuntimeHistoricalCacheResponse({ ticker, request, env }) {
 }
 
 function fastStaticHistoricalResponse({ ticker, request, env }) {
-  const targetDate = targetMarketDateForRuntimeCache(env);
+  const targetDate = targetMarketDateForRuntimeCache(env, request);
   return getStaticBars(ticker, new URL(request.url).origin, env?.ASSETS || null, { targetMarketDate: targetDate })
     .then((bars) => {
       if (!Array.isArray(bars) || bars.length < 60) return null;
