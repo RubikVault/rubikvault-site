@@ -563,7 +563,7 @@
       let _rvDataSource = 'v2';
       let _rvResolution = { mode: 'full', source: 'v2', notice: null, missingModules: [] };
       try {
-        const { fetchWithFallback } = await import('/js/rv-v2-client.js?v=20260514-static-shards');
+        const { fetchWithFallback } = await import('/js/rv-v2-client.js?v=20260514-static-profile');
         const resolved = await fetchWithFallback(ticker);
         payload = resolved.payload;
         _rvDataSource = resolved.source === 'v2' ? 'v2' : 'v1';
@@ -638,7 +638,7 @@
       const _chartBlockedByIntegrity = _integrityFields.chart?.status === 'BLOCK' && !_documentedMinimalChart;
       window._rvUiIntegrity = _integrity;
       const ssotMarketContext = data.ssot?.market_context || {};
-      const historicalProfileEnvelope = data.historical_profile || null;
+      let historicalProfileEnvelope = data.historical_profile || null;
       const identity = buildPageIdentity(payload, ticker);
       let urlAssetId = '';
       try {
@@ -732,6 +732,72 @@
       }
       bars = await hydrateChartBars(bars);
       data.bars = bars;
+      const buildClientHistoricalProfileFromBars = (series) => {
+        const cleanBars = Array.isArray(series) ? series.filter((bar) => Number.isFinite(Number(bar?.close ?? bar?.adjClose)) && String(bar?.date || '').length >= 10) : [];
+        if (cleanBars.length < 80) return null;
+        const closes = cleanBars.map((bar) => Number(bar.adjClose ?? bar.close));
+        const statForHorizon = (horizon) => {
+          const returns = [];
+          for (let i = 0; i + horizon < closes.length; i += 1) {
+            const base = closes[i];
+            const next = closes[i + horizon];
+            if (Number.isFinite(base) && Number.isFinite(next) && base > 0) returns.push(next / base - 1);
+          }
+          if (!returns.length) return null;
+          const n = returns.length;
+          const avg = returns.reduce((sum, value) => sum + value, 0) / n;
+          const wins = returns.filter((value) => value > 0).length;
+          const minRet = Math.min(...returns);
+          const maxRet = Math.max(...returns);
+          return {
+            n,
+            win_rate: wins / n,
+            avg_return: avg,
+            mae: Math.min(0, minRet),
+            mfe: Math.max(0, maxRet),
+            max_drawdown: Math.min(0, minRet),
+          };
+        };
+        const events = {
+          event_price_history_baseline: {
+            h5d: statForHorizon(5),
+            h20d: statForHorizon(20),
+            h60d: statForHorizon(60),
+            h120d: statForHorizon(120),
+          },
+        };
+        const latest = cleanBars[cleanBars.length - 1];
+        const closeNow = closes[closes.length - 1];
+        const closeThen = closes[Math.max(0, closes.length - 60)];
+        return {
+          ticker: String(data?.ticker || identity?.ticker || ticker || '').trim(),
+          profile: {
+            latest_date: latest.date,
+            computed_at: new Date().toISOString(),
+            bars_count: cleanBars.length,
+            events,
+          },
+          regime: {
+            date: latest.date,
+            market_regime: closeNow >= closeThen ? 'bull' : 'bear',
+            volatility_regime: 'normal_vol',
+            breadth_regime: 'normal',
+            breadth_above_ma50_pct: null,
+          },
+          availability: {
+            status: 'ready',
+            reason: null,
+            source: 'client_public_history_shard',
+          },
+        };
+      };
+      if ((!historicalProfileEnvelope?.profile?.events || typeof historicalProfileEnvelope.profile.events !== 'object') && bars.length >= 80) {
+        const synthesizedProfile = buildClientHistoricalProfileFromBars(bars);
+        if (synthesizedProfile) {
+          historicalProfileEnvelope = synthesizedProfile;
+          data.historical_profile = synthesizedProfile;
+        }
+      }
       const lastBar = bars.length ? bars[bars.length - 1] : {};
       async function loadHistoricalResearchInsights(assetId) {
         const rawId = String(assetId || '').toUpperCase();
