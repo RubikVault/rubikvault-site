@@ -97,12 +97,16 @@ function canonicalAssetQuery(ticker, extraParams = {}) {
 
 function canonicalAssetId(ticker) {
   const assetId = String(ticker || '').trim().toUpperCase();
-  return /^[A-Z0-9_.-]+:[A-Z0-9_.-]+$/.test(assetId) ? assetId : null;
+  if (/^[A-Z0-9_.-]+:[A-Z0-9_.-]+$/.test(assetId)) return assetId;
+  const dot = assetId.match(/^([A-Z0-9_-]+)\.([A-Z0-9_-]{2,8})$/);
+  return dot ? `${dot[2]}:${dot[1]}` : null;
 }
 
 function routeTickerForAsset(ticker) {
   const value = String(ticker || '').trim().toUpperCase();
-  if (/^[A-Z0-9_.-]+:[A-Z0-9_.-]+$/.test(value)) return value.split(':').pop();
+  if (/^[A-Z0-9_.-]+:[A-Z0-9_.-]+$/.test(value)) return value;
+  const dot = value.match(/^([A-Z0-9_-]+)\.([A-Z0-9_-]{2,8})$/);
+  if (dot) return dot[1];
   return value;
 }
 

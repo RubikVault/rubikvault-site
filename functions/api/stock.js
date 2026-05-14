@@ -622,7 +622,8 @@ async function fetchBreakoutV12Static(request, { ticker, canonicalId, exchange, 
     // Synthesize a top500-shaped item from the page-core breakout_summary so the
     // shared shaper still works for non-top500 tickers (AAPL/TSLA/etc.).
     item = {
-      asset_id: canonicalId || null,
+      asset_id: pageCoreSummary.asset_id || canonicalId || null,
+      display_ticker: pageCoreSummary.display_ticker || ticker || null,
       symbol: ticker || null,
       name: ticker || null,
       as_of: manifest?.as_of || null,
@@ -637,7 +638,7 @@ async function fetchBreakoutV12Static(request, { ticker, canonicalId, exchange, 
       scores: pageCoreSummary.scores || {},
       features: {},
       risk: {},
-      ui: { label: null, rank: null, rank_percentile: null, status: pageCoreSummary.breakout_status || null, legacy_state: pageCoreSummary.legacy_state || null },
+      ui: pageCoreSummary.ui || { label: null, rank: null, rank_percentile: null, status: pageCoreSummary.breakout_status || null, legacy_state: pageCoreSummary.legacy_state || null },
       reasons: [],
       warnings: [],
     };

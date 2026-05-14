@@ -4,9 +4,11 @@ import path from 'node:path';
 import test from 'node:test';
 
 import {
+  buildBreakoutV12Candidates,
   shapeBreakoutV12Result,
   toBreakoutV2Compat,
 } from '../functions/api/_shared/breakout-v12-static.mjs';
+import { okEnvelope } from '../functions/api/_shared/envelope.js';
 
 const ROOT = path.resolve(new URL('.', import.meta.url).pathname, '..');
 
@@ -45,6 +47,16 @@ test('breakout v12 static adapter maps ui label into status fields', () => {
   assert.equal(compat.state, 'BREAKOUT_CANDIDATE');
   assert.equal(compat.breakout_status, 'BREAKOUT_CANDIDATE');
   assert.equal(compat.scores.total, 87);
+});
+
+test('breakout v12 static adapter maps dotted exchange aliases both ways', () => {
+  assert.equal(buildBreakoutV12Candidates({ ticker: 'CMGU.LSE' }).has('LSE:CMGU'), true);
+  assert.equal(buildBreakoutV12Candidates({ canonicalId: 'LSE:CMGU' }).has('CMGU.LSE'), true);
+});
+
+test('envelope normalizes page-core missing status to no_data', () => {
+  const payload = okEnvelope(null, { provider: 'page-core', status: 'missing' });
+  assert.equal(payload.meta.status, 'no_data');
 });
 
 test('historical endpoint rejects stale runtime historical cache before fallback', () => {

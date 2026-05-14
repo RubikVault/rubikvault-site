@@ -347,6 +347,7 @@
     <header>
         <h1>Breakout Scanner V1</h1>
         <p>Breakout V1.3 scanner with legacy bucket states and 9-state detail.</p>
+        <p id="breakout-contract-status" style="color: var(--text-muted); font-size: .85rem;">Loading current breakout state contract.</p>
     </header>
 
     <div class="metrics-grid">
@@ -434,10 +435,79 @@
         let currentPage = 1;
         const rowsPerPage = 500; // Optimal speed
 
+        function normalizeBreakoutState(item) {
+            const raw = String(item?.legacy_state || item?.ui?.legacy_state || item?.state || item?.breakout_status || item?.status || '').toUpperCase();
+            if (!raw || raw === 'NO_DATA' || raw === 'NONE' || raw === 'NO_SETUP' || raw === 'DATA_INSUFFICIENT' || raw === 'UNELIGIBLE') return 'NONE';
+            if (raw.includes('CONFIRMED')) return 'CONFIRMED';
+            if (raw.includes('FAILED') || raw.includes('INVALIDATED')) return 'FAILED';
+            if (raw.includes('TRIGGERED')) return 'TRIGGERED';
+            if (raw.includes('ARMED') || raw.includes('READY')) return 'ARMED';
+            if (raw.includes('SETUP') || raw.includes('BASE') || raw.includes('ACCUMULATION')) return 'SETUP';
+            return 'NONE';
+        }
+
+        function routeTicker(item) {
+            const display = String(item?.display_ticker || '').trim();
+            if (display) return display;
+            const id = String(item?.asset_id || item?.canonical_id || item?.ticker || '').trim();
+            if (id.includes(':')) {
+                const [exchange, symbol] = id.split(':');
+                return `${symbol}.${exchange}`;
+            }
+            return id;
+        }
+
+        function normalizeBreakoutItem(item) {
+            const score = Number(item?.scores?.final_signal_score ?? item?.final_signal_score ?? item?.total_score ?? 0);
+            return {
+                ...item,
+                ticker: item?.display_ticker || item?.ticker || item?.symbol || item?.asset_id || '',
+                asset_id: item?.asset_id || item?.canonical_id || null,
+                name: item?.display_name || item?.name || item?.symbol || item?.asset_id || '',
+                state: normalizeBreakoutState(item),
+                breakout_status: String(item?.breakout_status || item?.status || item?.ui?.status || item?.ui?.label || '').toUpperCase(),
+                total_score: Number.isFinite(score) ? Math.round(score <= 1 ? score * 100 : score) : 0,
+                latest_close: Number(item?.latest_close ?? item?.risk?.close ?? 0),
+            };
+        }
+
+        async function fetchJson(path) {
+            const response = await fetch(path, { cache: 'no-store' });
+            if (!response.ok) throw new Error(`${path} ${response.status}`);
+            return response.json();
+        }
+
         async function loadData() {
             try {
-                const response = await fetch('/data/snapshots/breakout-all.json');
-                const data = await response.json();
+                let data = null;
+                let stateSummary = null;
+                let staleFallback = false;
+                try {
+                    const manifest = await fetchJson('/data/breakout/manifests/latest.json');
+                    const summaryPath = manifest?.files?.state_summary ? `/data/breakout/${manifest.files.state_summary}` : null;
+                    if (summaryPath) stateSummary = await fetchJson(summaryPath);
+                    const sourcePath = stateSummary?.full_state_distribution_available === true && manifest?.files?.all_scored
+                        ? `/data/breakout/${manifest.files.all_scored}`
+                        : (manifest?.files?.top500 ? `/data/breakout/${manifest.files.top500}` : null);
+                    if (!sourcePath) throw new Error('breakout manifest missing source file');
+                    const payload = await fetchJson(sourcePath);
+                    data = {
+                        ...payload,
+                        source: 'breakout_manifest',
+                        manifest,
+                        state_summary: stateSummary,
+                        items: Array.isArray(payload?.items) ? payload.items.map(normalizeBreakoutItem) : [],
+                    };
+                } catch (manifestError) {
+                    console.warn('Current breakout manifest load failed; using legacy fallback:', manifestError);
+                    const legacy = await fetchJson('/data/snapshots/breakout-all.json');
+                    staleFallback = true;
+                    data = {
+                        ...legacy,
+                        source: 'legacy_breakout_snapshot',
+                        items: Array.isArray(legacy?.items) ? legacy.items.map(normalizeBreakoutItem) : [],
+                    };
+                }
 
                 if (data.regime) {
                     const r = data.regime.regime_tag;
@@ -446,18 +516,31 @@
                     if (r === 'UP') badge.style.color = 'var(--success)';
                     if (r === 'DOWN') badge.style.color = 'var(--danger)';
                     if (r === 'NEUTRAL') badge.style.color = 'var(--warning)';
+                } else {
+                    const badge = document.getElementById('regime-status');
+                    badge.innerHTML = `<i class="fa-solid fa-circle-dot"></i> As-of: ${data.as_of || data.manifest?.as_of || 'latest'}`;
+                    badge.style.color = 'var(--success)';
+                }
+
+                const statusEl = document.getElementById('breakout-contract-status');
+                if (statusEl) {
+                    statusEl.textContent = staleFallback
+                        ? `Stale legacy fallback loaded from ${data.generated_at || 'unknown date'}. Current manifest unavailable.`
+                        : `Current full-state contract as of ${data.as_of || data.manifest?.as_of || 'latest'} · ${data.score_version || data.manifest?.score_version || 'breakout model'}.`;
+                    statusEl.style.color = staleFallback ? 'var(--warning)' : 'var(--text-muted)';
                 }
 
                 // Update Stats
                 const items = data.items || [];
+                const summaryCounts = data.state_summary?.counts || {};
                 const stats = {
-                    total: items.length,
-                    setup: items.filter(r => r.state === 'SETUP').length,
-                    armed: items.filter(r => r.state === 'ARMED').length,
-                    triggered: items.filter(r => r.state === 'TRIGGERED').length,
-                    confirmed: items.filter(r => r.state === 'CONFIRMED').length,
-                    failed: items.filter(r => r.state === 'FAILED').length,
-                    nodata: items.filter(r => r.state === 'NO_DATA').length
+                    total: Number(summaryCounts.SCANNED ?? summaryCounts.NONE ?? items.filter(r => r.state === 'NONE').length),
+                    setup: Number(summaryCounts.SETUP ?? items.filter(r => r.state === 'SETUP').length),
+                    armed: Number(summaryCounts.ARMED ?? items.filter(r => r.state === 'ARMED').length),
+                    triggered: Number(summaryCounts.TRIGGERED ?? items.filter(r => r.state === 'TRIGGERED').length),
+                    confirmed: Number(summaryCounts.CONFIRMED ?? items.filter(r => r.state === 'CONFIRMED').length),
+                    failed: Number(summaryCounts.FAILED ?? items.filter(r => r.state === 'FAILED').length),
+                    nodata: 0
                 };
 
                 document.getElementById('val-total').innerText = stats.total;
@@ -511,9 +594,7 @@
             } else {
                 // If ALL, hide NO_DATA by default to not flood with 50k empty rows, 
                 // UNLESS user is searching!
-                if (!searchValue) {
-                    filtered = filtered.filter(item => item.state !== 'NO_DATA' && item.state !== 'NONE');
-                }
+                if (!searchValue) filtered = filtered.filter(item => item.state === 'NONE');
             }
 
             if (searchValue) {
@@ -550,7 +631,7 @@
                 if (item.state === 'NONE') badgeClass = 'state-none';
                 if (item.state === 'NO_DATA') badgeClass = 'state-nodata';
 
-                const stateLabel = item.state === 'NO_DATA' ? 'NO DATA' : item.state;
+                const stateLabel = item.state === 'NONE' ? 'SCANNED' : item.state;
                 const suppressedBadge = item.is_suppressed ? '<span style="font-size:0.6rem; background:rgba(239,68,68,0.15); color:#f87171; border-radius:4px; padding:2px 4px; margin-left:4px; font-weight:700;">SUPPRESSED</span>' : '';
                 const zone = item.support_zone?.detected
                     ? `${Number(item.support_zone.center || 0).toFixed(2)} · tests ${item.support_zone.test_count ?? '—'}`
@@ -561,7 +642,7 @@
 
                 return `
                     <tr>
-                        <td class="ticker-col" style="cursor: pointer; position: relative;" onclick="window.open('/analyze/${encodeURIComponent(item.ticker.includes(':') ? item.ticker.split(':').reverse().join('.') : item.ticker)}', '_blank')" title="Open Stock Analyzer">
+                        <td class="ticker-col" style="cursor: pointer; position: relative;" onclick="window.open('/analyze/${encodeURIComponent(routeTicker(item))}', '_blank')" title="Open Stock Analyzer">
                             ${item.ticker} ${suppressedBadge}
                             <span class="asset-name">${item.name || ''}</span>
                         </td>

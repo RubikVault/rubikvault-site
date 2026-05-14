@@ -6,12 +6,29 @@ import hashlib
 import json
 import os
 import resource
+import sys
 import time
 import uuid
 from pathlib import Path
 from typing import Iterable, Any
 
 import polars as pl
+
+REPO_ROOT = Path(__file__).resolve().parents[2]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+from scripts.breakout_compute.lib.breakout_math import (  # noqa: E402
+    absorption_vol_ratio,
+    cluster_support_zone,
+    clv_series,
+    cmf_series,
+    count_failed_lows,
+    detect_pivots,
+    obv_higher_low,
+    safe_div,
+    trend_slope,
+)
 
 
 BAR_COLS = ["asset_id", "date", "asset_class", "open_raw", "high_raw", "low_raw", "close_raw", "volume_raw"]
@@ -153,13 +170,142 @@ def empty_features_schema() -> dict[str, pl.DataType]:
         "atr_compression_percentile_252d": pl.Float64,
         "recent_signal_count_20d": pl.Int64,
         "_rows_in_window": pl.Int64,
+        "history_bars_used": pl.Int64,
+        "atr_pct_est_history": pl.Float64,
+        "support_zone_detected": pl.Boolean,
+        "support_zone_center": pl.Float64,
+        "support_zone_low": pl.Float64,
+        "support_zone_high": pl.Float64,
+        "support_zone_width_pct": pl.Float64,
+        "support_test_count": pl.Int64,
+        "base_age_bars": pl.Int64,
+        "failed_low_count": pl.Int64,
+        "absorption_vol_ratio": pl.Float64,
+        "clv_trend_20": pl.Float64,
+        "cmf_recent_20": pl.Float64,
+        "obv_higher_low": pl.Boolean,
+        "up_down_volume_ratio_20": pl.Float64,
     }
 
 
-def compute_features(data: pl.DataFrame, *, as_of: str, bucket_id: int) -> pl.DataFrame:
+def compute_history_features(data: pl.DataFrame, *, tail_bars: int) -> pl.DataFrame:
+    schema = {
+        "asset_id": pl.Utf8,
+        "history_bars_used": pl.Int64,
+        "atr_pct_est_history": pl.Float64,
+        "support_zone_detected": pl.Boolean,
+        "support_zone_center": pl.Float64,
+        "support_zone_low": pl.Float64,
+        "support_zone_high": pl.Float64,
+        "support_zone_width_pct": pl.Float64,
+        "support_test_count": pl.Int64,
+        "base_age_bars": pl.Int64,
+        "failed_low_count": pl.Int64,
+        "absorption_vol_ratio": pl.Float64,
+        "clv_trend_20": pl.Float64,
+        "cmf_recent_20": pl.Float64,
+        "obv_higher_low": pl.Boolean,
+        "up_down_volume_ratio_20": pl.Float64,
+    }
+    if data.is_empty():
+        return pl.DataFrame(schema=schema)
+
+    rows: list[dict[str, Any]] = []
+    history_df = data.sort(["asset_id", "date"]).group_by("asset_id", maintain_order=True).tail(tail_bars)
+    for asset_id, group_df in history_df.group_by("asset_id", maintain_order=True):
+        aid = asset_id[0] if isinstance(asset_id, tuple) else asset_id
+        opens = group_df["open_raw"].to_list()
+        highs = group_df["high_raw"].to_list()
+        lows = group_df["low_raw"].to_list()
+        closes = group_df["close_raw"].to_list()
+        volumes = group_df["volume_raw"].to_list()
+        n = len(closes)
+        if n < 60:
+            rows.append({
+                "asset_id": str(aid),
+                "history_bars_used": n,
+                "atr_pct_est_history": None,
+                "support_zone_detected": False,
+                "support_zone_center": None,
+                "support_zone_low": None,
+                "support_zone_high": None,
+                "support_zone_width_pct": None,
+                "support_test_count": 0,
+                "base_age_bars": 0,
+                "failed_low_count": 0,
+                "absorption_vol_ratio": None,
+                "clv_trend_20": None,
+                "cmf_recent_20": None,
+                "obv_higher_low": False,
+                "up_down_volume_ratio_20": None,
+            })
+            continue
+
+        pivot_high, pivot_low = detect_pivots(highs, lows, left=3, right=3)
+        recent_close = closes[-14:]
+        recent_high = highs[-14:]
+        recent_low = lows[-14:]
+        trs: list[float] = []
+        for i in range(1, len(recent_close)):
+            h = recent_high[i] if recent_high[i] is not None else recent_close[i]
+            l = recent_low[i] if recent_low[i] is not None else recent_close[i]
+            pc = recent_close[i - 1]
+            if h is None or l is None or pc is None:
+                continue
+            trs.append(max(float(h) - float(l), abs(float(h) - float(pc)), abs(float(l) - float(pc))))
+        close_window = [float(c) for c in closes[-20:] if c is not None]
+        mean_close = sum(close_window) / max(1, len(close_window))
+        atr_pct_est = safe_div(sum(trs) / max(1, len(trs)), mean_close, 0.02)
+
+        zone = cluster_support_zone(pivot_low, atr_pct=atr_pct_est, lookback=min(120, n))
+        failed_low_count = count_failed_lows(lows, closes, pivot_low, lookback=80)
+        clv = clv_series(highs, lows, closes)
+        cmf = cmf_series(highs, lows, closes, volumes, window=20)
+
+        up_v = 0.0
+        down_v = 0.0
+        for i in range(max(0, n - 20), n):
+            o = opens[i]
+            c = closes[i]
+            v = volumes[i]
+            if o is None or c is None or v is None:
+                continue
+            if float(c) >= float(o):
+                up_v += float(v)
+            else:
+                down_v += float(v)
+
+        base_age = 0
+        if zone.get("detected"):
+            first_test = int(zone.get("first_test_index") or 0)
+            base_age = max(0, n - 1 - first_test)
+
+        rows.append({
+            "asset_id": str(aid),
+            "history_bars_used": n,
+            "atr_pct_est_history": float(atr_pct_est),
+            "support_zone_detected": bool(zone.get("detected", False)),
+            "support_zone_center": float(zone.get("center")) if zone.get("center") is not None else None,
+            "support_zone_low": float(zone.get("low")) if zone.get("low") is not None else None,
+            "support_zone_high": float(zone.get("high")) if zone.get("high") is not None else None,
+            "support_zone_width_pct": float(zone.get("width_pct") or 0.0),
+            "support_test_count": int(zone.get("test_count") or 0),
+            "base_age_bars": int(base_age),
+            "failed_low_count": int(failed_low_count),
+            "absorption_vol_ratio": float(absorption_vol_ratio(opens, closes, volumes, window=40)),
+            "clv_trend_20": float(trend_slope(clv, lookback=20)),
+            "cmf_recent_20": float(cmf[-1] if cmf else 0.0),
+            "obv_higher_low": bool(obv_higher_low(closes, volumes, lookback=60)),
+            "up_down_volume_ratio_20": float(safe_div(up_v, down_v, 1.0)),
+        })
+    return pl.DataFrame(rows, schema=schema) if rows else pl.DataFrame(schema=schema)
+
+
+def compute_features(data: pl.DataFrame, *, as_of: str, bucket_id: int, tail_bars: int) -> pl.DataFrame:
     if data.is_empty():
         return pl.DataFrame(schema=empty_features_schema())
     data = data.sort(["asset_id", "date"])
+    history_features = compute_history_features(data, tail_bars=tail_bars)
     prev_close = pl.col("close_raw").shift(1).over("asset_id")
     tr = pl.max_horizontal(
         (pl.col("high_raw") - pl.col("low_raw")).abs(),
@@ -222,6 +368,7 @@ def compute_features(data: pl.DataFrame, *, as_of: str, bucket_id: int) -> pl.Da
         )
         .filter(pl.col("date") == pl.lit(as_of).str.strptime(pl.Date))
         .with_columns([pl.lit(as_of).alias("as_of"), pl.lit(bucket_id).alias("bucket")])
+        .join(history_features, on="asset_id", how="left")
         .select(list(empty_features_schema().keys()))
         .sort("asset_id")
     )
@@ -257,7 +404,7 @@ def main(argv: Iterable[str] | None = None) -> int:
         tail = normalize(pl.read_parquet(tail_path))
         delta = normalize(pl.read_parquet(delta_path))
         data = pl.concat([tail, delta], how="vertical_relaxed").unique(["asset_id", "date"], keep="last").sort(["asset_id", "date"])
-        features = compute_features(data, as_of=str(args.as_of)[:10], bucket_id=bucket_id)
+        features = compute_features(data, as_of=str(args.as_of)[:10], bucket_id=bucket_id, tail_bars=int(args.tail_bars))
         next_tail = data.group_by("asset_id", maintain_order=True).tail(int(args.tail_bars)).sort(["asset_id", "date"])
 
         write_parquet_atomic(features, local_path, compression=args.compression, compression_level=int(args.compression_level))

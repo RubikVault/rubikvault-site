@@ -50,6 +50,29 @@ describe('fetchPageCore', () => {
       global.fetch = originalFetch;
     }
   });
+
+  it('uses symbol route plus reversed exchange asset_id for dotted exchange tickers', async () => {
+    const seen = [];
+    global.fetch = async (url) => {
+      const href = String(url);
+      seen.push(href);
+      if (href.includes('/data/page-core/latest.json')) {
+        return { ok: true, json: async () => ({ snapshot_id: 'page-test' }) };
+      }
+      if (href.includes('/api/v2/page/CMGU?v=page-test&asset_id=LSE%3ACMGU')) {
+        return { ok: true, json: async () => ({ ok: true, data: { canonical_asset_id: 'LSE:CMGU' }, meta: {} }) };
+      }
+      throw new Error(`Unexpected URL: ${href}`);
+    };
+    try {
+      const result = await fetchPageCore('CMGU.LSE');
+      assert.equal(result.ok, true);
+      assert.equal(result.data.canonical_asset_id, 'LSE:CMGU');
+      assert.equal(seen.some((href) => href.includes('/api/v2/page/CMGU?v=page-test&asset_id=LSE%3ACMGU')), true);
+    } finally {
+      global.fetch = originalFetch;
+    }
+  });
 });
 
 describe('fetchV2Historical', () => {

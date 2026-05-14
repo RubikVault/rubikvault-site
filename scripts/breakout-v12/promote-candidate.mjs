@@ -193,26 +193,66 @@ function enrichBreakoutPublicJson(publicCandidate) {
 
 function writeStateSummary(publicCandidate, asOf) {
   const top500 = readJsonIfExists(path.join(publicCandidate, 'top500.json'));
-  const items = Array.isArray(top500?.items) ? top500.items : [];
+  const allScored = readJsonIfExists(path.join(publicCandidate, 'all_scored.json'));
+  const topItems = Array.isArray(top500?.items) ? top500.items : [];
+  const allItems = Array.isArray(allScored?.items) ? allScored.items : [];
+  const items = allItems.length ? allItems : topItems;
+  const fullState = allItems.length > 0;
+  const counts = {
+    ALL: items.length,
+    SCANNED: 0,
+    NONE: 0,
+    SETUP: 0,
+    ARMED: 0,
+    TRIGGERED: 0,
+    CONFIRMED: 0,
+    FAILED: 0,
+    CANDIDATE: topItems.length,
+  };
+  const samples = {
+    SCANNED: [],
+    SETUP: [],
+    ARMED: [],
+    TRIGGERED: [],
+    CONFIRMED: [],
+    FAILED: [],
+  };
+  const bucketFor = (item) => {
+    const raw = String(item?.legacy_state || item?.ui?.legacy_state || item?.state || item?.breakout_status || item?.status || '').toUpperCase();
+    if (raw.includes('CONFIRMED')) return 'CONFIRMED';
+    if (raw.includes('FAILED') || raw.includes('INVALIDATED')) return 'FAILED';
+    if (raw.includes('TRIGGERED')) return 'TRIGGERED';
+    if (raw.includes('ARMED') || raw.includes('READY')) return 'ARMED';
+    if (raw.includes('SETUP') || raw.includes('BASE') || raw.includes('ACCUMULATION')) return 'SETUP';
+    return 'SCANNED';
+  };
+  for (const item of items) {
+    const bucket = bucketFor(item);
+    counts[bucket] = (counts[bucket] || 0) + 1;
+    if (bucket === 'SCANNED') counts.NONE += 1;
+    if (samples[bucket]?.length < 20) samples[bucket].push(item);
+  }
+  atomicWriteJson(path.join(publicCandidate, 'state-samples.json'), {
+    schema_version: 'rv.breakout.state_samples.v1',
+    generated_at: new Date().toISOString(),
+    as_of: asOf,
+    target_market_date: asOf,
+    score_version: top500?.score_version || allScored?.score_version || 'breakout_scoring_v12_incremental_v1',
+    buckets: samples,
+  });
   const doc = {
     schema_version: 'rv.breakout.state_summary.v1',
     generated_at: new Date().toISOString(),
     as_of: asOf,
     target_market_date: asOf,
-    score_version: top500?.score_version || 'breakout_scoring_v12_incremental_v1',
-    contract_mode: 'candidate_rank',
-    full_state_distribution_available: false,
-    candidate_rank_only: true,
-    counts: {
-      ALL: items.length,
-      CANDIDATE: items.length,
-      SETUP: 0,
-      ARMED: 0,
-      TRIGGERED: 0,
-      CONFIRMED: 0,
-      FAILED: 0,
-    },
-    note: 'Nightly V12 incremental feed publishes ranked breakout candidates, not full-scope state distribution.',
+    score_version: top500?.score_version || allScored?.score_version || 'breakout_scoring_v12_incremental_v1',
+    contract_mode: fullState ? 'full_state_distribution' : 'candidate_rank',
+    full_state_distribution_available: fullState,
+    candidate_rank_only: !fullState,
+    counts,
+    note: fullState
+      ? 'Nightly feed publishes current full-state breakout distribution.'
+      : 'Nightly feed publishes ranked breakout candidates, not full-scope state distribution.',
   };
   atomicWriteJson(path.join(publicCandidate, 'state-summary.json'), doc);
   return doc;
@@ -271,7 +311,9 @@ function main() {
     errors: `runs/${args.asOf}/${contentHash}/errors.json`,
     health: `runs/${args.asOf}/${contentHash}/health.json`,
     top500: `runs/${args.asOf}/${contentHash}/top500.json`,
+    all_scored: fs.existsSync(path.join(publicRunRoot, 'all_scored.json')) ? `runs/${args.asOf}/${contentHash}/all_scored.json` : null,
     state_summary: `runs/${args.asOf}/${contentHash}/state-summary.json`,
+    state_samples: `runs/${args.asOf}/${contentHash}/state-samples.json`,
     shards: shardFiles.map((file) => `runs/${args.asOf}/${contentHash}/${path.relative(publicRunRoot, file).split(path.sep).join('/')}`),
   };
   const shardsComplete = files.shards.length > 0 && files.shards.every((rel) => fs.existsSync(path.join(args.publicRoot, rel.replace(/\.json$/, '._SUCCESS'))));

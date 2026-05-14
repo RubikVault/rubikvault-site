@@ -138,6 +138,7 @@
     "verify:stock-analyzer:non-regression": "node scripts/validate/stock-analyzer-non-regression-gate.mjs",
     "verify:stock-analyzer:random50-proof": "node scripts/validate/stock-analyzer-ui-random50-proof.mjs",
     "verify:main-ui:expanded-proof": "node scripts/validate/main-ui-integrity-expanded-proof.mjs",
+    "verify:breakout-main-ui-proof": "node scripts/validate/breakout-main-ui-proof.mjs",
     "stock-analyzer:promotion-report": "node scripts/stock-analyzer/build-promotion-readiness-report.mjs",
     "test:stock-analyzer:governance": "node tests/stock-analyzer-promotion-governance.test.mjs",
     "stock-analyzer:overnight": "bash scripts/stock-analyzer/run_overnight_autopilot.sh",

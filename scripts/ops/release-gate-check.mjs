@@ -604,11 +604,13 @@ function checkLocalPublicStatus(seal) {
     stockUiState: uiState,
     stockUiReleaseEligible: uiState?.release_eligible === true,
     histReady: status.hist_ready === true,
+    breakoutReady: status.breakout_ready === true,
   });
   const safe = status.release_ready === true
     && status.overall_ui_ready === true
     && status.ui_green === true
     && status.core_release_ready !== false
+    && status.breakout_ready === true
     && gate.deploy_allowed === true;
   if (expectedTargetDate && statusTargetDate !== expectedTargetDate && !isForce) {
     fail(`public-status target mismatch: expected ${expectedTargetDate}, got ${statusTargetDate || 'missing'}.`);

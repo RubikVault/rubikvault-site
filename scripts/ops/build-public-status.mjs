@@ -10,6 +10,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { buildReleaseGateModel } from './lib/release-gate-model.mjs';
+import { evaluateBreakoutReadiness } from './lib/breakout-readiness.mjs';
 
 const REPO_ROOT = path.resolve(fileURLToPath(new URL('.', import.meta.url)), '../..');
 const FINAL_SEAL_PATH = path.join(REPO_ROOT, 'public/data/ops/final-integrity-seal-latest.json');
@@ -113,7 +114,8 @@ const coreReleaseReady = Boolean(
 );
 const decisionReady = releaseEvidenceFresh && (seal?.decision_ready === true || decisionPublicGreen);
 const histReady = releaseEvidenceFresh && (seal?.hist_ready === true || histGreen);
-const breakoutReady = seal?.breakout_ready ?? null;
+const breakoutStatus = evaluateBreakoutReadiness({ repoRoot: REPO_ROOT, targetMarketDate: targetDate });
+const breakoutReady = seal?.breakout_ready ?? breakoutStatus.ready;
 const releaseGate = buildReleaseGateModel({
   coreReleaseReady,
   pageCoreReady: Boolean(seal?.page_core_ready ?? pageCoreGreen),
@@ -122,6 +124,7 @@ const releaseGate = buildReleaseGateModel({
   stockUiState,
   stockUiReleaseEligible: stockUiStateGreen,
   histReady,
+  breakoutReady,
 });
 const overallUiReady = releaseGate.release_ui_ready;
 const uiGreen = overallUiReady;
@@ -142,6 +145,16 @@ const doc = {
   hist_ready: histReady,
   hist_release_blocking: false,
   breakout_ready: breakoutReady,
+  breakout_status: {
+    ready: breakoutReady,
+    as_of: breakoutStatus.manifest?.as_of || null,
+    score_version: breakoutStatus.manifest?.score_version || null,
+    all_scored_count: breakoutStatus.allScoredCount ?? null,
+    contract_mode: breakoutStatus.stateSummary?.contract_mode || null,
+    full_state_distribution_available: breakoutStatus.stateSummary?.full_state_distribution_available ?? null,
+    counts: breakoutStatus.stateSummary?.counts || null,
+    reasons: breakoutStatus.reasons,
+  },
   overall_ui_ready: overallUiReady,
   release_gate: releaseGate,
   target_market_date: targetDate,
