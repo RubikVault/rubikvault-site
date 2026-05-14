@@ -23,6 +23,7 @@ def parse_args(argv: Iterable[str] | None = None) -> argparse.Namespace:
     p = argparse.ArgumentParser(description="Build initial Breakout V12 rolling tail-state. Manual/backfill job, not nightly.")
     p.add_argument("--history-root", required=True, help="Snapshot bars root or parquet directory/file")
     p.add_argument("--output-root", required=True, help="Output root containing state/tail-bars")
+    p.add_argument("--scope-file", default="", help="Optional JSON list/dict of canonical asset ids to include")
     p.add_argument("--as-of", default=date.today().isoformat())
     p.add_argument("--tail-bars", type=int, default=300)
     p.add_argument("--bucket-count", type=int, default=128)
@@ -87,6 +88,26 @@ def parquet_files(root: Path) -> list[Path]:
     return sorted(root.rglob("*.parquet"))
 
 
+def load_scope_ids(scope_file: str) -> set[str] | None:
+    raw = str(scope_file or "").strip()
+    if not raw:
+        return None
+    path_value = Path(raw).expanduser()
+    if not path_value.is_absolute():
+        path_value = Path.cwd() / path_value
+    payload = json.loads(path_value.read_text(encoding="utf-8"))
+    if isinstance(payload, list):
+        values = payload
+    elif isinstance(payload, dict):
+        values = payload.get("canonical_ids") or payload.get("ids") or payload.get("asset_ids") or []
+    else:
+        values = []
+    scope_ids = {str(value).strip() for value in values if str(value).strip()}
+    if not scope_ids:
+        raise SystemExit(f"FATAL: empty scope file: {path_value}")
+    return scope_ids
+
+
 def chunks(items: list[Path], max_files: int, max_bytes: int) -> Iterable[list[Path]]:
     limit_files = max(1, int(max_files or 1))
     limit_bytes = max(1, int(max_bytes or 1))
@@ -148,6 +169,7 @@ def main(argv: Iterable[str] | None = None) -> int:
     files = parquet_files(history_root)
     if not files:
         raise SystemExit(f"FATAL: no parquet files under history-root: {history_root}")
+    scope_ids = load_scope_ids(args.scope_file)
     if parts_root.exists():
         shutil.rmtree(parts_root)
     parts_root.mkdir(parents=True, exist_ok=True)
@@ -196,6 +218,8 @@ def main(argv: Iterable[str] | None = None) -> int:
                 .alias("_bucket")
             )
         )
+        if scope_ids is not None:
+            lf = lf.filter(pl.col("asset_id").is_in(sorted(scope_ids)))
         batch_df = lf.collect(engine="streaming")
         if batch_df.is_empty():
             processed_files += len(batch)
@@ -276,6 +300,7 @@ def main(argv: Iterable[str] | None = None) -> int:
         "counts": {
             "rows": total_rows,
             "assets": total_assets,
+            "scope_assets": len(scope_ids) if scope_ids is not None else None,
             "buckets": len(bucket_entries),
             "source_files": len(files),
             "processed_files": processed_files,

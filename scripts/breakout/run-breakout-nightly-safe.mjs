@@ -219,6 +219,9 @@ function latestPublishedForAsOf(asOf, publicRoot) {
       state_counts_ready: false,
       top500_count: 0,
       top500_state_fields_ready: false,
+      expected_scope_count: 0,
+      min_all_scored_count: 0,
+      all_scored_scope_coverage_ok: true,
     };
     if (baseOk) {
       const topJson = JSON.parse(fs.readFileSync(top500, 'utf8'));
@@ -240,12 +243,17 @@ function latestPublishedForAsOf(asOf, publicRoot) {
         && stateSummary?.candidate_rank_only !== true;
       details.state_counts_ready = ['SCANNED', 'SETUP', 'ARMED', 'TRIGGERED', 'CONFIRMED', 'FAILED']
         .every((key) => Number.isFinite(Number(stateSummary?.counts?.[key])));
+      const minAllScored = resolveMinAllScoredCount();
+      details.expected_scope_count = minAllScored.expected_scope_count;
+      details.min_all_scored_count = minAllScored.min_all_scored_count;
+      details.all_scored_scope_coverage_ok = details.all_scored_count >= details.min_all_scored_count;
     }
     const fullStateOk = details.top500_count === 500
       && details.top500_state_fields_ready
       && details.all_scored_count > 0
       && details.full_state_contract
-      && details.state_counts_ready;
+      && details.state_counts_ready
+      && details.all_scored_scope_coverage_ok;
     const ok = baseOk && (!requireFullState || fullStateOk);
     return {
       ok,
@@ -260,6 +268,28 @@ function latestPublishedForAsOf(asOf, publicRoot) {
   } catch (error) {
     return { ok: false, reason: 'latest_missing_or_invalid', manifest_path: manifestPath, error: String(error?.message || error) };
   }
+}
+
+function countIdsFromJson(filePath) {
+  if (!filePath || !fs.existsSync(filePath)) return 0;
+  const payload = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+  const values = Array.isArray(payload)
+    ? payload
+    : (payload?.canonical_ids || payload?.ids || payload?.asset_ids || []);
+  return Array.isArray(values) ? values.filter((value) => String(value || '').trim()).length : 0;
+}
+
+function resolveMinAllScoredCount() {
+  const explicit = Number.parseInt(process.env.RV_BREAKOUT_MIN_ALL_SCORED_COUNT || '0', 10) || 0;
+  const scopeFile = process.env.RV_BREAKOUT_SCOPE_FILE ? path.resolve(REPO_ROOT, process.env.RV_BREAKOUT_SCOPE_FILE) : '';
+  const scopeCount = countIdsFromJson(scopeFile);
+  const derived = scopeCount > 0
+    ? Math.max(1, Math.floor(scopeCount * Number(process.env.RV_BREAKOUT_MIN_SCOPE_COVERAGE_RATIO || '0.90')))
+    : 0;
+  return {
+    expected_scope_count: scopeCount,
+    min_all_scored_count: Math.max(explicit, derived),
+  };
 }
 
 function writeDegraded(args, reason, checks = {}, extra = {}) {
