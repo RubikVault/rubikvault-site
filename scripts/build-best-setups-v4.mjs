@@ -14,6 +14,7 @@ import {
   REPO_ROOT,
   readJsonAbs,
   evaluateTickerViaSharedCore,
+  loadLocalBars,
   resolveLocalAssetMeta,
   setLocalBarsRuntimeOverrides,
 } from './lib/best-setups-local-loader.mjs';
@@ -560,6 +561,50 @@ function enrichDecisionRowsFromPageCore(rows, pageCoreGuard = null) {
   });
 }
 
+function returnPctFromBars(bars, lookback) {
+  if (!Array.isArray(bars) || bars.length <= lookback) return null;
+  const last = num(bars[bars.length - 1]?.close ?? bars[bars.length - 1]?.adjClose);
+  const prior = num(bars[bars.length - 1 - lookback]?.close ?? bars[bars.length - 1 - lookback]?.adjClose);
+  if (last == null || prior == null || prior <= 0) return null;
+  return (last / prior) - 1;
+}
+
+async function enrichDecisionRowsFromLocalUniverse(rows) {
+  if (!Array.isArray(rows) || rows.length === 0) return rows;
+  const concurrency = Math.max(1, Math.min(32, Number(process.env.BEST_SETUPS_LOCAL_ENRICH_CONCURRENCY || 8) || 8));
+  return mapWithConcurrency(rows, concurrency, async (row) => {
+    const ticker = row?.ticker || String(row?.canonical_id || '').split(':').pop();
+    const meta = await resolveLocalAssetMeta(ticker, {
+      preferredCanonicalId: row?.canonical_id,
+      canonicalId: row?.canonical_id,
+    });
+    const bars = await loadLocalBars(ticker, {
+      preferredCanonicalId: row?.canonical_id || meta?.canonical_id,
+      canonicalId: row?.canonical_id || meta?.canonical_id,
+      preferredHistoryPack: meta?.history_pack,
+      historyPack: meta?.history_pack,
+    });
+    const lastBar = Array.isArray(bars) && bars.length ? bars[bars.length - 1] : null;
+    const price = num(lastBar?.close ?? lastBar?.adjClose ?? row?.price ?? row?.last_close);
+    const ret5 = num(row?.analyzer_ret_5d_pct) ?? returnPctFromBars(bars, 5);
+    const ret20 = num(row?.analyzer_ret_20d_pct) ?? returnPctFromBars(bars, 20);
+    return {
+      ...row,
+      canonical_id: row?.canonical_id || meta?.canonical_id || null,
+      ticker: row?.ticker || meta?.ticker || ticker || null,
+      name: row?.name || meta?.name || null,
+      price: row?.price ?? price,
+      last_close: row?.last_close ?? price,
+      exchange: row?.exchange || meta?.exchange || String(row?.canonical_id || meta?.canonical_id || '').split(':')[0] || null,
+      analyzer_ret_5d_pct: ret5,
+      analyzer_ret_20d_pct: ret20,
+      market_data_as_of: row?.market_data_as_of || lastBar?.date || null,
+      bars_count: row?.bars_count || meta?.bars_count || (Array.isArray(bars) ? bars.length : 0),
+      history_pack: row?.history_pack || meta?.history_pack || null,
+    };
+  });
+}
+
 function hasFrontpageRequiredFields(row) {
   return Boolean(
     row?.canonical_id
@@ -787,6 +832,9 @@ async function main() {
   if (decisionBundleMode) {
     let buyRows = decisionBundleMode.rows || [];
     let pageCoreGuard = null;
+    if (decisionSource === 'decision-core') {
+      buyRows = await enrichDecisionRowsFromLocalUniverse(buyRows);
+    }
     if (decisionSource === 'decision-core' && process.env.BEST_SETUPS_DISABLE_PAGE_CORE_GUARD !== '1') {
       pageCoreGuard = await buildPageCoreBuyGuard(requestedTargetDate);
       if (pageCoreGuard.available) {
