@@ -205,17 +205,56 @@ function latestPublishedForAsOf(asOf, publicRoot) {
   try {
     const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
     const top500 = manifest?.files?.top500 ? path.join(publicRoot, manifest.files.top500) : '';
-    const ok = manifest?.as_of === asOf
+    const requireFullState = process.env.RV_BREAKOUT_REQUIRE_FULL_STATE !== '0';
+    const baseOk = manifest?.as_of === asOf
       && manifest?.validation?.publishable === true
       && Boolean(top500)
       && fs.existsSync(top500);
+    const details = {
+      full_state_required: requireFullState,
+      full_state_contract: false,
+      all_scored_exists: false,
+      all_scored_count: 0,
+      state_summary_exists: false,
+      state_counts_ready: false,
+      top500_count: 0,
+      top500_state_fields_ready: false,
+    };
+    if (baseOk) {
+      const topJson = JSON.parse(fs.readFileSync(top500, 'utf8'));
+      details.top500_count = Array.isArray(topJson?.items) ? topJson.items.length : Number(topJson?.count || 0);
+      const first = Array.isArray(topJson?.items) ? topJson.items[0] : null;
+      details.top500_state_fields_ready = Boolean(first)
+        && ['asset_id', 'display_ticker', 'breakout_status', 'legacy_state', 'support_zone', 'invalidation']
+          .every((key) => Object.hasOwn(first, key));
+
+      const allScoredPath = manifest?.files?.all_scored ? path.join(publicRoot, manifest.files.all_scored) : '';
+      const stateSummaryPath = manifest?.files?.state_summary ? path.join(publicRoot, manifest.files.state_summary) : '';
+      details.all_scored_exists = Boolean(allScoredPath && fs.existsSync(allScoredPath));
+      details.state_summary_exists = Boolean(stateSummaryPath && fs.existsSync(stateSummaryPath));
+      const allScored = details.all_scored_exists ? JSON.parse(fs.readFileSync(allScoredPath, 'utf8')) : null;
+      const stateSummary = details.state_summary_exists ? JSON.parse(fs.readFileSync(stateSummaryPath, 'utf8')) : null;
+      details.all_scored_count = Array.isArray(allScored?.items) ? allScored.items.length : Number(allScored?.count || 0);
+      details.full_state_contract = stateSummary?.contract_mode === 'full_state_distribution'
+        && stateSummary?.full_state_distribution_available === true
+        && stateSummary?.candidate_rank_only !== true;
+      details.state_counts_ready = ['SCANNED', 'SETUP', 'ARMED', 'TRIGGERED', 'CONFIRMED', 'FAILED']
+        .every((key) => Number.isFinite(Number(stateSummary?.counts?.[key])));
+    }
+    const fullStateOk = details.top500_count === 500
+      && details.top500_state_fields_ready
+      && details.all_scored_count > 0
+      && details.full_state_contract
+      && details.state_counts_ready;
+    const ok = baseOk && (!requireFullState || fullStateOk);
     return {
       ok,
-      reason: ok ? 'already_promoted' : 'latest_not_matching',
+      reason: ok ? 'already_promoted' : (baseOk && requireFullState ? 'latest_contract_not_full_state' : 'latest_not_matching'),
       manifest_path: manifestPath,
       as_of: manifest?.as_of || null,
       content_hash: manifest?.content_hash || null,
       top500_exists: Boolean(top500 && fs.existsSync(top500)),
+      ...details,
       publishable: manifest?.validation?.publishable === true,
     };
   } catch (error) {

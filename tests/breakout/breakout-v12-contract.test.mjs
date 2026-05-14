@@ -254,11 +254,32 @@ test('breakout nightly safe wrapper no-ops when as_of already promoted', () => {
   fs.writeFileSync(fakePython, '#!/bin/sh\necho \'{"ok":true,"missing":[]}\'\nexit 0\n');
   fs.chmodSync(fakePython, 0o755);
   const publicRoot = path.join(tmp, 'public');
-  writeJson(path.join(publicRoot, 'runs/2026-04-28/hash/top500.json'), { schema_version: 'breakout_top_scores_v1', as_of: '2026-04-28', items: [] });
+  const items = Array.from({ length: 500 }, (_, index) => ({
+    asset_id: `NASDAQ:T${index}`,
+    display_ticker: `T${index}`,
+    breakout_status: 'SCANNED',
+    legacy_state: 'NONE',
+    support_zone: null,
+    invalidation: null,
+  }));
+  writeJson(path.join(publicRoot, 'runs/2026-04-28/hash/top500.json'), { schema_version: 'breakout_top_scores_v1', as_of: '2026-04-28', items });
+  writeJson(path.join(publicRoot, 'runs/2026-04-28/hash/all_scored.json'), { schema_version: 'breakout_all_scored_v1', as_of: '2026-04-28', count: 500, items });
+  writeJson(path.join(publicRoot, 'runs/2026-04-28/hash/state-summary.json'), {
+    schema_version: 'breakout_state_summary_v1',
+    as_of: '2026-04-28',
+    contract_mode: 'full_state_distribution',
+    full_state_distribution_available: true,
+    candidate_rank_only: false,
+    counts: { ALL: 500, SCANNED: 500, SETUP: 0, ARMED: 0, TRIGGERED: 0, CONFIRMED: 0, FAILED: 0 },
+  });
   writeJson(path.join(publicRoot, 'manifests/latest.json'), {
     as_of: '2026-04-28',
     content_hash: 'hash',
-    files: { top500: 'runs/2026-04-28/hash/top500.json' },
+    files: {
+      top500: 'runs/2026-04-28/hash/top500.json',
+      all_scored: 'runs/2026-04-28/hash/all_scored.json',
+      state_summary: 'runs/2026-04-28/hash/state-summary.json',
+    },
     validation: { publishable: true },
   });
   const statusOut = path.join(tmp, 'status.json');
