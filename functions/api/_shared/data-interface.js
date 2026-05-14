@@ -379,10 +379,16 @@ async function readLocalJsonMaybeGzip(requestPath) {
   }
 }
 
-async function loadStaticBarsFallback(symbol, request, env) {
+async function loadStaticBarsFallback(symbol, request, env, options = {}) {
   try {
     const { getStaticBars } = await import('./history-store.mjs');
-    const bars = await getStaticBars(symbol, new URL(request.url).origin, env?.ASSETS || null);
+    const assetId = options?.canonicalId || options?.canonical_id || requestAssetId(request);
+    const bars = await getStaticBars(symbol, new URL(request.url).origin, env?.ASSETS || null, {
+      ...options,
+      canonicalId: assetId || null,
+      canonical_id: assetId || null,
+      ticker: symbol,
+    });
     return Array.isArray(bars) && bars.length ? bars : [];
   } catch {
     return [];
@@ -728,7 +734,11 @@ export async function fetchStockSummary(ticker, env, request) {
   let sourceChain = buildSourceChainMetadata(null);
   const expectedTargetMarketDate = resolveExpectedTargetMarketDate(now);
 
-  const staticBars = await loadStaticBarsFallback(effectiveTicker, request, env);
+  const staticBars = await loadStaticBarsFallback(effectiveTicker, request, env, {
+    canonicalId: ctx.canonicalId || null,
+    exchange: ctx.exchange || null,
+    targetMarketDate: expectedTargetMarketDate,
+  });
   const staticLatestDate = pickLatestBar(staticBars)?.date || null;
   const staticHistoryStale = isDateBehind(staticLatestDate, expectedTargetMarketDate);
   const shouldTryProviderChain = !staticBars.length || staticHistoryStale;
@@ -991,7 +1001,11 @@ export async function fetchStockHistorical(ticker, env, request) {
   let bars = [];
   let provider = 'eodhd';
   const expectedTargetMarketDate = resolveExpectedTargetMarketDate(now);
-  const staticBars = await loadStaticBarsFallback(effectiveTicker, request, env);
+  const staticBars = await loadStaticBarsFallback(effectiveTicker, request, env, {
+    canonicalId: ctx.canonicalId || null,
+    exchange: ctx.exchange || null,
+    targetMarketDate: expectedTargetMarketDate,
+  });
   const staticLatestDate = pickLatestBar(staticBars)?.date || null;
   const staticHistoryStale = isDateBehind(staticLatestDate, expectedTargetMarketDate);
   const shouldTryProviderChain = !staticBars.length || staticHistoryStale;

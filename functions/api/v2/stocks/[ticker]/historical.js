@@ -50,6 +50,15 @@ function targetMarketDateForRuntimeCache(env, request = null) {
   return forced || latestUsMarketSessionIso(new Date());
 }
 
+function assetIdForRequest(request) {
+  try {
+    const value = String(new URL(request.url).searchParams.get('asset_id') || '').trim().toUpperCase();
+    return /^[A-Z0-9_.-]+:[A-Z0-9_.-]+$/.test(value) ? value : null;
+  } catch {
+    return null;
+  }
+}
+
 function runtimeHistoricalDataDate(payload) {
   const metaDate = parseIsoDay(payload?.meta?.data_date || payload?.meta?.as_of || payload?.target_market_date);
   if (metaDate) return metaDate;
@@ -88,7 +97,13 @@ async function fastRuntimeHistoricalCacheResponse({ ticker, request, env }) {
 
 function fastStaticHistoricalResponse({ ticker, request, env }) {
   const targetDate = targetMarketDateForRuntimeCache(env, request);
-  return getStaticBars(ticker, new URL(request.url).origin, env?.ASSETS || null, { targetMarketDate: targetDate })
+  const assetId = assetIdForRequest(request);
+  return getStaticBars(ticker, new URL(request.url).origin, env?.ASSETS || null, {
+    targetMarketDate: targetDate,
+    canonicalId: assetId,
+    canonical_id: assetId,
+    ticker,
+  })
     .then((bars) => {
       if (!Array.isArray(bars) || bars.length < 60) return null;
       const limit = historicalLimitForRequest(request);

@@ -162,15 +162,22 @@ async function readLocalJsonMaybe(relPath) {
     }
 }
 
+function normalizedCanonicalAssetId(value) {
+    const raw = String(value || '').trim().toUpperCase();
+    return /^[A-Z0-9_.-]+:[A-Z0-9_.-]+$/.test(raw) ? raw : null;
+}
+
 export async function getStaticBars(symbol, baseUrl, assetFetcher = null, options = {}) {
     let mergedBars = [];
     try {
         const maxBars = Number.isFinite(Number(options?.maxBars)) && Number(options.maxBars) > 0
             ? Math.floor(Number(options.maxBars))
             : null;
+        const canonicalId = normalizedCanonicalAssetId(options?.canonicalId || options?.canonical_id);
+        const canonicalExchange = canonicalId ? canonicalId.split(':')[0] : '';
+        const explicitNonUsAsset = Boolean(canonicalExchange && canonicalExchange !== 'US');
         const optionCandidates = [
-            options?.canonicalId,
-            options?.canonical_id,
+            canonicalId,
             options?.displayTicker,
             options?.ticker,
         ];
@@ -315,12 +322,25 @@ export async function getStaticBars(symbol, baseUrl, assetFetcher = null, option
         async function loadHistoryPackManifest() {
             if (historyPackManifestCache.value) return historyPackManifestCache.value;
             if (!historyPackManifestCache.promise) {
-                historyPackManifestCache.promise = fetchJson('/data/eod/history/pack-manifest.us-eu.json')
-                    .then((doc) => {
-                        historyPackManifestCache.value = doc || null;
-                        return historyPackManifestCache.value;
-                    })
-                    .catch(() => null);
+                historyPackManifestCache.promise = (async () => {
+                    const docs = [];
+                    for (const relPath of [
+                        '/data/eod/history/pack-manifest.global.json',
+                        '/data/eod/history/pack-manifest.us-eu.json'
+                    ]) {
+                        const doc = await fetchJson(relPath).catch(() => null);
+                        if (doc && typeof doc === 'object') docs.push(doc);
+                    }
+                    const merged = docs.length
+                        ? {
+                            ...docs[docs.length - 1],
+                            by_symbol: Object.assign({}, ...docs.map((doc) => doc.by_symbol || {})),
+                            by_canonical_id: Object.assign({}, ...docs.map((doc) => doc.by_canonical_id || {})),
+                        }
+                        : null;
+                    historyPackManifestCache.value = merged || null;
+                    return historyPackManifestCache.value;
+                })().catch(() => null);
             }
             return historyPackManifestCache.promise;
         }
@@ -383,12 +403,14 @@ export async function getStaticBars(symbol, baseUrl, assetFetcher = null, option
             return compactBars;
         }
 
-        const seriesCandidates = [
-            `/data/v3/series/adjusted/US__${cleanSymbol}.ndjson.gz`
-        ];
-        for (const relPath of seriesCandidates) {
-            const rows = await fetchGzipNdjson(relPath);
-            mergeInBars(rows);
+        if (!explicitNonUsAsset) {
+            const seriesCandidates = [
+                `/data/v3/series/adjusted/US__${cleanSymbol}.ndjson.gz`
+            ];
+            for (const relPath of seriesCandidates) {
+                const rows = await fetchGzipNdjson(relPath);
+                mergeInBars(rows);
+            }
         }
 
         if (hasRenderableHistory(mergedBars) && isFreshEnough(mergedBars)) {
@@ -479,15 +501,17 @@ export async function getStaticBars(symbol, baseUrl, assetFetcher = null, option
             }
         }
 
-        const latestCandidates = [
-            '/data/v3/eod/US/latest.ndjson.gz'
-        ];
-        for (const relPath of latestCandidates) {
-            const rows = await fetchGzipNdjson(relPath);
-            if (!Array.isArray(rows)) continue;
-            for (const candidate of candidates) {
-                const hit = rows.find((row) => String(row?.ticker || row?.symbol || '').toUpperCase() === candidate);
-                mergeInBars(hit ? [hit] : []);
+        if (!explicitNonUsAsset) {
+            const latestCandidates = [
+                '/data/v3/eod/US/latest.ndjson.gz'
+            ];
+            for (const relPath of latestCandidates) {
+                const rows = await fetchGzipNdjson(relPath);
+                if (!Array.isArray(rows)) continue;
+                for (const candidate of candidates) {
+                    const hit = rows.find((row) => String(row?.ticker || row?.symbol || '').toUpperCase() === candidate);
+                    mergeInBars(hit ? [hit] : []);
+                }
             }
         }
 

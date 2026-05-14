@@ -985,16 +985,25 @@ export function transformV2ToStockShape(v2Data, v2Meta, historicalData = null, g
   const historicalBars = Array.isArray(historicalData?.bars) ? historicalData.bars : [];
   const summaryPriceDate = toIsoDate(v2Data?.market_prices?.date);
   const historicalLatestDate = historicalBars.length ? toIsoDate(historicalBars[historicalBars.length - 1]?.date) : null;
-  const decisionCoreHasPageCoreBasis = Boolean(decisionCoreMin && summaryPriceDate);
+  const summaryProvider = String(v2Data?.market_prices?.source_provider || '').toLowerCase();
+  const summaryHasPageCoreBasis = Boolean(
+    summaryPriceDate
+    && (
+      decisionCoreMin
+      || v2Data?.page_core_contract
+      || v2Data?.canonical_asset_id
+      || ['page-core', 'page_core', 'historical-bars'].includes(summaryProvider)
+    )
+  );
   const summaryClose = finiteNumber(v2Data?.market_prices?.close);
   const historicalLatestClose = historicalBars.length ? finiteNumber(historicalBars[historicalBars.length - 1]?.close ?? historicalBars[historicalBars.length - 1]?.adjClose) : null;
-  const historicalBarsPriceCompatible = !decisionCoreHasPageCoreBasis || !materialPriceMismatch(summaryClose, historicalLatestClose);
+  const historicalBarsPriceCompatible = !summaryHasPageCoreBasis || !materialPriceMismatch(summaryClose, historicalLatestClose);
   const historicalBarsCurrentEnough = Boolean(
     historicalBars.length
     && historicalBarsPriceCompatible
     && (!summaryPriceDate
       || !historicalLatestDate
-      || (decisionCoreHasPageCoreBasis ? historicalLatestDate === summaryPriceDate : historicalLatestDate >= summaryPriceDate))
+      || (summaryHasPageCoreBasis ? historicalLatestDate === summaryPriceDate : historicalLatestDate >= summaryPriceDate))
   );
   const bars = historicalBarsCurrentEnough ? historicalBars : (v2Data.latest_bar ? [v2Data.latest_bar] : []);
   const latestBar = bars.length ? bars[bars.length - 1] : v2Data.latest_bar;

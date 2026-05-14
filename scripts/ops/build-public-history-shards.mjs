@@ -217,6 +217,7 @@ async function main() {
     if (!wantedByPack.has(pack)) wantedByPack.set(pack, new Map());
     wantedByPack.get(pack).set(String(canonicalId).toUpperCase(), {
       symbol,
+      canonical_id: String(canonicalId).toUpperCase(),
       limit: BENCHMARK_SYMBOLS.has(symbol) ? benchmarkTailBars : tailBars,
     });
     wantedAssets += 1;
@@ -267,21 +268,21 @@ async function main() {
       if (!target) return;
       const bars = compactBars(row?.bars || [], target.limit);
       if (bars.length >= 60) {
-        const key = shardKey(target.symbol, shardPrefixLen);
+        const key = shardKey(target.canonical_id || canonicalId, shardPrefixLen);
         if (!shards.has(key)) {
           const previousShardPath = path.join(outDir, `${key}.json.gz`);
           shards.set(key, incrementalMode && fs.existsSync(previousShardPath) ? readGzipJson(previousShardPath) : {});
         }
-        shards.get(key)[target.symbol] = bars;
+        shards.get(key)[target.canonical_id || canonicalId] = bars;
         summary.packed_assets += 1;
       } else {
         if (incrementalMode) {
-          const key = shardKey(target.symbol, shardPrefixLen);
+          const key = shardKey(target.canonical_id || canonicalId, shardPrefixLen);
           if (!shards.has(key)) {
             const previousShardPath = path.join(outDir, `${key}.json.gz`);
             shards.set(key, fs.existsSync(previousShardPath) ? readGzipJson(previousShardPath) : {});
           }
-          delete shards.get(key)[target.symbol];
+          delete shards.get(key)[target.canonical_id || canonicalId];
         }
         summary.missing_rows += 1;
       }
