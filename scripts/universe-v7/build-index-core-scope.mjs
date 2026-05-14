@@ -778,6 +778,77 @@ async function resolveIndexAssets(config, registry, token, options = {}) {
 }
 resolveIndexAssets.lastDiagnostics = [];
 
+async function resolveValidatedNasdaqExtension(registry) {
+  if (process.env.RV_INDEX_CORE_INCLUDE_VALIDATED_NASDAQ_EXTENSION !== '1') {
+    return { rows: [], membership: null, diagnostics: { enabled: false } };
+  }
+  const configuredPath = process.env.RV_INDEX_CORE_VALIDATED_NASDAQ_EXTENSION_PATH
+    || 'public/data/universe/v7/index-memberships/nasdaq_composite_validated_extension.json';
+  const extensionPath = path.isAbsolute(configuredPath) ? configuredPath : path.join(ROOT, configuredPath);
+  const doc = await readJsonMaybe(extensionPath);
+  if (!doc || doc.production_ready !== true || !Array.isArray(doc.constituents)) {
+    const error = new Error(`validated_nasdaq_extension_unavailable:${configuredPath}`);
+    error.exitCode = 4;
+    throw error;
+  }
+  const rows = [];
+  const missing = [];
+  for (const item of doc.constituents) {
+    const canonicalId = normalize(item?.canonical_id);
+    if (!canonicalId) continue;
+    const row = registry.byCanonical.get(canonicalId);
+    if (!row) {
+      if (missing.length < 50) missing.push(canonicalId);
+      continue;
+    }
+    rows.push({
+      ...row,
+      index_memberships: ['nasdaq_composite_validated_extension'],
+      scope_region: classifyScopeRegion(row) || 'US',
+      meta: {
+        ...(row.meta || {}),
+        source: 'nasdaq_composite_validated_extension',
+        target_market_date: doc.target_market_date || null,
+      },
+    });
+  }
+  if (missing.length) {
+    const error = new Error(`validated_nasdaq_extension_missing_registry_rows:${missing.join(',')}`);
+    error.exitCode = 4;
+    throw error;
+  }
+  const membership = {
+    schema: 'rv.index_membership.v1',
+    generated_at: doc.generated_at || nowIso(),
+    index_id: 'nasdaq_composite_validated_extension',
+    label: doc.label || 'Nasdaq Composite Validated Extension',
+    source_kind: doc.source_kind || 'historical_preview_plus_eodhd_registry_freshness_validation',
+    source_url: 'public/data/universe/v7/index-memberships/nasdaq_composite_validated_extension.json',
+    source_input_path: path.relative(ROOT, extensionPath),
+    expected_min: 0,
+    count: rows.length,
+    unmatched_count: 0,
+    unmatched: [],
+    constituents: rows.map((row) => ({
+      ticker: row.symbol,
+      name: row.name || row.symbol,
+      canonical_id: row.canonical_id,
+      type_norm: row.type_norm,
+    })).sort((a, b) => a.canonical_id.localeCompare(b.canonical_id)),
+  };
+  return {
+    rows,
+    membership,
+    diagnostics: {
+      enabled: true,
+      source: path.relative(ROOT, extensionPath),
+      target_market_date: doc.target_market_date || null,
+      count: rows.length,
+      extension_count: Number(doc.extension_count || 0),
+    },
+  };
+}
+
 async function backupOutputs(generatedAt) {
   const dir = path.join(BACKUP_DIR, safeStamp(generatedAt));
   await fs.mkdir(dir, { recursive: true });
@@ -1004,6 +1075,15 @@ async function build(options) {
   for (const row of etfRows) {
     if (!byCanonical.has(row.canonical_id)) byCanonical.set(row.canonical_id, row);
   }
+  const nasdaqExtension = await resolveValidatedNasdaqExtension(registry);
+  for (const row of nasdaqExtension.rows) {
+    if (!byCanonical.has(row.canonical_id)) {
+      byCanonical.set(row.canonical_id, row);
+    } else {
+      byCanonical.get(row.canonical_id).index_memberships.push('nasdaq_composite_validated_extension');
+    }
+  }
+  if (nasdaqExtension.membership) memberships.push(nasdaqExtension.membership);
   const indexAssetRows = await resolveIndexAssets(config, registry, token, options);
   for (const row of indexAssetRows) {
     if (!byCanonical.has(row.canonical_id)) {
@@ -1027,6 +1107,7 @@ async function build(options) {
     provider_budget: budget,
     eodhd_calls: eodhdCalls,
     etf_count: etfRows.length,
+    nasdaq_validated_extension: nasdaqExtension.diagnostics,
     index_asset_count: indexAssetRows.length,
     index_count: memberships.length,
     per_index: perIndex,
