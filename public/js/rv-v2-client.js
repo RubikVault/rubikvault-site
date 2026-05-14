@@ -599,12 +599,14 @@ export async function fetchV2StockPage(ticker) {
       const summary = pageCoreToSummary(pageCore.data);
       const governance = pageCoreToGovernance(pageCore.data);
       const shouldHydrateOptional = optionalHydrationEnabled();
+      const shouldHydrateHistoricalProfile = shouldHydrateOptional
+        || String(pageCore.data?.status_contract?.historical_profile_status || '').toLowerCase() === 'available_via_endpoint';
       const [stockApiResult, historicalResult, historicalProfileResult, fundamentalsResult] = await Promise.all([
         shouldHydrateOptional
           ? settleOptionalModuleWithBudget(fetchStockApiPayload(ticker), 'stock_api', 12000)
           : Promise.resolve({ ok: false, data: null, meta: {}, source: 'stock_api', error: 'optional_hydration_disabled' }),
         settleOptionalModuleWithBudget(fetchV2Historical(ticker), 'v2_historical'),
-        shouldHydrateOptional
+        shouldHydrateHistoricalProfile
           ? settleOptionalModuleWithBudget(fetchV2HistoricalProfile(ticker), 'v2_historical_profile')
           : Promise.resolve({ ok: false, data: null, meta: {}, source: 'v2_historical_profile', error: 'optional_hydration_disabled' }),
         shouldHydrateOptional
