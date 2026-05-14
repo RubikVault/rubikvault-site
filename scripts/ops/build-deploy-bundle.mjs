@@ -145,7 +145,7 @@ const RUNTIME_HISTORICAL_CANONICAL_IDS = String(process.env.RV_RUNTIME_HISTORICA
   .split(',')
   .map((item) => item.trim().toUpperCase())
   .filter(Boolean);
-const RUNTIME_HISTORICAL_SCOPE_CACHE = String(process.env.RV_RUNTIME_HISTORICAL_SCOPE_CACHE ?? '1') !== '0';
+const RUNTIME_HISTORICAL_SCOPE_CACHE = String(process.env.RV_RUNTIME_HISTORICAL_SCOPE_CACHE ?? '0') !== '0';
 const CANONICAL_IDS_PATH = path.join(PUBLIC_DIR, 'data/universe/v7/ssot/assets.global.canonical.ids.json');
 const historyShardCache = new Map();
 

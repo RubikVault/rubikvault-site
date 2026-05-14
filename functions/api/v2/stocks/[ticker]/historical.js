@@ -14,8 +14,12 @@ function historicalLimitForRequest(request) {
     const url = new URL(request.url);
     const params = url.searchParams;
     const requestedLimit = String(params.get('limit') || params.get('range') || '').trim().toLowerCase();
-    if (requestedLimit === 'all' || params.get('all') === '1') return 25000;
+    const parsedLimit = Number.parseInt(requestedLimit, 10);
+    if (Number.isFinite(parsedLimit) && parsedLimit > 0) return Math.min(parsedLimit, 25000);
     const host = url.hostname;
+    if (requestedLimit === 'all' || params.get('all') === '1') {
+      return host === 'localhost' || host === '127.0.0.1' ? 25000 : 1500;
+    }
     if (host === 'localhost' || host === '127.0.0.1') return 1500;
   } catch { /* keep default */ }
   return 750;
