@@ -3,7 +3,7 @@
  * Uses the V2/V4 contract path only and returns typed empty state when incomplete.
  */
 
-import { buildCanonicalMarketContext } from './stock-ssot.js';
+import { buildCanonicalMarketContext } from './stock-ssot.js?v=20260514-pagecore-price';
 
 const V2_TIMEOUT_MS = 15000;
 const V2_RETRY_DELAYS_MS = [250, 750, 2000];
