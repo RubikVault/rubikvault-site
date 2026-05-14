@@ -157,7 +157,9 @@ export function assessMarketDataConsistency({ marketPrices = null, marketStats =
     issues.push(`bar_close_outside_stats_envelope:${barClose}`);
   }
 
-  const useHistoricalBasis = issues.some((issue) =>
+  const summaryProvider = String(marketPrices?.source_provider || '').toLowerCase();
+  const trustedSummaryPrice = ['page-core', 'historical-bars', 'historical'].includes(summaryProvider);
+  const useHistoricalBasis = !trustedSummaryPrice && issues.some((issue) =>
     issue.startsWith('price_bar_scale_mismatch')
     || issue.startsWith('price_outside_stats_envelope')
     || issue.startsWith('price_bar_date_mismatch'),

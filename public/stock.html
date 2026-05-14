@@ -640,8 +640,16 @@
       const ssotMarketContext = data.ssot?.market_context || {};
       const historicalProfileEnvelope = data.historical_profile || null;
       const identity = buildPageIdentity(payload, ticker);
+      let urlAssetId = '';
+      try {
+        const candidate = String(new URLSearchParams(window.location.search || '').get('asset_id') || '').trim().toUpperCase();
+        if (/^[A-Z0-9_.-]+:[A-Z0-9_.-]+$/.test(candidate)) urlAssetId = candidate;
+      } catch (e) {
+        urlAssetId = '';
+      }
       const canonicalAssetId = String(
-        data?.ssot?.page_core?.canonical_asset_id
+        urlAssetId
+        || data?.ssot?.page_core?.canonical_asset_id
         || data?.canonical_id
         || data?.canonical_asset_id
         || data?.asset_id
