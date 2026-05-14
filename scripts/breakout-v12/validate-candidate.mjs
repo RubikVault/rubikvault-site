@@ -142,6 +142,7 @@ function main() {
     errors: schemas.errors,
     health: schemas.health,
     top500: schemas.top500,
+    all_scored: schemas.top500,
   })) {
     const file = path.join(publicDir, `${name}.json`);
     if (!fs.existsSync(file)) continue;

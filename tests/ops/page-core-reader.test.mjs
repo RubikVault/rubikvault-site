@@ -70,11 +70,13 @@ async function fixtureRoot() {
     'BRK-B': 'US:BRK-B',
     'BRK.B': 'US:BRK.B',
     AAPL: 'US:AAPL',
+    'CMGU.LSE': 'LSE:CMGU',
   };
   const rows = {
     'US:BRK-B': row('US:BRK-B', 'BRK-B'),
     'US:BRK.B': row('US:BRK.B', 'BRK.B'),
     'US:AAPL': row('US:AAPL', 'AAPL', '2026-04-20'),
+    'LSE:CMGU': row('LSE:CMGU', 'CMGU.LSE'),
   };
   await writeJson(path.join(root, 'public/data/page-core/latest.json'), {
     schema: 'rv.page_core_latest.v1',
@@ -114,6 +116,14 @@ test('page-core reader keeps punctuation-distinct protected aliases', async () =
   assert.equal(dot.ok, true);
   assert.equal(dash.canonical_id, 'US:BRK-B');
   assert.equal(dot.canonical_id, 'US:BRK.B');
+});
+
+test('page-core reader maps dotted exchange route to canonical exchange asset id', async () => {
+  const root = await fixtureRoot();
+  clearPageCoreReaderCache();
+  const result = await readPageCoreForTicker('CMGU.LSE', { rootDir: root, nowMs: Date.parse('2026-04-24T18:00:00Z') });
+  assert.equal(result.ok, true);
+  assert.equal(result.canonical_id, 'LSE:CMGU');
 });
 
 test('page-core reader rejects malformed and unmapped aliases without punctuation fallback', async () => {

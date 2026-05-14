@@ -137,7 +137,7 @@ function checkPublicArtifacts(args, failures) {
   if (lastGood.validation?.publishable !== true) failures.push('last_good manifest not publishable');
   if (latest.content_hash !== lastGood.content_hash) failures.push('latest/last_good content_hash mismatch');
   if (status && status.status !== 'ok') failures.push(`status.json not ok: ${status.status}/${status.reason}`);
-  const required = ['coverage', 'errors', 'health', 'top500'];
+  const required = ['coverage', 'errors', 'health', 'top500', 'all_scored', 'state_summary'];
   for (const key of required) {
     const rel = latest.files?.[key];
     const filePath = rel ? path.join(args.publicRoot, rel) : '';
@@ -146,13 +146,27 @@ function checkPublicArtifacts(args, failures) {
   }
   const topPath = latest.files?.top500 ? path.join(args.publicRoot, latest.files.top500) : '';
   const top500 = topPath && fs.existsSync(topPath) ? readJsonIfExists(topPath) : null;
+  const allScoredPath = latest.files?.all_scored ? path.join(args.publicRoot, latest.files.all_scored) : '';
+  const allScored = allScoredPath && fs.existsSync(allScoredPath) ? readJsonIfExists(allScoredPath) : null;
+  const stateSummaryPath = latest.files?.state_summary ? path.join(args.publicRoot, latest.files.state_summary) : '';
+  const stateSummary = stateSummaryPath && fs.existsSync(stateSummaryPath) ? readJsonIfExists(stateSummaryPath) : null;
   const topCount = Array.isArray(top500?.items) ? top500.items.length : Number(top500?.count || 0);
   if (topCount !== 500) failures.push(`top500 count ${topCount} != 500`);
-  if (String(latest.score_version || top500?.score_version || '').startsWith('breakout_scoring_v1.3')) {
-    const first = Array.isArray(top500?.items) ? top500.items[0] : null;
-    for (const key of ['breakout_status', 'legacy_state', 'support_zone', 'invalidation']) {
-      if (!first || !Object.hasOwn(first, key)) failures.push(`top500 V1.3 field missing: ${key}`);
-    }
+  const first = Array.isArray(top500?.items) ? top500.items[0] : null;
+  for (const key of ['asset_id', 'display_ticker', 'breakout_status', 'legacy_state', 'support_zone', 'invalidation']) {
+    if (!first || !Object.hasOwn(first, key)) failures.push(`top500 state field missing: ${key}`);
+  }
+  const allCount = Array.isArray(allScored?.items) ? allScored.items.length : Number(allScored?.count || 0);
+  if (allCount <= 0) failures.push('all_scored empty');
+  if (stateSummary?.contract_mode !== 'full_state_distribution') failures.push(`state_summary contract_mode not full_state_distribution: ${stateSummary?.contract_mode || '<missing>'}`);
+  if (stateSummary?.full_state_distribution_available !== true) failures.push('state_summary full_state_distribution_available not true');
+  if (stateSummary?.candidate_rank_only === true) failures.push('state_summary candidate_rank_only true');
+  if (stateSummary?.as_of !== latest.as_of) failures.push(`state_summary as_of ${stateSummary?.as_of || '<missing>'} != latest ${latest.as_of}`);
+  if (Number(stateSummary?.counts?.ALL || 0) !== allCount) {
+    failures.push(`state_summary ALL ${stateSummary?.counts?.ALL ?? '<missing>'} != all_scored ${allCount}`);
+  }
+  for (const key of ['SCANNED', 'SETUP', 'ARMED', 'TRIGGERED', 'CONFIRMED', 'FAILED']) {
+    if (!Number.isFinite(Number(stateSummary?.counts?.[key]))) failures.push(`state_summary count missing: ${key}`);
   }
   const shards = Array.isArray(latest.files?.shards) ? latest.files.shards : [];
   if (!shards.length) failures.push('manifest has no shards');

@@ -441,6 +441,16 @@ function readForecastSymbols() {
 
 function readBreakoutKeys() {
   const keys = new Map();
+  const variantsFor = (raw) => {
+    const value = normalizePageCoreAlias(raw);
+    if (!value) return [];
+    const variants = new Set([value]);
+    const dot = value.match(/^([A-Z0-9_-]+)\.([A-Z0-9_-]{2,8})$/);
+    if (dot) variants.add(`${dot[2]}:${dot[1]}`);
+    const colon = value.match(/^([A-Z0-9_-]{2,8}):([A-Z0-9_.-]+)$/);
+    if (colon) variants.add(`${colon[2]}.${colon[1]}`);
+    return Array.from(variants).map((item) => normalizePageCoreAlias(item)).filter(Boolean);
+  };
   for (const filePath of BREAKOUT_LATEST_MANIFEST_PATHS) {
     const doc = readJsonMaybe(filePath);
     if (!doc?.files) continue;
@@ -454,9 +464,10 @@ function readBreakoutKeys() {
       const source = readJsonMaybe(path.join(BREAKOUT_PUBLIC_ROOT, rel));
       const items = Array.isArray(source?.items) ? source.items : [];
       for (const item of items) {
-        for (const raw of [item.asset_id, item.assetId, item.canonical_id, item.symbol, item.ticker]) {
-          const key = normalizePageCoreAlias(raw);
-          if (key && !keys.has(key)) keys.set(key, item);
+        for (const raw of [item.asset_id, item.assetId, item.canonical_id, item.display_ticker, item.symbol, item.ticker]) {
+          for (const key of variantsFor(raw)) {
+            if (!keys.has(key)) keys.set(key, item);
+          }
         }
       }
     }
@@ -1300,8 +1311,11 @@ function buildPageCoreRow({ canonicalId, registryRow, decisionRow, lookupValue, 
       states: modelStates,
     },
     breakout_summary: breakoutItem ? {
+      asset_id: breakoutItem.asset_id || canonicalId,
+      display_ticker: breakoutItem.display_ticker || display,
       breakout_status: normalizeBreakoutItemStatus(breakoutItem),
       legacy_state: normalizeBreakoutItemLegacyState(breakoutItem),
+      status_reasons: Array.isArray(breakoutItem.status_reasons) ? breakoutItem.status_reasons : [],
       support_zone: breakoutItem.support_zone || null,
       invalidation: breakoutItem.invalidation || null,
       status_explanation: breakoutItem.status_explanation || null,
@@ -1310,6 +1324,7 @@ function buildPageCoreRow({ canonicalId, registryRow, decisionRow, lookupValue, 
       rank: numberOrNull(breakoutItem?.ui?.rank ?? breakoutItem?.rank),
       rank_percentile: numberOrNull(breakoutItem?.ui?.rank_percentile ?? breakoutItem?.rank_percentile),
       label: breakoutItem?.ui?.label || breakoutItem?.label || null,
+      ui: breakoutItem.ui || null,
     } : null,
     module_links: {
       historical: `/api/v2/stocks/${encodeURIComponent(display)}/historical?asset_id=${encodeURIComponent(canonicalId)}`,

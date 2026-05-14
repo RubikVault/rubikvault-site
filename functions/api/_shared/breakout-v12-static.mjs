@@ -13,6 +13,10 @@ export function buildBreakoutV12Candidates({ ticker = '', canonicalId = '', exch
     out.add(value);
     out.add(value.replace('.', ':'));
     out.add(value.replace(':', '.'));
+    const dot = value.match(/^([A-Z0-9_-]+)\.([A-Z0-9_-]{2,8})$/);
+    if (dot) out.add(`${dot[2]}:${dot[1]}`);
+    const colon = value.match(/^([A-Z0-9_-]{2,8}):([A-Z0-9_.-]+)$/);
+    if (colon) out.add(`${colon[2]}.${colon[1]}`);
     if (!value.includes(':') && !value.includes('.')) out.add(`US:${value}`);
   }
   const cleanTicker = upper(ticker);

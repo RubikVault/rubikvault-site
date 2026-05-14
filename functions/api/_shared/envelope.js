@@ -94,6 +94,17 @@ function isAllowedStatus(value) {
   return ALLOWED_STATUS.has(value.toLowerCase());
 }
 
+function normalizeEnvelopeStatus(value, fallback) {
+  if (typeof value !== "string") return fallback;
+  const raw = value.trim();
+  if (!raw) return fallback;
+  const lower = raw.toLowerCase();
+  if (isAllowedStatus(lower)) return lower;
+  if (lower === "missing" || lower === "not_found" || lower === "unmapped") return "no_data";
+  if (lower === "unavailable") return "stale";
+  return fallback;
+}
+
 function deriveStatus({ ok, meta, metadata }) {
   const raw = pickString(meta?.status, metadata?.status) || "";
   const rawLower = raw.toLowerCase();
@@ -216,6 +227,7 @@ export function okEnvelope(data, metaPartial) {
       version: metaPartial?.version
     }
   };
+  envelope.meta.status = normalizeEnvelopeStatus(envelope.meta.status, "fresh");
   assertEnvelope(envelope);
   return envelope;
 }
@@ -242,6 +254,7 @@ export function errorEnvelope(code, message, metaPartial, details) {
       version: metaPartial?.version
     }
   };
+  envelope.meta.status = normalizeEnvelopeStatus(envelope.meta.status, "error");
   assertEnvelope(envelope);
   return envelope;
 }

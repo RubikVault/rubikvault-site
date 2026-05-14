@@ -179,6 +179,25 @@ function unique(values) {
   return Array.from(new Set(values.filter(Boolean)));
 }
 
+function pageCoreAliasCandidates(value) {
+  const normalized = normalizePageCoreAlias(value);
+  const out = [normalized];
+  const dot = normalized.match(/^([A-Z0-9_-]+)\.([A-Z0-9_-]{2,8})$/);
+  if (dot) out.push(`${dot[2]}:${dot[1]}`);
+  const colon = normalized.match(/^([A-Z0-9_-]{2,8}):([A-Z0-9_.-]+)$/);
+  if (colon) out.push(`${colon[2]}.${colon[1]}`);
+  return unique(out.map(normalizePageCoreAlias).filter(isValidPageCoreAlias));
+}
+
+function pageCoreRouteCanonical(value) {
+  const normalized = normalizePageCoreAlias(value);
+  if (normalized.includes(':') && isValidPageCoreAlias(normalized)) return normalized;
+  const dot = normalized.match(/^([A-Z0-9_-]+)\.([A-Z0-9_-]{2,8})$/);
+  if (!dot) return null;
+  const reversed = normalizePageCoreAlias(`${dot[2]}:${dot[1]}`);
+  return isValidPageCoreAlias(reversed) ? reversed : null;
+}
+
 function normalizeNameForAliasBasis(value) {
   return String(value || '')
     .toLowerCase()
@@ -291,14 +310,15 @@ export function clearPageCoreReaderCache() {
 
 export async function readPageCoreForTicker(rawTicker, options = {}) {
   const query = normalizePageCoreAlias(rawTicker);
+  const queryCandidates = pageCoreAliasCandidates(query);
   let requestedCanonical = null;
   try {
     const url = options.request?.url ? new URL(options.request.url) : null;
     const candidate = normalizePageCoreAlias(url?.searchParams?.get('asset_id') || '');
     if (candidate && candidate.includes(':') && isValidPageCoreAlias(candidate)) requestedCanonical = candidate;
   } catch {}
-  const routeCanonical = query && query.includes(':') && isValidPageCoreAlias(query) ? query : null;
-  if (!isValidPageCoreAlias(query) && !requestedCanonical) {
+  const routeCanonical = pageCoreRouteCanonical(query);
+  if (!queryCandidates.length && !requestedCanonical) {
     return failure('INVALID_TICKER', 'Invalid or missing ticker parameter', { httpStatus: 400 });
   }
   try {
@@ -312,8 +332,11 @@ export async function readPageCoreForTicker(rawTicker, options = {}) {
     }
     let canonical = requestedCanonical || routeCanonical || null;
     if (!canonical) {
-      const aliasShard = await loadAliasShard(latest, aliasShardIndex(query), options);
-      canonical = normalizePageCoreAlias(aliasShard?.[query]);
+      for (const alias of queryCandidates) {
+        const aliasShard = await loadAliasShard(latest, aliasShardIndex(alias), options);
+        canonical = normalizePageCoreAlias(aliasShard?.[alias]);
+        if (canonical) break;
+      }
     }
     if (!canonical) {
       return failure('INVALID_OR_UNMAPPED_TICKER', 'Ticker is not mapped in page-core alias shards', {

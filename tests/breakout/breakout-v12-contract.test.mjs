@@ -68,10 +68,29 @@ function makePromoteCandidate(root, { asOf = '2026-04-29', generatedAt = '2026-0
   const item = {
     event_id: 'evt-1',
     asset_id: 'US:A',
+    display_ticker: 'A',
+    symbol: 'A',
     as_of: asOf,
     score_version: 'breakout_scoring_v12_incremental_v1',
+    status: 'BREAKOUT_CONFIRMED',
+    breakout_status: 'BREAKOUT_CONFIRMED',
+    legacy_state: 'CONFIRMED',
+    status_reasons: ['fixture'],
+    status_explanation: 'Fixture confirmed breakout.',
+    support_zone: {
+      detected: true,
+      center: 100,
+      low: 98,
+      high: 102,
+      width_pct: 0.04,
+      test_count: 3,
+      base_age_bars: 80,
+      failed_low_count: 1,
+      method: 'fixture',
+    },
+    invalidation: { close_below: 97, method: 'fixture' },
     scores: { final_signal_score: 0.75 },
-    ui: { rank: 1 },
+    ui: { rank: 1, status: 'BREAKOUT_CONFIRMED', legacy_state: 'CONFIRMED' },
   };
   const top = {
     schema_version: 'breakout_top_scores_v1',
@@ -118,6 +137,7 @@ function makePromoteCandidate(root, { asOf = '2026-04-29', generatedAt = '2026-0
   writeJson(path.join(publicRoot, 'errors.json'), { schema_version: 'breakout_errors_v1', as_of: asOf, errors: [] });
   writeJson(path.join(publicRoot, 'health.json'), { schema_version: 'breakout_health_v1', as_of: asOf, generated_at: generatedAt, status: 'ok', hard_fail: false, alert: false });
   writeJson(path.join(publicRoot, 'top500.json'), top);
+  writeJson(path.join(publicRoot, 'all_scored.json'), top);
   writeJson(path.join(shardDir, 'shard_000.json'), top);
   if (shardSuccess) fs.writeFileSync(path.join(shardDir, 'shard_000._SUCCESS'), 'ok\n');
   return candidate;
@@ -373,8 +393,20 @@ print(json.dumps({'history':str(history),'delta_root':str(root/'quant/breakout-v
   assert.equal(latest.as_of, '2026-04-28');
   assert.equal(latest.validation.publishable, true);
   assert.ok(latest.files.top500);
+  assert.ok(latest.files.all_scored);
+  assert.ok(latest.files.state_summary);
   const top = JSON.parse(fs.readFileSync(path.join(tmp, 'public', latest.files.top500), 'utf8'));
   assert.ok(top.items.length > 0);
+  for (const key of ['asset_id', 'display_ticker', 'breakout_status', 'legacy_state', 'support_zone', 'invalidation']) {
+    assert.ok(Object.hasOwn(top.items[0], key), key);
+  }
+  const allScored = JSON.parse(fs.readFileSync(path.join(tmp, 'public', latest.files.all_scored), 'utf8'));
+  assert.ok(allScored.items.length > 0);
+  const stateSummary = JSON.parse(fs.readFileSync(path.join(tmp, 'public', latest.files.state_summary), 'utf8'));
+  assert.equal(stateSummary.contract_mode, 'full_state_distribution');
+  assert.equal(stateSummary.full_state_distribution_available, true);
+  assert.equal(stateSummary.candidate_rank_only, false);
+  assert.equal(Number(stateSummary.counts.ALL), allScored.items.length);
   const internal = JSON.parse(fs.readFileSync(path.join(tmp, 'quant/breakout-v12/last_good.json'), 'utf8'));
   assert.equal(internal.as_of, '2026-04-28');
   assert.ok(fs.existsSync(internal.state_tail_root));

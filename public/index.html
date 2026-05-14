@@ -4927,12 +4927,12 @@
     let breakoutData = null;
     function normalizeHomeBreakoutState(item) {
       const raw = String(item?.legacy_state || item?.state || item?.ui?.legacy_state || item?.breakout_status || item?.status || item?.ui?.label || item?.label || 'NONE').toUpperCase();
+      if (raw === 'NO_DATA' || raw === 'NONE' || raw === 'NO_SETUP' || raw === 'DATA_INSUFFICIENT' || raw === 'UNELIGIBLE') return 'NONE';
       if (raw.includes('CONFIRMED')) return 'CONFIRMED';
-      if (raw.includes('FAILED')) return 'FAILED';
+      if (raw.includes('FAILED') || raw.includes('INVALIDATED')) return 'FAILED';
       if (raw.includes('TRIGGERED')) return 'TRIGGERED';
       if (raw.includes('ARMED') || raw.includes('READY')) return 'ARMED';
       if (raw.includes('SETUP') || raw.includes('BASE') || raw.includes('ACCUMULATION') || raw.includes('CANDIDATE')) return 'SETUP';
-      if (raw === 'NO_DATA' || raw === 'NONE' || raw === 'NO_SETUP') return raw;
       return raw || 'NONE';
     }
 
@@ -4971,6 +4971,7 @@
         const manifestResult = await fetchJson('/data/breakout/manifests/latest.json');
         const manifest = manifestResult?.payload;
         const top500Path = manifest?.files?.top500 ? `/data/breakout/${manifest.files.top500}` : null;
+        const allScoredPath = manifest?.files?.all_scored ? `/data/breakout/${manifest.files.all_scored}` : null;
         const stateSummaryPath = manifest?.files?.state_summary ? `/data/breakout/${manifest.files.state_summary}` : null;
         let stateSummary = null;
         if (manifest?.validation?.publishable === true && stateSummaryPath) {
@@ -4981,8 +4982,9 @@
           }
         }
         if (manifest?.validation?.publishable === true && top500Path) {
-          const topResult = await fetchJson(top500Path);
-          const items = Array.isArray(topResult?.payload?.items) ? topResult.payload.items.map(normalizeHomeBreakoutItem) : [];
+          const fullState = stateSummary?.full_state_distribution_available === true && allScoredPath;
+          const sourceResult = await fetchJson(fullState ? allScoredPath : top500Path);
+          const items = Array.isArray(sourceResult?.payload?.items) ? sourceResult.payload.items.map(normalizeHomeBreakoutItem) : [];
           if (items.length) {
             breakoutData = {
               source: 'breakout_manifest',
@@ -4990,9 +4992,9 @@
               candidate_rank_only: stateSummary?.candidate_rank_only === true || stateSummary?.contract_mode === 'candidate_rank',
               full_state_distribution_available: stateSummary?.full_state_distribution_available === true,
               state_summary: stateSummary,
-              as_of: manifest.as_of || topResult?.payload?.as_of || null,
-              target_market_date: manifest.target_market_date || manifest.as_of || topResult?.payload?.target_market_date || null,
-              score_version: manifest.score_version || topResult?.payload?.score_version || null,
+              as_of: manifest.as_of || sourceResult?.payload?.as_of || null,
+              target_market_date: manifest.target_market_date || manifest.as_of || sourceResult?.payload?.target_market_date || null,
+              score_version: manifest.score_version || sourceResult?.payload?.score_version || null,
               items
             };
             return breakoutData;
@@ -5019,6 +5021,7 @@
       const candidateRankOnly = data.candidate_rank_only === true
         || (data.contract_mode === 'candidate_rank' && items.every(i => i.candidate_only || i.state === 'CANDIDATE'));
       const summaryCounts = data.state_summary?.counts || {};
+      const scannedCount = Number(summaryCounts.SCANNED ?? summaryCounts.NONE ?? items.filter(i => i.state === 'NONE').length);
       const counts = candidateRankOnly ? {
         ALL: Number(summaryCounts.CANDIDATE || summaryCounts.ALL || items.length),
         SETUP: 0,
@@ -5028,7 +5031,7 @@
         FAILED: 0,
         CANDIDATE: Number(summaryCounts.CANDIDATE || items.length),
       } : {
-        ALL: Number(summaryCounts.ALL ?? items.filter(i => i.state !== 'NO_DATA' && i.state !== 'NONE').length),
+        ALL: scannedCount,
         SETUP: Number(summaryCounts.SETUP ?? items.filter(i => i.state === 'SETUP').length),
         ARMED: Number(summaryCounts.ARMED ?? items.filter(i => i.state === 'ARMED').length),
         TRIGGERED: Number(summaryCounts.TRIGGERED ?? items.filter(i => i.state === 'TRIGGERED').length),
@@ -5045,11 +5048,11 @@
         : '<i class="fa-solid fa-bolt" style="color:#38bdf8"></i> Breakout State Tracker';
       if (subEl) subEl.textContent = candidateRankOnly
         ? `${counts.CANDIDATE} ranked candidates · ${data.score_version || 'breakout model'}`
-        : `Full-state distribution · ${data.score_version || 'breakout model'}`;
+        : `${Number(summaryCounts.ALL ?? items.length)} scanned rows · ${data.score_version || 'breakout model'}`;
       if (noteEl) noteEl.textContent = candidateRankOnly
         ? 'Nightly feed publishes a ranked candidate list, not full SETUP/ARMED/TRIGGERED/CONFIRMED state counts.'
         : `Full state distribution as of ${data.as_of || data.target_market_date || 'latest'}.`;
-      if (labelAllEl) labelAllEl.textContent = candidateRankOnly ? 'CANDIDATES' : 'ALL';
+      if (labelAllEl) labelAllEl.textContent = candidateRankOnly ? 'CANDIDATES' : 'SCANNED';
       document.querySelectorAll('.brk-state-btn').forEach((button) => {
         button.style.display = candidateRankOnly ? 'none' : '';
       });
@@ -5090,12 +5093,12 @@
         container.style.display = 'block';
         document.getElementById('brk-home-table-title').innerText = candidateRankOnly
           ? 'Top ranked breakout candidates'
-          : (state === 'ALL' ? 'Breakout indicator rows' : `Stocks in ${state} State`);
+          : (state === 'ALL' ? 'Scanned rows without active setup' : `Stocks in ${state} State`);
 
         const rowList = (
           candidateRankOnly
             ? items
-            : (state === 'ALL' ? items.filter(i => i.state !== 'NO_DATA' && i.state !== 'NONE') : items.filter(i => i.state === state))
+            : (state === 'ALL' ? items.filter(i => i.state === 'NONE') : items.filter(i => i.state === state))
         ).slice(0, 10);
         if (rowList.length === 0) {
             tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:10px; color:#64748b;">No rows in this state</td></tr>';

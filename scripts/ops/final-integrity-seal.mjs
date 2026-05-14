@@ -20,6 +20,7 @@ import { evaluateCoveragePolicy } from '../lib/decision-bundle-contract.mjs';
 import { assertMayWriteProductionTruth } from './prod-runtime-guard.mjs';
 import { readLeafSeal, REQUIRED_LEAF_SEAL_STEP_IDS } from '../lib/write-leaf-seal.mjs';
 import { buildReleaseGateModel } from './lib/release-gate-model.mjs';
+import { evaluateBreakoutReadiness } from './lib/breakout-readiness.mjs';
 
 const ROOT = path.resolve(new URL('.', import.meta.url).pathname, '../..');
 export const FINAL_INTEGRITY_SEAL_PATH = path.join(ROOT, 'public/data/ops/final-integrity-seal-latest.json');
@@ -953,7 +954,8 @@ export function buildFinalIntegritySeal({
     : decisionPublicGreen && decisionBundleHealth.status === 'OK';
   const riskReady = decisionReady;
   const histReady = histStatus.green;
-  const breakoutReady = null;
+  const breakoutStatus = evaluateBreakoutReadiness({ repoRoot: ROOT, targetMarketDate: expectedTargetDate });
+  const breakoutReady = breakoutStatus.ready;
   const releaseGate = buildReleaseGateModel({
     coreReleaseReady,
     pageCoreReady,
@@ -962,6 +964,7 @@ export function buildFinalIntegritySeal({
     stockUiState: stockAnalyzerUiState,
     stockUiReleaseEligible: stockAnalyzerUiState?.release_eligible === true,
     histReady,
+    breakoutReady,
   });
   const overallUiReady = releaseGate.release_ui_ready;
   const mergedBlockingReasons = [...uniqueBlockingReasons, ...releaseGate.blocking_reasons];
@@ -996,6 +999,16 @@ export function buildFinalIntegritySeal({
     hist_ready: histReady,
     hist_release_blocking: false,
     breakout_ready: breakoutReady,
+    breakout_status: {
+      ready: breakoutReady,
+      as_of: breakoutStatus.manifest?.as_of || null,
+      score_version: breakoutStatus.manifest?.score_version || null,
+      all_scored_count: breakoutStatus.allScoredCount ?? null,
+      contract_mode: breakoutStatus.stateSummary?.contract_mode || null,
+      full_state_distribution_available: breakoutStatus.stateSummary?.full_state_distribution_available ?? null,
+      counts: breakoutStatus.stateSummary?.counts || null,
+      reasons: breakoutStatus.reasons,
+    },
     overall_ui_ready: overallUiReady,
     release_gate: releaseGate,
     full_universe_validated: artifactFullValidated,

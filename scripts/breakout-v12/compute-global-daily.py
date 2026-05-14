@@ -7,6 +7,7 @@ import json
 import math
 import os
 import resource
+import sys
 import time
 import uuid
 from pathlib import Path
@@ -15,8 +16,31 @@ from typing import Iterable, Any
 import duckdb
 import polars as pl
 
+REPO_ROOT = Path(__file__).resolve().parents[2]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+from scripts.breakout_compute.lib.breakout_math import (  # noqa: E402
+    accumulation_proxy_score,
+    classify_status,
+    compute_invalidation,
+    legacy_state_from_v13,
+    selling_exhaustion_score,
+)
+
 
 SCORE_VERSION = "breakout_scoring_v12_incremental_v1"
+STATUS_EXPLANATION = {
+    "UNELIGIBLE": "Asset is excluded from scoring because liquidity or history checks failed.",
+    "DATA_INSUFFICIENT": "Feature calculation could not produce enough usable bars.",
+    "NO_SETUP": "Asset is tradable, but no base is detected.",
+    "EARLY_ACCUMULATION": "Early base structure with failed lows. Not near trigger yet.",
+    "RIGHT_SIDE_BASE": "Base is turning up; demand proxies are improving.",
+    "BREAKOUT_READY": "Setup is near pivot with compression and acceptable relative strength.",
+    "BREAKOUT_CONFIRMED": "Close is above pivot with volume confirmation.",
+    "FAILED_BREAKOUT": "Prior trigger has moved back into the range.",
+    "INVALIDATED": "Support zone broke; setup is invalidated.",
+}
 
 
 def parse_args(argv: Iterable[str] | None = None) -> argparse.Namespace:
@@ -194,6 +218,22 @@ def run_duckdb(args: argparse.Namespace, local_glob: str, scores_path: Path) -> 
         r.rvol_percentile_asset_252d,
         r.atr_compression_percentile_252d,
         r.recent_signal_count_20d,
+        r._rows_in_window,
+        r.history_bars_used,
+        r.atr_pct_est_history,
+        r.support_zone_detected,
+        r.support_zone_center,
+        r.support_zone_low,
+        r.support_zone_high,
+        r.support_zone_width_pct,
+        r.support_test_count,
+        r.base_age_bars,
+        r.failed_low_count,
+        r.absorption_vol_ratio,
+        r.clv_trend_20,
+        r.cmf_recent_20,
+        r.obv_higher_low,
+        r.up_down_volume_ratio_20,
         r.rvol_percentile_sector_252d,
         r.sector_relative_strength_63d,
         r.liquidity_score,
@@ -239,10 +279,55 @@ def build_item(row: dict[str, Any], rank: int, total: int) -> dict[str, Any]:
     asset_id = str(row.get("asset_id") or "")
     as_of = str(row.get("as_of") or "")[:10]
     final_score = float(clean_float(row.get("final_signal_score")) or 0.0)
+    exchange = asset_id.split(":", 1)[0].upper() if ":" in asset_id else ""
+    symbol = str(row.get("symbol") or (asset_id.split(":", 1)[1] if ":" in asset_id else asset_id) or "").upper()
+    display_ticker = symbol if not exchange or exchange == "US" else f"{symbol}.{exchange}"
+    selling = selling_exhaustion_score(
+        clean_float(row.get("absorption_vol_ratio")) or 1.0,
+        int(clean_float(row.get("failed_low_count")) or 0),
+        bool(row.get("obv_higher_low")),
+        clean_float(row.get("cmf_recent_20")) or 0.0,
+    )
+    accum = accumulation_proxy_score(
+        clean_float(row.get("clv_trend_20")) or 0.0,
+        clean_float(row.get("cmf_recent_20")) or 0.0,
+        bool(row.get("obv_higher_low")),
+        clean_float(row.get("up_down_volume_ratio_20")) or 1.0,
+    )
+    enriched = {
+        **row,
+        "selling_exhaustion_score": selling,
+        "accumulation_proxy_score": accum,
+        "eligible": bool(row.get("asset_id")),
+    }
+    breakout_status, status_reasons = classify_status(enriched)
+    legacy_state = legacy_state_from_v13(
+        breakout_status,
+        clean_float(enriched.get("close_raw")),
+        clean_float(enriched.get("resistance_level")),
+        clean_float(enriched.get("atr_14")),
+        clean_float(enriched.get("rvol20")),
+        clean_float(enriched.get("recent_signal_count_20d")),
+        clean_float(enriched.get("distance_to_resistance_atr")),
+    )
+    support_zone = None
+    if bool(row.get("support_zone_detected")):
+        support_zone = {
+            "detected": True,
+            "center": clean_float(row.get("support_zone_center")),
+            "low": clean_float(row.get("support_zone_low")),
+            "high": clean_float(row.get("support_zone_high")),
+            "width_pct": clean_float(row.get("support_zone_width_pct")),
+            "test_count": int(clean_float(row.get("support_test_count")) or 0),
+            "base_age_bars": int(clean_float(row.get("base_age_bars")) or 0),
+            "failed_low_count": int(clean_float(row.get("failed_low_count")) or 0),
+            "method": "pivot_cluster_atr_adjusted",
+        }
     return {
         "event_id": stable_event_id(asset_id, as_of, SCORE_VERSION),
         "asset_id": asset_id,
-        "symbol": row.get("symbol") or asset_id,
+        "display_ticker": display_ticker,
+        "symbol": symbol or asset_id,
         "name": row.get("name") or asset_id,
         "asset_class": str(row.get("asset_class") or "").lower(),
         "region": str(row.get("region") or "OTHER").upper(),
@@ -250,12 +335,19 @@ def build_item(row: dict[str, Any], rank: int, total: int) -> dict[str, Any]:
         "as_of": as_of,
         "feature_date": json_value(row.get("date")),
         "score_version": SCORE_VERSION,
+        "status": breakout_status,
+        "breakout_status": breakout_status,
+        "legacy_state": legacy_state,
+        "status_reasons": status_reasons,
+        "status_explanation": STATUS_EXPLANATION.get(breakout_status),
         "scores": {
             "structure_score": clean_float(row.get("structure_score")),
             "volume_score": clean_float(row.get("volume_score")),
             "compression_score": clean_float(row.get("compression_score")),
             "relative_strength_score": clean_float(row.get("relative_strength_score")),
             "liquidity_score": clean_float(row.get("liquidity_score")),
+            "selling_exhaustion_score": selling,
+            "accumulation_proxy_score": accum,
             "regime_multiplier": clean_float(row.get("regime_multiplier")),
             "final_signal_score": final_score,
         },
@@ -270,7 +362,15 @@ def build_item(row: dict[str, Any], rank: int, total: int) -> dict[str, Any]:
             "recent_signal_count_20d": clean_float(row.get("recent_signal_count_20d")),
             "market_regime_score": clean_float(row.get("market_regime_score")),
             "sector_breadth_score": clean_float(row.get("sector_breadth_score")),
+            "history_bars_used": int(clean_float(row.get("history_bars_used")) or 0),
+            "absorption_vol_ratio": clean_float(row.get("absorption_vol_ratio")),
+            "clv_trend_20": clean_float(row.get("clv_trend_20")),
+            "cmf_recent_20": clean_float(row.get("cmf_recent_20")),
+            "obv_higher_low": bool(row.get("obv_higher_low")),
+            "up_down_volume_ratio_20": clean_float(row.get("up_down_volume_ratio_20")),
         },
+        "support_zone": support_zone,
+        "invalidation": compute_invalidation(enriched),
         "risk": {
             "close": clean_float(row.get("close_raw")),
             "atr14": clean_float(row.get("atr_14")),
@@ -281,6 +381,8 @@ def build_item(row: dict[str, Any], rank: int, total: int) -> dict[str, Any]:
             "label": "breakout_candidate" if final_score >= 0.55 else "breakout_watchlist",
             "rank": rank,
             "rank_percentile": round(1.0 - ((rank - 1) / max(1, total)), 6),
+            "status": breakout_status,
+            "legacy_state": legacy_state,
         },
         "reasons": [],
         "warnings": [],
@@ -292,7 +394,7 @@ def write_public_json(args: argparse.Namespace, scores_path: Path, counts: dict[
     public_root = candidate_root / "public"
     public_root.mkdir(parents=True, exist_ok=True)
     df = pl.read_parquet(scores_path)
-    rows = df.head(max(int(args.max_top), int(args.max_shard))).to_dicts() if not df.is_empty() else []
+    rows = df.to_dicts() if not df.is_empty() else []
     total = int(df.height)
     items = [build_item(row, idx + 1, total) for idx, row in enumerate(rows)]
     top_items = items[: int(args.max_top)]
@@ -305,6 +407,17 @@ def write_public_json(args: argparse.Namespace, scores_path: Path, counts: dict[
         "items": top_items,
     }
     atomic_write_json(public_root / "top500.json", top_payload)
+    atomic_write_json(
+        public_root / "all_scored.json",
+        {
+            "schema_version": "breakout_top_scores_v1",
+            "as_of": str(args.as_of)[:10],
+            "generated_at": utc_now_iso(),
+            "score_version": SCORE_VERSION,
+            "count": len(items),
+            "items": items,
+        },
+    )
     for region in sorted({str(item["region"] or "OTHER").upper() for item in items} | {"US", "EU", "ASIA", "OTHER"}):
         shard_items = [item for item in items if str(item["region"] or "OTHER").upper() == region][: int(args.max_shard)]
         shard_dir = public_root / "shards" / f"region={region}"

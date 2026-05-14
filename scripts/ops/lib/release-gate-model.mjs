@@ -31,6 +31,7 @@ export function buildReleaseGateModel({
   stockUiState = null,
   stockUiReleaseEligible = null,
   histReady = null,
+  breakoutReady = null,
   previewSmokeOk = true,
   requiredFieldCoverageMin = DEFAULT_REQUIRED_FIELD_COVERAGE_MIN,
 } = {}) {
@@ -57,6 +58,7 @@ export function buildReleaseGateModel({
   if (contractViolations > 0) blockingReasons.push(reason('stock_ui_contract_violations', 'critical', { count: contractViolations }));
   if (missingScopeRows > 0) blockingReasons.push(reason('stock_ui_missing_scope_rows', 'critical', { count: missingScopeRows }));
   if (falseGreenCount > 0) blockingReasons.push(reason('false_green_ui_render', 'critical', { count: falseGreenCount }));
+  if (breakoutReady === false) blockingReasons.push(reason('breakout_not_ready'));
   if (!bool(previewSmokeOk)) blockingReasons.push(reason('preview_smoke_not_ok'));
 
   const warningReasons = [];
@@ -74,6 +76,7 @@ export function buildReleaseGateModel({
     contract_violation_total: contractViolations,
     missing_scope_rows: missingScopeRows,
     hist_ready: histReady,
+    breakout_ready: breakoutReady,
     hist_release_blocking: false,
     blocking_reasons: blockingReasons,
     warning_reasons: warningReasons,
