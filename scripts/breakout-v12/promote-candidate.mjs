@@ -232,8 +232,8 @@ function compactBreakoutItem(item) {
     status: breakoutStatus,
     legacy_state: legacyState,
     status_reasons: Array.isArray(item.status_reasons) ? item.status_reasons.slice(0, 6) : [],
-    support_zone: compactObject(item.support_zone),
-    invalidation: compactObject(item.invalidation),
+    support_zone: compactObject(item.support_zone) || {},
+    invalidation: compactObject(item.invalidation) || {},
     status_explanation: item.status_explanation || item.explanation || null,
     scores: compactScores(item.scores),
     final_signal_score: Number.isFinite(Number(item?.scores?.final_signal_score ?? item.final_signal_score))
