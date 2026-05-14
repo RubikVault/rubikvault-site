@@ -832,8 +832,17 @@ async function main() {
   if (decisionBundleMode) {
     let buyRows = decisionBundleMode.rows || [];
     let pageCoreGuard = null;
+    let staleMarketDataFiltered = 0;
     if (decisionSource === 'decision-core') {
       buyRows = await enrichDecisionRowsFromLocalUniverse(buyRows);
+      if (requestedTargetDate) {
+        const beforeFreshnessFilter = buyRows.length;
+        buyRows = buyRows.filter((row) => {
+          const marketDataAsOf = normalizeDateId(row?.market_data_as_of);
+          return Boolean(marketDataAsOf && marketDataAsOf >= requestedTargetDate);
+        });
+        staleMarketDataFiltered = beforeFreshnessFilter - buyRows.length;
+      }
     }
     if (decisionSource === 'decision-core' && process.env.BEST_SETUPS_DISABLE_PAGE_CORE_GUARD !== '1') {
       pageCoreGuard = await buildPageCoreBuyGuard(requestedTargetDate);
@@ -881,6 +890,7 @@ async function main() {
         candidate_counts: {
           decision_bundle_buy_rows: buyRows.length,
           unique_tickers: new Set(buyRows.map((row) => row.ticker)).size,
+          stale_market_data_filtered: staleMarketDataFiltered,
         },
         page_core_guard: pageCoreGuard ? {
           available: pageCoreGuard.available,
