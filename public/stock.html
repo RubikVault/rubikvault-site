@@ -131,15 +131,18 @@
 
     .tf-btn,
     .cl-btn {
-      padding: 10px 12px;
-      min-height:44px;
+      padding: 8px 10px;
+      min-height:36px;
+      min-width:42px;
       border-radius: 8px;
       border: 1px solid var(--border);
       background: rgba(255, 255, 255, 0.03);
       color: var(--text-dim);
-      font-size: .68rem;
+      font-size: .62rem;
       font-weight: 600;
-      cursor: pointer
+      cursor: pointer;
+      line-height:1;
+      white-space:nowrap
     }
 
     .tf-btn:hover,
@@ -360,7 +363,6 @@
         padding: 1rem 1rem 2rem
       }
 
-      .tf-btn,
       .cl-btn,
       .hp-btn {
         flex: 1
@@ -625,7 +627,8 @@
       const _guard = guardPayload(payload, ticker);
       if (_guard.warnings.length) console.debug('[RV Guard]', _guard.warnings);
 
-      const data = payload.data || {}, meta = payload.metadata || {}, s = data.market_stats?.stats || {}, prices = data.market_prices || {}, bars = data.bars || [], change = data.change || {};
+      const data = payload.data || {}, meta = payload.metadata || {}, s = data.market_stats?.stats || {}, prices = data.market_prices || {}, change = data.change || {};
+      let bars = Array.isArray(data.bars) ? data.bars : [];
       const _integrity = _guard.integrity || {};
       const _integrityFields = _integrity.fields || {};
       const _decisionBlockedByIntegrity = _integrity.decisionReadiness === 'UNAVAILABLE';
@@ -636,8 +639,76 @@
       window._rvUiIntegrity = _integrity;
       const ssotMarketContext = data.ssot?.market_context || {};
       const historicalProfileEnvelope = data.historical_profile || null;
-      const lastBar = bars.length ? bars[bars.length - 1] : {};
       const identity = buildPageIdentity(payload, ticker);
+      const canonicalAssetId = String(
+        data?.ssot?.page_core?.canonical_asset_id
+        || data?.canonical_id
+        || data?.canonical_asset_id
+        || data?.asset_id
+        || payload?.canonical_asset_id
+        || meta?.request?.canonical_id
+        || ticker
+        || ''
+      ).toUpperCase();
+      async function hydrateChartBars(currentBars) {
+        if (Array.isArray(currentBars) && currentBars.length >= 2000) return currentBars;
+        const rawTicker = String(data?.ticker || identity?.ticker || ticker || '').trim();
+        if (!rawTicker) return currentBars || [];
+        const params = new URLSearchParams({ range: 'all' });
+        if (canonicalAssetId.includes(':')) params.set('asset_id', canonicalAssetId);
+        const mergeBarsByDate = (...sets) => {
+          const byDate = new Map();
+          for (const set of sets) {
+            if (!Array.isArray(set)) continue;
+            for (const bar of set) {
+              const date = String(bar?.date || '');
+              if (!date) continue;
+              byDate.set(date, bar);
+            }
+          }
+          return [...byDate.values()].sort((a, b) => String(a.date).localeCompare(String(b.date)));
+        };
+        try {
+          const [historyDoc, stockDoc] = await Promise.all([
+            fetch(`/api/v2/stocks/${encodeURIComponent(rawTicker)}/historical?${params.toString()}`, { cache: 'no-store' })
+              .then(res => res.ok ? res.json() : null).catch(() => null),
+            fetch(`/api/stock?ticker=${encodeURIComponent(rawTicker)}`, { cache: 'no-store' })
+              .then(res => res.ok ? res.json() : null).catch(() => null),
+          ]);
+          const historyBars = Array.isArray(historyDoc?.data?.bars) ? historyDoc.data.bars : (Array.isArray(historyDoc?.bars) ? historyDoc.bars : []);
+          const stockBars = Array.isArray(stockDoc?.data?.bars) ? stockDoc.data.bars : [];
+          const merged = mergeBarsByDate(historyBars, currentBars, stockBars);
+          return merged.length > (currentBars?.length || 0) ? merged : (currentBars || []);
+        } catch {
+          return currentBars || [];
+        }
+      }
+      bars = await hydrateChartBars(bars);
+      data.bars = bars;
+      const lastBar = bars.length ? bars[bars.length - 1] : {};
+      async function loadHistoricalResearchInsights(assetId) {
+        const rawId = String(assetId || '').toUpperCase();
+        const id = rawId.includes(':') ? rawId : (rawId ? `US:${rawId}` : '');
+        if (!id.includes(':')) return null;
+        const [exchange, symbolRaw] = id.split(':');
+        const symbol = String(symbolRaw || '').replace(/[^A-Z0-9]/g, '').toUpperCase();
+        const shardKey = `${exchange.replace(/[^A-Z0-9_-]/g, '_')}-${(symbol[0] || '0')}`;
+        try {
+          const [manifestRes, shardRes] = await Promise.all([
+            fetch('/data/historical-insights/latest.json', { cache: 'no-store' }).then(r => r.ok ? r.json() : null).catch(() => null),
+            fetch(`/data/historical-insights/shards/${encodeURIComponent(shardKey)}.json`, { cache: 'no-store' }).then(r => r.ok ? r.json() : null).catch(() => null),
+          ]);
+          const row = shardRes?.by_asset?.[id] || null;
+          if (!row) return {
+            availability: { status: 'missing', reason: 'No historical research projection for this asset.' },
+            manifest: manifestRes,
+          };
+          return { ...row, manifest: manifestRes };
+        } catch (error) {
+          return { availability: { status: 'missing', reason: 'Historical research projection unavailable.' } };
+        }
+      }
+      const historicalResearchInsights = await loadHistoricalResearchInsights(canonicalAssetId);
       const close = identity.pageClose;
       const atr = Number.isFinite(s.atr14) ? s.atr14 : null;
       const atrPct = close > 0 && atr != null ? (atr / close * 100) : null;
@@ -1453,11 +1524,39 @@
       });
 
       // ── Render Chart ──
-      function svgChart(height, id, bc) {
-        if (_chartBlockedByIntegrity) {
-          return '<div style="height:' + height + 'px;display:flex;align-items:center;justify-content:center;text-align:center;padding:.8rem;background:rgba(248,113,113,0.06);border:1px solid rgba(248,113,113,0.16);border-radius:8px;color:var(--text-dim)">Chart unavailable — data integrity issue</div>';
+      function barsForChartRange(rangeKey) {
+        const key = String(rangeKey || '1M').toUpperCase();
+        const map = { '3D': 3, '1W': 5, '1M': 22, '6M': 130, '1Y': 252, '10Y': 2520, 'ALL': bars.length };
+        return map[key] || 22;
+      }
+
+      function downsampleChartBars(sourceBars, maxPoints = 420) {
+        if (!Array.isArray(sourceBars) || sourceBars.length <= maxPoints) return sourceBars || [];
+        const keep = new Set([0, sourceBars.length - 1]);
+        const bucketSize = Math.ceil(sourceBars.length / Math.max(1, maxPoints / 3));
+        for (let start = 0; start < sourceBars.length; start += bucketSize) {
+          const end = Math.min(sourceBars.length, start + bucketSize);
+          let minIdx = start;
+          let maxIdx = start;
+          for (let i = start; i < end; i += 1) {
+            const price = Number(sourceBars[i]?.adjClose ?? sourceBars[i]?.close);
+            const minPrice = Number(sourceBars[minIdx]?.adjClose ?? sourceBars[minIdx]?.close);
+            const maxPrice = Number(sourceBars[maxIdx]?.adjClose ?? sourceBars[maxIdx]?.close);
+            if (Number.isFinite(price) && (!Number.isFinite(minPrice) || price < minPrice)) minIdx = i;
+            if (Number.isFinite(price) && (!Number.isFinite(maxPrice) || price > maxPrice)) maxIdx = i;
+          }
+          keep.add(start);
+          keep.add(minIdx);
+          keep.add(maxIdx);
+          keep.add(end - 1);
         }
-        const recent = bars.slice(-(bc || 60));
+        return [...keep].sort((a, b) => a - b).map((idx) => sourceBars[idx]);
+      }
+
+      function svgChart(height, id, bc) {
+        const sourceBarCount = Math.min(Number(bc || 60), bars.length);
+        const sourceBars = bars.slice(-sourceBarCount);
+        const recent = downsampleChartBars(sourceBars);
         const cl = recent.map(b => Number(b.adjClose ?? b.close)).filter(Number.isFinite);
         const dates = recent.map(b => b.date);
         if (cl.length < 3) return '<div style="height:' + height + 'px;display:flex;align-items:center;justify-content:center;text-align:center;padding:.8rem;background:rgba(255,255,255,0.02);color:var(--text-dim)">Chart unavailable — full historical bars unavailable; latest EOD price shown above.</div>';
@@ -1478,7 +1577,18 @@
 
         setTimeout(() => {
           const el = document.getElementById(uniqId);
-          if (el) el._chartData = { cl, dates, mn, mx, rn, height };
+          if (el) el._chartData = {
+            cl,
+            dates,
+            mn,
+            mx,
+            rn,
+            height,
+            source_bar_count: sourceBarCount,
+            rendered_point_count: cl.length,
+            history_start_date: sourceBars[0]?.date || null,
+            history_end_date: sourceBars[sourceBars.length - 1]?.date || null
+          };
         }, 50);
 
         return `
@@ -2026,8 +2136,8 @@
         <div>
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.4rem">
             <div style="font-size:.65rem;color:var(--text-dim);font-weight:700">PRICE HISTORY</div>
-            <div style="display:flex;gap:.25rem" id="tf-btns">
-              ${_chartBlockedByIntegrity ? '' : ['1W', '1M', '6M', '1Y', 'ALL'].map(tf => `<button class="tf-btn ${tf === '1M' ? 'active' : ''}" data-tf="${tf}" onclick="window._switchTF(this)">${tf}</button>`).join('')}
+            <div style="display:flex;gap:.2rem;flex-wrap:nowrap;overflow-x:auto;max-width:100%;padding-bottom:1px" id="tf-btns">
+              ${bars.length ? ['3D', '1W', '1M', '6M', '1Y', '10Y', 'ALL'].map(tf => `<button class="tf-btn ${tf === '1M' ? 'active' : ''}" data-tf="${tf}" onclick="window._switchTF(this)">${tf}</button>`).join('') : ''}
             </div>
           </div>
           <div id="tf-chart">${svgChart(180, 'chg-main', 22)}</div>
@@ -2562,8 +2672,92 @@
         (function renderHistIntelMatrix() {
           const el = document.getElementById('rv-hist-intel');
           if (!el) return;
+          const latestClose = (idx = 0) => {
+            const b = bars[bars.length - 1 - idx];
+            return b ? Number(b.adjClose ?? b.close) : null;
+          };
+          const patternActive = (patternId) => {
+            const id = String(patternId || '').toLowerCase();
+            if (!id || bars.length < 2) return false;
+            const last = bars[bars.length - 1];
+            const prev = bars[bars.length - 2];
+            if (id.startsWith('month_')) {
+              const m = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'][new Date(pageAsOf || last.date).getUTCMonth()];
+              return id === `month_${m}`;
+            }
+            const streak = id.match(/^green_streak_(\d+)$/);
+            if (streak) {
+              const n = Number(streak[1]);
+              if (bars.length <= n) return false;
+              for (let i = 0; i < n; i += 1) {
+                const a = latestClose(i);
+                const b = latestClose(i + 1);
+                if (!(a != null && b != null && a > b)) return false;
+              }
+              return true;
+            }
+            const seq = id.match(/^seq_([gr]+)$/);
+            if (seq) {
+              const letters = seq[1].split('').reverse();
+              if (bars.length <= letters.length) return false;
+              return letters.every((letter, i) => {
+                const a = latestClose(i);
+                const b = latestClose(i + 1);
+                return letter === 'g' ? a > b : a < b;
+              });
+            }
+            if (id === 'inside_day') return Number(last.high) <= Number(prev.high) && Number(last.low) >= Number(prev.low);
+            const highMatch = id.match(/^new_(\d+)d_high$/);
+            if (highMatch) {
+              const n = Number(highMatch[1]);
+              const recent = bars.slice(-Math.min(n, bars.length));
+              const maxHigh = Math.max(...recent.map(b => Number(b.high ?? b.close)).filter(Number.isFinite));
+              return Number(last.high ?? last.close) >= maxHigh;
+            }
+            if (id === 'price_up_vol_up') return Number(last.close) > Number(prev.close) && Number(last.volume || 0) > Number(prev.volume || 0);
+            if (id === 'price_up_vol_down') return Number(last.close) > Number(prev.close) && Number(last.volume || 0) < Number(prev.volume || 0);
+            if (id === 'gap_up') return Number(last.open) > Number(prev.close);
+            if (id === 'gap_down') return Number(last.open) < Number(prev.close);
+            if (id === 'rsi14_gt_70') return Number(s.rsi14) > 70;
+            if (id === 'rsi14_gt_75') return Number(s.rsi14) > 75;
+            return false;
+          };
+          const researchPanel = (() => {
+            const row = historicalResearchInsights || null;
+            const rules = Array.isArray(row?.top_rules) ? row.top_rules : [];
+            if (!rules.length) return `<div class="section" style="height:auto;opacity:${historicalView.opacity}"><div style="padding:.75rem;border-radius:8px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.05)"><div style="font-size:.78rem;font-weight:700;color:var(--text);margin-bottom:.25rem">Historical research insights unavailable</div><div style="font-size:.62rem;color:var(--text-muted)">${_esc(row?.availability?.reason || 'No validated historical research projection for this asset.')}</div></div></div>`;
+            const enriched = rules.map(rule => ({ ...rule, active_today: patternActive(rule.pattern_id) }));
+            enriched.sort((a, b) => Number(b.active_today) - Number(a.active_today) || Number(b.evidence_score || 0) - Number(a.evidence_score || 0));
+            const fmtPctLocal = (v, d = 1) => v == null ? '—' : `${(Number(v) * 100).toFixed(d)}%`;
+            const cards = enriched.slice(0, 5).map(rule => {
+              const active = rule.active_today === true;
+              const color = active ? 'var(--green)' : rule.strength === 'highlight' ? 'var(--accent)' : 'var(--yellow)';
+              return `<div style="padding:.55rem;border-radius:8px;background:${active ? 'rgba(16,185,129,.08)' : 'rgba(255,255,255,.02)'};border:1px solid ${active ? 'rgba(16,185,129,.25)' : 'var(--border)'}">
+                <div style="display:flex;justify-content:space-between;gap:.5rem;align-items:center;margin-bottom:.25rem">
+                  <div style="font-size:.7rem;font-weight:800;color:${color}">${_esc(rule.label || rule.pattern_id || 'Historical rule')}</div>
+                  <span style="font-size:.5rem;font-weight:800;padding:2px 6px;border-radius:999px;background:rgba(255,255,255,.04);color:${color}">${active ? 'ACTIVE TODAY' : String(rule.strength || 'EDGE').toUpperCase()}</span>
+                </div>
+                <div style="font-size:.58rem;color:var(--text-muted);line-height:1.45">${_esc(rule.entry_condition || '')} ${_esc(rule.exit_rule || '')}</div>
+                <div style="display:flex;gap:.6rem;flex-wrap:wrap;margin-top:.35rem;font-size:.58rem;color:var(--text-dim)">
+                  <span>Win rate: <strong style="color:var(--text)">${fmtPctLocal(rule.win_rate)}</strong></span>
+                  <span>Avg return: <strong style="color:${Number(rule.avg_return) >= 0 ? 'var(--green)' : 'var(--red)'}">${fmtPctLocal(rule.avg_return)}</strong></span>
+                  <span>Sample: <strong style="color:var(--text)">${Number(rule.sample_size || 0).toLocaleString()}</strong></span>
+                </div>
+              </div>`;
+            }).join('');
+            return `<div class="section" style="height:auto;opacity:${historicalView.opacity}">
+              <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:.75rem;flex-wrap:wrap;margin-bottom:.6rem">
+                <div>
+                  <h2 style="margin:0">Historical research insights</h2>
+                  <div style="font-size:.58rem;color:var(--text-dim);margin-top:.2rem">Validated chart-pattern rules from long-run historical analysis. Background context, not financial advice.</div>
+                </div>
+                <div style="font-size:.5rem;color:var(--text-muted)">Research: ${_esc(row.last_research_date || 'latest')} · ${(row.bars_count || 0).toLocaleString()} bars</div>
+              </div>
+              <div style="display:grid;grid-template-columns:1fr;gap:.45rem">${cards}</div>
+            </div>`;
+          })();
           if (!hpDoc?.events || typeof hpDoc.events !== 'object') {
-            el.innerHTML = '<div class="section" style="height:auto;opacity:' + historicalView.opacity + '"><div style="padding:.75rem;border-radius:8px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.05)"><div style="font-size:.78rem;font-weight:700;color:var(--text);margin-bottom:.25rem">Historical signal profile unavailable</div><div style="font-size:.62rem;color:var(--text-muted)">' + _esc(hpAvailability.reason || 'Historical profile is still loading for this asset.') + '</div></div></div>';
+            el.innerHTML = researchPanel + '<div class="section" style="height:auto;opacity:' + historicalView.opacity + '"><div style="padding:.75rem;border-radius:8px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.05)"><div style="font-size:.78rem;font-weight:700;color:var(--text);margin-bottom:.25rem">Historical signal profile unavailable</div><div style="font-size:.62rem;color:var(--text-muted)">' + _esc(hpAvailability.reason || 'Historical profile is still loading for this asset.') + '</div></div></div>';
             return;
           }
           const HZS = [
@@ -2607,7 +2801,7 @@
             : '';
           const matrixId = 'hist-signal-profile-table';
           const detailMarkup = `<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:.7rem"><thead>${headerRow}${subRow}</thead><tbody>${dataRows}</tbody></table></div>`;
-          el.innerHTML = `<div class="section" style="height:auto;opacity:${historicalView.opacity}">
+          el.innerHTML = researchPanel + `<div class="section" style="height:auto;opacity:${historicalView.opacity}">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.6rem;gap:.75rem;flex-wrap:wrap">
           <div>
             <h2 style="margin:0">Historical signal profile${_driftBadge}</h2>
@@ -2624,8 +2818,8 @@
       })();
 
       window._switchTF = function (b) {
-        const m = { '1W': 5, '1M': 22, '6M': 130, '1Y': 252, 'ALL': bars.length };
-        document.getElementById('tf-chart').innerHTML = svgChart(180, 'chg-' + b.dataset.tf, m[b.dataset.tf] || 22);
+        const rangeKey = b.dataset.tf || '1M';
+        document.getElementById('tf-chart').innerHTML = svgChart(180, 'chg-' + rangeKey, barsForChartRange(rangeKey));
         document.querySelectorAll('#tf-btns .tf-btn').forEach(x => x.classList.remove('active'));
         b.classList.add('active');
       };

@@ -239,36 +239,37 @@
           style="margin-top: 2.2rem; text-align: left; background: rgba(15, 23, 42, 0.35); border: 1px solid rgba(147, 197, 253, 0.2); border-radius: 12px; padding: 1rem; position: relative;">
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
             <div>
-              <div style="font-size: 1rem; font-weight: 700; color: #f8fafc; display:flex; align-items:center; gap:5px;">
-                <i class="fa-solid fa-bolt" style="color:#38bdf8"></i> Stocks Breakouts Tracker (V2.0)
+              <div style="font-size: 1rem; font-weight: 700; color: #f8fafc; display:flex; align-items:center; gap:5px;" id="brk-home-title">
+                <i class="fa-solid fa-bolt" style="color:#38bdf8"></i> Breakout Candidates
               </div>
-              <div style="font-size: 0.8rem; color: #94a3b8;">Wyckoff Absorption & Setup Pipeline</div>
+              <div style="font-size: 0.8rem; color: #94a3b8;" id="brk-home-subtitle">Loading breakout contract...</div>
             </div>
             <a href="/breakout-all" style="font-size:0.75rem; color: #38bdf8; text-decoration:none; font-weight:600;">View All <i class="fa-solid fa-arrow-right"></i></a>
           </div>
+          <div id="brk-home-contract-note" style="font-size:.72rem;color:#94a3b8;margin:-.4rem 0 .85rem;">Breakout state contract loading.</div>
 
           <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(96px, 1fr)); gap: 0.75rem; margin-bottom: 1rem;" id="brk-home-buttons">
             <button onclick="toggleBreakoutHomeView('ALL')" style="padding:0.75rem; background:rgba(148, 163, 184, 0.08); border:1px solid rgba(148, 163, 184, 0.2); border-radius:10px; cursor:pointer;" class="brk-home-btn" id="btn-h-all">
               <div style="font-size:1.5rem; font-weight:800; color:#cbd5e1;" id="cnt-h-all">-</div>
-              <div style="font-size:0.6rem; color:#94a3b8; font-weight:700;">ALL</div>
+              <div style="font-size:0.6rem; color:#94a3b8; font-weight:700;" id="lbl-h-all">ALL</div>
             </button>
-            <button onclick="toggleBreakoutHomeView('SETUP')" style="padding:0.75rem; background:rgba(245, 158, 11, 0.08); border:1px solid rgba(245, 158, 11, 0.2); border-radius:10px; cursor:pointer;" class="brk-home-btn" id="btn-h-setup">
+            <button onclick="toggleBreakoutHomeView('SETUP')" style="padding:0.75rem; background:rgba(245, 158, 11, 0.08); border:1px solid rgba(245, 158, 11, 0.2); border-radius:10px; cursor:pointer;" class="brk-home-btn brk-state-btn" id="btn-h-setup">
               <div style="font-size:1.5rem; font-weight:800; color:#f59e0b;" id="cnt-h-setup">-</div>
               <div style="font-size:0.6rem; color:#94a3b8; font-weight:700;">SETUP</div>
             </button>
-            <button onclick="toggleBreakoutHomeView('ARMED')" style="padding:0.75rem; background:rgba(249, 115, 22, 0.08); border:1px solid rgba(249, 115, 22, 0.2); border-radius:10px; cursor:pointer;" class="brk-home-btn" id="btn-h-armed">
+            <button onclick="toggleBreakoutHomeView('ARMED')" style="padding:0.75rem; background:rgba(249, 115, 22, 0.08); border:1px solid rgba(249, 115, 22, 0.2); border-radius:10px; cursor:pointer;" class="brk-home-btn brk-state-btn" id="btn-h-armed">
               <div style="font-size:1.5rem; font-weight:800; color:#f97316;" id="cnt-h-armed">-</div>
               <div style="font-size:0.6rem; color:#94a3b8; font-weight:700;">ARMED</div>
             </button>
-            <button onclick="toggleBreakoutHomeView('TRIGGERED')" style="padding:0.75rem; background:rgba(56, 189, 248, 0.08); border:1px solid rgba(56, 189, 248, 0.2); border-radius:10px; cursor:pointer;" class="brk-home-btn" id="btn-h-triggered">
+            <button onclick="toggleBreakoutHomeView('TRIGGERED')" style="padding:0.75rem; background:rgba(56, 189, 248, 0.08); border:1px solid rgba(56, 189, 248, 0.2); border-radius:10px; cursor:pointer;" class="brk-home-btn brk-state-btn" id="btn-h-triggered">
               <div style="font-size:1.5rem; font-weight:800; color:#38bdf8;" id="cnt-h-triggered">-</div>
               <div style="font-size:0.6rem; color:#94a3b8; font-weight:700;">TRIGGERED</div>
             </button>
-            <button onclick="toggleBreakoutHomeView('CONFIRMED')" style="padding:0.75rem; background:rgba(16, 185, 129, 0.08); border:1px solid rgba(16, 185, 129, 0.2); border-radius:10px; cursor:pointer;" class="brk-home-btn" id="btn-h-confirmed">
+            <button onclick="toggleBreakoutHomeView('CONFIRMED')" style="padding:0.75rem; background:rgba(16, 185, 129, 0.08); border:1px solid rgba(16, 185, 129, 0.2); border-radius:10px; cursor:pointer;" class="brk-home-btn brk-state-btn" id="btn-h-confirmed">
               <div style="font-size:1.5rem; font-weight:800; color:#10b981;" id="cnt-h-confirmed">-</div>
               <div style="font-size:0.6rem; color:#94a3b8; font-weight:700;">CONFIRMED</div>
             </button>
-            <button onclick="toggleBreakoutHomeView('FAILED')" style="padding:0.75rem; background:rgba(239, 68, 68, 0.08); border:1px solid rgba(239, 68, 68, 0.2); border-radius:10px; cursor:pointer;" class="brk-home-btn" id="btn-h-failed">
+            <button onclick="toggleBreakoutHomeView('FAILED')" style="padding:0.75rem; background:rgba(239, 68, 68, 0.08); border:1px solid rgba(239, 68, 68, 0.2); border-radius:10px; cursor:pointer;" class="brk-home-btn brk-state-btn" id="btn-h-failed">
               <div style="font-size:1.5rem; font-weight:800; color:#ef4444;" id="cnt-h-failed">-</div>
               <div style="font-size:0.6rem; color:#94a3b8; font-weight:700;">FAILED</div>
             </button>
@@ -4970,13 +4971,25 @@
         const manifestResult = await fetchJson('/data/breakout/manifests/latest.json');
         const manifest = manifestResult?.payload;
         const top500Path = manifest?.files?.top500 ? `/data/breakout/${manifest.files.top500}` : null;
+        const stateSummaryPath = manifest?.files?.state_summary ? `/data/breakout/${manifest.files.state_summary}` : null;
+        let stateSummary = null;
+        if (manifest?.validation?.publishable === true && stateSummaryPath) {
+          try {
+            stateSummary = (await fetchJson(stateSummaryPath))?.payload || null;
+          } catch (summaryError) {
+            console.warn('Breakout state summary load failed:', summaryError);
+          }
+        }
         if (manifest?.validation?.publishable === true && top500Path) {
           const topResult = await fetchJson(top500Path);
           const items = Array.isArray(topResult?.payload?.items) ? topResult.payload.items.map(normalizeHomeBreakoutItem) : [];
           if (items.length) {
             breakoutData = {
               source: 'breakout_manifest',
-              contract_mode: 'candidate_rank',
+              contract_mode: stateSummary?.contract_mode || 'candidate_rank',
+              candidate_rank_only: stateSummary?.candidate_rank_only === true || stateSummary?.contract_mode === 'candidate_rank',
+              full_state_distribution_available: stateSummary?.full_state_distribution_available === true,
+              state_summary: stateSummary,
               as_of: manifest.as_of || topResult?.payload?.as_of || null,
               target_market_date: manifest.target_market_date || manifest.as_of || topResult?.payload?.target_market_date || null,
               score_version: manifest.score_version || topResult?.payload?.score_version || null,
@@ -5003,24 +5016,47 @@
       if (!data || !data.items) return;
 
       const items = data.items.map(normalizeHomeBreakoutItem);
-      const candidateRankOnly = data.contract_mode === 'candidate_rank' && items.every(i => i.candidate_only || i.state === 'CANDIDATE');
+      const candidateRankOnly = data.candidate_rank_only === true
+        || (data.contract_mode === 'candidate_rank' && items.every(i => i.candidate_only || i.state === 'CANDIDATE'));
+      const summaryCounts = data.state_summary?.counts || {};
       const counts = candidateRankOnly ? {
-        ALL: items.length,
+        ALL: Number(summaryCounts.CANDIDATE || summaryCounts.ALL || items.length),
         SETUP: 0,
         ARMED: 0,
         TRIGGERED: 0,
         CONFIRMED: 0,
         FAILED: 0,
-        CANDIDATE: items.length,
+        CANDIDATE: Number(summaryCounts.CANDIDATE || items.length),
       } : {
-        ALL: items.filter(i => i.state !== 'NO_DATA' && i.state !== 'NONE').length,
-        SETUP: items.filter(i => i.state === 'SETUP').length,
-        ARMED: items.filter(i => i.state === 'ARMED').length,
-        TRIGGERED: items.filter(i => i.state === 'TRIGGERED').length,
-        CONFIRMED: items.filter(i => i.state === 'CONFIRMED').length,
-        FAILED: items.filter(i => i.state === 'FAILED').length
+        ALL: Number(summaryCounts.ALL ?? items.filter(i => i.state !== 'NO_DATA' && i.state !== 'NONE').length),
+        SETUP: Number(summaryCounts.SETUP ?? items.filter(i => i.state === 'SETUP').length),
+        ARMED: Number(summaryCounts.ARMED ?? items.filter(i => i.state === 'ARMED').length),
+        TRIGGERED: Number(summaryCounts.TRIGGERED ?? items.filter(i => i.state === 'TRIGGERED').length),
+        CONFIRMED: Number(summaryCounts.CONFIRMED ?? items.filter(i => i.state === 'CONFIRMED').length),
+        FAILED: Number(summaryCounts.FAILED ?? items.filter(i => i.state === 'FAILED').length)
       };
 
+      const titleEl = document.getElementById('brk-home-title');
+      const subEl = document.getElementById('brk-home-subtitle');
+      const noteEl = document.getElementById('brk-home-contract-note');
+      const labelAllEl = document.getElementById('lbl-h-all');
+      if (titleEl) titleEl.innerHTML = candidateRankOnly
+        ? '<i class="fa-solid fa-bolt" style="color:#38bdf8"></i> Top Breakout Candidates'
+        : '<i class="fa-solid fa-bolt" style="color:#38bdf8"></i> Breakout State Tracker';
+      if (subEl) subEl.textContent = candidateRankOnly
+        ? `${counts.CANDIDATE} ranked candidates · ${data.score_version || 'breakout model'}`
+        : `Full-state distribution · ${data.score_version || 'breakout model'}`;
+      if (noteEl) noteEl.textContent = candidateRankOnly
+        ? 'Nightly feed publishes a ranked candidate list, not full SETUP/ARMED/TRIGGERED/CONFIRMED state counts.'
+        : `Full state distribution as of ${data.as_of || data.target_market_date || 'latest'}.`;
+      if (labelAllEl) labelAllEl.textContent = candidateRankOnly ? 'CANDIDATES' : 'ALL';
+      document.querySelectorAll('.brk-state-btn').forEach((button) => {
+        button.style.display = candidateRankOnly ? 'none' : '';
+      });
+      const buttons = document.getElementById('brk-home-buttons');
+      if (buttons) buttons.style.gridTemplateColumns = candidateRankOnly
+        ? 'minmax(180px, 260px)'
+        : 'repeat(auto-fit, minmax(96px, 1fr))';
       document.getElementById('cnt-h-all').innerText = counts.ALL;
       document.getElementById('cnt-h-setup').innerText = counts.SETUP;
       document.getElementById('cnt-h-armed').innerText = counts.ARMED;
@@ -5034,6 +5070,7 @@
         score_version: data.score_version || null,
         contract_mode: data.contract_mode || null,
         candidate_rank_only: candidateRankOnly,
+        full_state_distribution_available: data.full_state_distribution_available === true,
         counts
       };
 
@@ -5052,12 +5089,12 @@
 
         container.style.display = 'block';
         document.getElementById('brk-home-table-title').innerText = candidateRankOnly
-          ? (state === 'ALL' ? 'Top ranked breakout candidates' : `${state} state unavailable in candidate-rank feed`)
+          ? 'Top ranked breakout candidates'
           : (state === 'ALL' ? 'Breakout indicator rows' : `Stocks in ${state} State`);
 
         const rowList = (
           candidateRankOnly
-            ? (state === 'ALL' ? items : [])
+            ? items
             : (state === 'ALL' ? items.filter(i => i.state !== 'NO_DATA' && i.state !== 'NONE') : items.filter(i => i.state === state))
         ).slice(0, 10);
         if (rowList.length === 0) {
@@ -5071,10 +5108,11 @@
           const inv = i.invalidation?.close_below != null ? `Invalidation < ${Number(i.invalidation.close_below).toFixed(2)}` : '';
           const routeId = i.asset_id || i.ticker;
           const href = `/analyze/${encodeURIComponent(routeId).replace(/%3A/gi, ':')}`;
+          const rank = i.ui?.rank || i.candidate_rank || i.rank || '';
           return `<tr style="border-bottom:1px solid rgba(255,255,255,0.02)">
             <td style="padding:6px 8px;"><a href="${href}" style="color:#60a5fa; text-decoration:none; font-weight:700;">${escapeHtml(i.display_ticker || i.ticker)}</a></td>
             <td style="padding:6px 8px; font-size:0.7rem; color:#94a3b8;">${i.name || ''}</td>
-            <td style="padding:6px 8px; font-weight:800; color:#8b5cf6">${score}</td>
+            <td style="padding:6px 8px; font-weight:800; color:#8b5cf6">${rank ? `#${rank}` : score}</td>
             <td style="padding:6px 8px; font-size:0.75rem;">${i.breakout_status || i.state}</td>
             <td style="padding:6px 8px; font-size:0.75rem; color:#94a3b8;">${zone}${inv ? ` · ${inv}` : ''}</td>
           </tr>`;

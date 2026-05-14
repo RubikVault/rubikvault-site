@@ -418,7 +418,7 @@ step_timeout_sec() {
     v1_audit) printf '%s\n' 1800 ;;
     cutover_readiness) printf '%s\n' 1800 ;;
     stage1_ops_pack) printf '%s\n' 1800 ;;
-    system_status_report|data_freshness_report|pipeline_epoch|generate_meta_dashboard_data) printf '%s\n' 1800 ;;
+    system_status_report|system_status_aggregator|data_freshness_report|pipeline_epoch|generate_meta_dashboard_data) printf '%s\n' 1800 ;;
     runtime_preflight|stock_ui_integrity_audit|classifier_audit|ops_health_reports) printf '%s\n' 1800 ;;
     resource_budget_report) printf '%s\n' 300 ;;
     stock_analyzer_universe_audit) printf '%s\n' 5400 ;;
@@ -763,6 +763,9 @@ step_command() {
     system_status_report)
       printf '%s\n' "node scripts/ops/build-system-status-report.mjs --lane='$ACTIVE_LANE'"
       ;;
+    system_status_aggregator)
+      printf '%s\n' "node scripts/ops/build-system-status-aggregator.mjs"
+      ;;
     resource_budget_report)
       printf '%s\n' "node scripts/ops/check-step-resource-budgets.mjs --runs-root '$PIPELINE_ROOT/runs' --campaign '$CAMPAIGN_STAMP' --output '${NAS_OPS_ROOT:-$REPO_ROOT/var/private}/pipeline-artifacts/step-resource-budget-latest.json'"
       ;;
@@ -1052,7 +1055,7 @@ run_step() {
   fi
 
   case "$step_id" in
-    build_global_scope|provider_health_preflight|q1_delta_proof_report|hist_probs|hist_probs_catchup|hist_probs_v2_shadow|decision_core_shadow|snapshot|page_core_bundle|best_setups_core|classifier_audit|ops_health_reports|public_history_shards|learning_daily|decision_module_scorecard|decision_core_outcome_bootstrap|forecast_daily|build_fundamentals|quantlab_daily_report|breakout_v12|scientific_summary|v1_audit|cutover_readiness|etf_diagnostic|stage1_ops_pack|system_status_report|resource_budget_report|data_freshness_report|pipeline_epoch|generate_meta_dashboard_data|signal_performance_report|dp8_market|runtime_preflight|stock_analyzer_universe_audit|ui_field_truth_report|stock_ui_integrity_audit|page_core_smoke|final_integrity_seal|build_deploy_bundle|pre_deploy_smoke|wrangler_deploy|code_manifest_guard|lock_policy_report)
+    build_global_scope|provider_health_preflight|q1_delta_proof_report|hist_probs|hist_probs_catchup|hist_probs_v2_shadow|decision_core_shadow|snapshot|page_core_bundle|best_setups_core|classifier_audit|ops_health_reports|public_history_shards|learning_daily|decision_module_scorecard|decision_core_outcome_bootstrap|forecast_daily|build_fundamentals|quantlab_daily_report|breakout_v12|scientific_summary|v1_audit|cutover_readiness|etf_diagnostic|stage1_ops_pack|system_status_report|system_status_aggregator|resource_budget_report|data_freshness_report|pipeline_epoch|generate_meta_dashboard_data|signal_performance_report|dp8_market|runtime_preflight|stock_analyzer_universe_audit|ui_field_truth_report|stock_ui_integrity_audit|page_core_smoke|final_integrity_seal|build_deploy_bundle|pre_deploy_smoke|wrangler_deploy|code_manifest_guard|lock_policy_report)
       measure_args+=(--set-env "NODE_OPTIONS=--max-old-space-size=$heap_mb")
       ;;
   esac
@@ -1157,6 +1160,7 @@ lane_steps() {
       stage1_ops_pack \
       data_freshness_report \
       system_status_report \
+      system_status_aggregator \
       resource_budget_report \
       pipeline_epoch \
       generate_meta_dashboard_data \
@@ -1178,6 +1182,7 @@ lane_steps() {
       ops_health_reports \
       final_integrity_seal \
       system_status_report \
+      system_status_aggregator \
       generate_meta_dashboard_data \
       signal_performance_report \
       build_deploy_bundle \

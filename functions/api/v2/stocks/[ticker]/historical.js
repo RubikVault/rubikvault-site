@@ -11,7 +11,11 @@ function pickLatestBar(bars) {
 
 function historicalLimitForRequest(request) {
   try {
-    const host = new URL(request.url).hostname;
+    const url = new URL(request.url);
+    const params = url.searchParams;
+    const requestedLimit = String(params.get('limit') || params.get('range') || '').trim().toLowerCase();
+    if (requestedLimit === 'all' || params.get('all') === '1') return 25000;
+    const host = url.hostname;
     if (host === 'localhost' || host === '127.0.0.1') return 1500;
   } catch { /* keep default */ }
   return 750;

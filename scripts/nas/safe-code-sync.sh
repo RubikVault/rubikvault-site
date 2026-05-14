@@ -29,8 +29,10 @@ PUBLIC_DATA_CODE_ALLOWLIST=(
   public/data/universe/v7/index-memberships/dowjones.json
   public/data/universe/v7/index-memberships/manifest.json
   public/data/universe/v7/index-memberships/nasdaq100.json
+  public/data/universe/v7/index-memberships/nasdaq_composite_all.preview.json
   public/data/universe/v7/index-memberships/russell2000.json
   public/data/universe/v7/index-memberships/sp500.json
+  public/data/historical-insights
 )
 
 if [[ "${ALLOW_ACTIVE_NIGHT_PIPELINE_LOCK:-0}" != "1" ]]; then
@@ -109,7 +111,11 @@ sync_public_data_code_allowlist() {
   local copied=0
   local rel
   for rel in "${PUBLIC_DATA_CODE_ALLOWLIST[@]}"; do
-    if [[ -f "$src_root/$rel" ]]; then
+    if [[ -d "$src_root/$rel" ]]; then
+      mkdir -p "$SYNC_ROOT/$rel"
+      rsync -a --delete "$src_root/$rel/" "$SYNC_ROOT/$rel/"
+      copied=$((copied + 1))
+    elif [[ -f "$src_root/$rel" ]]; then
       mkdir -p "$SYNC_ROOT/$(dirname "$rel")"
       rsync -a "$src_root/$rel" "$SYNC_ROOT/$rel"
       copied=$((copied + 1))
