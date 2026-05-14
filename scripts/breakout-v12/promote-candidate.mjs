@@ -167,6 +167,88 @@ function enrichBreakoutItem(item, metaByCanonical) {
   };
 }
 
+function compactObject(value) {
+  if (!value || typeof value !== 'object') return value ?? null;
+  const out = {};
+  for (const [key, raw] of Object.entries(value)) {
+    if (raw == null) continue;
+    if (typeof raw === 'number' && !Number.isFinite(raw)) continue;
+    out[key] = raw;
+  }
+  return out;
+}
+
+function compactScores(scores) {
+  if (!scores || typeof scores !== 'object') return null;
+  const keep = [
+    'final_signal_score',
+    'structure_score',
+    'compression_score',
+    'volume_score',
+    'relative_strength_score',
+    'accumulation_proxy_score',
+    'selling_exhaustion_score',
+    'liquidity_score',
+    'regime_multiplier',
+  ];
+  const out = {};
+  for (const key of keep) {
+    const value = Number(scores[key]);
+    if (Number.isFinite(value)) out[key] = value;
+  }
+  return Object.keys(out).length ? out : null;
+}
+
+function compactUi(ui, fallback = {}) {
+  const src = ui && typeof ui === 'object' ? ui : {};
+  return compactObject({
+    label: src.label || fallback.label || null,
+    status: src.status || fallback.status || null,
+    legacy_state: src.legacy_state || fallback.legacy_state || null,
+    rank: src.rank ?? fallback.rank ?? null,
+    rank_percentile: src.rank_percentile ?? fallback.rank_percentile ?? null,
+  });
+}
+
+function compactBreakoutItem(item) {
+  if (!item || typeof item !== 'object') return item;
+  const canonicalId = normalizeCanonical(item.asset_id || item.assetId || item.canonical_id);
+  const breakoutStatus = item.breakout_status || item.status || item.ui?.status || null;
+  const legacyState = item.legacy_state || item.state || item.ui?.legacy_state || null;
+  return compactObject({
+    asset_id: canonicalId || null,
+    canonical_id: canonicalId || null,
+    display_ticker: item.display_ticker || null,
+    symbol: item.symbol || item.ticker || null,
+    ticker: item.ticker || item.symbol || null,
+    name: item.name || item.display_name || null,
+    display_name: item.display_name || item.name || null,
+    asset_class: item.asset_class || null,
+    region: item.region || null,
+    as_of: item.as_of || item.feature_date || null,
+    feature_date: item.feature_date || item.as_of || null,
+    score_version: item.score_version || 'breakout_scoring_v12_incremental_v1',
+    breakout_status: breakoutStatus,
+    status: breakoutStatus,
+    legacy_state: legacyState,
+    status_reasons: Array.isArray(item.status_reasons) ? item.status_reasons.slice(0, 6) : [],
+    support_zone: compactObject(item.support_zone),
+    invalidation: compactObject(item.invalidation),
+    status_explanation: item.status_explanation || item.explanation || null,
+    scores: compactScores(item.scores),
+    final_signal_score: Number.isFinite(Number(item?.scores?.final_signal_score ?? item.final_signal_score))
+      ? Number(item?.scores?.final_signal_score ?? item.final_signal_score)
+      : null,
+    ui: compactUi(item.ui, {
+      label: item.label || null,
+      status: breakoutStatus,
+      legacy_state: legacyState,
+      rank: item.rank,
+      rank_percentile: item.rank_percentile,
+    }),
+  });
+}
+
 function enrichBreakoutPublicJson(publicCandidate) {
   const metaByCanonical = loadUniverseMetaIndex();
   if (metaByCanonical.size === 0) return { enriched_files: 0, enriched_items: 0, meta_loaded: false };
@@ -177,11 +259,11 @@ function enrichBreakoutPublicJson(publicCandidate) {
     if (!doc) continue;
     let next = null;
     if (Array.isArray(doc?.items)) {
-      const items = doc.items.map((item) => enrichBreakoutItem(item, metaByCanonical));
+      const items = doc.items.map((item) => compactBreakoutItem(enrichBreakoutItem(item, metaByCanonical)));
       enrichedItems += items.length;
       next = { ...doc, items };
     } else if (Array.isArray(doc)) {
-      next = doc.map((item) => enrichBreakoutItem(item, metaByCanonical));
+      next = doc.map((item) => compactBreakoutItem(enrichBreakoutItem(item, metaByCanonical)));
       enrichedItems += next.length;
     }
     if (!next) continue;
