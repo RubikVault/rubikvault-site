@@ -49,10 +49,10 @@ function boolArg(value) {
   return ['1', 'true', 'yes', 'on'].includes(String(value || '').trim().toLowerCase());
 }
 
-function shardKey(symbol) {
+function shardKey(symbol, prefixLen = 1) {
   const clean = String(symbol || '').trim().toUpperCase().replace(/[^A-Z0-9.\-]/g, '');
-  const first = clean.charAt(0);
-  return /^[A-Z0-9]$/.test(first) ? first : '_';
+  const key = clean.slice(0, Math.max(1, Math.min(4, Number(prefixLen) || 1)));
+  return /^[A-Z0-9]+$/.test(key) ? key : '_';
 }
 
 function roundNumber(value) {
@@ -163,7 +163,7 @@ function loadHistoryTouchReport(filePath) {
 function removeStaleGzipShards(outDir, activeKeys) {
   if (!fs.existsSync(outDir)) return;
   for (const name of fs.readdirSync(outDir)) {
-    if (!/^[A-Z0-9_]\.json\.gz$/.test(name)) continue;
+    if (!/^[A-Z0-9_]{1,4}\.json\.gz$/.test(name)) continue;
     const key = name.slice(0, -'.json.gz'.length);
     if (!activeKeys.has(key)) fs.rmSync(path.join(outDir, name), { force: true });
   }
@@ -176,6 +176,7 @@ async function main() {
   const incrementalRequested = boolArg(argValue('--incremental', process.env.RV_PUBLIC_HISTORY_INCREMENTAL || '0'));
   const touchReportPath = path.resolve(String(argValue('--history-touch-report', process.env.RV_HISTORY_TOUCH_REPORT_PATH || 'mirrors/universe-v7/reports/history_touch_report.json')));
   const shardMaxBytes = Number.parseInt(String(argValue('--max-shard-bytes', process.env.RV_PUBLIC_HISTORY_SHARD_MAX_BYTES || String(25 * 1024 * 1024))), 10) || (25 * 1024 * 1024);
+  const shardPrefixLen = Math.max(1, Math.min(4, Number.parseInt(String(argValue('--shard-prefix-len', process.env.RV_PUBLIC_HISTORY_SHARD_PREFIX_LEN || '2')), 10) || 2));
   const canarySymbols = String(argValue('--canaries', process.env.RV_PUBLIC_HISTORY_CANARIES || 'AAPL,HOOD,SPY,ASML,BASM,000220'))
     .split(',')
     .map((item) => item.trim().toUpperCase())
@@ -243,6 +244,7 @@ async function main() {
       entries_count: Number(touchReport?.entries_count || touchReport?.updated_ids_count || 0),
     },
     max_shard_bytes: shardMaxBytes,
+    shard_prefix_len: shardPrefixLen,
     shards: incrementalMode && previousSummary?.shards ? { ...previousSummary.shards } : {},
   };
 
@@ -265,7 +267,7 @@ async function main() {
       if (!target) return;
       const bars = compactBars(row?.bars || [], target.limit);
       if (bars.length >= 60) {
-        const key = shardKey(target.symbol);
+        const key = shardKey(target.symbol, shardPrefixLen);
         if (!shards.has(key)) {
           const previousShardPath = path.join(outDir, `${key}.json.gz`);
           shards.set(key, incrementalMode && fs.existsSync(previousShardPath) ? readGzipJson(previousShardPath) : {});
@@ -274,7 +276,7 @@ async function main() {
         summary.packed_assets += 1;
       } else {
         if (incrementalMode) {
-          const key = shardKey(target.symbol);
+          const key = shardKey(target.symbol, shardPrefixLen);
           if (!shards.has(key)) {
             const previousShardPath = path.join(outDir, `${key}.json.gz`);
             shards.set(key, fs.existsSync(previousShardPath) ? readGzipJson(previousShardPath) : {});
@@ -309,7 +311,7 @@ async function main() {
     .map(([key, row]) => ({ key, bytes: Number(row.bytes) }));
   summary.canaries = {};
   for (const symbol of canarySymbols) {
-    const key = shardKey(symbol);
+    const key = shardKey(symbol, shardPrefixLen);
     const shardPath = path.join(outDir, `${key}.json.gz`);
     let bars = [];
     try {

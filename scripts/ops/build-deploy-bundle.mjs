@@ -568,9 +568,20 @@ function readHistoryShardDoc(shardKey) {
 function readHistoryShardRows(symbol) {
   const cleanSymbol = String(symbol || '').trim().toUpperCase().replace(/[^A-Z0-9.\-]/g, '');
   if (!cleanSymbol) return [];
-  const shardKey = cleanSymbol[0] || '_';
-  const shard = readHistoryShardDoc(shardKey);
-  const rawRows = shard?.[cleanSymbol];
+  let prefixLen = 2;
+  try {
+    const manifest = JSON.parse(fs.readFileSync(path.join(PUBLIC_DIR, 'data/eod/history/shards/manifest.public-history-shards.json'), 'utf8'));
+    prefixLen = Math.max(1, Math.min(4, Number(manifest?.shard_prefix_len || prefixLen) || prefixLen));
+  } catch {
+    prefixLen = 2;
+  }
+  const shardKeys = [...new Set([cleanSymbol.slice(0, prefixLen), cleanSymbol[0] || '_'].filter(Boolean))];
+  let rawRows = null;
+  for (const shardKey of shardKeys) {
+    const shard = readHistoryShardDoc(shardKey);
+    rawRows = shard?.[cleanSymbol];
+    if (Array.isArray(rawRows)) break;
+  }
   if (!Array.isArray(rawRows)) return [];
   return rawRows
     .map((row) => normalizeHistoricalRow(row))

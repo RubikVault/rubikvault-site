@@ -28,6 +28,10 @@ const historyPackLookupCache = {
     promise: null,
     value: null,
 };
+const publicHistoryShardManifestCache = {
+    promise: null,
+    value: null,
+};
 const historyPackRowsCache = new Map();
 const HISTORY_PACK_CACHE_LIMIT = 32;
 const KNOWN_EODHD_SUFFIXES = new Set([
@@ -334,6 +338,19 @@ export async function getStaticBars(symbol, baseUrl, assetFetcher = null, option
             return historyPackLookupCache.promise;
         }
 
+        async function loadPublicHistoryShardManifest() {
+            if (publicHistoryShardManifestCache.value) return publicHistoryShardManifestCache.value;
+            if (!publicHistoryShardManifestCache.promise) {
+                publicHistoryShardManifestCache.promise = fetchJson('/data/eod/history/shards/manifest.public-history-shards.json')
+                    .then((doc) => {
+                        publicHistoryShardManifestCache.value = doc || null;
+                        return publicHistoryShardManifestCache.value;
+                    })
+                    .catch(() => null);
+            }
+            return publicHistoryShardManifestCache.promise;
+        }
+
         function normalizePackEntry(entry) {
             if (!entry) return null;
             if (Array.isArray(entry)) {
@@ -408,14 +425,34 @@ export async function getStaticBars(symbol, baseUrl, assetFetcher = null, option
             return mergedBars;
         }
 
-        // Legacy fallback only: alphabet shards can be large enough to hit Worker CPU limits.
-        const shard = cleanSymbol[0] || '_';
-        const shardCandidates = [
-            `/data/eod/history/shards/${shard}.json.gz`,
-            `/data/eod/history/shards/${shard}.json`
-        ];
+        // Legacy public chart shards are split by symbol prefix. The manifest advertises
+        // the current prefix length; one-character paths stay as compatibility fallback.
+        const shardManifest = await loadPublicHistoryShardManifest();
+        const manifestShards = shardManifest?.shards && typeof shardManifest.shards === 'object'
+            ? shardManifest.shards
+            : null;
+        const manifestPrefixLen = Math.max(1, Math.min(4, Number(shardManifest?.shard_prefix_len || 1) || 1));
+        const shardKeys = [];
+        for (const candidate of candidates) {
+            const cleanCandidate = String(candidate || '').replace(/[^A-Z0-9.\-]/g, '');
+            const key = cleanCandidate.slice(0, manifestPrefixLen) || '_';
+            const legacyKey = cleanCandidate[0] || '_';
+            const keysForCandidate = manifestShards
+                ? [manifestShards[key] ? key : null, manifestShards[legacyKey] ? legacyKey : null]
+                : [key, legacyKey];
+            for (const item of keysForCandidate) {
+                if (!item || shardKeys.includes(item)) continue;
+                shardKeys.push(item);
+            }
+        }
+        if (!shardKeys.length) shardKeys.push(cleanSymbol[0] || '_');
 
-        for (const shardPath of shardCandidates) {
+        for (const shard of shardKeys) {
+            const shardCandidates = [
+                `/data/eod/history/shards/${shard}.json.gz`,
+                `/data/eod/history/shards/${shard}.json`
+            ];
+            for (const shardPath of shardCandidates) {
             try {
                 if (localMode) {
                     const shardData = await readLocalJsonMaybe(shardPath);
@@ -439,6 +476,7 @@ export async function getStaticBars(symbol, baseUrl, assetFetcher = null, option
                     }
                 }
             } catch { /* ignore */ }
+            }
         }
 
         const latestCandidates = [
