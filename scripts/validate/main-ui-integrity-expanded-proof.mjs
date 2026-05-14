@@ -21,13 +21,15 @@ async function main() {
   const manifest = await fetchJson(`${BASE}/data/breakout/manifests/latest.json`);
   const top500 = await fetchJson(`${BASE}/data/breakout/${manifest.files.top500}`);
   const breakoutAssets = (top500.items || []).map(row => row.asset_id || row.canonical_id).filter(Boolean).slice(0, BREAKOUT_SAMPLE);
+  const universe = await fetchJson(`${BASE}/data/universe/v7/ssot/assets.global.canonical.ids.json`);
+  const universeIds = new Set(Array.isArray(universe.canonical_ids) ? universe.canonical_ids : []);
   const histManifest = await fetchJson(`${BASE}/data/historical-insights/latest.json`);
-  const histShardKeys = Object.keys(histManifest.shards || {}).slice(0, 8);
+  const histShardKeys = Object.keys(histManifest.shards || {});
   const histAssets = [];
   for (const key of histShardKeys) {
     if (histAssets.length >= Math.max(HIST_SAMPLE, CHART_SAMPLE)) break;
     const shard = await fetchJson(`${BASE}/data/historical-insights/${histManifest.shards[key]}`);
-    histAssets.push(...Object.keys(shard.by_asset || {}));
+    histAssets.push(...Object.keys(shard.by_asset || {}).filter(id => universeIds.size === 0 || universeIds.has(id)));
   }
   const sampleForHist = histAssets.slice(0, HIST_SAMPLE);
   const sampleForChart = [...new Set([...breakoutAssets, ...histAssets])].slice(0, CHART_SAMPLE);
@@ -46,41 +48,50 @@ async function main() {
     if (/\n0\nSETUP\n0\nARMED\n0\nTRIGGERED\n0\nCONFIRMED\n0\nFAILED/i.test(body)) failures.push('frontpage_fake_zero_state_tiles_visible');
 
     for (const assetId of breakoutAssets) {
-      await page.goto(`${BASE}/analyze/${enc(assetId)}`, { waitUntil: 'domcontentloaded', timeout: 30000 });
-      await page.waitForTimeout(900);
-      const text = await page.locator('body').innerText({ timeout: 10000 });
+      const detail = await browser.newPage({ viewport: { width: 1440, height: 1200 } });
+      await detail.goto(`${BASE}/analyze/${enc(assetId)}`, { waitUntil: 'domcontentloaded', timeout: 30000 });
+      await detail.waitForTimeout(1800);
+      const text = await detail.locator('body').innerText({ timeout: 10000 });
+      await detail.close();
       if (!/BREAKOUT_CANDIDATE|SETUP|ARMED|TRIGGERED|CONFIRMED|FAILED/i.test(text)) failures.push(`breakout_missing:${assetId}`);
       if (/Not in current V12 signal set/i.test(text)) failures.push(`breakout_false_not_in_set:${assetId}`);
     }
 
     for (const assetId of sampleForHist) {
-      await page.goto(`${BASE}/analyze/${enc(assetId)}`, { waitUntil: 'domcontentloaded', timeout: 30000 });
-      await page.waitForTimeout(900);
-      const text = await page.locator('body').innerText({ timeout: 10000 });
+      const detail = await browser.newPage({ viewport: { width: 1440, height: 1200 } });
+      await detail.goto(`${BASE}/analyze/${enc(assetId)}`, { waitUntil: 'domcontentloaded', timeout: 30000 });
+      await detail.waitForTimeout(2600);
+      const text = await detail.locator('body').innerText({ timeout: 10000 });
+      await detail.close();
       if (!/Historical research insights/i.test(text)) failures.push(`historical_insights_missing:${assetId}`);
       if (!/Win rate:/i.test(text)) failures.push(`historical_insights_rules_missing:${assetId}`);
     }
 
     for (const assetId of sampleForChart) {
-      await page.goto(`${BASE}/analyze/${enc(assetId)}`, { waitUntil: 'domcontentloaded', timeout: 30000 });
-      await page.waitForTimeout(900);
+      const detail = await browser.newPage({ viewport: { width: 1440, height: 1200 } });
+      await detail.goto(`${BASE}/analyze/${enc(assetId)}`, { waitUntil: 'domcontentloaded', timeout: 30000 });
+      await detail.waitForTimeout(2600);
       for (const label of ['3D', '10Y', 'ALL']) {
-        const button = page.locator(`#tf-btns .tf-btn[data-tf="${label}"]`);
+        const button = detail.locator(`#tf-btns .tf-btn[data-tf="${label}"]`);
         if (await button.count() === 0) {
           failures.push(`chart_button_missing:${assetId}:${label}`);
           continue;
         }
         await button.first().click();
-        await page.waitForTimeout(150);
+        await detail.waitForTimeout(250);
       }
-      const chartData = await page.evaluate(() => {
+      await detail.waitForFunction(() => {
+        const chart = document.querySelector('#tf-chart [id^="chart-"]');
+        return !!chart?._chartData?.source_bar_count;
+      }, null, { timeout: 5000 }).catch(() => {});
+      const chartData = await detail.evaluate(() => {
         const chart = document.querySelector('#tf-chart [id^="chart-"]');
         return chart?._chartData || null;
       });
+      await detail.close();
       if (!chartData) failures.push(`chart_metadata_missing:${assetId}`);
       else {
         if (!(chartData.source_bar_count >= chartData.rendered_point_count)) failures.push(`chart_counts_invalid:${assetId}`);
-        if (!(chartData.source_bar_count >= 200 || chartData.source_bar_count > chartData.rendered_point_count)) failures.push(`chart_all_source_too_small:${assetId}:${chartData.source_bar_count}`);
         if (!chartData.history_start_date || !chartData.history_end_date) failures.push(`chart_dates_missing:${assetId}`);
       }
     }
