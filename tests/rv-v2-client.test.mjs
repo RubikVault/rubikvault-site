@@ -51,6 +51,33 @@ describe('fetchPageCore', () => {
     }
   });
 
+  it('honors URL asset_id when symbol route is ambiguous', async () => {
+    const previousWindow = global.window;
+    global.window = { location: { search: '?asset_id=US%3AVOD' } };
+    const seen = [];
+    global.fetch = async (url) => {
+      const href = String(url);
+      seen.push(href);
+      if (href.includes('/data/page-core/latest.json')) {
+        return { ok: true, json: async () => ({ snapshot_id: 'page-test' }) };
+      }
+      if (href.includes('/api/v2/page/VOD?v=page-test&asset_id=US%3AVOD')) {
+        return { ok: true, json: async () => ({ ok: true, data: { canonical_asset_id: 'US:VOD' }, meta: {} }) };
+      }
+      throw new Error(`Unexpected URL: ${href}`);
+    };
+    try {
+      const result = await fetchPageCore('VOD');
+      assert.equal(result.ok, true);
+      assert.equal(result.data.canonical_asset_id, 'US:VOD');
+      assert.equal(seen.some((href) => href.includes('/api/v2/page/VOD?v=page-test&asset_id=US%3AVOD')), true);
+    } finally {
+      global.fetch = originalFetch;
+      if (previousWindow === undefined) delete global.window;
+      else global.window = previousWindow;
+    }
+  });
+
   it('uses symbol route plus reversed exchange asset_id for dotted exchange tickers', async () => {
     const seen = [];
     global.fetch = async (url) => {

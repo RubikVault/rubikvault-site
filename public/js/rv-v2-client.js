@@ -95,7 +95,19 @@ function canonicalAssetQuery(ticker, extraParams = {}) {
   return query ? `?${query}` : '';
 }
 
+function requestedAssetIdOverride() {
+  if (typeof window === 'undefined') return null;
+  try {
+    const value = String(new URLSearchParams(window.location.search || '').get('asset_id') || '').trim().toUpperCase();
+    return /^[A-Z0-9_.-]+:[A-Z0-9_.-]+$/.test(value) ? value : null;
+  } catch {
+    return null;
+  }
+}
+
 function canonicalAssetId(ticker) {
+  const override = requestedAssetIdOverride();
+  if (override) return override;
   const assetId = String(ticker || '').trim().toUpperCase();
   if (/^[A-Z0-9_.-]+:[A-Z0-9_.-]+$/.test(assetId)) return assetId;
   const dot = assetId.match(/^([A-Z0-9_-]+)\.([A-Z0-9_-]{2,8})$/);
