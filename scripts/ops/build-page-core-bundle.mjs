@@ -1712,26 +1712,89 @@ function writeBundle(opts, bundle) {
       alias_files: aliasFiles,
       page_files_summary: summarizeShardFiles(pageFiles),
     })),
+    input_hash: opts.inputHash || null,
   };
   writeJsonAtomic(path.join(snapshotDir, 'manifest.json'), manifest);
   writeJsonAtomic(path.join(opts.pageCoreRoot, 'candidates/latest.candidate.json'), {
     ...bundle.pointer,
     status: 'STAGED',
     bundle_hash: manifest.bundle_hash,
+    input_hash: opts.inputHash || null,
   });
   if (opts.promote) {
     writeJsonAtomic(path.join(opts.pageCoreRoot, 'latest.json'), {
       ...bundle.pointer,
       status: 'ACTIVE',
       bundle_hash: manifest.bundle_hash,
+      input_hash: opts.inputHash || null,
     });
   }
   return manifest;
 }
 
+function computeInputsHash(opts) {
+  // Idempotency hash over the inputs that drive page-core content. If unchanged + last
+  // run targeted same market date + last snapshot still present, skip rebuild.
+  // Skipped when --replace, --force-rebuild, or RV_PAGE_CORE_FORCE_REBUILD=1.
+  const inputs = [
+    GLOBAL_SCOPE_PATH,
+    DAILY_SCOPE_PATH,
+    COMPAT_SCOPE_PATH,
+    OPERABILITY_PATH,
+    DECISIONS_LATEST_PATH,
+    FORECAST_LATEST_PATH,
+    SCIENTIFIC_PER_ASSET_LATEST_PATH,
+    QUANTLAB_MODEL_COVERAGE_LATEST_PATH,
+    PROVIDER_EXCEPTIONS_LATEST_PATH,
+    ...BREAKOUT_LATEST_MANIFEST_PATHS,
+    path.join(DECISION_CORE_ROOT, 'core/manifest.json'),
+    path.join(ROOT, 'public/data/ops/module-outputs-verify-latest.json'),
+  ];
+  const parts = [`target=${opts.targetMarketDate}`, `incremental=${opts.incremental ? 1 : 0}`, `max_assets=${opts.maxAssets || ''}`];
+  for (const file of inputs) {
+    try {
+      const stat = fs.statSync(file);
+      parts.push(`${path.relative(ROOT, file)}:${stat.size}:${stat.mtimeMs.toFixed(0)}`);
+    } catch {
+      parts.push(`${path.relative(ROOT, file)}:missing`);
+    }
+  }
+  return crypto.createHash('sha256').update(parts.join('\n')).digest('hex');
+}
+
+function maybeSkipBuild(opts) {
+  if (opts.replace || opts.dryRun) return null;
+  if (process.env.RV_PAGE_CORE_FORCE_REBUILD === '1') return null;
+  if (process.argv.includes('--force-rebuild')) return null;
+  const latestPath = path.join(opts.pageCoreRoot, 'latest.json');
+  if (!fs.existsSync(latestPath)) return null;
+  let latest;
+  try {
+    latest = JSON.parse(fs.readFileSync(latestPath, 'utf8'));
+  } catch {
+    return null;
+  }
+  if (!latest || latest.target_market_date !== opts.targetMarketDate) return null;
+  if (!latest.input_hash) return null;
+  if (latest.snapshot_path) {
+    const snapshotPath = path.resolve(ROOT, latest.snapshot_path);
+    if (!fs.existsSync(snapshotPath)) return null;
+  }
+  const currentHash = computeInputsHash(opts);
+  if (currentHash !== latest.input_hash) return null;
+  return { skipped: true, reason: 'inputs_unchanged', snapshot_id: latest.snapshot_id, snapshot_path: latest.snapshot_path, input_hash: currentHash, target_market_date: latest.target_market_date };
+}
+
 function main() {
   const opts = parseArgs(process.argv.slice(2));
   if (!opts.targetMarketDate) throw new Error('TARGET_MARKET_DATE_REQUIRED');
+  const skipDecision = maybeSkipBuild(opts);
+  if (skipDecision) {
+    console.log(JSON.stringify({ ok: true, ...skipDecision }, null, 2));
+    return;
+  }
+  const inputHash = computeInputsHash(opts);
+  opts.inputHash = inputHash;
   const bundle = buildBundle(opts);
   if (opts.dryRun) {
     console.log(JSON.stringify({
