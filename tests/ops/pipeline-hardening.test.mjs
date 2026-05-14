@@ -5,6 +5,11 @@ import os from 'node:os';
 import path from 'node:path';
 import zlib from 'node:zlib';
 import { readHistoryPackRows } from '../../scripts/lib/history-pack-overlay.mjs';
+import {
+  pageCoreClaimsOperational,
+  pageCoreStrictOperationalReasons,
+  normalizePageCoreOperationalState,
+} from '../../functions/api/_shared/page-core-operational-contract.js';
 
 const ROOT = path.resolve(new URL('../..', import.meta.url).pathname);
 
@@ -35,6 +40,52 @@ test('history overlay reader keeps base behavior unless deltas are enabled', asy
     ['2026-04-28', 20],
     ['2026-04-29', 3],
   ]);
+});
+
+test('page-core API normalization preserves producer strict blocking reasons', () => {
+  const row = {
+    canonical_asset_id: 'US:MDRX',
+    target_market_date: '2026-05-13',
+    ui_banner_state: 'provider_or_data_reason',
+    coverage: { ui_renderable: true },
+    key_levels_ready: true,
+    market_stats_min: {
+      latest_bar_date: '2026-05-12',
+      price_date: '2026-05-12',
+      as_of: '2026-05-12',
+      price_source: 'historical-bars',
+      stats_source: 'historical-indicators',
+      key_levels_ready: true,
+      stats: { rsi14: 52 },
+    },
+    freshness: { status: 'fresh', as_of: '2026-05-12' },
+    summary_min: {
+      last_close: 4.65,
+      daily_change_pct: 0,
+      daily_change_abs: 0,
+      governance_status: 'available',
+      risk_level: 'HIGH',
+    },
+    historical_profile_summary: { availability: { status: 'available_via_endpoint' } },
+    model_coverage: { status: 'complete' },
+    status_contract: {
+      strict_operational: false,
+      strict_blocking_reasons: ['bars_stale'],
+      stock_detail_view_status: 'degraded',
+      historical_profile_status: 'available_via_endpoint',
+      model_coverage_status: 'complete',
+    },
+  };
+
+  assert.deepEqual(pageCoreStrictOperationalReasons(row, { latest: { target_market_date: '2026-05-13' } }), [
+    'bars_stale',
+    'ui_banner_not_operational',
+  ]);
+  assert.equal(pageCoreClaimsOperational(row), false);
+  const normalized = normalizePageCoreOperationalState(row, { latest: { target_market_date: '2026-05-13' } });
+  assert.equal(normalized.status_contract.strict_operational, false);
+  assert.equal(normalized.status_contract.stock_detail_view_status, 'degraded');
+  assert.equal(normalized.ui_banner_state, 'provider_or_data_reason');
 });
 
 test('night supervisor exposes safe hardening flags without changing default data semantics', () => {

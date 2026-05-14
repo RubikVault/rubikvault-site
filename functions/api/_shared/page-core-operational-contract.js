@@ -16,6 +16,14 @@ function addReason(reasons, reason) {
   if (reason && !reasons.includes(reason)) reasons.push(reason);
 }
 
+function contractBlockingReasons(row) {
+  const reasons = row?.status_contract?.strict_blocking_reasons;
+  if (!Array.isArray(reasons)) return [];
+  return reasons
+    .map((reason) => String(reason || '').trim())
+    .filter(Boolean);
+}
+
 function finiteNumber(value) {
   const n = Number(value);
   return Number.isFinite(n) ? n : null;
@@ -100,6 +108,7 @@ export function pageCoreReturnIntegrity(row) {
 
 export function pageCoreStrictOperationalReasons(row, { latest = null, freshnessStatus = null } = {}) {
   const reasons = [];
+  for (const reason of contractBlockingReasons(row)) addReason(reasons, reason);
   const marketStatsMin = row?.market_stats_min && typeof row.market_stats_min === 'object'
     ? row.market_stats_min
     : null;
@@ -165,6 +174,8 @@ export function pageCoreStrictOperationalReasons(row, { latest = null, freshness
 }
 
 export function pageCoreClaimsOperational(row) {
+  if (row?.status_contract?.strict_operational === false) return false;
+  if (contractBlockingReasons(row).length > 0) return false;
   return row?.ui_banner_state === 'all_systems_operational'
     || String(row?.status_contract?.stock_detail_view_status || '').toLowerCase() === 'operational';
 }
