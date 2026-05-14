@@ -467,7 +467,7 @@
                 state: normalizeBreakoutState(item),
                 breakout_status: String(item?.breakout_status || item?.status || item?.ui?.status || item?.ui?.label || '').toUpperCase(),
                 total_score: Number.isFinite(score) ? Math.round(score <= 1 ? score * 100 : score) : 0,
-                latest_close: Number(item?.latest_close ?? item?.risk?.close ?? 0),
+                latest_close: Number(item?.latest_close ?? item?.risk?.close ?? NaN),
             };
         }
 
@@ -651,7 +651,7 @@
                         <td class="price-col" style="font-weight: 800; color: #8b5cf6;">${item.total_score || 0}</td>
                         <td class="price-col">${zone}</td>
                         <td class="price-col">${invalidation}</td>
-                        <td class="price-col">${item.state === 'NO_DATA' ? '-' : Number(item.latest_close || 0).toFixed(2)}</td>
+                        <td class="price-col">${Number.isFinite(Number(item.latest_close)) && Number(item.latest_close) > 0 ? Number(item.latest_close).toFixed(2) : '-'}</td>
                     </tr>
                 `;
             }).join('');
