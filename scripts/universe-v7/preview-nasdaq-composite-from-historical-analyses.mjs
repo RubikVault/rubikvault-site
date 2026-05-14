@@ -52,6 +52,8 @@ function main() {
     canonical_id: row.canonical_id,
     ticker: row.symbol,
     exchange: row.exchange,
+    asset_class: 'STOCK',
+    asset_class_source: 'historical_analyses_us_equity_seed_requires_eodhd_validation',
     source: 'historical_analyses_seed',
     bars_count: Number(row.bars_count || 0),
     first_date: row.first_date || null,
@@ -69,6 +71,7 @@ function main() {
     production_ready: false,
     required_followup: [
       'Validate membership against EODHD/registry exchange truth before enabling production scope.',
+      'Confirm asset_class against EODHD/registry before enabling production scope; preview seeds are marked STOCK only because source is US equity history.',
       'Dedupe against existing index_core scope by canonical_id.',
       'Run provider-exception classification before final scope flip.',
     ],
