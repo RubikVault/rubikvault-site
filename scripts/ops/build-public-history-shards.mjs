@@ -268,7 +268,7 @@ async function main() {
       if (!target) return;
       const bars = compactBars(row?.bars || [], target.limit);
       if (bars.length >= 60) {
-        const key = shardKey(target.canonical_id || canonicalId, shardPrefixLen);
+        const key = shardKey(target.symbol, shardPrefixLen);
         if (!shards.has(key)) {
           const previousShardPath = path.join(outDir, `${key}.json.gz`);
           shards.set(key, incrementalMode && fs.existsSync(previousShardPath) ? readGzipJson(previousShardPath) : {});
@@ -277,7 +277,7 @@ async function main() {
         summary.packed_assets += 1;
       } else {
         if (incrementalMode) {
-          const key = shardKey(target.canonical_id || canonicalId, shardPrefixLen);
+          const key = shardKey(target.symbol, shardPrefixLen);
           if (!shards.has(key)) {
             const previousShardPath = path.join(outDir, `${key}.json.gz`);
             shards.set(key, fs.existsSync(previousShardPath) ? readGzipJson(previousShardPath) : {});
