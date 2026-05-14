@@ -487,7 +487,10 @@ step_heap_mb() {
     forecast_daily)
       printf '%s\n' "${RV_FORECAST_DAILY_HEAP_MB:-3072}"
       ;;
-    build_fundamentals|quantlab_daily_report|breakout_v12|scientific_summary|etf_diagnostic|signal_performance_report)
+    scientific_summary)
+      printf '%s\n' "${RV_SCIENTIFIC_SUMMARY_HEAP_MB:-2048}"
+      ;;
+    build_fundamentals|quantlab_daily_report|breakout_v12|etf_diagnostic|signal_performance_report)
       printf '%s\n' 512
       ;;
     dp8_market)
