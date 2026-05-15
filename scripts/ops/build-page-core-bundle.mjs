@@ -1434,6 +1434,48 @@ function finalizePageCoreRow(row, { targetMarketDate, canonicalId = null } = {})
       .slice(0, 1);
     hardBytes = Buffer.byteLength(JSON.stringify(row), 'utf8');
   }
+  // 3rd-pass trim: long decision_reasons/strict_blocking_reasons arrays + free-form
+  // text fields are diagnostic, not load-bearing for UI rendering. Truncate
+  // aggressively rather than crash the whole pipeline on a single asset row.
+  if (hardBytes > PAGE_CORE_HARD_BYTES) {
+    if (Array.isArray(row.decision_reasons) && row.decision_reasons.length > 5) {
+      row.decision_reasons = row.decision_reasons.slice(0, 5);
+    }
+    if (row.status_contract?.strict_blocking_reasons && Array.isArray(row.status_contract.strict_blocking_reasons) && row.status_contract.strict_blocking_reasons.length > 8) {
+      row.status_contract.strict_blocking_reasons = row.status_contract.strict_blocking_reasons.slice(0, 8);
+    }
+    if (typeof row.status_explanation === 'string' && row.status_explanation.length > 200) {
+      row.status_explanation = `${row.status_explanation.slice(0, 197)}...`;
+    }
+    if (Array.isArray(row.meta?.warnings) && row.meta.warnings.length > 3) {
+      row.meta.warnings = row.meta.warnings.slice(0, 3);
+    }
+    hardBytes = Buffer.byteLength(JSON.stringify(row), 'utf8');
+  }
+  // 4th-pass: if STILL oversized, flag the row as quarantined and replace the
+  // bulky panels with a typed-exception placeholder. The UI then renders a
+  // typed reason instead of operational content, but the pipeline finishes for
+  // every other asset. Tracking field surfaces the canonical_id so the
+  // post-build audit can decide whether to fix or accept as exception.
+  if (hardBytes > PAGE_CORE_HARD_BYTES) {
+    const placeholderCanonical = canonicalId || row.canonical_asset_id || 'unknown';
+    if (row.market_stats_min) row.market_stats_min = { stats: {}, oversized_quarantined: true };
+    if (row.summary_min) row.summary_min = { ...row.summary_min, oversized_quarantined: true };
+    if (row.historical_profile) row.historical_profile = { availability: { status: 'oversized_quarantined' } };
+    row.status_contract = {
+      ...(row.status_contract || {}),
+      strict_blocking_reasons: ['oversized_row_quarantined'],
+      historical_profile_status: 'unavailable',
+      model_coverage_status: 'unavailable',
+      stock_detail_view_status: 'degraded',
+      banner_state: 'degraded',
+    };
+    row.ui_banner_state = 'degraded';
+    row.primary_blocker = 'oversized_row_quarantined';
+    row.meta = { ...(row.meta || {}), oversized_quarantined_canonical: placeholderCanonical };
+    hardBytes = Buffer.byteLength(JSON.stringify(row), 'utf8');
+    process.stderr.write(`[page-core] quarantined oversized row canonical=${placeholderCanonical} bytes=${hardBytes}\n`);
+  }
   if (hardBytes > PAGE_CORE_HARD_BYTES) throw new Error(`PAGE_CORE_ROW_TOO_LARGE:${canonicalId || row.canonical_asset_id || 'unknown'}:${hardBytes}`);
   return row;
 }
