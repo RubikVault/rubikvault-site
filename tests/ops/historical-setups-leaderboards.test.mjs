@@ -79,3 +79,12 @@ test('historical active setups reads page-core object-map shards', () => {
   assert.match(builder, /Object\.values\(doc \|\| \{\}\)/);
   assert.match(builder, /row\?\.display_ticker \|\| row\?\.provider_ticker/);
 });
+
+test('historical research ranking supports SHORT edges from negative returns', () => {
+  const builder = fs.readFileSync(path.join(ROOT, 'scripts/historical-insights/build-active-setups.mjs'), 'utf8');
+  const projection = fs.readFileSync(path.join(ROOT, 'scripts/historical-insights/build-projection-from-parquet.mjs'), 'utf8');
+  assert.match(builder, /function directionalExpectedReturn/);
+  assert.match(builder, /normalizedDirection\(rule\) === 'SHORT' \? Math\.abs\(avg\) : avg/);
+  assert.match(projection, /CASE WHEN .* < 0 THEN 'SHORT' ELSE 'LONG' END/);
+  assert.match(projection, /ABS\(\$\{rawSignedReturnExpr\}\) > 0/);
+});

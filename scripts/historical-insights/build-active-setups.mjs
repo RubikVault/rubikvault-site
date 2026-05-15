@@ -96,16 +96,26 @@ function scoreRule(rule) {
   const n = Number(rule.sample_size ?? rule.n ?? 0);
   const wl = Number(rule.wilson_low ?? Math.max(0, Number(rule.win_rate ?? 0) - 0.05));
   const wr = Number(rule.win_rate ?? 0);
-  const avg = Number(rule.avg_signed_return ?? rule.avg_return ?? 0);
+  const avg = directionalExpectedReturn(rule);
   const ev = Number(rule.evidence_score ?? 0);
   const avgScore = Math.max(0, Math.min(1, avg / 0.1));
   return cleanNum(100 * ((0.45 * wl) + (0.20 * wr) + (0.15 * Math.min(n, 500) / 500) + (0.10 * avgScore) + (0.10 * ev / 100)), 4);
 }
 
+function normalizedDirection(rule) {
+  return String(rule?.direction || 'LONG').toUpperCase() === 'SHORT' ? 'SHORT' : 'LONG';
+}
+
+function directionalExpectedReturn(rule) {
+  const avg = Number(rule.avg_signed_return ?? rule.avg_return ?? 0);
+  if (!Number.isFinite(avg)) return 0;
+  return normalizedDirection(rule) === 'SHORT' ? Math.abs(avg) : avg;
+}
+
 function includeRule(rule) {
   const n = Number(rule.sample_size ?? rule.n ?? 0);
   const wl = Number(rule.wilson_low ?? Math.max(0, Number(rule.win_rate ?? 0) - 0.05));
-  const avg = Number(rule.avg_signed_return ?? rule.avg_return ?? 0);
+  const avg = directionalExpectedReturn(rule);
   return n >= 30 && wl >= 0.50 && avg > 0;
 }
 
@@ -115,7 +125,7 @@ function rankProbability(rule) {
 }
 
 function expectedGainPct(rule) {
-  const avg = Number(rule.avg_signed_return ?? rule.avg_return ?? 0);
+  const avg = directionalExpectedReturn(rule);
   return Number.isFinite(avg) ? cleanNum(avg * 100, 2) : null;
 }
 

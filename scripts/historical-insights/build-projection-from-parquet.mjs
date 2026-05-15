@@ -115,6 +115,11 @@ function main() {
   emptyDir(path.join(outRoot, 'shards'));
   const ruleCols = parquetColumns(rulesPath);
   const expr = (name, fallbackSql) => ruleCols.has(name) ? `r.${name}` : fallbackSql;
+  const rawSignedReturnExpr = expr('avg_signed_return', 'r.avg_return');
+  const directionExpr = ruleCols.has('direction')
+    ? `UPPER(COALESCE(r.direction, CASE WHEN ${rawSignedReturnExpr} < 0 THEN 'SHORT' ELSE 'LONG' END))`
+    : `CASE WHEN ${rawSignedReturnExpr} < 0 THEN 'SHORT' ELSE 'LONG' END`;
+  const sideSignedReturnExpr = `CASE WHEN ${directionExpr} = 'SHORT' THEN ABS(${rawSignedReturnExpr}) ELSE ${rawSignedReturnExpr} END`;
 
   const rulesSql = `
     WITH base AS (
@@ -124,15 +129,15 @@ function main() {
         r.rule_id,
         r.pattern_id,
         r.pattern_family,
-        ${expr('direction', "'LONG'")} AS direction,
+        ${directionExpr} AS direction,
         r.target_horizon,
         r.n,
         r.win_rate,
         ${expr('wilson_low', 'NULL')} AS wilson_low,
         ${expr('wilson_high', 'NULL')} AS wilson_high,
         r.avg_return,
-        ${expr('avg_signed_return', 'r.avg_return')} AS avg_signed_return,
-        ${expr('raw_avg_return', 'r.avg_return')} AS raw_avg_return,
+        ${sideSignedReturnExpr} AS avg_signed_return,
+        ${expr('raw_avg_return', rawSignedReturnExpr)} AS raw_avg_return,
         r.edge_vs_baseline,
         r.evidence_score,
         r.status,
@@ -155,7 +160,7 @@ function main() {
       LEFT JOIN read_parquet('${profilesPath.replaceAll("'", "''")}') p ON p.asset_id = r.asset_id
       WHERE r.n >= ${minSample}
         AND r.win_rate > ${weakWinRate}
-        AND ${expr('avg_signed_return', 'r.avg_return')} > 0
+        AND ABS(${rawSignedReturnExpr}) > 0
     )
     SELECT * FROM base WHERE rn <= 5 ORDER BY asset_id, rn;
   `;
