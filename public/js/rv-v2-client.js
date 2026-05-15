@@ -631,7 +631,7 @@ export async function fetchV2StockPage(ticker) {
       const shouldHydrateHistorical = shouldHydrateOptional;
       const shouldHydrateHistoricalProfile = shouldHydrateOptional
         && String(pageCore.data?.status_contract?.historical_profile_status || '').toLowerCase() === 'available_via_endpoint';
-      const [historicalResult, historicalProfileResult, fundamentalsResult] = await Promise.all([
+      const [historicalResult, historicalProfileResult, fundamentalsResult, stockApiResult] = await Promise.all([
         shouldHydrateHistorical
           ? settleOptionalModuleWithBudget(fetchV2Historical(ticker, { targetMarketDate }), 'v2_historical')
           : Promise.resolve({ ok: false, data: null, meta: {}, source: 'v2_historical', error: 'optional_hydration_disabled' }),
@@ -641,10 +641,16 @@ export async function fetchV2StockPage(ticker) {
         shouldHydrateOptional
           ? settleOptionalModuleWithBudget(fetchFundamentals(ticker), 'fundamentals')
           : Promise.resolve({ ok: false, data: null, meta: {}, source: 'fundamentals', error: 'optional_hydration_disabled' }),
+        shouldHydrateHistorical
+          ? settleOptionalModuleWithBudget(fetchStockApiPayload(ticker), 'stock_api', 6500)
+          : Promise.resolve({ ok: false, data: null, meta: {}, source: 'stock_api', error: 'optional_hydration_disabled' }),
       ]);
       const pageCoreHistorical = pageCoreToHistorical(pageCore.data);
       const pageCoreBreakout = pageCoreToBreakoutV12(pageCore.data);
-      const historicalBase = hasRenderableBars(historicalResult?.data)
+      const stockApiHistorical = stockApiToHistorical(stockApiResult?.data, summary.ticker);
+      const historicalBase = hasRenderableBars(stockApiHistorical)
+        ? stockApiHistorical
+        : hasRenderableBars(historicalResult?.data)
           ? historicalResult.data
           : historicalResult?.data || pageCoreHistorical;
       const historical = {

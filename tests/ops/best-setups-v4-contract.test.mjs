@@ -53,7 +53,10 @@ test('best-setups v4 keeps horizon cards ordered by probability then gain', () =
   assert.match(SCRIPT, /function compareHorizonRankRows/);
   assert.match(SCRIPT, /rank_probability/);
   assert.match(SCRIPT, /expected_return/);
-  assert.match(SCRIPT, /num\(row\.expected_return\) > 0/);
+  assert.match(SCRIPT, /function hasExplicitNegativeExpectedReturn/);
+  assert.match(SCRIPT, /expectedReturn != null && expectedReturn < 0/);
+  assert.match(SCRIPT, /!hasExplicitNegativeExpectedReturn\(row\)/);
+  assert.match(SCRIPT, /expected_return_reason: expectedReturnPct == null \? 'page_core_return_metric_unavailable' : null/);
   assert.match(SCRIPT, /selected\.slice\(0, BEST_SETUP_LIMIT\)\.sort\(compareHorizonRankRows\)/);
 });
 

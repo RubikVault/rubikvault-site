@@ -670,12 +670,17 @@ function compareHorizonRankRows(a, b) {
   return String(a.ticker || '').localeCompare(String(b.ticker || ''));
 }
 
+function hasExplicitNegativeExpectedReturn(row) {
+  const expectedReturn = num(row?.expected_return);
+  return expectedReturn != null && expectedReturn < 0;
+}
+
 function sortedHorizonRows(rows, horizon) {
   return rows
     .filter((row) => String(row?.verdict || '').toUpperCase() === 'BUY')
     .filter((row) => rowQualifiesForHorizon(row, horizon))
     .map((row) => decorateForHorizon(row, horizon))
-    .filter((row) => num(row.expected_return) != null && num(row.expected_return) > 0)
+    .filter((row) => !hasExplicitNegativeExpectedReturn(row))
     .sort(compareHorizonRankRows);
 }
 
