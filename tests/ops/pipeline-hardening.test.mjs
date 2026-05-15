@@ -193,6 +193,7 @@ test('feature stock universe report is produced and copied despite report exclud
   const supervisor = fs.readFileSync(path.join(ROOT, 'scripts/nas/rv-nas-night-supervisor.sh'), 'utf8');
   const builder = fs.readFileSync(path.join(ROOT, 'scripts/ops/build-deploy-bundle.mjs'), 'utf8');
   const privacyGate = fs.readFileSync(path.join(ROOT, 'scripts/ops/privacy-gate.mjs'), 'utf8');
+  const featureReport = fs.readFileSync(path.join(ROOT, 'scripts/universe-v7/report-feature-stock-universe.mjs'), 'utf8');
   const runtimeManifest = JSON.parse(fs.readFileSync(path.join(ROOT, 'config/runtime-manifest.json'), 'utf8'));
   assert.match(supervisor, /feature_stock_universe_report/);
   assert.match(supervisor, /report-feature-stock-universe\.mjs/);
@@ -200,6 +201,10 @@ test('feature stock universe report is produced and copied despite report exclud
   assert.match(builder, /feature_stock_universe_report\.json/);
   assert.match(builder, /Copied \$\{copiedUniverseReports\} public universe reports/);
   assert.match(privacyGate, /data\/universe\/v7\/ssot\/feature_stock_universe_report\.json/);
+  assert.match(featureReport, /function pageCoreBreakdown/);
+  assert.match(featureReport, /by_region: effectiveByRegion/);
+  assert.match(featureReport, /by_class: effectiveByClass/);
+  assert.doesNotMatch(featureReport, /by_region: ssotByRegion/);
   assert.ok(runtimeManifest.allow.some((entry) => (
     entry.pattern === 'data/universe/v7/ssot/feature_stock_universe_report.json'
     && entry.allowDenyNameHints === true

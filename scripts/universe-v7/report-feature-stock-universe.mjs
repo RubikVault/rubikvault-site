@@ -1,9 +1,12 @@
 #!/usr/bin/env node
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import { gunzip } from 'node:zlib';
+import { promisify } from 'node:util';
 import { publicSsotPath, resolveSsotPath } from './lib/ssot-paths.mjs';
 
 const REPO_ROOT = process.cwd();
+const gunzipAsync = promisify(gunzip);
 const SSOT_SYMBOLS = publicSsotPath(REPO_ROOT, 'stocks.max.symbols.json');
 const SSOT_CANONICAL_ROWS = resolveSsotPath(REPO_ROOT, 'stocks.max.canonical.rows.json');
 const SSOT_CANONICAL_IDS = publicSsotPath(REPO_ROOT, 'stocks.max.canonical.ids.json');
@@ -67,6 +70,60 @@ function projectSymbolsToCanonical(symbolSet, symbolToCanonical) {
     for (const cid of ids) out.add(cid);
   }
   return out;
+}
+
+function bump(map, key) {
+  const normalized = String(key || 'UNKNOWN').trim().toUpperCase() || 'UNKNOWN';
+  map[normalized] = (map[normalized] || 0) + 1;
+}
+
+function publicRefToAbs(ref) {
+  const normalized = String(ref || '').trim();
+  if (!normalized) return null;
+  if (path.isAbsolute(normalized) && normalized.startsWith('/data/')) {
+    return path.join(REPO_ROOT, 'public', normalized.slice(1));
+  }
+  if (normalized.startsWith('data/')) return path.join(REPO_ROOT, 'public', normalized);
+  if (normalized.startsWith('public/')) return path.join(REPO_ROOT, normalized);
+  return path.isAbsolute(normalized) ? normalized : path.join(REPO_ROOT, normalized);
+}
+
+function regionFromRow(row) {
+  const explicit = String(row?.meta?.region || row?.identity?.region || row?.region || row?.scope_region || '').trim().toUpperCase();
+  if (explicit) return explicit;
+  const exchange = String(row?.identity?.exchange || row?.exchange || row?.canonical_asset_id?.split(':')?.[0] || '').trim().toUpperCase();
+  const country = String(row?.identity?.country || row?.country || '').trim().toUpperCase();
+  if (['US', 'NYSE', 'NASDAQ', 'AMEX', 'ARCA', 'BATS', 'OTC'].includes(exchange) || country === 'USA' || country === 'UNITED STATES') return 'US';
+  if (['AS', 'F', 'HM', 'BE', 'DU', 'HA', 'MU', 'SG', 'PA', 'BR', 'MC', 'MI', 'L', 'SW', 'ST', 'OL', 'HE', 'CO', 'IC', 'VI', 'LS', 'AT', 'IR', 'BD', 'WA', 'PR'].includes(exchange)) return 'EU';
+  if (['KO', 'KQ', 'KS', 'JK', 'TSE', 'TO', 'HK', 'SHG', 'SHE', 'NSE', 'BSE', 'AU', 'AX', 'SI', 'TW', 'TWO', 'BK', 'KLSE'].includes(exchange)) return 'ASIA';
+  return 'OTHER';
+}
+
+async function pageCoreBreakdown(pageCoreLatest) {
+  const snapshotRoot = publicRefToAbs(pageCoreLatest?.snapshot_path);
+  if (!snapshotRoot) return null;
+  const shardDir = path.join(snapshotRoot, 'page-shards');
+  let files = [];
+  try {
+    files = (await fs.readdir(shardDir)).filter((file) => file.endsWith('.json.gz')).sort();
+  } catch {
+    return null;
+  }
+  const byRegion = {};
+  const byClass = {};
+  let total = 0;
+  for (const file of files) {
+    const raw = await fs.readFile(path.join(shardDir, file));
+    const doc = JSON.parse((await gunzipAsync(raw)).toString('utf8'));
+    const rows = Array.isArray(doc) ? doc : Object.values(doc || {});
+    for (const row of rows) {
+      if (!row?.canonical_asset_id) continue;
+      total += 1;
+      bump(byRegion, regionFromRow(row));
+      bump(byClass, row?.identity?.asset_class || row?.asset_class || row?.meta?.asset_class || 'UNKNOWN');
+    }
+  }
+  return total > 0 ? { total, byRegion, byClass } : null;
 }
 
 async function main() {
@@ -193,9 +250,12 @@ async function main() {
   const marketphaseEffectiveCanonical = intersection(marketphaseRawCanonical, byFeatureCanonical.marketphase);
   const elliottEffectiveCanonical = intersection(elliottRawCanonical, byFeatureCanonical.elliott);
   const pageCoreAssetCount = Number(pageCoreLatest?.asset_count);
-  const effectiveUniverseTotal = Number.isFinite(pageCoreAssetCount) && pageCoreAssetCount > 0
+  const pageCoreScope = await pageCoreBreakdown(pageCoreLatest);
+  const effectiveUniverseTotal = pageCoreScope?.total || (Number.isFinite(pageCoreAssetCount) && pageCoreAssetCount > 0
     ? pageCoreAssetCount
-    : (byFeatureCanonical.analyzer.size || byFeature.analyzer.size || ssotCanonicalSet.size || ssotSet.size);
+    : (byFeatureCanonical.analyzer.size || byFeature.analyzer.size || ssotCanonicalSet.size || ssotSet.size));
+  const effectiveByRegion = pageCoreScope?.byRegion || (Number.isFinite(pageCoreAssetCount) && pageCoreAssetCount > 0 ? { UNKNOWN: pageCoreAssetCount } : ssotByRegion);
+  const effectiveByClass = pageCoreScope?.byClass || (Number.isFinite(pageCoreAssetCount) && pageCoreAssetCount > 0 ? { UNKNOWN: pageCoreAssetCount } : ssotByType);
 
   const report = {
     schema: 'rv_v7_feature_stock_universe_report_v1',
@@ -204,8 +264,8 @@ async function main() {
     ssot_total: effectiveUniverseTotal,
     provider_covered: effectiveUniverseTotal,
     excluded_by_reason: {},
-    by_region: ssotByRegion,
-    by_class: ssotByType,
+    by_region: effectiveByRegion,
+    by_class: effectiveByClass,
     active_ingestible_count: effectiveUniverseTotal,
     feature_eligible_count: {
       analyzer: byFeature.analyzer.size,
