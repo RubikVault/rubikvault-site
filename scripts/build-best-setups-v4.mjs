@@ -251,6 +251,11 @@ async function readDecisionCoreBuyRows(targetMarketDate = null) {
           medium: String(decision?.horizons?.mid_term?.horizon_action || '').toUpperCase() || null,
           long: String(decision?.horizons?.long_term?.horizon_action || '').toUpperCase() || null,
         },
+        horizon_reliability: {
+          short: String(decision?.horizons?.short_term?.horizon_reliability || '').toUpperCase() || null,
+          medium: String(decision?.horizons?.mid_term?.horizon_reliability || '').toUpperCase() || null,
+          long: String(decision?.horizons?.long_term?.horizon_reliability || '').toUpperCase() || null,
+        },
         verdict: 'BUY',
         confidence: decision?.decision?.analysis_reliability || 'LOW',
         buy_eligible: true,
@@ -497,9 +502,12 @@ function horizonScore(row, horizon) {
 function decorateForHorizon(row, horizon) {
   const score = horizonScore(row, horizon);
   const rawProbability = row?.calibrated_probability ?? row?.probability ?? null;
-  const expectedReturn = horizon === 'short'
-    ? (num(row?.analyzer_ret_5d_pct) != null ? Number((num(row.analyzer_ret_5d_pct) * 100).toFixed(1)) : null)
-    : (num(row?.analyzer_ret_20d_pct) != null ? Number((num(row.analyzer_ret_20d_pct) * 100).toFixed(1)) : null);
+  const expectedReturnPct = (() => {
+    if (horizon === 'short') return num(row?.analyzer_ret_5d_pct);
+    if (horizon === 'medium') return num(row?.analyzer_ret_20d_pct);
+    return num(row?.analyzer_ret_60d_pct) ?? num(row?.analyzer_ret_63d_pct) ?? num(row?.analyzer_ret_20d_pct);
+  })();
+  const probability = rawProbability != null ? rawProbability : score / 100;
   return {
     ...row,
     horizon,
@@ -511,9 +519,11 @@ function decorateForHorizon(row, horizon) {
     rank_score: score,
     metric_value: score,
     metric_label: 'RANK',
-    probability: rawProbability != null ? rawProbability : score / 100,
-    expected_return: expectedReturn,
-    expected_return_reason: expectedReturn == null ? 'page_core_return_metric_unavailable' : null,
+    probability,
+    rank_probability: probability,
+    expected_return: expectedReturnPct != null ? Number((expectedReturnPct * 100).toFixed(1)) : null,
+    expected_return_reason: expectedReturnPct == null ? 'page_core_return_metric_unavailable' : null,
+    rank_basis: 'horizon_probability_expected_gain',
   };
 }
 
@@ -547,6 +557,14 @@ function enrichDecisionRowsFromPageCore(rows, pageCoreGuard = null) {
     const stats = pageRow.market_stats_min?.stats || pageRow.market_stats?.stats || {};
     const ret5 = num(firstDefined(stats.ret_5d_pct, stats.return_5d_pct, pageRow.historical_profile_summary?.ret_5d_pct));
     const ret20 = num(firstDefined(stats.ret_20d_pct, stats.return_20d_pct, pageRow.historical_profile_summary?.ret_20d_pct));
+    const ret60 = num(firstDefined(
+      stats.ret_60d_pct,
+      stats.return_60d_pct,
+      stats.ret_63d_pct,
+      stats.return_63d_pct,
+      pageRow.historical_profile_summary?.ret_60d_pct,
+      pageRow.historical_profile_summary?.ret_63d_pct,
+    ));
     return {
       ...row,
       name: row.name || pageRow.identity?.name || pageRow.name || pageRow.company_name || pageRow.display_name || pageRow.asset_name || null,
@@ -556,6 +574,7 @@ function enrichDecisionRowsFromPageCore(rows, pageCoreGuard = null) {
       exchange: row.exchange || pageRow.identity?.exchange || String(row.canonical_id || '').split(':')[0] || null,
       analyzer_ret_5d_pct: row.analyzer_ret_5d_pct ?? ret5,
       analyzer_ret_20d_pct: row.analyzer_ret_20d_pct ?? ret20,
+      analyzer_ret_60d_pct: row.analyzer_ret_60d_pct ?? row.analyzer_ret_63d_pct ?? ret60,
       page_core_snapshot_id: row.page_core_snapshot_id || pageCoreGuard.snapshot_id || null,
     };
   });
@@ -588,6 +607,7 @@ async function enrichDecisionRowsFromLocalUniverse(rows) {
     const price = num(lastBar?.close ?? lastBar?.adjClose ?? row?.price ?? row?.last_close);
     const ret5 = num(row?.analyzer_ret_5d_pct) ?? returnPctFromBars(bars, 5);
     const ret20 = num(row?.analyzer_ret_20d_pct) ?? returnPctFromBars(bars, 20);
+    const ret60 = num(row?.analyzer_ret_60d_pct) ?? num(row?.analyzer_ret_63d_pct) ?? returnPctFromBars(bars, 60);
     return {
       ...row,
       canonical_id: row?.canonical_id || meta?.canonical_id || null,
@@ -598,6 +618,7 @@ async function enrichDecisionRowsFromLocalUniverse(rows) {
       exchange: row?.exchange || meta?.exchange || String(row?.canonical_id || meta?.canonical_id || '').split(':')[0] || null,
       analyzer_ret_5d_pct: ret5,
       analyzer_ret_20d_pct: ret20,
+      analyzer_ret_60d_pct: ret60,
       market_data_as_of: row?.market_data_as_of || lastBar?.date || null,
       bars_count: row?.bars_count || meta?.bars_count || (Array.isArray(bars) ? bars.length : 0),
       history_pack: row?.history_pack || meta?.history_pack || null,
@@ -618,8 +639,15 @@ function hasFrontpageRequiredFields(row) {
 function sortedHorizonRows(rows, horizon) {
   return rows
     .filter((row) => String(row?.verdict || '').toUpperCase() === 'BUY')
+    .filter((row) => rowQualifiesForHorizon(row, horizon))
     .map((row) => decorateForHorizon(row, horizon))
     .sort((a, b) => {
+      if ((b.rank_probability ?? -Infinity) !== (a.rank_probability ?? -Infinity)) {
+        return (b.rank_probability ?? -Infinity) - (a.rank_probability ?? -Infinity);
+      }
+      if ((b.expected_return ?? -Infinity) !== (a.expected_return ?? -Infinity)) {
+        return (b.expected_return ?? -Infinity) - (a.expected_return ?? -Infinity);
+      }
       if (b.score !== a.score) return b.score - a.score;
       if ((b.analyzer_composite ?? -Infinity) !== (a.analyzer_composite ?? -Infinity)) {
         return (b.analyzer_composite ?? -Infinity) - (a.analyzer_composite ?? -Infinity);
@@ -629,6 +657,16 @@ function sortedHorizonRows(rows, horizon) {
       }
       return a.ticker.localeCompare(b.ticker);
     });
+}
+
+function rowQualifiesForHorizon(row, horizon) {
+  const actions = row?.horizon_actions && typeof row.horizon_actions === 'object' ? row.horizon_actions : null;
+  if (actions && Object.values(actions).some(Boolean)) {
+    return String(actions[horizon] || '').toUpperCase() === 'BUY';
+  }
+  const rowHorizon = String(row?.horizon || '').toLowerCase();
+  if (rowHorizon) return rowHorizon === horizon;
+  return true;
 }
 
 function buildHorizonRows(rows, horizon) {
@@ -645,10 +683,7 @@ function cyclicSlice(rows, offset, count) {
 }
 
 function buildDecisionCoreHorizonRows(rows, horizon) {
-  const sorted = sortedHorizonRows(rows, horizon).filter((row) => {
-    const action = row?.horizon_actions?.[horizon];
-    return !action || action === 'BUY';
-  });
+  const sorted = sortedHorizonRows(rows, horizon);
   const regions = ['US', 'EU', 'ASIA'];
   const minPerRegion = Math.max(1, Math.min(
     Math.floor(BEST_SETUP_LIMIT / 3),
@@ -678,6 +713,45 @@ function buildDecisionCoreHorizonRows(rows, horizon) {
   }
   for (const row of sorted) add(row);
   return selected.slice(0, BEST_SETUP_LIMIT);
+}
+
+function horizonDiagnostics(rows, horizonsByClass) {
+  const candidatePoolSize = {};
+  const selectedCount = {};
+  const overlapCount = {};
+  const rankBasis = 'horizon_probability_expected_gain';
+  for (const assetClass of ['stocks', 'etfs']) {
+    const classRows = rows.filter((row) => assetClass === 'etfs' ? row?.asset_class === 'etf' : row?.asset_class !== 'etf');
+    candidatePoolSize[assetClass] = {};
+    selectedCount[assetClass] = {};
+    for (const horizon of ['short', 'medium', 'long']) {
+      candidatePoolSize[assetClass][horizon] = classRows.filter((row) => String(row?.verdict || '').toUpperCase() === 'BUY' && rowQualifiesForHorizon(row, horizon)).length;
+      selectedCount[assetClass][horizon] = (horizonsByClass?.[assetClass]?.[horizon] || []).length;
+    }
+    overlapCount[assetClass] = {};
+    for (const [a, b] of [['short', 'medium'], ['short', 'long'], ['medium', 'long']]) {
+      const aIds = new Set((horizonsByClass?.[assetClass]?.[a] || []).map((row) => row?.canonical_id || row?.ticker).filter(Boolean));
+      const bIds = new Set((horizonsByClass?.[assetClass]?.[b] || []).map((row) => row?.canonical_id || row?.ticker).filter(Boolean));
+      overlapCount[assetClass][`${a}_${b}`] = [...aIds].filter((id) => bIds.has(id)).length;
+    }
+  }
+  return { candidate_pool_size: candidatePoolSize, selected_count: selectedCount, overlap_count: overlapCount, rank_basis: rankBasis };
+}
+
+function assertHorizonDiversity(diag) {
+  for (const assetClass of ['stocks', 'etfs']) {
+    const selected = diag?.selected_count?.[assetClass] || {};
+    const pools = diag?.candidate_pool_size?.[assetClass] || {};
+    const overlap = diag?.overlap_count?.[assetClass] || {};
+    const fullHorizonRows = ['short', 'medium', 'long'].every((horizon) => Number(selected[horizon] || 0) >= BEST_SETUP_LIMIT);
+    const sufficientPools = ['short', 'medium', 'long'].every((horizon) => Number(pools[horizon] || 0) >= BEST_SETUP_LIMIT);
+    const identicalTopSets = Number(overlap.short_medium || 0) >= BEST_SETUP_LIMIT
+      && Number(overlap.short_long || 0) >= BEST_SETUP_LIMIT
+      && Number(overlap.medium_long || 0) >= BEST_SETUP_LIMIT;
+    if (fullHorizonRows && sufficientPools && identicalTopSets) {
+      throw new Error(`BEST_SETUPS_HORIZON_DIVERSITY_FAILED:${assetClass}`);
+    }
+  }
 }
 
 function emptyRejectionBucket() {
@@ -873,6 +947,8 @@ async function main() {
     };
     const totalRowsEmitted = Object.values(emittedCounts.stocks).reduce((sum, value) => sum + value, 0)
       + Object.values(emittedCounts.etfs).reduce((sum, value) => sum + value, 0);
+    const horizonDiagnosticsSummary = horizonDiagnostics(buyRows, horizonsByClass);
+    assertHorizonDiversity(horizonDiagnosticsSummary);
     const payload = {
       ok: true,
       schema_version: 'rv.best-setups.shared-core.snapshot.v3',
@@ -892,6 +968,7 @@ async function main() {
           unique_tickers: new Set(buyRows.map((row) => row.ticker)).size,
           stale_market_data_filtered: staleMarketDataFiltered,
         },
+        horizon_diagnostics: horizonDiagnosticsSummary,
         page_core_guard: pageCoreGuard ? {
           available: pageCoreGuard.available,
           target_market_date: pageCoreGuard.target_market_date || null,
@@ -1053,6 +1130,12 @@ async function main() {
   };
   const totalRowsEmitted = Object.values(emittedCounts.stocks).reduce((sum, value) => sum + value, 0)
     + Object.values(emittedCounts.etfs).reduce((sum, value) => sum + value, 0);
+  const horizonDiagnosticsSummary = horizonDiagnostics([
+    ...(acceptedByHorizon.short || []),
+    ...(acceptedByHorizon.medium || []),
+    ...(acceptedByHorizon.long || []),
+  ], horizonsByClass);
+  assertHorizonDiversity(horizonDiagnosticsSummary);
 
   const payload = {
     ok: true,
@@ -1086,6 +1169,7 @@ async function main() {
         unique_tickers: uniqueTickers.length,
         shard_count: quantlabResult.shardCount,
       },
+      horizon_diagnostics: horizonDiagnosticsSummary,
       verified_counts: emittedCounts,
       setup_phase_counts: {
         early: (acceptedByHorizon.medium || []).filter(r => r.setup_phase === 'EARLY').length,

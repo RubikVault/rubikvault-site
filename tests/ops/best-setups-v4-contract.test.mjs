@@ -23,9 +23,21 @@ test('best-setups v4 preserves decision confidence, freshness, reasons, and modu
 
 test('decision-core best-setups only publishes true BUY rows for each horizon', () => {
   assert.match(SCRIPT, /horizon_actions:/);
+  assert.match(SCRIPT, /horizon_reliability:/);
   assert.match(SCRIPT, /short: String\(decision\?\.horizons\?\.short_term\?\.horizon_action/);
   assert.match(SCRIPT, /medium: String\(decision\?\.horizons\?\.mid_term\?\.horizon_action/);
   assert.match(SCRIPT, /long: String\(decision\?\.horizons\?\.long_term\?\.horizon_action/);
-  assert.match(SCRIPT, /row\?\.horizon_actions\?\.\[horizon\]/);
-  assert.match(SCRIPT, /return !action \|\| action === 'BUY'/);
+  assert.match(SCRIPT, /rowQualifiesForHorizon\(row, horizon\)/);
+  assert.match(SCRIPT, /String\(actions\[horizon\] \|\| ''\)\.toUpperCase\(\) === 'BUY'/);
+  assert.doesNotMatch(SCRIPT, /return !action \|\| action === 'BUY'/);
+});
+
+test('best-setups v4 publishes horizon diagnostics and rank basis', () => {
+  assert.match(SCRIPT, /function horizonDiagnostics/);
+  assert.match(SCRIPT, /function assertHorizonDiversity/);
+  assert.match(SCRIPT, /BEST_SETUPS_HORIZON_DIVERSITY_FAILED/);
+  assert.match(SCRIPT, /candidate_pool_size/);
+  assert.match(SCRIPT, /overlap_count/);
+  assert.match(SCRIPT, /horizon_diagnostics: horizonDiagnosticsSummary/);
+  assert.match(SCRIPT, /rank_basis: 'horizon_probability_expected_gain'/);
 });
