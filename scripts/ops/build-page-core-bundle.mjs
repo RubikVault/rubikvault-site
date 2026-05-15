@@ -1452,31 +1452,44 @@ function finalizePageCoreRow(row, { targetMarketDate, canonicalId = null } = {})
     }
     hardBytes = Buffer.byteLength(JSON.stringify(row), 'utf8');
   }
-  // 4th-pass: if STILL oversized, flag the row as quarantined and replace the
-  // bulky panels with a typed-exception placeholder. The UI then renders a
-  // typed reason instead of operational content, but the pipeline finishes for
-  // every other asset. Tracking field surfaces the canonical_id so the
-  // post-build audit can decide whether to fix or accept as exception.
+  // 4th-pass: if STILL oversized, replace the row with an absolute minimal
+  // placeholder so the page-shard stays under cap. Keeps only the keys the
+  // UI/contracts need to render a typed-degraded state. Anything else
+  // (history, indicators, decision details) lives in dedicated artifacts and
+  // does not have to be inline in page-core.
   if (hardBytes > PAGE_CORE_HARD_BYTES) {
     const placeholderCanonical = canonicalId || row.canonical_asset_id || 'unknown';
-    if (row.market_stats_min) row.market_stats_min = { stats: {}, oversized_quarantined: true };
-    if (row.summary_min) row.summary_min = { ...row.summary_min, oversized_quarantined: true };
-    if (row.historical_profile) row.historical_profile = { availability: { status: 'oversized_quarantined' } };
-    row.status_contract = {
-      ...(row.status_contract || {}),
-      strict_blocking_reasons: ['oversized_row_quarantined'],
-      historical_profile_status: 'unavailable',
-      model_coverage_status: 'unavailable',
-      stock_detail_view_status: 'degraded',
-      banner_state: 'degraded',
+    const minimalRow = {
+      canonical_asset_id: placeholderCanonical,
+      schema_version: row.schema_version || 'rv.page_core.v1',
+      target_market_date: row.target_market_date || null,
+      snapshot_id: row.snapshot_id || null,
+      run_id: row.run_id || null,
+      ui_banner_state: 'degraded',
+      primary_blocker: 'oversized_row_quarantined',
+      coverage: { ui_renderable: false },
+      status_contract: {
+        strict_blocking_reasons: ['oversized_row_quarantined'],
+        historical_profile_status: 'unavailable',
+        model_coverage_status: 'unavailable',
+        stock_detail_view_status: 'degraded',
+        banner_state: 'degraded',
+        strict_operational: false,
+      },
+      meta: {
+        asset_type: row.meta?.asset_type || null,
+        region: row.meta?.region || null,
+        oversized_quarantined: true,
+      },
+      freshness: {
+        status: 'last_good',
+        generated_at: row.freshness?.generated_at || new Date().toISOString(),
+      },
     };
-    row.ui_banner_state = 'degraded';
-    row.primary_blocker = 'oversized_row_quarantined';
-    row.meta = { ...(row.meta || {}), oversized_quarantined_canonical: placeholderCanonical };
-    hardBytes = Buffer.byteLength(JSON.stringify(row), 'utf8');
-    process.stderr.write(`[page-core] quarantined oversized row canonical=${placeholderCanonical} bytes=${hardBytes}\n`);
+    const minimalBytes = Buffer.byteLength(JSON.stringify(minimalRow), 'utf8');
+    process.stderr.write(`[page-core] quarantined oversized row canonical=${placeholderCanonical} bytes=${hardBytes} -> minimal_bytes=${minimalBytes}\n`);
+    return minimalRow;
   }
-  if (hardBytes > PAGE_CORE_HARD_BYTES) throw new Error(`PAGE_CORE_ROW_TOO_LARGE:${canonicalId || row.canonical_asset_id || 'unknown'}:${hardBytes}`);
   return row;
 }
 
