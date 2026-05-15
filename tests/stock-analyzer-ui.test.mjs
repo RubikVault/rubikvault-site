@@ -526,6 +526,14 @@ test('Live stock.html qualifies historical confidence strength', async () => {
   assert.ok(content.includes('historicalView.confidenceLabel'), 'Historical confidence qualifier is missing');
 });
 
+test('Live stock.html renders typed historical performance unavailable reasons', async () => {
+  const fs = await import('node:fs');
+  const content = fs.readFileSync(new URL('../public/stock.html', import.meta.url), 'utf-8');
+  assert.ok(content.includes('Historical Performance Unavailable'), 'Historical unavailable title is missing');
+  assert.ok(content.includes('quality_guardrail_suspect_returns'), 'Quality guardrail typed reason is missing');
+  assert.ok(content.includes('window._hpAvailability?.status'), 'Historical profile typed status is missing');
+});
+
 test('Live stock.html exposes compact decision meta summary', async () => {
   const fs = await import('node:fs');
   const content = fs.readFileSync(new URL('../public/stock.html', import.meta.url), 'utf-8');
@@ -622,7 +630,7 @@ test('Live stock.html includes WAIT next-action guidance', async () => {
 test('Live stock.html includes mobile-safe targets and skeleton states', async () => {
   const fs = await import('node:fs');
   const content = fs.readFileSync(new URL('../public/stock.html', import.meta.url), 'utf-8');
-  assert.ok(content.includes('min-height:44px'), '44px tap target rule is missing');
+  assert.ok(/min-height:\s*44px/.test(content), '44px tap target rule is missing');
   assert.ok(content.includes('skeleton-line'), 'Skeleton loading state is missing');
   assert.ok(content.includes('Current price sits between near support and near resistance.'), 'Mobile key levels summary is missing');
   assert.ok(content.includes('mobile-segments'), 'Mobile segmented navigation is missing');

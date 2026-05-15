@@ -2466,7 +2466,7 @@
 
         if (!data) {
           setBadge([{ check: true, level: 'invalid', msg: 'No historical data' }]);
-          body.innerHTML = '<div style="color:var(--text-muted);font-size:.75rem;text-align:center;padding:1rem">' + _esc(window._hpAvailability?.reason || 'Historical performance unavailable.') + '</div>';
+          body.innerHTML = '<div style="color:var(--text-muted);font-size:.75rem;text-align:center;padding:1rem"><div style="font-weight:700;color:var(--yellow);margin-bottom:.25rem">Historical Performance Unavailable</div><div>' + _esc(window._hpAvailability?.reason || 'Historical performance unavailable.') + '</div><div style="font-size:.58rem;color:var(--text-dim);margin-top:.35rem">Reason: ' + _esc(window._hpAvailability?.status || 'historical_profile_unavailable') + '</div></div>';
           return;
         }
         const events = data.events || {};
@@ -2566,7 +2566,7 @@
 
         if (confidence === 'UNAVAILABLE') {
           setBadge([{ check: true, level: 'invalid', msg: 'All events suspect — data excluded' }]);
-          body.innerHTML = '<div style="color:var(--text-muted);font-size:.75rem;text-align:center;padding:1rem"><div style="color:var(--red);font-weight:700;margin-bottom:.3rem">\u26A0 Quality Guardrail Active</div>Historical data excluded by quality guardrail \u2014 all available events contain suspect return values. This is a protective measure to prevent misleading signals.</div>';
+          body.innerHTML = '<div style="color:var(--text-muted);font-size:.75rem;text-align:center;padding:1rem"><div style="color:var(--red);font-weight:700;margin-bottom:.3rem">\u26A0 Quality Guardrail Active</div><div>Historical data excluded by quality guardrail — all available events contain suspect return values.</div><div style="font-size:.58rem;color:var(--text-dim);margin-top:.35rem">Reason: quality_guardrail_suspect_returns · as-of: ' + _esc(data.latest_date || data.computed_at || 'unknown') + '</div></div>';
           return;
         }
 
