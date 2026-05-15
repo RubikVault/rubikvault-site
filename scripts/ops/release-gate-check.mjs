@@ -850,6 +850,42 @@ function deploymentIdFromUrl(url) {
   }
 }
 
+// F13: stock-analyzer UI proof against a freshly deployed URL. Covers both the
+// page-core staging preview and the main production deploy so non-candidate
+// deploys (UI-only code change) cannot skip the gate. Modes:
+//   warn (default) — log summary on failure, keep deploy going
+//   hard           — fail() the gate immediately on proof failure
+//   off            — skip entirely
+// Sample defaults to class160; override via RV_RELEASE_GATE_UI_PROOF_SAMPLE.
+function runUiProofGate(targetUrl, label = 'deploy') {
+  const uiProofMode = String(process.env.RV_RELEASE_GATE_UI_PROOF_MODE || 'warn').toLowerCase();
+  if (uiProofMode === 'off') {
+    log(`Stock-analyzer UI proof against ${label} disabled via RV_RELEASE_GATE_UI_PROOF_MODE=off.`);
+    return;
+  }
+  if (!targetUrl) {
+    warn(`runUiProofGate(${label}): no URL provided, skipping.`);
+    return;
+  }
+  const sample = process.env.RV_RELEASE_GATE_UI_PROOF_SAMPLE || 'class160';
+  log(`Running stock-analyzer UI proof against ${label} (sample=${sample}, mode=${uiProofMode})...`);
+  const proofRun = spawnSync(process.execPath, [
+    'scripts/validate/stock-analyzer-ui-random50-proof.mjs',
+    `--base-url=${targetUrl}`,
+    `--sample=${sample}`,
+    '--max-failures=10',
+  ], { cwd: REPO_ROOT, encoding: 'utf8', timeout: 1_800_000, maxBuffer: 32 * 1024 * 1024 });
+  if (proofRun.status === 0) {
+    log(`Stock-analyzer UI proof against ${label} passed.`);
+    return;
+  }
+  const stderr = (proofRun.stderr || '').slice(-2000);
+  const stdout = (proofRun.stdout || '').slice(-2000);
+  const summary = `UI proof against ${label} failed (exit=${proofRun.status ?? 'timeout'}). stdout-tail=${stdout} stderr-tail=${stderr}`;
+  if (uiProofMode === 'hard') fail(summary);
+  else warn(summary);
+}
+
 function runWranglerDeploy(branch = PAGES_DEPLOY_BRANCH, { skipCaching = WRANGLER_SKIP_CACHING, purpose = 'deploy' } = {}) {
   log(`Running wrangler pages deploy dist/pages-prod/ (branch=${branch}, purpose=${purpose}, skip_caching=${skipCaching})...`);
   // Use the project-local Wrangler binary so deploys do not depend on host CLI PATH setup.
@@ -1037,37 +1073,7 @@ if (pageCoreCandidatePresent) {
       pageCoreOnly: true,
       pageCoreLatestPath: 'public/data/page-core/candidates/latest.candidate.json',
     });
-    // QM5/QM6 follow-up: run the random160 stock-analyzer UI proof against the
-    // preview deploy BEFORE we promote the candidate. Catches regressions like
-    // the 1102 chart crash, asset-id route collisions, or null-price rows
-    // earlier than the post-prod canary. WARN-mode first cycle so we can prove
-    // the gate is stable; flip RV_RELEASE_GATE_UI_PROOF_MODE=hard to enforce.
-    const uiProofMode = String(process.env.RV_RELEASE_GATE_UI_PROOF_MODE || 'warn').toLowerCase();
-    if (uiProofMode !== 'off') {
-      const sample = process.env.RV_RELEASE_GATE_UI_PROOF_SAMPLE || 'class160';
-      log(`Running stock-analyzer UI proof against preview (sample=${sample}, mode=${uiProofMode})...`);
-      const proofRun = spawnSync(process.execPath, [
-        'scripts/validate/stock-analyzer-ui-random50-proof.mjs',
-        `--base-url=${previewDeploy.deployment_url}`,
-        `--sample=${sample}`,
-        '--max-failures=10',
-      ], { cwd: REPO_ROOT, encoding: 'utf8', timeout: 1_800_000, maxBuffer: 32 * 1024 * 1024 });
-      const proofOk = proofRun.status === 0;
-      if (!proofOk) {
-        const stderr = (proofRun.stderr || '').slice(-2000);
-        const stdout = (proofRun.stdout || '').slice(-2000);
-        const summary = `UI proof against preview failed (exit=${proofRun.status ?? 'timeout'}). stdout-tail=${stdout} stderr-tail=${stderr}`;
-        if (uiProofMode === 'hard') {
-          fail(summary);
-        } else {
-          warn(summary);
-        }
-      } else {
-        log('Stock-analyzer UI proof against preview passed.');
-      }
-    } else {
-      log('Stock-analyzer UI proof against preview disabled via RV_RELEASE_GATE_UI_PROOF_MODE=off.');
-    }
+    runUiProofGate(previewDeploy.deployment_url, 'preview');
   }
   promotePageCoreCandidate();
   buildDeployBundle();
@@ -1116,6 +1122,14 @@ if (!skipSmokes) {
   const runtimeContracts = verifyRuntimeContractsWithRetry(deployResult.deployment_url || PROD_BASE, proofTargetDate);
   if (!runtimeContracts.ok) {
     fail(`Production runtime contract smoke failed: ${runtimeContracts.failures.join('; ')}`);
+  }
+  // F13: also run the UI proof against the main deploy URL so non-candidate
+  // releases (UI-only code change with no page-core promotion) still cover
+  // the random160 regression sweep. Skipped when the prior step reused the
+  // previous deploy artifact (dist hash matched) — that deploy already
+  // passed proof in its own run.
+  if (!deployResult.reused_prior_deploy) {
+    runUiProofGate(deployResult.deployment_url || PROD_BASE, 'main');
   }
   customDomainContracts = verifyRuntimeContractsWithRetry(PROD_BASE, proofTargetDate, { requirePublicStatus: true });
   if (!customDomainContracts.ok) {
