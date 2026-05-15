@@ -1799,11 +1799,7 @@
       // ── Construct Layout ──
       const _criticalIntegrityItems = _integrityItems.filter(item => item.color === 'var(--red)');
       const _allSystemsOperational = _finalSealOperational && _assetDecisionOperational && (_integrity.pageState || 'OK') === 'OK' && _criticalIntegrityItems.length === 0 && _integrityItems.length === 0;
-      // Partial-but-decision-grade coverage (e.g. Models 1/2 with healthy price/tech/regime/freshness)
-      // is surfaced as informational chips, not a top banner. The chip row already tells the user.
-      const _decisionGradeReady = Boolean(_statusContract?.decision_grade_ready);
-      const _hasCriticalSignal = _integrity.severity === 'critical' || (_integrity.pageState && _integrity.pageState !== 'OK') || _criticalIntegrityItems.length > 0;
-      const _statusSeverity = _hasCriticalSignal ? 'critical' : (_allSystemsOperational ? 'ok' : (_decisionGradeReady ? 'info' : 'warning'));
+      const _statusSeverity = _integrity.severity === 'critical' || (_integrity.pageState && _integrity.pageState !== 'OK') ? 'critical' : (_criticalIntegrityItems.length ? 'critical' : (_allSystemsOperational ? 'ok' : 'warning'));
       const _statusTitle = _integrity.pageState === 'GLOBAL_OUTAGE'
         ? 'System Status: GLOBAL OUTAGE'
         : _integrity.pageState === 'DATA_ISSUE'
@@ -1831,9 +1827,7 @@
       const _statusColor = _statusSeverity === 'ok' ? 'var(--green)' : _statusSeverity === 'critical' ? 'var(--red)' : 'var(--yellow)';
       const _statusBg = _statusSeverity === 'ok' ? 'rgba(16,185,129,0.06)' : _statusSeverity === 'critical' ? 'rgba(248,113,113,0.08)' : 'rgba(245,158,11,0.06)';
       const _statusBorder = _statusSeverity === 'ok' ? 'rgba(16,185,129,0.12)' : _statusSeverity === 'critical' ? 'rgba(248,113,113,0.18)' : 'rgba(245,158,11,0.12)';
-      const _integrityBanner = _statusSeverity === 'info'
-        ? ''
-        : '<div style="padding:.45rem .7rem;margin-bottom:.75rem;border-radius:8px;background:' + _statusBg + ';border:1px solid ' + _statusBorder + ';display:flex;align-items:flex-start;gap:.55rem"><span style="color:' + _statusColor + ';font-size:.7rem;line-height:1.3">' + (_statusSeverity === 'ok' ? '\u2713' : _statusSeverity === 'critical' ? '\u26A0' : '\u25CF') + '</span><div><div style="font-size:.64rem;color:' + _statusColor + ';font-weight:800;text-transform:uppercase;letter-spacing:.04em">' + _statusTitle + '</div><div style="font-size:.6rem;color:var(--text-muted);margin-top:2px;line-height:1.45">' + _esc(_statusSubline) + '</div></div></div>';
+      const _integrityBanner = '<div style="padding:.45rem .7rem;margin-bottom:.75rem;border-radius:8px;background:' + _statusBg + ';border:1px solid ' + _statusBorder + ';display:flex;align-items:flex-start;gap:.55rem"><span style="color:' + _statusColor + ';font-size:.7rem;line-height:1.3">' + (_statusSeverity === 'ok' ? '\u2713' : _statusSeverity === 'critical' ? '\u26A0' : '\u25CF') + '</span><div><div style="font-size:.64rem;color:' + _statusColor + ';font-weight:800;text-transform:uppercase;letter-spacing:.04em">' + _statusTitle + '</div><div style="font-size:.6rem;color:var(--text-muted);margin-top:2px;line-height:1.45">' + _esc(_statusSubline) + '</div></div></div>';
       const _qualityLabel = _integrity.dataQuality || (trustView.coverageLabel === 'partial' ? 'DATA ISSUE' : 'OK');
       const _coverageLabel = _integrity.coverage || String(trustView.coverageLabel || 'partial').toUpperCase();
       const _trustSummary = _integrity.pageState && _integrity.pageState !== 'OK' ? 'Data Quality: FAILED' : _esc(stockUiState.trustSummary || trustView.summaryText);

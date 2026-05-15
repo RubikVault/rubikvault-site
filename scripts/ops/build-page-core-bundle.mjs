@@ -1207,25 +1207,9 @@ function buildPageCoreRow({ canonicalId, registryRow, decisionRow, lookupValue, 
   }
   const historicalProfileOperational = ['ready', 'available_via_endpoint', 'not_applicable'].includes(historicalProfileStatus);
   const modelCoverageOperational = ['complete', 'not_applicable', 'typed_gap'].includes(modelCoverageStatus);
-  const modelsPresent = Number(modelCoverage.available || 0);
-  // decision_grade_ready: the asset has a complete decision-grade payload
-  // (decision-core operational, sufficient bars, fresh price series, historical
-  // basis available). Partial module enhancement (Models N/M with N >= 1) is
-  // surfaced as a typed warning rather than a hard banner blocker — the chip
-  // row already tells the user. Reserve the strict banner for genuine integrity
-  // failures (price corruption, all-modules-zero AND no decision-grade baseline).
-  const decisionGradeReady = Boolean(
-    decisionOperational && targetable && historicalBasisOk && freshnessOk
-  );
   const visibleModuleBlockers = [];
   if (!historicalProfileOperational) visibleModuleBlockers.push('historical_profile_not_ready');
-  if (!modelCoverageOperational) {
-    if (decisionGradeReady) {
-      moduleWarnings.push('model_coverage_unavailable');
-    } else {
-      visibleModuleBlockers.push('model_coverage_incomplete');
-    }
-  }
+  if (!modelCoverageOperational) visibleModuleBlockers.push('model_coverage_incomplete');
   if (!historicalProfileOperational) moduleWarnings.push(`historical_profile_${historicalProfileStatus || 'missing'}`);
   const visibleModulesOperational = visibleModuleBlockers.length === 0;
   const strictBlockingReasons = uniqueStrings([
@@ -1327,9 +1311,6 @@ function buildPageCoreRow({ canonicalId, registryRow, decisionRow, lookupValue, 
       quantlab_status: modelStates.quantlab.status,
       scientific_status: modelStates.scientific.status,
       model_coverage_status: modelCoverageStatus,
-      models_present: modelsPresent,
-      models_required: Number(modelCoverage.required || 0),
-      decision_grade_ready: decisionGradeReady,
       warning_reasons: uniqueStrings([...moduleWarnings]),
       visible_modules_operational: visibleModulesOperational,
       stock_detail_view_status: uiBannerState === 'all_systems_operational' ? 'operational' : 'degraded',
