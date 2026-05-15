@@ -530,9 +530,9 @@ function decorateForHorizon(row, horizon) {
     rank_basis: 'horizon_probability_expected_gain',
     horizon_action: horizonAction,
     horizon_reliability: row?.horizon_reliability?.[horizon] || null,
-    horizon_signal_basis: String(horizonAction || '').toUpperCase() === 'BUY'
-      ? 'horizon_action_buy'
-      : 'decision_core_primary_buy_horizon_rank',
+    horizon_signal_basis: isHorizonBuyAction(horizonAction)
+      ? 'horizon_action_buy_or_high'
+      : 'horizon_action_not_buy',
   };
 }
 
@@ -671,18 +671,14 @@ function sortedHorizonRows(rows, horizon) {
     .sort(compareHorizonRankRows);
 }
 
+function isHorizonBuyAction(value) {
+  return ['BUY', 'HIGH'].includes(String(value || '').toUpperCase());
+}
+
 function rowQualifiesForHorizon(row, horizon) {
   const actions = row?.horizon_actions && typeof row.horizon_actions === 'object' ? row.horizon_actions : null;
   if (actions && Object.values(actions).some(Boolean)) {
-    if (String(actions[horizon] || '').toUpperCase() === 'BUY') return true;
-    if (
-      process.env.BEST_SETUPS_REQUIRE_HORIZON_ACTION !== '1'
-      && row?.decision_source === 'decision-core'
-      && String(row?.primary_action || row?.verdict || '').toUpperCase() === 'BUY'
-    ) {
-      return true;
-    }
-    return false;
+    return isHorizonBuyAction(actions[horizon]);
   }
   const rowHorizon = String(row?.horizon || '').toLowerCase();
   if (rowHorizon) return rowHorizon === horizon;

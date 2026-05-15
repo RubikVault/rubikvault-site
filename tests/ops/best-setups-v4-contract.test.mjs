@@ -28,8 +28,11 @@ test('decision-core best-setups only publishes true BUY rows for each horizon', 
   assert.match(SCRIPT, /medium: String\(decision\?\.horizons\?\.mid_term\?\.horizon_action/);
   assert.match(SCRIPT, /long: String\(decision\?\.horizons\?\.long_term\?\.horizon_action/);
   assert.match(SCRIPT, /rowQualifiesForHorizon\(row, horizon\)/);
-  assert.match(SCRIPT, /String\(actions\[horizon\] \|\| ''\)\.toUpperCase\(\) === 'BUY'/);
-  assert.match(SCRIPT, /decision_core_primary_buy_horizon_rank/);
+  assert.match(SCRIPT, /function isHorizonBuyAction/);
+  assert.match(SCRIPT, /\['BUY', 'HIGH'\]\.includes/);
+  assert.match(SCRIPT, /return isHorizonBuyAction\(actions\[horizon\]\)/);
+  assert.doesNotMatch(SCRIPT, /decision_core_primary_buy_horizon_rank/);
+  assert.doesNotMatch(SCRIPT, /BEST_SETUPS_REQUIRE_HORIZON_ACTION/);
   assert.doesNotMatch(SCRIPT, /return !action \|\| action === 'BUY'/);
 });
 
