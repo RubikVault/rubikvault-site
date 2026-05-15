@@ -1452,22 +1452,91 @@ function finalizePageCoreRow(row, { targetMarketDate, canonicalId = null } = {})
     }
     hardBytes = Buffer.byteLength(JSON.stringify(row), 'utf8');
   }
-  // 4th-pass: if STILL oversized, replace the row with an absolute minimal
-  // placeholder so the page-shard stays under cap. Keeps only the keys the
-  // UI/contracts need to render a typed-degraded state. Anything else
-  // (history, indicators, decision details) lives in dedicated artifacts and
-  // does not have to be inline in page-core.
+  // 4th-pass: if STILL oversized, replace the row with a schema-valid minimal
+  // placeholder so the page-shard stays under cap AND page-core.v1 ajv
+  // validation passes. Required keys + nested required fields covered with
+  // typed-degraded placeholders. History/indicators/decision details live
+  // in dedicated artifacts; quarantined rows simply expose typed degraded
+  // status_contract so the UI renders a typed reason.
   if (hardBytes > PAGE_CORE_HARD_BYTES) {
     const placeholderCanonical = canonicalId || row.canonical_asset_id || 'unknown';
+    const fallbackTicker = (row.display_ticker || row.provider_ticker || placeholderCanonical.split(':').pop() || placeholderCanonical);
+    const nowIso = new Date().toISOString();
+    const targetDate = row.target_market_date || nowIso.slice(0, 10);
+    const fallbackRunId = row.run_id || `page-core-quarantine-${targetDate}`;
+    const fallbackSnapshotId = row.snapshot_id || `page-quarantine-${targetDate}`;
     const minimalRow = {
-      canonical_asset_id: placeholderCanonical,
+      ok: false,
       schema_version: row.schema_version || 'rv.page_core.v1',
-      target_market_date: row.target_market_date || null,
-      snapshot_id: row.snapshot_id || null,
-      run_id: row.run_id || null,
+      run_id: fallbackRunId,
+      snapshot_id: fallbackSnapshotId,
+      canonical_asset_id: placeholderCanonical,
+      display_ticker: fallbackTicker,
+      provider_ticker: fallbackTicker,
+      target_market_date: targetDate,
+      latest_bar_date: row.latest_bar_date || null,
+      stats_date: row.stats_date || null,
+      price_source: row.price_source || null,
+      key_levels_ready: false,
+      core_status: 'degraded',
       ui_banner_state: 'degraded',
       primary_blocker: 'oversized_row_quarantined',
-      coverage: { ui_renderable: false },
+      freshness: {
+        status: 'stale',
+        as_of: row.freshness?.as_of || row.latest_bar_date || targetDate,
+        generated_at: row.freshness?.generated_at || nowIso,
+        stale_after: row.freshness?.stale_after || nowIso,
+      },
+      identity: {
+        name: row.identity?.name || fallbackTicker,
+        country: row.identity?.country || null,
+        exchange: row.identity?.exchange || (placeholderCanonical.split(':')[0] || null),
+        sector: row.identity?.sector || null,
+        industry: row.identity?.industry || null,
+        asset_class: row.identity?.asset_class || row.meta?.asset_type || 'UNKNOWN',
+      },
+      summary_min: {
+        last_close: null,
+        daily_change_pct: null,
+        daily_change_abs: null,
+        market_cap: null,
+        decision_verdict: 'DEGRADED',
+        decision_confidence_bucket: 'unknown',
+        learning_status: 'UNKNOWN',
+        quality_status: 'DEGRADED',
+        governance_status: 'DEGRADED',
+        oversized_quarantined: true,
+      },
+      governance_summary: {
+        status: 'DEGRADED',
+        evaluation_role: null,
+        learning_gate_status: 'unknown',
+        blocking_reasons: ['oversized_row_quarantined'],
+        warnings: ['oversized_row_quarantined'],
+        oversized_quarantined: true,
+      },
+      coverage: {
+        bars: null,
+        derived_daily: false,
+        governance: false,
+        fundamentals: false,
+        forecast: false,
+        ui_renderable: false,
+      },
+      module_links: {
+        historical: row.module_links?.historical || null,
+        fundamentals: row.module_links?.fundamentals || null,
+        forecast: row.module_links?.forecast || null,
+        quote: row.module_links?.quote || null,
+      },
+      meta: {
+        source: row.meta?.source || 'page_core_bundle',
+        render_contract: row.meta?.render_contract || 'typed_degraded_quarantine',
+        warnings: ['oversized_row_quarantined'],
+        asset_type: row.meta?.asset_type || null,
+        region: row.meta?.region || null,
+        oversized_quarantined: true,
+      },
       status_contract: {
         strict_blocking_reasons: ['oversized_row_quarantined'],
         historical_profile_status: 'unavailable',
@@ -1476,15 +1545,11 @@ function finalizePageCoreRow(row, { targetMarketDate, canonicalId = null } = {})
         banner_state: 'degraded',
         strict_operational: false,
       },
-      meta: {
-        asset_type: row.meta?.asset_type || null,
-        region: row.meta?.region || null,
-        oversized_quarantined: true,
-      },
-      freshness: {
-        status: 'last_good',
-        generated_at: row.freshness?.generated_at || new Date().toISOString(),
-      },
+      market_stats_min: { stats: {}, oversized_quarantined: true },
+      decision_core_min: null,
+      historical_profile_summary: { availability: { status: 'oversized_quarantined' } },
+      model_coverage: { status: 'unavailable', oversized_quarantined: true },
+      breakout_summary: null,
     };
     const minimalBytes = Buffer.byteLength(JSON.stringify(minimalRow), 'utf8');
     process.stderr.write(`[page-core] quarantined oversized row canonical=${placeholderCanonical} bytes=${hardBytes} -> minimal_bytes=${minimalBytes}\n`);
