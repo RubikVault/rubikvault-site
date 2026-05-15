@@ -79,7 +79,7 @@ function readNdjsonGz(filePath) {
 function writeJsonAtomic(filePath, doc) {
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
   const tmp = `${filePath}.${process.pid}.${Date.now()}.tmp`;
-  fs.writeFileSync(tmp, `${JSON.stringify(doc, null, 2)}\n`, 'utf8');
+  fs.writeFileSync(tmp, `${JSON.stringify(doc)}\n`, 'utf8');
   fs.renameSync(tmp, filePath);
 }
 
@@ -216,14 +216,9 @@ function main() {
     exceptionIds.add(canonicalId);
     exceptions.push({
       canonical_id: canonicalId,
-      symbol: row?.symbol || canonicalId.split(':').pop(),
-      exchange,
-      asset_class: assetClass,
       bars_count: bars,
       last_trade_date: lastTradeDate,
-      target_market_date: options.targetMarketDate,
       reason,
-      evidence: 'full_universe_eodhd_refresh_ok_no_target_row',
     });
   }
 
@@ -238,16 +233,9 @@ function main() {
     exceptionIds.add(canonicalId);
     exceptions.push({
       canonical_id: canonicalId,
-      symbol: canonicalId.split(':').pop(),
-      exchange,
-      asset_class: assetClassFromCanonicalId(canonicalId),
       bars_count: null,
       last_trade_date: null,
-      target_market_date: options.targetMarketDate,
       reason,
-      evidence: 'refresh_report_fetch_error',
-      provider_error: error.error,
-      provider_message: error.message,
     });
   }
 
