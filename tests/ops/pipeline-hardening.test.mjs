@@ -376,3 +376,13 @@ test('page core bundle has conservative incremental same-target reuse with stric
   const supervisor = fs.readFileSync(path.join(ROOT, 'scripts/nas/rv-nas-night-supervisor.sh'), 'utf8');
   assert.match(supervisor, /build-page-core-bundle\.mjs .*--incremental/);
 });
+
+test('historical active setups has enough NAS heap for full-universe leaderboards', () => {
+  const supervisor = fs.readFileSync(path.join(ROOT, 'scripts/nas/rv-nas-night-supervisor.sh'), 'utf8');
+  assert.match(supervisor, /RV_HISTORICAL_ACTIVE_SETUPS_HEAP_MB:-1536/);
+  assert.match(supervisor, /RV_HISTORICAL_ACTIVE_SETUPS_TIMEOUT_SEC:-1800/);
+  assert.doesNotMatch(
+    supervisor,
+    /quantlab_daily_report\|etf_diagnostic\|signal_performance_report\|historical_research_ingest\|historical_active_setups\)\s*printf '%s\\n' 512/,
+  );
+});

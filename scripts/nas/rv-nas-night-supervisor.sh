@@ -419,7 +419,8 @@ step_timeout_sec() {
     cutover_readiness) printf '%s\n' 1800 ;;
     stage1_ops_pack) printf '%s\n' 1800 ;;
     system_status_report|system_status_aggregator|data_freshness_report|pipeline_epoch|generate_meta_dashboard_data) printf '%s\n' 1800 ;;
-    historical_research_ingest|historical_active_setups) printf '%s\n' 900 ;;
+    historical_research_ingest) printf '%s\n' 900 ;;
+    historical_active_setups) printf '%s\n' "${RV_HISTORICAL_ACTIVE_SETUPS_TIMEOUT_SEC:-1800}" ;;
     runtime_preflight|stock_ui_integrity_audit|classifier_audit|ops_health_reports) printf '%s\n' 1800 ;;
     resource_budget_report) printf '%s\n' 300 ;;
     stock_analyzer_universe_audit) printf '%s\n' 5400 ;;
@@ -563,7 +564,10 @@ step_heap_mb() {
         scope_aware_heap_mb 512 250
       fi
       ;;
-    quantlab_daily_report|etf_diagnostic|signal_performance_report|historical_research_ingest|historical_active_setups)
+    historical_active_setups)
+      printf '%s\n' "${RV_HISTORICAL_ACTIVE_SETUPS_HEAP_MB:-1536}"
+      ;;
+    quantlab_daily_report|etf_diagnostic|signal_performance_report|historical_research_ingest)
       printf '%s\n' 512
       ;;
     dp8_market)
