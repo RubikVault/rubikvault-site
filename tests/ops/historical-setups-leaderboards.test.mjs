@@ -65,3 +65,11 @@ test('frontpage renders historical research filters from historical-setups leade
   assert.match(html, /Open/);
   assert.match(html, /expected_gain_pct/);
 });
+
+test('historical active setups keeps private stats scan opt-in for nightly safety', () => {
+  const builder = fs.readFileSync(path.join(ROOT, 'scripts/historical-insights/build-active-setups.mjs'), 'utf8');
+  const supervisor = fs.readFileSync(path.join(ROOT, 'scripts/nas/rv-nas-night-supervisor.sh'), 'utf8');
+  assert.match(builder, /RV_HISTORICAL_ACTIVE_SETUPS_PRIVATE_SCAN === '1'/);
+  assert.match(builder, /private_stats_scan_enabled/);
+  assert.match(supervisor, /RV_HISTORICAL_ACTIVE_SETUPS_PRIVATE_SCAN='\$\{RV_HISTORICAL_ACTIVE_SETUPS_PRIVATE_SCAN:-0\}'/);
+});

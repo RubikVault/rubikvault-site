@@ -20,7 +20,8 @@ const DEFAULT_PRIVATE_STATS = NAS_OPS_ROOT
   ? path.join(NAS_OPS_ROOT, 'external-analysis/historical-research/last-good/private/validated_rules.parquet')
   : '';
 const PRIVATE_STATS_PATH = process.env.RV_HISTORICAL_RESEARCH_STATS || DEFAULT_PRIVATE_STATS;
-if (!PRIVATE_STATS_PATH) {
+const PRIVATE_STATS_ENABLED = process.env.RV_HISTORICAL_ACTIVE_SETUPS_PRIVATE_SCAN === '1';
+if (PRIVATE_STATS_ENABLED && !PRIVATE_STATS_PATH) {
   throw new Error('build-active-setups: RV_HISTORICAL_RESEARCH_STATS or NAS_OPS_ROOT must point at the last-good validated_rules.parquet.');
 }
 const MAX_BAR_STALE_DAYS = Math.max(1, Number(process.env.RV_HISTORICAL_SETUPS_MAX_BAR_STALE_DAYS || '7'));
@@ -358,7 +359,7 @@ async function main() {
   const assetMeta = new Map(assetRows.map((row) => [String(row.asset_id || '').toUpperCase(), row]));
   let statsSource = 'public_projection';
 
-  if (fs.existsSync(PRIVATE_STATS_PATH)) {
+  if (PRIVATE_STATS_ENABLED && fs.existsSync(PRIVATE_STATS_PATH)) {
     try {
       const patternIds = distinctPatternIdsFromStats(PRIVATE_STATS_PATH);
       telemetry.pattern_catalog_size = patternIds.length;
@@ -535,6 +536,7 @@ async function main() {
       historical_insights_generated_at: latest?.generated_at || null,
       page_core_scope_limited: Boolean(scopeIds),
       stats_source: statsSource,
+      private_stats_scan_enabled: PRIVATE_STATS_ENABLED,
     },
     thresholds: { min_n: 30, min_wilson_low: 0.50, require_positive_avg_signed_return: true, top, leaderboard_top: LEADERBOARD_TOP },
     telemetry,

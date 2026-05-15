@@ -766,7 +766,7 @@ step_command() {
       printf '%s\n' "node scripts/historical-insights/ingest-research-bundle.mjs"
       ;;
     historical_active_setups)
-      printf '%s\n' "ALLOW_REMOTE_BAR_FETCH=0 BEST_SETUPS_DISABLE_NETWORK=1 node scripts/historical-insights/build-active-setups.mjs --top=30"
+      printf '%s\n' "ALLOW_REMOTE_BAR_FETCH=0 BEST_SETUPS_DISABLE_NETWORK=1 RV_HISTORICAL_ACTIVE_SETUPS_PRIVATE_SCAN='${RV_HISTORICAL_ACTIVE_SETUPS_PRIVATE_SCAN:-0}' node scripts/historical-insights/build-active-setups.mjs --top=30"
       ;;
     stock_ui_integrity_audit)
       printf '%s\n' "node scripts/ops/audit-stock-analyzer-ui-integrity.mjs --base-url='${RV_STOCK_UI_AUDIT_BASE_URL:-${RV_PUBLIC_BASE_URL:-https://rubikvault-site.pages.dev}}' --gate=ui_renderable --min-pass-rate='${RV_STOCK_UI_AUDIT_MIN_PASS_RATE:-0.90}' --min-operational-rate='${RV_STOCK_UI_AUDIT_MIN_OPERATIONAL_RATE:-0.90}' || { audit_status=\$?; if [ \"${RV_STOCK_UI_AUDIT_HARD_GATE:-0}\" = \"1\" ]; then exit \"\$audit_status\"; fi; echo \"stock_ui_integrity_audit_warn_only exit_code=\$audit_status\" >&2; exit 0; }"
