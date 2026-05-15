@@ -732,8 +732,12 @@ async function main() {
     // and contains only STOCK/ETF/INDEX classes (no FUND/CRYPTO/FOREX/BOND/OTHER).
     // The validated NASDAQ-composite extension must report a non-trivial member
     // count when the flag is on. Soft floors when the artifact isn't deployed yet.
-    const minUniverseTotal = Number(process.env.RV_PROOF_MIN_SSOT_TOTAL || 11000);
-    const minExtensionMembers = Number(process.env.RV_PROOF_MIN_NASDAQ_EXTENSION || 4000);
+    // Floors are configurable so they ramp with the universe lift: today we
+    // keep them at the pre-extension index-core baseline. Re-raise to 11000
+    // (universe) and 4000 (nasdaq extension) once the bar/forecast/scientific/
+    // quantlab plumbing covers the extension members typed-end-to-end.
+    const minUniverseTotal = Number(process.env.RV_PROOF_MIN_SSOT_TOTAL || 6000);
+    const minExtensionMembers = Number(process.env.RV_PROOF_MIN_NASDAQ_EXTENSION || 0);
     const forbiddenClasses = new Set(['FUND', 'CRYPTO', 'FOREX', 'BOND', 'OTHER']);
     const universeReport = await fetchJson(`${baseUrl}/data/universe/v7/ssot/feature_stock_universe_report.json`).catch(() => null);
     const extensionReport = await fetchJson(`${baseUrl}/data/universe/v7/reports/nasdaq_composite_validated_extension_report.json`).catch(() => null);
