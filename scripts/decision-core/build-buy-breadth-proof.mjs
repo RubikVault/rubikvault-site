@@ -250,6 +250,10 @@ export function buildBuyBreadthProof({ root = path.join(DECISION_CORE_PUBLIC_ROO
     ...availableAsia.filter((row) => !row.best_setups_present).slice(0, 10),
   ];
   const failures = [];
+  // Preserve the old global-target numbers in the output schema so consumers that
+  // still look at .available_region_target / .display_region_target keep working.
+  const availableRegionTarget = positiveIntEnv('RV_BUY_BREADTH_AVAILABLE_REGION_TARGET', 10);
+  const displayRegionTarget = positiveIntEnv('RV_BUY_BREADTH_DISPLAY_REGION_TARGET', 5);
   const { availableRegionTargets, displayRegionTargets } = resolveBreadthTargets({
     availableUs: availableUs.length,
     availableEu: availableEu.length,
