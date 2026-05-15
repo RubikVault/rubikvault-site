@@ -2036,9 +2036,8 @@
 
     const V7_SEARCH_EXACT_URL = '/data/universe/v7/search/search_exact_by_symbol.json.gz';
     const V7_STOCK_SYMBOLS_URL = '/data/universe/v7/ssot/stocks.max.symbols.json';
-    const V7_KPI_REPORT_URL = '/data/universe/v7/reports/kpi_levels_report.json';
     const V7_SSOT_REPORT_URL = '/data/universe/v7/ssot/feature_stock_universe_report.json';
-    const V7_UNIVERSE_SUMMARY_URL = '/api/universe/summary?pageSize=200';
+    const PAGE_CORE_LATEST_URL = '/data/page-core/latest.json';
     const V7_MARKET_CATALOG_MANIFEST_URL = '/data/universe/v7/read_models/market_catalog_manifest.json';
     const V7_MARKET_CATALOG_PAGE_BASE = '/data/universe/v7/read_models/market_catalog_pages';
     const V7_MARKET_CATALOG_CLASS_BASE = '/data/universe/v7/read_models/market_catalog_by_class';
@@ -2087,9 +2086,9 @@
     function formatCoverageSummary(coverage) {
       const totalStocks = Number(coverage?.stock_universe_count);
       const ingestible = Number(coverage?.active_ingestible_count);
-      if (!Number.isFinite(totalStocks) || totalStocks <= 0) return 'Coverage: unavailable';
+      if (!Number.isFinite(totalStocks) || totalStocks <= 0) return 'Universe: pending';
       const breakdown = formatCoverageByFeatures(coverage?.feature_eligible_count);
-      const base = `Universe: ${totalStocks.toLocaleString('en-US')} v7 stocks${Number.isFinite(ingestible) && ingestible > 0 ? ` | ${ingestible.toLocaleString('en-US')} ingestible Varianten` : ''}`;
+      const base = `Universe: ${totalStocks.toLocaleString('en-US')} v7 assets${Number.isFinite(ingestible) && ingestible > 0 ? ` | ${ingestible.toLocaleString('en-US')} ingestible variants` : ''}`;
       return breakdown ? `${base} (${breakdown})` : base;
     }
 
@@ -2097,41 +2096,27 @@
       if (coverageInfo) return coverageInfo;
       if (coveragePromise) return coveragePromise;
       coveragePromise = (async () => {
-        const [{ response: ssotRes, payload: ssotPayload }, { response: kpiRes, payload: kpiPayload }] = await Promise.all([
+        const [{ payload: ssotPayload }, { payload: pageCorePayload }] = await Promise.all([
           fetchJson(V7_SSOT_REPORT_URL),
-          fetchJson(V7_KPI_REPORT_URL)
+          fetchJson(PAGE_CORE_LATEST_URL)
         ]);
         const stockUniverseCount = Number(
-          ssotPayload?.counts?.ssot_stocks_max
+          ssotPayload?.ssot_total
             || ssotPayload?.counts?.stock_analyzer_effective
+            || pageCorePayload?.asset_count
             || 0
         );
         if (Number.isFinite(stockUniverseCount) && stockUniverseCount > 0) {
           coverageInfo = {
             stock_universe_count: stockUniverseCount,
-            active_ingestible_count: Number(kpiPayload?.active_ingestible_count),
-            feature_eligible_count: kpiPayload?.feature_eligible_count && typeof kpiPayload.feature_eligible_count === 'object'
-              ? kpiPayload.feature_eligible_count
+            active_ingestible_count: Number(ssotPayload?.active_ingestible_count),
+            feature_eligible_count: ssotPayload?.feature_eligible_count && typeof ssotPayload.feature_eligible_count === 'object'
+              ? ssotPayload.feature_eligible_count
               : {},
-            by_type_norm: kpiPayload?.by_type_norm && typeof kpiPayload.by_type_norm === 'object'
-              ? kpiPayload.by_type_norm
+            by_type_norm: ssotPayload?.by_class && typeof ssotPayload.by_class === 'object'
+              ? ssotPayload.by_class
               : {},
-            run_id: ssotPayload?.run_id || ssotPayload?.meta?.run_id || kpiPayload?.run_id || kpiPayload?.meta?.run_id || null
-          };
-          return coverageInfo;
-        }
-
-        if (kpiRes?.ok && kpiPayload && typeof kpiPayload === 'object') {
-          coverageInfo = {
-            stock_universe_count: Number(kpiPayload?.discovered_count),
-            active_ingestible_count: Number(kpiPayload?.active_ingestible_count),
-            feature_eligible_count: kpiPayload?.feature_eligible_count && typeof kpiPayload.feature_eligible_count === 'object'
-              ? kpiPayload.feature_eligible_count
-              : {},
-            by_type_norm: kpiPayload?.by_type_norm && typeof kpiPayload.by_type_norm === 'object'
-              ? kpiPayload.by_type_norm
-              : {},
-            run_id: kpiPayload?.run_id || kpiPayload?.meta?.run_id || null
+            run_id: ssotPayload?.run_id || ssotPayload?.meta?.run_id || pageCorePayload?.run_id || null
           };
           return coverageInfo;
         }
@@ -2177,29 +2162,7 @@
         try { localStorage.setItem('rv_coverage_cache', JSON.stringify({ text, ts: Date.now() })); } catch (_) { }
         return;
       }
-      // Fallback: load deduplicated v7 universe count from summary endpoint
-      try {
-        const { response: summaryRes, payload: summary } = await fetchJson(V7_UNIVERSE_SUMMARY_URL);
-        const total = Number(summary?.totals?.all?.count || 0);
-        if (summaryRes?.ok && total > 0) {
-          const text = `Universe: ${total.toLocaleString('en-US')} v7 assets`;
-          coverageSummaryEl.textContent = text;
-          try { localStorage.setItem('rv_coverage_cache', JSON.stringify({ text, ts: Date.now() })); } catch (_) { }
-          return;
-        }
-      } catch (_) { /* ignore */ }
-
-      try {
-        const { response: ssotRes, payload: ssot } = await fetchJson(V7_SSOT_REPORT_URL);
-        const total = Number(ssot?.counts?.ssot_stocks_max || ssot?.counts?.stock_analyzer_effective || 0);
-        if (ssotRes?.ok && total > 0) {
-          const text = `Universe: ${total.toLocaleString('en-US')} v7 stocks`;
-            coverageSummaryEl.textContent = text;
-            try { localStorage.setItem('rv_coverage_cache', JSON.stringify({ text, ts: Date.now() })); } catch (_) { }
-            return;
-        }
-      } catch (_) { /* ignore */ }
-      coverageSummaryEl.textContent = 'Coverage: unavailable';
+      coverageSummaryEl.textContent = 'Universe: pending';
     }
 
     function syncSearchInputs(value) {
@@ -2209,7 +2172,7 @@
 
     function normalizeAssetClass(value) {
       const normalized = String(value || 'all').trim().toLowerCase();
-      const allowed = new Set(['all', 'stock', 'etf', 'bond']);
+      const allowed = new Set(['all', 'stock', 'etf', 'index']);
       return allowed.has(normalized) ? normalized : 'all';
     }
 
@@ -3167,6 +3130,7 @@
       const asOf = doc?.meta?.quantlab_asof || doc?.meta?.forecast_asof || doc?.generated_at || null;
       const stockBuckets = doc?.data?.stocks && typeof doc.data.stocks === 'object' ? doc.data.stocks : {};
       const etfBuckets = doc?.data?.etfs && typeof doc.data.etfs === 'object' ? doc.data.etfs : {};
+      const diagnostics = doc?.meta?.horizon_diagnostics || {};
       const out = { short: [], medium: [], long: [] };
       for (const horizon of ['short', 'medium', 'long']) {
         const rows = [
@@ -3181,7 +3145,7 @@
           trigger_fulfilled: true
         })), 10);
       }
-      homeSetupsByHorizon = { ...out, source, asOf };
+      homeSetupsByHorizon = { ...out, source, asOf, diagnostics };
       return homeSetupsByHorizon;
     }
 
@@ -3298,6 +3262,7 @@
         const board = payload.leaderboards?.[region]?.[assetClass] || { long: [], short: [] };
         const table = (side) => {
           const rows = Array.isArray(board?.[side.key]) ? board[side.key] : [];
+          const emptyReason = board?.empty_reasons?.[side.key] || board?.[`${side.key}_empty_reason`] || 'no_qualified_edges';
           const body = rows.length
             ? `<table style="width:100%; border-collapse:collapse; font-size:0.8rem;">
                 <thead>
@@ -3327,7 +3292,7 @@
                     </tr>`).join('')}
                 </tbody>
               </table>`
-            : `<div style="padding:0.6rem; color:#64748b;">No ${side.label} historical research setup for this filter.</div>`;
+            : `<div style="padding:0.6rem; color:#64748b;">No ${side.label} historical research setup for this filter. Reason: ${escapeHtml(emptyReason)}.</div>`;
           return `<article style="padding:0.8rem; border:1px solid rgba(100,116,139,0.22); border-radius:10px; background:rgba(15,23,42,0.35);">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.45rem;">
               <div style="font-size:0.88rem; font-weight:700; color:${side.color};">${side.label} Top 20</div>
@@ -3378,6 +3343,15 @@
       const accent = { short: '#10b981', medium: '#3b82f6', long: '#a78bfa' };
       const blocks = ['short', 'medium', 'long'].map((horizon) => {
         const rows = Array.isArray(horizonRows[horizon]) ? horizonRows[horizon] : [];
+        const diag = horizonRows.diagnostics || {};
+        const candidatePool = Number(diag?.candidate_pool_size?.stocks?.[horizon] || 0) + Number(diag?.candidate_pool_size?.etfs?.[horizon] || 0);
+        const selectedCount = Number(diag?.selected_count?.stocks?.[horizon] || 0) + Number(diag?.selected_count?.etfs?.[horizon] || 0);
+        const stockReason = diag?.pool_limited_reason?.stocks?.[horizon] || 'none';
+        const etfReason = diag?.pool_limited_reason?.etfs?.[horizon] || 'none';
+        const poolReason = candidatePool < 10 ? 'candidate_pool_limited' : (stockReason !== 'none' || etfReason !== 'none' ? 'positive_return_filter' : 'none');
+        const countText = poolReason === 'none'
+          ? `rows=${rows.length}`
+          : `rows=${selectedCount || rows.length}/10 · ${poolReason} · pool=${candidatePool}`;
         const body = rows.length
           ? `<table style="width:100%; border-collapse:collapse; font-size:0.86rem;">
               <thead>
@@ -3424,7 +3398,7 @@
           <article style="padding:0.8rem; border:1px solid rgba(100,116,139,0.22); border-radius:10px; background:rgba(15,23,42,0.35);">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.45rem;">
               <div style="font-size:0.88rem; font-weight:700; color:${accent[horizon]};">${titles[horizon]}</div>
-              <div style="font-size:0.74rem; color:#94a3b8;">rows=${rows.length}</div>
+              <div style="font-size:0.74rem; color:#94a3b8;">${escapeHtml(countText)}</div>
             </div>
             ${body}
           </article>

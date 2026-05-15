@@ -436,7 +436,15 @@ function readDecisionRows() {
 function readForecastSymbols() {
   const doc = readJsonMaybe(FORECAST_LATEST_PATH);
   const rows = Array.isArray(doc?.data?.forecasts) ? doc.data.forecasts : [];
-  return new Set(rows.map((row) => normalizePageCoreAlias(row?.symbol || row?.ticker)).filter(Boolean));
+  const trainedAt = normalizeIsoDate(doc?.trained_at || doc?.meta?.trained_at || doc?.data?.trained_at || null);
+  const maxAgeDays = Number(process.env.RV_FORECAST_MAX_TRAINING_AGE_DAYS || 45);
+  const ageDays = trainedAt ? Math.floor((Date.now() - Date.parse(`${trainedAt}T00:00:00Z`)) / 86400000) : null;
+  return {
+    symbols: new Set(rows.map((row) => normalizePageCoreAlias(row?.symbol || row?.ticker)).filter(Boolean)),
+    trained_at: trainedAt,
+    training_age_days: Number.isFinite(ageDays) ? ageDays : null,
+    stale: !trainedAt || (Number.isFinite(ageDays) && ageDays > maxAgeDays),
+  };
 }
 
 function readBreakoutKeys() {
@@ -575,7 +583,8 @@ function fundamentalsStatusFor({ display, name, assetClass, scopeDoc, targetMark
 
 function forecastStatusFor({ display, assetClass, forecastSymbols }) {
   if (assetClass !== 'STOCK') return 'not_applicable';
-  return forecastSymbols?.has(normalizePageCoreAlias(display)) ? 'available' : 'not_generated';
+  if (forecastSymbols?.stale) return 'stale';
+  return forecastSymbols?.symbols?.has(normalizePageCoreAlias(display)) ? 'available' : 'not_generated';
 }
 
 function breakoutStatusFor({ canonicalId, display, barsCount, breakoutKeys }) {
@@ -682,6 +691,9 @@ function forecastModelState({ forecastStatus, targetMarketDate }) {
   if (forecastStatus === 'not_applicable') {
     return { status: 'not_applicable', as_of: targetMarketDate || null, reason: 'forecast_model_stock_only' };
   }
+  if (forecastStatus === 'stale') {
+    return { status: 'stale', as_of: null, reason: 'forecast_training_stale' };
+  }
   return { status: 'unavailable', reason: 'forecast_unavailable' };
 }
 
@@ -692,8 +704,17 @@ function summarizeModelCoverage(states) {
   const blocked = required.filter((state) => state?.status !== 'ok');
   if (required.length === 0) return { status: 'not_applicable', available: 0, required: 0, total: values.length, blocked };
   if (blocked.length === 0) return { status: 'complete', available: ok.length, required: required.length, total: values.length, blocked };
+  if (blocked.every(isTypedModelGap)) return { status: 'typed_gap', available: ok.length, required: required.length, total: values.length, blocked };
   if (ok.length > 0) return { status: 'partial', available: ok.length, required: required.length, total: values.length, blocked };
   return { status: 'missing', available: 0, required: required.length, total: values.length, blocked };
+}
+
+function isTypedModelGap(state) {
+  if (!state || typeof state !== 'object') return false;
+  const status = String(state.status || '').trim().toLowerCase();
+  if (!status || status === 'ok') return false;
+  if (status === 'not_applicable') return true;
+  return Boolean(String(state.reason || '').trim());
 }
 
 function normalizeBreakoutItemStatus(item) {
@@ -1185,7 +1206,7 @@ function buildPageCoreRow({ canonicalId, registryRow, decisionRow, lookupValue, 
     if (state?.status && !['ok', 'not_applicable'].includes(state.status)) moduleWarnings.push(`${modelKey}_${state.status}`);
   }
   const historicalProfileOperational = ['ready', 'available_via_endpoint', 'not_applicable'].includes(historicalProfileStatus);
-  const modelCoverageOperational = ['complete', 'not_applicable'].includes(modelCoverageStatus);
+  const modelCoverageOperational = ['complete', 'not_applicable', 'typed_gap'].includes(modelCoverageStatus);
   const visibleModuleBlockers = [];
   if (!historicalProfileOperational) visibleModuleBlockers.push('historical_profile_not_ready');
   if (!modelCoverageOperational) visibleModuleBlockers.push('model_coverage_incomplete');
@@ -1290,6 +1311,7 @@ function buildPageCoreRow({ canonicalId, registryRow, decisionRow, lookupValue, 
       quantlab_status: modelStates.quantlab.status,
       scientific_status: modelStates.scientific.status,
       model_coverage_status: modelCoverageStatus,
+      warning_reasons: uniqueStrings([...moduleWarnings]),
       visible_modules_operational: visibleModulesOperational,
       stock_detail_view_status: uiBannerState === 'all_systems_operational' ? 'operational' : 'degraded',
       strict_operational: uiBannerState === 'all_systems_operational',

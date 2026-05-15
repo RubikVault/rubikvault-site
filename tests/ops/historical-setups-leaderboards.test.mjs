@@ -46,8 +46,8 @@ test('historical-setups schema accepts filterable leaderboards', () => {
     leaderboards: {
       ALL: { ALL: { long: [sampleSetup()], short: [sampleSetup({ direction: 'SHORT', expected_gain_pct: 3.1 })] } },
       US: { STOCK: { long: [sampleSetup()], short: [] } },
-      EU: { ETF: { long: [], short: [] } },
-      ASIA: { INDEX: { long: [], short: [] } },
+      EU: { ETF: { long: [], short: [], empty_reasons: { long: 'no_qualified_edges', short: 'no_qualified_edges' } } },
+      ASIA: { INDEX: { long: [], short: [], empty_reasons: { long: 'no_qualified_edges', short: 'no_qualified_edges' } } },
     },
   };
   assert.equal(validate(payload), true, JSON.stringify(validate.errors, null, 2));
@@ -64,6 +64,7 @@ test('frontpage renders historical research filters from historical-setups leade
   assert.match(html, /Expected gain/);
   assert.match(html, /Open/);
   assert.match(html, /expected_gain_pct/);
+  assert.match(html, /empty_reasons/);
 });
 
 test('historical active setups keeps private stats scan opt-in for nightly safety', () => {

@@ -859,7 +859,10 @@
       if (moduleFreshness.some(item => item.state === 'stale')) _integrityItems.push({ text: 'Modules have mixed as-of dates', color: 'var(--yellow)' });
       if (_guard.corrections.modelConsensus?.degraded) _integrityItems.push({ text: 'Model evidence limited', color: 'var(--yellow)' });
       if (_guard.panelGates.keyLevels?.show === false) _integrityItems.push({ text: 'Key levels awaiting coherent price stack', color: 'var(--yellow)' });
-      if (_integrity.pageState && _integrity.pageState !== 'OK') {
+      if (Array.isArray(_integrity.warningReasons) && _integrity.warningReasons.length) {
+        _integrityItems.push({ text: `Typed data notice: ${_integrity.warningReasons[0]}`, color: 'var(--yellow)' });
+      }
+      if (_integrity.pageState && _integrity.pageState !== 'OK' && _integrity.severity === 'critical') {
         _integrityItems.push({
           text: _integrity.pageState === 'GLOBAL_OUTAGE' ? 'Market data integrity issue' : 'Input data integrity issue',
           color: 'var(--red)',
@@ -1796,7 +1799,7 @@
       // ── Construct Layout ──
       const _criticalIntegrityItems = _integrityItems.filter(item => item.color === 'var(--red)');
       const _allSystemsOperational = _finalSealOperational && _assetDecisionOperational && (_integrity.pageState || 'OK') === 'OK' && _criticalIntegrityItems.length === 0 && _integrityItems.length === 0;
-      const _statusSeverity = _integrity.pageState && _integrity.pageState !== 'OK' ? 'critical' : (_criticalIntegrityItems.length ? 'critical' : (_allSystemsOperational ? 'ok' : 'warning'));
+      const _statusSeverity = _integrity.severity === 'critical' || (_integrity.pageState && _integrity.pageState !== 'OK') ? 'critical' : (_criticalIntegrityItems.length ? 'critical' : (_allSystemsOperational ? 'ok' : 'warning'));
       const _statusTitle = _integrity.pageState === 'GLOBAL_OUTAGE'
         ? 'System Status: GLOBAL OUTAGE'
         : _integrity.pageState === 'DATA_ISSUE'

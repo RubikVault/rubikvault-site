@@ -6,15 +6,16 @@ export const HORIZON_DAYS = {
   long_term: 120,
 };
 
-export function resolveHorizonState({ horizon, baseAction, setup, evidence, evRisk, reliability, reasonCodes, reasonMap } = {}) {
+export function resolveHorizonState({ horizon, baseAction, setup, evidence, evRisk, reliability, reasonCodes, reasonMap, policy } = {}) {
   let action = baseAction;
   const blockers = horizonBlockers(reasonCodes, reasonMap, horizon);
-  if (horizon === 'long_term' && evidence?.evidence_method === 'unavailable' && !blockers.includes('LONG_HORIZON_EVIDENCE_MISSING')) {
+  const requireLongEvidence = policy?.evidence?.require_long_horizon_profile === true;
+  if (horizon === 'long_term' && requireLongEvidence && evidence?.evidence_method === 'unavailable' && !blockers.includes('LONG_HORIZON_EVIDENCE_MISSING')) {
     blockers.unshift('LONG_HORIZON_EVIDENCE_MISSING');
   }
   const cappedBlockers = blockers.slice(0, 3);
   if (blockers.length && action === 'BUY') action = 'WAIT';
-  if (horizon === 'long_term' && evidence?.evidence_method === 'unavailable') action = 'WAIT';
+  if (horizon === 'long_term' && requireLongEvidence && evidence?.evidence_method === 'unavailable') action = 'WAIT';
   return {
     horizon_action: action,
     horizon_reason: cappedBlockers[0] || reasonCodes?.[0] || null,

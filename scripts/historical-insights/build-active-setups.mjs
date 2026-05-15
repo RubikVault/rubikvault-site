@@ -567,13 +567,16 @@ async function main() {
   for (const region of LEADERBOARD_REGIONS) {
     leaderboards[region] = {};
     for (const assetClass of LEADERBOARD_ASSET_CLASSES) {
-      leaderboards[region][assetClass] = { long: [], short: [] };
+      leaderboards[region][assetClass] = { long: [], short: [], empty_reasons: {} };
       for (const side of ['long', 'short']) {
         leaderboards[region][assetClass][side] = sortHistoricalRows([...best.values()]
           .filter((row) => (region === 'ALL' || row.region === region)
             && (assetClass === 'ALL' || normalizeAssetClass(row.asset_class) === assetClass)
             && row.direction.toLowerCase() === side)
         ).slice(0, LEADERBOARD_TOP);
+        if (leaderboards[region][assetClass][side].length === 0) {
+          leaderboards[region][assetClass].empty_reasons[side] = 'no_qualified_edges';
+        }
       }
     }
   }

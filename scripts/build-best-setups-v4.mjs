@@ -743,14 +743,19 @@ function horizonDiagnostics(rows, horizonsByClass) {
   const candidatePoolSize = {};
   const selectedCount = {};
   const overlapCount = {};
+  const poolLimitedReason = {};
   const rankBasis = 'horizon_probability_expected_gain';
   for (const assetClass of ['stocks', 'etfs']) {
     const classRows = rows.filter((row) => assetClass === 'etfs' ? row?.asset_class === 'etf' : row?.asset_class !== 'etf');
     candidatePoolSize[assetClass] = {};
     selectedCount[assetClass] = {};
+    poolLimitedReason[assetClass] = {};
     for (const horizon of ['short', 'medium', 'long']) {
       candidatePoolSize[assetClass][horizon] = classRows.filter((row) => String(row?.verdict || '').toUpperCase() === 'BUY' && rowQualifiesForHorizon(row, horizon)).length;
       selectedCount[assetClass][horizon] = (horizonsByClass?.[assetClass]?.[horizon] || []).length;
+      poolLimitedReason[assetClass][horizon] = candidatePoolSize[assetClass][horizon] < BEST_SETUP_LIMIT
+        ? 'candidate_pool_limited'
+        : (selectedCount[assetClass][horizon] < BEST_SETUP_LIMIT ? 'positive_return_filter' : 'none');
     }
     overlapCount[assetClass] = {};
     for (const [a, b] of [['short', 'medium'], ['short', 'long'], ['medium', 'long']]) {
@@ -759,7 +764,7 @@ function horizonDiagnostics(rows, horizonsByClass) {
       overlapCount[assetClass][`${a}_${b}`] = [...aIds].filter((id) => bIds.has(id)).length;
     }
   }
-  return { candidate_pool_size: candidatePoolSize, selected_count: selectedCount, overlap_count: overlapCount, rank_basis: rankBasis };
+  return { candidate_pool_size: candidatePoolSize, selected_count: selectedCount, overlap_count: overlapCount, rank_basis: rankBasis, pool_limited_reason: poolLimitedReason };
 }
 
 function assertHorizonDiversity(diag) {

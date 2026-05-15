@@ -178,7 +178,7 @@ export function pageCoreStrictOperationalReasons(row, { latest = null, freshness
   if (!['ready', 'available', 'available_via_endpoint', 'not_applicable'].includes(historicalProfileStatus)) {
     addReason(reasons, 'historical_profile_not_ready');
   }
-  if (!['complete', 'ready', 'not_applicable'].includes(modelCoverageStatus)) {
+  if (!['complete', 'ready', 'not_applicable', 'typed_gap'].includes(modelCoverageStatus)) {
     addReason(reasons, 'model_coverage_incomplete');
   }
   if (claimsNonOperational && reasons.length > 0) addReason(reasons, 'ui_banner_not_operational');

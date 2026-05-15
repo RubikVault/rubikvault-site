@@ -89,7 +89,9 @@ function cliBool(name, fallback = false) {
   return !/^(0|false|no|off)$/i.test(String(value).trim());
 }
 
-const SAMPLE_MODE = String(cliValue('sample') || cliValue('mode') || process.env.RV_STOCK_ANALYZER_UI_PROOF_SAMPLE || 'random50').trim().toLowerCase();
+const SAMPLE_SIZE = Number(cliValue('sample-size') || process.env.RV_STOCK_ANALYZER_UI_PROOF_SAMPLE_SIZE || 0);
+const SAMPLE_MODE_REQUESTED = cliValue('sample') || cliValue('mode') || process.env.RV_STOCK_ANALYZER_UI_PROOF_SAMPLE || '';
+const SAMPLE_MODE = String(SAMPLE_MODE_REQUESTED || (SAMPLE_SIZE === 100 ? 'regional100' : 'random50')).trim().toLowerCase();
 const ACCEPT_TYPED_DEGRADED = cliBool('accept-typed-degraded', false);
 const REPORT_PATH = path.resolve(
   ROOT,

@@ -10,16 +10,20 @@ export function loadHistProbsPublic() {
   return { latest, profiles: new Map(), shards: new Map(), available: true };
 }
 
-export function evidenceBootstrap({ assetId, horizon, setup, histProbs, features } = {}) {
+export function evidenceBootstrap({ assetId, horizon, setup, histProbs, features, policy } = {}) {
   const raw = lookupHistProbsProfile(assetId, histProbs);
   const profile = summarizeHistProfile(raw, horizon);
   const fallbackN = setup?.primary_setup !== 'none' && features?.bars_count >= 252 ? 24 : 0;
-  const horizonAllowed = horizon === 'long_term' ? false : true;
+  const horizonAllowed = horizon === 'long_term'
+    ? policy?.evidence?.long_term_enabled !== false
+    : true;
   const observations = finiteNumber(profile?.observations ?? raw?.observations ?? raw?.sample_size ?? raw?.n) ?? (horizonAllowed ? fallbackN : 0);
   const effective = observations ? Number(Math.max(0, observations * 0.75).toFixed(2)) : 0;
   let scope = observations ? 'asset_type' : 'none';
-  let method = observations ? 'hist_probs_v2_bootstrap' : 'unavailable';
-  if (horizon === 'long_term' && !profile?.long_horizon_supported && !raw?.long_horizon_supported) {
+  let method = observations
+    ? (horizon === 'long_term' && !profile?.long_horizon_supported && !raw?.long_horizon_supported ? 'hist_probs_v1_long_bootstrap' : 'hist_probs_v2_bootstrap')
+    : 'unavailable';
+  if (horizon === 'long_term' && policy?.evidence?.require_long_horizon_profile === true && !profile?.long_horizon_supported && !raw?.long_horizon_supported) {
     scope = 'none';
     method = 'unavailable';
   }

@@ -22,6 +22,12 @@ import { stripExchangeSuffix } from '../utils/symbol-normalize.mjs';
 const V3_UNIVERSE_PATH = 'public/data/v3/universe/universe.json';
 const LEGACY_UNIVERSE_PATH = 'public/data/universe/all.json';
 const V7_REGISTRY_PATH = 'public/data/universe/v7/registry/registry.ndjson.gz';
+const FORECAST_ASSET_CLASSES = new Set(
+    String(process.env.RV_FORECAST_ASSET_CLASSES || 'STOCK')
+        .split(',')
+        .map((value) => value.trim().toUpperCase())
+        .filter(Boolean)
+);
 const EOD_BATCH_PATTERN = 'public/data/eod/batches/eod.latest.';
 const MARKET_PRICES_SNAPSHOT_PATH = 'public/data/snapshots/market-prices/latest.json';
 const V3_EOD_LATEST_PATH = 'public/data/v3/eod/US/latest.ndjson.gz';
@@ -115,7 +121,6 @@ function loadRegistryUniverse(repoRoot) {
 
     const rows = parseGzipNdjsonFile(registryPath)
         .map((row) => {
-            if (String(row?.type_norm || '').trim().toUpperCase() !== 'STOCK') return null;
             return registryEntryFromRow(row);
         })
         .filter(Boolean);
@@ -147,6 +152,8 @@ function loadRegistryUniverse(repoRoot) {
 
 function forecastUniverseFilter(row, minBars = DEFAULT_MIN_BARS) {
     const barsCount = Number(row?.bars_count || 0);
+    const assetClass = String(row?.type_norm || row?.asset_class || 'STOCK').trim().toUpperCase();
+    if (!FORECAST_ASSET_CLASSES.has(assetClass)) return false;
     const hasAnyHistory = Boolean(row?.history_pack) || (Array.isArray(row?.recent_closes) && row.recent_closes.length > 0);
     return Boolean(row?.symbol) && barsCount >= minBars && hasAnyHistory;
 }

@@ -108,6 +108,33 @@ function collectReasonCounts(summary) {
   return counts;
 }
 
+function buildMinimumNStatus(summary) {
+  const globalThreshold = Number(process.env.RV_HIST_PROBS_GLOBAL_MIN_N || 200);
+  const thresholds = {
+    '1d': Number(process.env.RV_HIST_PROBS_1D_MIN_N || globalThreshold),
+    '5d': Number(process.env.RV_HIST_PROBS_5D_MIN_N || globalThreshold),
+    '20d': Number(process.env.RV_HIST_PROBS_20D_MIN_N || globalThreshold),
+    '60d': Number(process.env.RV_HIST_PROBS_60D_MIN_N || 100),
+  };
+  const source = summary?.minimum_n_status?.by_horizon || summary?.by_horizon || {};
+  const byHorizon = Object.fromEntries(Object.entries(thresholds).map(([horizon, threshold]) => {
+    const row = source?.[horizon] || {};
+    const outcomes = nonNegative(row?.outcomes_resolved ?? row?.sample_n ?? row?.n) ?? 0;
+    return [horizon, {
+      outcomes_resolved: outcomes,
+      threshold,
+      satisfied: outcomes >= threshold,
+    }];
+  }));
+  const satisfiedHorizons = Object.values(byHorizon).filter((row) => row.satisfied).length;
+  return {
+    global_per_horizon_threshold: globalThreshold,
+    by_horizon: byHorizon,
+    satisfied_horizons: satisfiedHorizons,
+    ready_for_safety: satisfiedHorizons >= 2,
+  };
+}
+
 function findHistFreshness(dataFreshness) {
   const candidates = [];
   const walk = (value) => {
@@ -190,6 +217,7 @@ function buildStatus({ runSummary, deferred, dataFreshness, runSummaryPath }) {
     tickers_input_total: tickersInputTotal,
     tickers_remaining: tickersRemaining,
     tickers_errors: tickersErrors,
+    minimum_n_status: buildMinimumNStatus(runSummary || {}),
     provider_data_reasons: collectReasonCounts(runSummary || {}),
     data_freshness: freshness ? {
       id: freshness.id || freshness.step_id || freshness.family || null,

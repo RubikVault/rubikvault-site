@@ -395,6 +395,7 @@ step_timeout_sec() {
     safe_code_sync) printf '%s\n' 600 ;;
     lock_policy_report) printf '%s\n' 120 ;;
     build_global_scope) printf '%s\n' 1800 ;;
+    feature_stock_universe_report) printf '%s\n' 300 ;;
     provider_health_preflight) printf '%s\n' 120 ;;
     market_data_refresh) printf '%s\n' "${RV_MARKET_REFRESH_TIMEOUT_SEC:-28800}" ;;
     q1_delta_ingest) printf '%s\n' "${RV_Q1_DELTA_INGEST_TIMEOUT_SEC:-21600}" ;;
@@ -540,6 +541,9 @@ step_heap_mb() {
     build_global_scope)
       printf '%s\n' 1024
       ;;
+    feature_stock_universe_report)
+      printf '%s\n' 512
+      ;;
     forecast_daily)
       printf '%s\n' "${RV_FORECAST_DAILY_HEAP_MB:-3072}"
       ;;
@@ -661,6 +665,9 @@ step_command() {
         fi
       fi
       printf '%s\n' "${preflight_cmd}${nasdaq_extension_cmd}node scripts/universe-v7/build-global-scope.mjs --asset-classes '$GLOBAL_ASSET_CLASSES' && ${search_cmd} && node scripts/universe-v7/build-index-memberships.mjs && node scripts/ops/build-history-pack-manifest.mjs --scope global --asset-classes '$GLOBAL_ASSET_CLASSES'"
+      ;;
+    feature_stock_universe_report)
+      printf '%s\n' "node scripts/universe-v7/report-feature-stock-universe.mjs"
       ;;
     provider_health_preflight)
       printf '%s\n' "node scripts/ops/provider-health-preflight.mjs --env-file '$RV_EODHD_ENV_FILE' --min-available-calls '${RV_MARKET_REFRESH_MIN_EODHD_AVAILABLE_CALLS:-10000}' --output '${NAS_OPS_ROOT:-$REPO_ROOT/var/private}/pipeline-artifacts/provider-health-latest.json'"
@@ -1088,7 +1095,7 @@ run_step() {
   fi
 
   case "$step_id" in
-    build_global_scope|provider_health_preflight|q1_delta_proof_report|hist_probs|hist_probs_catchup|hist_probs_v2_shadow|decision_core_shadow|snapshot|page_core_bundle|best_setups_core|classifier_audit|ops_health_reports|public_history_shards|historical_research_ingest|historical_active_setups|learning_daily|decision_module_scorecard|decision_core_outcome_bootstrap|forecast_daily|build_fundamentals|quantlab_daily_report|breakout_v12|scientific_summary|v1_audit|cutover_readiness|etf_diagnostic|stage1_ops_pack|system_status_report|system_status_aggregator|resource_budget_report|data_freshness_report|pipeline_epoch|generate_meta_dashboard_data|signal_performance_report|dp8_market|runtime_preflight|stock_analyzer_universe_audit|ui_field_truth_report|stock_ui_integrity_audit|page_core_smoke|final_integrity_seal|build_deploy_bundle|pre_deploy_smoke|wrangler_deploy|code_manifest_guard|lock_policy_report)
+    build_global_scope|feature_stock_universe_report|provider_health_preflight|q1_delta_proof_report|hist_probs|hist_probs_catchup|hist_probs_v2_shadow|decision_core_shadow|snapshot|page_core_bundle|best_setups_core|classifier_audit|ops_health_reports|public_history_shards|historical_research_ingest|historical_active_setups|learning_daily|decision_module_scorecard|decision_core_outcome_bootstrap|forecast_daily|build_fundamentals|quantlab_daily_report|breakout_v12|scientific_summary|v1_audit|cutover_readiness|etf_diagnostic|stage1_ops_pack|system_status_report|system_status_aggregator|resource_budget_report|data_freshness_report|pipeline_epoch|generate_meta_dashboard_data|signal_performance_report|dp8_market|runtime_preflight|stock_analyzer_universe_audit|ui_field_truth_report|stock_ui_integrity_audit|page_core_smoke|final_integrity_seal|build_deploy_bundle|pre_deploy_smoke|wrangler_deploy|code_manifest_guard|lock_policy_report)
       measure_args+=(--set-env "NODE_OPTIONS=--max-old-space-size=$heap_mb")
       ;;
   esac
@@ -1161,6 +1168,7 @@ lane_steps() {
       code_manifest_guard \
       lock_policy_report \
       build_global_scope \
+      feature_stock_universe_report \
       provider_health_preflight \
       market_data_refresh \
       q1_delta_ingest \

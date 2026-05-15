@@ -3,8 +3,14 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { evidenceBootstrap, loadHistProbsPublic } from '../../scripts/decision-core/evidence-bootstrap-v1.mjs';
 
-test('long-term BUY evidence is unavailable without long-horizon support', () => {
+test('long-term BUY evidence uses policy-enabled fallback without long-horizon profile', () => {
   const out = evidenceBootstrap({ assetId: 'US:TEST', horizon: 'long_term', setup: { primary_setup: 'trend_continuation' }, histProbs: { available: false }, features: { bars_count: 300 } });
+  assert.equal(out.evidence_method, 'hist_probs_v1_long_bootstrap');
+  assert.ok(out.evidence_effective_n > 0);
+});
+
+test('long-term BUY evidence can still be policy-disabled', () => {
+  const out = evidenceBootstrap({ assetId: 'US:TEST', horizon: 'long_term', setup: { primary_setup: 'trend_continuation' }, histProbs: { available: false }, features: { bars_count: 300 }, policy: { evidence: { long_term_enabled: false } } });
   assert.equal(out.evidence_method, 'unavailable');
   assert.equal(out.evidence_effective_n, 0);
 });

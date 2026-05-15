@@ -77,9 +77,9 @@ export async function main(argv = process.argv.slice(2)) {
     else rejected.push({ row, reason: eligibility.eligibility_status === 'ELIGIBLE' ? 'LOW_COARSE_SCORE' : eligibility.eligibility_status, eligibility, features });
 
     const evidenceByHorizon = {
-      short_term: evidenceBootstrap({ assetId, horizon: 'short_term', setup, histProbs, features }),
-      mid_term: evidenceBootstrap({ assetId, horizon: 'mid_term', setup, histProbs, features }),
-      long_term: evidenceBootstrap({ assetId, horizon: 'long_term', setup, histProbs, features }),
+      short_term: evidenceBootstrap({ assetId, horizon: 'short_term', setup, histProbs, features, policy }),
+      mid_term: evidenceBootstrap({ assetId, horizon: 'mid_term', setup, histProbs, features, policy }),
+      long_term: evidenceBootstrap({ assetId, horizon: 'long_term', setup, histProbs, features, policy }),
     };
     const setupByHorizon = buildSetupByHorizon({ setup, features, regime, eligibility });
     const evRiskByHorizon = Object.fromEntries(DECISION_HORIZONS.map((horizon) => [
@@ -427,6 +427,7 @@ function buildRow({ row, targetMarketDate, policy, featureManifest, eligibility,
     reliability,
     reasonCodes: capReasonCodes(reasonCodesByHorizon?.[horizon] || reasonCodes, reasonMap),
     reasonMap,
+    policy,
   });
   const rowDoc = {
     meta: {

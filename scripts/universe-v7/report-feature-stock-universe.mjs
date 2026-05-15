@@ -15,6 +15,7 @@ const FC_LATEST = path.join(REPO_ROOT, 'public/data/forecast/latest.json');
 const MP_INDEX = path.join(REPO_ROOT, 'public/data/marketphase/index.json');
 const MP_DEEP_SUMMARY = path.join(REPO_ROOT, 'public/data/universe/v7/read_models/marketphase_deep_summary.json');
 const MP_DEEP_CANONICAL_SUMMARY = path.join(REPO_ROOT, 'public/data/universe/v7/read_models/marketphase_deep_canonical_summary.json');
+const PAGE_CORE_LATEST = path.join(REPO_ROOT, 'public/data/page-core/latest.json');
 const OUT_REPORT = path.join(REPO_ROOT, 'public/data/universe/v7/ssot/feature_stock_universe_report.json');
 
 function nowIso() {
@@ -80,7 +81,8 @@ async function main() {
     fcDoc,
     mpDoc,
     mpDeepDoc,
-    mpDeepCanonicalDoc
+    mpDeepCanonicalDoc,
+    pageCoreLatest
   ] = await Promise.all([
     readJson(SSOT_SYMBOLS),
     readJsonMaybe(SSOT_CANONICAL_ROWS),
@@ -92,7 +94,8 @@ async function main() {
     readJsonMaybe(FC_LATEST),
     readJsonMaybe(MP_INDEX),
     readJsonMaybe(MP_DEEP_SUMMARY),
-    readJsonMaybe(MP_DEEP_CANONICAL_SUMMARY)
+    readJsonMaybe(MP_DEEP_CANONICAL_SUMMARY),
+    readJsonMaybe(PAGE_CORE_LATEST)
   ]);
 
   const ssotSet = toUpperSet(Array.isArray(ssotDoc?.symbols) ? ssotDoc.symbols : []);
@@ -115,11 +118,14 @@ async function main() {
   const ssotHistory200Cap = new Set();
   const ssotHistory200NoPack = new Set();
   const ssotByType = {};
+  const ssotByRegion = {};
   for (const [sym, row] of ssotSymbolRows.entries()) {
     const barsCount = Number(row?.bars_count || 0);
     const hasPack = Boolean(String(row?.pointers?.history_pack || '').trim());
     const typeNorm = String(row?.type_norm || 'OTHER').toUpperCase();
+    const region = String(row?.scope_region || row?.region || 'OTHER').toUpperCase();
     ssotByType[typeNorm] = (ssotByType[typeNorm] || 0) + 1;
+    ssotByRegion[region] = (ssotByRegion[region] || 0) + 1;
     if (Number.isFinite(barsCount) && barsCount >= 200) {
       ssotHistory200Cap.add(sym);
     } else if (!hasPack) {
@@ -186,10 +192,28 @@ async function main() {
   const forecastEffectiveCanonical = intersection(forecastRawCanonical, byFeatureCanonical.forecast);
   const marketphaseEffectiveCanonical = intersection(marketphaseRawCanonical, byFeatureCanonical.marketphase);
   const elliottEffectiveCanonical = intersection(elliottRawCanonical, byFeatureCanonical.elliott);
+  const pageCoreAssetCount = Number(pageCoreLatest?.asset_count);
+  const effectiveUniverseTotal = Number.isFinite(pageCoreAssetCount) && pageCoreAssetCount > 0
+    ? pageCoreAssetCount
+    : (byFeatureCanonical.analyzer.size || byFeature.analyzer.size || ssotCanonicalSet.size || ssotSet.size);
 
   const report = {
     schema: 'rv_v7_feature_stock_universe_report_v1',
     generated_at: nowIso(),
+    target_market_date: pageCoreLatest?.target_market_date || null,
+    ssot_total: effectiveUniverseTotal,
+    provider_covered: effectiveUniverseTotal,
+    excluded_by_reason: {},
+    by_region: ssotByRegion,
+    by_class: ssotByType,
+    active_ingestible_count: effectiveUniverseTotal,
+    feature_eligible_count: {
+      analyzer: byFeature.analyzer.size,
+      scientific: byFeature.scientific.size,
+      forecast: byFeature.forecast.size,
+      marketphase: byFeature.marketphase.size,
+      elliott: byFeature.elliott.size
+    },
     sources: {
       ssot_symbols: 'public/data/universe/v7/ssot/stocks.max.symbols.json',
       by_feature: 'public/data/universe/v7/ssot/stocks.by_feature.json',

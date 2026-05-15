@@ -189,6 +189,30 @@ test('deploy bundle writes private top-file size report', () => {
   assert.match(builder, /RV_DEPLOY_BUNDLE_SIZE_WARN_MB/);
 });
 
+test('feature stock universe report is produced and copied despite report excludes', () => {
+  const supervisor = fs.readFileSync(path.join(ROOT, 'scripts/nas/rv-nas-night-supervisor.sh'), 'utf8');
+  const builder = fs.readFileSync(path.join(ROOT, 'scripts/ops/build-deploy-bundle.mjs'), 'utf8');
+  const privacyGate = fs.readFileSync(path.join(ROOT, 'scripts/ops/privacy-gate.mjs'), 'utf8');
+  const runtimeManifest = JSON.parse(fs.readFileSync(path.join(ROOT, 'config/runtime-manifest.json'), 'utf8'));
+  assert.match(supervisor, /feature_stock_universe_report/);
+  assert.match(supervisor, /report-feature-stock-universe\.mjs/);
+  assert.match(builder, /PUBLIC_UNIVERSE_REPORT_ALLOWLIST/);
+  assert.match(builder, /feature_stock_universe_report\.json/);
+  assert.match(builder, /Copied \$\{copiedUniverseReports\} public universe reports/);
+  assert.match(privacyGate, /data\/universe\/v7\/ssot\/feature_stock_universe_report\.json/);
+  assert.ok(runtimeManifest.allow.some((entry) => (
+    entry.pattern === 'data/universe/v7/ssot/feature_stock_universe_report.json'
+    && entry.allowDenyNameHints === true
+  )));
+});
+
+test('release gate UI proof uses preview-safe regional100 typed-state acceptance', () => {
+  const gate = fs.readFileSync(path.join(ROOT, 'scripts/ops/release-gate-check.mjs'), 'utf8');
+  assert.match(gate, /RV_RELEASE_GATE_UI_PROOF_SAMPLE \|\| 'regional100'/);
+  assert.match(gate, /--accept-typed-degraded/);
+  assert.match(gate, /runUiProofGate\(previewDeploy\.deployment_url, 'preview'\)/);
+});
+
 test('public history shards support incremental touched-pack rebuilds with strict budgets and canaries', () => {
   const builder = fs.readFileSync(path.join(ROOT, 'scripts/ops/build-public-history-shards.mjs'), 'utf8');
   assert.match(builder, /RV_PUBLIC_HISTORY_INCREMENTAL/);
@@ -205,7 +229,8 @@ test('public history shards support incremental touched-pack rebuilds with stric
   assert.match(builder, /incremental_fallback_reason/);
 
   const supervisor = fs.readFileSync(path.join(ROOT, 'scripts/nas/rv-nas-night-supervisor.sh'), 'utf8');
-  assert.match(supervisor, /build-public-history-shards\.mjs .*--incremental/);
+  assert.match(supervisor, /history_incremental_flag='--incremental'/);
+  assert.match(supervisor, /build-public-history-shards\.mjs .*\\\$history_incremental_flag/);
 });
 
 test('morning acceptance covers dual hosts, proof, historical probes, locks, and rogue processes', () => {
@@ -374,7 +399,8 @@ test('page core bundle has conservative incremental same-target reuse with stric
   assert.match(builder, /pageCoreStrictOperationalReasons/);
 
   const supervisor = fs.readFileSync(path.join(ROOT, 'scripts/nas/rv-nas-night-supervisor.sh'), 'utf8');
-  assert.match(supervisor, /build-page-core-bundle\.mjs .*--incremental/);
+  assert.match(supervisor, /page_core_incremental_flag="--incremental"/);
+  assert.match(supervisor, /build-page-core-bundle\.mjs .*\$page_core_incremental_flag/);
 });
 
 test('historical active setups has enough NAS heap for full-universe leaderboards', () => {

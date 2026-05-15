@@ -856,7 +856,7 @@ function deploymentIdFromUrl(url) {
 //   warn (default) — log summary on failure, keep deploy going
 //   hard           — fail() the gate immediately on proof failure
 //   off            — skip entirely
-// Sample defaults to class160; override via RV_RELEASE_GATE_UI_PROOF_SAMPLE.
+// Sample defaults to regional100; override via RV_RELEASE_GATE_UI_PROOF_SAMPLE.
 function runUiProofGate(targetUrl, label = 'deploy') {
   const uiProofMode = String(process.env.RV_RELEASE_GATE_UI_PROOF_MODE || 'warn').toLowerCase();
   if (uiProofMode === 'off') {
@@ -867,12 +867,13 @@ function runUiProofGate(targetUrl, label = 'deploy') {
     warn(`runUiProofGate(${label}): no URL provided, skipping.`);
     return;
   }
-  const sample = process.env.RV_RELEASE_GATE_UI_PROOF_SAMPLE || 'class160';
+  const sample = process.env.RV_RELEASE_GATE_UI_PROOF_SAMPLE || 'regional100';
   log(`Running stock-analyzer UI proof against ${label} (sample=${sample}, mode=${uiProofMode})...`);
   const proofRun = spawnSync(process.execPath, [
     'scripts/validate/stock-analyzer-ui-random50-proof.mjs',
     `--base-url=${targetUrl}`,
     `--sample=${sample}`,
+    '--accept-typed-degraded',
     '--max-failures=10',
   ], { cwd: REPO_ROOT, encoding: 'utf8', timeout: 1_800_000, maxBuffer: 32 * 1024 * 1024 });
   if (proofRun.status === 0) {

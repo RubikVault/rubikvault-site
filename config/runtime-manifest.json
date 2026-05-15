@@ -69,6 +69,7 @@
     { "pattern": "data/v3/**", "maxFileSizeBytes": 5242880, "class": "v3-public-data" },
     { "pattern": "data/symbol-resolve.v1.json", "maxFileSizeBytes": 20971520, "class": "symbol-resolve" },
     { "pattern": "data/symbol-resolve.v1.lookup.json", "maxFileSizeBytes": 10485760, "class": "symbol-resolve-lookup" },
+    { "pattern": "data/universe/v7/ssot/feature_stock_universe_report.json", "maxFileSizeBytes": 262144, "class": "feature-stock-universe-report", "allowDenyNameHints": true },
     { "pattern": "data/universe/**", "maxFileSizeBytes": 26214400, "class": "universe-public-data" },
     { "pattern": "data/supermodules/*.json", "maxFileSizeBytes": 5242880, "class": "public-supermodule" },
     { "pattern": "data/supermodules/scientific-per-asset/latest.json", "maxFileSizeBytes": 65536, "class": "scientific-per-asset-pointer" },

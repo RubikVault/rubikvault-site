@@ -13,6 +13,7 @@ test('stock analyzer UI proof has deterministic regional100 coverage across regi
   assert.match(SRC, /ASIA:\s*Object\.freeze\(\{\s*INDEX:\s*5,\s*ETF:\s*10,\s*STOCK:\s*18\s*\}\)/);
   assert.match(SRC, /buildRegional100Sample/);
   assert.match(SRC, /rv\.stock_analyzer_ui_regional100_proof\.v1/);
+  assert.match(SRC, /SAMPLE_SIZE === 100 \? 'regional100' : 'random50'/);
 });
 
 test('stock analyzer UI proof can accept typed degraded states without weakening strict default', () => {

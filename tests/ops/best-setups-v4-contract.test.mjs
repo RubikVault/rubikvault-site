@@ -42,6 +42,8 @@ test('best-setups v4 publishes horizon diagnostics and rank basis', () => {
   assert.match(SCRIPT, /BEST_SETUPS_HORIZON_DIVERSITY_FAILED/);
   assert.match(SCRIPT, /candidate_pool_size/);
   assert.match(SCRIPT, /overlap_count/);
+  assert.match(SCRIPT, /pool_limited_reason/);
+  assert.match(SCRIPT, /candidate_pool_limited/);
   assert.match(SCRIPT, /horizon_diagnostics: horizonDiagnosticsSummary/);
   assert.match(SCRIPT, /rank_basis: 'horizon_probability_expected_gain'/);
   assert.match(SCRIPT, /horizon_signal_basis/);

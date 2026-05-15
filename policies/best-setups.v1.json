@@ -27,9 +27,25 @@
   "feature_logic_version": "v1_shared_core",
   "minimum_n_gates": {
     "global_per_horizon": 200,
+    "by_horizon": {
+      "1d": 200,
+      "5d": 200,
+      "20d": 200,
+      "60d": 100
+    },
     "asset_class_horizon": 100,
     "regime_horizon": 75,
     "ticker_specific_calibration": 300
+  },
+  "evidence": {
+    "long_term_enabled": true,
+    "require_long_horizon_profile": false,
+    "minimum_n_by_horizon": {
+      "1d": 200,
+      "5d": 200,
+      "20d": 200,
+      "60d": 100
+    }
   },
   "regime_definitions": {
     "trend": {

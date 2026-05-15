@@ -213,7 +213,7 @@ function deriveAnalyzerLearningStatus(metrics, policyConfig) {
     const total = Number(metrics?.outcomes_resolved || 0);
     const outcomeDays = new Set((metrics?.outcome_dates || []).filter(Boolean)).size;
     const byHorizon = metrics?.by_horizon || {};
-    const horizonsReady = ['1d', '5d', '20d'].every((horizon) => Number(byHorizon?.[horizon]?.outcomes_resolved || 0) >= perHorizonMin);
+    const horizonsReady = ['1d', '5d', '20d', '60d'].every((horizon) => Number(byHorizon?.[horizon]?.outcomes_resolved || 0) >= perHorizonMin);
 
     // V6 Core Activation Logic:
     // Option A: All horizons mature (the strict standard)
@@ -227,15 +227,18 @@ function deriveAnalyzerLearningStatus(metrics, policyConfig) {
 function computeMinimumNStatus(metrics, policyConfig) {
     const gates = policyConfig?.minimumNGates || {};
     const globalPerHorizon = Number(gates?.global_per_horizon || 200);
+    const byHorizonThresholds = gates?.by_horizon || {};
     const assetClassHorizon = Number(gates?.asset_class_horizon || 100);
     const regimeHorizon = Number(gates?.regime_horizon || 75);
-    const horizons = ['1d', '5d', '20d'];
+    const horizons = ['1d', '5d', '20d', '60d'];
     const byHorizon = Object.fromEntries(
         horizons.map((horizon) => {
             const row = metrics?.by_horizon?.[horizon] || {};
+            const threshold = Number(byHorizonThresholds?.[horizon] || globalPerHorizon);
             return [horizon, {
                 outcomes_resolved: Number(row?.outcomes_resolved || 0),
-                satisfied: Number(row?.outcomes_resolved || 0) >= globalPerHorizon,
+                threshold,
+                satisfied: Number(row?.outcomes_resolved || 0) >= threshold,
             }];
         })
     );

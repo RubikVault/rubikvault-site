@@ -138,6 +138,10 @@ const PUBLIC_RUNTIME_ALLOWLIST = [
   'data/runtime/stock-analyzer-provider-exceptions-latest.json',
 ];
 
+const PUBLIC_UNIVERSE_REPORT_ALLOWLIST = [
+  'data/universe/v7/ssot/feature_stock_universe_report.json',
+];
+
 const PUBLIC_DASHBOARD_STATUS_REPORT = 'data/status/dashboard-v7-public-latest.json';
 
 const RUNTIME_HISTORICAL_CACHE_LIMIT = Number(process.env.RV_RUNTIME_HISTORICAL_CACHE_LIMIT || 750);
@@ -997,6 +1001,17 @@ if (!isDryRun) {
     copiedDecisionCoreProofReports += 1;
   }
   if (copiedDecisionCoreProofReports > 0) log(`Copied ${copiedDecisionCoreProofReports} Decision-Core public proof reports to dist/`);
+
+  let copiedUniverseReports = 0;
+  for (const relPath of PUBLIC_UNIVERSE_REPORT_ALLOWLIST) {
+    const src = path.join(PUBLIC_DIR, relPath);
+    if (!fs.existsSync(src)) continue;
+    const dest = path.join(DIST_DIR, relPath);
+    fs.mkdirSync(path.dirname(dest), { recursive: true });
+    fs.copyFileSync(src, dest);
+    copiedUniverseReports += 1;
+  }
+  if (copiedUniverseReports > 0) log(`Copied ${copiedUniverseReports} public universe reports to dist/`);
 
   materializePublicDashboardV7();
 

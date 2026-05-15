@@ -56,6 +56,7 @@ export function classifyPath(relPath) {
     'data/reports/frontpage-best-setups-ui-proof-latest.json',
     'data/reports/decision-core-historical-replay-latest.json',
     'data/reports/decision-core-outcome-bootstrap-latest.json',
+    'data/universe/v7/ssot/feature_stock_universe_report.json',
     'data/status/dashboard-v7-public-latest.json'
   ];
   if (allowlistedReports.some(allowed => low.endsWith(allowed))) {

@@ -117,6 +117,28 @@ function hasUsableDecisionCore(payload) {
   return ['BUY', 'WAIT', 'AVOID', 'SELL', 'INCUBATING'].includes(action);
 }
 
+function collectTypedModuleReasons(payload) {
+  const out = [];
+  const contract = payload?.data?.ssot?.page_core?.status_contract
+    || payload?.data?.page_core_contract?.status_contract
+    || payload?.page_core_contract?.status_contract
+    || {};
+  if (Array.isArray(contract.warning_reasons)) out.push(...contract.warning_reasons);
+  const states = payload?.data?.model_coverage?.states
+    || payload?.model_coverage?.states
+    || {};
+  for (const state of Object.values(states || {})) {
+    const status = String(state?.status || '').toLowerCase();
+    if (status && status !== 'ok') out.push(state?.reason || status);
+  }
+  const histStatus = payload?.data?.historical_profile?.availability?.status
+    || payload?.data?.historical_profile_summary?.availability?.status
+    || null;
+  if (histStatus && !['ready', 'available'].includes(String(histStatus).toLowerCase())) out.push(`historical_profile_${histStatus}`);
+  if (Array.isArray(payload?.missingModules)) out.push(...payload.missingModules.map((module) => `module_${module}_missing`));
+  return unique(out);
+}
+
 function field(value, status = 'VALID', reason = null, usedInDecision = false, asOf = null) {
   return { value, status, reason, usedInDecision, asOf };
 }
@@ -224,10 +246,13 @@ export function buildUiIntegrity(payload, { ticker = null, priceStack = null } =
     ? field(true, 'VALID', null, true, priceAsOf)
     : field(null, 'BLOCK', decisionBlockingReasons[0] || 'decision contract failed', true, priceAsOf);
 
+  const typedModuleReasons = collectTypedModuleReasons(payload);
   const decisionCritical = ['current_price', 'asset_return_1d', 'price_series', 'decision_contract'];
   const pageCritical = [...decisionCritical, 'chart'];
   const decisionBlocks = decisionCritical.filter((key) => fields[key]?.status === 'BLOCK');
-  const criticalBlocks = pageCritical.filter((key) => fields[key]?.status === 'BLOCK');
+  const criticalBlocksRaw = pageCritical.filter((key) => fields[key]?.status === 'BLOCK');
+  const softCriticalBlocks = criticalBlocksRaw.filter((key) => isVisibleModuleOnlyReason(fields[key]?.reason));
+  const criticalBlocks = criticalBlocksRaw.filter((key) => !softCriticalBlocks.includes(key));
   const allBlocks = Object.entries(fields).filter(([, value]) => value?.status === 'BLOCK');
   const pageState = criticalBlocks.length > 0
     ? (criticalBlocks.length / decisionCritical.length > 0.5 ? 'GLOBAL_OUTAGE' : 'DATA_ISSUE')
@@ -240,11 +265,16 @@ export function buildUiIntegrity(payload, { ticker = null, priceStack = null } =
   return {
     fields,
     pageState,
+    severity: criticalBlocks.length ? 'critical' : (softCriticalBlocks.length || typedModuleReasons.length ? 'warning' : 'ok'),
     dataQuality: pageState === 'OK' ? 'OK' : 'FAILED',
-    coverage: fields.chart.status === 'BLOCK' || fields.price_series.status === 'BLOCK' ? 'PARTIAL' : 'FULL',
+    coverage: fields.chart.status === 'BLOCK' || fields.price_series.status === 'BLOCK' || typedModuleReasons.length ? 'PARTIAL' : 'FULL',
     decisionReadiness: decisionBlocks.length ? 'UNAVAILABLE' : 'READY',
     flags: unique(flags),
     blockingReasons: unique(criticalBlocks.map((key) => fields[key]?.reason)),
+    warningReasons: unique([
+      ...softCriticalBlocks.map((key) => fields[key]?.reason),
+      ...typedModuleReasons,
+    ]),
     issueCount: allBlocks.length,
   };
 }

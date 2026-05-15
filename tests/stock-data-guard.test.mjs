@@ -180,6 +180,52 @@ describe('UI integrity resolver', () => {
     assert.equal(integrity.pageState, 'DATA_ISSUE');
   });
 
+  it('keeps typed model projection gaps as warnings, not generic DATA_ISSUE', () => {
+    const payload = {
+      data: {
+        market_prices: { close: 80.73, date: '2026-05-12' },
+        change: { pct: 0.011, abs: 0.89 },
+        market_stats: { stats: { low_52w: 40, high_52w: 90, rsi14: 55, sma20: 78, sma50: 76, sma200: 70, atr14: 1.8 } },
+        bars: [{ date: '2026-05-12', close: 80.73 }, { date: '2026-05-13', close: 81.1 }, { date: '2026-05-14', close: 82 }],
+        ssot: {
+          page_core: {
+            status_contract: {
+              strict_operational: true,
+              stock_detail_view_status: 'operational',
+              strict_blocking_reasons: [],
+              warning_reasons: ['scientific_projection_missing'],
+            },
+          },
+          market_context: {
+            key_levels_ready: true,
+            issues: [],
+            prices_source: 'historical-bars',
+            stats_source: 'historical-indicators',
+            price_date: '2026-05-12',
+            stats_date: '2026-05-12',
+            latest_bar_date: '2026-05-12',
+          },
+        },
+        model_coverage: {
+          states: {
+            forecast: { status: 'ok' },
+            scientific: { status: 'unavailable', reason: 'scientific_projection_missing' },
+            quantlab: { status: 'not_applicable', reason: 'quantlab_model_stock_etf_only' },
+          },
+        },
+        decision_core_min: { decision: { primary_action: 'BUY', analysis_reliability: 'MEDIUM' } },
+      },
+      decision_core_min: { decision: { primary_action: 'BUY', analysis_reliability: 'MEDIUM' } },
+      daily_decision: { schema: 'rv.asset_daily_decision.v1', pipeline_status: 'OK', verdict: 'BUY', blocking_reasons: [], risk_assessment: { level: 'MEDIUM' } },
+      analysis_readiness: { status: 'READY', decision_bundle_status: 'OK', blocking_reasons: [] },
+    };
+    const integrity = buildUiIntegrity(payload, { ticker: 'ADM', priceStack: { valid: true } });
+    assert.equal(integrity.pageState, 'OK');
+    assert.equal(integrity.severity, 'warning');
+    assert.equal(integrity.decisionReadiness, 'READY');
+    assert.ok(integrity.warningReasons.includes('scientific_projection_missing'));
+  });
+
   it('keeps decision-core WAIT/AVOID reasons as explanation, not data-integrity blockers', () => {
     const basePayload = (action) => ({
       data: {
