@@ -20,6 +20,8 @@ function parseArgs(argv = process.argv.slice(2)) {
     refreshReportPath: DEFAULT_REFRESH_REPORT,
     outputPath: DEFAULT_OUTPUT,
     minBars: Number(process.env.RV_PROVIDER_EXCEPTION_MIN_BARS || 200),
+    auditMode: null,        // path to degraded-asset-audit-latest.json
+    auditScopeOnly: false,
   };
   for (let i = 0; i < argv.length; i += 1) {
     const arg = String(argv[i] || '');
@@ -35,6 +37,15 @@ function parseArgs(argv = process.argv.slice(2)) {
     else if (arg === '--refresh-report' || arg.startsWith('--refresh-report=')) out.refreshReportPath = resolvePath(read());
     else if (arg === '--output' || arg.startsWith('--output=')) out.outputPath = resolvePath(read());
     else if (arg === '--min-bars' || arg.startsWith('--min-bars=')) out.minBars = Number(read());
+    else if (arg === '--audit-mode' || arg.startsWith('--audit-mode=')) {
+      // F12: when set, narrow scope to canonical_ids in the audit artifact's
+      // provider_exception bucket. Probes use the existing refresh-report
+      // evidence (no new EODHD calls — kritik's concern about hammering rate
+      // limits stays satisfied) and emit to a private path so the bundle does
+      // not leak audit-mode output as production exceptions.
+      out.auditMode = resolvePath(read());
+      out.auditScopeOnly = true;
+    }
   }
   out.targetMarketDate = isoDate(out.targetMarketDate);
   if (!out.targetMarketDate) throw new Error('target_market_date_required');
@@ -142,11 +153,44 @@ function sanitizeReason(value) {
     .replace(/^_+|_+$/g, '') || 'refresh_error';
 }
 
+function loadAuditBucket(auditPath) {
+  if (!auditPath) return null;
+  let audit;
+  try {
+    audit = JSON.parse(fs.readFileSync(auditPath, 'utf8'));
+  } catch (err) {
+    throw new Error(`audit-mode: cannot read ${auditPath}: ${err?.message || err}`);
+  }
+  const bucket = audit?.buckets?.provider_exception;
+  const ids = new Set();
+  for (const id of bucket?.canonical_ids || []) ids.add(String(id).toUpperCase());
+  return { ids, audit };
+}
+
 function main() {
   const options = parseArgs();
   const scopeIds = loadScopeIds(options.scopePath);
   const refreshReport = assertRefreshEvidence(options.refreshReportPath, options.targetMarketDate);
   const registryRows = readNdjsonGz(options.registryPath);
+  const auditBucket = loadAuditBucket(options.auditMode);
+  // F12 audit-mode: shrink the candidate set to the degraded audit's
+  // provider_exception bucket. Use the existing refresh-report evidence
+  // (no live EODHD probe — kritik's batched/locked concern stays valid:
+  // the underlying refresh already happened with the EODHD lock during
+  // market_data_refresh, so we trust that artifact instead of double-
+  // fetching). Output goes to a private path by default.
+  const auditOnlyIds = options.auditScopeOnly ? auditBucket?.ids : null;
+  if (options.auditScopeOnly) {
+    process.stderr.write(`[audit-mode] narrowing scope to ${auditOnlyIds?.size || 0} canonical_ids from ${path.relative(ROOT, options.auditMode)}\n`);
+    if (!auditOnlyIds || auditOnlyIds.size === 0) {
+      process.stderr.write('[audit-mode] no provider_exception bucket assets to classify; writing empty audit report.\n');
+    }
+    if (options.outputPath === DEFAULT_OUTPUT) {
+      // Audit-mode writes private so we never overwrite the production
+      // provider-exceptions artifact accidentally.
+      options.outputPath = path.join(ROOT, 'var/private/ops/degraded-provider-probe-latest.json');
+    }
+  }
   const exceptions = [];
   const exceptionIds = new Set();
   const byExchange = {};
@@ -155,6 +199,7 @@ function main() {
   for (const row of registryRows) {
     const canonicalId = String(row?.canonical_id || '').toUpperCase();
     if (!scopeIds.has(canonicalId)) continue;
+    if (auditOnlyIds && !auditOnlyIds.has(canonicalId)) continue;
     const assetClass = String(row?.type_norm || row?.asset_class || '').toUpperCase();
     if (!OPERATIONAL_ASSET_CLASSES.has(assetClass)) continue;
     const bars = numberOrZero(row?.bars_count);
@@ -185,6 +230,7 @@ function main() {
   for (const error of extractRefreshErrors(refreshReport)) {
     const canonicalId = error.canonical_id;
     if (!scopeIds.has(canonicalId) || exceptionIds.has(canonicalId)) continue;
+    if (auditOnlyIds && !auditOnlyIds.has(canonicalId)) continue;
     const exchange = String(canonicalId.split(':')[0] || '').toUpperCase();
     const reason = `refresh_report_${sanitizeReason(error.error)}`;
     byExchange[exchange] = (byExchange[exchange] || 0) + 1;
@@ -206,10 +252,15 @@ function main() {
   }
 
   const doc = {
-    schema: 'rv.stock_analyzer.provider_exceptions.v1',
+    schema: options.auditScopeOnly
+      ? 'rv.stock_analyzer.provider_exceptions.audit.v1'
+      : 'rv.stock_analyzer.provider_exceptions.v1',
     generated_at: new Date().toISOString(),
     target_market_date: options.targetMarketDate,
     min_bars: options.minBars,
+    audit_mode: options.auditScopeOnly,
+    audit_source_path: options.auditScopeOnly ? path.relative(ROOT, options.auditMode) : null,
+    audit_scope_size: options.auditScopeOnly ? (auditOnlyIds?.size || 0) : null,
     evidence_source: {
       refresh_report_path: path.relative(ROOT, options.refreshReportPath),
       refresh_report_status: refreshReport.status || null,

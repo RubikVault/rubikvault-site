@@ -35,6 +35,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import zlib from 'node:zlib';
+import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(fileURLToPath(new URL('.', import.meta.url)), '../..');
@@ -220,11 +221,35 @@ function main() {
   fs.writeFileSync(tmp, `${JSON.stringify(report, null, 2)}\n`);
   fs.renameSync(tmp, OUTPUT_PATH);
 
+  // F12 --probe: hand the audit artifact to build-stock-analyzer-provider-exceptions
+  // in audit-mode so the provider_exception bucket gets re-classified against the
+  // existing market_data_refresh evidence (no live EODHD probe — refresh already
+  // happened under the EODHD lock during nightly). Output is private.
+  let probeResult = null;
+  if (args.includes('--probe') && totals.provider_exception > 0) {
+    process.stderr.write('[audit --probe] running build-stock-analyzer-provider-exceptions --audit-mode...\n');
+    const probeRun = spawnSync(process.execPath, [
+      'scripts/ops/build-stock-analyzer-provider-exceptions.mjs',
+      `--target-market-date=${meta.target}`,
+      `--audit-mode=${OUTPUT_PATH}`,
+    ], { cwd: ROOT, encoding: 'utf8', timeout: 600_000, maxBuffer: 32 * 1024 * 1024 });
+    probeResult = {
+      status: probeRun.status,
+      signal: probeRun.signal,
+      stdout_tail: (probeRun.stdout || '').slice(-1000),
+      stderr_tail: (probeRun.stderr || '').slice(-1000),
+    };
+    if (probeRun.status !== 0) {
+      process.stderr.write(`[audit --probe] probe exit=${probeRun.status} signal=${probeRun.signal || 'null'}\n`);
+    }
+  }
+
   process.stdout.write(`${JSON.stringify({
     ok: true,
     output: path.relative(ROOT, OUTPUT_PATH),
     totals,
     target_market_date: meta.target,
+    probe: probeResult,
   })}\n`);
 }
 
