@@ -179,6 +179,9 @@ function readRegistryMeta() {
 function indexHasDocumentedNonTradableState({ asset, strictReasons, coreAction, visibleAction }) {
   if (asset?.asset_class !== 'INDEX') return false;
   const allowedReasons = new Set([
+    'decision_not_operational',
+    'decision_bundle_missing',
+    'insufficient_history',
     'primary_blocker:decision_not_operational',
     'primary_blocker:decision_bundle_missing',
     'primary_blocker:insufficient_history',

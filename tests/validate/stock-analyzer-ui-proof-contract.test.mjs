@@ -22,4 +22,5 @@ test('stock analyzer UI proof can accept typed degraded states without weakening
   assert.match(SRC, /typed_reason_visible_when_degraded/);
   assert.match(SRC, /Quality Guardrail Active/);
   assert.match(SRC, /oversized_row_quarantined/);
+  assert.match(SRC, /decision_not_operational/);
 });
