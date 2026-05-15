@@ -645,27 +645,30 @@ function hasFrontpageRequiredFields(row) {
   );
 }
 
+function compareHorizonRankRows(a, b) {
+  if ((b.rank_probability ?? -Infinity) !== (a.rank_probability ?? -Infinity)) {
+    return (b.rank_probability ?? -Infinity) - (a.rank_probability ?? -Infinity);
+  }
+  if ((b.expected_return ?? -Infinity) !== (a.expected_return ?? -Infinity)) {
+    return (b.expected_return ?? -Infinity) - (a.expected_return ?? -Infinity);
+  }
+  if (b.score !== a.score) return b.score - a.score;
+  if ((b.analyzer_composite ?? -Infinity) !== (a.analyzer_composite ?? -Infinity)) {
+    return (b.analyzer_composite ?? -Infinity) - (a.analyzer_composite ?? -Infinity);
+  }
+  if ((b.avg_top_percentile ?? -Infinity) !== (a.avg_top_percentile ?? -Infinity)) {
+    return (b.avg_top_percentile ?? -Infinity) - (a.avg_top_percentile ?? -Infinity);
+  }
+  return String(a.ticker || '').localeCompare(String(b.ticker || ''));
+}
+
 function sortedHorizonRows(rows, horizon) {
   return rows
     .filter((row) => String(row?.verdict || '').toUpperCase() === 'BUY')
     .filter((row) => rowQualifiesForHorizon(row, horizon))
     .map((row) => decorateForHorizon(row, horizon))
-    .sort((a, b) => {
-      if ((b.rank_probability ?? -Infinity) !== (a.rank_probability ?? -Infinity)) {
-        return (b.rank_probability ?? -Infinity) - (a.rank_probability ?? -Infinity);
-      }
-      if ((b.expected_return ?? -Infinity) !== (a.expected_return ?? -Infinity)) {
-        return (b.expected_return ?? -Infinity) - (a.expected_return ?? -Infinity);
-      }
-      if (b.score !== a.score) return b.score - a.score;
-      if ((b.analyzer_composite ?? -Infinity) !== (a.analyzer_composite ?? -Infinity)) {
-        return (b.analyzer_composite ?? -Infinity) - (a.analyzer_composite ?? -Infinity);
-      }
-      if ((b.avg_top_percentile ?? -Infinity) !== (a.avg_top_percentile ?? -Infinity)) {
-        return (b.avg_top_percentile ?? -Infinity) - (a.avg_top_percentile ?? -Infinity);
-      }
-      return a.ticker.localeCompare(b.ticker);
-    });
+    .filter((row) => num(row.expected_return) != null && num(row.expected_return) > 0)
+    .sort(compareHorizonRankRows);
 }
 
 function rowQualifiesForHorizon(row, horizon) {
@@ -729,7 +732,7 @@ function buildDecisionCoreHorizonRows(rows, horizon) {
     for (const row of cyclicSlice(regionRows, horizonOffset + minPerRegion, regionRows.length)) add(row);
   }
   for (const row of sorted) add(row);
-  return selected.slice(0, BEST_SETUP_LIMIT);
+  return selected.slice(0, BEST_SETUP_LIMIT).sort(compareHorizonRankRows);
 }
 
 function horizonDiagnostics(rows, horizonsByClass) {

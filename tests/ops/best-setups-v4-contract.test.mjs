@@ -44,6 +44,14 @@ test('best-setups v4 publishes horizon diagnostics and rank basis', () => {
   assert.match(SCRIPT, /horizon_signal_basis/);
 });
 
+test('best-setups v4 keeps horizon cards ordered by probability then gain', () => {
+  assert.match(SCRIPT, /function compareHorizonRankRows/);
+  assert.match(SCRIPT, /rank_probability/);
+  assert.match(SCRIPT, /expected_return/);
+  assert.match(SCRIPT, /num\(row\.expected_return\) > 0/);
+  assert.match(SCRIPT, /selected\.slice\(0, BEST_SETUP_LIMIT\)\.sort\(compareHorizonRankRows\)/);
+});
+
 test('decision-core source uses page-core guard for enrichment only', () => {
   assert.match(SCRIPT, /guard_mode = 'enrich_only'/);
   assert.match(SCRIPT, /enriched_buy_rows/);
