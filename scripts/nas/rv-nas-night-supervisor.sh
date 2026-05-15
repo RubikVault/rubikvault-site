@@ -419,6 +419,7 @@ step_timeout_sec() {
     cutover_readiness) printf '%s\n' 1800 ;;
     stage1_ops_pack) printf '%s\n' 1800 ;;
     system_status_report|system_status_aggregator|data_freshness_report|pipeline_epoch|generate_meta_dashboard_data) printf '%s\n' 1800 ;;
+    historical_research_ingest|historical_active_setups) printf '%s\n' 900 ;;
     runtime_preflight|stock_ui_integrity_audit|classifier_audit|ops_health_reports) printf '%s\n' 1800 ;;
     resource_budget_report) printf '%s\n' 300 ;;
     stock_analyzer_universe_audit) printf '%s\n' 5400 ;;
@@ -548,7 +549,7 @@ step_heap_mb() {
         scope_aware_heap_mb 512 250
       fi
       ;;
-    quantlab_daily_report|etf_diagnostic|signal_performance_report)
+    quantlab_daily_report|etf_diagnostic|signal_performance_report|historical_research_ingest|historical_active_setups)
       printf '%s\n' 512
       ;;
     dp8_market)
@@ -633,11 +634,15 @@ step_command() {
       local universe_scope_mode="${RV_UNIVERSE_SCOPE_MODE:-global_registry}"
       local search_cmd
       local preflight_cmd=""
+      local nasdaq_extension_cmd=""
       search_cmd="$(build_search_rebuild_cmd "$universe_scope_mode")"
       if [[ "$universe_scope_mode" == "index_core" ]]; then
         preflight_cmd="node scripts/ops/provider-health-preflight.mjs --env-file '$RV_EODHD_ENV_FILE' --min-available-calls '${RV_MARKET_REFRESH_MIN_EODHD_AVAILABLE_CALLS:-10000}' --output '${NAS_OPS_ROOT:-$REPO_ROOT/var/private}/pipeline-artifacts/provider-health-latest.json' && "
+        if [[ "${RV_INDEX_CORE_INCLUDE_VALIDATED_NASDAQ_EXTENSION:-0}" == "1" ]]; then
+          nasdaq_extension_cmd="node scripts/universe-v7/build-nasdaq-composite-validated-extension.mjs --target-market-date '$TARGET_MARKET_DATE' && "
+        fi
       fi
-      printf '%s\n' "${preflight_cmd}node scripts/universe-v7/build-global-scope.mjs --asset-classes '$GLOBAL_ASSET_CLASSES' && ${search_cmd} && node scripts/universe-v7/build-index-memberships.mjs && node scripts/ops/build-history-pack-manifest.mjs --scope global --asset-classes '$GLOBAL_ASSET_CLASSES'"
+      printf '%s\n' "${preflight_cmd}${nasdaq_extension_cmd}node scripts/universe-v7/build-global-scope.mjs --asset-classes '$GLOBAL_ASSET_CLASSES' && ${search_cmd} && node scripts/universe-v7/build-index-memberships.mjs && node scripts/ops/build-history-pack-manifest.mjs --scope global --asset-classes '$GLOBAL_ASSET_CLASSES'"
       ;;
     provider_health_preflight)
       printf '%s\n' "node scripts/ops/provider-health-preflight.mjs --env-file '$RV_EODHD_ENV_FILE' --min-available-calls '${RV_MARKET_REFRESH_MIN_EODHD_AVAILABLE_CALLS:-10000}' --output '${NAS_OPS_ROOT:-$REPO_ROOT/var/private}/pipeline-artifacts/provider-health-latest.json'"
@@ -739,6 +744,12 @@ step_command() {
     public_history_shards)
       printf '%s\n' "history_incremental_flag='--incremental'; if [ \"\${RV_UNIVERSE_SCOPE_MODE:-global_registry}\" = \"index_core\" ]; then history_incremental_flag=''; fi; RV_PUBLIC_HISTORY_TAIL_BARS='${RV_PUBLIC_HISTORY_TAIL_BARS:-260}' RV_PUBLIC_HISTORY_BENCHMARK_TAIL_BARS='${RV_PUBLIC_HISTORY_BENCHMARK_TAIL_BARS:-520}' NODE_OPTIONS='--max-old-space-size=${RV_PUBLIC_HISTORY_SHARDS_HEAP_MB:-4096}' node scripts/ops/build-public-history-shards.mjs --manifest '$RV_GLOBAL_MANIFEST_DIR/pack-manifest.global.json' --target-market-date='$TARGET_MARKET_DATE' \$history_incremental_flag"
       ;;
+    historical_research_ingest)
+      printf '%s\n' "node scripts/historical-insights/ingest-research-bundle.mjs"
+      ;;
+    historical_active_setups)
+      printf '%s\n' "ALLOW_REMOTE_BAR_FETCH=0 BEST_SETUPS_DISABLE_NETWORK=1 node scripts/historical-insights/build-active-setups.mjs --top=30"
+      ;;
     stock_ui_integrity_audit)
       printf '%s\n' "node scripts/ops/audit-stock-analyzer-ui-integrity.mjs --base-url='${RV_STOCK_UI_AUDIT_BASE_URL:-${RV_PUBLIC_BASE_URL:-https://rubikvault-site.pages.dev}}' --gate=ui_renderable --min-pass-rate='${RV_STOCK_UI_AUDIT_MIN_PASS_RATE:-0.90}' --min-operational-rate='${RV_STOCK_UI_AUDIT_MIN_OPERATIONAL_RATE:-0.90}' || { audit_status=\$?; if [ \"${RV_STOCK_UI_AUDIT_HARD_GATE:-0}\" = \"1\" ]; then exit \"\$audit_status\"; fi; echo \"stock_ui_integrity_audit_warn_only exit_code=\$audit_status\" >&2; exit 0; }"
       ;;
@@ -803,12 +814,16 @@ step_command() {
       fi
       local release_scope_mode="${RV_UNIVERSE_SCOPE_MODE:-global_registry}"
       local release_scope_arg=""
+      local release_nasdaq_extension_cmd=""
       if [[ "$release_scope_mode" == "index_core" ]]; then
         release_scope_arg=" --scope-file public/data/universe/v7/ssot/assets.global.canonical.ids.json"
+        if [[ "${RV_INDEX_CORE_INCLUDE_VALIDATED_NASDAQ_EXTENSION:-0}" == "1" ]]; then
+          release_nasdaq_extension_cmd="node scripts/universe-v7/build-nasdaq-composite-validated-extension.mjs --target-market-date '$TARGET_MARKET_DATE' && "
+        fi
       fi
       local search_cmd
       search_cmd="$(build_search_rebuild_cmd "$release_scope_mode")"
-      printf '%s\n' "mkdir -p '${RV_GLOBAL_MANIFEST_DIR:-${NAS_PIPELINE_ARTIFACTS_ROOT:-$NAS_OPS_ROOT/pipeline-artifacts}/manifests}' && RV_UNIVERSE_SCOPE_MODE='$release_scope_mode' node scripts/universe-v7/build-global-scope.mjs --asset-classes '$GLOBAL_ASSET_CLASSES' && ${search_cmd} && RV_UNIVERSE_SCOPE_MODE='$release_scope_mode' node scripts/universe-v7/build-index-memberships.mjs && node scripts/ops/build-history-pack-manifest.mjs --scope global --asset-classes '$GLOBAL_ASSET_CLASSES' && node scripts/ops/apply-history-touch-report-to-registry.mjs --allow-empty${release_history_scan_arg}${release_scope_arg} && node scripts/ops/report-history-coverage.mjs --asset-classes '$GLOBAL_ASSET_CLASSES' --target-market-date '$TARGET_MARKET_DATE' && node scripts/ops/build-stock-analyzer-universe-audit.mjs --registry-path public/data/universe/v7/registry/registry.ndjson.gz --allowlist-path public/data/universe/v7/ssot/assets.global.canonical.ids.json --asset-classes '$GLOBAL_ASSET_CLASSES' --max-tickers 0 --live-sample-size 0 --concurrency '${RV_STOCK_ANALYZER_AUDIT_CONCURRENCY:-12}' --timeout-ms '${RV_STOCK_ANALYZER_AUDIT_TIMEOUT_MS:-30000}' && if [ -f public/data/ops/stock-analyzer-operability-latest.json ]; then node scripts/ops/build-stock-analyzer-operability.mjs --refresh-from-registry --registry-path public/data/universe/v7/registry/registry.ndjson.gz; else echo '{\"ok\":true,\"skipped\":\"stock_analyzer_operability_full_report_missing\"}'; fi"
+      printf '%s\n' "mkdir -p '${RV_GLOBAL_MANIFEST_DIR:-${NAS_PIPELINE_ARTIFACTS_ROOT:-$NAS_OPS_ROOT/pipeline-artifacts}/manifests}' && ${release_nasdaq_extension_cmd}RV_UNIVERSE_SCOPE_MODE='$release_scope_mode' node scripts/universe-v7/build-global-scope.mjs --asset-classes '$GLOBAL_ASSET_CLASSES' && ${search_cmd} && RV_UNIVERSE_SCOPE_MODE='$release_scope_mode' node scripts/universe-v7/build-index-memberships.mjs && node scripts/ops/build-history-pack-manifest.mjs --scope global --asset-classes '$GLOBAL_ASSET_CLASSES' && node scripts/ops/apply-history-touch-report-to-registry.mjs --allow-empty${release_history_scan_arg}${release_scope_arg} && node scripts/ops/report-history-coverage.mjs --asset-classes '$GLOBAL_ASSET_CLASSES' --target-market-date '$TARGET_MARKET_DATE' && node scripts/ops/build-stock-analyzer-universe-audit.mjs --registry-path public/data/universe/v7/registry/registry.ndjson.gz --allowlist-path public/data/universe/v7/ssot/assets.global.canonical.ids.json --asset-classes '$GLOBAL_ASSET_CLASSES' --max-tickers 0 --live-sample-size 0 --concurrency '${RV_STOCK_ANALYZER_AUDIT_CONCURRENCY:-12}' --timeout-ms '${RV_STOCK_ANALYZER_AUDIT_TIMEOUT_MS:-30000}' && if [ -f public/data/ops/stock-analyzer-operability-latest.json ]; then node scripts/ops/build-stock-analyzer-operability.mjs --refresh-from-registry --registry-path public/data/universe/v7/registry/registry.ndjson.gz; else echo '{\"ok\":true,\"skipped\":\"stock_analyzer_operability_full_report_missing\"}'; fi"
       ;;
     ui_field_truth_report)
       if [[ "${RV_ALLOW_LOCAL_RUNTIME_GATES:-0}" == "1" ]]; then
@@ -1055,7 +1070,7 @@ run_step() {
   fi
 
   case "$step_id" in
-    build_global_scope|provider_health_preflight|q1_delta_proof_report|hist_probs|hist_probs_catchup|hist_probs_v2_shadow|decision_core_shadow|snapshot|page_core_bundle|best_setups_core|classifier_audit|ops_health_reports|public_history_shards|learning_daily|decision_module_scorecard|decision_core_outcome_bootstrap|forecast_daily|build_fundamentals|quantlab_daily_report|breakout_v12|scientific_summary|v1_audit|cutover_readiness|etf_diagnostic|stage1_ops_pack|system_status_report|system_status_aggregator|resource_budget_report|data_freshness_report|pipeline_epoch|generate_meta_dashboard_data|signal_performance_report|dp8_market|runtime_preflight|stock_analyzer_universe_audit|ui_field_truth_report|stock_ui_integrity_audit|page_core_smoke|final_integrity_seal|build_deploy_bundle|pre_deploy_smoke|wrangler_deploy|code_manifest_guard|lock_policy_report)
+    build_global_scope|provider_health_preflight|q1_delta_proof_report|hist_probs|hist_probs_catchup|hist_probs_v2_shadow|decision_core_shadow|snapshot|page_core_bundle|best_setups_core|classifier_audit|ops_health_reports|public_history_shards|historical_research_ingest|historical_active_setups|learning_daily|decision_module_scorecard|decision_core_outcome_bootstrap|forecast_daily|build_fundamentals|quantlab_daily_report|breakout_v12|scientific_summary|v1_audit|cutover_readiness|etf_diagnostic|stage1_ops_pack|system_status_report|system_status_aggregator|resource_budget_report|data_freshness_report|pipeline_epoch|generate_meta_dashboard_data|signal_performance_report|dp8_market|runtime_preflight|stock_analyzer_universe_audit|ui_field_truth_report|stock_ui_integrity_audit|page_core_smoke|final_integrity_seal|build_deploy_bundle|pre_deploy_smoke|wrangler_deploy|code_manifest_guard|lock_policy_report)
       measure_args+=(--set-env "NODE_OPTIONS=--max-old-space-size=$heap_mb")
       ;;
   esac
@@ -1152,6 +1167,8 @@ lane_steps() {
       classifier_audit \
       ops_health_reports \
       public_history_shards \
+      historical_research_ingest \
+      historical_active_setups \
       etf_diagnostic \
       learning_daily \
       decision_module_scorecard \
@@ -1185,6 +1202,8 @@ lane_steps() {
       system_status_aggregator \
       generate_meta_dashboard_data \
       signal_performance_report \
+      historical_research_ingest \
+      historical_active_setups \
       build_deploy_bundle \
       pre_deploy_smoke \
       wrangler_deploy \
@@ -1248,7 +1267,7 @@ while IFS= read -r step_id; do
     # them. Tonight 2026-05-05 hist_probs deferred (exit 23) and lost the entire
     # data-plane lane + release-full + wrangler_deploy. Treat the same family as
     # breakout_v12: log degraded, continue.
-    OPTIONAL_STEPS_LIST="${RV_OPTIONAL_STEPS:-breakout_v12 hist_probs hist_probs_catchup hist_probs_v2_shadow scientific_summary etf_diagnostic dp8_market stock_ui_integrity_audit}"
+    OPTIONAL_STEPS_LIST="${RV_OPTIONAL_STEPS:-breakout_v12 hist_probs hist_probs_catchup hist_probs_v2_shadow scientific_summary etf_diagnostic dp8_market historical_research_ingest historical_active_setups stock_ui_integrity_audit}"
     if [[ " $OPTIONAL_STEPS_LIST " == *" $step_id "* ]]; then
       if [[ "$step_id" == "breakout_v12" ]]; then
         echo "optional_step_degraded=breakout_v12 exit_code=$step_status latest_unchanged=1" >&2
