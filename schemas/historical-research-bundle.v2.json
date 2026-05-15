@@ -1,0 +1,30 @@
+{
+  "$id": "rv.historical_research_bundle.v2",
+  "type": "object",
+  "required": ["schema", "generated_at", "public_paths", "counts"],
+  "properties": {
+    "schema": { "const": "rv.historical_research_bundle.v2" },
+    "generated_at": { "type": "string" },
+    "page_core_snapshot_id": { "type": ["string", "null"] },
+    "historical_insights_generated_at": { "type": ["string", "null"] },
+    "public_paths": {
+      "type": "object",
+      "required": ["latest", "shards", "coverage"],
+      "properties": {
+        "latest": { "type": "string" },
+        "shards": { "type": "string" },
+        "coverage": { "type": "string" }
+      }
+    },
+    "counts": {
+      "type": "object",
+      "required": ["historical_assets", "historical_rules", "shard_count"],
+      "properties": {
+        "historical_assets": { "type": "number" },
+        "historical_rules": { "type": "number" },
+        "shard_count": { "type": "number" }
+      }
+    }
+  },
+  "additionalProperties": true
+}

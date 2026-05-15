@@ -1,0 +1,15 @@
+{
+  "$id": "rv.historical_research_coverage.v1",
+  "type": "object",
+  "required": ["schema", "generated_at", "historical_asset_count", "status"],
+  "properties": {
+    "schema": { "const": "rv.historical_research_coverage.v1" },
+    "generated_at": { "type": "string" },
+    "page_core_snapshot_id": { "type": ["string", "null"] },
+    "page_core_asset_count": { "type": "number" },
+    "historical_asset_count": { "type": "number" },
+    "coverage_pct": { "type": ["number", "null"] },
+    "status": { "type": "string" }
+  },
+  "additionalProperties": true
+}

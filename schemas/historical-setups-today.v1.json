@@ -1,0 +1,41 @@
+{
+  "$id": "rv.historical_setups_today.v1",
+  "type": "object",
+  "required": ["schema", "generated_at", "regions"],
+  "properties": {
+    "schema": { "const": "rv.historical_setups_today.v1" },
+    "generated_at": { "type": "string" },
+    "regions": {
+      "type": "object",
+      "required": ["US", "EU", "ASIA"],
+      "properties": {
+        "US": { "$ref": "#/$defs/region" },
+        "EU": { "$ref": "#/$defs/region" },
+        "ASIA": { "$ref": "#/$defs/region" }
+      }
+    }
+  },
+  "$defs": {
+    "region": {
+      "type": "object",
+      "required": ["long", "short"],
+      "properties": {
+        "long": { "type": "array", "items": { "$ref": "#/$defs/setup" } },
+        "short": { "type": "array", "items": { "$ref": "#/$defs/setup" } }
+      }
+    },
+    "setup": {
+      "type": "object",
+      "required": ["asset_id", "ticker", "direction", "pattern_id", "rank_score"],
+      "properties": {
+        "asset_id": { "type": "string" },
+        "ticker": { "type": "string" },
+        "direction": { "enum": ["LONG", "SHORT"] },
+        "pattern_id": { "type": "string" },
+        "rank_score": { "type": "number" }
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": true
+}
