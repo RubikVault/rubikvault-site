@@ -5,6 +5,8 @@ import zlib from 'node:zlib';
 
 const DEFAULT_BASE = 'mirrors/universe-v7';
 const DEFAULT_DELTAS = 'mirrors/universe-v7/history-deltas';
+const MAX_HISTORY_PACK_ROWS_CACHE = Math.max(0, Number(process.env.RV_HISTORY_PACK_ROWS_CACHE_MAX || '32'));
+const historyPackRowsCache = new Map();
 
 export function normalizeCanonicalId(value) {
   return String(value || '').trim().toUpperCase();
@@ -72,14 +74,47 @@ function deltaCandidates(repoRoot, relPack, deltasDir = DEFAULT_DELTAS) {
   }
 }
 
+function historyPackCacheKey(repoRoot, relPack, options, includeDeltas) {
+  return [
+    path.resolve(repoRoot || '.'),
+    String(options.baseDir || DEFAULT_BASE),
+    String(options.deltasDir || DEFAULT_DELTAS),
+    String(relPack || '').replace(/^\/+/, ''),
+    includeDeltas ? 'deltas=1' : 'deltas=0',
+  ].join('|');
+}
+
+function readRowsCache(key) {
+  if (!MAX_HISTORY_PACK_ROWS_CACHE || !historyPackRowsCache.has(key)) return null;
+  const rows = historyPackRowsCache.get(key);
+  historyPackRowsCache.delete(key);
+  historyPackRowsCache.set(key, rows);
+  return rows;
+}
+
+function writeRowsCache(key, rows) {
+  if (!MAX_HISTORY_PACK_ROWS_CACHE) return;
+  historyPackRowsCache.set(key, rows);
+  while (historyPackRowsCache.size > MAX_HISTORY_PACK_ROWS_CACHE) {
+    const oldest = historyPackRowsCache.keys().next().value;
+    historyPackRowsCache.delete(oldest);
+  }
+}
+
 export async function readHistoryPackRows(repoRoot, relPack, options = {}) {
   const includeDeltas = options.includeDeltas ?? process.env.RV_HISTORY_READ_DELTAS === '1';
+  const cacheKey = historyPackCacheKey(repoRoot, relPack, options, includeDeltas);
+  const cached = readRowsCache(cacheKey);
+  if (cached) return cached;
   let rows = [];
   for (const candidate of baseCandidates(repoRoot, relPack, options.baseDir)) {
     rows = await readNdjsonGz(candidate);
     if (rows.length) break;
   }
-  if (!includeDeltas) return rows;
+  if (!includeDeltas) {
+    writeRowsCache(cacheKey, rows);
+    return rows;
+  }
 
   const byId = new Map();
   for (const row of rows) {
@@ -103,7 +138,9 @@ export async function readHistoryPackRows(repoRoot, relPack, options = {}) {
     }
   }
 
-  return [...byId.keys()].sort().map((canonicalId) => byId.get(canonicalId));
+  const mergedRows = [...byId.keys()].sort().map((canonicalId) => byId.get(canonicalId));
+  writeRowsCache(cacheKey, mergedRows);
+  return mergedRows;
 }
 
 export async function readHistoryPackIndex(repoRoot, relPack, options = {}) {

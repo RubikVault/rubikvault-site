@@ -25,6 +25,7 @@ if (PRIVATE_STATS_ENABLED && !PRIVATE_STATS_PATH) {
   throw new Error('build-active-setups: RV_HISTORICAL_RESEARCH_STATS or NAS_OPS_ROOT must point at the last-good validated_rules.parquet.');
 }
 const MAX_BAR_STALE_DAYS = Math.max(1, Number(process.env.RV_HISTORICAL_SETUPS_MAX_BAR_STALE_DAYS || '7'));
+const PROGRESS_EVERY = Math.max(0, Number(process.env.RV_HISTORICAL_ACTIVE_SETUPS_PROGRESS_EVERY || '500'));
 const EU_EXCHANGES = new Set(['EUFUND','AS','AT','BA','BC','BE','BR','BUD','CO','DE','DU','F','HA','HE','HM','IR','LSE','LU','LS','MC','MI','MU','OL','PA','RO','ST','STU','SW','VI','WAR','XETRA']);
 const ASIA_EXCHANGES = new Set(['AU','BK','JK','KAR','KLSE','KO','KQ','PSE','SHE','SHG','TA','TO','TW','TWO','VN','XNAI','XNSA']);
 const LEADERBOARD_REGIONS = Object.freeze(['ALL', 'US', 'EU', 'ASIA']);
@@ -197,6 +198,22 @@ function assetRowsFrom(scopeAssets, insightRows) {
     asset_class: normalizeAssetClass(row.asset_class || row.asset_type),
     history_pack: row.history_pack || null,
   })).filter((row) => row.asset_id && row.ticker);
+}
+
+function historyPackFor(assetId, row, assetMeta) {
+  const meta = assetMeta?.get(String(assetId || '').toUpperCase()) || {};
+  return String(meta.history_pack || row?.history_pack || row?.historyPack || '').trim() || null;
+}
+
+function sortRowsForHistoryPackLocality(rows, assetMeta) {
+  return [...rows].sort((a, b) => {
+    const aId = String(a?.asset_id || '').toUpperCase();
+    const bId = String(b?.asset_id || '').toUpperCase();
+    const aPack = historyPackFor(aId, a, assetMeta) || '';
+    const bPack = historyPackFor(bId, b, assetMeta) || '';
+    if (aPack !== bPack) return aPack.localeCompare(bPack);
+    return aId.localeCompare(bId);
+  });
 }
 
 function distinctPatternIdsFromStats(statsPath) {
@@ -435,24 +452,43 @@ async function main() {
     telemetry.patterns_active_raw = 0;
     telemetry.bars_missing = 0;
     telemetry.bars_stale = 0;
-    for (const row of rows) {
+    const publicRows = sortRowsForHistoryPackLocality(rows, assetMeta);
+    let processedAssets = 0;
+    const logProgress = () => {
+      if (PROGRESS_EVERY && processedAssets % PROGRESS_EVERY === 0) {
+        console.log(`[historical-setups] progress public_projection assets=${processedAssets}/${publicRows.length} active_rules=${telemetry.rules_active} missing=${telemetry.bars_missing} stale=${telemetry.bars_stale}`);
+      }
+    };
+    for (const row of publicRows) {
+      processedAssets += 1;
       const assetId = String(row.asset_id || '').toUpperCase();
       const ticker = String(row.ticker || assetId.split(':').pop() || '').toUpperCase();
       const rules = Array.isArray(row.top_rules) ? row.top_rules : [];
-      if (!rules.length) continue;
+      if (!rules.length) {
+        logProgress();
+        continue;
+      }
+      const preferredHistoryPack = historyPackFor(assetId, row, assetMeta);
       let bars = [];
       try {
-        bars = await loadLocalBars(ticker, { canonicalId: assetId, preferredCanonicalId: assetId, allowRemoteBarFetch: false });
+        bars = await loadLocalBars(ticker, {
+          canonicalId: assetId,
+          preferredCanonicalId: assetId,
+          preferredHistoryPack,
+          allowRemoteBarFetch: false,
+        });
       } catch {
         bars = [];
       }
       if (!Array.isArray(bars) || bars.length < 60) {
         telemetry.bars_missing += 1;
+        logProgress();
         continue;
       }
       const latestBarDate = bars[bars.length - 1]?.date || null;
       if (daysOld(latestBarDate) > MAX_BAR_STALE_DAYS) {
         telemetry.bars_stale += 1;
+        logProgress();
         continue;
       }
       let assetHadActive = false;
@@ -500,6 +536,7 @@ async function main() {
         telemetry.assets_with_active_rules += 1;
         telemetry.assets_with_active_patterns += 1;
       }
+      logProgress();
     }
   }
 
