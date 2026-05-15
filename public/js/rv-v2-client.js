@@ -566,7 +566,7 @@ function optionalHydrationEnabled() {
   try {
     const params = new URLSearchParams(window.location.search || '');
     if (params.get('rv_optional') === '0' || window.__RV_DISABLE_OPTIONAL_HYDRATION === true) return false;
-    return params.get('rv_optional') === '1';
+    return true;
   } catch {
     return false;
   }

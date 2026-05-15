@@ -688,6 +688,19 @@ test('Live stock.html upgrades analyzer search to universe-backed typeahead', as
   assert.ok(content.includes('Search stock by name or ticker'), 'Analyzer search placeholder is not name-aware');
 });
 
+test('Live stock.html does not fetch missing historical research shards', () => {
+  assert.ok(stockHtmlSource.includes('if (!shardRel) return'), 'Historical insight shard loader must return typed missing state before 404 fetches');
+  assert.ok(stockHtmlSource.includes('No historical research projection for this asset.'), 'Historical insight missing state must be typed');
+});
+
+test('V2 client hydrates optional historical modules by default in browser', async () => {
+  const fs = await import('node:fs');
+  const content = fs.readFileSync(new URL('../public/js/rv-v2-client.js', import.meta.url), 'utf-8');
+  assert.ok(content.includes("if (params.get('rv_optional') === '0'"), 'Optional hydration opt-out flag missing');
+  assert.ok(content.includes('return true;'), 'Optional hydration should default on in browser runtime');
+  assert.ok(!content.includes("return params.get('rv_optional') === '1'"), 'Optional hydration must not require rv_optional=1');
+});
+
 // ─── K) Initial HTML State Tests ────────────────────────────────────────────
 
 test('Initial HTML has no pre-filled "Unsupported" badge', async () => {

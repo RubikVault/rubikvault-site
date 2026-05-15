@@ -563,7 +563,7 @@
       let _rvDataSource = 'v2';
       let _rvResolution = { mode: 'full', source: 'v2', notice: null, missingModules: [] };
       try {
-        const { fetchWithFallback } = await import('/js/rv-v2-client.js?v=20260512-pagecore-hydration');
+        const { fetchWithFallback } = await import('/js/rv-v2-client.js?v=20260515-optional-hydration');
         const resolved = await fetchWithFallback(ticker);
         payload = resolved.payload;
         _rvDataSource = resolved.source === 'v2' ? 'v2' : 'v1';
@@ -697,7 +697,11 @@
         const splitShardKey = `${exchangeKey}-${(symbol.slice(0, 2) || '0')}`;
         try {
           const manifestRes = await fetch('/data/historical-insights/latest.json', { cache: 'no-store' }).then(r => r.ok ? r.json() : null).catch(() => null);
-          const shardRel = manifestRes?.shards?.[splitShardKey] || manifestRes?.shards?.[shardKey] || `shards/${shardKey}.json`;
+          const shardRel = manifestRes?.shards?.[splitShardKey] || manifestRes?.shards?.[shardKey] || null;
+          if (!shardRel) return {
+            availability: { status: 'missing', reason: 'No historical research projection for this asset.' },
+            manifest: manifestRes,
+          };
           const shardRes = await fetch(`/data/historical-insights/${String(shardRel).replace(/^\/+/, '')}`, { cache: 'no-store' }).then(r => r.ok ? r.json() : null).catch(() => null);
           const row = shardRes?.by_asset?.[id] || null;
           if (!row) return {
