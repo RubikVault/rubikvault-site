@@ -58,6 +58,8 @@ test('best-setups v4 keeps horizon cards ordered by probability then gain', () =
 test('decision-core source uses page-core guard for enrichment only', () => {
   assert.match(SCRIPT, /guard_mode = 'enrich_only'/);
   assert.match(SCRIPT, /enriched_buy_rows/);
+  assert.match(SCRIPT, /market_data_as_of: row\.market_data_as_of \|\| marketDataAsOf/);
+  assert.match(SCRIPT, /if \(!pageCoreGuard\?\.available\) \{\s*buyRows = await enrichDecisionRowsFromLocalUniverse\(buyRows\);/s);
   assert.doesNotMatch(
     SCRIPT,
     /buyRows = buyRows\.filter\(\(row\) => pageCoreGuard\.buy_ids\.has/,

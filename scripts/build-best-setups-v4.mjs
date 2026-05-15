@@ -564,6 +564,13 @@ function enrichDecisionRowsFromPageCore(rows, pageCoreGuard = null) {
       )
     );
     const stats = pageRow.market_stats_min?.stats || pageRow.market_stats?.stats || {};
+    const marketDataAsOf = normalizeDateId(firstDefined(
+      pageRow.market_stats_min?.price_date,
+      pageRow.market_stats_min?.latest_bar_date,
+      pageRow.latest_bar_date,
+      pageRow.stats_date,
+      pageRow.freshness?.as_of,
+    ));
     const ret5 = num(firstDefined(stats.ret_5d_pct, stats.return_5d_pct, pageRow.historical_profile_summary?.ret_5d_pct));
     const ret20 = num(firstDefined(stats.ret_20d_pct, stats.return_20d_pct, pageRow.historical_profile_summary?.ret_20d_pct));
     const ret60 = num(firstDefined(
@@ -584,6 +591,7 @@ function enrichDecisionRowsFromPageCore(rows, pageCoreGuard = null) {
       analyzer_ret_5d_pct: row.analyzer_ret_5d_pct ?? ret5,
       analyzer_ret_20d_pct: row.analyzer_ret_20d_pct ?? ret20,
       analyzer_ret_60d_pct: row.analyzer_ret_60d_pct ?? row.analyzer_ret_63d_pct ?? ret60,
+      market_data_as_of: row.market_data_as_of || marketDataAsOf,
       page_core_snapshot_id: row.page_core_snapshot_id || pageCoreGuard.snapshot_id || null,
     };
   });
@@ -923,17 +931,6 @@ async function main() {
     let buyRows = decisionBundleMode.rows || [];
     let pageCoreGuard = null;
     let staleMarketDataFiltered = 0;
-    if (decisionSource === 'decision-core') {
-      buyRows = await enrichDecisionRowsFromLocalUniverse(buyRows);
-      if (requestedTargetDate) {
-        const beforeFreshnessFilter = buyRows.length;
-        buyRows = buyRows.filter((row) => {
-          const marketDataAsOf = normalizeDateId(row?.market_data_as_of);
-          return Boolean(marketDataAsOf && marketDataAsOf >= requestedTargetDate);
-        });
-        staleMarketDataFiltered = beforeFreshnessFilter - buyRows.length;
-      }
-    }
     if (decisionSource === 'decision-core' && process.env.BEST_SETUPS_DISABLE_PAGE_CORE_GUARD !== '1') {
       pageCoreGuard = await buildPageCoreBuyGuard(requestedTargetDate);
       if (pageCoreGuard.available) {
@@ -943,6 +940,19 @@ async function main() {
         pageCoreGuard.enriched_buy_rows = buyRows.filter((row) => pageCoreGuard.by_id.has(String(row?.canonical_id || '').toUpperCase())).length;
         pageCoreGuard.guard_mode = 'enrich_only';
         pageCoreGuard.decision_core_buy_rows = before;
+      }
+    }
+    if (decisionSource === 'decision-core') {
+      if (!pageCoreGuard?.available) {
+        buyRows = await enrichDecisionRowsFromLocalUniverse(buyRows);
+      }
+      if (requestedTargetDate) {
+        const beforeFreshnessFilter = buyRows.length;
+        buyRows = buyRows.filter((row) => {
+          const marketDataAsOf = normalizeDateId(row?.market_data_as_of);
+          return Boolean(marketDataAsOf && marketDataAsOf >= requestedTargetDate);
+        });
+        staleMarketDataFiltered = beforeFreshnessFilter - buyRows.length;
       }
     }
     const horizonBuilder = decisionSource === 'decision-core' ? buildDecisionCoreHorizonRows : buildHorizonRows;
