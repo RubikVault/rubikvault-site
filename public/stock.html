@@ -563,7 +563,7 @@
       let _rvDataSource = 'v2';
       let _rvResolution = { mode: 'full', source: 'v2', notice: null, missingModules: [] };
       try {
-        const { fetchWithFallback } = await import('/js/rv-v2-client.js?v=20260514-assetid-contract');
+        const { fetchWithFallback } = await import('/js/rv-v2-client.js?v=20260512-pagecore-hydration');
         const resolved = await fetchWithFallback(ticker);
         payload = resolved.payload;
         _rvDataSource = resolved.source === 'v2' ? 'v2' : 'v1';
@@ -623,7 +623,7 @@
       }
 
       // Data Guard: validate and annotate payload before rendering
-      const { guardPayload } = await import('/js/stock-data-guard.js?v=20260514-pagecore-contract');
+      const { guardPayload } = await import('/js/stock-data-guard.js');
       const _guard = guardPayload(payload, ticker);
       if (_guard.warnings.length) console.debug('[RV Guard]', _guard.warnings);
 
@@ -638,18 +638,10 @@
       const _chartBlockedByIntegrity = _integrityFields.chart?.status === 'BLOCK' && !_documentedMinimalChart;
       window._rvUiIntegrity = _integrity;
       const ssotMarketContext = data.ssot?.market_context || {};
-      let historicalProfileEnvelope = data.historical_profile || null;
+      const historicalProfileEnvelope = data.historical_profile || null;
       const identity = buildPageIdentity(payload, ticker);
-      let urlAssetId = '';
-      try {
-        const candidate = String(new URLSearchParams(window.location.search || '').get('asset_id') || '').trim().toUpperCase();
-        if (/^[A-Z0-9_.-]+:[A-Z0-9_.-]+$/.test(candidate)) urlAssetId = candidate;
-      } catch (e) {
-        urlAssetId = '';
-      }
       const canonicalAssetId = String(
-        urlAssetId
-        || data?.ssot?.page_core?.canonical_asset_id
+        data?.ssot?.page_core?.canonical_asset_id
         || data?.canonical_id
         || data?.canonical_asset_id
         || data?.asset_id
@@ -662,6 +654,8 @@
         if (Array.isArray(currentBars) && currentBars.length >= 2000) return currentBars;
         const rawTicker = String(data?.ticker || identity?.ticker || ticker || '').trim();
         if (!rawTicker) return currentBars || [];
+        const params = new URLSearchParams({ range: 'all' });
+        if (canonicalAssetId.includes(':')) params.set('asset_id', canonicalAssetId);
         const mergeBarsByDate = (...sets) => {
           const byDate = new Map();
           for (const set of sets) {
@@ -674,57 +668,16 @@
           }
           return [...byDate.values()].sort((a, b) => String(a.date).localeCompare(String(b.date)));
         };
-        const normalizePublicBars = (rows) => {
-          if (!Array.isArray(rows)) return [];
-          return rows.map((row) => {
-            if (Array.isArray(row)) {
-              const date = String(row[0] || '').slice(0, 10);
-              const close = Number(row.length >= 5 ? row[4] : row[1]);
-              if (!date || !Number.isFinite(close)) return null;
-              const open = Number(row.length >= 5 ? row[1] : close);
-              const high = Number(row.length >= 5 ? row[2] : close);
-              const low = Number(row.length >= 5 ? row[3] : close);
-              const adjClose = Number(row.length >= 6 ? row[5] : close);
-              const volume = Number(row.length >= 7 ? row[6] : 0);
-              return {
-                date,
-                open: Number.isFinite(open) ? open : close,
-                high: Number.isFinite(high) ? high : close,
-                low: Number.isFinite(low) ? low : close,
-                close,
-                adjClose: Number.isFinite(adjClose) ? adjClose : close,
-                volume: Number.isFinite(volume) ? volume : 0,
-              };
-            }
-            return row && typeof row === 'object' ? row : null;
-          }).filter(Boolean);
-        };
-        const loadPublicHistoryShardBars = async (assetId) => {
-          const id = String(assetId || '').trim().toUpperCase();
-          if (!/^[A-Z0-9_.-]+:[A-Z0-9_.-]+$/.test(id)) return [];
-          const symbol = id.split(':').pop().replace(/[^A-Z0-9.\-]/g, '');
-          if (!symbol) return [];
-          const manifestRes = await fetch('/data/eod/history/shards/manifest.public-history-shards.json', { cache: 'no-store' });
-          if (!manifestRes.ok) return [];
-          const manifest = await manifestRes.json().catch(() => null);
-          const prefixLen = Math.max(1, Math.min(4, Number(manifest?.shard_prefix_len || 2) || 2));
-          const shardKey = symbol.slice(0, prefixLen) || '_';
-          if (manifest?.shards && !manifest.shards[shardKey]) return [];
-          const shardRes = await fetch(`/data/eod/history/shards/${encodeURIComponent(shardKey)}.json.gz`, { cache: 'no-store' });
-          if (!shardRes.ok) return [];
-          let shardDoc = null;
-          try {
-            shardDoc = await shardRes.clone().json();
-          } catch {
-            if (typeof DecompressionStream !== 'function' || !shardRes.body) return [];
-            const text = await new Response(shardRes.body.pipeThrough(new DecompressionStream('gzip'))).text();
-            shardDoc = JSON.parse(text);
-          }
-          return normalizePublicBars(shardDoc?.[id] || []);
-        };
         try {
-          const publicBars = await loadPublicHistoryShardBars(canonicalAssetId);
-          const merged = mergeBarsByDate(publicBars, currentBars);
+          const [historyDoc, stockDoc] = await Promise.all([
+            fetch(`/api/v2/stocks/${encodeURIComponent(rawTicker)}/historical?${params.toString()}`, { cache: 'no-store' })
+              .then(res => res.ok ? res.json() : null).catch(() => null),
+            fetch(`/api/stock?ticker=${encodeURIComponent(rawTicker)}`, { cache: 'no-store' })
+              .then(res => res.ok ? res.json() : null).catch(() => null),
+          ]);
+          const historyBars = Array.isArray(historyDoc?.data?.bars) ? historyDoc.data.bars : (Array.isArray(historyDoc?.bars) ? historyDoc.bars : []);
+          const stockBars = Array.isArray(stockDoc?.data?.bars) ? stockDoc.data.bars : [];
+          const merged = mergeBarsByDate(historyBars, currentBars, stockBars);
           return merged.length > (currentBars?.length || 0) ? merged : (currentBars || []);
         } catch {
           return currentBars || [];
@@ -732,72 +685,6 @@
       }
       bars = await hydrateChartBars(bars);
       data.bars = bars;
-      const buildClientHistoricalProfileFromBars = (series) => {
-        const cleanBars = Array.isArray(series) ? series.filter((bar) => Number.isFinite(Number(bar?.close ?? bar?.adjClose)) && String(bar?.date || '').length >= 10) : [];
-        if (cleanBars.length < 80) return null;
-        const closes = cleanBars.map((bar) => Number(bar.adjClose ?? bar.close));
-        const statForHorizon = (horizon) => {
-          const returns = [];
-          for (let i = 0; i + horizon < closes.length; i += 1) {
-            const base = closes[i];
-            const next = closes[i + horizon];
-            if (Number.isFinite(base) && Number.isFinite(next) && base > 0) returns.push(next / base - 1);
-          }
-          if (!returns.length) return null;
-          const n = returns.length;
-          const avg = returns.reduce((sum, value) => sum + value, 0) / n;
-          const wins = returns.filter((value) => value > 0).length;
-          const minRet = Math.min(...returns);
-          const maxRet = Math.max(...returns);
-          return {
-            n,
-            win_rate: wins / n,
-            avg_return: avg,
-            mae: Math.min(0, minRet),
-            mfe: Math.max(0, maxRet),
-            max_drawdown: Math.min(0, minRet),
-          };
-        };
-        const events = {
-          event_price_history_baseline: {
-            h5d: statForHorizon(5),
-            h20d: statForHorizon(20),
-            h60d: statForHorizon(60),
-            h120d: statForHorizon(120),
-          },
-        };
-        const latest = cleanBars[cleanBars.length - 1];
-        const closeNow = closes[closes.length - 1];
-        const closeThen = closes[Math.max(0, closes.length - 60)];
-        return {
-          ticker: String(data?.ticker || identity?.ticker || ticker || '').trim(),
-          profile: {
-            latest_date: latest.date,
-            computed_at: new Date().toISOString(),
-            bars_count: cleanBars.length,
-            events,
-          },
-          regime: {
-            date: latest.date,
-            market_regime: closeNow >= closeThen ? 'bull' : 'bear',
-            volatility_regime: 'normal_vol',
-            breadth_regime: 'normal',
-            breadth_above_ma50_pct: null,
-          },
-          availability: {
-            status: 'ready',
-            reason: null,
-            source: 'client_public_history_shard',
-          },
-        };
-      };
-      if ((!historicalProfileEnvelope?.profile?.events || typeof historicalProfileEnvelope.profile.events !== 'object') && bars.length >= 80) {
-        const synthesizedProfile = buildClientHistoricalProfileFromBars(bars);
-        if (synthesizedProfile) {
-          historicalProfileEnvelope = synthesizedProfile;
-          data.historical_profile = synthesizedProfile;
-        }
-      }
       const lastBar = bars.length ? bars[bars.length - 1] : {};
       async function loadHistoricalResearchInsights(assetId) {
         const rawId = String(assetId || '').toUpperCase();
@@ -805,15 +692,13 @@
         if (!id.includes(':')) return null;
         const [exchange, symbolRaw] = id.split(':');
         const symbol = String(symbolRaw || '').replace(/[^A-Z0-9]/g, '').toUpperCase();
-        const shardKey = `${exchange.replace(/[^A-Z0-9_-]/g, '_')}-${(symbol[0] || '0')}`;
+        const exchangeKey = exchange.replace(/[^A-Z0-9_-]/g, '_');
+        const shardKey = `${exchangeKey}-${(symbol[0] || '0')}`;
+        const splitShardKey = `${exchangeKey}-${(symbol.slice(0, 2) || '0')}`;
         try {
           const manifestRes = await fetch('/data/historical-insights/latest.json', { cache: 'no-store' }).then(r => r.ok ? r.json() : null).catch(() => null);
-          if (manifestRes?.shards && !manifestRes.shards[shardKey]) return {
-            availability: { status: 'missing', reason: 'No historical research projection for this asset.' },
-            manifest: manifestRes,
-          };
-          const shardPath = manifestRes?.shards?.[shardKey] || `shards/${shardKey}.json`;
-          const shardRes = await fetch(`/data/historical-insights/${shardPath.replace(/^\/?data\/historical-insights\/?/, '')}`, { cache: 'no-store' }).then(r => r.ok ? r.json() : null).catch(() => null);
+          const shardRel = manifestRes?.shards?.[splitShardKey] || manifestRes?.shards?.[shardKey] || `shards/${shardKey}.json`;
+          const shardRes = await fetch(`/data/historical-insights/${String(shardRel).replace(/^\/+/, '')}`, { cache: 'no-store' }).then(r => r.ok ? r.json() : null).catch(() => null);
           const row = shardRes?.by_asset?.[id] || null;
           if (!row) return {
             availability: { status: 'missing', reason: 'No historical research projection for this asset.' },
@@ -2788,61 +2673,11 @@
         (function renderHistIntelMatrix() {
           const el = document.getElementById('rv-hist-intel');
           if (!el) return;
-          const latestClose = (idx = 0) => {
-            const b = bars[bars.length - 1 - idx];
-            return b ? Number(b.adjClose ?? b.close) : null;
-          };
-          const patternActive = (patternId) => {
-            const id = String(patternId || '').toLowerCase();
-            if (!id || bars.length < 2) return false;
-            const last = bars[bars.length - 1];
-            const prev = bars[bars.length - 2];
-            if (id.startsWith('month_')) {
-              const m = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'][new Date(pageAsOf || last.date).getUTCMonth()];
-              return id === `month_${m}`;
-            }
-            const streak = id.match(/^green_streak_(\d+)$/);
-            if (streak) {
-              const n = Number(streak[1]);
-              if (bars.length <= n) return false;
-              for (let i = 0; i < n; i += 1) {
-                const a = latestClose(i);
-                const b = latestClose(i + 1);
-                if (!(a != null && b != null && a > b)) return false;
-              }
-              return true;
-            }
-            const seq = id.match(/^seq_([gr]+)$/);
-            if (seq) {
-              const letters = seq[1].split('').reverse();
-              if (bars.length <= letters.length) return false;
-              return letters.every((letter, i) => {
-                const a = latestClose(i);
-                const b = latestClose(i + 1);
-                return letter === 'g' ? a > b : a < b;
-              });
-            }
-            if (id === 'inside_day') return Number(last.high) <= Number(prev.high) && Number(last.low) >= Number(prev.low);
-            const highMatch = id.match(/^new_(\d+)d_high$/);
-            if (highMatch) {
-              const n = Number(highMatch[1]);
-              const recent = bars.slice(-Math.min(n, bars.length));
-              const maxHigh = Math.max(...recent.map(b => Number(b.high ?? b.close)).filter(Number.isFinite));
-              return Number(last.high ?? last.close) >= maxHigh;
-            }
-            if (id === 'price_up_vol_up') return Number(last.close) > Number(prev.close) && Number(last.volume || 0) > Number(prev.volume || 0);
-            if (id === 'price_up_vol_down') return Number(last.close) > Number(prev.close) && Number(last.volume || 0) < Number(prev.volume || 0);
-            if (id === 'gap_up') return Number(last.open) > Number(prev.close);
-            if (id === 'gap_down') return Number(last.open) < Number(prev.close);
-            if (id === 'rsi14_gt_70') return Number(s.rsi14) > 70;
-            if (id === 'rsi14_gt_75') return Number(s.rsi14) > 75;
-            return false;
-          };
           const researchPanel = (() => {
             const row = historicalResearchInsights || null;
             const rules = Array.isArray(row?.top_rules) ? row.top_rules : [];
             if (!rules.length) return `<div class="section" style="height:auto;opacity:${historicalView.opacity}"><div style="padding:.75rem;border-radius:8px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.05)"><div style="font-size:.78rem;font-weight:700;color:var(--text);margin-bottom:.25rem">Historical research insights unavailable</div><div style="font-size:.62rem;color:var(--text-muted)">${_esc(row?.availability?.reason || 'No validated historical research projection for this asset.')}</div></div></div>`;
-            const enriched = rules.map(rule => ({ ...rule, active_today: patternActive(rule.pattern_id) }));
+            const enriched = rules.map(rule => ({ ...rule, active_today: rule.active_today === true }));
             enriched.sort((a, b) => Number(b.active_today) - Number(a.active_today) || Number(b.evidence_score || 0) - Number(a.evidence_score || 0));
             const fmtPctLocal = (v, d = 1) => v == null ? '—' : `${(Number(v) * 100).toFixed(d)}%`;
             const cards = enriched.slice(0, 5).map(rule => {
@@ -2856,7 +2691,9 @@
                 <div style="font-size:.58rem;color:var(--text-muted);line-height:1.45">${_esc(rule.entry_condition || '')} ${_esc(rule.exit_rule || '')}</div>
                 <div style="display:flex;gap:.6rem;flex-wrap:wrap;margin-top:.35rem;font-size:.58rem;color:var(--text-dim)">
                   <span>Win rate: <strong style="color:var(--text)">${fmtPctLocal(rule.win_rate)}</strong></span>
-                  <span>Avg return: <strong style="color:${Number(rule.avg_return) >= 0 ? 'var(--green)' : 'var(--red)'}">${fmtPctLocal(rule.avg_return)}</strong></span>
+                  <span>Wilson low: <strong style="color:var(--text)">${fmtPctLocal(rule.wilson_low)}</strong></span>
+                  <span>Side: <strong style="color:${String(rule.direction || 'LONG').toUpperCase() === 'SHORT' ? 'var(--red)' : 'var(--green)'}">${_esc(String(rule.direction || 'LONG').toUpperCase())}</strong></span>
+                  <span>Avg edge: <strong style="color:${Number(rule.avg_signed_return ?? rule.avg_return) >= 0 ? 'var(--green)' : 'var(--red)'}">${fmtPctLocal(rule.avg_signed_return ?? rule.avg_return)}</strong></span>
                   <span>Sample: <strong style="color:var(--text)">${Number(rule.sample_size || 0).toLocaleString()}</strong></span>
                 </div>
               </div>`;

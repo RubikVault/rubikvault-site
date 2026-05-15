@@ -295,12 +295,28 @@
           </div>
         </div>
 
+        <div id="historical-setups-home"
+          style="margin-top: 2.2rem; text-align: left; background: rgba(15, 23, 42, 0.35); border: 1px solid rgba(16, 185, 129, 0.22); border-radius: 12px; padding: 1rem;">
+          <div
+            style="display:flex; justify-content:space-between; gap:0.8rem; align-items:center; flex-wrap:wrap; margin-bottom:0.8rem;">
+            <div>
+              <div style="font-size: 1rem; font-weight: 700; color: #e5e7eb;">Best Setups Today</div>
+              <div id="historical-setups-meta" style="font-size: 0.8rem; color: #94a3b8;">Loading historical setups...</div>
+            </div>
+          </div>
+          <div id="historical-setups-grid" style="display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:0.8rem;">
+            <div style="padding:0.7rem; border:1px solid rgba(100,116,139,0.22); border-radius:10px; color:#64748b;">
+              Loading historical setups...
+            </div>
+          </div>
+        </div>
+
         <div id="best-setups-home"
           style="margin-top: 2.2rem; text-align: left; background: rgba(15, 23, 42, 0.35); border: 1px solid rgba(100, 116, 139, 0.22); border-radius: 12px; padding: 1rem;">
           <div
             style="display:flex; justify-content:space-between; gap:0.8rem; align-items:center; flex-wrap:wrap; margin-bottom:0.8rem;">
             <div>
-              <div style="font-size: 1rem; font-weight: 700; color: #e5e7eb;">Best Setups Today</div>
+              <div style="font-size: 1rem; font-weight: 700; color: #e5e7eb;">Analyzer Buy Signals</div>
               <div id="best-setups-meta" style="font-size: 0.8rem; color: #94a3b8;">Loading top setups…</div>
             </div>
           </div>
@@ -1703,10 +1719,12 @@
           }
           buildScientificMaps();
           await renderBestSetups();
+          await renderHistoricalSetupsToday();
           if (!topSetupsDoc || topSetupsDoc?.meta?.source === 'fallback_scientific_rankings') {
             topSetupsDoc = null;
             await loadTopSetupsDoc();
             await renderBestSetups();
+            await renderHistoricalSetupsToday();
           }
           setTimeout(() => {
             updateBuySignalsStats();
@@ -1939,6 +1957,8 @@
     const ideasView = document.getElementById('ideas-view');
     const bestSetupsMeta = document.getElementById('best-setups-meta');
     const bestSetupsByHorizonWrap = document.getElementById('best-setups-by-horizon');
+    const historicalSetupsMeta = document.getElementById('historical-setups-meta');
+    const historicalSetupsGrid = document.getElementById('historical-setups-grid');
     const marketViewMeta = document.getElementById('market-view-meta');
     const ideasViewMeta = document.getElementById('ideas-view-meta');
     const marketRegimeBanner = document.getElementById('market-regime-banner');
@@ -3173,6 +3193,75 @@
         }
       };
       return topSetupsDoc;
+    }
+
+    async function renderHistoricalSetupsToday() {
+      if (!historicalSetupsGrid || !historicalSetupsMeta) return;
+      const { response, payload } = await fetchJson('/data/historical-setups/latest.json');
+      if (!response?.ok || payload?.schema !== 'rv.historical_setups_today.v1') {
+        historicalSetupsMeta.textContent = 'No historical setup snapshot available. Last-good insights remain visible in Stock Analyzer.';
+        historicalSetupsGrid.innerHTML = '<div style="padding:0.7rem; border:1px solid rgba(100,116,139,0.22); border-radius:10px; color:#64748b;">Historical setup snapshot unavailable.</div>';
+        return;
+      }
+      const generated = payload.generated_at ? String(payload.generated_at).slice(0, 16).replace('T', ' ') + ' UTC' : 'n/a';
+      const source = payload.source?.historical_insights_generated_at ? String(payload.source.historical_insights_generated_at).slice(0, 10) : 'last-good';
+      historicalSetupsMeta.textContent = `Top 30 LONG + SHORT by region • generated=${generated} • research=${source}`;
+      const regions = ['US', 'EU', 'ASIA'];
+      const sides = [
+        { key: 'long', label: 'LONG', color: '#22c55e' },
+        { key: 'short', label: 'SHORT', color: '#f87171' }
+      ];
+      const pct = (value) => {
+        const n = Number(value);
+        return Number.isFinite(n) ? `${(n * 100).toFixed(1)}%` : '—';
+      };
+      const blocks = [];
+      for (const region of regions) {
+        for (const side of sides) {
+          const rows = Array.isArray(payload.regions?.[region]?.[side.key]) ? payload.regions[region][side.key] : [];
+          const body = rows.length
+            ? `<table style="width:100%; border-collapse:collapse; font-size:0.82rem;">
+                <thead>
+                  <tr>
+                    <th style="text-align:left; color:#94a3b8; padding:0.35rem 0.25rem;">Ticker</th>
+                    <th style="text-align:left; color:#94a3b8; padding:0.35rem 0.25rem;">Rule</th>
+                    <th style="text-align:right; color:#94a3b8; padding:0.35rem 0.25rem;">WL</th>
+                    <th style="text-align:right; color:#94a3b8; padding:0.35rem 0.25rem;">Score</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${rows.map((row) => `
+                    <tr>
+                      <td style="padding:0.35rem 0.25rem; border-top:1px solid rgba(100,116,139,0.18);">
+                        <a class="best-setup-link" href="${escapeHtml(row.route || `/analyze/${encodeURIComponent(row.asset_id || row.ticker || '').replace(/%3A/gi, ':')}`)}" data-open-ticker="${escapeHtml(row.ticker || '')}" data-canonical-id="${escapeHtml(row.asset_id || '')}">${escapeHtml(row.ticker || '—')}</a>
+                      </td>
+                      <td style="padding:0.35rem 0.25rem; border-top:1px solid rgba(100,116,139,0.18); color:#cbd5e1;" title="${escapeHtml(row.explanation || '')}">${escapeHtml(row.label || row.pattern_id || '—')}<span style="display:block;font-size:0.68rem;color:#64748b;">${escapeHtml(row.horizon || '')} · n=${Number(row.n || 0).toLocaleString('en-US')}</span></td>
+                      <td style="padding:0.35rem 0.25rem; border-top:1px solid rgba(100,116,139,0.18); text-align:right; color:#e5e7eb;">${pct(row.wilson_low)}</td>
+                      <td style="padding:0.35rem 0.25rem; border-top:1px solid rgba(100,116,139,0.18); text-align:right; color:${side.color}; font-weight:700;">${Number(row.rank_score || 0).toFixed(1)}</td>
+                    </tr>`).join('')}
+                </tbody>
+              </table>`
+            : '<div style="padding:0.6rem; color:#64748b;">No active historical rules for this region and side.</div>';
+          blocks.push(`
+            <article style="padding:0.8rem; border:1px solid rgba(100,116,139,0.22); border-radius:10px; background:rgba(15,23,42,0.35);">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.45rem;">
+                <div style="font-size:0.88rem; font-weight:700; color:${side.color};">${region} ${side.label}</div>
+                <div style="font-size:0.74rem; color:#94a3b8;">rows=${rows.length}</div>
+              </div>
+              ${body}
+            </article>
+          `);
+        }
+      }
+      historicalSetupsGrid.innerHTML = blocks.join('');
+      document.querySelectorAll('#historical-setups-grid [data-open-ticker]').forEach((link) => {
+        link.addEventListener('click', async (ev) => {
+          ev.preventDefault();
+          const canonicalId = link.getAttribute('data-canonical-id') || '';
+          const ticker = link.getAttribute('data-open-ticker') || '';
+          window.location.assign(`/analyze/${encodeURIComponent(canonicalId || ticker).replace(/%3A/gi, ':')}`);
+        });
+      });
     }
 
     async function renderBestSetups() {
@@ -4911,6 +5000,7 @@
             clearSearch({ push: false, keepInput: true, focus: false });
             await loadTopSetupsDoc();
             await renderBestSetups();
+            await renderHistoricalSetupsToday();
             try { await renderBreakoutSummary(); } catch(e) {}
           } else if (route === 'market') {
             await loadMarketDoc();
@@ -5152,6 +5242,7 @@
           clearSearch({ push: false, keepInput: true, focus: true });
           await loadTopSetupsDoc();
           await renderBestSetups();
+          await renderHistoricalSetupsToday();
           try { await renderBreakoutSummary(); } catch(e) {}
         }
       } catch (err) {
@@ -5188,6 +5279,7 @@
       clearSearch({ push: false, keepInput: true, focus: false });
       await loadTopSetupsDoc();
       await renderBestSetups();
+      await renderHistoricalSetupsToday();
     });
 
     /*
