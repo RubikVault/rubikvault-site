@@ -462,19 +462,33 @@ print(value if value in {4096, 6144} else default)
 PY
 }
 
-# scope_aware_heap_mb returns the larger of (base_mb, scope_count * multiplier_kb_per_asset / 1024),
+# effective_scope_count prefers public/data/page-core/latest.json.asset_count
+# (which includes the Nasdaq Composite validated extension when active) and
+# falls back to canonical_ids.count, then a 6110 last-resort. Producer-side
+# budgets must size to the effective scope, not the index_core SSOT only.
+effective_scope_count() {
+  local page_core_file="public/data/page-core/latest.json"
+  local canonical_file="public/data/universe/v7/ssot/assets.global.canonical.ids.json"
+  local count
+  count="$(jq -r '.asset_count // empty' "$page_core_file" 2>/dev/null || true)"
+  if ! [[ "$count" =~ ^[0-9]+$ ]] || [ "${count:-0}" -le 0 ]; then
+    count="$(jq -r '.count // empty' "$canonical_file" 2>/dev/null || true)"
+  fi
+  if ! [[ "$count" =~ ^[0-9]+$ ]] || [ "${count:-0}" -le 0 ]; then
+    count=6110
+  fi
+  printf '%s\n' "$count"
+}
+
+# scope_aware_heap_mb returns the larger of (effective_scope * multiplier_kb / 1024, base_mb),
 # capped at RV_SCOPE_HEAP_MAX_MB (default 12288 MB).
 # Prevents OOM crashes mid-pipeline when scope grows (e.g. scientific_summary exit 134 with
 # heap=512MB on 6k scope). Multiplier table tuned per-step memory profile; see plan QM2.
 # Override: each step still honors its existing RV_*_HEAP_MB env var if user pins it explicitly.
 scope_aware_heap_mb() {
   local base="$1" multiplier_kb="$2"
-  local scope_file="public/data/universe/v7/ssot/assets.global.canonical.ids.json"
   local scope_count
-  scope_count="$(jq -r '.count // 6110' "$scope_file" 2>/dev/null || echo 6110)"
-  if ! [[ "$scope_count" =~ ^[0-9]+$ ]]; then
-    scope_count=6110
-  fi
+  scope_count="$(effective_scope_count)"
   local cap="${RV_SCOPE_HEAP_MAX_MB:-12288}"
   local computed=$(( scope_count * multiplier_kb / 1024 ))
   if [ "$computed" -gt "$cap" ]; then
@@ -662,7 +676,7 @@ step_command() {
       # Exit 17 → step "deferred" (not fail). Skipped via RV_PREFLIGHT_SKIP=1.
       local market_preflight=""
       if [ "${RV_PREFLIGHT_SKIP:-0}" != "1" ]; then
-        market_preflight="REQUIRED_CALLS=\$(node -e 'const fs=require(\"node:fs\");try{const d=JSON.parse(fs.readFileSync(\"public/data/universe/v7/ssot/assets.global.canonical.ids.json\",\"utf8\"));process.stdout.write(String(Math.ceil((d.count||6110)*1.2)))}catch{process.stdout.write(\"7332\")}' ) && node scripts/ops/provider-health-preflight.mjs --env-file '$RV_EODHD_ENV_FILE' --min-available-calls '${RV_MARKET_REFRESH_MIN_EODHD_AVAILABLE_CALLS:-10000}' --required-calls \"\$REQUIRED_CALLS\" --output '${NAS_OPS_ROOT:-$REPO_ROOT/var/private}/pipeline-artifacts/provider-health-market-refresh-preflight.json' && "
+        market_preflight="REQUIRED_CALLS=\$(node -e 'import(\"./scripts/lib/effective-scope.mjs\").then(m=>{const r=m.effectiveScopeCount();process.stdout.write(String(Math.ceil(r.count*1.2)))}).catch(()=>process.stdout.write(\"7332\"))' ) && node scripts/ops/provider-health-preflight.mjs --env-file '$RV_EODHD_ENV_FILE' --min-available-calls '${RV_MARKET_REFRESH_MIN_EODHD_AVAILABLE_CALLS:-10000}' --required-calls \"\$REQUIRED_CALLS\" --output '${NAS_OPS_ROOT:-$REPO_ROOT/var/private}/pipeline-artifacts/provider-health-market-refresh-preflight.json' && "
       fi
       printf '%s\n' "${market_preflight}python3 scripts/quantlab/refresh_v7_history_from_eodhd.py --env-file '$RV_EODHD_ENV_FILE' --allowlist-path public/data/universe/v7/ssot/assets.global.canonical.ids.json --from-date '$TARGET_MARKET_DATE' --to-date '$TARGET_MARKET_DATE' --bulk-last-day --bulk-exchange-cost '${RV_EODHD_BULK_EXCHANGE_COST:-100}' --exchange-checkpoint-path '${NAS_OPS_ROOT:-$REPO_ROOT/var/private}/pipeline-artifacts/$checkpoint_name' --resume-exchange-checkpoint --global-lock-path '$NAS_LOCK_ROOT/eodhd.lock' --max-eodhd-calls '${RV_MARKET_REFRESH_MAX_EODHD_CALLS:-0}' --max-retries '${RV_MARKET_REFRESH_MAX_RETRIES:-1}' --timeout-sec '${RV_MARKET_REFRESH_TIMEOUT_PER_REQUEST_SEC:-60}' --flush-every '${RV_MARKET_REFRESH_FLUSH_EVERY:-250}' --concurrency '$MARKET_REFRESH_CONCURRENCY' --progress-every '$MARKET_REFRESH_PROGRESS_EVERY' --write-mode '${RV_HISTORY_WRITE_MODE:-merge}' --reset-state-on-start --bulk-min-yield-ratio '${RV_EODHD_BULK_MIN_YIELD_RATIO:-0}' --bulk-min-rows-matched '$bulk_min_rows_matched' --hard-daily-cap-calls '${RV_EODHD_HARD_DAILY_CAP:-90000}' && node scripts/ops/apply-history-touch-report-to-registry.mjs --scan-existing-packs${history_scan_scope_arg} && node scripts/ops/build-history-pack-manifest.mjs --scope global --asset-classes '$GLOBAL_ASSET_CLASSES' && node scripts/ops/report-history-coverage.mjs --asset-classes '$GLOBAL_ASSET_CLASSES' --target-market-date '$TARGET_MARKET_DATE'"
       ;;
