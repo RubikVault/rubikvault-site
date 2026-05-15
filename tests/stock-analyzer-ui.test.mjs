@@ -693,6 +693,12 @@ test('Live stock.html does not fetch missing historical research shards', () => 
   assert.ok(stockHtmlSource.includes('No historical research projection for this asset.'), 'Historical insight missing state must be typed');
 });
 
+test('Live stock.html avoids legacy stock API chart fallback when page payload has bars', () => {
+  assert.ok(stockHtmlSource.includes('currentBars.length >= 3'), 'Chart hydration should trust renderable page-core bars');
+  assert.ok(stockHtmlSource.includes('if (_earlyStrictReasons.length > 0) return currentBars || []'), 'Typed degraded rows should not trigger optional chart fetch noise');
+  assert.ok(!stockHtmlSource.includes("fetch(`/api/stock?ticker=${encodeURIComponent(rawTicker)}`"), 'Chart hydration must not call legacy /api/stock fallback');
+});
+
 test('V2 client hydrates optional historical modules by default in browser', async () => {
   const fs = await import('node:fs');
   const content = fs.readFileSync(new URL('../public/js/rv-v2-client.js', import.meta.url), 'utf-8');

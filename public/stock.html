@@ -651,7 +651,8 @@
         || ''
       ).toUpperCase();
       async function hydrateChartBars(currentBars) {
-        if (Array.isArray(currentBars) && currentBars.length >= 2000) return currentBars;
+        if (Array.isArray(currentBars) && currentBars.length >= 3) return currentBars;
+        if (_earlyStrictReasons.length > 0) return currentBars || [];
         const rawTicker = String(data?.ticker || identity?.ticker || ticker || '').trim();
         if (!rawTicker) return currentBars || [];
         const params = new URLSearchParams({ range: 'all' });
@@ -669,15 +670,10 @@
           return [...byDate.values()].sort((a, b) => String(a.date).localeCompare(String(b.date)));
         };
         try {
-          const [historyDoc, stockDoc] = await Promise.all([
-            fetch(`/api/v2/stocks/${encodeURIComponent(rawTicker)}/historical?${params.toString()}`, { cache: 'no-store' })
-              .then(res => res.ok ? res.json() : null).catch(() => null),
-            fetch(`/api/stock?ticker=${encodeURIComponent(rawTicker)}`, { cache: 'no-store' })
-              .then(res => res.ok ? res.json() : null).catch(() => null),
-          ]);
+          const historyDoc = await fetch(`/api/v2/stocks/${encodeURIComponent(rawTicker)}/historical?${params.toString()}`, { cache: 'no-store' })
+            .then(res => res.ok ? res.json() : null).catch(() => null);
           const historyBars = Array.isArray(historyDoc?.data?.bars) ? historyDoc.data.bars : (Array.isArray(historyDoc?.bars) ? historyDoc.bars : []);
-          const stockBars = Array.isArray(stockDoc?.data?.bars) ? stockDoc.data.bars : [];
-          const merged = mergeBarsByDate(historyBars, currentBars, stockBars);
+          const merged = mergeBarsByDate(historyBars, currentBars);
           return merged.length > (currentBars?.length || 0) ? merged : (currentBars || []);
         } catch {
           return currentBars || [];
