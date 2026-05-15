@@ -269,6 +269,7 @@
     "verify:features:v2:parity": "node scripts/validate/stock-insights-v2-parity.mjs",
     "build:features:v4": "node scripts/build-features-v4.mjs",
     "build:historical-insights": "node scripts/historical-insights/build-projection-from-parquet.mjs",
+    "build:historical-setups": "node scripts/historical-insights/build-active-setups.mjs",
     "verify:features:v4:parity": "node scripts/validate/stock-insights-v4-parity.mjs",
     "verify:features:v4:local-main-5ticker": "node scripts/validate/stock-v4-local-vs-main-5ticker.mjs",
     "build:v3:daily": "npm run dp0:v3 && npm run dp1:v3 && npm run dp1_5:v3 && npm run dp2:v3 && npm run dp3:v3 && npm run dp4:v3 && npm run dp5:v3 && npm run dp6:v3",
