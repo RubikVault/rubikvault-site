@@ -29,6 +29,7 @@ test('decision-core best-setups only publishes true BUY rows for each horizon', 
   assert.match(SCRIPT, /long: String\(decision\?\.horizons\?\.long_term\?\.horizon_action/);
   assert.match(SCRIPT, /rowQualifiesForHorizon\(row, horizon\)/);
   assert.match(SCRIPT, /String\(actions\[horizon\] \|\| ''\)\.toUpperCase\(\) === 'BUY'/);
+  assert.match(SCRIPT, /decision_core_primary_buy_horizon_rank/);
   assert.doesNotMatch(SCRIPT, /return !action \|\| action === 'BUY'/);
 });
 
@@ -40,6 +41,7 @@ test('best-setups v4 publishes horizon diagnostics and rank basis', () => {
   assert.match(SCRIPT, /overlap_count/);
   assert.match(SCRIPT, /horizon_diagnostics: horizonDiagnosticsSummary/);
   assert.match(SCRIPT, /rank_basis: 'horizon_probability_expected_gain'/);
+  assert.match(SCRIPT, /horizon_signal_basis/);
 });
 
 test('decision-core source uses page-core guard for enrichment only', () => {

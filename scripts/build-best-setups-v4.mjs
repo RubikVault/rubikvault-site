@@ -246,6 +246,8 @@ async function readDecisionCoreBuyRows(targetMarketDate = null) {
         canonical_id: decision?.meta?.asset_id,
         asset_class: String(decision?.meta?.asset_type || '').toUpperCase() === 'ETF' ? 'etf' : 'stock',
         region: regionFromCanonicalId(decision?.meta?.asset_id),
+        decision_source: 'decision-core',
+        primary_action: 'BUY',
         horizon_actions: {
           short: String(decision?.horizons?.short_term?.horizon_action || '').toUpperCase() || null,
           medium: String(decision?.horizons?.mid_term?.horizon_action || '').toUpperCase() || null,
@@ -445,6 +447,7 @@ function horizonScore(row, horizon) {
   const context = clamp(num(row?.analyzer_context_score) ?? 0, 0, 100);
   const ret5 = scaleTo100(num(row?.analyzer_ret_5d_pct), -0.1, 0.15);
   const ret20 = scaleTo100(num(row?.analyzer_ret_20d_pct), -0.15, 0.35);
+  const ret60 = scaleTo100(num(row?.analyzer_ret_60d_pct) ?? num(row?.analyzer_ret_63d_pct), -0.2, 0.6);
   const macd = scaleTo100(num(row?.analyzer_macd_hist), -0.8, 0.8);
   const trendDuration = scaleTo100(num(row?.analyzer_trend_duration_days), 0, 60);
   const liquidity = clamp(num(row?.analyzer_liquidity_score) ?? 0, 0, 100);
@@ -485,7 +488,7 @@ function horizonScore(row, horizon) {
         trendDuration * 0.10 +
         liquidity * 0.07 +
         strongExperts * 0.05 +
-        ret20 * 0.04 +
+        ret60 * 0.04 +
         risk * 0.02 -
         volatilityPenalty * 0.02;
   }
@@ -502,6 +505,7 @@ function horizonScore(row, horizon) {
 function decorateForHorizon(row, horizon) {
   const score = horizonScore(row, horizon);
   const rawProbability = row?.calibrated_probability ?? row?.probability ?? null;
+  const horizonAction = row?.horizon_actions?.[horizon] || null;
   const expectedReturnPct = (() => {
     if (horizon === 'short') return num(row?.analyzer_ret_5d_pct);
     if (horizon === 'medium') return num(row?.analyzer_ret_20d_pct);
@@ -524,6 +528,11 @@ function decorateForHorizon(row, horizon) {
     expected_return: expectedReturnPct != null ? Number((expectedReturnPct * 100).toFixed(1)) : null,
     expected_return_reason: expectedReturnPct == null ? 'page_core_return_metric_unavailable' : null,
     rank_basis: 'horizon_probability_expected_gain',
+    horizon_action: horizonAction,
+    horizon_reliability: row?.horizon_reliability?.[horizon] || null,
+    horizon_signal_basis: String(horizonAction || '').toUpperCase() === 'BUY'
+      ? 'horizon_action_buy'
+      : 'decision_core_primary_buy_horizon_rank',
   };
 }
 
@@ -662,7 +671,15 @@ function sortedHorizonRows(rows, horizon) {
 function rowQualifiesForHorizon(row, horizon) {
   const actions = row?.horizon_actions && typeof row.horizon_actions === 'object' ? row.horizon_actions : null;
   if (actions && Object.values(actions).some(Boolean)) {
-    return String(actions[horizon] || '').toUpperCase() === 'BUY';
+    if (String(actions[horizon] || '').toUpperCase() === 'BUY') return true;
+    if (
+      process.env.BEST_SETUPS_REQUIRE_HORIZON_ACTION !== '1'
+      && row?.decision_source === 'decision-core'
+      && String(row?.primary_action || row?.verdict || '').toUpperCase() === 'BUY'
+    ) {
+      return true;
+    }
+    return false;
   }
   const rowHorizon = String(row?.horizon || '').toLowerCase();
   if (rowHorizon) return rowHorizon === horizon;
