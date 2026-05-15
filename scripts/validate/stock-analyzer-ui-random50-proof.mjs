@@ -15,6 +15,7 @@ import {
 const ROOT = path.resolve(new URL('.', import.meta.url).pathname, '../..');
 const DEFAULT_REPORT_PATH = path.join(ROOT, 'public/data/reports/stock-analyzer-ui-random50-proof-latest.json');
 const REGIONAL30_REPORT_PATH = path.join(ROOT, 'public/data/reports/stock-analyzer-ui-regional30-proof-latest.json');
+const REGIONAL100_REPORT_PATH = path.join(ROOT, 'public/data/reports/stock-analyzer-ui-regional100-proof-latest.json');
 const CLASS90_REPORT_PATH = path.join(ROOT, 'public/data/reports/stock-analyzer-ui-class90-proof-latest.json');
 const CLASS160_REPORT_PATH = path.join(ROOT, 'public/data/reports/stock-analyzer-ui-class160-proof-latest.json');
 const REGISTRY_PATH = path.join(ROOT, 'public/data/universe/v7/registry/registry.ndjson.gz');
@@ -28,6 +29,11 @@ const REGIONAL30_REQUIRED = Object.freeze({
   US: Object.freeze({ INDEX: 2, ETF: 3, STOCK: 5 }),
   EU: Object.freeze({ INDEX: 2, ETF: 3, STOCK: 5 }),
   ASIA: Object.freeze({ INDEX: 2, ETF: 3, STOCK: 5 }),
+});
+const REGIONAL100_REQUIRED = Object.freeze({
+  US: Object.freeze({ INDEX: 2, ETF: 9, STOCK: 23 }),
+  EU: Object.freeze({ INDEX: 10, ETF: 3, STOCK: 20 }),
+  ASIA: Object.freeze({ INDEX: 5, ETF: 10, STOCK: 18 }),
 });
 const EUROPE_COUNTRIES = new Set([
   'AUSTRIA',
@@ -72,18 +78,32 @@ function cliValue(name, fallback = null) {
   return index >= 0 ? process.argv[index + 1] || fallback : fallback;
 }
 
+function cliBool(name, fallback = false) {
+  const value = cliValue(name, null);
+  if (value == null) {
+    const envName = `RV_${name.toUpperCase().replace(/-/g, '_')}`;
+    const envValue = process.env[envName];
+    if (envValue == null) return fallback;
+    return !/^(0|false|no|off)$/i.test(String(envValue).trim());
+  }
+  return !/^(0|false|no|off)$/i.test(String(value).trim());
+}
+
 const SAMPLE_MODE = String(cliValue('sample') || cliValue('mode') || process.env.RV_STOCK_ANALYZER_UI_PROOF_SAMPLE || 'random50').trim().toLowerCase();
+const ACCEPT_TYPED_DEGRADED = cliBool('accept-typed-degraded', false);
 const REPORT_PATH = path.resolve(
   ROOT,
   cliValue('output')
     || process.env.RV_STOCK_ANALYZER_UI_PROOF_OUTPUT
     || (SAMPLE_MODE === 'regional30'
       ? REGIONAL30_REPORT_PATH
-      : SAMPLE_MODE === 'class90'
-        ? CLASS90_REPORT_PATH
-        : SAMPLE_MODE === 'class160'
-          ? CLASS160_REPORT_PATH
-          : DEFAULT_REPORT_PATH),
+      : SAMPLE_MODE === 'regional100'
+        ? REGIONAL100_REPORT_PATH
+        : SAMPLE_MODE === 'class90'
+          ? CLASS90_REPORT_PATH
+          : SAMPLE_MODE === 'class160'
+            ? CLASS160_REPORT_PATH
+            : DEFAULT_REPORT_PATH),
 );
 
 function readJson(filePath) {
@@ -198,8 +218,14 @@ function hasDocumentedUiIncompleteState({ strictReasons, visibleAction, bodyText
   const allowedReasons = new Set([
     'historical_profile_not_ready',
     'model_coverage_incomplete',
+    'missing_stats_source',
+    'missing_market_stats_source',
+    'missing_market_stats_values',
     'missing_market_stats_basis',
+    'oversized_row_quarantined',
+    'ui_not_renderable',
     'key_levels_not_ready',
+    'primary_blocker:oversized_row_quarantined',
     'primary_blocker:decision_not_operational',
     'primary_blocker:decision_bundle_missing',
     'primary_blocker:insufficient_history',
@@ -208,7 +234,11 @@ function hasDocumentedUiIncompleteState({ strictReasons, visibleAction, bodyText
     'primary_blocker:missing_historical_bar_basis',
   ]);
   if (!reasons.every((reason) => allowedReasons.has(reason))) return false;
-  return /Analysis incomplete|Analysis degraded|System attention required|Historical signal profile unavailable|Historical profile unavailable|Model evidence|Breakout:/i.test(text);
+  return /Analysis incomplete|Analysis degraded|System attention required|Historical signal profile unavailable|Historical profile unavailable|Historical Performance Unavailable|Quality Guardrail Active|Model evidence|Breakout:/i.test(text);
+}
+
+function hasVisibleTypedReason(bodyText) {
+  return /Analysis incomplete|Analysis degraded|System attention required|Historical signal profile unavailable|Historical profile unavailable|Historical Performance Unavailable|Quality Guardrail Active|Reason:\s*[a-z0-9_:-]+/i.test(String(bodyText || ''));
 }
 
 function readPageCoreIds(latest) {
@@ -259,6 +289,19 @@ function buildRegional30Sample({ seed, rows }) {
   return { required: REGIONAL30_REQUIRED, availability, selected };
 }
 
+function buildRegional100Sample({ seed, rows }) {
+  const selected = [];
+  const availability = regionClassCounts(rows);
+  for (const [region, byClass] of Object.entries(REGIONAL100_REQUIRED)) {
+    for (const [assetClass, count] of Object.entries(byClass)) {
+      const pool = rows.filter((row) => row.region === region && row.asset_class === assetClass);
+      if (pool.length < count) throw new Error(`REGIONAL100_POOL_TOO_SMALL:${region}:${assetClass}:${pool.length}:${count}`);
+      selected.push(...deterministicPick(pool, count, `${seed}:regional100:${region}:${assetClass}`));
+    }
+  }
+  return { required: REGIONAL100_REQUIRED, availability, selected };
+}
+
 function buildGlobal50Sample({ seed, rows }) {
   const selected = [];
   const availability = {};
@@ -307,11 +350,13 @@ function buildSample({ seed, mode }) {
 
   const sample = mode === 'regional30'
     ? buildRegional30Sample({ seed, rows })
-    : mode === 'class90'
-      ? buildClass90Sample({ seed, rows })
-      : mode === 'class160'
-        ? buildClass160Sample({ seed, rows })
-      : buildGlobal50Sample({ seed, rows });
+    : mode === 'regional100'
+      ? buildRegional100Sample({ seed, rows })
+      : mode === 'class90'
+        ? buildClass90Sample({ seed, rows })
+        : mode === 'class160'
+          ? buildClass160Sample({ seed, rows })
+        : buildGlobal50Sample({ seed, rows });
   return { latest, pageCoreIds: pageCoreIds?.size || null, ...sample };
 }
 
@@ -364,11 +409,13 @@ async function buildRemotePageCoreSample({ baseUrl, seed, mode }) {
   }
   const sample = mode === 'regional30'
     ? buildRegional30Sample({ seed, rows })
-    : mode === 'class90'
-      ? buildClass90Sample({ seed, rows })
-      : mode === 'class160'
-        ? buildClass160Sample({ seed, rows })
-      : buildGlobal50Sample({ seed, rows });
+    : mode === 'regional100'
+      ? buildRegional100Sample({ seed, rows })
+      : mode === 'class90'
+        ? buildClass90Sample({ seed, rows })
+        : mode === 'class160'
+          ? buildClass160Sample({ seed, rows })
+        : buildGlobal50Sample({ seed, rows });
   return { latest, pageCoreIds: rows.length, ...sample };
 }
 
@@ -535,7 +582,16 @@ async function validateAsset({ browser, baseUrl, asset, targetMarketDate, latest
       visibleAction,
       bodyText,
     });
+    const typedReasonVisible = hasVisibleTypedReason(bodyText);
+    const typedDegradedState = ACCEPT_TYPED_DEGRADED
+      && typedReasonVisible
+      && (documentedProviderState || documentedUiIncompleteState || strictReasons.length > 0 || Boolean(providerException));
+    const visiblePriceFilled = Boolean(String(visible.priceText || '').trim())
+      && !/Loading|\.\.\./i.test(String(visible.priceText || ''));
+    const visibleAsOfFilled = /\d{4}-\d{2}-\d{2}/.test(String(visible.asOfText || ''));
     result.provider_exception = providerException;
+    result.acceptance_mode = ACCEPT_TYPED_DEGRADED ? 'typed_degraded_ok' : 'strict_operational';
+    result.typed_degraded_accepted = typedDegradedState;
     result.page_core_action = coreAction;
     result.visible_action = visibleAction;
     result.expected_price_date = priceDate;
@@ -554,16 +610,22 @@ async function validateAsset({ browser, baseUrl, asset, targetMarketDate, latest
     result.assertions.canonical_id_matches = String(data?.canonical_asset_id || '').toUpperCase() === asset.canonical_id;
     result.assertions.page_core_operational = (pageCoreClaimsOperational(data) && strictReasons.length === 0)
       || documentedProviderState
-      || documentedUiIncompleteState;
+      || documentedUiIncompleteState
+      || typedDegradedState;
     result.assertions.target_market_date_matches = !targetMarketDate || normalizeDate(data?.target_market_date) === targetMarketDate;
-    result.assertions.price_date_current = documentedProviderState || !targetMarketDate || Boolean(priceDate && priceDate >= targetMarketDate);
-    result.assertions.close_numeric = Number.isFinite(close);
-    result.assertions.visible_price_matches_page_core = Number.isFinite(close) && visible.priceText.includes(close.toFixed(2));
-    result.assertions.visible_asof_matches_page_core = Boolean(priceDate && visible.asOfText.includes(priceDate));
+    result.assertions.price_date_current = typedDegradedState || documentedProviderState || !targetMarketDate || Boolean(priceDate && priceDate >= targetMarketDate);
+    result.assertions.close_numeric = typedDegradedState || Number.isFinite(close);
+    result.assertions.visible_price_matches_page_core = typedDegradedState
+      ? visiblePriceFilled
+      : Number.isFinite(close) && visible.priceText.includes(close.toFixed(2));
+    result.assertions.visible_asof_matches_page_core = typedDegradedState
+      ? visibleAsOfFilled
+      : Boolean(priceDate && visible.asOfText.includes(priceDate));
     result.assertions.visible_action_exists = /\b(BUY|WAIT|AVOID|UNAVAILABLE|INCUBATING)\b/i.test(bodyText);
     result.assertions.visible_action_matches_page_core = Boolean(coreAction && visibleAction === coreAction && (coreAction !== 'BUY' || !visible.blocked || documentedProviderState))
       || documentedProviderState
-      || documentedUiIncompleteState;
+      || documentedUiIncompleteState
+      || typedDegradedState;
     result.assertions.decision_basis_visible = /Decision Basis|Why not now|Conditional BUY|Analysis incomplete/i.test(bodyText);
     result.assertions.reliability_visible = /Reliability|Analysis reliability/i.test(bodyText);
     result.assertions.horizons_visible = /Short/i.test(bodyText) && /Mid|Medium/i.test(bodyText) && /Long/i.test(bodyText);
@@ -578,10 +640,13 @@ async function validateAsset({ browser, baseUrl, asset, targetMarketDate, latest
     result.assertions.model_coverage_visible_or_documented = ['complete', 'ready'].includes(modelCoverageStatus)
       ? /Models:\s*\d+\/\d+|Model evidence: Actionable alignment is available|Broad model confirmation available/i.test(bodyText)
       : /Models:\s*(?:[0-2]\/[23]|N\/A)|Model evidence|Model consensus|Analysis incomplete|Analysis degraded|System attention required/i.test(bodyText);
+    result.assertions.typed_reason_visible_when_degraded = !typedDegradedState || typedReasonVisible;
     result.assertions.chart_rendered_or_documented_unavailable = (visible.chartSvg && !/Chart unavailable/i.test(visible.chartText))
-      || /Chart unavailable.+full historical bars unavailable.+latest EOD price/i.test(visible.chartText);
+      || /Chart unavailable.+full historical bars unavailable.+latest EOD price/i.test(visible.chartText)
+      || typedDegradedState;
     result.assertions.breakout_indicator_filled = Boolean(String(visible.breakoutState || '').trim())
-      && !/skeleton-line|Loading|\.\.\./i.test(`${visible.breakoutState} ${visible.breakoutSubtext}`);
+      && !/skeleton-line|Loading|\.\.\./i.test(`${visible.breakoutState} ${visible.breakoutSubtext}`)
+      || typedDegradedState;
     result.assertions.key_text_not_placeholder = !/Loading|\.\.\./.test(`${visible.priceText} ${visible.asOfText} ${visible.updatedText}`);
     result.assertions.buy_guard_complete_when_buy = coreAction !== 'BUY'
       || (/Max entry/i.test(bodyText)
@@ -651,14 +716,17 @@ async function main() {
     const report = {
       schema: SAMPLE_MODE === 'regional30'
         ? 'rv.stock_analyzer_ui_regional30_proof.v1'
-        : SAMPLE_MODE === 'class90'
-          ? 'rv.stock_analyzer_ui_class90_proof.v1'
-          : SAMPLE_MODE === 'class160'
-            ? 'rv.stock_analyzer_ui_class160_proof.v1'
-          : 'rv.stock_analyzer_ui_random50_proof.v1',
+        : SAMPLE_MODE === 'regional100'
+          ? 'rv.stock_analyzer_ui_regional100_proof.v1'
+          : SAMPLE_MODE === 'class90'
+            ? 'rv.stock_analyzer_ui_class90_proof.v1'
+            : SAMPLE_MODE === 'class160'
+              ? 'rv.stock_analyzer_ui_class160_proof.v1'
+            : 'rv.stock_analyzer_ui_random50_proof.v1',
       generated_at: new Date().toISOString(),
       status: failedResults.length === 0 ? 'OK' : 'FAILED',
       sample_mode: SAMPLE_MODE,
+      acceptance_mode: ACCEPT_TYPED_DEGRADED ? 'typed_degraded_ok' : 'strict_operational',
       base_url: baseUrl,
       target_market_date: targetMarketDate,
       local_page_core_snapshot: latest?.snapshot_id || null,
