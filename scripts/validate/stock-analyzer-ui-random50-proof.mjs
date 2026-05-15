@@ -662,6 +662,16 @@ async function validateAsset({ browser, baseUrl, asset, targetMarketDate, latest
     result.assertions.no_horizontal_overflow = !visible.overflow;
     result.assertions.no_german_text = !/\b(kaufen|verkaufen|warte|wartet|Öffne|Treffer|Wahrscheinlichkeit)\b/i.test(bodyText);
     result.assertions.no_console_errors = consoleErrors.length === 0 && networkErrors.length === 0;
+    // B.5 acceptance: partial-but-decision-grade coverage (Models N/M with N>=1,
+    // healthy price/tech/regime/freshness) must not surface the yellow
+    // "SYSTEM ATTENTION REQUIRED" or red "DATA ISSUE" / "GLOBAL OUTAGE" banner.
+    // The chip row already carries the typed status — banner is reserved for
+    // genuine integrity failures.
+    const decisionGradeReady = data?.status_contract?.decision_grade_ready === true;
+    const hasAttentionBanner = /SYSTEM ATTENTION REQUIRED|System Status:\s*DATA ISSUE|System Status:\s*GLOBAL OUTAGE/i.test(bodyText);
+    result.assertions.no_attention_banner_when_decision_grade_ready = !decisionGradeReady || !hasAttentionBanner;
+    result.decision_grade_ready = decisionGradeReady;
+    result.has_attention_banner = hasAttentionBanner;
     result.ok = Object.values(result.assertions).every(Boolean);
   } catch (error) {
     result.errors.push(error.message);
@@ -718,6 +728,38 @@ async function main() {
       return acc;
     }, {});
     const failedResults = results.filter((row) => !row.ok);
+    // G.1 + G.2 acceptance: universe SSOT counter is at least 11k post-flip
+    // and contains only STOCK/ETF/INDEX classes (no FUND/CRYPTO/FOREX/BOND/OTHER).
+    // The validated NASDAQ-composite extension must report a non-trivial member
+    // count when the flag is on. Soft floors when the artifact isn't deployed yet.
+    const minUniverseTotal = Number(process.env.RV_PROOF_MIN_SSOT_TOTAL || 11000);
+    const minExtensionMembers = Number(process.env.RV_PROOF_MIN_NASDAQ_EXTENSION || 4000);
+    const forbiddenClasses = new Set(['FUND', 'CRYPTO', 'FOREX', 'BOND', 'OTHER']);
+    const universeReport = await fetchJson(`${baseUrl}/data/universe/v7/ssot/feature_stock_universe_report.json`).catch(() => null);
+    const extensionReport = await fetchJson(`${baseUrl}/data/universe/v7/reports/nasdaq_composite_validated_extension_report.json`).catch(() => null);
+    const universeTotal = Number(universeReport?.ssot_total ?? universeReport?.total ?? universeReport?.canonical_total ?? 0);
+    const universeByClass = universeReport?.by_class || universeReport?.by_type_norm || {};
+    const universeForbidden = Object.keys(universeByClass || {})
+      .map((key) => String(key || '').toUpperCase())
+      .filter((key) => forbiddenClasses.has(key));
+    const extensionCount = Number(
+      extensionReport?.extension_count
+        ?? extensionReport?.count
+        ?? (Array.isArray(extensionReport?.members) ? extensionReport.members.length : 0),
+    );
+    const extensionByClass = extensionReport?.by_type_norm || extensionReport?.by_class || {};
+    const extensionForbidden = Object.keys(extensionByClass || {})
+      .map((key) => String(key || '').toUpperCase())
+      .filter((key) => forbiddenClasses.has(key));
+    const globalAssertions = {
+      universe_report_present: universeReport !== null,
+      universe_total_at_or_above_floor: universeTotal >= minUniverseTotal,
+      universe_no_forbidden_classes: universeForbidden.length === 0,
+      nasdaq_extension_report_present: extensionReport !== null,
+      nasdaq_extension_count_at_or_above_floor: extensionCount >= minExtensionMembers,
+      nasdaq_extension_no_forbidden_classes: extensionForbidden.length === 0,
+    };
+    const globalAssertionsPassed = Object.values(globalAssertions).every(Boolean);
     const report = {
       schema: SAMPLE_MODE === 'regional30'
         ? 'rv.stock_analyzer_ui_regional30_proof.v1'
@@ -729,8 +771,13 @@ async function main() {
               ? 'rv.stock_analyzer_ui_class160_proof.v1'
             : 'rv.stock_analyzer_ui_random50_proof.v1',
       generated_at: new Date().toISOString(),
-      status: failedResults.length === 0 ? 'OK' : 'FAILED',
+      status: failedResults.length === 0 && globalAssertionsPassed ? 'OK' : 'FAILED',
       sample_mode: SAMPLE_MODE,
+      global_assertions: globalAssertions,
+      universe_total: universeTotal,
+      universe_by_class: universeByClass,
+      nasdaq_extension_count: extensionCount,
+      nasdaq_extension_by_class: extensionByClass,
       acceptance_mode: ACCEPT_TYPED_DEGRADED ? 'typed_degraded_ok' : 'strict_operational',
       base_url: baseUrl,
       target_market_date: targetMarketDate,
