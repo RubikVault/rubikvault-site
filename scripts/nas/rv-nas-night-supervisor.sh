@@ -535,7 +535,10 @@ step_heap_mb() {
         scope_aware_heap_mb 1536 600
       fi
       ;;
-    learning_daily|v1_audit|cutover_readiness|stock_analyzer_universe_audit|ui_field_truth_report|page_core_smoke|final_integrity_seal|hist_probs_v2_shadow|classifier_audit|ops_health_reports)
+    hist_probs_v2_shadow)
+      printf '%s\n' "${RV_HIST_PROBS_V2_HEAP_MB:-3072}"
+      ;;
+    learning_daily|v1_audit|cutover_readiness|stock_analyzer_universe_audit|ui_field_truth_report|page_core_smoke|final_integrity_seal|classifier_audit|ops_health_reports)
       printf '%s\n' 1536
       ;;
     build_global_scope)
@@ -1153,7 +1156,9 @@ run_step() {
 
   if [[ "$cmd_status" -ne 0 ]]; then
     write_status "failed" "step_failed" "$step_id"
-    return "$cmd_status"
+    local return_status="$cmd_status"
+    if (( return_status < 0 )); then return_status=125; fi
+    return "$return_status"
   fi
 
   append_completed_step "$step_id"
