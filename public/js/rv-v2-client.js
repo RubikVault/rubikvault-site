@@ -631,10 +631,7 @@ export async function fetchV2StockPage(ticker) {
       const shouldHydrateHistorical = shouldHydrateOptional;
       const shouldHydrateHistoricalProfile = shouldHydrateOptional
         && String(pageCore.data?.status_contract?.historical_profile_status || '').toLowerCase() === 'available_via_endpoint';
-      const [stockApiResult, historicalResult, historicalProfileResult, fundamentalsResult] = await Promise.all([
-        shouldHydrateOptional
-          ? settleOptionalModuleWithBudget(fetchStockApiPayload(ticker), 'stock_api', 12000)
-          : Promise.resolve({ ok: false, data: null, meta: {}, source: 'stock_api', error: 'optional_hydration_disabled' }),
+      const [historicalResult, historicalProfileResult, fundamentalsResult] = await Promise.all([
         shouldHydrateHistorical
           ? settleOptionalModuleWithBudget(fetchV2Historical(ticker, { targetMarketDate }), 'v2_historical')
           : Promise.resolve({ ok: false, data: null, meta: {}, source: 'v2_historical', error: 'optional_hydration_disabled' }),
@@ -645,27 +642,22 @@ export async function fetchV2StockPage(ticker) {
           ? settleOptionalModuleWithBudget(fetchFundamentals(ticker), 'fundamentals')
           : Promise.resolve({ ok: false, data: null, meta: {}, source: 'fundamentals', error: 'optional_hydration_disabled' }),
       ]);
-      const stockApiPayload = stockApiResult?.data || null;
-      const stockApiData = stockApiPayload?.data || null;
-      const stockApiHistorical = stockApiToHistorical(stockApiPayload, summary.ticker);
       const pageCoreHistorical = pageCoreToHistorical(pageCore.data);
       const pageCoreBreakout = pageCoreToBreakoutV12(pageCore.data);
-      const historicalBase = hasRenderableBars(stockApiHistorical)
-        ? stockApiHistorical
-        : hasRenderableBars(historicalResult?.data)
+      const historicalBase = hasRenderableBars(historicalResult?.data)
           ? historicalResult.data
-          : stockApiHistorical || historicalResult?.data || pageCoreHistorical;
+          : historicalResult?.data || pageCoreHistorical;
       const historical = {
         ...historicalBase,
-        breakout_v12: pageCoreBreakout || historicalBase?.breakout_v12 || stockApiData?.breakout_v12 || null,
-        breakout_v2: historicalBase?.breakout_v2 || stockApiData?.breakout_v2 || null,
-        breakout_v2_legacy: historicalBase?.breakout_v2_legacy || stockApiData?.breakout_v2_legacy || null,
+        breakout_v12: pageCoreBreakout || historicalBase?.breakout_v12 || null,
+        breakout_v2: historicalBase?.breakout_v2 || null,
+        breakout_v2_legacy: historicalBase?.breakout_v2_legacy || null,
       };
-      const historicalProfile = stockApiData?.historical_profile || historicalProfileResult?.data || pageCoreToHistoricalProfile(pageCore.data);
-      const fundamentals = stockApiData?.fundamentals || fundamentalsResult?.data || null;
+      const historicalProfile = historicalProfileResult?.data || pageCoreToHistoricalProfile(pageCore.data);
+      const fundamentals = fundamentalsResult?.data || null;
       const missingModules = moduleMissingKeys({
         summary: { data: summary },
-        historical: stockApiHistorical ? { data: historical } : (historicalResult?.data ? historicalResult : { data: historical }),
+        historical: historicalResult?.data ? historicalResult : { data: historical },
         governance: { data: governance },
         fundamentals: fundamentalsResult?.data ? fundamentalsResult : { data: fundamentals },
         historicalProfile: historicalProfileResult?.data ? historicalProfileResult : { data: historicalProfile },
@@ -688,9 +680,7 @@ export async function fetchV2StockPage(ticker) {
         },
         meta: {
           summary: pageCore.meta || null,
-          historical: stockApiHistorical
-            ? { ...(stockApiResult?.meta || {}), provider: 'stock_api', status: 'fresh' }
-            : (historicalResult?.meta || { provider: 'page-core', status: 'fresh' }),
+          historical: historicalResult?.meta || { provider: 'page-core', status: 'fresh' },
           governance: pageCore.meta || null,
           fundamentals: fundamentalsResult?.meta || null,
           historical_profile: historicalProfileResult?.meta || { provider: 'page-core', status: 'pending' },

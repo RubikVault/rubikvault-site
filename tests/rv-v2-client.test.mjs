@@ -635,7 +635,7 @@ describe('fetchV2StockPage', () => {
     assert.deepEqual(result.missingModules.includes('governance'), true);
   });
 
-  it('hydrates page-core stock pages with full Stock API history before using the one-bar fallback', async () => {
+  it('hydrates page-core stock pages from V2 history without legacy Stock API fallback', async () => {
     global.window = { location: { search: '?rv_optional=1' } };
     global.fetch = async (url) => {
       const href = String(url);
@@ -679,6 +679,9 @@ describe('fetchV2StockPage', () => {
         });
       }
       if (href.includes('/api/stock?ticker=AAPL')) {
+        throw new Error('legacy stock api should not be called');
+      }
+      if (href.includes('/historical')) {
         return okJson({
           ok: true,
           data: {
@@ -691,10 +694,10 @@ describe('fetchV2StockPage', () => {
             indicators: [{ id: 'rsi14', value: 55 }],
             fundamentals: { companyName: 'Apple Inc' },
           },
-          metadata: { provider: 'page-core-public-stock-api', data_date: '2026-05-08' },
+          meta: { provider: 'v2_historical', data_date: '2026-05-08' },
         });
       }
-      if (href.includes('/historical') || href.includes('/historical-profile') || href.includes('/api/fundamentals')) {
+      if (href.includes('/historical-profile') || href.includes('/api/fundamentals')) {
         throw new Error('optional module unavailable');
       }
       throw new Error(`Unexpected URL: ${href}`);
@@ -702,10 +705,9 @@ describe('fetchV2StockPage', () => {
 
     const result = await fetchV2StockPage('AAPL');
     assert.equal(result.ok, true);
-    assert.equal(result.mode, 'page_core_hydrated');
+    assert.equal(result.mode, 'page_core_hydrated_degraded');
     assert.equal(result.data.historical.bars.length, 3);
-    assert.equal(result.data.historical.availability.status, 'stock_api_history');
-    assert.equal(result.meta.historical.provider, 'stock_api');
+    assert.equal(result.meta.historical.provider, 'v2_historical');
     delete global.window;
   });
 });
