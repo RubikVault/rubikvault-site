@@ -11,9 +11,18 @@ import { evaluateHistoricalPattern } from './rule-evaluator.mjs';
 const OUT_PATH = path.join(REPO_ROOT, 'public/data/historical-setups/latest.json');
 const INSIGHTS_ROOT = path.join(REPO_ROOT, 'public/data/historical-insights');
 const PAGE_CORE_LATEST = path.join(REPO_ROOT, 'public/data/page-core/latest.json');
-const NAS_OPS_ROOT = process.env.NAS_OPS_ROOT || '/volume1/homes/neoboy/RepoOps/rubikvault-site';
-const DEFAULT_PRIVATE_STATS = path.join(NAS_OPS_ROOT, 'external-analysis/historical-research/last-good/private/validated_rules.parquet');
+// NAS_OPS_ROOT must be supplied by the supervisor / .env.local on NAS. Hardcoding
+// the operator-machine path here would leak a private NAS layout into MAIN and
+// would silently mask a missing env on local dev runs. Fail fast instead so the
+// missing env is obvious.
+const NAS_OPS_ROOT = process.env.NAS_OPS_ROOT || '';
+const DEFAULT_PRIVATE_STATS = NAS_OPS_ROOT
+  ? path.join(NAS_OPS_ROOT, 'external-analysis/historical-research/last-good/private/validated_rules.parquet')
+  : '';
 const PRIVATE_STATS_PATH = process.env.RV_HISTORICAL_RESEARCH_STATS || DEFAULT_PRIVATE_STATS;
+if (!PRIVATE_STATS_PATH) {
+  throw new Error('build-active-setups: RV_HISTORICAL_RESEARCH_STATS or NAS_OPS_ROOT must point at the last-good validated_rules.parquet.');
+}
 const MAX_BAR_STALE_DAYS = Math.max(1, Number(process.env.RV_HISTORICAL_SETUPS_MAX_BAR_STALE_DAYS || '7'));
 const EU_EXCHANGES = new Set(['EUFUND','AS','AT','BA','BC','BE','BR','BUD','CO','DE','DU','F','HA','HE','HM','IR','LSE','LU','LS','MC','MI','MU','OL','PA','RO','ST','STU','SW','VI','WAR','XETRA']);
 const ASIA_EXCHANGES = new Set(['AU','BK','JK','KAR','KLSE','KO','KQ','PSE','SHE','SHG','TA','TO','TW','TWO','VN','XNAI','XNSA']);

@@ -4,9 +4,12 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const REPO_ROOT = path.resolve(fileURLToPath(new URL('../..', import.meta.url)));
-const NAS_OPS_ROOT = process.env.NAS_OPS_ROOT || '/volume1/homes/neoboy/RepoOps/rubikvault-site';
-const DEFAULT_INBOX = path.join(NAS_OPS_ROOT, 'external-analysis/historical-research/inbox/current');
-const DEFAULT_LAST_GOOD = path.join(NAS_OPS_ROOT, 'external-analysis/historical-research/last-good');
+// Supervisor / .env.local sets NAS_OPS_ROOT on NAS. Empty default forces a clear
+// error when run outside that environment instead of silently writing to a
+// path that doesn't exist on the operator machine.
+const NAS_OPS_ROOT = process.env.NAS_OPS_ROOT || '';
+const DEFAULT_INBOX = NAS_OPS_ROOT ? path.join(NAS_OPS_ROOT, 'external-analysis/historical-research/inbox/current') : '';
+const DEFAULT_LAST_GOOD = NAS_OPS_ROOT ? path.join(NAS_OPS_ROOT, 'external-analysis/historical-research/last-good') : '';
 const OUT_ROOT = path.join(REPO_ROOT, 'public/data/historical-insights');
 const REPORT_PATH = path.join(REPO_ROOT, 'public/data/reports/historical-research-ingest-latest.json');
 
