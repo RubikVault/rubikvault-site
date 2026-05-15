@@ -41,3 +41,13 @@ test('best-setups v4 publishes horizon diagnostics and rank basis', () => {
   assert.match(SCRIPT, /horizon_diagnostics: horizonDiagnosticsSummary/);
   assert.match(SCRIPT, /rank_basis: 'horizon_probability_expected_gain'/);
 });
+
+test('decision-core source uses page-core guard for enrichment only', () => {
+  assert.match(SCRIPT, /guard_mode = 'enrich_only'/);
+  assert.match(SCRIPT, /enriched_buy_rows/);
+  assert.doesNotMatch(
+    SCRIPT,
+    /buyRows = buyRows\.filter\(\(row\) => pageCoreGuard\.buy_ids\.has/,
+    'decision-core BUY rows must not be filtered by page-core summary state',
+  );
+});

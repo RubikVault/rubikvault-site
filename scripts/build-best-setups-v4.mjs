@@ -922,9 +922,11 @@ async function main() {
       pageCoreGuard = await buildPageCoreBuyGuard(requestedTargetDate);
       if (pageCoreGuard.available) {
         const before = buyRows.length;
-        buyRows = buyRows.filter((row) => pageCoreGuard.buy_ids.has(String(row?.canonical_id || '').toUpperCase()));
         buyRows = enrichDecisionRowsFromPageCore(buyRows, pageCoreGuard);
-        pageCoreGuard.filtered_buy_rows = before - buyRows.length;
+        pageCoreGuard.filtered_buy_rows = 0;
+        pageCoreGuard.enriched_buy_rows = buyRows.filter((row) => pageCoreGuard.by_id.has(String(row?.canonical_id || '').toUpperCase())).length;
+        pageCoreGuard.guard_mode = 'enrich_only';
+        pageCoreGuard.decision_core_buy_rows = before;
       }
     }
     const horizonBuilder = decisionSource === 'decision-core' ? buildDecisionCoreHorizonRows : buildHorizonRows;
@@ -975,6 +977,9 @@ async function main() {
           snapshot_id: pageCoreGuard.snapshot_id || null,
           confirmed_buy_total: pageCoreGuard.confirmed_buy_total || 0,
           filtered_buy_rows: pageCoreGuard.filtered_buy_rows || 0,
+          enriched_buy_rows: pageCoreGuard.enriched_buy_rows || 0,
+          guard_mode: pageCoreGuard.guard_mode || null,
+          decision_core_buy_rows: pageCoreGuard.decision_core_buy_rows || null,
           rows_scanned: pageCoreGuard.rows_scanned || 0,
           missing_core_total: pageCoreGuard.missing_core_total || 0,
         } : null,
