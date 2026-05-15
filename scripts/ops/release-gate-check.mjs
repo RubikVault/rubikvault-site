@@ -1037,6 +1037,37 @@ if (pageCoreCandidatePresent) {
       pageCoreOnly: true,
       pageCoreLatestPath: 'public/data/page-core/candidates/latest.candidate.json',
     });
+    // QM5/QM6 follow-up: run the random160 stock-analyzer UI proof against the
+    // preview deploy BEFORE we promote the candidate. Catches regressions like
+    // the 1102 chart crash, asset-id route collisions, or null-price rows
+    // earlier than the post-prod canary. WARN-mode first cycle so we can prove
+    // the gate is stable; flip RV_RELEASE_GATE_UI_PROOF_MODE=hard to enforce.
+    const uiProofMode = String(process.env.RV_RELEASE_GATE_UI_PROOF_MODE || 'warn').toLowerCase();
+    if (uiProofMode !== 'off') {
+      const sample = process.env.RV_RELEASE_GATE_UI_PROOF_SAMPLE || 'class160';
+      log(`Running stock-analyzer UI proof against preview (sample=${sample}, mode=${uiProofMode})...`);
+      const proofRun = spawnSync(process.execPath, [
+        'scripts/validate/stock-analyzer-ui-random50-proof.mjs',
+        `--base-url=${previewDeploy.deployment_url}`,
+        `--sample=${sample}`,
+        '--max-failures=10',
+      ], { cwd: REPO_ROOT, encoding: 'utf8', timeout: 1_800_000, maxBuffer: 32 * 1024 * 1024 });
+      const proofOk = proofRun.status === 0;
+      if (!proofOk) {
+        const stderr = (proofRun.stderr || '').slice(-2000);
+        const stdout = (proofRun.stdout || '').slice(-2000);
+        const summary = `UI proof against preview failed (exit=${proofRun.status ?? 'timeout'}). stdout-tail=${stdout} stderr-tail=${stderr}`;
+        if (uiProofMode === 'hard') {
+          fail(summary);
+        } else {
+          warn(summary);
+        }
+      } else {
+        log('Stock-analyzer UI proof against preview passed.');
+      }
+    } else {
+      log('Stock-analyzer UI proof against preview disabled via RV_RELEASE_GATE_UI_PROOF_MODE=off.');
+    }
   }
   promotePageCoreCandidate();
   buildDeployBundle();
