@@ -73,3 +73,9 @@ test('historical active setups keeps private stats scan opt-in for nightly safet
   assert.match(builder, /private_stats_scan_enabled/);
   assert.match(supervisor, /RV_HISTORICAL_ACTIVE_SETUPS_PRIVATE_SCAN='\$\{RV_HISTORICAL_ACTIVE_SETUPS_PRIVATE_SCAN:-0\}'/);
 });
+
+test('historical active setups reads page-core object-map shards', () => {
+  const builder = fs.readFileSync(path.join(ROOT, 'scripts/historical-insights/build-active-setups.mjs'), 'utf8');
+  assert.match(builder, /Object\.values\(doc \|\| \{\}\)/);
+  assert.match(builder, /row\?\.display_ticker \|\| row\?\.provider_ticker/);
+});

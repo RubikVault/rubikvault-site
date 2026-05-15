@@ -155,16 +155,18 @@ async function activePageCoreAssets() {
     const filePath = path.join(pageDir, pageShardName(i, Number(latest.page_shard_count || 1024)));
     try {
       const doc = JSON.parse(zlib.gunzipSync(fs.readFileSync(filePath)).toString('utf8'));
-      const rows = Array.isArray(doc?.rows) ? doc.rows : Array.isArray(doc) ? doc : [];
+      const rows = Array.isArray(doc?.rows)
+        ? doc.rows
+        : (Array.isArray(doc) ? doc : Object.values(doc || {}));
       for (const row of rows) {
         const id = String(row?.canonical_asset_id || row?.canonical_id || row?.asset_id || '').toUpperCase();
         if (!id) continue;
         assets.set(id, {
           asset_id: id,
-          ticker: String(row?.ticker || row?.symbol || row?.display_ticker || id.split(':').pop() || '').toUpperCase(),
+          ticker: String(row?.ticker || row?.symbol || row?.display_ticker || row?.provider_ticker || id.split(':').pop() || '').toUpperCase(),
           exchange: String(row?.exchange || row?.identity?.exchange || id.split(':')[0] || '').toUpperCase(),
           asset_class: normalizeAssetClass(row?.identity?.asset_class || row?.meta?.asset_type || row?.asset_class),
-          history_pack: row?.history_pack || row?.historyPack || null,
+          history_pack: row?.history_pack || row?.historyPack || row?.meta?.history_pack || null,
         });
       }
     } catch {
