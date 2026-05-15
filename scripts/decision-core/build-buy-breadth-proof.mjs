@@ -109,6 +109,35 @@ function positiveIntEnv(name, fallback) {
   return Math.floor(value);
 }
 
+// Pure helper exported so tests can verify per-region env overrides without
+// having to materialize a full decision-core fixture on disk. Same logic the
+// main builder uses; both sites stay in sync.
+export function resolveBreadthTargets({ availableUs, availableEu, availableAsia } = {}) {
+  const availableRegionTarget = positiveIntEnv('RV_BUY_BREADTH_AVAILABLE_REGION_TARGET', 10);
+  const displayRegionTarget = positiveIntEnv('RV_BUY_BREADTH_DISPLAY_REGION_TARGET', 5);
+  const availableUsTarget = positiveIntEnv('RV_BUY_BREADTH_AVAILABLE_US_TARGET', availableRegionTarget);
+  const availableEuTarget = positiveIntEnv('RV_BUY_BREADTH_AVAILABLE_EU_TARGET', availableRegionTarget);
+  const availableAsiaTarget = positiveIntEnv('RV_BUY_BREADTH_AVAILABLE_ASIA_TARGET', availableRegionTarget);
+  const displayUsTarget = positiveIntEnv('RV_BUY_BREADTH_DISPLAY_US_TARGET', displayRegionTarget);
+  const displayEuTarget = positiveIntEnv('RV_BUY_BREADTH_DISPLAY_EU_TARGET', displayRegionTarget);
+  const displayAsiaTarget = positiveIntEnv('RV_BUY_BREADTH_DISPLAY_ASIA_TARGET', displayRegionTarget);
+  const usAvail = Number.isFinite(availableUs) ? availableUs : 0;
+  const euAvail = Number.isFinite(availableEu) ? availableEu : 0;
+  const asiaAvail = Number.isFinite(availableAsia) ? availableAsia : 0;
+  return {
+    availableRegionTargets: {
+      US: Math.min(availableUsTarget, usAvail),
+      EU: Math.min(availableEuTarget, euAvail),
+      ASIA: Math.min(availableAsiaTarget, asiaAvail),
+    },
+    displayRegionTargets: {
+      US: Math.min(displayUsTarget, usAvail),
+      EU: Math.min(displayEuTarget, euAvail),
+      ASIA: Math.min(displayAsiaTarget, asiaAvail),
+    },
+  };
+}
+
 function diagnoseBreadth({ rows, metaById }) {
   const diag = {
     us_stock_etf_rows: 0,
@@ -221,29 +250,11 @@ export function buildBuyBreadthProof({ root = path.join(DECISION_CORE_PUBLIC_ROO
     ...availableAsia.filter((row) => !row.best_setups_present).slice(0, 10),
   ];
   const failures = [];
-  const availableRegionTarget = positiveIntEnv('RV_BUY_BREADTH_AVAILABLE_REGION_TARGET', 10);
-  const displayRegionTarget = positiveIntEnv('RV_BUY_BREADTH_DISPLAY_REGION_TARGET', 5);
-  // Per-region overrides fall back to the global default. Useful when best-setups-v4
-  // emit caps (10/horizon/asset_class) produce a globally-tilted distribution
-  // (e.g. US-dominated SHORT bucket leaves EU display=0) yet decision-core itself has
-  // ample available BUYs per region. Operators can drop a region temporarily while
-  // the producer-side rebalancing is being designed.
-  const availableUsTarget = positiveIntEnv('RV_BUY_BREADTH_AVAILABLE_US_TARGET', availableRegionTarget);
-  const availableEuTarget = positiveIntEnv('RV_BUY_BREADTH_AVAILABLE_EU_TARGET', availableRegionTarget);
-  const availableAsiaTarget = positiveIntEnv('RV_BUY_BREADTH_AVAILABLE_ASIA_TARGET', availableRegionTarget);
-  const displayUsTarget = positiveIntEnv('RV_BUY_BREADTH_DISPLAY_US_TARGET', displayRegionTarget);
-  const displayEuTarget = positiveIntEnv('RV_BUY_BREADTH_DISPLAY_EU_TARGET', displayRegionTarget);
-  const displayAsiaTarget = positiveIntEnv('RV_BUY_BREADTH_DISPLAY_ASIA_TARGET', displayRegionTarget);
-  const availableRegionTargets = {
-    US: Math.min(availableUsTarget, availableUs.length),
-    EU: Math.min(availableEuTarget, availableEu.length),
-    ASIA: Math.min(availableAsiaTarget, availableAsia.length),
-  };
-  const displayRegionTargets = {
-    US: Math.min(displayUsTarget, availableUs.length),
-    EU: Math.min(displayEuTarget, availableEu.length),
-    ASIA: Math.min(displayAsiaTarget, availableAsia.length),
-  };
+  const { availableRegionTargets, displayRegionTargets } = resolveBreadthTargets({
+    availableUs: availableUs.length,
+    availableEu: availableEu.length,
+    availableAsia: availableAsia.length,
+  });
   if (availableRegionTargets.US <= 0) failures.push('BUY_BREADTH_US_NONE_AVAILABLE');
   else if (availableUs.length < availableRegionTargets.US) failures.push('BUY_BREADTH_US_AVAILABLE_BELOW_TARGET');
   if (availableRegionTargets.EU <= 0) failures.push('BUY_BREADTH_EU_NONE_AVAILABLE');
