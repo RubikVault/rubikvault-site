@@ -26,6 +26,9 @@ if (!PRIVATE_STATS_PATH) {
 const MAX_BAR_STALE_DAYS = Math.max(1, Number(process.env.RV_HISTORICAL_SETUPS_MAX_BAR_STALE_DAYS || '7'));
 const EU_EXCHANGES = new Set(['EUFUND','AS','AT','BA','BC','BE','BR','BUD','CO','DE','DU','F','HA','HE','HM','IR','LSE','LU','LS','MC','MI','MU','OL','PA','RO','ST','STU','SW','VI','WAR','XETRA']);
 const ASIA_EXCHANGES = new Set(['AU','BK','JK','KAR','KLSE','KO','KQ','PSE','SHE','SHG','TA','TO','TW','TWO','VN','XNAI','XNSA']);
+const LEADERBOARD_REGIONS = Object.freeze(['ALL', 'US', 'EU', 'ASIA']);
+const LEADERBOARD_ASSET_CLASSES = Object.freeze(['ALL', 'STOCK', 'ETF', 'INDEX']);
+const LEADERBOARD_TOP = Math.max(1, Number(process.env.RV_HISTORICAL_RESEARCH_LEADERBOARD_TOP || '20'));
 
 function readJson(filePath) {
   try { return JSON.parse(fs.readFileSync(filePath, 'utf8')); } catch { return null; }
@@ -80,6 +83,13 @@ function regionFromAssetId(assetId) {
   return 'OTHER';
 }
 
+function normalizeAssetClass(value) {
+  const raw = String(value || '').trim().toUpperCase();
+  if (raw === 'ETF') return 'ETF';
+  if (raw === 'INDEX') return 'INDEX';
+  return 'STOCK';
+}
+
 function scoreRule(rule) {
   const n = Number(rule.sample_size ?? rule.n ?? 0);
   const wl = Number(rule.wilson_low ?? Math.max(0, Number(rule.win_rate ?? 0) - 0.05));
@@ -95,6 +105,30 @@ function includeRule(rule) {
   const wl = Number(rule.wilson_low ?? Math.max(0, Number(rule.win_rate ?? 0) - 0.05));
   const avg = Number(rule.avg_signed_return ?? rule.avg_return ?? 0);
   return n >= 30 && wl >= 0.50 && avg > 0;
+}
+
+function rankProbability(rule) {
+  const wl = Number(rule.wilson_low ?? Math.max(0, Number(rule.win_rate ?? 0) - 0.05));
+  return cleanNum(wl);
+}
+
+function expectedGainPct(rule) {
+  const avg = Number(rule.avg_signed_return ?? rule.avg_return ?? 0);
+  return Number.isFinite(avg) ? cleanNum(avg * 100, 2) : null;
+}
+
+function sortHistoricalRows(rows) {
+  return [...rows].sort((a, b) => {
+    if (Number(b.rank_probability || 0) !== Number(a.rank_probability || 0)) {
+      return Number(b.rank_probability || 0) - Number(a.rank_probability || 0);
+    }
+    if (Number(b.expected_gain_pct || 0) !== Number(a.expected_gain_pct || 0)) {
+      return Number(b.expected_gain_pct || 0) - Number(a.expected_gain_pct || 0);
+    }
+    if (Number(b.n || 0) !== Number(a.n || 0)) return Number(b.n || 0) - Number(a.n || 0);
+    if (Number(b.rank_score || 0) !== Number(a.rank_score || 0)) return Number(b.rank_score || 0) - Number(a.rank_score || 0);
+    return String(a.ticker || '').localeCompare(String(b.ticker || ''));
+  });
 }
 
 function routeFor(assetId, ticker) {
@@ -125,8 +159,9 @@ async function activePageCoreAssets() {
         if (!id) continue;
         assets.set(id, {
           asset_id: id,
-          ticker: String(row?.ticker || row?.symbol || id.split(':').pop() || '').toUpperCase(),
-          exchange: String(row?.exchange || id.split(':')[0] || '').toUpperCase(),
+          ticker: String(row?.ticker || row?.symbol || row?.display_ticker || id.split(':').pop() || '').toUpperCase(),
+          exchange: String(row?.exchange || row?.identity?.exchange || id.split(':')[0] || '').toUpperCase(),
+          asset_class: normalizeAssetClass(row?.identity?.asset_class || row?.meta?.asset_type || row?.asset_class),
           history_pack: row?.history_pack || row?.historyPack || null,
         });
       }
@@ -158,6 +193,7 @@ function assetRowsFrom(scopeAssets, insightRows) {
     asset_id: String(row.asset_id || '').toUpperCase(),
     ticker: String(row.ticker || String(row.asset_id || '').split(':').pop() || '').toUpperCase(),
     exchange: String(row.exchange || String(row.asset_id || '').split(':')[0] || '').toUpperCase(),
+    asset_class: normalizeAssetClass(row.asset_class || row.asset_type),
     history_pack: row.history_pack || null,
   })).filter((row) => row.asset_id && row.ticker);
 }
@@ -367,10 +403,14 @@ async function main() {
           win_rate: rule.win_rate,
           wilson_low: rule.wilson_low,
           n: rule.sample_size,
+          sample_size: rule.sample_size,
           avg_signed_return: rule.avg_signed_return,
           evidence_score: rule.evidence_score,
           rank_score: rankScore,
           latest_bar_date: barsByAsset.get(assetId)?.latest_bar_date || null,
+          asset_class: normalizeAssetClass(meta.asset_class),
+          rank_probability: rankProbability(rule),
+          expected_gain_pct: expectedGainPct(rule),
           route: routeFor(assetId, ticker),
           explanation: `${rule.label} is active today. Historical ${direction.toUpperCase()} edge at ${rule.target_horizon || 'tested horizon'}.`,
         };
@@ -441,10 +481,14 @@ async function main() {
           win_rate: cleanNum(rule.win_rate),
           wilson_low: cleanNum(rule.wilson_low),
           n: Number(rule.sample_size ?? rule.n ?? 0),
+          sample_size: Number(rule.sample_size ?? rule.n ?? 0),
           avg_signed_return: cleanNum(rule.avg_signed_return ?? rule.avg_return),
           evidence_score: Number(rule.evidence_score || 0),
           rank_score: rankScore,
           latest_bar_date: latestBarDate,
+          asset_class: normalizeAssetClass(row.asset_class || row.asset_type),
+          rank_probability: rankProbability(rule),
+          expected_gain_pct: expectedGainPct(rule),
           route: routeFor(assetId, ticker),
           explanation: `${rule.label || rule.pattern_id} is active today. Historical ${direction.toUpperCase()} edge at ${rule.target_horizon || 'tested horizon'}.`,
         };
@@ -462,10 +506,25 @@ async function main() {
   for (const region of ['US', 'EU', 'ASIA']) {
     regions[region] = { long: [], short: [] };
     for (const side of ['long', 'short']) {
-      regions[region][side] = [...best.values()]
+      regions[region][side] = sortHistoricalRows([...best.values()]
         .filter((row) => row.region === region && row.direction.toLowerCase() === side)
-        .sort((a, b) => Number(b.rank_score || 0) - Number(a.rank_score || 0) || a.ticker.localeCompare(b.ticker))
+      )
         .slice(0, top);
+    }
+  }
+
+  const leaderboards = {};
+  for (const region of LEADERBOARD_REGIONS) {
+    leaderboards[region] = {};
+    for (const assetClass of LEADERBOARD_ASSET_CLASSES) {
+      leaderboards[region][assetClass] = { long: [], short: [] };
+      for (const side of ['long', 'short']) {
+        leaderboards[region][assetClass][side] = sortHistoricalRows([...best.values()]
+          .filter((row) => (region === 'ALL' || row.region === region)
+            && (assetClass === 'ALL' || normalizeAssetClass(row.asset_class) === assetClass)
+            && row.direction.toLowerCase() === side)
+        ).slice(0, LEADERBOARD_TOP);
+      }
     }
   }
 
@@ -477,9 +536,10 @@ async function main() {
       page_core_scope_limited: Boolean(scopeIds),
       stats_source: statsSource,
     },
-    thresholds: { min_n: 30, min_wilson_low: 0.50, require_positive_avg_signed_return: true, top },
+    thresholds: { min_n: 30, min_wilson_low: 0.50, require_positive_avg_signed_return: true, top, leaderboard_top: LEADERBOARD_TOP },
     telemetry,
     regions,
+    leaderboards,
   });
   annotateInsightShards(activeKeys);
   await fsp.mkdir(path.dirname(OUT_PATH), { recursive: true });

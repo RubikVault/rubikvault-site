@@ -309,6 +309,33 @@
               Loading historical setups...
             </div>
           </div>
+          <div id="historical-research-home" style="margin-top:1rem; padding-top:1rem; border-top:1px solid rgba(100,116,139,0.18);">
+            <div style="display:flex; justify-content:space-between; gap:0.8rem; align-items:flex-end; flex-wrap:wrap; margin-bottom:0.75rem;">
+              <div>
+                <div style="font-size: 1rem; font-weight: 700; color: #e5e7eb;">Historical research insights</div>
+                <div id="historical-research-meta" style="font-size: 0.78rem; color: #94a3b8;">Historical edge from last EOD data for next session.</div>
+              </div>
+              <div style="display:flex; gap:0.55rem; flex-wrap:wrap;">
+                <select id="historical-research-region-filter" aria-label="Historical research region filter" style="background:rgba(15,23,42,0.75); border:1px solid rgba(100,116,139,0.3); color:#e5e7eb; border-radius:8px; padding:0.45rem 0.6rem;">
+                  <option value="ALL">All regions</option>
+                  <option value="US">US</option>
+                  <option value="EU">EU</option>
+                  <option value="ASIA">Asia</option>
+                </select>
+                <select id="historical-research-class-filter" aria-label="Historical research asset class filter" style="background:rgba(15,23,42,0.75); border:1px solid rgba(100,116,139,0.3); color:#e5e7eb; border-radius:8px; padding:0.45rem 0.6rem;">
+                  <option value="ALL">All assets</option>
+                  <option value="STOCK">Stocks</option>
+                  <option value="ETF">ETFs</option>
+                  <option value="INDEX">Indexes</option>
+                </select>
+              </div>
+            </div>
+            <div id="historical-research-leaderboards" style="display:grid; grid-template-columns:repeat(auto-fit,minmax(320px,1fr)); gap:0.8rem;">
+              <div style="padding:0.7rem; border:1px solid rgba(100,116,139,0.22); border-radius:10px; color:#64748b;">
+                Loading historical research insights...
+              </div>
+            </div>
+          </div>
         </div>
 
         <div id="best-setups-home"
@@ -1959,6 +1986,10 @@
     const bestSetupsByHorizonWrap = document.getElementById('best-setups-by-horizon');
     const historicalSetupsMeta = document.getElementById('historical-setups-meta');
     const historicalSetupsGrid = document.getElementById('historical-setups-grid');
+    const historicalResearchMeta = document.getElementById('historical-research-meta');
+    const historicalResearchLeaderboards = document.getElementById('historical-research-leaderboards');
+    const historicalResearchRegionFilter = document.getElementById('historical-research-region-filter');
+    const historicalResearchClassFilter = document.getElementById('historical-research-class-filter');
     const marketViewMeta = document.getElementById('market-view-meta');
     const ideasViewMeta = document.getElementById('ideas-view-meta');
     const marketRegimeBanner = document.getElementById('market-regime-banner');
@@ -3201,11 +3232,13 @@
       if (!response?.ok || payload?.schema !== 'rv.historical_setups_today.v1') {
         historicalSetupsMeta.textContent = 'No historical setup snapshot available. Last-good insights remain visible in Stock Analyzer.';
         historicalSetupsGrid.innerHTML = '<div style="padding:0.7rem; border:1px solid rgba(100,116,139,0.22); border-radius:10px; color:#64748b;">Historical setup snapshot unavailable.</div>';
+        if (historicalResearchLeaderboards) historicalResearchLeaderboards.innerHTML = '<div style="padding:0.7rem; border:1px solid rgba(100,116,139,0.22); border-radius:10px; color:#64748b;">Historical research insights unavailable.</div>';
         return;
       }
       const generated = payload.generated_at ? String(payload.generated_at).slice(0, 16).replace('T', ' ') + ' UTC' : 'n/a';
       const source = payload.source?.historical_insights_generated_at ? String(payload.source.historical_insights_generated_at).slice(0, 10) : 'last-good';
       historicalSetupsMeta.textContent = `Top 30 LONG + SHORT by region • generated=${generated} • research=${source}`;
+      if (historicalResearchMeta) historicalResearchMeta.textContent = `Historical edge from last EOD data for next session • generated=${generated}`;
       const regions = ['US', 'EU', 'ASIA'];
       const sides = [
         { key: 'long', label: 'LONG', color: '#22c55e' },
@@ -3254,7 +3287,61 @@
         }
       }
       historicalSetupsGrid.innerHTML = blocks.join('');
-      document.querySelectorAll('#historical-setups-grid [data-open-ticker]').forEach((link) => {
+      const pctPoint = (value) => {
+        const n = Number(value);
+        return Number.isFinite(n) ? `${n.toFixed(1)}%` : '—';
+      };
+      const renderResearchLeaderboards = () => {
+        if (!historicalResearchLeaderboards) return;
+        const region = historicalResearchRegionFilter?.value || 'ALL';
+        const assetClass = historicalResearchClassFilter?.value || 'ALL';
+        const board = payload.leaderboards?.[region]?.[assetClass] || { long: [], short: [] };
+        const table = (side) => {
+          const rows = Array.isArray(board?.[side.key]) ? board[side.key] : [];
+          const body = rows.length
+            ? `<table style="width:100%; border-collapse:collapse; font-size:0.8rem;">
+                <thead>
+                  <tr>
+                    <th style="text-align:right; color:#94a3b8; padding:0.35rem 0.25rem;">Rank</th>
+                    <th style="text-align:left; color:#94a3b8; padding:0.35rem 0.25rem;">Asset</th>
+                    <th style="text-align:right; color:#94a3b8; padding:0.35rem 0.25rem;">Probability</th>
+                    <th style="text-align:right; color:#94a3b8; padding:0.35rem 0.25rem;">Expected gain</th>
+                    <th style="text-align:left; color:#94a3b8; padding:0.35rem 0.25rem;">Setup</th>
+                    <th style="text-align:right; color:#94a3b8; padding:0.35rem 0.25rem;">Link</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${rows.map((row, idx) => `
+                    <tr>
+                      <td style="padding:0.35rem 0.25rem; border-top:1px solid rgba(100,116,139,0.18); text-align:right; color:#64748b;">${idx + 1}</td>
+                      <td style="padding:0.35rem 0.25rem; border-top:1px solid rgba(100,116,139,0.18);">
+                        <span style="font-weight:700;color:#e5e7eb;">${escapeHtml(row.ticker || '—')}</span>
+                        <span style="display:block;font-size:0.66rem;color:#64748b;">${escapeHtml(row.region || '')} · ${escapeHtml(row.asset_class || '')}</span>
+                      </td>
+                      <td style="padding:0.35rem 0.25rem; border-top:1px solid rgba(100,116,139,0.18); text-align:right; color:#e5e7eb;">${pct(row.rank_probability ?? row.wilson_low)}</td>
+                      <td style="padding:0.35rem 0.25rem; border-top:1px solid rgba(100,116,139,0.18); text-align:right; color:${side.color}; font-weight:700;">${pctPoint(row.expected_gain_pct)}</td>
+                      <td style="padding:0.35rem 0.25rem; border-top:1px solid rgba(100,116,139,0.18); color:#cbd5e1;" title="${escapeHtml(row.explanation || '')}">${escapeHtml(row.label || row.pattern_id || '—')}<span style="display:block;font-size:0.66rem;color:#64748b;">${escapeHtml(row.horizon || '')} · n=${Number(row.sample_size || row.n || 0).toLocaleString('en-US')}</span></td>
+                      <td style="padding:0.35rem 0.25rem; border-top:1px solid rgba(100,116,139,0.18); text-align:right;">
+                        <a class="best-setup-link" href="${escapeHtml(row.route || `/analyze/${encodeURIComponent(row.asset_id || row.ticker || '').replace(/%3A/gi, ':')}`)}" data-open-ticker="${escapeHtml(row.ticker || '')}" data-canonical-id="${escapeHtml(row.asset_id || '')}">Open</a>
+                      </td>
+                    </tr>`).join('')}
+                </tbody>
+              </table>`
+            : `<div style="padding:0.6rem; color:#64748b;">No ${side.label} historical research setup for this filter.</div>`;
+          return `<article style="padding:0.8rem; border:1px solid rgba(100,116,139,0.22); border-radius:10px; background:rgba(15,23,42,0.35);">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.45rem;">
+              <div style="font-size:0.88rem; font-weight:700; color:${side.color};">${side.label} Top 20</div>
+              <div style="font-size:0.74rem; color:#94a3b8;">${region} · ${assetClass}</div>
+            </div>
+            ${body}
+          </article>`;
+        };
+        historicalResearchLeaderboards.innerHTML = sides.map(table).join('');
+      };
+      if (historicalResearchRegionFilter) historicalResearchRegionFilter.onchange = renderResearchLeaderboards;
+      if (historicalResearchClassFilter) historicalResearchClassFilter.onchange = renderResearchLeaderboards;
+      renderResearchLeaderboards();
+      document.querySelectorAll('#historical-setups-home [data-open-ticker]').forEach((link) => {
         link.addEventListener('click', async (ev) => {
           ev.preventDefault();
           const canonicalId = link.getAttribute('data-canonical-id') || '';
