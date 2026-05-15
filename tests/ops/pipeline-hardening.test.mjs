@@ -220,7 +220,7 @@ test('release gate UI proof uses preview-safe regional100 typed-state acceptance
 
 test('night supervisor handles negative measured exits before optional-step routing', () => {
   const supervisor = fs.readFileSync(path.join(ROOT, 'scripts/nas/rv-nas-night-supervisor.sh'), 'utf8');
-  assert.match(supervisor, /RV_HIST_PROBS_V2_HEAP_MB:-3072/);
+  assert.match(supervisor, /RV_HIST_PROBS_V2_HEAP_MB:-4096/);
   assert.match(supervisor, /if \(\( return_status < 0 \)\); then return_status=125; fi/);
   assert.match(supervisor, /hist_probs_v2_shadow/);
   assert.match(supervisor, /OPTIONAL_STEPS_LIST=.*hist_probs_v2_shadow/);

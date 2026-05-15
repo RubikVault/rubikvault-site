@@ -536,7 +536,7 @@ step_heap_mb() {
       fi
       ;;
     hist_probs_v2_shadow)
-      printf '%s\n' "${RV_HIST_PROBS_V2_HEAP_MB:-3072}"
+      printf '%s\n' "${RV_HIST_PROBS_V2_HEAP_MB:-4096}"
       ;;
     learning_daily|v1_audit|cutover_readiness|stock_analyzer_universe_audit|ui_field_truth_report|page_core_smoke|final_integrity_seal|classifier_audit|ops_health_reports)
       printf '%s\n' 1536
