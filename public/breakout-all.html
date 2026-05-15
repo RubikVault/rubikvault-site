@@ -471,6 +471,13 @@
             };
         }
 
+        function formatBreakoutLevel(value) {
+            const level = Number(value);
+            if (!Number.isFinite(level) || level <= 0) return '-';
+            if (level < 0.01) return '<0.01';
+            return level.toFixed(2);
+        }
+
         async function fetchJson(path) {
             const response = await fetch(path, { cache: 'no-store' });
             if (!response.ok) throw new Error(`${path} ${response.status}`);
@@ -633,11 +640,13 @@
 
                 const stateLabel = item.state === 'NONE' ? 'SCANNED' : item.state;
                 const suppressedBadge = item.is_suppressed ? '<span style="font-size:0.6rem; background:rgba(239,68,68,0.15); color:#f87171; border-radius:4px; padding:2px 4px; margin-left:4px; font-weight:700;">SUPPRESSED</span>' : '';
-                const zone = item.support_zone?.detected
-                    ? `${Number(item.support_zone.center || 0).toFixed(2)} · tests ${item.support_zone.test_count ?? '—'}`
+                const zoneLevel = formatBreakoutLevel(item.support_zone?.center);
+                const zone = item.support_zone?.detected && zoneLevel !== '-'
+                    ? `${zoneLevel} · tests ${item.support_zone.test_count ?? '—'}`
                     : '-';
-                const invalidation = item.invalidation?.close_below != null
-                    ? `close < ${Number(item.invalidation.close_below).toFixed(2)}`
+                const invalidationLevel = formatBreakoutLevel(item.invalidation?.close_below);
+                const invalidation = invalidationLevel !== '-'
+                    ? `close < ${invalidationLevel}`
                     : '-';
 
                 return `
@@ -651,7 +660,7 @@
                         <td class="price-col" style="font-weight: 800; color: #8b5cf6;">${item.total_score || 0}</td>
                         <td class="price-col">${zone}</td>
                         <td class="price-col">${invalidation}</td>
-                        <td class="price-col">${Number.isFinite(Number(item.latest_close)) && Number(item.latest_close) > 0 ? Number(item.latest_close).toFixed(2) : '-'}</td>
+                        <td class="price-col">${formatBreakoutLevel(item.latest_close)}</td>
                     </tr>
                 `;
             }).join('');
