@@ -38,6 +38,8 @@ test('historical-setups schema accepts filterable leaderboards', () => {
   const payload = {
     schema: 'rv.historical_setups_today.v1',
     generated_at: '2026-05-15T07:00:00.000Z',
+    target_market_date: '2026-05-14',
+    data_asof: '2026-05-14',
     regions: {
       US: { long: [sampleSetup()], short: [] },
       EU: { long: [], short: [] },
@@ -79,6 +81,8 @@ test('historical active setups reads page-core object-map shards', () => {
   const builder = fs.readFileSync(path.join(ROOT, 'scripts/historical-insights/build-active-setups.mjs'), 'utf8');
   assert.match(builder, /Object\.values\(doc \|\| \{\}\)/);
   assert.match(builder, /row\?\.display_ticker \|\| row\?\.provider_ticker/);
+  assert.match(builder, /target_market_date: dataAsOf/);
+  assert.match(builder, /page_core_target_market_date/);
 });
 
 test('historical research ranking supports SHORT edges from negative returns', () => {

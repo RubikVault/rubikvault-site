@@ -5,6 +5,8 @@
   "properties": {
     "schema": { "const": "rv.historical_setups_today.v1" },
     "generated_at": { "type": "string" },
+    "target_market_date": { "type": ["string", "null"] },
+    "data_asof": { "type": ["string", "null"] },
     "regions": {
       "type": "object",
       "required": ["US", "EU", "ASIA"],

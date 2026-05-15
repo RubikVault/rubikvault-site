@@ -143,6 +143,14 @@ function sortHistoricalRows(rows) {
   });
 }
 
+function maxIsoDate(values) {
+  return values
+    .map((value) => String(value || '').slice(0, 10))
+    .filter((value) => /^\d{4}-\d{2}-\d{2}$/.test(value))
+    .sort()
+    .at(-1) || null;
+}
+
 function routeFor(assetId, ticker) {
   return `/analyze/${encodeURIComponent(assetId || ticker || '').replace(/%3A/gi, ':')}`;
 }
@@ -368,6 +376,7 @@ async function main() {
   setLocalBarsRuntimeOverrides({ allowRemoteBarFetch: false, localBarStaleDays: 3650 });
   const generatedAt = new Date().toISOString();
   const scopeAssets = await activePageCoreAssets();
+  const pageCoreLatest = readJson(PAGE_CORE_LATEST);
   const scopeIds = scopeAssets?.size ? new Set(scopeAssets.keys()) : null;
   const { latest, rows } = await loadInsightRows(scopeIds);
   const best = new Map();
@@ -581,11 +590,21 @@ async function main() {
     }
   }
 
+  const dataAsOf = maxIsoDate([
+    ...[...best.values()].map((row) => row.latest_bar_date),
+    pageCoreLatest?.target_market_date,
+    latest?.target_market_date,
+    latest?.data_asof,
+  ]);
+
   atomicWriteJson(OUT_PATH, {
     schema: 'rv.historical_setups_today.v1',
     generated_at: generatedAt,
+    target_market_date: dataAsOf,
+    data_asof: dataAsOf,
     source: {
       historical_insights_generated_at: latest?.generated_at || null,
+      page_core_target_market_date: pageCoreLatest?.target_market_date || null,
       page_core_scope_limited: Boolean(scopeIds),
       stats_source: statsSource,
       private_stats_scan_enabled: PRIVATE_STATS_ENABLED,
