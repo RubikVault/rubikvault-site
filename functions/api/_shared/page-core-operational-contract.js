@@ -135,6 +135,18 @@ export function pageCoreStrictOperationalReasons(row, { latest = null, freshness
   const primaryBlocker = String(row?.primary_blocker || '');
 
   const claimsNonOperational = row?.ui_banner_state !== 'all_systems_operational' && statusContractView !== 'operational';
+  // null_price: STOCK/ETF with last_close <= 0 cannot show operational state.
+  // INDEX exempt (some indices legitimately publish 0 baseline on settlement days).
+  // Provider-exception lane is the only documented escape: row.provider_exception_status
+  // === 'verified' means an upstream classification already accepted the gap.
+  const assetType = String(row?.meta?.asset_type || row?.asset_type || '').toUpperCase();
+  if (assetType && assetType !== 'INDEX') {
+    const lastClose = finiteNumber(marketStatsMin?.last_close ?? row?.last_close);
+    const providerExceptionVerified = String(row?.status_contract?.provider_exception_status || '').toLowerCase() === 'verified';
+    if ((lastClose === null || lastClose <= 0) && !providerExceptionVerified) {
+      addReason(reasons, 'null_price');
+    }
+  }
   if (row?.coverage?.ui_renderable !== true) addReason(reasons, 'ui_not_renderable');
   if (!marketStatsMin) {
     addReason(reasons, 'missing_market_stats_basis');
