@@ -1431,7 +1431,17 @@
         const el = document.getElementById('dyn-market-context');
         if (el) el.innerHTML = window._renderMarketContext();
       };
-      if (tkr !== 'SPY' && tkr !== 'QQQ') loadBenchmarks();
+      if (tkr !== 'SPY' && tkr !== 'QQQ') {
+        loadBenchmarks();
+      } else {
+        _mktCtx.loaded = false;
+        _mktCtx.loading = false;
+        _mktCtx.degraded = true;
+        _mktCtx.cacheUsed = false;
+        _mktCtx.errorReason = 'Market context unavailable for benchmark asset.';
+        const el = document.getElementById('dyn-market-context');
+        if (el) el.innerHTML = window._renderMarketContext();
+      }
 
       // Dynamic Strategic Rationale
       const narrativeSynthesis = _explanation.synthesis || _explanation.headline || '';

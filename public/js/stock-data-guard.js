@@ -93,6 +93,7 @@ function isVisibleModuleOnlyReason(reason) {
   const raw = String(reason || '').toLowerCase();
   return /model_coverage_incomplete|historical_profile|breakout_detail|visible_module|fundamentals|ui_banner_not_operational/.test(raw)
     || /provider_refresh_error|provider_no_target_row|refresh_report_missing_registry_entry/.test(raw)
+    || /insufficient_history|provider_insufficient_history/.test(raw)
     || /decision_not_operational|primary_blocker:decision_not_operational/.test(raw)
     || /bars_stale|freshness_(?:stale|expired|last_good)/.test(raw);
 }
