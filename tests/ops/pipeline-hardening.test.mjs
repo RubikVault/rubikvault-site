@@ -211,10 +211,17 @@ test('feature stock universe report is produced and copied despite report exclud
   )));
 });
 
-test('release gate UI proof uses preview-safe regional100 typed-state acceptance', () => {
+test('release gate UI proof defaults to release20 hard gate via github provider', () => {
   const gate = fs.readFileSync(path.join(ROOT, 'scripts/ops/release-gate-check.mjs'), 'utf8');
-  assert.match(gate, /RV_RELEASE_GATE_UI_PROOF_SAMPLE \|\| 'regional100'/);
-  assert.match(gate, /--accept-typed-degraded/);
+  // P.3 default sample is release20 (small, fast CI-runner hard gate).
+  assert.match(gate, /RV_RELEASE_GATE_UI_PROOF_SAMPLE \|\| 'release20'/);
+  // Hard mode is the new default; local Playwright kept as dev override.
+  assert.match(gate, /RV_RELEASE_GATE_UI_PROOF_MODE \|\| 'hard'/);
+  // Provider switch picks GHA path by default (NAS-side libatk regression fix).
+  assert.match(gate, /RV_RELEASE_GATE_UI_PROOF_PROVIDER \|\| 'github'/);
+  // The trigger script is the GHA dispatcher.
+  assert.match(gate, /scripts\/nas\/trigger-ui-proof-ci\.mjs/);
+  // Preview-deploy gate stays wired.
   assert.match(gate, /runUiProofGate\(previewDeploy\.deployment_url, 'preview'\)/);
 });
 

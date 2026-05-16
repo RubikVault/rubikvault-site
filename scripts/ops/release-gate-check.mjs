@@ -724,6 +724,42 @@ function checkManifestContract(bundleMeta) {
   return check;
 }
 
+// P.5 readDeployProofUi reads the latest UI proof envelope (preview or main)
+// to compose the `preview_proof` / `main_proof` blocks in the v2 deploy proof.
+// Falls back to null when the artifact isn't present yet (e.g. pre-deploy
+// bundle writes happen before either UI proof has been emitted).
+function readUiProofSummary(environment) {
+  const candidates = [
+    path.join(REPO_ROOT, `public/data/ops/ui-proof-release20-${environment}-latest.json`),
+    path.join(REPO_ROOT, `public/data/ops/ui-proof-regional100-${environment}-latest.json`),
+    path.join(REPO_ROOT, `public/data/ops/ui-proof-random200-${environment}-latest.json`),
+  ];
+  for (const candidate of candidates) {
+    try {
+      if (!fs.existsSync(candidate)) continue;
+      const doc = JSON.parse(fs.readFileSync(candidate, 'utf8'));
+      const envelope = doc.ui_proof_result || doc;
+      if (!envelope || envelope.schema !== 'rv.ui_proof_result.v1') continue;
+      return {
+        id: envelope.run_id || null,
+        status: envelope.status || null,
+        sample: envelope.sample || null,
+        expected_commit: envelope.expected_commit || null,
+        observed_commit: envelope.observed_commit || null,
+        target_market_date: envelope.target_market_date || null,
+        page_core_snapshot: envelope.page_core_snapshot || null,
+        ok: envelope.ok ?? null,
+        failed: envelope.failed ?? null,
+        runner_failure_reason: envelope.runner_failure_reason || null,
+        ci_provider: envelope.ci_provider || null,
+        ci_run_id: envelope.ci_run_id || null,
+        generated_at: envelope.generated_at || null,
+      };
+    } catch (_e) { /* swallow, try next candidate */ }
+  }
+  return null;
+}
+
 function writeDeployProof({
   deployedCommit,
   deploymentId = null,
@@ -741,17 +777,30 @@ function writeDeployProof({
   releaseReady = null,
   distHash = null,
   reusedPriorDeploy = false,
+  // P.5 v2-only fields. Caller can pass; we also fall back to local artifact reads.
+  branch = null,
+  environment = null,
+  pageCoreSnapshot = null,
+  previewProof = undefined,
+  mainProof = undefined,
 }) {
   const proofReleaseReady = releaseReady == null
     ? contractCheck !== 'failed'
     : Boolean(releaseReady);
+  const previewSummary = previewProof === undefined ? readUiProofSummary('preview') : previewProof;
+  const mainSummary = mainProof === undefined ? readUiProofSummary('main') : mainProof;
+  const browserValidated = Boolean(
+    previewSummary?.status === 'ok' && (mainSummary == null || mainSummary?.status === 'ok'),
+  );
   const proof = {
-    schema: 'rv_deploy_proof_v1',
+    schema: 'rv_deploy_proof_v2',
     deployed_commit: deployedCommit,
     deployment_id: deploymentId,
     deploy_id: deploymentId,
     deployment_url: deploymentUrl,
     deploy_url: deploymentUrl,
+    branch: branch || process.env.PAGES_DEPLOY_BRANCH || null,
+    environment: environment || (deploymentUrl && deploymentUrl.includes('rubikvault.com') ? 'main' : 'preview'),
     smokes,
     smokes_ok: smokesOk,
     custom_domain_smoke: customDomainSmoke,
@@ -763,16 +812,20 @@ function writeDeployProof({
     bundle_max_file_bytes: bundleMeta?.bundle_max_file_bytes ?? null,
     bundle_hash: bundleMeta?.bundle_hash ?? null,
     dist_hash: distHash,
+    page_core_snapshot: pageCoreSnapshot,
     reused_prior_deploy: Boolean(reusedPriorDeploy),
     contract_check: contractCheck ?? bundleMeta?.manifest_check ?? null,
     release_state_phase: releaseStatePhase,
     release_ready: proofReleaseReady,
     target_market_date: targetDate,
     target_date: targetDate,
+    preview_proof: previewSummary,
+    main_proof: mainSummary,
+    browser_validated: browserValidated,
   };
   writeJsonAtomic(DEPLOY_PROOF_PATH, proof);
   const publicProof = {
-    schema: 'rv_public_deploy_proof_v1',
+    schema: 'rv_public_deploy_proof_v2',
     generated_at: utcNow(),
     proof_mode: deploymentId ? 'post_deploy_local' : 'pre_deploy_bundle',
     git_commit_sha: deployedCommit,
@@ -780,6 +833,8 @@ function writeDeployProof({
     deploy_id: deploymentId,
     deployment_url: deploymentUrl,
     deploy_url: deploymentUrl,
+    branch: proof.branch,
+    environment: proof.environment,
     smokes_ok: smokesOk,
     custom_domain_smoke: customDomainSmoke,
     pages_dev_smoke: pagesDevSmoke,
@@ -794,6 +849,10 @@ function writeDeployProof({
     target_date: targetDate,
     requested_at: requestedAt,
     verified_at: verifiedAt,
+    page_core_snapshot: pageCoreSnapshot,
+    preview_proof: previewSummary,
+    main_proof: mainSummary,
+    browser_validated: browserValidated,
   };
   writeJsonAtomic(PUBLIC_DEPLOY_PROOF_PATH, publicProof);
   const distProofPath = path.join(DIST_DIR, 'data/status/deploy-proof-latest.json');
@@ -858,7 +917,10 @@ function deploymentIdFromUrl(url) {
 //   off            — skip entirely
 // Sample defaults to regional100; override via RV_RELEASE_GATE_UI_PROOF_SAMPLE.
 function runUiProofGate(targetUrl, label = 'deploy') {
-  const uiProofMode = String(process.env.RV_RELEASE_GATE_UI_PROOF_MODE || 'warn').toLowerCase();
+  // P.3 release-gate UI proof. Defaults shifted to GitHub-Actions provider with
+  // hard mode for the deploy chain. Local Playwright is dev-only override and
+  // stays warn-mode so a missing libatk on the host never blocks dev workflows.
+  const uiProofMode = String(process.env.RV_RELEASE_GATE_UI_PROOF_MODE || 'hard').toLowerCase();
   if (uiProofMode === 'off') {
     log(`Stock-analyzer UI proof against ${label} disabled via RV_RELEASE_GATE_UI_PROOF_MODE=off.`);
     return;
@@ -867,23 +929,45 @@ function runUiProofGate(targetUrl, label = 'deploy') {
     warn(`runUiProofGate(${label}): no URL provided, skipping.`);
     return;
   }
-  const sample = process.env.RV_RELEASE_GATE_UI_PROOF_SAMPLE || 'regional100';
-  log(`Running stock-analyzer UI proof against ${label} (sample=${sample}, mode=${uiProofMode})...`);
-  const proofRun = spawnSync(process.execPath, [
-    'scripts/validate/stock-analyzer-ui-random50-proof.mjs',
-    `--base-url=${targetUrl}`,
-    `--sample=${sample}`,
-    '--accept-typed-degraded',
-    '--max-failures=10',
-  ], { cwd: REPO_ROOT, encoding: 'utf8', timeout: 1_800_000, maxBuffer: 32 * 1024 * 1024 });
+  const sample = process.env.RV_RELEASE_GATE_UI_PROOF_SAMPLE || 'release20';
+  const provider = String(process.env.RV_RELEASE_GATE_UI_PROOF_PROVIDER || 'github').toLowerCase();
+  const environment = label.includes('preview') ? 'preview' : 'main';
+  log(`Running stock-analyzer UI proof against ${label} (provider=${provider}, sample=${sample}, mode=${uiProofMode}, env=${environment})...`);
+  let proofRun;
+  if (provider === 'github') {
+    // CI-side runner (P.1+P.2). NAS reads token from RV_GITHUB_TOKEN_PATH.
+    proofRun = spawnSync(process.execPath, [
+      'scripts/nas/trigger-ui-proof-ci.mjs',
+      `--base-url=${targetUrl}`,
+      `--sample=${sample}`,
+      `--environment=${environment}`,
+      '--max-failures=10',
+      `--target-market-date=${process.env.RV_TARGET_MARKET_DATE || ''}`,
+      `--expected-commit=${process.env.RV_UI_PROOF_EXPECTED_COMMIT || ''}`,
+    ], { cwd: REPO_ROOT, encoding: 'utf8', timeout: 1_800_000, maxBuffer: 32 * 1024 * 1024 });
+  } else {
+    // Local Playwright fallback (dev override). Honors the warn|hard env mode
+    // independently so a dev box without libatk doesn't break the gate flow.
+    proofRun = spawnSync(process.execPath, [
+      'scripts/validate/stock-analyzer-ui-random50-proof.mjs',
+      `--base-url=${targetUrl}`,
+      `--sample=${sample}`,
+      `--environment=${environment}`,
+      '--accept-typed-degraded',
+      '--max-failures=10',
+    ], { cwd: REPO_ROOT, encoding: 'utf8', timeout: 1_800_000, maxBuffer: 32 * 1024 * 1024 });
+  }
   if (proofRun.status === 0) {
-    log(`Stock-analyzer UI proof against ${label} passed.`);
+    log(`Stock-analyzer UI proof against ${label} passed (provider=${provider}).`);
     return;
   }
   const stderr = (proofRun.stderr || '').slice(-2000);
   const stdout = (proofRun.stdout || '').slice(-2000);
-  const summary = `UI proof against ${label} failed (exit=${proofRun.status ?? 'timeout'}). stdout-tail=${stdout} stderr-tail=${stderr}`;
-  if (uiProofMode === 'hard') fail(summary);
+  // Exit code 2 = runner_failed (infrastructure or token issue). Always hard
+  // fail: warn-mode would mask a config regression that pretends UI is OK.
+  const runnerFailed = proofRun.status === 2;
+  const summary = `UI proof against ${label} ${runnerFailed ? 'runner_failed' : 'failed'} (exit=${proofRun.status ?? 'timeout'}, provider=${provider}). stdout-tail=${stdout} stderr-tail=${stderr}`;
+  if (runnerFailed || uiProofMode === 'hard') fail(summary);
   else warn(summary);
 }
 
