@@ -1207,6 +1207,17 @@ function buildPageCoreRow({ canonicalId, registryRow, decisionRow, lookupValue, 
   }
   const historicalProfileOperational = ['ready', 'available_via_endpoint', 'not_applicable'].includes(historicalProfileStatus);
   const modelCoverageOperational = ['complete', 'not_applicable', 'typed_gap'].includes(modelCoverageStatus);
+  const decisionGradeReady = Boolean(
+    decisionOperational
+    && targetable
+    && historicalBasisOk
+    && freshnessOk
+    && keyLevelsReady
+    && historyContext.marketStatsMin
+    && riskLevel
+    && riskLevel !== 'UNKNOWN'
+    && (modelAvailable >= 1 || ['not_applicable', 'typed_gap'].includes(modelCoverageStatus))
+  );
   const visibleModuleBlockers = [];
   if (!historicalProfileOperational) visibleModuleBlockers.push('historical_profile_not_ready');
   if (!modelCoverageOperational) visibleModuleBlockers.push('model_coverage_incomplete');
@@ -1312,6 +1323,7 @@ function buildPageCoreRow({ canonicalId, registryRow, decisionRow, lookupValue, 
       scientific_status: modelStates.scientific.status,
       model_coverage_status: modelCoverageStatus,
       warning_reasons: uniqueStrings([...moduleWarnings]),
+      decision_grade_ready: decisionGradeReady,
       visible_modules_operational: visibleModulesOperational,
       stock_detail_view_status: uiBannerState === 'all_systems_operational' ? 'operational' : 'degraded',
       strict_operational: uiBannerState === 'all_systems_operational',

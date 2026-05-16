@@ -30,17 +30,17 @@
     "dedup_by": ["isin", "underlying_index"],
     "max_count": 200,
     "include_categories": ["broad_market", "sector_us", "sector_eu", "country", "factor_value", "factor_momentum", "treasuries_long", "treasuries_short", "gold", "broad_commodities"],
-    "regional_minimums": { "US": 3, "EU": 3, "ASIA": 3 }
+    "regional_minimums": { "US": 18, "EU": 6, "ASIA": 20 }
   },
   "index_assets": {
     "policy": "registry_index_assets_with_configured_benchmarks",
     "max_count": 50,
     "min_bars": 60,
-    "regional_minimums": { "US": 2, "EU": 2, "ASIA": 2 },
+    "regional_minimums": { "US": 4, "EU": 2, "ASIA": 2 },
     "synthetic_from_indices": {
       "enabled": true,
       "regions": ["US"],
-      "max_assets": 2,
+      "max_assets": 4,
       "min_bars": 200,
       "from_date": "2010-01-01"
     }

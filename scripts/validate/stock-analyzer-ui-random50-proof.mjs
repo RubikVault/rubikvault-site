@@ -16,6 +16,7 @@ const ROOT = path.resolve(new URL('.', import.meta.url).pathname, '../..');
 const DEFAULT_REPORT_PATH = path.join(ROOT, 'public/data/reports/stock-analyzer-ui-random50-proof-latest.json');
 const REGIONAL30_REPORT_PATH = path.join(ROOT, 'public/data/reports/stock-analyzer-ui-regional30-proof-latest.json');
 const REGIONAL100_REPORT_PATH = path.join(ROOT, 'public/data/reports/stock-analyzer-ui-regional100-proof-latest.json');
+const RANDOM200_REPORT_PATH = path.join(ROOT, 'public/data/reports/stock-analyzer-ui-random200-proof-latest.json');
 const CLASS90_REPORT_PATH = path.join(ROOT, 'public/data/reports/stock-analyzer-ui-class90-proof-latest.json');
 const CLASS160_REPORT_PATH = path.join(ROOT, 'public/data/reports/stock-analyzer-ui-class160-proof-latest.json');
 const REGISTRY_PATH = path.join(ROOT, 'public/data/universe/v7/registry/registry.ndjson.gz');
@@ -34,6 +35,11 @@ const REGIONAL100_REQUIRED = Object.freeze({
   US: Object.freeze({ INDEX: 2, ETF: 9, STOCK: 23 }),
   EU: Object.freeze({ INDEX: 10, ETF: 3, STOCK: 20 }),
   ASIA: Object.freeze({ INDEX: 5, ETF: 10, STOCK: 18 }),
+});
+const RANDOM200_REQUIRED = Object.freeze({
+  US: Object.freeze({ INDEX: 4, ETF: 18, STOCK: 46 }),
+  EU: Object.freeze({ INDEX: 20, ETF: 6, STOCK: 40 }),
+  ASIA: Object.freeze({ INDEX: 10, ETF: 20, STOCK: 36 }),
 });
 const EUROPE_COUNTRIES = new Set([
   'AUSTRIA',
@@ -91,7 +97,7 @@ function cliBool(name, fallback = false) {
 
 const SAMPLE_SIZE = Number(cliValue('sample-size') || process.env.RV_STOCK_ANALYZER_UI_PROOF_SAMPLE_SIZE || 0);
 const SAMPLE_MODE_REQUESTED = cliValue('sample') || cliValue('mode') || process.env.RV_STOCK_ANALYZER_UI_PROOF_SAMPLE || '';
-const SAMPLE_MODE = String(SAMPLE_MODE_REQUESTED || (SAMPLE_SIZE === 100 ? 'regional100' : 'random50')).trim().toLowerCase();
+const SAMPLE_MODE = String(SAMPLE_MODE_REQUESTED || (SAMPLE_SIZE === 200 ? 'random200' : SAMPLE_SIZE === 100 ? 'regional100' : 'random50')).trim().toLowerCase();
 const ACCEPT_TYPED_DEGRADED = cliBool('accept-typed-degraded', false);
 const REPORT_PATH = path.resolve(
   ROOT,
@@ -101,11 +107,13 @@ const REPORT_PATH = path.resolve(
       ? REGIONAL30_REPORT_PATH
       : SAMPLE_MODE === 'regional100'
         ? REGIONAL100_REPORT_PATH
-        : SAMPLE_MODE === 'class90'
-          ? CLASS90_REPORT_PATH
-          : SAMPLE_MODE === 'class160'
-            ? CLASS160_REPORT_PATH
-            : DEFAULT_REPORT_PATH),
+        : SAMPLE_MODE === 'random200'
+          ? RANDOM200_REPORT_PATH
+          : SAMPLE_MODE === 'class90'
+            ? CLASS90_REPORT_PATH
+            : SAMPLE_MODE === 'class160'
+              ? CLASS160_REPORT_PATH
+              : DEFAULT_REPORT_PATH),
 );
 
 function readJson(filePath) {
@@ -307,6 +315,19 @@ function buildRegional100Sample({ seed, rows }) {
   return { required: REGIONAL100_REQUIRED, availability, selected };
 }
 
+function buildRandom200Sample({ seed, rows }) {
+  const selected = [];
+  const availability = regionClassCounts(rows);
+  for (const [region, byClass] of Object.entries(RANDOM200_REQUIRED)) {
+    for (const [assetClass, count] of Object.entries(byClass)) {
+      const pool = rows.filter((row) => row.region === region && row.asset_class === assetClass);
+      if (pool.length < count) throw new Error(`RANDOM200_POOL_TOO_SMALL:${region}:${assetClass}:${pool.length}:${count}`);
+      selected.push(...deterministicPick(pool, count, `${seed}:random200:${region}:${assetClass}`));
+    }
+  }
+  return { required: RANDOM200_REQUIRED, availability, selected };
+}
+
 function buildGlobal50Sample({ seed, rows }) {
   const selected = [];
   const availability = {};
@@ -353,16 +374,18 @@ function buildSample({ seed, mode }) {
     .filter(Boolean)
     .filter((row) => !pageCoreIds || pageCoreIds.has(row.canonical_id));
 
-  const sample = mode === 'regional30'
-    ? buildRegional30Sample({ seed, rows })
-    : mode === 'regional100'
-      ? buildRegional100Sample({ seed, rows })
-      : mode === 'class90'
-        ? buildClass90Sample({ seed, rows })
-        : mode === 'class160'
-          ? buildClass160Sample({ seed, rows })
-        : buildGlobal50Sample({ seed, rows });
+  const sample = buildSampleFromRows({ seed, rows, mode });
   return { latest, pageCoreIds: pageCoreIds?.size || null, ...sample };
+}
+
+function buildSampleFromRows({ seed, rows, mode }) {
+  if (mode === 'regional30') return buildRegional30Sample({ seed, rows });
+  if (mode === 'regional100') return buildRegional100Sample({ seed, rows });
+  if (mode === 'random200') return buildRandom200Sample({ seed, rows });
+  if (mode === 'class90') return buildClass90Sample({ seed, rows });
+  if (mode === 'class160') return buildClass160Sample({ seed, rows });
+  if (mode === 'random50') return buildGlobal50Sample({ seed, rows });
+  throw new Error(`UNSUPPORTED_SAMPLE_MODE:${mode}`);
 }
 
 async function fetchMaybeGzipJson(url) {
@@ -412,15 +435,7 @@ async function buildRemotePageCoreSample({ baseUrl, seed, mode }) {
       if (normalized) rows.push(normalized);
     }
   }
-  const sample = mode === 'regional30'
-    ? buildRegional30Sample({ seed, rows })
-    : mode === 'regional100'
-      ? buildRegional100Sample({ seed, rows })
-      : mode === 'class90'
-        ? buildClass90Sample({ seed, rows })
-        : mode === 'class160'
-          ? buildClass160Sample({ seed, rows })
-        : buildGlobal50Sample({ seed, rows });
+  const sample = buildSampleFromRows({ seed, rows, mode });
   return { latest, pageCoreIds: rows.length, ...sample };
 }
 
@@ -634,7 +649,25 @@ async function validateAsset({ browser, baseUrl, asset, targetMarketDate, latest
     result.assertions.decision_basis_visible = /Decision Basis|Why not now|Conditional BUY|Analysis incomplete/i.test(bodyText);
     result.assertions.reliability_visible = /Reliability|Analysis reliability/i.test(bodyText);
     result.assertions.horizons_visible = /Short/i.test(bodyText) && /Mid|Medium/i.test(bodyText) && /Long/i.test(bodyText);
+    result.assertions.horizon_cards_populated = /Entry ready|Entry wait|Up bias|Pool limited|Pending setup|Insufficient history/i.test(bodyText);
     result.assertions.system_status_visible = /System Status|System:\s*(?:OK|Blocked|Failed)|All Systems Operational|Analysis degraded|Analysis incomplete|System attention required/i.test(bodyText);
+    result.assertions.status_pills_populated = /Models:\s*(?:\d+\/\d+|N\/A)/i.test(bodyText)
+      && /History:\s*(?:fresh|delayed|stale|\d)/i.test(bodyText)
+      && /Reliability/i.test(bodyText)
+      && /Tail risk/i.test(bodyText)
+      && /Fundamentals/i.test(bodyText);
+    result.assertions.technical_vitality_populated = /Technical Vitality/i.test(bodyText)
+      && /RSI/i.test(bodyText)
+      && /Bollinger|%B/i.test(bodyText)
+      && /ATR/i.test(bodyText)
+      && /Final Risk|Risk regime|Risk:/i.test(bodyText);
+    result.assertions.narrative_key_levels_populated = /Narrative & Key Levels/i.test(bodyText)
+      && /Catalysts/i.test(bodyText)
+      && /Market Context/i.test(bodyText)
+      && /Key Levels/i.test(bodyText)
+      && (/\$\d+(?:\.\d+)?/.test(bodyText) || /awaiting coherent price stack|key levels unavailable/i.test(bodyText));
+    result.assertions.historical_research_visible = /Historical Research|Historical research insights|Historical Performance|Validated/i.test(bodyText);
+    result.assertions.no_red_data_issue_or_global_outage = !/System Status:\s*(?:DATA ISSUE|GLOBAL OUTAGE)|\bDATA_ISSUE\b|\bGLOBAL_OUTAGE\b/i.test(bodyText);
     result.assertions.no_false_green_for_missing_historical_profile = !strictReasons.includes('historical_profile_not_ready')
       || !/All Systems Operational/i.test(bodyText);
     result.assertions.no_false_green_for_missing_model_coverage = !strictReasons.includes('model_coverage_incomplete')
@@ -682,7 +715,7 @@ async function validateAsset({ browser, baseUrl, asset, targetMarketDate, latest
 }
 
 async function main() {
-  const seed = cliValue('seed') || process.env.RV_RANDOM50_SEED || new Date().toISOString().slice(0, 10);
+  const seed = cliValue('seed') || process.env.RV_RANDOM50_SEED || (SAMPLE_MODE === 'random200' ? '2026-05-16' : new Date().toISOString().slice(0, 10));
   const baseArg = cliValue('base-url') || process.env.RV_UI_PROOF_BASE_URL || '';
   let baseUrl = String(baseArg || '').replace(/\/+$/, '');
   let server = null;
@@ -769,11 +802,13 @@ async function main() {
         ? 'rv.stock_analyzer_ui_regional30_proof.v1'
         : SAMPLE_MODE === 'regional100'
           ? 'rv.stock_analyzer_ui_regional100_proof.v1'
-          : SAMPLE_MODE === 'class90'
-            ? 'rv.stock_analyzer_ui_class90_proof.v1'
-            : SAMPLE_MODE === 'class160'
-              ? 'rv.stock_analyzer_ui_class160_proof.v1'
-            : 'rv.stock_analyzer_ui_random50_proof.v1',
+          : SAMPLE_MODE === 'random200'
+            ? 'rv.stock_analyzer_ui_random200_proof.v1'
+            : SAMPLE_MODE === 'class90'
+              ? 'rv.stock_analyzer_ui_class90_proof.v1'
+              : SAMPLE_MODE === 'class160'
+                ? 'rv.stock_analyzer_ui_class160_proof.v1'
+                : 'rv.stock_analyzer_ui_random50_proof.v1',
       generated_at: new Date().toISOString(),
       status: failedResults.length === 0 && globalAssertionsPassed ? 'OK' : 'FAILED',
       sample_mode: SAMPLE_MODE,

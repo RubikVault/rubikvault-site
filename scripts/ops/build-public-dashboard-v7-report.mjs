@@ -32,8 +32,10 @@ const PATHS = {
   random20: 'public/data/reports/stock-decision-core-ui-random20-latest.json',
   random50: 'public/data/reports/stock-analyzer-ui-random50-proof-latest.json',
   regional30: 'public/data/reports/stock-analyzer-ui-regional30-proof-latest.json',
+  random200: 'public/data/reports/stock-analyzer-ui-random200-proof-latest.json',
   frontpageProof: 'public/data/reports/frontpage-best-setups-ui-proof-latest.json',
   bestSetups: 'public/data/snapshots/best-setups-v4.json',
+  featureStockUniverse: 'public/data/universe/v7/ssot/feature_stock_universe_report.json',
   moduleScorecard: 'public/data/status/decision-module-scorecard-latest.json',
 };
 
@@ -125,6 +127,17 @@ function compactUiProof(report) {
       eu_assets: finiteNumber(report?.eu_assets),
       asia_assets: finiteNumber(report?.asia_assets),
     },
+  };
+}
+
+function compactFeatureStockUniverse(report) {
+  return {
+    status: report ? 'OK' : 'UNKNOWN',
+    target_market_date: report?.target_market_date || null,
+    generated_at: report?.generated_at || null,
+    ssot_total: finiteNumber(report?.ssot_total),
+    by_region: report?.by_region || {},
+    by_class: report?.by_class || {},
   };
 }
 
@@ -262,9 +275,11 @@ function build() {
       random20: compactUiProof(readJson(PATHS.random20)),
       random50: compactUiProof(readJson(PATHS.random50)),
       regional30: compactUiProof(readJson(PATHS.regional30)),
+      random200: compactUiProof(readJson(PATHS.random200)),
       frontpage_best_setups: compactUiProof(readJson(PATHS.frontpageProof)),
     },
     best_setups: compactBestSetups(readJson(PATHS.bestSetups)),
+    feature_stock_universe: compactFeatureStockUniverse(readJson(PATHS.featureStockUniverse)),
     pipeline: {
       stage_health: compactStages(stageHealth),
       watchdog: {

@@ -127,6 +127,9 @@ const DECISION_CORE_PUBLIC_PROOF_REPORTS = [
   'data/reports/decision-core-buy-breadth-latest.json',
   'data/reports/stock-decision-core-ui-buy-breadth-latest.json',
   'data/reports/stock-decision-core-ui-random20-latest.json',
+  'data/reports/stock-analyzer-ui-random50-proof-latest.json',
+  'data/reports/stock-analyzer-ui-regional30-proof-latest.json',
+  'data/reports/stock-analyzer-ui-random200-proof-latest.json',
   'data/reports/frontpage-best-setups-ui-proof-latest.json',
   'data/reports/decision-core-historical-replay-latest.json',
   'data/reports/decision-core-outcome-bootstrap-latest.json',
@@ -371,6 +374,7 @@ function publicDashboardHtml() {
         row('Disk free GB', p.disk.free_gb),
         row('EODHD budget used', p.eodhd_budget.used_pct == null ? 'n/a' : p.eodhd_budget.used_pct + '%'),
         row('Bundle preflight', p.cloudflare_bundle.status),
+        row('Feature universe', (d.feature_stock_universe?.ssot_total ?? 'n/a') + ' · ' + (d.feature_stock_universe?.target_market_date ?? 'n/a'), d.feature_stock_universe?.status),
         row('Stale actionable inputs', p.stale_data.actionable_stale_input_count),
         row('Reason-code drift', p.reason_code_drift.status),
         row('Connectivity', p.connectivity.status)
@@ -381,6 +385,7 @@ function publicDashboardHtml() {
         row('Random20 UI', u.random20.status),
         row('Random50 UI', u.random50.status),
         row('Regional30 UI', u.regional30.status),
+        row('Random200 UI', u.random200?.status),
         row('Frontpage analyzer proof', u.frontpage_best_setups.status),
         row('Frontpage pages OK', (u.frontpage_best_setups.counts?.ok ?? 'n/a') + ' / ' + (u.frontpage_best_setups.counts?.unique_analyzer_pages ?? u.frontpage_best_setups.counts?.total ?? 'n/a')),
         row('No stale actionable BUY', p.stale_data.stale_actionable_buy_forbidden ? 'YES' : 'NO', p.stale_data.stale_actionable_buy_forbidden ? 'OK' : 'FAIL')

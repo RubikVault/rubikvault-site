@@ -87,21 +87,34 @@ function bestSetupCanonicalIds() {
 }
 
 // Producer-honest demotion: a DISPLAY-target shortfall is only warn-eligible when
-// best-setups explicitly admits via meta.pool_limited_reason that it filtered/
-// capped rows for a real reason. When every reason is 'none', best-setups should
-// have surfaced the full pool, so a shortfall is a producer/UI bug — stay fail.
-function bestSetupsAcknowledgesPoolLimit(meta) {
-  const reasons = meta?.pool_limited_reason;
-  if (!reasons || typeof reasons !== 'object') return false;
-  for (const klass of Object.keys(reasons)) {
-    const byHorizon = reasons[klass];
-    if (!byHorizon || typeof byHorizon !== 'object') continue;
-    for (const horizon of Object.keys(byHorizon)) {
-      const reason = byHorizon[horizon];
-      if (reason && reason !== 'none') return true;
+// best-setups explicitly records candidate_pool_limited for the same region and
+// horizon. Otherwise shortfall stays a producer/UI bug and remains a hard fail.
+function bestSetupsPoolLimitEvidence(meta, target = 10) {
+  const evidence = [];
+  const byRegion = {};
+  const regionDiagnostics = meta?.horizon_diagnostics?.by_region || {};
+  for (const region of ['US', 'EU', 'ASIA']) {
+    const diag = regionDiagnostics?.[region] || {};
+    const reasons = diag.pool_limited_reason || {};
+    const pools = diag.candidate_pool_size || {};
+    const selected = diag.selected_count || {};
+    for (const klass of Object.keys(reasons)) {
+      const byHorizon = reasons[klass];
+      if (!byHorizon || typeof byHorizon !== 'object') continue;
+      for (const horizon of Object.keys(byHorizon)) {
+        const reason = byHorizon[horizon];
+        const pool = Number(pools?.[klass]?.[horizon] || 0);
+        const count = Number(selected?.[klass]?.[horizon] || 0);
+        if (reason === 'candidate_pool_limited' && pool < target && count === Math.min(target, pool)) {
+          const item = { region, asset_class_bucket: klass, horizon, pool, selected: count, target, reason };
+          evidence.push(item);
+          byRegion[region] ||= [];
+          byRegion[region].push(item);
+        }
+      }
     }
   }
-  return false;
+  return { eligible: evidence.length > 0, byRegion, evidence };
 }
 
 const DISPLAY_BELOW_TARGET_CODES = new Set([
@@ -109,6 +122,11 @@ const DISPLAY_BELOW_TARGET_CODES = new Set([
   'BUY_BREADTH_EU_DISPLAY_BELOW_TARGET',
   'BUY_BREADTH_ASIA_DISPLAY_BELOW_TARGET',
 ]);
+const DISPLAY_CODE_REGION = Object.freeze({
+  BUY_BREADTH_US_DISPLAY_BELOW_TARGET: 'US',
+  BUY_BREADTH_EU_DISPLAY_BELOW_TARGET: 'EU',
+  BUY_BREADTH_ASIA_DISPLAY_BELOW_TARGET: 'ASIA',
+});
 
 function currentScopeCanonicalIds() {
   const doc = readJsonMaybe(CURRENT_SCOPE_IDS_PATH);
@@ -276,16 +294,6 @@ export function buildBuyBreadthProof({ root = path.join(DECISION_CORE_PUBLIC_ROO
   ];
   const failures = [];
   const warnings = [];
-  // Producers' meta governs whether a DISPLAY shortfall is honestly pool-limited
-  // (warn-eligible) or a real producer/UI gap (must stay a hard failure).
-  const poolLimitAcknowledged = bestSetupsAcknowledgesPoolLimit(best.meta);
-  const pushFailure = (code) => {
-    if (DISPLAY_BELOW_TARGET_CODES.has(code) && poolLimitAcknowledged) {
-      warnings.push(code);
-    } else {
-      failures.push(code);
-    }
-  };
   // Preserve the old global-target numbers in the output schema so consumers that
   // still look at .available_region_target / .display_region_target keep working.
   const availableRegionTarget = positiveIntEnv('RV_BUY_BREADTH_AVAILABLE_REGION_TARGET', 10);
@@ -295,6 +303,18 @@ export function buildBuyBreadthProof({ root = path.join(DECISION_CORE_PUBLIC_ROO
     availableEu: availableEu.length,
     availableAsia: availableAsia.length,
   });
+  // Producers' meta governs whether a DISPLAY shortfall is honestly pool-limited
+  // (warn-eligible) or a real producer/UI gap (must stay a hard failure).
+  const poolLimit = bestSetupsPoolLimitEvidence(best.meta, displayRegionTarget);
+  const poolLimitAcknowledged = poolLimit.eligible;
+  const pushFailure = (code) => {
+    const region = DISPLAY_CODE_REGION[code];
+    if (DISPLAY_BELOW_TARGET_CODES.has(code) && region && (poolLimit.byRegion[region] || []).length > 0) {
+      warnings.push(code);
+    } else {
+      failures.push(code);
+    }
+  };
   if (availableRegionTargets.US <= 0) failures.push('BUY_BREADTH_US_NONE_AVAILABLE');
   else if (availableUs.length < availableRegionTargets.US) failures.push('BUY_BREADTH_US_AVAILABLE_BELOW_TARGET');
   if (availableRegionTargets.EU <= 0) failures.push('BUY_BREADTH_EU_NONE_AVAILABLE');
@@ -343,6 +363,7 @@ export function buildBuyBreadthProof({ root = path.join(DECISION_CORE_PUBLIC_ROO
     warnings,
     warning_reason: warnings[0] || null,
     best_setups_pool_limit_acknowledged: poolLimitAcknowledged,
+    best_setups_pool_limit_evidence: poolLimit.evidence,
   };
 }
 

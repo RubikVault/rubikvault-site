@@ -1173,7 +1173,6 @@ lane_steps() {
       code_manifest_guard \
       lock_policy_report \
       build_global_scope \
-      feature_stock_universe_report \
       provider_health_preflight \
       market_data_refresh \
       q1_delta_ingest \
@@ -1194,6 +1193,7 @@ lane_steps() {
       decision_core_outcome_bootstrap \
       snapshot \
       page_core_bundle \
+      feature_stock_universe_report \
       best_setups_core \
       classifier_audit \
       ops_health_reports \
@@ -1228,6 +1228,7 @@ lane_steps() {
       page_core_smoke \
       classifier_audit \
       ops_health_reports \
+      feature_stock_universe_report \
       final_integrity_seal \
       system_status_report \
       system_status_aggregator \

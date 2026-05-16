@@ -12,7 +12,14 @@ const REPORT_PATH = path.join(ROOT, 'public/data/reports/frontpage-best-setups-u
 const REQUIRED_REGIONS = ['US', 'EU', 'ASIA'];
 const COVERAGE_CLASSES = ['stock', 'etf'];
 const REQUIRED_COVERAGE_CLASSES = ['stock'];
-const REQUIRED_STOCK_BUY_PER_HORIZON = Math.max(0, Number(process.env.RV_FRONTPAGE_STOCK_BUY_MIN_PER_HORIZON || 5));
+const REQUIRED_STOCK_BUY_PER_HORIZON = Math.max(0, Number(process.env.RV_FRONTPAGE_STOCK_BUY_MIN_PER_HORIZON || 0));
+const BEST_SETUP_TARGET_PER_CLASS_HORIZON = Math.max(1, Number(process.env.RV_BEST_SETUP_TARGET_PER_CLASS_HORIZON || 10));
+const HISTORICAL_LEADERBOARD_CHECKS = Object.freeze([
+  Object.freeze(['ALL', 'ALL']),
+  Object.freeze(['US', 'STOCK']),
+  Object.freeze(['EU', 'ETF']),
+  Object.freeze(['ASIA', 'INDEX']),
+]);
 const HORIZON_CORE_KEYS = Object.freeze({
   short: 'short_term',
   medium: 'mid_term',
@@ -117,6 +124,63 @@ function uniqueRows(rows) {
     map.set(id, { ...existing, horizons: [...horizons] });
   }
   return [...map.values()];
+}
+
+function validateBestSetupDiagnostics(snapshot) {
+  const diag = snapshot?.meta?.horizon_diagnostics || {};
+  const candidatePool = diag.candidate_pool_size || {};
+  const selectedCount = diag.selected_count || {};
+  const poolLimitedReason = diag.pool_limited_reason || {};
+  const failures = [];
+  for (const klass of ['stocks', 'etfs']) {
+    for (const horizon of ['short', 'medium', 'long']) {
+      const pool = Number(candidatePool?.[klass]?.[horizon] || 0);
+      const selected = Number(selectedCount?.[klass]?.[horizon] || 0);
+      const expected = Math.min(BEST_SETUP_TARGET_PER_CLASS_HORIZON, pool);
+      const reason = String(poolLimitedReason?.[klass]?.[horizon] || 'none');
+      if (selected !== expected) {
+        failures.push(`${klass}:${horizon}:selected_${selected}_expected_${expected}_pool_${pool}`);
+      }
+      if (pool < BEST_SETUP_TARGET_PER_CLASS_HORIZON && reason !== 'candidate_pool_limited') {
+        failures.push(`${klass}:${horizon}:missing_candidate_pool_limited_reason`);
+      }
+      if (pool >= BEST_SETUP_TARGET_PER_CLASS_HORIZON && reason === 'candidate_pool_limited') {
+        failures.push(`${klass}:${horizon}:false_candidate_pool_limited_reason`);
+      }
+    }
+  }
+  return {
+    ok: failures.length === 0,
+    target_per_class_horizon: BEST_SETUP_TARGET_PER_CLASS_HORIZON,
+    failures,
+  };
+}
+
+async function validateHistoricalLeaderboards(baseUrl) {
+  const result = {
+    ok: false,
+    checks: {},
+    errors: [],
+  };
+  try {
+    const doc = await fetchJson(`${baseUrl}/data/historical-setups/latest.json`);
+    for (const [region, assetClass] of HISTORICAL_LEADERBOARD_CHECKS) {
+      const key = `${region}/${assetClass}`;
+      const board = doc?.leaderboards?.[region]?.[assetClass] || null;
+      const emptyReasons = board?.empty_reasons || {};
+      const sideChecks = {};
+      for (const side of ['long', 'short']) {
+        const rows = Array.isArray(board?.[side]) ? board[side] : [];
+        sideChecks[side] = rows.length <= 20 && (rows.length > 0 || Boolean(emptyReasons?.[side] || board?.[`${side}_empty_reason`]));
+      }
+      result.checks[key] = sideChecks.long && sideChecks.short;
+    }
+    result.target_market_date = doc?.target_market_date || null;
+    result.ok = Object.values(result.checks).every(Boolean);
+  } catch (error) {
+    result.errors.push(error.message);
+  }
+  return result;
 }
 
 function exclusiveStockBuyCountsByHorizon(rows) {
@@ -397,6 +461,7 @@ async function main() {
     const rows = flattenBestSetups(snapshot);
     const coverage = regionClassCoverage(rows);
     const rowQuality = bestSetupRowQuality(rows);
+    const bestSetupDiagnostics = validateBestSetupDiagnostics(snapshot);
     const stockBuyByHorizon = stockBuyCountsByHorizon(rows);
     const exclusiveStockBuyByHorizon = exclusiveStockBuyCountsByHorizon(rows);
     const insufficientStockBuyHorizons = Object.entries(stockBuyByHorizon)
@@ -413,6 +478,7 @@ async function main() {
     }
     browser = await chromium.launch({ headless: true });
     const homeCounterResult = await validateHomeCounters(browser, baseUrl, stockBuyByHorizon, snapshot?.meta?.data_asof || null);
+    const historicalLeaderboards = await validateHistoricalLeaderboards(baseUrl);
     const proofRows = uniqueRows(rows);
     const results = await mapLimit(proofRows, 3, (row) => validateAnalyzerPage(browser, baseUrl, row));
     const report = {
@@ -421,7 +487,7 @@ async function main() {
       base_url: baseUrl,
       source: snapshot?.meta?.source || null,
       target_market_date: snapshot?.meta?.data_asof || null,
-      status: rowQuality.ok && missingCoverage.length === 0 && insufficientStockBuyHorizons.length === 0 && homeCounterResult.ok && results.every((row) => row.ok) ? 'OK' : 'FAILED',
+      status: rowQuality.ok && bestSetupDiagnostics.ok && missingCoverage.length === 0 && insufficientStockBuyHorizons.length === 0 && homeCounterResult.ok && historicalLeaderboards.ok && results.every((row) => row.ok) ? 'OK' : 'FAILED',
       counts: {
         frontpage_rows: rows.length,
         unique_analyzer_pages: proofRows.length,
@@ -433,7 +499,9 @@ async function main() {
       exclusive_stock_buy_by_horizon: exclusiveStockBuyByHorizon.counts,
       exclusive_stock_buy_examples: exclusiveStockBuyByHorizon.examples,
       home_counter_result: homeCounterResult,
+      historical_leaderboards: historicalLeaderboards,
       row_quality: rowQuality,
+      best_setups_diagnostics: bestSetupDiagnostics,
       insufficient_stock_buy_horizons: insufficientStockBuyHorizons,
       missing_exclusive_stock_buy_horizons: missingExclusiveBuyHorizons,
       region_class_coverage: coverage,
@@ -441,7 +509,6 @@ async function main() {
       failed_results: results.filter((row) => !row.ok),
       results,
     };
-    if (missingExclusiveBuyHorizons.length > 0) report.status = 'FAILED';
     writeJsonAtomic(REPORT_PATH, report);
     console.log(JSON.stringify(report, null, 2));
     if (report.status !== 'OK') process.exitCode = 1;

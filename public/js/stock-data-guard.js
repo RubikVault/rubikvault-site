@@ -139,6 +139,13 @@ function collectTypedModuleReasons(payload) {
   return unique(out);
 }
 
+function isDecisionGradeModelNotice(reason) {
+  const raw = String(reason || '').toLowerCase();
+  return /^(forecast|scientific|quantlab)_(stale|unavailable|not_ready|not_applicable)$/.test(raw)
+    || /forecast_training_stale|projection_missing|entry_missing|model_coverage_(?:incomplete|unavailable)/.test(raw)
+    || /(scientific|quantlab|forecast).*_(projection_missing|entry_missing|not_applicable|stale|unavailable)/.test(raw);
+}
+
 function field(value, status = 'VALID', reason = null, usedInDecision = false, asOf = null) {
   return { value, status, reason, usedInDecision, asOf };
 }
@@ -206,6 +213,10 @@ function chartContractStatus(payload) {
 
 export function buildUiIntegrity(payload, { ticker = null, priceStack = null } = {}) {
   const data = payload?.data || {};
+  const contract = data?.ssot?.page_core?.status_contract
+    || data?.page_core_contract?.status_contract
+    || payload?.page_core_contract?.status_contract
+    || {};
   const stats = data.market_stats?.stats || {};
   const prices = data.market_prices || {};
   const change = data.change || {};
@@ -247,6 +258,10 @@ export function buildUiIntegrity(payload, { ticker = null, priceStack = null } =
     : field(null, 'BLOCK', decisionBlockingReasons[0] || 'decision contract failed', true, priceAsOf);
 
   const typedModuleReasons = collectTypedModuleReasons(payload);
+  const decisionGradeReady = contract?.decision_grade_ready === true;
+  const surfacedTypedModuleReasons = decisionGradeReady
+    ? typedModuleReasons.filter((reason) => !isDecisionGradeModelNotice(reason))
+    : typedModuleReasons;
   const decisionCritical = ['current_price', 'asset_return_1d', 'price_series', 'decision_contract'];
   const pageCritical = [...decisionCritical, 'chart'];
   const decisionBlocks = decisionCritical.filter((key) => fields[key]?.status === 'BLOCK');
@@ -265,16 +280,17 @@ export function buildUiIntegrity(payload, { ticker = null, priceStack = null } =
   return {
     fields,
     pageState,
-    severity: criticalBlocks.length ? 'critical' : (softCriticalBlocks.length || typedModuleReasons.length ? 'warning' : 'ok'),
+    severity: criticalBlocks.length ? 'critical' : (softCriticalBlocks.length || surfacedTypedModuleReasons.length ? 'warning' : 'ok'),
     dataQuality: pageState === 'OK' ? 'OK' : 'FAILED',
-    coverage: fields.chart.status === 'BLOCK' || fields.price_series.status === 'BLOCK' || typedModuleReasons.length ? 'PARTIAL' : 'FULL',
+    coverage: fields.chart.status === 'BLOCK' || fields.price_series.status === 'BLOCK' || surfacedTypedModuleReasons.length ? 'PARTIAL' : 'FULL',
     decisionReadiness: decisionBlocks.length ? 'UNAVAILABLE' : 'READY',
     flags: unique(flags),
     blockingReasons: unique(criticalBlocks.map((key) => fields[key]?.reason)),
     warningReasons: unique([
       ...softCriticalBlocks.map((key) => fields[key]?.reason),
-      ...typedModuleReasons,
+      ...surfacedTypedModuleReasons,
     ]),
+    informationalReasons: decisionGradeReady ? typedModuleReasons.filter(isDecisionGradeModelNotice) : [],
     issueCount: allBlocks.length,
   };
 }

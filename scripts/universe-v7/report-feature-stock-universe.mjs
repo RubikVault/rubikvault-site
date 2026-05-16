@@ -327,8 +327,8 @@ async function main() {
       elliott_effective_canonical: elliottEffectiveCanonical.size
     },
     classes: {
-      allowed_web_universe: ['STOCK', 'ETF', 'BOND'],
-      removed_from_web_universe: ['FUND', 'CRYPTO', 'FOREX', 'INDEX', 'OTHER'],
+      allowed_web_universe: ['STOCK', 'ETF', 'INDEX'],
+      removed_from_web_universe: ['FUND', 'CRYPTO', 'FOREX', 'BOND', 'OTHER'],
       by_type_norm: ssotByType
     },
     parity: {
