@@ -61,6 +61,21 @@ export RV_EODHD_HARD_DAILY_CAP="${RV_EODHD_HARD_DAILY_CAP:-90000}"
 export RV_MARKET_REFRESH_TIMEOUT_SEC="${RV_MARKET_REFRESH_TIMEOUT_SEC:-43200}"
 export RV_STOCK_UI_AUDIT_HARD_GATE="${RV_STOCK_UI_AUDIT_HARD_GATE:-1}"
 
+# P.2 GitHub Actions UI proof runner. Stores the token OUTSIDE the repo so it
+# is never committed. Default token path lives next to the EODHD env file in
+# the user's NAS home; override with RV_GITHUB_TOKEN_PATH for alternative
+# locations. trigger-ui-proof-ci.mjs reads it via either GITHUB_TOKEN (set
+# inline by the caller) or by reading the file at RV_GITHUB_TOKEN_PATH.
+export GITHUB_OWNER="${GITHUB_OWNER:-RubikVault}"
+export GITHUB_REPO="${GITHUB_REPO:-rubikvault-site}"
+export GITHUB_WORKFLOW="${GITHUB_WORKFLOW:-ui-proof.yml}"
+export RV_GITHUB_TOKEN_PATH="${RV_GITHUB_TOKEN_PATH:-/volume1/homes/neoboy/Dev/rubikvault-site/.env.github-token}"
+# Release-gate UI proof provider: github (CI) | local (Playwright on NAS).
+# Default to github since the NAS lacks libatk-1.0.so.0; local is dev-override.
+export RV_RELEASE_GATE_UI_PROOF_PROVIDER="${RV_RELEASE_GATE_UI_PROOF_PROVIDER:-github}"
+export RV_RELEASE_GATE_UI_PROOF_MODE="${RV_RELEASE_GATE_UI_PROOF_MODE:-hard}"
+export RV_RELEASE_GATE_UI_PROOF_SAMPLE="${RV_RELEASE_GATE_UI_PROOF_SAMPLE:-release20}"
+
 export NAS_RUNTIME_ROOT="${NAS_RUNTIME_ROOT:-$NAS_OPS_ROOT/runtime}"
 export NAS_LOCK_ROOT="${NAS_LOCK_ROOT:-$NAS_RUNTIME_ROOT/locks}"
 export NAS_REPORTS_ROOT="${NAS_REPORTS_ROOT:-$NAS_RUNTIME_ROOT/reports}"

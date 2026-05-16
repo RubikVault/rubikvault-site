@@ -1,0 +1,127 @@
+name: UI Proof (CI Runner)
+
+# P.1 CI-side Playwright runner for the stock-analyzer UI proof. Replaces the
+# NAS-side Playwright that breaks when libatk-1.0.so.0 is missing on Synology
+# DSM. Triggered by the NAS release-gate via workflow_dispatch (see
+# scripts/nas/trigger-ui-proof-ci.mjs). The result artifact is downloaded by
+# the trigger script and consumed by release-gate-check.mjs as the
+# browser-validation hard gate.
+
+on:
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: "Public URL of the candidate to validate (preview branch or rubikvault.com)"
+        type: string
+        required: true
+      sample:
+        description: "Sample mode"
+        type: choice
+        required: true
+        default: release20
+        options:
+          - release20
+          - regional100
+          - random200
+      expected_commit:
+        description: "Git SHA the runner must observe on the page-core artifact"
+        type: string
+        required: false
+      target_market_date:
+        description: "Expected target_market_date (YYYY-MM-DD)"
+        type: string
+        required: false
+      run_id_label:
+        description: "Caller-supplied run id (echoed in the result envelope)"
+        type: string
+        required: false
+      environment:
+        description: "Pages environment label"
+        type: choice
+        required: true
+        default: preview
+        options:
+          - preview
+          - main
+      max_failures:
+        description: "Max per-asset failures to enumerate"
+        type: string
+        required: false
+        default: "10"
+
+permissions:
+  contents: read
+
+jobs:
+  ui-proof:
+    name: Stock Analyzer UI Proof (${{ inputs.sample }} → ${{ inputs.environment }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - name: Install dependencies (production + playwright)
+        run: |
+          npm ci
+          # Install Chromium with all required system libs (libatk etc.)
+          npx --yes playwright install --with-deps chromium
+
+      - name: Run UI proof
+        id: run_proof
+        env:
+          RV_UI_PROOF_BASE_URL: ${{ inputs.base_url }}
+          RV_UI_PROOF_EXPECTED_COMMIT: ${{ inputs.expected_commit }}
+          RV_UI_PROOF_RUN_ID: ${{ inputs.run_id_label || github.run_id }}
+          RV_UI_PROOF_ENVIRONMENT: ${{ inputs.environment }}
+          RV_TARGET_MARKET_DATE: ${{ inputs.target_market_date }}
+          RV_STOCK_ANALYZER_UI_PROOF_SAMPLE: ${{ inputs.sample }}
+        run: |
+          set +e
+          node scripts/validate/stock-analyzer-ui-random50-proof.mjs \
+            --base-url="${{ inputs.base_url }}" \
+            --sample="${{ inputs.sample }}" \
+            --environment="${{ inputs.environment }}" \
+            --max-failures="${{ inputs.max_failures }}" \
+            --expected-commit="${{ inputs.expected_commit }}" \
+            --run-id="${{ inputs.run_id_label || github.run_id }}" \
+            --accept-typed-degraded
+          echo "proof_exit_code=$?" >> "$GITHUB_OUTPUT"
+
+      - name: Locate proof artifact
+        id: locate_artifact
+        if: always()
+        run: |
+          set -e
+          case "${{ inputs.sample }}" in
+            release20)   ARTIFACT_REL="public/data/reports/stock-analyzer-ui-release20-proof-latest.json" ;;
+            regional100) ARTIFACT_REL="public/data/reports/stock-analyzer-ui-regional100-proof-latest.json" ;;
+            random200)   ARTIFACT_REL="public/data/reports/stock-analyzer-ui-random200-proof-latest.json" ;;
+            *)           ARTIFACT_REL="public/data/reports/stock-analyzer-ui-random50-proof-latest.json" ;;
+          esac
+          if [[ ! -f "$ARTIFACT_REL" ]]; then
+            echo "::error::Proof artifact missing at $ARTIFACT_REL"
+            exit 1
+          fi
+          echo "artifact_path=$ARTIFACT_REL" >> "$GITHUB_OUTPUT"
+
+      - name: Upload proof artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ui-proof-${{ inputs.sample }}-${{ inputs.environment }}-${{ github.run_id }}
+          path: ${{ steps.locate_artifact.outputs.artifact_path }}
+          retention-days: 14
+
+      - name: Fail the job when the proof reports failure
+        if: always()
+        run: |
+          exit ${{ steps.run_proof.outputs.proof_exit_code }}
