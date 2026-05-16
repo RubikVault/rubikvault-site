@@ -93,3 +93,33 @@ test('historical research ranking supports SHORT edges from negative returns', (
   assert.match(projection, /CASE WHEN .* < 0 THEN 'SHORT' ELSE 'LONG' END/);
   assert.match(projection, /ABS\(\$\{rawSignedReturnExpr\}\) > 0/);
 });
+
+// P.7 historical SHORT guard: when no SHORT-side rows qualify for a given
+// region × asset_class filter, the leaderboard must surface a typed
+// `empty_reasons.short = 'no_qualified_edges'` instead of an empty array
+// without an explanation. This prevents the UI from rendering a silently
+// empty SHORT table, which would let a producer regression hide a real
+// coverage gap.
+test('historical leaderboards emit typed empty_reasons for empty SHORT slots', () => {
+  const builder = fs.readFileSync(path.join(ROOT, 'scripts/historical-insights/build-active-setups.mjs'), 'utf8');
+  // The builder must populate empty_reasons[side] whenever the slice is empty.
+  assert.match(builder, /empty_reasons\[side\] = 'no_qualified_edges'/);
+  // Negative public-projection edges feed SHORT rows — must keep the path live.
+  assert.match(builder, /direction\.toLowerCase\(\) === side/);
+  // Smoke: when the schema example renders no SHORT row, the empty_reasons
+  // key is required (validated against the schema). Reuse the schema we have.
+  const schema = JSON.parse(fs.readFileSync(path.join(ROOT, 'schemas/historical-setups-today.v1.json'), 'utf8'));
+  const ajv = new Ajv2020({ strict: false, allErrors: true });
+  const validate = ajv.compile(schema);
+  const payload = {
+    schema: 'rv.historical_setups_today.v1',
+    generated_at: '2026-05-15T07:00:00.000Z',
+    target_market_date: '2026-05-14',
+    data_asof: '2026-05-14',
+    regions: { US: { long: [], short: [] }, EU: { long: [], short: [] }, ASIA: { long: [], short: [] } },
+    leaderboards: {
+      ALL: { ALL: { long: [sampleSetup()], short: [], empty_reasons: { short: 'no_qualified_edges' } } },
+    },
+  };
+  assert.equal(validate(payload), true, JSON.stringify(validate.errors, null, 2));
+});

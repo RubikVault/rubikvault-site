@@ -5152,14 +5152,33 @@
           }
         }
       } catch(e) { console.error("Breakout manifest load failed:", e); }
+      // P.7 legacy-breakout guard: only consume breakout-all.json when it is
+      // explicitly fresh (within 7 days of today). Stale legacy data must
+      // surface as typed unavailable instead of silently rendering ancient
+      // STATE counts. Prevents the "Breakout 54 days old shown as live"
+      // regression that surfaced in the freshness audit.
       try {
         const res = await fetch('/data/snapshots/breakout-all.json');
         const legacy = await res.json();
-        breakoutData = {
-          ...(legacy || {}),
-          source: legacy?.source || 'legacy_breakout_snapshot',
-          items: Array.isArray(legacy?.items) ? legacy.items.map(normalizeHomeBreakoutItem) : []
-        };
+        const legacyAsOf = legacy?.target_market_date || legacy?.as_of || legacy?.generated_at || null;
+        const legacyDate = legacyAsOf ? new Date(legacyAsOf) : null;
+        const ageDays = legacyDate ? Math.floor((Date.now() - legacyDate.getTime()) / 86400000) : null;
+        const MAX_LEGACY_AGE_DAYS = 7;
+        if (legacyDate && ageDays != null && ageDays <= MAX_LEGACY_AGE_DAYS) {
+          breakoutData = {
+            ...(legacy || {}),
+            source: legacy?.source || 'legacy_breakout_snapshot',
+            items: Array.isArray(legacy?.items) ? legacy.items.map(normalizeHomeBreakoutItem) : []
+          };
+        } else {
+          breakoutData = {
+            source: 'legacy_breakout_snapshot_stale',
+            as_of: legacyAsOf,
+            stale_age_days: ageDays,
+            items: [],
+            empty_reason: 'breakout_legacy_snapshot_stale',
+          };
+        }
       } catch(e) { console.error("Snapshot load failed:", e); }
       return breakoutData;
     }
