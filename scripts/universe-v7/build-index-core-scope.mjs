@@ -621,7 +621,11 @@ async function resolveSyntheticIndexAssets(config, token, options = {}) {
   const toDate = syntheticIndexToDate();
   const rows = [];
   const diagnostics = [];
-  for (const def of config.indices || []) {
+  const defs = [
+    ...(Array.isArray(config.indices) ? config.indices : []),
+    ...(Array.isArray(settings.extra_indices) ? settings.extra_indices : []),
+  ];
+  for (const def of defs) {
     if (maxAssets > 0 && rows.length >= maxAssets) break;
     if (!regions.has(normalize(def.region))) continue;
     const canonicalId = syntheticIndexCanonicalId(def);

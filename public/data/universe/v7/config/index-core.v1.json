@@ -42,7 +42,10 @@
       "regions": ["US"],
       "max_assets": 4,
       "min_bars": 200,
-      "from_date": "2010-01-01"
+      "from_date": "2010-01-01",
+      "extra_indices": [
+        { "id": "nasdaq_composite", "eodhd": "IXIC.INDX", "region": "US", "label": "Nasdaq Composite" }
+      ]
     }
   },
   "extended_when_RV_INDEX_CORE_INCLUDE_EXTENDED": {

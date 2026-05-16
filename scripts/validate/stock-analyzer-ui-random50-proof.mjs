@@ -75,6 +75,7 @@ const ASIA_COUNTRIES = new Set([
   'AUSTRALIA',
 ]);
 const ASIA_EXCHANGES = new Set(['AU', 'BK', 'HK', 'JK', 'KO', 'KQ', 'KS', 'NSE', 'NSEI', 'PSE', 'SHE', 'SHG', 'SI', 'TA', 'TSE', 'TW', 'VN']);
+const EU_EXCHANGES = new Set(['AS', 'AT', 'BA', 'BC', 'BE', 'BR', 'BUD', 'CO', 'DE', 'DU', 'F', 'HA', 'HE', 'HM', 'IR', 'LSE', 'LU', 'LS', 'MC', 'MI', 'MU', 'OL', 'PA', 'RO', 'ST', 'STU', 'SW', 'VI', 'WAR', 'XETRA']);
 
 function cliValue(name, fallback = null) {
   const prefix = `--${name}=`;
@@ -145,7 +146,7 @@ function classifyRegion(row) {
   const country = String(row?.country || '').trim().toUpperCase();
   const exchange = String(row?.exchange || '').trim().toUpperCase();
   if (country === 'USA' || country === 'UNITED STATES' || id.startsWith('US:')) return 'US';
-  if (EUROPE_COUNTRIES.has(country)) return 'EU';
+  if (EUROPE_COUNTRIES.has(country) || EU_EXCHANGES.has(exchange)) return 'EU';
   if (ASIA_COUNTRIES.has(country) || ASIA_EXCHANGES.has(exchange)) return 'ASIA';
   return 'OTHER';
 }

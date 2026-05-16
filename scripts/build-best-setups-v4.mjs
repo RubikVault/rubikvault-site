@@ -325,9 +325,11 @@ async function buildPageCoreBuyGuard(targetMarketDate = null) {
       const id = String(row?.canonical_asset_id || row?.asset_id || row?.canonical_id || key || '').toUpperCase();
       if (!id) continue;
       byId.set(id, row);
-      const coreAction = String(row?.decision_core_min?.decision?.primary_action || row?.summary_min?.decision_verdict || '').toUpperCase();
+      const coreAction = String(row?.summary_min?.decision_verdict || row?.decision_core_min?.decision?.primary_action || '').toUpperCase();
+      const renderable = row?.status_contract?.stock_detail_view_status === 'operational'
+        || row?.status_contract?.strict_operational === true;
       if (!coreAction) missingCoreTotal += 1;
-      if (coreAction === 'BUY') buyIds.add(id);
+      if (coreAction === 'BUY' && renderable) buyIds.add(id);
     }
   }
   return {
@@ -963,9 +965,10 @@ async function main() {
       if (pageCoreGuard.available) {
         const before = buyRows.length;
         buyRows = enrichDecisionRowsFromPageCore(buyRows, pageCoreGuard);
-        pageCoreGuard.filtered_buy_rows = 0;
+        buyRows = buyRows.filter((row) => pageCoreGuard.buy_ids.has(String(row?.canonical_id || '').toUpperCase()));
+        pageCoreGuard.filtered_buy_rows = before - buyRows.length;
         pageCoreGuard.enriched_buy_rows = buyRows.filter((row) => pageCoreGuard.by_id.has(String(row?.canonical_id || '').toUpperCase())).length;
-        pageCoreGuard.guard_mode = 'enrich_only';
+        pageCoreGuard.guard_mode = 'filter_and_enrich';
         pageCoreGuard.decision_core_buy_rows = before;
       }
     }
