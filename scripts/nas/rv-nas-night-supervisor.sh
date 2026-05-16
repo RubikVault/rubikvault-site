@@ -815,7 +815,18 @@ step_command() {
       printf '%s\n' "node scripts/ops/build-pipeline-epoch.mjs --lane='$ACTIVE_LANE'"
       ;;
     generate_meta_dashboard_data)
-      printf '%s\n' "node scripts/generate_meta_dashboard_data.mjs --lane='$ACTIVE_LANE' && node scripts/ops/build-public-dashboard-v7-report.mjs"
+      # D.1 dashboard build chain (canonical order, single source-of-truth per panel).
+      # Order matters: each generator below consumes outputs of the previous one.
+      #   1. system-status-report + data-freshness-report already ran in earlier steps
+      #      (system_status_report L803, data_freshness_report L812).
+      #   2. generate_meta_dashboard_data: builds dashboard-v7-status.json + meta data.
+      #   3. extract_buys.py: rebuilds buy-signals-live.json from the latest decision
+      #      bundle so the dashboard BUY hero strip is in lock-step with current scope.
+      #   4. build-public-dashboard-v7-report: aggregates everything into the public
+      #      sanitized projection consumed by /dashboard_v7 on MAIN.
+      # signal_performance_report runs as its own supervisor step (L821) so it can be
+      # re-run independently without rebuilding the meta-dashboard.
+      printf '%s\n' "node scripts/generate_meta_dashboard_data.mjs --lane='$ACTIVE_LANE' && python3 extract_buys.py && node scripts/ops/build-public-dashboard-v7-report.mjs"
       ;;
     signal_performance_report)
       printf '%s\n' "node scripts/ops/build-signal-performance-report.mjs --lane='$ACTIVE_LANE'"

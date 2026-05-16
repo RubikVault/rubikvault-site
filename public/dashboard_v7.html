@@ -538,6 +538,43 @@
         </div>
     </div>
 
+    <!-- D.3 Mirror Contract Banner: surfaces RubikLocal mirror artifact freshness
+         (LIVE / STALE / MISSING / SYNC_DRIFT) so panels never silently render
+         stale data. Populated from /data/ui/rubiklocal-mirror-report.json
+         (written by ~/RubikLocal/.dashboard-state-sync.sh on every sync). -->
+    <div id="mirrorContractBanner" style="display:none;margin:.5rem 0;padding:.55rem .8rem;border-radius:8px;background:rgba(59,130,246,0.05);border:1px solid rgba(59,130,246,0.18);font-size:.72rem;color:var(--text-muted);display:flex;flex-wrap:wrap;gap:.5rem;align-items:center;justify-content:space-between">
+        <div><i class="fas fa-mirror" style="color:#60a5fa"></i> <strong style="color:var(--text)">Mirror Contract:</strong> <span id="mirrorContractSummary">loading…</span></div>
+        <details style="font-size:.7rem"><summary style="cursor:pointer;color:#60a5fa">Details</summary>
+            <div id="mirrorContractDetails" style="margin-top:.4rem;display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:.3rem"></div>
+        </details>
+    </div>
+    <script>
+    (function initMirrorContract() {
+      const fetchMirror = async () => {
+        try {
+          const res = await fetch('/data/ui/rubiklocal-mirror-report.json?_=' + Date.now(), { cache: 'no-store' });
+          if (!res.ok) return;
+          const doc = await res.json();
+          const banner = document.getElementById('mirrorContractBanner');
+          const summary = document.getElementById('mirrorContractSummary');
+          const details = document.getElementById('mirrorContractDetails');
+          if (!banner || !summary || !details) return;
+          const arts = Array.isArray(doc.artifacts) ? doc.artifacts : [];
+          const counts = { LIVE: 0, STALE: 0, MISSING: 0, SYNC_DRIFT: 0 };
+          for (const a of arts) counts[a.state] = (counts[a.state] || 0) + 1;
+          const colorOf = (s) => s === 'LIVE' ? '#10b981' : s === 'STALE' ? '#f59e0b' : s === 'SYNC_DRIFT' ? '#fb923c' : '#ef4444';
+          summary.innerHTML = ['LIVE','STALE','SYNC_DRIFT','MISSING']
+            .map((s) => `<span style="color:${colorOf(s)};font-weight:700">${s}: ${counts[s] || 0}</span>`)
+            .join(' · ') + ` <span style="color:var(--text-dim)">seal_target=${doc.seal_target_market_date || '—'}</span>`;
+          details.innerHTML = arts.map((a) => `<div style="display:flex;justify-content:space-between;gap:.4rem;padding:2px 6px;border-radius:4px;background:rgba(255,255,255,0.02)"><span style="color:var(--text-dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;direction:rtl;text-align:left">${a.path}</span><span style="color:${colorOf(a.state)};font-weight:700">${a.state}</span></div>`).join('');
+          banner.style.display = 'flex';
+        } catch (_e) { /* mirror report absent on public MAIN — silent ignore */ }
+      };
+      fetchMirror();
+      setInterval(fetchMirror, 60000);
+    })();
+    </script>
+
     <!-- Tab Navigation -->
     <div class="tab-bar">
         <button class="tab-btn active" data-tab="health"><i class="fas fa-heartbeat"></i> System Health</button>
@@ -2630,6 +2667,15 @@ function renderNasLive(dashboard, sup, wd) {
     html += `<div class="nas-metric"><div class="nm-label">Current ETA</div><div class="nm-value">${fmtDurationCompact(currentEta)}</div></div>`;
     html += `<div class="nas-metric"><div class="nm-label">Best-Case Finish</div><div class="nm-value">${bestCaseFinishAt ? fmtShortDate(bestCaseFinishAt) : '—'}</div></div>`;
     html += `<div class="nas-metric"><div class="nm-label">Sync Age</div><div class="nm-value">${escapeHtml(syncAgeText)}</div></div>`;
+    // D.4 Pipeline duration aggregates over rolling 14-day window. Helps spot
+    // regression vs. typical runtime without digging into per-step history.
+    const runStats = dashboard.historical?.run_stats || null;
+    if (runStats) {
+        const runsWindow = runStats.completed_runs ? `${fmtCount(runStats.completed_runs)} runs/${runStats.window_days || 14}d` : '—';
+        html += `<div class="nas-metric"><div class="nm-label">Last Run</div><div class="nm-value">${fmtDurationCompact(runStats.last_run_duration_sec)}</div></div>`;
+        html += `<div class="nas-metric"><div class="nm-label">Avg Run (${escapeHtml(runsWindow)})</div><div class="nm-value">${fmtDurationCompact(runStats.avg_run_duration_sec)}</div></div>`;
+        html += `<div class="nas-metric"><div class="nm-label">P90 Run</div><div class="nm-value">${fmtDurationCompact(runStats.p90_run_duration_sec)}</div></div>`;
+    }
     html += '</div>';
 
     if (currentProgress && currentProgress.total > 0) {

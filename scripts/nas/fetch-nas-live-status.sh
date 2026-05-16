@@ -106,7 +106,7 @@ import os
 import re
 import statistics
 from collections import Counter, defaultdict
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 HOME = Path.home()
@@ -894,7 +894,73 @@ def build_history() -> dict:
             }
         )
     protocol_rows.sort(key=lambda row: (-int(row.get("count") or 0), row.get("last_seen_at") or ""), reverse=False)
-    return {"runs_scanned": len(run_dirs), "steps": output, "failure_protocol": protocol_rows[:12]}
+    run_stats = build_run_stats(run_dirs)
+    return {
+        "runs_scanned": len(run_dirs),
+        "steps": output,
+        "failure_protocol": protocol_rows[:12],
+        "run_stats": run_stats,
+    }
+
+
+def build_run_stats(run_dirs) -> dict:
+    """D.4 — whole-pipeline duration aggregates (last/avg/median/p90/completed/last_completed_at).
+
+    Source per run: ``runs/<stamp>/status.json`` with ``started_at`` + ``finished_at``
+    (written by the supervisor's ``write_status`` helper). Only counts runs that
+    reached status ``completed``. Restricted to a rolling 14-day window so stale
+    historical runs do not skew the average. Falls back to per-step max
+    finished_at when ``status.json`` lacks ``finished_at`` (e.g. interrupted runs
+    that the supervisor never sealed).
+    """
+    cutoff_ts = None
+    try:
+        cutoff_ts = (datetime.now(timezone.utc) - timedelta(days=14)).timestamp()
+    except Exception:
+        cutoff_ts = None
+    durations: list[float] = []
+    last_completed_at = None
+    last_completed_duration_sec = None
+    for run_dir in run_dirs:
+        status_doc = read_json(run_dir / "status.json", None)
+        if not isinstance(status_doc, dict):
+            continue
+        if str(status_doc.get("last_status") or "").lower() != "completed":
+            continue
+        started_at = status_doc.get("started_at")
+        finished_at = status_doc.get("finished_at")
+        ts_start = parse_iso(started_at)
+        ts_finish = parse_iso(finished_at)
+        if not ts_start or not ts_finish:
+            continue
+        if cutoff_ts is not None and ts_finish.timestamp() < cutoff_ts:
+            continue
+        duration_sec = (ts_finish - ts_start).total_seconds()
+        if duration_sec <= 0:
+            continue
+        durations.append(duration_sec)
+        if last_completed_at is None or (parse_iso(last_completed_at) and ts_finish > parse_iso(last_completed_at)):
+            last_completed_at = finished_at
+            last_completed_duration_sec = duration_sec
+    if not durations:
+        return {
+            "last_run_duration_sec": None,
+            "avg_run_duration_sec": None,
+            "median_run_duration_sec": None,
+            "p90_run_duration_sec": None,
+            "completed_runs": 0,
+            "last_completed_at": None,
+            "window_days": 14,
+        }
+    return {
+        "last_run_duration_sec": round(last_completed_duration_sec, 2) if last_completed_duration_sec else None,
+        "avg_run_duration_sec": round(sum(durations) / len(durations), 2),
+        "median_run_duration_sec": round(statistics.median(durations), 2),
+        "p90_run_duration_sec": round(percentile(durations, 90) or 0, 2),
+        "completed_runs": len(durations),
+        "last_completed_at": last_completed_at,
+        "window_days": 14,
+    }
 
 
 latest = read_json(PIPELINE_ROOT / "latest.json", {}) or {}
