@@ -91,7 +91,10 @@ function unique(values) {
 
 function isVisibleModuleOnlyReason(reason) {
   const raw = String(reason || '').toLowerCase();
-  return /model_coverage_incomplete|historical_profile|breakout_detail|visible_module|fundamentals|ui_banner_not_operational/.test(raw);
+  return /model_coverage_incomplete|historical_profile|breakout_detail|visible_module|fundamentals|ui_banner_not_operational/.test(raw)
+    || /provider_refresh_error|provider_no_target_row|refresh_report_missing_registry_entry/.test(raw)
+    || /decision_not_operational|primary_blocker:decision_not_operational/.test(raw)
+    || /bars_stale|freshness_(?:stale|expired|last_good)/.test(raw);
 }
 
 function isDecisionCoreBusinessReason(reason) {
@@ -264,7 +267,9 @@ export function buildUiIntegrity(payload, { ticker = null, priceStack = null } =
     : typedModuleReasons;
   const decisionCritical = ['current_price', 'asset_return_1d', 'price_series', 'decision_contract'];
   const pageCritical = [...decisionCritical, 'chart'];
-  const decisionBlocks = decisionCritical.filter((key) => fields[key]?.status === 'BLOCK');
+  const decisionBlocksRaw = decisionCritical.filter((key) => fields[key]?.status === 'BLOCK');
+  const softDecisionBlocks = decisionBlocksRaw.filter((key) => isVisibleModuleOnlyReason(fields[key]?.reason));
+  const decisionBlocks = decisionBlocksRaw.filter((key) => !softDecisionBlocks.includes(key));
   const criticalBlocksRaw = pageCritical.filter((key) => fields[key]?.status === 'BLOCK');
   const softCriticalBlocks = criticalBlocksRaw.filter((key) => isVisibleModuleOnlyReason(fields[key]?.reason));
   const criticalBlocks = criticalBlocksRaw.filter((key) => !softCriticalBlocks.includes(key));

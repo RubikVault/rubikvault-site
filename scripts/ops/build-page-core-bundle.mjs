@@ -339,6 +339,19 @@ function readDecisionCoreRows(source = process.env.RV_DECISION_CORE_SOURCE || 'c
 
 function compactDecisionCoreForPageCore(row) {
   if (!row || typeof row !== 'object') return null;
+  const compactObject = (value) => {
+    if (Array.isArray(value)) return value.map(compactObject).filter((item) => item != null);
+    if (!value || typeof value !== 'object') return value ?? undefined;
+    const out = {};
+    for (const [key, child] of Object.entries(value)) {
+      const compacted = compactObject(child);
+      if (compacted == null) continue;
+      if (Array.isArray(compacted) && compacted.length === 0) continue;
+      if (typeof compacted === 'object' && !Array.isArray(compacted) && Object.keys(compacted).length === 0) continue;
+      out[key] = compacted;
+    }
+    return out;
+  };
   const horizons = {};
   for (const key of ['short_term', 'mid_term', 'long_term']) {
     const horizon = row?.horizons?.[key];
@@ -346,67 +359,46 @@ function compactDecisionCoreForPageCore(row) {
       horizon_action: horizon.horizon_action || null,
       horizon_reliability: horizon.horizon_reliability || null,
       horizon_setup: horizon.horizon_setup || null,
-      horizon_blockers: Array.isArray(horizon.horizon_blockers) ? horizon.horizon_blockers.slice(0, 3) : [],
+      horizon_blockers: Array.isArray(horizon.horizon_blockers) ? horizon.horizon_blockers.slice(0, 2) : [],
     } : null;
   }
-  return {
+  return compactObject({
     meta: {
-      decision_id: row?.meta?.decision_id || null,
       asset_id: row?.meta?.asset_id || null,
       asset_type: row?.meta?.asset_type || null,
       as_of_date: row?.meta?.as_of_date || null,
       target_market_date: row?.meta?.target_market_date || null,
-      policy_bundle_version: row?.meta?.policy_bundle_version || null,
-      model_version: row?.meta?.model_version || null,
     },
     eligibility: {
       eligibility_status: row?.eligibility?.eligibility_status || null,
       decision_grade: row?.eligibility?.decision_grade === true,
-      vetos: Array.isArray(row?.eligibility?.vetos) ? row.eligibility.vetos.slice(0, 5) : [],
-      warnings: Array.isArray(row?.eligibility?.warnings) ? row.eligibility.warnings.slice(0, 5) : [],
+      vetos: Array.isArray(row?.eligibility?.vetos) ? row.eligibility.vetos.slice(0, 2) : [],
+      warnings: Array.isArray(row?.eligibility?.warnings) ? row.eligibility.warnings.slice(0, 2) : [],
     },
     decision: {
       primary_action: row?.decision?.primary_action || null,
       wait_subtype: row?.decision?.wait_subtype || null,
-      bias: row?.decision?.bias || null,
       analysis_reliability: row?.decision?.analysis_reliability || null,
       primary_setup: row?.decision?.primary_setup || null,
       main_blocker: row?.decision?.main_blocker || null,
-      next_trigger: row?.decision?.next_trigger || null,
-      reason_codes: Array.isArray(row?.decision?.reason_codes) ? row.decision.reason_codes.slice(0, 5) : [],
+      reason_codes: Array.isArray(row?.decision?.reason_codes) ? row.decision.reason_codes.slice(0, 3) : [],
     },
     evidence_summary: {
-      evidence_raw_n: row?.evidence_summary?.evidence_raw_n ?? null,
       evidence_effective_n: row?.evidence_summary?.evidence_effective_n ?? null,
-      evidence_scope: row?.evidence_summary?.evidence_scope || null,
       ev_proxy_bucket: row?.evidence_summary?.ev_proxy_bucket || null,
       tail_risk_bucket: row?.evidence_summary?.tail_risk_bucket || null,
     },
     trade_guard: {
       entry_policy: row?.trade_guard?.entry_policy || null,
       max_entry_price: row?.trade_guard?.max_entry_price ?? null,
-      gap_tolerance_pct: row?.trade_guard?.gap_tolerance_pct ?? null,
-      cancel_if_open_above: row?.trade_guard?.cancel_if_open_above ?? null,
-      entry_valid_until: row?.trade_guard?.entry_valid_until || null,
       invalidation_level: row?.trade_guard?.invalidation_level ?? null,
-      invalidation_reason: row?.trade_guard?.invalidation_reason || null,
-      setup_failed_if: row?.trade_guard?.setup_failed_if || null,
-    },
-    evaluation: {
-      evaluation_horizon_days: row?.evaluation?.evaluation_horizon_days ?? null,
-      evaluation_policy: row?.evaluation?.evaluation_policy || null,
-    },
-    rank_summary: {
-      rank_percentile: row?.rank_summary?.rank_percentile ?? null,
-      rank_scope: row?.rank_summary?.rank_scope || null,
     },
     horizons,
     ui: {
       severity: row?.ui?.severity || null,
       show_override_banner: row?.ui?.show_override_banner === true,
-      disclaimer_policy_version: row?.ui?.disclaimer_policy_version || null,
     },
-  };
+  });
 }
 
 function readDecisionRows() {
@@ -1484,6 +1476,22 @@ function finalizePageCoreRow(row, { targetMarketDate, canonicalId = null } = {})
     if (Array.isArray(row.meta?.warnings) && row.meta.warnings.length > 3) {
       row.meta.warnings = row.meta.warnings.slice(0, 3);
     }
+    hardBytes = Buffer.byteLength(JSON.stringify(row), 'utf8');
+  }
+  if (hardBytes > PAGE_CORE_HARD_BYTES && row.decision_core_min) {
+    row.decision_core_min = {
+      decision: {
+        primary_action: row.decision_core_min?.decision?.primary_action || row.summary_min?.decision_verdict || null,
+        wait_subtype: row.decision_core_min?.decision?.wait_subtype || row.summary_min?.decision_wait_subtype || null,
+        analysis_reliability: row.decision_core_min?.decision?.analysis_reliability || row.summary_min?.decision_analysis_reliability || null,
+        primary_setup: row.decision_core_min?.decision?.primary_setup || row.summary_min?.decision_primary_setup || null,
+      },
+      trade_guard: {
+        max_entry_price: row.decision_core_min?.trade_guard?.max_entry_price ?? row.summary_min?.decision_max_entry_price ?? null,
+        invalidation_level: row.decision_core_min?.trade_guard?.invalidation_level ?? row.summary_min?.decision_invalidation_level ?? null,
+      },
+      horizons: row.decision_core_min?.horizons || null,
+    };
     hardBytes = Buffer.byteLength(JSON.stringify(row), 'utf8');
   }
   // 4th-pass: if STILL oversized, replace the row with a schema-valid minimal
