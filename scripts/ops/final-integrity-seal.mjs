@@ -52,6 +52,26 @@ const PATHS = {
   moduleOutputsVerify: path.join(ROOT, 'public/data/ops/module-outputs-verify-latest.json'),
   heartbeat: path.join(ROOT, 'mirrors/ops/pipeline-master/supervisor-heartbeat.json'),
   crashSeal: path.join(ROOT, 'public/data/ops/crash-seal-latest.json'),
+  // P.5 browser-validation gate inputs. The seal consults deploy-proof v2 and
+  // both preview + main UI proof envelopes. When any of these is missing or
+  // shows status != ok / mismatched commit / mismatched target_market_date,
+  // the seal stamps `release_not_browser_validated` and refuses to set
+  // release_ready=true. This is what prevents the "deploy continued despite
+  // UI proof FAILED" regression that hit the release-full lane on 2026-05-16.
+  deployProof: path.join(ROOT, 'public/data/status/deploy-proof-latest.json'),
+  deployProofLocal: path.join(ROOT, 'var/private/ops/deploy-proof-latest.json'),
+  uiProofPreviewRelease20: path.join(ROOT, 'public/data/ops/ui-proof-release20-preview-latest.json'),
+  uiProofPreviewRegional100: path.join(ROOT, 'public/data/ops/ui-proof-regional100-preview-latest.json'),
+  uiProofPreviewRandom200: path.join(ROOT, 'public/data/ops/ui-proof-random200-preview-latest.json'),
+  uiProofMainRelease20: path.join(ROOT, 'public/data/ops/ui-proof-release20-main-latest.json'),
+  uiProofMainRegional100: path.join(ROOT, 'public/data/ops/ui-proof-regional100-main-latest.json'),
+  uiProofMainRandom200: path.join(ROOT, 'public/data/ops/ui-proof-random200-main-latest.json'),
+  // P.7 scope refresh sync: page-core latest + feature stock universe report.
+  // Seal asserts that both reference the same target_market_date AND, when
+  // the report carries a page_core_snapshot_id, that it matches the deployed
+  // page-core snapshot.
+  pageCoreLatest: path.join(ROOT, 'public/data/page-core/latest.json'),
+  featureStockUniverseReport: path.join(ROOT, 'public/data/universe/v7/ssot/feature_stock_universe_report.json'),
 };
 
 function severityRank(value) {
@@ -967,7 +987,127 @@ export function buildFinalIntegritySeal({
     breakoutReady,
   });
   const overallUiReady = releaseGate.release_ui_ready;
-  const mergedBlockingReasons = [...uniqueBlockingReasons, ...releaseGate.blocking_reasons];
+  // P.5 browser-validation check. Block release if either the deploy proof
+  // explicitly reports browser_validated=false, OR there is no preview UI
+  // proof envelope at all for the current target_market_date / expected
+  // commit. Soft-skip when neither artifact exists yet (e.g. early data-plane
+  // before the deploy chain has run) — releaseGate's existing readiness gates
+  // catch that. Mismatch shapes (status != 'ok', commit drift, target drift)
+  // map to specific reason codes so the dashboard surfaces the actual cause.
+  const browserValidationBlockers = [];
+  let browserValidation = null;
+  try {
+    const deployProofPaths = [PATHS.deployProof, PATHS.deployProofLocal];
+    let deployProofDoc = null;
+    for (const candidate of deployProofPaths) {
+      try {
+        if (fs.existsSync(candidate)) {
+          deployProofDoc = JSON.parse(fs.readFileSync(candidate, 'utf8'));
+          if (deployProofDoc) break;
+        }
+      } catch (_e) { /* swallow */ }
+    }
+    const previewCandidates = [PATHS.uiProofPreviewRelease20, PATHS.uiProofPreviewRegional100, PATHS.uiProofPreviewRandom200];
+    let previewProof = null;
+    for (const candidate of previewCandidates) {
+      try {
+        if (fs.existsSync(candidate)) {
+          const raw = JSON.parse(fs.readFileSync(candidate, 'utf8'));
+          previewProof = raw.ui_proof_result || raw;
+          if (previewProof && previewProof.schema === 'rv.ui_proof_result.v1') break;
+          previewProof = null;
+        }
+      } catch (_e) { /* swallow */ }
+    }
+    const mainCandidates = [PATHS.uiProofMainRelease20, PATHS.uiProofMainRegional100, PATHS.uiProofMainRandom200];
+    let mainProof = null;
+    for (const candidate of mainCandidates) {
+      try {
+        if (fs.existsSync(candidate)) {
+          const raw = JSON.parse(fs.readFileSync(candidate, 'utf8'));
+          mainProof = raw.ui_proof_result || raw;
+          if (mainProof && mainProof.schema === 'rv.ui_proof_result.v1') break;
+          mainProof = null;
+        }
+      } catch (_e) { /* swallow */ }
+    }
+    if (deployProofDoc) {
+      if (deployProofDoc.browser_validated === false) {
+        browserValidationBlockers.push('release_not_browser_validated');
+      }
+      if (previewProof) {
+        if (previewProof.status !== 'ok') {
+          browserValidationBlockers.push(`preview_ui_proof_${previewProof.status || 'missing'}`);
+        }
+        if (previewProof.target_market_date && expectedTargetDate && previewProof.target_market_date !== expectedTargetDate) {
+          browserValidationBlockers.push('preview_ui_proof_target_mismatch');
+        }
+        if (previewProof.expected_commit && previewProof.observed_commit && previewProof.expected_commit !== previewProof.observed_commit) {
+          browserValidationBlockers.push('preview_ui_proof_commit_drift');
+        }
+      } else if (deployProofDoc.deployment_id) {
+        // Deploy happened but no preview proof artifact persisted — hard block.
+        browserValidationBlockers.push('preview_ui_proof_missing');
+      }
+      if (mainProof && mainProof.status === 'failed') {
+        browserValidationBlockers.push('main_ui_proof_failed');
+      }
+    }
+    browserValidation = {
+      deploy_proof_present: Boolean(deployProofDoc),
+      deploy_proof_browser_validated: deployProofDoc?.browser_validated ?? null,
+      preview_proof_status: previewProof?.status || null,
+      preview_proof_sample: previewProof?.sample || null,
+      main_proof_status: mainProof?.status || null,
+      main_proof_sample: mainProof?.sample || null,
+      blockers: [...browserValidationBlockers],
+    };
+  } catch (error) {
+    browserValidation = { error: String(error?.message || error) };
+  }
+  // P.7 scope refresh sync. Block release when feature_stock_universe_report
+  // disagrees with page-core on target_market_date or snapshot_id. Soft when
+  // the report is absent (catches early data-plane runs where the report
+  // hasn't been written yet — covered by other readiness gates).
+  const scopeRefreshBlockers = [];
+  let scopeRefresh = null;
+  try {
+    let pageCoreLatestDoc = null;
+    try {
+      if (fs.existsSync(PATHS.pageCoreLatest)) {
+        pageCoreLatestDoc = JSON.parse(fs.readFileSync(PATHS.pageCoreLatest, 'utf8'));
+      }
+    } catch (_e) { /* swallow */ }
+    let featureReport = null;
+    try {
+      if (fs.existsSync(PATHS.featureStockUniverseReport)) {
+        featureReport = JSON.parse(fs.readFileSync(PATHS.featureStockUniverseReport, 'utf8'));
+      }
+    } catch (_e) { /* swallow */ }
+    if (pageCoreLatestDoc && featureReport) {
+      if (pageCoreLatestDoc.target_market_date && featureReport.target_market_date && pageCoreLatestDoc.target_market_date !== featureReport.target_market_date) {
+        scopeRefreshBlockers.push('feature_report_target_market_date_drift');
+      }
+      if (pageCoreLatestDoc.snapshot_id && featureReport.page_core_snapshot_id && pageCoreLatestDoc.snapshot_id !== featureReport.page_core_snapshot_id) {
+        scopeRefreshBlockers.push('feature_report_page_core_snapshot_drift');
+      }
+      if (Number.isFinite(pageCoreLatestDoc.asset_count) && Number.isFinite(featureReport.page_core_asset_count) && pageCoreLatestDoc.asset_count !== featureReport.page_core_asset_count) {
+        scopeRefreshBlockers.push('feature_report_asset_count_drift');
+      }
+    }
+    scopeRefresh = {
+      page_core_target_market_date: pageCoreLatestDoc?.target_market_date || null,
+      page_core_snapshot_id: pageCoreLatestDoc?.snapshot_id || null,
+      page_core_asset_count: pageCoreLatestDoc?.asset_count ?? null,
+      feature_report_target_market_date: featureReport?.target_market_date || null,
+      feature_report_page_core_snapshot_id: featureReport?.page_core_snapshot_id || null,
+      feature_report_page_core_asset_count: featureReport?.page_core_asset_count ?? null,
+      blockers: [...scopeRefreshBlockers],
+    };
+  } catch (error) {
+    scopeRefresh = { error: String(error?.message || error) };
+  }
+  const mergedBlockingReasons = [...uniqueBlockingReasons, ...releaseGate.blocking_reasons, ...browserValidationBlockers, ...scopeRefreshBlockers];
   const mergedWarningReasons = [...uniqueWarningReasons, ...releaseGate.warning_reasons];
   const status = !overallUiReady ? 'FAILED' : mergedWarningReasons.length === 0 ? 'OK' : 'DEGRADED';
   const uiGreen = overallUiReady;
@@ -989,7 +1129,9 @@ export function buildFinalIntegritySeal({
     status,
     ui_green: uiGreen,
     global_green: uiGreen,
-    release_ready: releaseGate.deploy_allowed,
+    release_ready: releaseGate.deploy_allowed && browserValidationBlockers.length === 0 && scopeRefreshBlockers.length === 0,
+    browser_validation: browserValidation,
+    scope_refresh: scopeRefresh,
     core_release_ready: coreReleaseReady,
     page_core_ready: pageCoreReady,
     search_ready: searchReady,

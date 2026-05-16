@@ -257,10 +257,16 @@ async function main() {
   const effectiveByRegion = pageCoreScope?.byRegion || (Number.isFinite(pageCoreAssetCount) && pageCoreAssetCount > 0 ? { UNKNOWN: pageCoreAssetCount } : ssotByRegion);
   const effectiveByClass = pageCoreScope?.byClass || (Number.isFinite(pageCoreAssetCount) && pageCoreAssetCount > 0 ? { UNKNOWN: pageCoreAssetCount } : ssotByType);
 
+  // P.7 scope refresh sync: bind the feature report to the page-core snapshot
+  // it was derived from. The seal asserts these match so a release-full lane
+  // cannot ship a feature report whose target/snapshot/count drift away from
+  // the page-core that the bundle actually deployed.
   const report = {
     schema: 'rv_v7_feature_stock_universe_report_v1',
     generated_at: nowIso(),
     target_market_date: pageCoreLatest?.target_market_date || null,
+    page_core_snapshot_id: pageCoreLatest?.snapshot_id || null,
+    page_core_asset_count: pageCoreAssetCount ?? null,
     ssot_total: effectiveUniverseTotal,
     provider_covered: effectiveUniverseTotal,
     excluded_by_reason: {},
