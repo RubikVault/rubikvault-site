@@ -822,11 +822,17 @@ step_command() {
       #   2. generate_meta_dashboard_data: builds dashboard-v7-status.json + meta data.
       #   3. extract_buys.py: rebuilds buy-signals-live.json from the latest decision
       #      bundle so the dashboard BUY hero strip is in lock-step with current scope.
-      #   4. build-public-dashboard-v7-report: aggregates everything into the public
+      #   4. fetch-nas-live-status.sh --local: rebuilds the live NAS telemetry
+      #      bundle (nas-pipeline-dashboard.json + nas-pipeline-live.json +
+      #      nas-supervisor-state.json). Without this step the Live NAS Pipeline
+      #      Monitor panel runs on stale data (the file was last touched on
+      #      2026-04-26 because the Mac-side cron was decommissioned). --local
+      #      skips SSH so the script runs cleanly from inside the NAS.
+      #   5. build-public-dashboard-v7-report: aggregates everything into the public
       #      sanitized projection consumed by /dashboard_v7 on MAIN.
-      # signal_performance_report runs as its own supervisor step (L821) so it can be
+      # signal_performance_report runs as its own supervisor step (L831) so it can be
       # re-run independently without rebuilding the meta-dashboard.
-      printf '%s\n' "node scripts/generate_meta_dashboard_data.mjs --lane='$ACTIVE_LANE' && python3 extract_buys.py && node scripts/ops/build-public-dashboard-v7-report.mjs"
+      printf '%s\n' "node scripts/generate_meta_dashboard_data.mjs --lane='$ACTIVE_LANE' && python3 extract_buys.py && RV_FETCH_LOCAL=1 bash scripts/nas/fetch-nas-live-status.sh --local && node scripts/ops/build-public-dashboard-v7-report.mjs"
       ;;
     signal_performance_report)
       printf '%s\n' "node scripts/ops/build-signal-performance-report.mjs --lane='$ACTIVE_LANE'"

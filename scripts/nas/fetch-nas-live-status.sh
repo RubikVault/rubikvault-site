@@ -16,6 +16,7 @@ OUT_DIR="$REPO_ROOT/public/data/ui"
 mkdir -p "$OUT_DIR"
 FETCH_MODE="full"
 
+RV_FETCH_LOCAL="${RV_FETCH_LOCAL:-0}"
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --fast)
@@ -31,8 +32,13 @@ while [[ $# -gt 0 ]]; do
     --mode=*)
       FETCH_MODE="${1#*=}"
       ;;
+    --local)
+      # Skip SSH; run python payload locally. Required when invoked from NAS itself
+      # (SSH-to-self fails). Mac-side dashboard refresh still defaults to SSH.
+      RV_FETCH_LOCAL=1
+      ;;
     *)
-      echo "Usage: bash scripts/nas/fetch-nas-live-status.sh [--mode fast|full]" >&2
+      echo "Usage: bash scripts/nas/fetch-nas-live-status.sh [--mode fast|full] [--local]" >&2
       exit 2
       ;;
   esac
@@ -87,15 +93,26 @@ choose_ssh_target() {
 TMP_BUNDLE="$(mktemp "$OUT_DIR/nas-pipeline-dashboard.XXXXXX.tmp")"
 trap 'rm -f "$TMP_BUNDLE"' EXIT
 
-log "Resolving NAS SSH target..."
-if ! choose_ssh_target; then
-  echo "ERROR: NAS SSH target unreachable via alias or Tailscale fallback." >&2
-  exit 1
+# RV_FETCH_LOCAL=1 (or --local, parsed above) runs the python payload directly
+# without SSH. Required when the script runs ON NAS itself (Synology cron /
+# supervisor step): SSH-to-self fails because the alias `neonas` doesn't
+# resolve from inside the box. Default stays SSH so Mac-side dashboard refresh
+# continues to work.
+if [[ "$RV_FETCH_LOCAL" != "1" ]]; then
+  log "Resolving NAS SSH target..."
+  if ! choose_ssh_target; then
+    echo "ERROR: NAS SSH target unreachable via alias or Tailscale fallback." >&2
+    exit 1
+  fi
+  log "Using SSH target: $SSH_TARGET_LABEL"
+  REMOTE_RUNNER=("${SSH_CMD[@]}" "bash -s")
+else
+  SSH_TARGET_LABEL="local"
+  REMOTE_RUNNER=(bash -s)
 fi
-log "Using SSH target: $SSH_TARGET_LABEL"
 
-log "Fetching NAS pipeline telemetry (mode=$FETCH_MODE)..."
-RV_DASHBOARD_FETCH_MODE="$FETCH_MODE" "${SSH_CMD[@]}" 'bash -s' > "$TMP_BUNDLE" <<'REMOTE'
+log "Fetching NAS pipeline telemetry (mode=$FETCH_MODE, target=$SSH_TARGET_LABEL)..."
+RV_DASHBOARD_FETCH_MODE="$FETCH_MODE" "${REMOTE_RUNNER[@]}" > "$TMP_BUNDLE" <<'REMOTE'
 python3 - <<'PY'
 from __future__ import annotations
 
