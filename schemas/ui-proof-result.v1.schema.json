@@ -1,0 +1,77 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://rubikvault.com/schemas/ui-proof-result.v1.schema.json",
+  "title": "rv.ui_proof_result.v1",
+  "description": "Result envelope emitted by stock-analyzer-ui-random50-proof.mjs (and CI runner wrappers). Consumed by release-gate-check.mjs and final-integrity-seal.mjs as the browser-validation gate.",
+  "type": "object",
+  "required": [
+    "schema",
+    "run_id",
+    "expected_commit",
+    "observed_commit",
+    "base_url",
+    "environment",
+    "target_market_date",
+    "sample",
+    "sample_set_id",
+    "required",
+    "completed",
+    "status",
+    "ok",
+    "failed",
+    "total",
+    "console_errors",
+    "network_errors",
+    "failures",
+    "allowed_degraded",
+    "generated_at"
+  ],
+  "properties": {
+    "schema": { "const": "rv.ui_proof_result.v1" },
+    "run_id": { "type": "string", "minLength": 1 },
+    "expected_commit": { "type": "string", "pattern": "^[0-9a-f]{7,40}$" },
+    "observed_commit": { "type": ["string", "null"], "description": "Commit SHA actually rendered on the target page. Null only when status=runner_failed and the runner could not load the page." },
+    "base_url": { "type": "string", "format": "uri" },
+    "environment": { "enum": ["preview", "main"] },
+    "deployment_id": { "type": ["string", "null"] },
+    "target_market_date": { "type": ["string", "null"], "pattern": "^\\d{4}-\\d{2}-\\d{2}$" },
+    "page_core_snapshot": { "type": ["string", "null"], "description": "snapshot_id read from /data/page-core/latest.json on the candidate." },
+    "sample": { "enum": ["release20", "regional100", "regional30", "random50", "random200", "class90", "class160"] },
+    "sample_set_id": { "type": "string", "minLength": 1 },
+    "required": { "type": "integer", "minimum": 0, "description": "Quota requirement count for this sample mode." },
+    "completed": { "type": "integer", "minimum": 0, "description": "How many assets the runner actually visited and asserted on." },
+    "total": { "type": "integer", "minimum": 0 },
+    "ok": { "type": "integer", "minimum": 0 },
+    "failed": { "type": "integer", "minimum": 0 },
+    "status": { "enum": ["ok", "failed", "runner_failed"], "description": "ok = every visited asset passed acceptance; failed = at least one asset failed; runner_failed = harness could not execute (browser missing libs, spawn died, target unreachable)." },
+    "console_errors": { "type": "integer", "minimum": 0 },
+    "network_errors": { "type": "integer", "minimum": 0 },
+    "failures": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["canonical_id", "assertion", "detail"],
+        "properties": {
+          "canonical_id": { "type": "string" },
+          "assertion": { "type": "string" },
+          "detail": { "type": "string" }
+        },
+        "additionalProperties": true
+      },
+      "description": "Per-asset failure summaries (truncated to max_failures from request)."
+    },
+    "allowed_degraded": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Count of assets that rendered a typed-degraded UI state which the harness accepted under --accept-typed-degraded."
+    },
+    "runner_failure_reason": { "type": ["string", "null"], "description": "Populated when status=runner_failed (e.g. 'playwright_spawn_failed', 'libatk_missing', 'target_unreachable')." },
+    "generated_at": { "type": "string", "format": "date-time" },
+    "global_assertions": {
+      "type": "object",
+      "description": "Per-run global checks (universe ssot_total, NASDAQ extension shape, etc).",
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": true
+}

@@ -17,6 +17,7 @@ const DEFAULT_REPORT_PATH = path.join(ROOT, 'public/data/reports/stock-analyzer-
 const REGIONAL30_REPORT_PATH = path.join(ROOT, 'public/data/reports/stock-analyzer-ui-regional30-proof-latest.json');
 const REGIONAL100_REPORT_PATH = path.join(ROOT, 'public/data/reports/stock-analyzer-ui-regional100-proof-latest.json');
 const RANDOM200_REPORT_PATH = path.join(ROOT, 'public/data/reports/stock-analyzer-ui-random200-proof-latest.json');
+const RELEASE20_REPORT_PATH = path.join(ROOT, 'public/data/reports/stock-analyzer-ui-release20-proof-latest.json');
 const CLASS90_REPORT_PATH = path.join(ROOT, 'public/data/reports/stock-analyzer-ui-class90-proof-latest.json');
 const CLASS160_REPORT_PATH = path.join(ROOT, 'public/data/reports/stock-analyzer-ui-class160-proof-latest.json');
 const REGISTRY_PATH = path.join(ROOT, 'public/data/universe/v7/registry/registry.ndjson.gz');
@@ -41,6 +42,18 @@ const RANDOM200_REQUIRED = Object.freeze({
   EU: Object.freeze({ INDEX: 20, ETF: 6, STOCK: 40 }),
   ASIA: Object.freeze({ INDEX: 10, ETF: 20, STOCK: 36 }),
 });
+// release20: minimal CI-hard-gate sample. Small enough to finish in ~2 min on a
+// GHA runner with Playwright Chromium. Balanced across region × class plus
+// known historical canaries to catch regression on stable assets.
+const RELEASE20_REQUIRED = Object.freeze({
+  US: Object.freeze({ INDEX: 1, ETF: 3, STOCK: 5 }),
+  EU: Object.freeze({ INDEX: 2, ETF: 1, STOCK: 3 }),
+  ASIA: Object.freeze({ INDEX: 1, ETF: 2, STOCK: 2 }),
+});
+// Known canaries that must appear in every release20 sample regardless of
+// random selection. These are high-liquidity assets with stable historical
+// profiles — a regression here is almost always a real bug, never a sample bias.
+const RELEASE20_CANARIES = Object.freeze(['US:SPY', 'US:QQQ', 'US:F']);
 const EUROPE_COUNTRIES = new Set([
   'AUSTRIA',
   'BELGIUM',
@@ -98,7 +111,7 @@ function cliBool(name, fallback = false) {
 
 const SAMPLE_SIZE = Number(cliValue('sample-size') || process.env.RV_STOCK_ANALYZER_UI_PROOF_SAMPLE_SIZE || 0);
 const SAMPLE_MODE_REQUESTED = cliValue('sample') || cliValue('mode') || process.env.RV_STOCK_ANALYZER_UI_PROOF_SAMPLE || '';
-const SAMPLE_MODE = String(SAMPLE_MODE_REQUESTED || (SAMPLE_SIZE === 200 ? 'random200' : SAMPLE_SIZE === 100 ? 'regional100' : 'random50')).trim().toLowerCase();
+const SAMPLE_MODE = String(SAMPLE_MODE_REQUESTED || (SAMPLE_SIZE === 200 ? 'random200' : SAMPLE_SIZE === 100 ? 'regional100' : SAMPLE_SIZE === 20 ? 'release20' : 'random50')).trim().toLowerCase();
 const ACCEPT_TYPED_DEGRADED = cliBool('accept-typed-degraded', false);
 const REPORT_PATH = path.resolve(
   ROOT,
@@ -110,11 +123,13 @@ const REPORT_PATH = path.resolve(
         ? REGIONAL100_REPORT_PATH
         : SAMPLE_MODE === 'random200'
           ? RANDOM200_REPORT_PATH
-          : SAMPLE_MODE === 'class90'
-            ? CLASS90_REPORT_PATH
-            : SAMPLE_MODE === 'class160'
-              ? CLASS160_REPORT_PATH
-              : DEFAULT_REPORT_PATH),
+          : SAMPLE_MODE === 'release20'
+            ? RELEASE20_REPORT_PATH
+            : SAMPLE_MODE === 'class90'
+              ? CLASS90_REPORT_PATH
+              : SAMPLE_MODE === 'class160'
+                ? CLASS160_REPORT_PATH
+                : DEFAULT_REPORT_PATH),
 );
 
 function readJson(filePath) {
@@ -365,6 +380,39 @@ function buildClass160Sample({ seed, rows }) {
   return { required: CLASS160_REQUIRED, availability, selected };
 }
 
+// release20: CI-hard-gate sample (P.1). Always includes the canaries first,
+// then fills the remaining quota per region × class. Throws if quota cannot be
+// met — never silently falls back.
+function buildRelease20Sample({ seed, rows }) {
+  const rowsById = new Map(rows.map((row) => [row.canonical_id, row]));
+  const selected = [];
+  const selectedIds = new Set();
+  const canaryHits = [];
+  for (const canonicalId of RELEASE20_CANARIES) {
+    const row = rowsById.get(canonicalId);
+    if (row && !selectedIds.has(row.canonical_id)) {
+      selected.push(row);
+      selectedIds.add(row.canonical_id);
+      canaryHits.push(row.canonical_id);
+    }
+  }
+  const availability = regionClassCounts(rows);
+  for (const [region, byClass] of Object.entries(RELEASE20_REQUIRED)) {
+    for (const [assetClass, count] of Object.entries(byClass)) {
+      const pool = rows.filter((row) => row.region === region && row.asset_class === assetClass && !selectedIds.has(row.canonical_id));
+      const already = selected.filter((row) => row.region === region && row.asset_class === assetClass).length;
+      const need = Math.max(0, count - already);
+      if (need === 0) continue;
+      if (pool.length < need) throw new Error(`RELEASE20_POOL_TOO_SMALL:${region}:${assetClass}:${pool.length}:${need}`);
+      for (const row of deterministicPick(pool, need, `${seed}:release20:${region}:${assetClass}`)) {
+        selected.push(row);
+        selectedIds.add(row.canonical_id);
+      }
+    }
+  }
+  return { required: RELEASE20_REQUIRED, availability, selected, canary_hits: canaryHits };
+}
+
 function buildSample({ seed, mode }) {
   const canonicalIds = readCanonicalIds();
   const registryMeta = readRegistryMeta();
@@ -385,6 +433,7 @@ function buildSampleFromRows({ seed, rows, mode }) {
   if (mode === 'random200') return buildRandom200Sample({ seed, rows });
   if (mode === 'class90') return buildClass90Sample({ seed, rows });
   if (mode === 'class160') return buildClass160Sample({ seed, rows });
+  if (mode === 'release20') return buildRelease20Sample({ seed, rows });
   if (mode === 'random50') return buildGlobal50Sample({ seed, rows });
   throw new Error(`UNSUPPORTED_SAMPLE_MODE:${mode}`);
 }
@@ -836,6 +885,55 @@ async function main() {
       failed_results: failedResults,
       results,
     };
+    // P.4 ui-proof-result.v1 envelope. Additive — top-level shape stays the
+    // same for back-compat; new contract block consumed by release-gate +
+    // final-integrity-seal as the browser-validation gate input.
+    const consoleErrorTotal = results.reduce((acc, row) => acc + (row.console_errors?.length || 0), 0);
+    const networkErrorTotal = results.reduce((acc, row) => acc + (row.network_errors?.length || 0), 0);
+    const allowedDegradedTotal = results.filter((row) => row.typed_degraded_accepted === true).length;
+    const observedCommit = (remoteLatest?.deploy_proof?.git_commit_sha
+        || remoteLatest?.git_commit_sha
+        || latest?.git_commit_sha
+        || null);
+    const expectedCommit = (cliValue('expected-commit') || process.env.RV_UI_PROOF_EXPECTED_COMMIT || null);
+    const runId = cliValue('run-id') || process.env.RV_UI_PROOF_RUN_ID || `local-${process.pid}-${Date.now()}`;
+    const sampleSetId = cliValue('sample-set-id') || `${SAMPLE_MODE}:${seed}`;
+    const environment = String(cliValue('environment') || process.env.RV_UI_PROOF_ENVIRONMENT || (baseUrl.includes('rubikvault.com') ? 'main' : 'preview')).toLowerCase();
+    const failedSummary = (failedResults || []).slice(0, Number(cliValue('max-failures') || 10)).map((row) => {
+      const assertionEntries = row.assertions ? Object.entries(row.assertions).filter(([, v]) => v === false) : [];
+      const firstAssertion = assertionEntries.length ? assertionEntries[0][0] : 'unknown';
+      const detail = row.errors?.[0]
+        || (row.console_errors && row.console_errors[0])
+        || row.strict_operational_reasons?.[0]
+        || 'see failed_results[].assertions for detail';
+      return { canonical_id: row.canonical_id, assertion: firstAssertion, detail: String(detail).slice(0, 240) };
+    });
+    report.ui_proof_result = {
+      schema: 'rv.ui_proof_result.v1',
+      run_id: runId,
+      expected_commit: expectedCommit,
+      observed_commit: observedCommit,
+      base_url: baseUrl,
+      environment: environment === 'main' ? 'main' : 'preview',
+      deployment_id: remoteLatest?.deploy_proof?.deployment_id || null,
+      target_market_date: targetMarketDate || null,
+      page_core_snapshot: remoteLatest?.snapshot_id || latest?.snapshot_id || null,
+      sample: SAMPLE_MODE,
+      sample_set_id: sampleSetId,
+      required: typeof required === 'object' ? Object.values(required).reduce((s, v) => s + (typeof v === 'number' ? v : Object.values(v).reduce((a, b) => a + b, 0)), 0) : 0,
+      completed: results.length,
+      total: results.length,
+      ok: results.filter((row) => row.ok).length,
+      failed: failedResults.length,
+      status: report.status === 'OK' ? 'ok' : 'failed',
+      console_errors: consoleErrorTotal,
+      network_errors: networkErrorTotal,
+      failures: failedSummary,
+      allowed_degraded: allowedDegradedTotal,
+      runner_failure_reason: null,
+      generated_at: report.generated_at,
+      global_assertions: globalAssertions,
+    };
     writeJsonAtomic(REPORT_PATH, report);
     console.log(JSON.stringify(report, null, 2));
     if (report.status !== 'OK') process.exitCode = 1;
@@ -845,14 +943,54 @@ async function main() {
   }
 }
 
+// P.4 runner-failure classification. The harness must distinguish "asset
+// failed acceptance" (status=failed, exit 1) from "harness could not run"
+// (status=runner_failed, exit 2). Release-gate treats runner_failed as a
+// blocking fail — never a silent pass.
+function classifyRunnerFailure(error) {
+  const message = String(error?.message || '');
+  if (/libatk|playwright|browserType\.launch|executable.+doesn't exist|Failed to launch/i.test(message)) return 'playwright_runner_unavailable';
+  if (/ENOTFOUND|ECONNREFUSED|fetch failed|UND_ERR/i.test(message)) return 'target_unreachable';
+  if (/POOL_TOO_SMALL|UNSUPPORTED_SAMPLE_MODE/i.test(message)) return null; // sample-side, not runner
+  return null;
+}
+
 main().catch((error) => {
-  const report = {
+  const runnerFailureReason = classifyRunnerFailure(error);
+  const baseEnvelope = {
     schema: 'rv.stock_analyzer_ui_random50_proof.v1',
     generated_at: new Date().toISOString(),
     status: 'FAILED',
     error: error.message,
   };
-  writeJsonAtomic(REPORT_PATH, report);
+  if (runnerFailureReason) {
+    baseEnvelope.ui_proof_result = {
+      schema: 'rv.ui_proof_result.v1',
+      run_id: process.env.RV_UI_PROOF_RUN_ID || `local-${process.pid}-${Date.now()}`,
+      expected_commit: process.env.RV_UI_PROOF_EXPECTED_COMMIT || null,
+      observed_commit: null,
+      base_url: process.env.RV_UI_PROOF_BASE_URL || null,
+      environment: process.env.RV_UI_PROOF_ENVIRONMENT || 'preview',
+      deployment_id: null,
+      target_market_date: null,
+      page_core_snapshot: null,
+      sample: process.env.RV_STOCK_ANALYZER_UI_PROOF_SAMPLE || 'release20',
+      sample_set_id: null,
+      required: 0,
+      completed: 0,
+      total: 0,
+      ok: 0,
+      failed: 0,
+      status: 'runner_failed',
+      console_errors: 0,
+      network_errors: 0,
+      failures: [],
+      allowed_degraded: 0,
+      runner_failure_reason: runnerFailureReason,
+      generated_at: baseEnvelope.generated_at,
+    };
+  }
+  writeJsonAtomic(REPORT_PATH, baseEnvelope);
   console.error(error?.stack || error?.message || String(error));
-  process.exit(1);
+  process.exit(runnerFailureReason ? 2 : 1);
 });

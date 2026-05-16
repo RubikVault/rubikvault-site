@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://rubikvault.com/schemas/ui-proof-request.v1.schema.json",
+  "title": "rv.ui_proof_request.v1",
+  "description": "Request envelope passed to the UI proof runner (local Playwright or GHA-driven CI). Captures expected build + target so the runner can refuse to validate against a drifted artifact set.",
+  "type": "object",
+  "required": [
+    "schema",
+    "run_id",
+    "expected_commit",
+    "base_url",
+    "environment",
+    "sample",
+    "sample_set_id"
+  ],
+  "properties": {
+    "schema": { "const": "rv.ui_proof_request.v1" },
+    "run_id": { "type": "string", "minLength": 1, "description": "UUID/string identifier set by the caller (NAS supervisor or CI orchestrator)." },
+    "expected_commit": { "type": "string", "pattern": "^[0-9a-f]{7,40}$", "description": "Git SHA the runner must observe on the target host before running checks." },
+    "base_url": { "type": "string", "format": "uri", "description": "Public URL of the candidate to validate (preview branch URL or rubikvault.com)." },
+    "environment": { "enum": ["preview", "main"], "description": "Pages environment label." },
+    "target_market_date": { "type": ["string", "null"], "pattern": "^\\d{4}-\\d{2}-\\d{2}$" },
+    "sample": { "enum": ["release20", "regional100", "regional30", "random50", "random200", "class90", "class160"] },
+    "sample_set_id": { "type": "string", "minLength": 1, "description": "Stable id of the asset sample so callers can verify the same set was used." },
+    "max_failures": { "type": "integer", "minimum": 1, "default": 10 },
+    "accept_typed_degraded": { "type": "boolean", "default": false },
+    "issued_at": { "type": "string", "format": "date-time" }
+  },
+  "additionalProperties": false
+}
