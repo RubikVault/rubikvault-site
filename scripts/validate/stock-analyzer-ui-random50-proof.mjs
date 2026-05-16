@@ -793,7 +793,7 @@ async function main() {
       universe_report_present: universeReport !== null,
       universe_total_at_or_above_floor: universeTotal >= minUniverseTotal,
       universe_no_forbidden_classes: universeForbidden.length === 0,
-      nasdaq_extension_report_present: extensionReport !== null,
+      nasdaq_extension_report_present: minExtensionMembers <= 0 || extensionReport !== null,
       nasdaq_extension_count_at_or_above_floor: extensionCount >= minExtensionMembers,
       nasdaq_extension_no_forbidden_classes: extensionForbidden.length === 0,
     };
