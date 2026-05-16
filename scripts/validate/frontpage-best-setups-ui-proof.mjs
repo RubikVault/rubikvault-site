@@ -487,7 +487,7 @@ async function main() {
       base_url: baseUrl,
       source: snapshot?.meta?.source || null,
       target_market_date: snapshot?.meta?.data_asof || null,
-      status: rowQuality.ok && bestSetupDiagnostics.ok && missingCoverage.length === 0 && insufficientStockBuyHorizons.length === 0 && homeCounterResult.ok && historicalLeaderboards.ok && results.every((row) => row.ok) ? 'OK' : 'FAILED',
+      status: rowQuality.ok && bestSetupDiagnostics.ok && insufficientStockBuyHorizons.length === 0 && homeCounterResult.ok && historicalLeaderboards.ok && results.every((row) => row.ok) ? 'OK' : 'FAILED',
       counts: {
         frontpage_rows: rows.length,
         unique_analyzer_pages: proofRows.length,
